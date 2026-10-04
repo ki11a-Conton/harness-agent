@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Harness Agent — Web 控制台</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div id="app">
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <h1>会话</h1>
+      <button id="new-session-btn" title="新建会话">＋</button>
+    </div>
+    <ul id="session-list"></ul>
+    <div class="sidebar-footer">本地 Web 控制台</div>
+  </aside>
+  <main id="main">
+    <header id="topbar">
+      <span id="conn-dot" class="dot"></span>
+      <span id="conn-label">连接中…</span>
+      <span id="agent-status"></span>
+    </header>
+    <section id="messages" aria-live="polite"></section>
+    <footer id="composer">
+      <textarea id="input" rows="1" placeholder="输入消息…（Enter 发送，Shift+Enter 换行）"></textarea>
+      <div class="composer-actions">
+        <button id="cancel-btn" disabled>取消</button>
+        <button id="send-btn">发送</button>
+      </div>
+    </footer>
+  </main>
+</div>
+<script src="/app.js"></script>
+</body>
+</html>

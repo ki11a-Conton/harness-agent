@@ -1,0 +1,26 @@
+{
+  "phase": "delimiter-green",
+  "command": [
+    "corepack",
+    "pnpm",
+    "exec",
+    "vitest",
+    "run",
+    "packages/gateway",
+    "apps/web",
+    "--reporter=default",
+    "--reporter=json",
+    "--outputFile=/workspace/harness-agent/.ci/web-dsh-20261004/backend/delimiter-green.json"
+  ],
+  "cwd": "/workspace/harness-agent",
+  "startedAt": "2026-10-04T02:17:58.746465+00:00",
+  "sourceHashes": {
+    "packages/gateway/src/gateway.ts": "7630a2f67de219787ba72639920f9e6e187c0d430889c7c8c35691c7a03ec6c5",
+    "packages/gateway/src/gateway.test.ts": "cef806ea44c933eb84a9a0ae70f62c552890770f3199ffc44bebe05375ca8637",
+    "apps/web/src/server.ts": "1db0bad5f52aefa7b1c7a94a4fc6ba1dda17390ab57283207ea2aafbcd873638",
+    "apps/web/src/server.test.ts": "bef0057e9061e618103dd7e9da3ec97ff8910224b8146b61dbf59e79610164ac",
+    "apps/web/src/harness.integration.test.ts": "36edaf416dfb9280483657f9f43dc34b10a4617b2c17b231472a59be5e5273a9"
+  },
+  "exitCode": 0,
+  "finishedAt": "2026-10-04T02:18:04.111690+00:00"
+}

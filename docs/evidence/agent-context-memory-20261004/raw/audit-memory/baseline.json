@@ -1,0 +1,1201 @@
+{
+  "observedAt": "2026-10-04T06:49:27.467Z",
+  "sourceHead": "17aa6c7471faf8bdec020b45bfe7b9bb45470131",
+  "sourceStatus": "",
+  "sourceHashes": {
+    "packages/memory/src/memory-store.ts": "ff28c1a0f3ba73f312279aa3efff786b618ed3f3d2fb795562c58e936443191b",
+    "packages/memory/src/sqlite-memory-store.ts": "0fd23b08c1f370d60c78b7ee7ebf82c939bff066a03696ccc976dcf09dac2773",
+    "packages/memory/src/retrieval.ts": "0921994bc133782ca2d01ae7e9af05d01e4fd2ac233916cb42c5350ad3621f55",
+    "packages/memory/src/security-gate.ts": "35dd1c100d6200a862ac50c3b2f1c0fff1d9feb8b7921e31c8805aed319a5efa",
+    "packages/harness/src/memory-runtime-bridge.ts": "2d6cf39686f2884d2c390dcd13e7c7f46a3e368094d807b79124a79297a4f4cf",
+    "packages/harness/src/create-harness.ts": "a115aa9c8ec71b86e689e80ab9195c21cd85c8f19a0d9de669e9e19d8becf84e",
+    "packages/memory/dist/memory-store.js": "e5e2a7f1f54f36c4c2c724ad040eebe12745ea1a7eb8773f61bb2cdee6953d04",
+    "packages/memory/dist/sqlite-memory-store.js": "f6b5774755c0c24ea6b6f99093fa7820f848c00bb09a899f3f169c8db340cb00",
+    "packages/memory/dist/retrieval.js": "642e15428ffcb008e68d6448d5465555477c17f20888b6bf4d76e483eab709d6",
+    "packages/harness/dist/memory-runtime-bridge.js": "b3b45a131640fad6a294aa8cb30a5c0d0770f1706c3281130a3816037d9eba09",
+    "packages/harness/dist/create-harness.js": "442874f7297e7e0b7df5e715af249457fbd0bf6cd33f15b75d5e198700ea29e3"
+  },
+  "probeSha256": "632fae71959b513b97df3fd49d8c0daeb0e0ae0bdc77d122845cf8eedfe0fe65",
+  "realProviderCalls": 0,
+  "paidCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "cases": [
+    {
+      "backend": "jsonl",
+      "name": "english-token",
+      "query": "retry",
+      "entry": {
+        "content": "Inspect retry failures before repeating commands",
+        "type": "procedural",
+        "sourceSession": "session-owner",
+        "scope": "workspace",
+        "importance": 0.9,
+        "confidence": 0.9,
+        "novelty": 0.9,
+        "stability": 0.9,
+        "createdAt": 1791096567467,
+        "updatedAt": 1791096567467,
+        "deleted": false,
+        "id": "jsonl-english-token"
+      },
+      "expected": true,
+      "actual": true,
+      "pass": true,
+      "rawIds": [
+        "jsonl-english-token"
+      ],
+      "retrievedIds": [
+        "jsonl-english-token"
+      ],
+      "suppressed": []
+    },
+    {
+      "backend": "jsonl",
+      "name": "english-substring",
+      "query": "portconfig",
+      "entry": {
+        "content": "Read the portconfiguration guidance",
+        "type": "procedural",
+        "sourceSession": "session-owner",
+        "scope": "workspace",
+        "importance": 0.9,
+        "confidence": 0.9,
+        "novelty": 0.9,
+        "stability": 0.9,
+        "createdAt": 1791096567467,
+        "updatedAt": 1791096567467,
+        "deleted": false,
+        "id": "jsonl-english-substring"
+      },
+      "expected": true,
+      "actual": true,
+      "pass": true,
+      "rawIds": [
+        "jsonl-english-substring"
+      ],
+      "retrievedIds": [
+        "jsonl-english-substring"
+      ],
+      "suppressed": []
+    },
+    {
+      "backend": "jsonl",
+      "name": "chinese-substring",
+      "query": "端口配置",
+      "entry": {
+        "content": "调试端口配置时先检查环境变量。",
+        "type": "procedural",
+        "sourceSession": "session-owner",
+        "scope": "workspace",
+        "importance": 0.9,
+        "confidence": 0.9,
+        "novelty": 0.9,
+        "stability": 0.9,
+        "createdAt": 1791096567467,
+        "updatedAt": 1791096567467,
+        "deleted": false,
+        "id": "jsonl-chinese-substring"
+      },
+      "expected": true,
+      "actual": true,
+      "pass": true,
+      "rawIds": [
+        "jsonl-chinese-substring"
+      ],
+      "retrievedIds": [
+        "jsonl-chinese-substring"
+      ],
+      "suppressed": []
+    },
+    {
+      "backend": "jsonl",
+      "name": "mixed-substring",
+      "query": "EADDRINUSE 端口",
+      "entry": {
+        "content": "如果EADDRINUSE 端口冲突先停服务。",
+        "type": "procedural",
+        "sourceSession": "session-owner",
+        "scope": "workspace",
+        "importance": 0.9,
+        "confidence": 0.9,
+        "novelty": 0.9,
+        "stability": 0.9,
+        "createdAt": 1791096567467,
+        "updatedAt": 1791096567467,
+        "deleted": false,
+        "id": "jsonl-mixed-substring"
+      },
+      "expected": true,
+      "actual": true,
+      "pass": true,
+      "rawIds": [
+        "jsonl-mixed-substring"
+      ],
+      "retrievedIds": [
+        "jsonl-mixed-substring"
+      ],
+      "suppressed": []
+    },
+    {
+      "backend": "jsonl",
+      "name": "structured-when",
+      "query": "端口配置",
+      "entry": {
+        "content": "lesson summary unrelated words",
+        "type": "procedural",
+        "sourceSession": "session-owner",
+        "scope": "workspace",
+        "importance": 0.9,
+        "confidence": 0.9,
+        "novelty": 0.9,
+        "stability": 0.9,
+        "createdAt": 1791096567467,
+        "updatedAt": 1791096567467,
+        "deleted": false,
+        "id": "jsonl-structured-when",
+        "structured": {
+          "when": "遇到端口配置错误时",
+          "do": "执行 portlint 然后重启",
+          "avoid": "重复 blindretry",
+          "rootCause": "tool",
+          "outcome": "failure",
+          "evidenceRefs": [
+            "event-observed"
+          ]
+        }
+      },
+      "expected": true,
+      "actual": false,
+      "pass": false,
+      "rawIds": [],
+      "retrievedIds": [],
+      "suppressed": []
+    },
+    {
+      "backend": "jsonl",
+      "name": "structured-do",
+      "query": "portlint",
+      "entry": {
+        "content": "lesson summary unrelated words",
+        "type": "procedural",
+        "sourceSession": "session-owner",
+        "scope": "workspace",
+        "importance": 0.9,
+        "confidence": 0.9,
+        "novelty": 0.9,
+        "stability": 0.9,
+        "createdAt": 1791096567467,
+        "updatedAt": 1791096567467,
+        "deleted": false,
+        "id": "jsonl-structured-do",
+        "structured": {
+          "when": "遇到端口配置错误时",
+          "do": "执行 portlint 然后重启",
+          "avoid": "重复 blindretry",
+          "rootCause": "tool",
+          "outcome": "failure",
+          "evidenceRefs": [
+            "event-observed"
+          ]
+        }
+      },
+      "expected": true,
+      "actual": false,
+      "pass": false,
+      "rawIds": [],
+      "retrievedIds": [],
+      "suppressed": []
+    },
+    {
+      "backend": "jsonl",
+      "name": "structured-avoid",
+      "query": "blindretry",
+      "entry": {
+        "content": "lesson summary unrelated words",
+        "type": "procedural",
+        "sourceSession": "session-owner",
+        "scope": "workspace",
+        "importance": 0.9,
+        "confidence": 0.9,
+        "novelty": 0.9,
+        "stability": 0.9,
+        "createdAt": 1791096567467,
+        "updatedAt": 1791096567467,
+        "deleted": false,
+        "id": "jsonl-structured-avoid",
+        "structured": {
+          "when": "遇到端口配置错误时",
+          "do": "执行 portlint 然后重启",
+          "avoid": "重复 blindretry",
+          "rootCause": "tool",
+          "outcome": "failure",
+          "evidenceRefs": [
+            "event-observed"
+          ]
+        }
+      },
+      "expected": true,
+      "actual": false,
+      "pass": false,
+      "rawIds": [],
+      "retrievedIds": [],
+      "suppressed": []
+    },
+    {
+      "backend": "jsonl",
+      "name": "english-miss",
+      "query": "absentenglishmarker",
+      "entry": {
+        "content": "safe distinct engineering advice",
+        "type": "procedural",
+        "sourceSession": "session-owner",
+        "scope": "workspace",
+        "importance": 0.9,
+        "confidence": 0.9,
+        "novelty": 0.9,
+        "stability": 0.9,
+        "createdAt": 1791096567467,
+        "updatedAt": 1791096567467,
+        "deleted": false,
+        "id": "jsonl-english-miss"
+      },
+      "expected": false,
+      "actual": false,
+      "pass": true,
+      "rawIds": [],
+      "retrievedIds": [],
+      "suppressed": []
+    },
+    {
+      "backend": "jsonl",
+      "name": "chinese-miss",
+      "query": "绝不匹配量子词",
+      "entry": {
+        "content": "调试端口配置时先检查环境变量。",
+        "type": "procedural",
+        "sourceSession": "session-owner",
+        "scope": "workspace",
+        "importance": 0.9,
+        "confidence": 0.9,
+        "novelty": 0.9,
+        "stability": 0.9,
+        "createdAt": 1791096567467,
+        "updatedAt": 1791096567467,
+        "deleted": false,
+        "id": "jsonl-chinese-miss"
+      },
+      "expected": false,
+      "actual": false,
+      "pass": true,
+      "rawIds": [],
+      "retrievedIds": [],
+      "suppressed": []
+    },
+    {
+      "backend": "jsonl",
+      "name": "deleted",
+      "query": "deletedmarker",
+      "entry": {
+        "content": "deletedmarker guidance",
+        "type": "procedural",
+        "sourceSession": "session-owner",
+        "scope": "workspace",
+        "importance": 0.9,
+        "confidence": 0.9,
+        "novelty": 0.9,
+        "stability": 0.9,
+        "createdAt": 1791096567467,
+        "updatedAt": 1791096567467,
+        "deleted": true,
+        "id": "jsonl-deleted"
+      },
+      "expected": false,
+      "actual": false,
+      "pass": true,
+      "rawIds": [],
+      "retrievedIds": [],
+      "suppressed": []
+    },
+    {
+      "backend": "jsonl",
+      "name": "type-filter",
+      "query": "typemarker",
+      "entry": {
+        "content": "typemarker guidance",
+        "type": "explicit",
+        "sourceSession": "session-owner",
+        "scope": "workspace",
+        "importance": 0.9,
+        "confidence": 0.9,
+        "novelty": 0.9,
+        "stability": 0.9,
+        "createdAt": 1791096567467,
+        "updatedAt": 1791096567467,
+        "deleted": false,
+        "id": "jsonl-type-filter"
+      },
+      "opts": {
+        "type": "procedural"
+      },
+      "expected": false,
+      "actual": false,
+      "pass": true,
+      "rawIds": [],
+      "retrievedIds": [],
+      "suppressed": []
+    },
+    {
+      "backend": "jsonl",
+      "name": "scope-filter",
+      "query": "scopemarker",
+      "entry": {
+        "content": "scopemarker guidance",
+        "type": "procedural",
+        "sourceSession": "session-owner",
+        "scope": "session",
+        "importance": 0.9,
+        "confidence": 0.9,
+        "novelty": 0.9,
+        "stability": 0.9,
+        "createdAt": 1791096567467,
+        "updatedAt": 1791096567467,
+        "deleted": false,
+        "id": "jsonl-scope-filter"
+      },
+      "opts": {
+        "scope": "workspace"
+      },
+      "expected": false,
+      "actual": false,
+      "pass": true,
+      "rawIds": [],
+      "retrievedIds": [],
+      "suppressed": []
+    },
+    {
+      "backend": "jsonl",
+      "name": "owned-session",
+      "query": "sessionmarker",
+      "entry": {
+        "content": "sessionmarker guidance",
+        "type": "procedural",
+        "sourceSession": "session-owner",
+        "scope": "session",
+        "importance": 0.9,
+        "confidence": 0.9,
+        "novelty": 0.9,
+        "stability": 0.9,
+        "createdAt": 1791096567467,
+        "updatedAt": 1791096567467,
+        "deleted": false,
+        "id": "jsonl-owned-session"
+      },
+      "expected": true,
+      "actual": true,
+      "pass": true,
+      "rawIds": [
+        "jsonl-owned-session"
+      ],
+      "retrievedIds": [
+        "jsonl-owned-session"
+      ],
+      "suppressed": []
+    },
+    {
+      "backend": "jsonl",
+      "name": "foreign-session",
+      "query": "sessionmarker",
+      "entry": {
+        "content": "sessionmarker guidance",
+        "type": "procedural",
+        "sourceSession": "session-foreign",
+        "scope": "session",
+        "importance": 0.9,
+        "confidence": 0.9,
+        "novelty": 0.9,
+        "stability": 0.9,
+        "createdAt": 1791096567467,
+        "updatedAt": 1791096567467,
+        "deleted": false,
+        "id": "jsonl-foreign-session"
+      },
+      "expected": false,
+      "actual": false,
+      "pass": true,
+      "rawIds": [
+        "jsonl-foreign-session"
+      ],
+      "retrievedIds": [],
+      "suppressed": [
+        {
+          "id": "jsonl-foreign-session",
+          "reason": "session-mismatch"
+        }
+      ]
+    },
+    {
+      "backend": "jsonl",
+      "name": "inactive",
+      "query": "retiredmarker",
+      "entry": {
+        "content": "retiredmarker guidance",
+        "type": "procedural",
+        "sourceSession": "session-owner",
+        "scope": "workspace",
+        "importance": 0.9,
+        "confidence": 0.9,
+        "novelty": 0.9,
+        "stability": 0.9,
+        "createdAt": 1791096567467,
+        "updatedAt": 1791096567467,
+        "deleted": false,
+        "id": "jsonl-inactive",
+        "state": {
+          "kind": "deprecated",
+          "at": 1791096567467
+        }
+      },
+      "expected": false,
+      "actual": false,
+      "pass": true,
+      "rawIds": [
+        "jsonl-inactive"
+      ],
+      "retrievedIds": [],
+      "suppressed": [
+        {
+          "id": "jsonl-inactive",
+          "reason": "inactive"
+        }
+      ]
+    },
+    {
+      "backend": "sqlite",
+      "name": "english-token",
+      "query": "retry",
+      "entry": {
+        "content": "Inspect retry failures before repeating commands",
+        "type": "procedural",
+        "sourceSession": "session-owner",
+        "scope": "workspace",
+        "importance": 0.9,
+        "confidence": 0.9,
+        "novelty": 0.9,
+        "stability": 0.9,
+        "createdAt": 1791096567467,
+        "updatedAt": 1791096567467,
+        "deleted": false,
+        "id": "sqlite-english-token"
+      },
+      "expected": true,
+      "actual": true,
+      "pass": true,
+      "rawIds": [
+        "sqlite-english-token"
+      ],
+      "retrievedIds": [
+        "sqlite-english-token"
+      ],
+      "suppressed": [],
+      "fts": [
+        {
+          "content": "Inspect retry failures before repeating commands",
+          "id": "sqlite-english-token"
+        }
+      ]
+    },
+    {
+      "backend": "sqlite",
+      "name": "english-substring",
+      "query": "portconfig",
+      "entry": {
+        "content": "Read the portconfiguration guidance",
+        "type": "procedural",
+        "sourceSession": "session-owner",
+        "scope": "workspace",
+        "importance": 0.9,
+        "confidence": 0.9,
+        "novelty": 0.9,
+        "stability": 0.9,
+        "createdAt": 1791096567467,
+        "updatedAt": 1791096567467,
+        "deleted": false,
+        "id": "sqlite-english-substring"
+      },
+      "expected": true,
+      "actual": false,
+      "pass": false,
+      "rawIds": [],
+      "retrievedIds": [],
+      "suppressed": [],
+      "fts": []
+    },
+    {
+      "backend": "sqlite",
+      "name": "chinese-substring",
+      "query": "端口配置",
+      "entry": {
+        "content": "调试端口配置时先检查环境变量。",
+        "type": "procedural",
+        "sourceSession": "session-owner",
+        "scope": "workspace",
+        "importance": 0.9,
+        "confidence": 0.9,
+        "novelty": 0.9,
+        "stability": 0.9,
+        "createdAt": 1791096567467,
+        "updatedAt": 1791096567467,
+        "deleted": false,
+        "id": "sqlite-chinese-substring"
+      },
+      "expected": true,
+      "actual": false,
+      "pass": false,
+      "rawIds": [],
+      "retrievedIds": [],
+      "suppressed": [],
+      "fts": []
+    },
+    {
+      "backend": "sqlite",
+      "name": "mixed-substring",
+      "query": "EADDRINUSE 端口",
+      "entry": {
+        "content": "如果EADDRINUSE 端口冲突先停服务。",
+        "type": "procedural",
+        "sourceSession": "session-owner",
+        "scope": "workspace",
+        "importance": 0.9,
+        "confidence": 0.9,
+        "novelty": 0.9,
+        "stability": 0.9,
+        "createdAt": 1791096567467,
+        "updatedAt": 1791096567467,
+        "deleted": false,
+        "id": "sqlite-mixed-substring"
+      },
+      "expected": true,
+      "actual": false,
+      "pass": false,
+      "rawIds": [],
+      "retrievedIds": [],
+      "suppressed": [],
+      "fts": []
+    },
+    {
+      "backend": "sqlite",
+      "name": "structured-when",
+      "query": "端口配置",
+      "entry": {
+        "content": "lesson summary unrelated words",
+        "type": "procedural",
+        "sourceSession": "session-owner",
+        "scope": "workspace",
+        "importance": 0.9,
+        "confidence": 0.9,
+        "novelty": 0.9,
+        "stability": 0.9,
+        "createdAt": 1791096567467,
+        "updatedAt": 1791096567467,
+        "deleted": false,
+        "id": "sqlite-structured-when",
+        "structured": {
+          "when": "遇到端口配置错误时",
+          "do": "执行 portlint 然后重启",
+          "avoid": "重复 blindretry",
+          "rootCause": "tool",
+          "outcome": "failure",
+          "evidenceRefs": [
+            "event-observed"
+          ]
+        }
+      },
+      "expected": true,
+      "actual": false,
+      "pass": false,
+      "rawIds": [],
+      "retrievedIds": [],
+      "suppressed": [],
+      "fts": []
+    },
+    {
+      "backend": "sqlite",
+      "name": "structured-do",
+      "query": "portlint",
+      "entry": {
+        "content": "lesson summary unrelated words",
+        "type": "procedural",
+        "sourceSession": "session-owner",
+        "scope": "workspace",
+        "importance": 0.9,
+        "confidence": 0.9,
+        "novelty": 0.9,
+        "stability": 0.9,
+        "createdAt": 1791096567467,
+        "updatedAt": 1791096567467,
+        "deleted": false,
+        "id": "sqlite-structured-do",
+        "structured": {
+          "when": "遇到端口配置错误时",
+          "do": "执行 portlint 然后重启",
+          "avoid": "重复 blindretry",
+          "rootCause": "tool",
+          "outcome": "failure",
+          "evidenceRefs": [
+            "event-observed"
+          ]
+        }
+      },
+      "expected": true,
+      "actual": false,
+      "pass": false,
+      "rawIds": [],
+      "retrievedIds": [],
+      "suppressed": [],
+      "fts": []
+    },
+    {
+      "backend": "sqlite",
+      "name": "structured-avoid",
+      "query": "blindretry",
+      "entry": {
+        "content": "lesson summary unrelated words",
+        "type": "procedural",
+        "sourceSession": "session-owner",
+        "scope": "workspace",
+        "importance": 0.9,
+        "confidence": 0.9,
+        "novelty": 0.9,
+        "stability": 0.9,
+        "createdAt": 1791096567467,
+        "updatedAt": 1791096567467,
+        "deleted": false,
+        "id": "sqlite-structured-avoid",
+        "structured": {
+          "when": "遇到端口配置错误时",
+          "do": "执行 portlint 然后重启",
+          "avoid": "重复 blindretry",
+          "rootCause": "tool",
+          "outcome": "failure",
+          "evidenceRefs": [
+            "event-observed"
+          ]
+        }
+      },
+      "expected": true,
+      "actual": false,
+      "pass": false,
+      "rawIds": [],
+      "retrievedIds": [],
+      "suppressed": [],
+      "fts": []
+    },
+    {
+      "backend": "sqlite",
+      "name": "english-miss",
+      "query": "absentenglishmarker",
+      "entry": {
+        "content": "safe distinct engineering advice",
+        "type": "procedural",
+        "sourceSession": "session-owner",
+        "scope": "workspace",
+        "importance": 0.9,
+        "confidence": 0.9,
+        "novelty": 0.9,
+        "stability": 0.9,
+        "createdAt": 1791096567467,
+        "updatedAt": 1791096567467,
+        "deleted": false,
+        "id": "sqlite-english-miss"
+      },
+      "expected": false,
+      "actual": false,
+      "pass": true,
+      "rawIds": [],
+      "retrievedIds": [],
+      "suppressed": [],
+      "fts": []
+    },
+    {
+      "backend": "sqlite",
+      "name": "chinese-miss",
+      "query": "绝不匹配量子词",
+      "entry": {
+        "content": "调试端口配置时先检查环境变量。",
+        "type": "procedural",
+        "sourceSession": "session-owner",
+        "scope": "workspace",
+        "importance": 0.9,
+        "confidence": 0.9,
+        "novelty": 0.9,
+        "stability": 0.9,
+        "createdAt": 1791096567467,
+        "updatedAt": 1791096567467,
+        "deleted": false,
+        "id": "sqlite-chinese-miss"
+      },
+      "expected": false,
+      "actual": false,
+      "pass": true,
+      "rawIds": [],
+      "retrievedIds": [],
+      "suppressed": [],
+      "fts": []
+    },
+    {
+      "backend": "sqlite",
+      "name": "deleted",
+      "query": "deletedmarker",
+      "entry": {
+        "content": "deletedmarker guidance",
+        "type": "procedural",
+        "sourceSession": "session-owner",
+        "scope": "workspace",
+        "importance": 0.9,
+        "confidence": 0.9,
+        "novelty": 0.9,
+        "stability": 0.9,
+        "createdAt": 1791096567467,
+        "updatedAt": 1791096567467,
+        "deleted": true,
+        "id": "sqlite-deleted"
+      },
+      "expected": false,
+      "actual": false,
+      "pass": true,
+      "rawIds": [],
+      "retrievedIds": [],
+      "suppressed": [],
+      "fts": [
+        {
+          "content": "deletedmarker guidance",
+          "id": "sqlite-deleted"
+        }
+      ]
+    },
+    {
+      "backend": "sqlite",
+      "name": "type-filter",
+      "query": "typemarker",
+      "entry": {
+        "content": "typemarker guidance",
+        "type": "explicit",
+        "sourceSession": "session-owner",
+        "scope": "workspace",
+        "importance": 0.9,
+        "confidence": 0.9,
+        "novelty": 0.9,
+        "stability": 0.9,
+        "createdAt": 1791096567467,
+        "updatedAt": 1791096567467,
+        "deleted": false,
+        "id": "sqlite-type-filter"
+      },
+      "opts": {
+        "type": "procedural"
+      },
+      "expected": false,
+      "actual": false,
+      "pass": true,
+      "rawIds": [],
+      "retrievedIds": [],
+      "suppressed": [],
+      "fts": [
+        {
+          "content": "typemarker guidance",
+          "id": "sqlite-type-filter"
+        }
+      ]
+    },
+    {
+      "backend": "sqlite",
+      "name": "scope-filter",
+      "query": "scopemarker",
+      "entry": {
+        "content": "scopemarker guidance",
+        "type": "procedural",
+        "sourceSession": "session-owner",
+        "scope": "session",
+        "importance": 0.9,
+        "confidence": 0.9,
+        "novelty": 0.9,
+        "stability": 0.9,
+        "createdAt": 1791096567467,
+        "updatedAt": 1791096567467,
+        "deleted": false,
+        "id": "sqlite-scope-filter"
+      },
+      "opts": {
+        "scope": "workspace"
+      },
+      "expected": false,
+      "actual": false,
+      "pass": true,
+      "rawIds": [],
+      "retrievedIds": [],
+      "suppressed": [],
+      "fts": [
+        {
+          "content": "scopemarker guidance",
+          "id": "sqlite-scope-filter"
+        }
+      ]
+    },
+    {
+      "backend": "sqlite",
+      "name": "owned-session",
+      "query": "sessionmarker",
+      "entry": {
+        "content": "sessionmarker guidance",
+        "type": "procedural",
+        "sourceSession": "session-owner",
+        "scope": "session",
+        "importance": 0.9,
+        "confidence": 0.9,
+        "novelty": 0.9,
+        "stability": 0.9,
+        "createdAt": 1791096567467,
+        "updatedAt": 1791096567467,
+        "deleted": false,
+        "id": "sqlite-owned-session"
+      },
+      "expected": true,
+      "actual": true,
+      "pass": true,
+      "rawIds": [
+        "sqlite-owned-session"
+      ],
+      "retrievedIds": [
+        "sqlite-owned-session"
+      ],
+      "suppressed": [],
+      "fts": [
+        {
+          "content": "sessionmarker guidance",
+          "id": "sqlite-owned-session"
+        }
+      ]
+    },
+    {
+      "backend": "sqlite",
+      "name": "foreign-session",
+      "query": "sessionmarker",
+      "entry": {
+        "content": "sessionmarker guidance",
+        "type": "procedural",
+        "sourceSession": "session-foreign",
+        "scope": "session",
+        "importance": 0.9,
+        "confidence": 0.9,
+        "novelty": 0.9,
+        "stability": 0.9,
+        "createdAt": 1791096567467,
+        "updatedAt": 1791096567467,
+        "deleted": false,
+        "id": "sqlite-foreign-session"
+      },
+      "expected": false,
+      "actual": false,
+      "pass": true,
+      "rawIds": [
+        "sqlite-foreign-session"
+      ],
+      "retrievedIds": [],
+      "suppressed": [
+        {
+          "id": "sqlite-foreign-session",
+          "reason": "session-mismatch"
+        }
+      ],
+      "fts": [
+        {
+          "content": "sessionmarker guidance",
+          "id": "sqlite-foreign-session"
+        }
+      ]
+    },
+    {
+      "backend": "sqlite",
+      "name": "inactive",
+      "query": "retiredmarker",
+      "entry": {
+        "content": "retiredmarker guidance",
+        "type": "procedural",
+        "sourceSession": "session-owner",
+        "scope": "workspace",
+        "importance": 0.9,
+        "confidence": 0.9,
+        "novelty": 0.9,
+        "stability": 0.9,
+        "createdAt": 1791096567467,
+        "updatedAt": 1791096567467,
+        "deleted": false,
+        "id": "sqlite-inactive",
+        "state": {
+          "kind": "deprecated",
+          "at": 1791096567467
+        }
+      },
+      "expected": false,
+      "actual": false,
+      "pass": true,
+      "rawIds": [
+        "sqlite-inactive"
+      ],
+      "retrievedIds": [],
+      "suppressed": [
+        {
+          "id": "sqlite-inactive",
+          "reason": "inactive"
+        }
+      ],
+      "fts": [
+        {
+          "content": "retiredmarker guidance",
+          "id": "sqlite-inactive"
+        }
+      ]
+    }
+  ],
+  "harnessCases": [
+    {
+      "backend": "jsonl",
+      "name": "english-token",
+      "query": "retry",
+      "expected": true,
+      "bodySeen": true,
+      "memoryRefs": [
+        "harness-jsonl-english-token"
+      ],
+      "requestCount": 1,
+      "outcome": "completed",
+      "pass": true,
+      "requestFile": "request-jsonl-english-token.json",
+      "usefulness": {
+        "retrievedCount": 1,
+        "injectedCount": 1,
+        "usedCount": 1,
+        "taskSuccessCount": 1,
+        "verificationPassedCount": 0,
+        "score": 0.8425
+      }
+    },
+    {
+      "backend": "jsonl",
+      "name": "chinese-substring",
+      "query": "端口配置",
+      "expected": true,
+      "bodySeen": true,
+      "memoryRefs": [
+        "harness-jsonl-chinese-substring"
+      ],
+      "requestCount": 1,
+      "outcome": "completed",
+      "pass": true,
+      "requestFile": "request-jsonl-chinese-substring.json",
+      "usefulness": {
+        "retrievedCount": 1,
+        "injectedCount": 1,
+        "usedCount": 1,
+        "taskSuccessCount": 1,
+        "verificationPassedCount": 0,
+        "score": 0.8425
+      }
+    },
+    {
+      "backend": "jsonl",
+      "name": "mixed-substring",
+      "query": "EADDRINUSE 端口",
+      "expected": true,
+      "bodySeen": true,
+      "memoryRefs": [
+        "harness-jsonl-mixed-substring"
+      ],
+      "requestCount": 1,
+      "outcome": "completed",
+      "pass": true,
+      "requestFile": "request-jsonl-mixed-substring.json",
+      "usefulness": {
+        "retrievedCount": 1,
+        "injectedCount": 1,
+        "usedCount": 1,
+        "taskSuccessCount": 1,
+        "verificationPassedCount": 0,
+        "score": 0.8425
+      }
+    },
+    {
+      "backend": "jsonl",
+      "name": "structured-when",
+      "query": "端口配置",
+      "expected": true,
+      "bodySeen": false,
+      "memoryRefs": [],
+      "requestCount": 1,
+      "outcome": "completed",
+      "pass": false,
+      "requestFile": "request-jsonl-structured-when.json"
+    },
+    {
+      "backend": "jsonl",
+      "name": "structured-do",
+      "query": "portlint",
+      "expected": true,
+      "bodySeen": false,
+      "memoryRefs": [],
+      "requestCount": 1,
+      "outcome": "completed",
+      "pass": false,
+      "requestFile": "request-jsonl-structured-do.json"
+    },
+    {
+      "backend": "jsonl",
+      "name": "chinese-miss",
+      "query": "绝不匹配量子词",
+      "expected": false,
+      "bodySeen": false,
+      "memoryRefs": [],
+      "requestCount": 1,
+      "outcome": "completed",
+      "pass": true,
+      "requestFile": "request-jsonl-chinese-miss.json"
+    },
+    {
+      "backend": "sqlite",
+      "name": "english-token",
+      "query": "retry",
+      "expected": true,
+      "bodySeen": true,
+      "memoryRefs": [
+        "harness-sqlite-english-token"
+      ],
+      "requestCount": 1,
+      "outcome": "completed",
+      "pass": true,
+      "requestFile": "request-sqlite-english-token.json",
+      "usefulness": {
+        "retrievedCount": 1,
+        "injectedCount": 1,
+        "usedCount": 1,
+        "taskSuccessCount": 1,
+        "verificationPassedCount": 0,
+        "score": 0.8425
+      }
+    },
+    {
+      "backend": "sqlite",
+      "name": "chinese-substring",
+      "query": "端口配置",
+      "expected": true,
+      "bodySeen": false,
+      "memoryRefs": [],
+      "requestCount": 1,
+      "outcome": "completed",
+      "pass": false,
+      "requestFile": "request-sqlite-chinese-substring.json"
+    },
+    {
+      "backend": "sqlite",
+      "name": "mixed-substring",
+      "query": "EADDRINUSE 端口",
+      "expected": true,
+      "bodySeen": false,
+      "memoryRefs": [],
+      "requestCount": 1,
+      "outcome": "completed",
+      "pass": false,
+      "requestFile": "request-sqlite-mixed-substring.json"
+    },
+    {
+      "backend": "sqlite",
+      "name": "structured-when",
+      "query": "端口配置",
+      "expected": true,
+      "bodySeen": false,
+      "memoryRefs": [],
+      "requestCount": 1,
+      "outcome": "completed",
+      "pass": false,
+      "requestFile": "request-sqlite-structured-when.json"
+    },
+    {
+      "backend": "sqlite",
+      "name": "structured-do",
+      "query": "portlint",
+      "expected": true,
+      "bodySeen": false,
+      "memoryRefs": [],
+      "requestCount": 1,
+      "outcome": "completed",
+      "pass": false,
+      "requestFile": "request-sqlite-structured-do.json"
+    },
+    {
+      "backend": "sqlite",
+      "name": "chinese-miss",
+      "query": "绝不匹配量子词",
+      "expected": false,
+      "bodySeen": false,
+      "memoryRefs": [],
+      "requestCount": 1,
+      "outcome": "completed",
+      "pass": true,
+      "requestFile": "request-sqlite-chinese-miss.json"
+    }
+  ],
+  "supplementCase": [
+    {
+      "backend": "jsonl",
+      "query": "端口配置",
+      "expectedIds": [
+        "exact-chinese-token",
+        "chinese-substring-also-required"
+      ],
+      "actualIds": [
+        "exact-chinese-token",
+        "chinese-substring-also-required"
+      ],
+      "pass": true
+    },
+    {
+      "backend": "sqlite",
+      "query": "端口配置",
+      "expectedIds": [
+        "exact-chinese-token",
+        "chinese-substring-also-required"
+      ],
+      "actualIds": [
+        "exact-chinese-token"
+      ],
+      "pass": false
+    }
+  ],
+  "storeSummary": {
+    "total": 30,
+    "passed": 21,
+    "failed": [
+      "jsonl:structured-when",
+      "jsonl:structured-do",
+      "jsonl:structured-avoid",
+      "sqlite:english-substring",
+      "sqlite:chinese-substring",
+      "sqlite:mixed-substring",
+      "sqlite:structured-when",
+      "sqlite:structured-do",
+      "sqlite:structured-avoid"
+    ]
+  },
+  "harnessSummary": {
+    "total": 12,
+    "passed": 6,
+    "failed": [
+      "jsonl:structured-when",
+      "jsonl:structured-do",
+      "sqlite:chinese-substring",
+      "sqlite:mixed-substring",
+      "sqlite:structured-when",
+      "sqlite:structured-do"
+    ],
+    "scriptedGenerateCalls": 12
+  }
+}

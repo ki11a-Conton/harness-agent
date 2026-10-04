@@ -1,0 +1,401 @@
+{
+  "schema": "web-dsh-independent-ui-review.v1",
+  "reviewer": "/root/resume_web_probe_review",
+  "reviewedAt": "2026-10-04T06:49:33.394457+00:00",
+  "status": "UI_STAGE_ACCEPTANCE_PASS",
+  "sourceSha": "17aa6c7471faf8bdec020b45bfe7b9bb45470131",
+  "scope": "Independent read-only source, raw evidence, hashes, actual record/event correlations, and visual screenshot review. No production source changes and no test reruns. One authorized ignored review receipt was written.",
+  "checks": [
+    {
+      "name": "candidate-source-and-clean",
+      "passed": true,
+      "observed": {
+        "sha": "17aa6c7471faf8bdec020b45bfe7b9bb45470131",
+        "trackedClean": true
+      }
+    },
+    {
+      "name": "candidate-result",
+      "passed": true,
+      "observed": {
+        "cases": 26,
+        "caseAssertions": 70,
+        "allAssertions": 74,
+        "groups": {
+          "controlled-protocol": 12,
+          "production-stack": 13,
+          "production-network-control": 1
+        }
+      }
+    },
+    {
+      "name": "runner-and-graceful-cleanup",
+      "passed": true,
+      "observed": {
+        "durationSeconds": 15.975,
+        "cleanup": {
+          "graceful": true,
+          "exitCode": 0,
+          "forcedKill": false,
+          "runtimeSnapshotReadable": true,
+          "finalSourceSha": "17aa6c7471faf8bdec020b45bfe7b9bb45470131",
+          "changedFingerprints": []
+        }
+      }
+    },
+    {
+      "name": "source-dist-static-fingerprints",
+      "passed": true,
+      "observed": {
+        "count": 21,
+        "mismatches": []
+      }
+    },
+    {
+      "name": "executed-probe-fingerprints",
+      "passed": true,
+      "observed": {
+        "browser.py": "cf5daf414a0634be7e19fe001d6dbe6b63d27854ce0230010af9cd0713cffe55",
+        "protocol-control.js": "058610e9c1519fb43833538b997484eeb6995f9f2a72e617dd3b3ae527fed0a3",
+        "fixture.mjs": "1e035a87d47e9bfc0c8683d9e4e9b9b648132626c0d01741fdd44dbc3605f439"
+      }
+    },
+    {
+      "name": "snapshot-provenance",
+      "passed": true,
+      "observed": {
+        "sourceSha": "17aa6c7471faf8bdec020b45bfe7b9bb45470131"
+      }
+    },
+    {
+      "name": "artifact-integrity-and-coverage",
+      "passed": true,
+      "observed": {
+        "files": 14,
+        "bytes": 556180,
+        "hashMismatches": [],
+        "unindexed": [],
+        "excluded": "fixture/runtime-data and fixture/workspace; durable evidence is covered by indexed complete runtime snapshot"
+      }
+    },
+    {
+      "name": "upstream-license-and-vendor-content",
+      "passed": true,
+      "observed": {
+        "upstreamSha": "5badb15009ae1756c3afe0ae0cef1faafc290ccc",
+        "verbatimCss": 6,
+        "verbatimLicense": 1,
+        "adaptedStylesheet": 1,
+        "entries": [
+          {
+            "localPath": "vendor/deepseek/base.css",
+            "mode": "verbatim",
+            "pass": true
+          },
+          {
+            "localPath": "vendor/deepseek/design-platform.css",
+            "mode": "verbatim",
+            "pass": true
+          },
+          {
+            "localPath": "vendor/deepseek/scrollbar.css",
+            "mode": "verbatim",
+            "pass": true
+          },
+          {
+            "localPath": "vendor/deepseek/focus.css",
+            "mode": "verbatim",
+            "pass": true
+          },
+          {
+            "localPath": "vendor/deepseek/corner-shape.css",
+            "mode": "verbatim",
+            "pass": true
+          },
+          {
+            "localPath": "vendor/deepseek/gradient-shadow-text.css",
+            "mode": "verbatim",
+            "pass": true
+          },
+          {
+            "localPath": "style.css",
+            "mode": "adapted",
+            "pass": true
+          },
+          {
+            "localPath": "vendor/deepseek/LICENSE",
+            "mode": "verbatim",
+            "pass": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "local-resource-loads",
+      "passed": true,
+      "observed": {
+        "localHttpStatuses": {
+          "/": 200,
+          "/app.js": 200,
+          "/style.css": 200,
+          "/vendor/deepseek/LICENSE": 200,
+          "/vendor/deepseek/source-manifest.json": 200,
+          "/vendor/deepseek/base.css": 200,
+          "/vendor/deepseek/corner-shape.css": 200,
+          "/vendor/deepseek/design-platform.css": 200,
+          "/vendor/deepseek/focus.css": 200,
+          "/vendor/deepseek/scrollbar.css": 200,
+          "/vendor/deepseek/gradient-shadow-text.css": 200
+        },
+        "loadedStylesheets": [
+          "/vendor/deepseek/base.css",
+          "/vendor/deepseek/design-platform.css",
+          "/vendor/deepseek/gradient-shadow-text.css",
+          "/vendor/deepseek/scrollbar.css",
+          "/vendor/deepseek/focus.css",
+          "/vendor/deepseek/corner-shape.css",
+          "/style.css"
+        ],
+        "externalResourceCount": 0
+      }
+    },
+    {
+      "name": "browser-errors",
+      "passed": true,
+      "observed": {
+        "pageErrors": 0,
+        "networkErrors": [
+          {
+            "controlled": false,
+            "url": "http://127.0.0.1:40129/api/events?from=196ca351-9a9e-4fe2-8c8b-dc680bf3c777",
+            "failure": "net::ERR_INCOMPLETE_CHUNKED_ENCODING"
+          },
+          {
+            "controlled": false,
+            "url": "http://127.0.0.1:40129/api/events?from=196ca351-9a9e-4fe2-8c8b-dc680bf3c777",
+            "failure": "net::ERR_ABORTED"
+          }
+        ],
+        "responses": 180,
+        "responseStatuses": {
+          "200": 180
+        },
+        "networkErrorLimit": "The two SSE network errors are retained, consistent with socket fault/session teardown; no zero-network-error claim."
+      }
+    },
+    {
+      "name": "screenshots",
+      "passed": true,
+      "observed": {
+        "files": [
+          {
+            "path": "desktop-chat.png",
+            "dimensions": [
+              1440,
+              900
+            ],
+            "bytes": 51141,
+            "pass": true
+          },
+          {
+            "path": "desktop-dark.png",
+            "dimensions": [
+              1440,
+              900
+            ],
+            "bytes": 49498,
+            "pass": true
+          },
+          {
+            "path": "desktop-light.png",
+            "dimensions": [
+              1440,
+              900
+            ],
+            "bytes": 48657,
+            "pass": true
+          },
+          {
+            "path": "mobile-chat.png",
+            "dimensions": [
+              390,
+              844
+            ],
+            "bytes": 29629,
+            "pass": true
+          },
+          {
+            "path": "mobile-sidebar.png",
+            "dimensions": [
+              390,
+              844
+            ],
+            "bytes": 19708,
+            "pass": true
+          }
+        ],
+        "visuallyInspected": 5,
+        "observed": "Desktop empty light/dark and completed chat are readable; mobile empty state/composer fits viewport and drawer/backdrop works. Mobile screenshot has no sent conversation; mobile acceptance covers layout/drawer, general send/history/approval flows are desktop production cases."
+      }
+    },
+    {
+      "name": "raw-production-records",
+      "passed": true,
+      "observed": {
+        "sessions": 2,
+        "calls": 15,
+        "messages": 29,
+        "events": 184,
+        "terminals": {
+          "turn.completed": 7,
+          "turn.failed": 1,
+          "turn.cancelled": 1
+        }
+      }
+    },
+    {
+      "name": "actual-approval-authority-and-tool-files",
+      "passed": true,
+      "observed": {
+        "humanApprovalCount": 4,
+        "decisions": {
+          "allow": 3,
+          "deny": 1
+        },
+        "foreignHumanApprovals": 0,
+        "pendingApprovals": 0,
+        "files": {
+          "allowed.txt": "ACTUAL_HARNESS_WRITE\n",
+          "denied.txt": null,
+          "../outside.txt": null,
+          "fail-verification.flag": "ACTUAL_HARNESS_WRITE\n"
+        }
+      }
+    },
+    {
+      "name": "actual-sandbox-and-cancel",
+      "passed": true,
+      "observed": {
+        "sandboxDenied": true,
+        "cancelledTurns": 1,
+        "providerAbortObserved": true
+      }
+    },
+    {
+      "name": "actual-socket-outage-and-completion-window",
+      "passed": true,
+      "observed": {
+        "hold": {
+          "action": "hold",
+          "from": "196ca351-9a9e-4fe2-8c8b-dc680bf3c777",
+          "droppedSockets": 1,
+          "releasedRequests": 0,
+          "at": "2026-10-04T06:44:08.029Z"
+        },
+        "heldReconnect": [
+          {
+            "action": "held-reconnect",
+            "from": "196ca351-9a9e-4fe2-8c8b-dc680bf3c777",
+            "at": "2026-10-04T06:44:11.031Z"
+          }
+        ],
+        "release": {
+          "action": "release",
+          "from": "196ca351-9a9e-4fe2-8c8b-dc680bf3c777",
+          "droppedSockets": 0,
+          "releasedRequests": 1,
+          "at": "2026-10-04T06:44:11.542Z"
+        },
+        "completionTimestampMs": 1791096249231,
+        "turnId": "turn_88eb4bf0-3048-43e6-a2f3-c60e73d92403",
+        "outageSeconds": 3.5128474069933873
+      }
+    },
+    {
+      "name": "actual-exit7-verification-gate",
+      "passed": true,
+      "observed": {
+        "turnId": "turn_b3eb1dc1-e395-41a3-9e01-14e3ea2af23a",
+        "failures": 3,
+        "terminalTypes": [
+          "turn.failed"
+        ],
+        "attempts": [
+          1,
+          2,
+          3
+        ]
+      }
+    },
+    {
+      "name": "original-failed-candidate-preserved",
+      "passed": true,
+      "observed": {
+        "status": "FAILED",
+        "passed": 10,
+        "failed": 16,
+        "indexFiles": 13,
+        "hashMismatches": []
+      }
+    },
+    {
+      "name": "original-baseline-reproducers-preserved",
+      "passed": true,
+      "observed": {
+        "status": "BASELINE_REPRODUCED",
+        "reproducerFailures": 2,
+        "passingXssControl": 1,
+        "scope": "Original baseline static assets only; baseline concurrent runtime is excluded from causality claim; separate static/probe and index-correction receipts retained."
+      }
+    },
+    {
+      "name": "gateway-web-directed-unit-integration",
+      "passed": true,
+      "observed": {
+        "tests": 115,
+        "testFiles": 6,
+        "pending": 0,
+        "sourceHashMismatches": [],
+        "directedTypecheckExitCode": 0
+      }
+    },
+    {
+      "name": "security-and-docs-directed-gates",
+      "passed": true,
+      "observed": {
+        "securityTests": 2135,
+        "securityFiles": 19,
+        "docsVerify": "PASS",
+        "scope": "Directed UI stage gate; historical security invocation correctly records trackedDirty=true. Not a final clean-source full regression."
+      }
+    }
+  ],
+  "checkCount": 20,
+  "checkPassed": 20,
+  "blockers": [],
+  "decision": "U1-U3 and U4 UI-stage acceptance/evidence are sufficient to enter U5. The task contract schedules the final frozen joint full regression after both UI and agent work; that final gate remains pending and must not be claimed complete now.",
+  "limits": [
+    "Scripted provider, paidCalls=0; real-model quality and promotion NOT_RUN.",
+    "Chromium 151 only; no Safari/Firefox or actual mobile device claim.",
+    "Mobile browser case verifies layout/drawer and empty-state composer; full send/history/approval/copy flows are desktop production cases.",
+    "Race controls replace fetch/EventSource and are labelled controlled-protocol, distinct from production runtime.",
+    "Transport fault uses a loopback proxy and actual native EventSource, transparently forwards real backend data; no network-wide resilience claim.",
+    "Session sender bindings are process-local; no restart recovery claim.",
+    "Assistant text is completed-message rendering; no token streaming claim.",
+    "Existing directed security/docs/typecheck gates and browser pass are not final all-repository acceptance."
+  ],
+  "paidCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "promotion": "NOT_RUN",
+  "reviewedEvidenceDigests": {
+    ".ci/web-dsh-20261004/browser-candidate-17aa6c7/browser-result.json": "48c9d9c44b223898fd4faeb4344ccd9428d20660d8af376c4dedace352512c0e",
+    ".ci/web-dsh-20261004/browser-candidate-17aa6c7/artifact-index.json": "0d7761fbc1fdbe68633103840565d272ec628405187a2cd9e76595ce8279bce2",
+    ".ci/web-dsh-20261004/browser-candidate-17aa6c7/fixture/runtime-snapshot.json": "98cc8870e2af77d5f79b52310a3a0292cd3c7886656ef1dee142d296b2923fcb",
+    ".ci/web-dsh-20261004/browser-run-17aa6c7.json": "ef784b7f786b82841c72d6a3cd5205d09b8c7431db9292727e5c31c4d47db573",
+    ".ci/web-dsh-20261004/backend/delimiter-green.json": "6ca5c948bb2dc9c044b926ba6b263643a48aa13ca390609cbde40e651010394d",
+    ".ci/web-dsh-20261004/backend/delimiter-green.command.json": "2ef018a44ff961c6cb48d506d6f5f960f5a23b123afa7e4c53c12a9490fc5bb1",
+    ".ci/web-dsh-20261004/ui-gates/security.json": "18066b919c56af59144dfac27f47b19e55202984061bfe4462d5d101a7d5f5a0",
+    ".ci/web-dsh-20261004/ui-gates/security.log": "de6ad0e0d82eefa2afcb55bc83ac6c74a10de57bcc6227a84aeb82ccb08c2404",
+    ".ci/web-dsh-20261004/ui-gates/docs-pass.log": "a2c98d924d87fbd02fb2628d9a15b6f912cd0e44618217afa91195d48b97f122"
+  }
+}

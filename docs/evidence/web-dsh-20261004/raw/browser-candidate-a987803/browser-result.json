@@ -1,0 +1,387 @@
+{
+  "schema": "web-dsh-browser.v1",
+  "status": "FAILED",
+  "mode": "candidate",
+  "requireCleanSource": true,
+  "scope": "Real Chromium; production cases use actual Harness/Gateway/WebServer/PermissionEngine/SandboxManager/TaskVerifier with scripted provider; controlled-protocol cases replace browser fetch/EventSource only and do not prove model quality.",
+  "source": {
+    "base": "http://127.0.0.1:33313",
+    "inspector": "http://127.0.0.1:40793/snapshot",
+    "cwd": "/workspace/harness-agent/.ci/web-dsh-20261004/browser-candidate-a987803/fixture/workspace",
+    "sourceSha": "a9878031a8965e59881cb3f03982a3698651a3d9",
+    "trackedDirty": false,
+    "fingerprints": {
+      "apps/web/src/server.ts": "1db0bad5f52aefa7b1c7a94a4fc6ba1dda17390ab57283207ea2aafbcd873638",
+      "apps/web/src/adapter.ts": "6ed06e0638b57e5247342675d691b0cf0de4116c22d3f571317e3974ba0ef4b3",
+      "apps/web/src/bindings.ts": "44d30d6bc1d4a79cebd4b53a006e47d76ffe573fd7fd76d4324589b112c0473f",
+      "packages/gateway/src/gateway.ts": "7630a2f67de219787ba72639920f9e6e187c0d430889c7c8c35691c7a03ec6c5",
+      "packages/harness/src/create-harness.ts": "a115aa9c8ec71b86e689e80ab9195c21cd85c8f19a0d9de669e9e19d8becf84e",
+      "apps/web/dist/server.js": "195eb0d3e0f9c3b814c2b820e5e7191d13bd9145d778294a46e1c34bf287205d",
+      "apps/web/dist/adapter.js": "f1aa8a86f5b79f7163a86cfaec50c71860c7983e75a2f65946f9fac2bd2fd529",
+      "apps/web/dist/bindings.js": "e5e0a55554b60cdd9da0b19ebbc6a62ef8555f1ec347dfb3a5d9f3981a59c958",
+      "packages/gateway/dist/gateway.js": "7890f6c217165a79a6cd91599aefa33b82f9ac8f661bdebfc81c2ea4d5becd5c",
+      "packages/harness/dist/create-harness.js": "442874f7297e7e0b7df5e715af249457fbd0bf6cd33f15b75d5e198700ea29e3",
+      "static/app.js": "d6fa3cc612f0e66fd6326cc6067eda9eb8c1ccc9146f2a44b65e8e83367e441c",
+      "static/index.html": "7987bd0b38de59ff679cd052a0069afb4d00132a027ad78633e78116a6971cf5",
+      "static/style.css": "60f6e63348d1a58e65e093c37dc847f065f1f7c2c56455d22f6eec90d695453f",
+      "static/vendor/deepseek/LICENSE": "ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be",
+      "static/vendor/deepseek/base.css": "03704b5ac0e86d9d875c4fa5c985a7dfe5d56e20dc28a8d8221626aaf7aa482a",
+      "static/vendor/deepseek/corner-shape.css": "d94f82e1332b6d37e8345aafe1b6b4129faed65891edd3861c00b88940ec4d3f",
+      "static/vendor/deepseek/design-platform.css": "809b20ae477324fdf5181a2d338655a19919cabbf1b0e60adc149908462c5a66",
+      "static/vendor/deepseek/focus.css": "f7398e7730415592ab1e81cec36f8c5e23065becd06c050f0129a6fa44d247e8",
+      "static/vendor/deepseek/gradient-shadow-text.css": "a32d784be999def56673b5f86bebd250f401cda1c861adc4c1ea0ebb1ce36ad6",
+      "static/vendor/deepseek/scrollbar.css": "673450184fe82a679b5759a7f93ceab17895b9f12e1196f7efb281304afd8398",
+      "static/vendor/deepseek/source-manifest.json": "16844150e74b11c61aa9e6f8745d46c3944406bbccc264eced91eb7796b6597a"
+    },
+    "node": "v24.19.0",
+    "fixtureSha256": "129b2d70e7d43b8a2df73c4ae3af01ab6eaa18d88016dc0e746f62b5343c1407",
+    "staticDir": "/workspace/harness-agent/apps/web/public",
+    "paidCalls": 0,
+    "realModelQuality": "NOT_RUN",
+    "promotion": "NOT_RUN"
+  },
+  "probeSha256": {
+    "browser.py": "88242c745e58462af8acb0cec8a707d3f23b849f760d0f0e9a0190cb1fb02226",
+    "protocol-control.js": "058610e9c1519fb43833538b997484eeb6995f9f2a72e617dd3b3ae527fed0a3",
+    "fixture.mjs": "129b2d70e7d43b8a2df73c4ae3af01ab6eaa18d88016dc0e746f62b5343c1407"
+  },
+  "cleanup": {
+    "graceful": true,
+    "exitCode": 0,
+    "forcedKill": false,
+    "runtimeSnapshotReadable": true,
+    "finalSourceSha": "a9878031a8965e59881cb3f03982a3698651a3d9",
+    "changedFingerprints": []
+  },
+  "chromium": "151.0.7922.173",
+  "viewportDesktop": [
+    1440,
+    900
+  ],
+  "viewportMobile": [
+    390,
+    844
+  ],
+  "paidCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "promotion": "NOT_RUN",
+  "caseCount": 26,
+  "assertCount": 42,
+  "passed": 10,
+  "failed": 16,
+  "browserErrorCount": 0,
+  "receipts": [
+    {
+      "name": "consecutive-assistants-and-id-replay",
+      "group": "controlled-protocol",
+      "passed": false,
+      "observed": {
+        "error": "Locator.wait_for: Error: strict mode violation: get_by_text(\"B_ONLY_HISTORY\", exact=True) resolved to 3 elements:\n    1) <span class=\"session-name\">B_ONLY_HISTORY</span> aka get_by_role(\"button\", name=\"B_ONLY_HISTORY\")\n    2) <h1 id=\"session-title\">B_ONLY_HISTORY</h1> aka get_by_role(\"heading\", name=\"B_ONLY_HISTORY\")\n    3) <div class=\"bubble user-bubble\">B_ONLY_HISTORY</div> aka get_by_label(\"聊天记录\").get_by_text(\"B_ONLY_HISTORY\")\n\nCall log:\n  - waiting for get_by_text(\"B_ONLY_HISTORY\", exact=True) to be visible\n",
+        "traceback": "Traceback (most recent call last):\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 63, in run_case\n    observed = function()\n               ^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 298, in <lambda>\n    run_case(kind, 'controlled-protocol', lambda kind=kind: controlled_case(kind))\n                                                            ^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 129, in controlled_case\n    context, page = page_context(controlled=True)\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 123, in page_context\n    page.get_by_text('B_ONLY_HISTORY', exact=True).wait_for()\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/sync_api/_generated.py\", line 20539, in wait_for\n    self._sync(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_sync_base.py\", line 115, in _sync\n    return task.result()\n           ^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_locator.py\", line 748, in wait_for\n    await self._frame.wait_for_selector(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_frame.py\", line 394, in wait_for_selector\n    await self._channel.send(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_connection.py\", line 76, in send\n    return await self._connection.wrap_api_call(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_connection.py\", line 632, in wrap_api_call\n    raise rewrite_error(error, f\"{parsed_st['apiName']}: {error}\") from None\nplaywright._impl._errors.Error: Locator.wait_for: Error: strict mode violation: get_by_text(\"B_ONLY_HISTORY\", exact=True) resolved to 3 elements:\n    1) <span class=\"session-name\">B_ONLY_HISTORY</span> aka get_by_role(\"button\", name=\"B_ONLY_HISTORY\")\n    2) <h1 id=\"session-title\">B_ONLY_HISTORY</h1> aka get_by_role(\"heading\", name=\"B_ONLY_HISTORY\")\n    3) <div class=\"bubble user-bubble\">B_ONLY_HISTORY</div> aka get_by_label(\"聊天记录\").get_by_text(\"B_ONLY_HISTORY\")\n\nCall log:\n  - waiting for get_by_text(\"B_ONLY_HISTORY\", exact=True) to be visible\n\n"
+      },
+      "assertCount": 0
+    },
+    {
+      "name": "slow-a-history-cannot-pollute-b",
+      "group": "controlled-protocol",
+      "passed": false,
+      "observed": {
+        "error": "Locator.wait_for: Error: strict mode violation: get_by_text(\"B_ONLY_HISTORY\", exact=True) resolved to 3 elements:\n    1) <span class=\"session-name\">B_ONLY_HISTORY</span> aka get_by_role(\"button\", name=\"B_ONLY_HISTORY\")\n    2) <h1 id=\"session-title\">B_ONLY_HISTORY</h1> aka get_by_role(\"heading\", name=\"B_ONLY_HISTORY\")\n    3) <div class=\"bubble user-bubble\">B_ONLY_HISTORY</div> aka get_by_label(\"聊天记录\").get_by_text(\"B_ONLY_HISTORY\")\n\nCall log:\n  - waiting for get_by_text(\"B_ONLY_HISTORY\", exact=True) to be visible\n",
+        "traceback": "Traceback (most recent call last):\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 63, in run_case\n    observed = function()\n               ^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 298, in <lambda>\n    run_case(kind, 'controlled-protocol', lambda kind=kind: controlled_case(kind))\n                                                            ^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 129, in controlled_case\n    context, page = page_context(controlled=True)\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 123, in page_context\n    page.get_by_text('B_ONLY_HISTORY', exact=True).wait_for()\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/sync_api/_generated.py\", line 20539, in wait_for\n    self._sync(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_sync_base.py\", line 115, in _sync\n    return task.result()\n           ^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_locator.py\", line 748, in wait_for\n    await self._frame.wait_for_selector(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_frame.py\", line 394, in wait_for_selector\n    await self._channel.send(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_connection.py\", line 76, in send\n    return await self._connection.wrap_api_call(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_connection.py\", line 632, in wrap_api_call\n    raise rewrite_error(error, f\"{parsed_st['apiName']}: {error}\") from None\nplaywright._impl._errors.Error: Locator.wait_for: Error: strict mode violation: get_by_text(\"B_ONLY_HISTORY\", exact=True) resolved to 3 elements:\n    1) <span class=\"session-name\">B_ONLY_HISTORY</span> aka get_by_role(\"button\", name=\"B_ONLY_HISTORY\")\n    2) <h1 id=\"session-title\">B_ONLY_HISTORY</h1> aka get_by_role(\"heading\", name=\"B_ONLY_HISTORY\")\n    3) <div class=\"bubble user-bubble\">B_ONLY_HISTORY</div> aka get_by_label(\"聊天记录\").get_by_text(\"B_ONLY_HISTORY\")\n\nCall log:\n  - waiting for get_by_text(\"B_ONLY_HISTORY\", exact=True) to be visible\n\n"
+      },
+      "assertCount": 0
+    },
+    {
+      "name": "xss-is-text",
+      "group": "controlled-protocol",
+      "passed": false,
+      "observed": {
+        "error": "Locator.wait_for: Error: strict mode violation: get_by_text(\"B_ONLY_HISTORY\", exact=True) resolved to 3 elements:\n    1) <span class=\"session-name\">B_ONLY_HISTORY</span> aka get_by_role(\"button\", name=\"B_ONLY_HISTORY\")\n    2) <h1 id=\"session-title\">B_ONLY_HISTORY</h1> aka get_by_role(\"heading\", name=\"B_ONLY_HISTORY\")\n    3) <div class=\"bubble user-bubble\">B_ONLY_HISTORY</div> aka get_by_label(\"聊天记录\").get_by_text(\"B_ONLY_HISTORY\")\n\nCall log:\n  - waiting for get_by_text(\"B_ONLY_HISTORY\", exact=True) to be visible\n",
+        "traceback": "Traceback (most recent call last):\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 63, in run_case\n    observed = function()\n               ^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 298, in <lambda>\n    run_case(kind, 'controlled-protocol', lambda kind=kind: controlled_case(kind))\n                                                            ^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 129, in controlled_case\n    context, page = page_context(controlled=True)\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 123, in page_context\n    page.get_by_text('B_ONLY_HISTORY', exact=True).wait_for()\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/sync_api/_generated.py\", line 20539, in wait_for\n    self._sync(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_sync_base.py\", line 115, in _sync\n    return task.result()\n           ^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_locator.py\", line 748, in wait_for\n    await self._frame.wait_for_selector(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_frame.py\", line 394, in wait_for_selector\n    await self._channel.send(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_connection.py\", line 76, in send\n    return await self._connection.wrap_api_call(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_connection.py\", line 632, in wrap_api_call\n    raise rewrite_error(error, f\"{parsed_st['apiName']}: {error}\") from None\nplaywright._impl._errors.Error: Locator.wait_for: Error: strict mode violation: get_by_text(\"B_ONLY_HISTORY\", exact=True) resolved to 3 elements:\n    1) <span class=\"session-name\">B_ONLY_HISTORY</span> aka get_by_role(\"button\", name=\"B_ONLY_HISTORY\")\n    2) <h1 id=\"session-title\">B_ONLY_HISTORY</h1> aka get_by_role(\"heading\", name=\"B_ONLY_HISTORY\")\n    3) <div class=\"bubble user-bubble\">B_ONLY_HISTORY</div> aka get_by_label(\"聊天记录\").get_by_text(\"B_ONLY_HISTORY\")\n\nCall log:\n  - waiting for get_by_text(\"B_ONLY_HISTORY\", exact=True) to be visible\n\n"
+      },
+      "assertCount": 0
+    },
+    {
+      "name": "closed-sse-callback-cannot-pollute-new-session",
+      "group": "controlled-protocol",
+      "passed": false,
+      "observed": {
+        "error": "Locator.wait_for: Error: strict mode violation: get_by_text(\"B_ONLY_HISTORY\", exact=True) resolved to 3 elements:\n    1) <span class=\"session-name\">B_ONLY_HISTORY</span> aka get_by_role(\"button\", name=\"B_ONLY_HISTORY\")\n    2) <h1 id=\"session-title\">B_ONLY_HISTORY</h1> aka get_by_role(\"heading\", name=\"B_ONLY_HISTORY\")\n    3) <div class=\"bubble user-bubble\">B_ONLY_HISTORY</div> aka get_by_label(\"聊天记录\").get_by_text(\"B_ONLY_HISTORY\")\n\nCall log:\n  - waiting for get_by_text(\"B_ONLY_HISTORY\", exact=True) to be visible\n",
+        "traceback": "Traceback (most recent call last):\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 63, in run_case\n    observed = function()\n               ^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 298, in <lambda>\n    run_case(kind, 'controlled-protocol', lambda kind=kind: controlled_case(kind))\n                                                            ^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 129, in controlled_case\n    context, page = page_context(controlled=True)\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 123, in page_context\n    page.get_by_text('B_ONLY_HISTORY', exact=True).wait_for()\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/sync_api/_generated.py\", line 20539, in wait_for\n    self._sync(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_sync_base.py\", line 115, in _sync\n    return task.result()\n           ^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_locator.py\", line 748, in wait_for\n    await self._frame.wait_for_selector(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_frame.py\", line 394, in wait_for_selector\n    await self._channel.send(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_connection.py\", line 76, in send\n    return await self._connection.wrap_api_call(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_connection.py\", line 632, in wrap_api_call\n    raise rewrite_error(error, f\"{parsed_st['apiName']}: {error}\") from None\nplaywright._impl._errors.Error: Locator.wait_for: Error: strict mode violation: get_by_text(\"B_ONLY_HISTORY\", exact=True) resolved to 3 elements:\n    1) <span class=\"session-name\">B_ONLY_HISTORY</span> aka get_by_role(\"button\", name=\"B_ONLY_HISTORY\")\n    2) <h1 id=\"session-title\">B_ONLY_HISTORY</h1> aka get_by_role(\"heading\", name=\"B_ONLY_HISTORY\")\n    3) <div class=\"bubble user-bubble\">B_ONLY_HISTORY</div> aka get_by_label(\"聊天记录\").get_by_text(\"B_ONLY_HISTORY\")\n\nCall log:\n  - waiting for get_by_text(\"B_ONLY_HISTORY\", exact=True) to be visible\n\n"
+      },
+      "assertCount": 0
+    },
+    {
+      "name": "old-post-error-cannot-pollute-new-session",
+      "group": "controlled-protocol",
+      "passed": false,
+      "observed": {
+        "error": "Locator.wait_for: Error: strict mode violation: get_by_text(\"B_ONLY_HISTORY\", exact=True) resolved to 3 elements:\n    1) <span class=\"session-name\">B_ONLY_HISTORY</span> aka get_by_role(\"button\", name=\"B_ONLY_HISTORY\")\n    2) <h1 id=\"session-title\">B_ONLY_HISTORY</h1> aka get_by_role(\"heading\", name=\"B_ONLY_HISTORY\")\n    3) <div class=\"bubble user-bubble\">B_ONLY_HISTORY</div> aka get_by_label(\"聊天记录\").get_by_text(\"B_ONLY_HISTORY\")\n\nCall log:\n  - waiting for get_by_text(\"B_ONLY_HISTORY\", exact=True) to be visible\n",
+        "traceback": "Traceback (most recent call last):\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 63, in run_case\n    observed = function()\n               ^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 298, in <lambda>\n    run_case(kind, 'controlled-protocol', lambda kind=kind: controlled_case(kind))\n                                                            ^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 129, in controlled_case\n    context, page = page_context(controlled=True)\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 123, in page_context\n    page.get_by_text('B_ONLY_HISTORY', exact=True).wait_for()\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/sync_api/_generated.py\", line 20539, in wait_for\n    self._sync(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_sync_base.py\", line 115, in _sync\n    return task.result()\n           ^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_locator.py\", line 748, in wait_for\n    await self._frame.wait_for_selector(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_frame.py\", line 394, in wait_for_selector\n    await self._channel.send(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_connection.py\", line 76, in send\n    return await self._connection.wrap_api_call(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_connection.py\", line 632, in wrap_api_call\n    raise rewrite_error(error, f\"{parsed_st['apiName']}: {error}\") from None\nplaywright._impl._errors.Error: Locator.wait_for: Error: strict mode violation: get_by_text(\"B_ONLY_HISTORY\", exact=True) resolved to 3 elements:\n    1) <span class=\"session-name\">B_ONLY_HISTORY</span> aka get_by_role(\"button\", name=\"B_ONLY_HISTORY\")\n    2) <h1 id=\"session-title\">B_ONLY_HISTORY</h1> aka get_by_role(\"heading\", name=\"B_ONLY_HISTORY\")\n    3) <div class=\"bubble user-bubble\">B_ONLY_HISTORY</div> aka get_by_label(\"聊天记录\").get_by_text(\"B_ONLY_HISTORY\")\n\nCall log:\n  - waiting for get_by_text(\"B_ONLY_HISTORY\", exact=True) to be visible\n\n"
+      },
+      "assertCount": 0
+    },
+    {
+      "name": "ime-enter-does-not-send-and-enter-sends-once",
+      "group": "controlled-protocol",
+      "passed": false,
+      "observed": {
+        "error": "Locator.wait_for: Error: strict mode violation: get_by_text(\"B_ONLY_HISTORY\", exact=True) resolved to 3 elements:\n    1) <span class=\"session-name\">B_ONLY_HISTORY</span> aka get_by_role(\"button\", name=\"B_ONLY_HISTORY\")\n    2) <h1 id=\"session-title\">B_ONLY_HISTORY</h1> aka get_by_role(\"heading\", name=\"B_ONLY_HISTORY\")\n    3) <div class=\"bubble user-bubble\">B_ONLY_HISTORY</div> aka get_by_label(\"聊天记录\").get_by_text(\"B_ONLY_HISTORY\")\n\nCall log:\n  - waiting for get_by_text(\"B_ONLY_HISTORY\", exact=True) to be visible\n",
+        "traceback": "Traceback (most recent call last):\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 63, in run_case\n    observed = function()\n               ^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 298, in <lambda>\n    run_case(kind, 'controlled-protocol', lambda kind=kind: controlled_case(kind))\n                                                            ^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 129, in controlled_case\n    context, page = page_context(controlled=True)\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 123, in page_context\n    page.get_by_text('B_ONLY_HISTORY', exact=True).wait_for()\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/sync_api/_generated.py\", line 20539, in wait_for\n    self._sync(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_sync_base.py\", line 115, in _sync\n    return task.result()\n           ^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_locator.py\", line 748, in wait_for\n    await self._frame.wait_for_selector(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_frame.py\", line 394, in wait_for_selector\n    await self._channel.send(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_connection.py\", line 76, in send\n    return await self._connection.wrap_api_call(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_connection.py\", line 632, in wrap_api_call\n    raise rewrite_error(error, f\"{parsed_st['apiName']}: {error}\") from None\nplaywright._impl._errors.Error: Locator.wait_for: Error: strict mode violation: get_by_text(\"B_ONLY_HISTORY\", exact=True) resolved to 3 elements:\n    1) <span class=\"session-name\">B_ONLY_HISTORY</span> aka get_by_role(\"button\", name=\"B_ONLY_HISTORY\")\n    2) <h1 id=\"session-title\">B_ONLY_HISTORY</h1> aka get_by_role(\"heading\", name=\"B_ONLY_HISTORY\")\n    3) <div class=\"bubble user-bubble\">B_ONLY_HISTORY</div> aka get_by_label(\"聊天记录\").get_by_text(\"B_ONLY_HISTORY\")\n\nCall log:\n  - waiting for get_by_text(\"B_ONLY_HISTORY\", exact=True) to be visible\n\n"
+      },
+      "assertCount": 0
+    },
+    {
+      "name": "history-and-live-id-replay-does-not-duplicate",
+      "group": "controlled-protocol",
+      "passed": false,
+      "observed": {
+        "error": "Locator.wait_for: Error: strict mode violation: get_by_text(\"B_ONLY_HISTORY\", exact=True) resolved to 3 elements:\n    1) <span class=\"session-name\">B_ONLY_HISTORY</span> aka get_by_role(\"button\", name=\"B_ONLY_HISTORY\")\n    2) <h1 id=\"session-title\">B_ONLY_HISTORY</h1> aka get_by_role(\"heading\", name=\"B_ONLY_HISTORY\")\n    3) <div class=\"bubble user-bubble\">B_ONLY_HISTORY</div> aka get_by_label(\"聊天记录\").get_by_text(\"B_ONLY_HISTORY\")\n\nCall log:\n  - waiting for get_by_text(\"B_ONLY_HISTORY\", exact=True) to be visible\n",
+        "traceback": "Traceback (most recent call last):\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 63, in run_case\n    observed = function()\n               ^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 298, in <lambda>\n    run_case(kind, 'controlled-protocol', lambda kind=kind: controlled_case(kind))\n                                                            ^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 129, in controlled_case\n    context, page = page_context(controlled=True)\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 123, in page_context\n    page.get_by_text('B_ONLY_HISTORY', exact=True).wait_for()\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/sync_api/_generated.py\", line 20539, in wait_for\n    self._sync(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_sync_base.py\", line 115, in _sync\n    return task.result()\n           ^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_locator.py\", line 748, in wait_for\n    await self._frame.wait_for_selector(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_frame.py\", line 394, in wait_for_selector\n    await self._channel.send(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_connection.py\", line 76, in send\n    return await self._connection.wrap_api_call(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_connection.py\", line 632, in wrap_api_call\n    raise rewrite_error(error, f\"{parsed_st['apiName']}: {error}\") from None\nplaywright._impl._errors.Error: Locator.wait_for: Error: strict mode violation: get_by_text(\"B_ONLY_HISTORY\", exact=True) resolved to 3 elements:\n    1) <span class=\"session-name\">B_ONLY_HISTORY</span> aka get_by_role(\"button\", name=\"B_ONLY_HISTORY\")\n    2) <h1 id=\"session-title\">B_ONLY_HISTORY</h1> aka get_by_role(\"heading\", name=\"B_ONLY_HISTORY\")\n    3) <div class=\"bubble user-bubble\">B_ONLY_HISTORY</div> aka get_by_label(\"聊天记录\").get_by_text(\"B_ONLY_HISTORY\")\n\nCall log:\n  - waiting for get_by_text(\"B_ONLY_HISTORY\", exact=True) to be visible\n\n"
+      },
+      "assertCount": 0
+    },
+    {
+      "name": "history-before-live-id-replay-does-not-duplicate",
+      "group": "controlled-protocol",
+      "passed": false,
+      "observed": {
+        "error": "Locator.wait_for: Error: strict mode violation: get_by_text(\"B_ONLY_HISTORY\", exact=True) resolved to 3 elements:\n    1) <span class=\"session-name\">B_ONLY_HISTORY</span> aka get_by_role(\"button\", name=\"B_ONLY_HISTORY\")\n    2) <h1 id=\"session-title\">B_ONLY_HISTORY</h1> aka get_by_role(\"heading\", name=\"B_ONLY_HISTORY\")\n    3) <div class=\"bubble user-bubble\">B_ONLY_HISTORY</div> aka get_by_label(\"聊天记录\").get_by_text(\"B_ONLY_HISTORY\")\n\nCall log:\n  - waiting for get_by_text(\"B_ONLY_HISTORY\", exact=True) to be visible\n",
+        "traceback": "Traceback (most recent call last):\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 63, in run_case\n    observed = function()\n               ^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 298, in <lambda>\n    run_case(kind, 'controlled-protocol', lambda kind=kind: controlled_case(kind))\n                                                            ^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 129, in controlled_case\n    context, page = page_context(controlled=True)\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 123, in page_context\n    page.get_by_text('B_ONLY_HISTORY', exact=True).wait_for()\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/sync_api/_generated.py\", line 20539, in wait_for\n    self._sync(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_sync_base.py\", line 115, in _sync\n    return task.result()\n           ^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_locator.py\", line 748, in wait_for\n    await self._frame.wait_for_selector(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_frame.py\", line 394, in wait_for_selector\n    await self._channel.send(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_connection.py\", line 76, in send\n    return await self._connection.wrap_api_call(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_connection.py\", line 632, in wrap_api_call\n    raise rewrite_error(error, f\"{parsed_st['apiName']}: {error}\") from None\nplaywright._impl._errors.Error: Locator.wait_for: Error: strict mode violation: get_by_text(\"B_ONLY_HISTORY\", exact=True) resolved to 3 elements:\n    1) <span class=\"session-name\">B_ONLY_HISTORY</span> aka get_by_role(\"button\", name=\"B_ONLY_HISTORY\")\n    2) <h1 id=\"session-title\">B_ONLY_HISTORY</h1> aka get_by_role(\"heading\", name=\"B_ONLY_HISTORY\")\n    3) <div class=\"bubble user-bubble\">B_ONLY_HISTORY</div> aka get_by_label(\"聊天记录\").get_by_text(\"B_ONLY_HISTORY\")\n\nCall log:\n  - waiting for get_by_text(\"B_ONLY_HISTORY\", exact=True) to be visible\n\n"
+      },
+      "assertCount": 0
+    },
+    {
+      "name": "hello-handshake-precedes-history-and-preserves-buffered-message",
+      "group": "controlled-protocol",
+      "passed": false,
+      "observed": {
+        "error": "Locator.wait_for: Error: strict mode violation: get_by_text(\"B_ONLY_HISTORY\", exact=True) resolved to 3 elements:\n    1) <span class=\"session-name\">B_ONLY_HISTORY</span> aka get_by_role(\"button\", name=\"B_ONLY_HISTORY\")\n    2) <h1 id=\"session-title\">B_ONLY_HISTORY</h1> aka get_by_role(\"heading\", name=\"B_ONLY_HISTORY\")\n    3) <div class=\"bubble user-bubble\">B_ONLY_HISTORY</div> aka get_by_label(\"聊天记录\").get_by_text(\"B_ONLY_HISTORY\")\n\nCall log:\n  - waiting for get_by_text(\"B_ONLY_HISTORY\", exact=True) to be visible\n",
+        "traceback": "Traceback (most recent call last):\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 63, in run_case\n    observed = function()\n               ^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 298, in <lambda>\n    run_case(kind, 'controlled-protocol', lambda kind=kind: controlled_case(kind))\n                                                            ^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 129, in controlled_case\n    context, page = page_context(controlled=True)\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 123, in page_context\n    page.get_by_text('B_ONLY_HISTORY', exact=True).wait_for()\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/sync_api/_generated.py\", line 20539, in wait_for\n    self._sync(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_sync_base.py\", line 115, in _sync\n    return task.result()\n           ^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_locator.py\", line 748, in wait_for\n    await self._frame.wait_for_selector(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_frame.py\", line 394, in wait_for_selector\n    await self._channel.send(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_connection.py\", line 76, in send\n    return await self._connection.wrap_api_call(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_connection.py\", line 632, in wrap_api_call\n    raise rewrite_error(error, f\"{parsed_st['apiName']}: {error}\") from None\nplaywright._impl._errors.Error: Locator.wait_for: Error: strict mode violation: get_by_text(\"B_ONLY_HISTORY\", exact=True) resolved to 3 elements:\n    1) <span class=\"session-name\">B_ONLY_HISTORY</span> aka get_by_role(\"button\", name=\"B_ONLY_HISTORY\")\n    2) <h1 id=\"session-title\">B_ONLY_HISTORY</h1> aka get_by_role(\"heading\", name=\"B_ONLY_HISTORY\")\n    3) <div class=\"bubble user-bubble\">B_ONLY_HISTORY</div> aka get_by_label(\"聊天记录\").get_by_text(\"B_ONLY_HISTORY\")\n\nCall log:\n  - waiting for get_by_text(\"B_ONLY_HISTORY\", exact=True) to be visible\n\n"
+      },
+      "assertCount": 0
+    },
+    {
+      "name": "historical-and-expired-approvals-are-readonly",
+      "group": "controlled-protocol",
+      "passed": false,
+      "observed": {
+        "error": "Locator.wait_for: Error: strict mode violation: get_by_text(\"B_ONLY_HISTORY\", exact=True) resolved to 3 elements:\n    1) <span class=\"session-name\">B_ONLY_HISTORY</span> aka get_by_role(\"button\", name=\"B_ONLY_HISTORY\")\n    2) <h1 id=\"session-title\">B_ONLY_HISTORY</h1> aka get_by_role(\"heading\", name=\"B_ONLY_HISTORY\")\n    3) <div class=\"bubble user-bubble\">B_ONLY_HISTORY</div> aka get_by_label(\"聊天记录\").get_by_text(\"B_ONLY_HISTORY\")\n\nCall log:\n  - waiting for get_by_text(\"B_ONLY_HISTORY\", exact=True) to be visible\n",
+        "traceback": "Traceback (most recent call last):\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 63, in run_case\n    observed = function()\n               ^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 298, in <lambda>\n    run_case(kind, 'controlled-protocol', lambda kind=kind: controlled_case(kind))\n                                                            ^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 129, in controlled_case\n    context, page = page_context(controlled=True)\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 123, in page_context\n    page.get_by_text('B_ONLY_HISTORY', exact=True).wait_for()\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/sync_api/_generated.py\", line 20539, in wait_for\n    self._sync(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_sync_base.py\", line 115, in _sync\n    return task.result()\n           ^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_locator.py\", line 748, in wait_for\n    await self._frame.wait_for_selector(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_frame.py\", line 394, in wait_for_selector\n    await self._channel.send(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_connection.py\", line 76, in send\n    return await self._connection.wrap_api_call(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_connection.py\", line 632, in wrap_api_call\n    raise rewrite_error(error, f\"{parsed_st['apiName']}: {error}\") from None\nplaywright._impl._errors.Error: Locator.wait_for: Error: strict mode violation: get_by_text(\"B_ONLY_HISTORY\", exact=True) resolved to 3 elements:\n    1) <span class=\"session-name\">B_ONLY_HISTORY</span> aka get_by_role(\"button\", name=\"B_ONLY_HISTORY\")\n    2) <h1 id=\"session-title\">B_ONLY_HISTORY</h1> aka get_by_role(\"heading\", name=\"B_ONLY_HISTORY\")\n    3) <div class=\"bubble user-bubble\">B_ONLY_HISTORY</div> aka get_by_label(\"聊天记录\").get_by_text(\"B_ONLY_HISTORY\")\n\nCall log:\n  - waiting for get_by_text(\"B_ONLY_HISTORY\", exact=True) to be visible\n\n"
+      },
+      "assertCount": 0
+    },
+    {
+      "name": "resolved-approval-replay-is-idempotent",
+      "group": "controlled-protocol",
+      "passed": false,
+      "observed": {
+        "error": "Locator.wait_for: Error: strict mode violation: get_by_text(\"B_ONLY_HISTORY\", exact=True) resolved to 3 elements:\n    1) <span class=\"session-name\">B_ONLY_HISTORY</span> aka get_by_role(\"button\", name=\"B_ONLY_HISTORY\")\n    2) <h1 id=\"session-title\">B_ONLY_HISTORY</h1> aka get_by_role(\"heading\", name=\"B_ONLY_HISTORY\")\n    3) <div class=\"bubble user-bubble\">B_ONLY_HISTORY</div> aka get_by_label(\"聊天记录\").get_by_text(\"B_ONLY_HISTORY\")\n\nCall log:\n  - waiting for get_by_text(\"B_ONLY_HISTORY\", exact=True) to be visible\n",
+        "traceback": "Traceback (most recent call last):\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 63, in run_case\n    observed = function()\n               ^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 298, in <lambda>\n    run_case(kind, 'controlled-protocol', lambda kind=kind: controlled_case(kind))\n                                                            ^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 129, in controlled_case\n    context, page = page_context(controlled=True)\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 123, in page_context\n    page.get_by_text('B_ONLY_HISTORY', exact=True).wait_for()\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/sync_api/_generated.py\", line 20539, in wait_for\n    self._sync(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_sync_base.py\", line 115, in _sync\n    return task.result()\n           ^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_locator.py\", line 748, in wait_for\n    await self._frame.wait_for_selector(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_frame.py\", line 394, in wait_for_selector\n    await self._channel.send(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_connection.py\", line 76, in send\n    return await self._connection.wrap_api_call(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_connection.py\", line 632, in wrap_api_call\n    raise rewrite_error(error, f\"{parsed_st['apiName']}: {error}\") from None\nplaywright._impl._errors.Error: Locator.wait_for: Error: strict mode violation: get_by_text(\"B_ONLY_HISTORY\", exact=True) resolved to 3 elements:\n    1) <span class=\"session-name\">B_ONLY_HISTORY</span> aka get_by_role(\"button\", name=\"B_ONLY_HISTORY\")\n    2) <h1 id=\"session-title\">B_ONLY_HISTORY</h1> aka get_by_role(\"heading\", name=\"B_ONLY_HISTORY\")\n    3) <div class=\"bubble user-bubble\">B_ONLY_HISTORY</div> aka get_by_label(\"聊天记录\").get_by_text(\"B_ONLY_HISTORY\")\n\nCall log:\n  - waiting for get_by_text(\"B_ONLY_HISTORY\", exact=True) to be visible\n\n"
+      },
+      "assertCount": 0
+    },
+    {
+      "name": "reconnect-hello-merges-missed-history-without-duplicates",
+      "group": "controlled-protocol",
+      "passed": false,
+      "observed": {
+        "error": "Locator.wait_for: Error: strict mode violation: get_by_text(\"B_ONLY_HISTORY\", exact=True) resolved to 3 elements:\n    1) <span class=\"session-name\">B_ONLY_HISTORY</span> aka get_by_role(\"button\", name=\"B_ONLY_HISTORY\")\n    2) <h1 id=\"session-title\">B_ONLY_HISTORY</h1> aka get_by_role(\"heading\", name=\"B_ONLY_HISTORY\")\n    3) <div class=\"bubble user-bubble\">B_ONLY_HISTORY</div> aka get_by_label(\"聊天记录\").get_by_text(\"B_ONLY_HISTORY\")\n\nCall log:\n  - waiting for get_by_text(\"B_ONLY_HISTORY\", exact=True) to be visible\n",
+        "traceback": "Traceback (most recent call last):\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 63, in run_case\n    observed = function()\n               ^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 298, in <lambda>\n    run_case(kind, 'controlled-protocol', lambda kind=kind: controlled_case(kind))\n                                                            ^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 129, in controlled_case\n    context, page = page_context(controlled=True)\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 123, in page_context\n    page.get_by_text('B_ONLY_HISTORY', exact=True).wait_for()\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/sync_api/_generated.py\", line 20539, in wait_for\n    self._sync(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_sync_base.py\", line 115, in _sync\n    return task.result()\n           ^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_locator.py\", line 748, in wait_for\n    await self._frame.wait_for_selector(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_frame.py\", line 394, in wait_for_selector\n    await self._channel.send(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_connection.py\", line 76, in send\n    return await self._connection.wrap_api_call(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_connection.py\", line 632, in wrap_api_call\n    raise rewrite_error(error, f\"{parsed_st['apiName']}: {error}\") from None\nplaywright._impl._errors.Error: Locator.wait_for: Error: strict mode violation: get_by_text(\"B_ONLY_HISTORY\", exact=True) resolved to 3 elements:\n    1) <span class=\"session-name\">B_ONLY_HISTORY</span> aka get_by_role(\"button\", name=\"B_ONLY_HISTORY\")\n    2) <h1 id=\"session-title\">B_ONLY_HISTORY</h1> aka get_by_role(\"heading\", name=\"B_ONLY_HISTORY\")\n    3) <div class=\"bubble user-bubble\">B_ONLY_HISTORY</div> aka get_by_label(\"聊天记录\").get_by_text(\"B_ONLY_HISTORY\")\n\nCall log:\n  - waiting for get_by_text(\"B_ONLY_HISTORY\", exact=True) to be visible\n\n"
+      },
+      "assertCount": 0
+    },
+    {
+      "name": "desktop-1440x900-layout",
+      "group": "production-stack",
+      "passed": true,
+      "observed": {
+        "viewport": 1440,
+        "document": 1440
+      },
+      "assertCount": 2
+    },
+    {
+      "name": "vendored-assets-local-200-without-cdn",
+      "group": "production-stack",
+      "passed": true,
+      "observed": {
+        "localHttpStatuses": {
+          "/": 200,
+          "/app.js": 200,
+          "/style.css": 200,
+          "/vendor/deepseek/LICENSE": 200,
+          "/vendor/deepseek/source-manifest.json": 200,
+          "/vendor/deepseek/base.css": 200,
+          "/vendor/deepseek/corner-shape.css": 200,
+          "/vendor/deepseek/design-platform.css": 200,
+          "/vendor/deepseek/focus.css": 200,
+          "/vendor/deepseek/scrollbar.css": 200,
+          "/vendor/deepseek/gradient-shadow-text.css": 200
+        },
+        "loadedStylesheets": [
+          "/vendor/deepseek/base.css",
+          "/vendor/deepseek/design-platform.css",
+          "/vendor/deepseek/gradient-shadow-text.css",
+          "/vendor/deepseek/scrollbar.css",
+          "/vendor/deepseek/focus.css",
+          "/vendor/deepseek/corner-shape.css",
+          "/style.css"
+        ],
+        "externalResourceCount": 0
+      },
+      "assertCount": 13
+    },
+    {
+      "name": "theme-and-sidebar",
+      "group": "production-stack",
+      "passed": false,
+      "observed": {
+        "error": "sidebar still occupies visible layout: {'x': 0, 'y': 0, 'width': 25, 'height': 900}",
+        "traceback": "Traceback (most recent call last):\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 63, in run_case\n    observed = function()\n               ^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 352, in theme_and_sidebar\n    expect(collapsed_box is None or collapsed_box['width'] < 5 or collapsed_box['x'] + collapsed_box['width'] <= 1, f'sidebar still occupies visible layout: {collapsed_box}')\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 57, in expect\n    raise AssertionError(message)\nAssertionError: sidebar still occupies visible layout: {'x': 0, 'y': 0, 'width': 25, 'height': 900}\n"
+      },
+      "assertCount": 3
+    },
+    {
+      "name": "two-production-replies-and-verification",
+      "group": "production-stack",
+      "passed": true,
+      "observed": {
+        "completedTurns": 2,
+        "verifiedTurns": 2,
+        "assistantTexts": [
+          "hHarnessHARNESS_REPLY:BROWSER_FIRST复制回复",
+          "hHarnessHARNESS_REPLY:BROWSER_SECOND复制回复"
+        ]
+      },
+      "assertCount": 2
+    },
+    {
+      "name": "refresh-restores-production-history",
+      "group": "production-stack",
+      "passed": true,
+      "observed": {
+        "senderRetained": "ad81e0c7-e9ea-48ad-b4e6-ae6f0adcd9ec",
+        "firstReplyCount": 1,
+        "secondReplyCount": 1
+      },
+      "assertCount": 2
+    },
+    {
+      "name": "copy-production-assistant-reply",
+      "group": "production-stack",
+      "passed": true,
+      "observed": {
+        "clipboardText": "HARNESS_REPLY:BROWSER_FIRST",
+        "source": "actual browser clipboard after UI click"
+      },
+      "assertCount": 1
+    },
+    {
+      "name": "real-approval-allow-write",
+      "group": "production-stack",
+      "passed": true,
+      "observed": {
+        "approvalId": "approval_91167aaf-cce8-4f32-9a2b-a9661dddac65",
+        "fileBytes": 21,
+        "toolName": "write_file"
+      },
+      "assertCount": 4
+    },
+    {
+      "name": "real-approval-deny-write",
+      "group": "production-stack",
+      "passed": true,
+      "observed": {
+        "approvalId": "approval_e922536e-e7c3-4ff6-a9c7-d48c33b55517",
+        "fileAbsent": true,
+        "foreignDeliveryAckStatus": 200,
+        "foreignPreservedPending": true,
+        "foreignHumanEventCount": 0
+      },
+      "assertCount": 4
+    },
+    {
+      "name": "real-sandbox-denies-approved-outside-write",
+      "group": "production-stack",
+      "passed": true,
+      "observed": {
+        "approvalId": "approval_c60538f2-c40f-45ec-9b27-cd4eb2d03a68",
+        "outsideFileAbsent": true,
+        "sandboxEvents": [
+          {
+            "id": "event_73ed7993-c780-4d03-a506-792446653795",
+            "sessionId": "session_40e863a7-8c34-4f97-9a56-45abfd515dcd",
+            "turnId": "turn_979322dc-2d4e-4a1c-8a41-81293824f431",
+            "sequence": 92,
+            "timestamp": 1791080922386,
+            "type": "tool.failed",
+            "payload": {
+              "toolCallId": "browser-call-7",
+              "tool": "write_file",
+              "error": {
+                "code": "SANDBOX_FILESYSTEM_DENIED",
+                "message": "sandbox denied: path outside workspace: /workspace/harness-agent/.ci/web-dsh-20261004/browser-candidate-a987803/fixture/outside.txt",
+                "retryable": false,
+                "safeToRetry": false
+              },
+              "durationMs": 66
+            },
+            "schemaVersion": 1
+          }
+        ]
+      },
+      "assertCount": 2
+    },
+    {
+      "name": "cancel-real-blocked-turn",
+      "group": "production-stack",
+      "passed": true,
+      "observed": {
+        "cancelledTurns": 1,
+        "providerAbortObserved": true
+      },
+      "assertCount": 1
+    },
+    {
+      "name": "real-offline-completion-reconnect-restores-reply",
+      "group": "production-stack",
+      "passed": false,
+      "observed": {
+        "error": "offline browser received reply before reconnect",
+        "traceback": "Traceback (most recent call last):\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 63, in run_case\n    observed = function()\n               ^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 454, in reconnect_production\n    expect('HARNESS_REPLY:[disconnect-complete]' not in page.locator('#messages').inner_text(), 'offline browser received reply before reconnect')\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 57, in expect\n    raise AssertionError(message)\nAssertionError: offline browser received reply before reconnect\n"
+      },
+      "assertCount": 1
+    },
+    {
+      "name": "new-session-isolation",
+      "group": "production-stack",
+      "passed": false,
+      "observed": {
+        "error": "Locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator(\"#new-session-btn\")\n    - locator resolved to <button id=\"new-session-btn\">…</button>\n  - attempting click action\n    2 × waiting for element to be visible, enabled and stable\n      - element is not visible\n    - retrying click action\n    - waiting 20ms\n    2 × waiting for element to be visible, enabled and stable\n      - element is not visible\n    - retrying click action\n      - waiting 100ms\n    58 × waiting for element to be visible, enabled and stable\n       - element is not visible\n     - retrying click action\n       - waiting 500ms\n",
+        "traceback": "Traceback (most recent call last):\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 63, in run_case\n    observed = function()\n               ^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 464, in new_session\n    page.locator('#new-session-btn').click()\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/sync_api/_generated.py\", line 17876, in click\n    self._sync(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_sync_base.py\", line 115, in _sync\n    return task.result()\n           ^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_locator.py\", line 165, in click\n    return await self._frame._click(self._selector, strict=True, **params)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_frame.py\", line 593, in _click\n    await self._channel.send(\"click\", self._timeout, locals_to_params(locals()))\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_connection.py\", line 76, in send\n    return await self._connection.wrap_api_call(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_connection.py\", line 632, in wrap_api_call\n    raise rewrite_error(error, f\"{parsed_st['apiName']}: {error}\") from None\nplaywright._impl._errors.TimeoutError: Locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator(\"#new-session-btn\")\n    - locator resolved to <button id=\"new-session-btn\">…</button>\n  - attempting click action\n    2 × waiting for element to be visible, enabled and stable\n      - element is not visible\n    - retrying click action\n    - waiting 20ms\n    2 × waiting for element to be visible, enabled and stable\n      - element is not visible\n    - retrying click action\n      - waiting 100ms\n    58 × waiting for element to be visible, enabled and stable\n       - element is not visible\n     - retrying click action\n       - waiting 500ms\n\n"
+      },
+      "assertCount": 0
+    },
+    {
+      "name": "mobile-390x844-layout-and-drawer",
+      "group": "production-stack",
+      "passed": true,
+      "observed": {
+        "viewport": 390,
+        "document": 390
+      },
+      "assertCount": 3
+    },
+    {
+      "name": "real-verification-exit7-prevents-completion",
+      "group": "production-stack",
+      "passed": false,
+      "observed": {
+        "error": "Locator.wait_for: Timeout 15000ms exceeded.\nCall log:\n  - waiting for locator(\".approval-card:not(.resolved) .allow-btn\") to be visible\n",
+        "traceback": "Traceback (most recent call last):\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 63, in run_case\n    observed = function()\n               ^^^^^^^^^^\n  File \"/workspace/harness-agent/scripts/research/web-dsh-20261004/browser.py\", line 495, in verification_failure\n    page.locator('.approval-card:not(.resolved) .allow-btn').wait_for(timeout=15000)\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/sync_api/_generated.py\", line 20539, in wait_for\n    self._sync(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_sync_base.py\", line 115, in _sync\n    return task.result()\n           ^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_locator.py\", line 748, in wait_for\n    await self._frame.wait_for_selector(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_frame.py\", line 394, in wait_for_selector\n    await self._channel.send(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_connection.py\", line 76, in send\n    return await self._connection.wrap_api_call(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_connection.py\", line 632, in wrap_api_call\n    raise rewrite_error(error, f\"{parsed_st['apiName']}: {error}\") from None\nplaywright._impl._errors.TimeoutError: Locator.wait_for: Timeout 15000ms exceeded.\nCall log:\n  - waiting for locator(\".approval-card:not(.resolved) .allow-btn\") to be visible\n\n"
+      },
+      "assertCount": 0
+    }
+  ]
+}

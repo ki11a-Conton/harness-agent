@@ -1,0 +1,24 @@
+{
+  "phase": "RED-delimiter-collision-before-tuple-key",
+  "command": [
+    "corepack",
+    "pnpm",
+    "exec",
+    "vitest",
+    "run",
+    "packages/gateway/src/gateway.test.ts",
+    "-t",
+    "U3 rejects delimiter-colliding",
+    "--reporter=default",
+    "--reporter=json",
+    "--outputFile=/workspace/harness-agent/.ci/web-dsh-20261004/backend/delimiter-red.json"
+  ],
+  "cwd": "/workspace/harness-agent",
+  "startedAt": "2026-10-04T02:17:27.848716+00:00",
+  "sourceHashes": {
+    "packages/gateway/src/gateway.ts": "25fe6f2b01b82913a51f1b971249cb7bef03e1809caf3aff2d1c1fde1c9aa96d",
+    "packages/gateway/src/gateway.test.ts": "cef806ea44c933eb84a9a0ae70f62c552890770f3199ffc44bebe05375ca8637"
+  },
+  "exitCode": 1,
+  "finishedAt": "2026-10-04T02:17:29.352643+00:00"
+}

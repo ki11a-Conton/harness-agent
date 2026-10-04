@@ -1,0 +1,22 @@
+{
+  "phase": "directed-typecheck",
+  "command": [
+    "corepack",
+    "pnpm",
+    "exec",
+    "tsc",
+    "-b",
+    "packages/gateway",
+    "apps/web"
+  ],
+  "cwd": "/workspace/harness-agent",
+  "startedAt": "2026-10-04T02:13:35.499108+00:00",
+  "sourceHashes": {
+    "packages/gateway/src/gateway.ts": "25fe6f2b01b82913a51f1b971249cb7bef03e1809caf3aff2d1c1fde1c9aa96d",
+    "packages/gateway/src/gateway.test.ts": "dca52a334b174af984cab315a0992741222d72e7b83570a4e73f513542d14825",
+    "apps/web/src/server.test.ts": "bef0057e9061e618103dd7e9da3ec97ff8910224b8146b61dbf59e79610164ac",
+    "apps/web/src/harness.integration.test.ts": "36edaf416dfb9280483657f9f43dc34b10a4617b2c17b231472a59be5e5273a9"
+  },
+  "exitCode": 0,
+  "finishedAt": "2026-10-04T02:13:36.245525+00:00"
+}

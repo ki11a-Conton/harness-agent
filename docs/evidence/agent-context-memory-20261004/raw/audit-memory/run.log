@@ -1,0 +1,32 @@
+{
+  "head": "17aa6c7471faf8bdec020b45bfe7b9bb45470131",
+  "store": {
+    "total": 30,
+    "passed": 21,
+    "failed": [
+      "jsonl:structured-when",
+      "jsonl:structured-do",
+      "jsonl:structured-avoid",
+      "sqlite:english-substring",
+      "sqlite:chinese-substring",
+      "sqlite:mixed-substring",
+      "sqlite:structured-when",
+      "sqlite:structured-do",
+      "sqlite:structured-avoid"
+    ]
+  },
+  "harness": {
+    "total": 12,
+    "passed": 6,
+    "failed": [
+      "jsonl:structured-when",
+      "jsonl:structured-do",
+      "sqlite:chinese-substring",
+      "sqlite:mixed-substring",
+      "sqlite:structured-when",
+      "sqlite:structured-do"
+    ],
+    "scriptedGenerateCalls": 12
+  },
+  "paidCalls": 0
+}

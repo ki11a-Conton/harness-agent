@@ -1,0 +1,331 @@
+{
+  "sourceHead": "17aa6c7471faf8bdec020b45bfe7b9bb45470131",
+  "status": "AUDIT_COMPLETE",
+  "cases": [
+    {
+      "name": "zero",
+      "cap": 0,
+      "sourceBytes": 12,
+      "outputBytes": 31,
+      "readCount": 1,
+      "readReturnedBytes": 12,
+      "overrun": true
+    },
+    {
+      "name": "tiny-one-byte",
+      "cap": 1,
+      "sourceBytes": 12,
+      "outputBytes": 31,
+      "readCount": 1,
+      "readReturnedBytes": 12,
+      "overrun": true
+    },
+    {
+      "name": "tiny-four-byte",
+      "cap": 4,
+      "sourceBytes": 16,
+      "outputBytes": 42,
+      "readCount": 1,
+      "readReturnedBytes": 16,
+      "overrun": true
+    },
+    {
+      "name": "ascii-single-line",
+      "cap": 100,
+      "sourceBytes": 1000,
+      "outputBytes": 1028,
+      "readCount": 1,
+      "readReturnedBytes": 1000,
+      "overrun": true
+    },
+    {
+      "name": "utf8-single-line",
+      "cap": 99,
+      "sourceBytes": 1000,
+      "outputBytes": 1028,
+      "readCount": 1,
+      "readReturnedBytes": 1000,
+      "overrun": true
+    },
+    {
+      "name": "multi-line",
+      "cap": 100,
+      "sourceBytes": 800,
+      "outputBytes": 122,
+      "readCount": 1,
+      "readReturnedBytes": 800,
+      "overrun": true
+    },
+    {
+      "name": "exact-cap",
+      "cap": 13,
+      "sourceBytes": 13,
+      "outputBytes": 13,
+      "readCount": 1,
+      "readReturnedBytes": 13,
+      "overrun": false
+    },
+    {
+      "name": "large-one-line",
+      "cap": 50000,
+      "sourceBytes": 16777216,
+      "outputBytes": 16777248,
+      "readCount": 1,
+      "readReturnedBytes": 16777216,
+      "overrun": true
+    },
+    {
+      "name": "large-many-lines",
+      "cap": 50000,
+      "sourceBytes": 16777312,
+      "outputBytes": 50026,
+      "readCount": 1,
+      "readReturnedBytes": 16777312,
+      "overrun": true
+    },
+    {
+      "name": "cwd-file-symlink",
+      "cap": 100,
+      "sourceBytes": 28,
+      "outputBytes": 28,
+      "readCount": 1,
+      "readReturnedBytes": 28,
+      "overrun": false
+    },
+    {
+      "name": "nan-budget",
+      "cap": null,
+      "sourceBytes": 3,
+      "outputBytes": 3,
+      "readCount": 1,
+      "readReturnedBytes": 3,
+      "overrun": false
+    },
+    {
+      "name": "negative-budget",
+      "cap": -1,
+      "sourceBytes": 3,
+      "outputBytes": 28,
+      "readCount": 1,
+      "readReturnedBytes": 3,
+      "overrun": true
+    }
+  ],
+  "wire": [
+    {
+      "kind": "pipeline",
+      "mode": "allowed",
+      "discovered": [
+        "/workspace/harness-agent/.ci/agent-context-memory-20261004/audit-context/fixtures/pipeline-allowed/AGENTS.md"
+      ],
+      "admitted": [
+        "/workspace/harness-agent/.ci/agent-context-memory-20261004/audit-context/fixtures/pipeline-allowed/AGENTS.md"
+      ],
+      "injected": [],
+      "report": {
+        "used": 9,
+        "available": 9991,
+        "dropped": 0,
+        "compressed": 0,
+        "messagesTokens": 0
+      }
+    },
+    {
+      "kind": "pipeline",
+      "mode": "injection",
+      "discovered": [
+        "/workspace/harness-agent/.ci/agent-context-memory-20261004/audit-context/fixtures/pipeline-injection/AGENTS.md"
+      ],
+      "admitted": [],
+      "injected": [
+        {
+          "id": "/workspace/harness-agent/.ci/agent-context-memory-20261004/audit-context/fixtures/pipeline-injection/AGENTS.md",
+          "source": "project",
+          "reasons": [
+            "dismiss-previous-instructions",
+            "dismiss-all-instructions",
+            "override-own-instructions",
+            "extract-system-prompt"
+          ]
+        }
+      ],
+      "report": {
+        "used": 3,
+        "available": 9997,
+        "dropped": 0,
+        "compressed": 0,
+        "messagesTokens": 0
+      }
+    },
+    {
+      "kind": "pipeline",
+      "mode": "budget",
+      "discovered": [
+        "/workspace/harness-agent/.ci/agent-context-memory-20261004/audit-context/fixtures/pipeline-budget/AGENTS.md"
+      ],
+      "admitted": [],
+      "injected": [],
+      "report": {
+        "used": 3,
+        "available": 97,
+        "dropped": 1,
+        "compressed": 1,
+        "messagesTokens": 0
+      }
+    },
+    {
+      "kind": "harness",
+      "mode": "allowed",
+      "outcomes": [
+        {
+          "status": "completed"
+        },
+        {
+          "status": "completed"
+        }
+      ],
+      "requests": 2,
+      "bodiesVisible": [
+        true,
+        true
+      ],
+      "instructionFingerprints": [
+        "8731f1d49c38daf0508d12189155f1e2f9d460528582d468805264087a140904",
+        "8213500b28474b6016a401cce0bda73b83c802824cdbdbb80cdf8c5154ac6235"
+      ],
+      "fingerprintChanged": true,
+      "discovered": [
+        {
+          "path": "/workspace/harness-agent/.ci/agent-context-memory-20261004/audit-context/fixtures/harness-allowed/AGENTS.md",
+          "scope": "cwd",
+          "sizeBytes": 18,
+          "truncated": false
+        },
+        {
+          "path": "/workspace/harness-agent/.ci/agent-context-memory-20261004/audit-context/fixtures/harness-allowed/AGENTS.md",
+          "scope": "cwd",
+          "sizeBytes": 17,
+          "truncated": false
+        }
+      ],
+      "denied": [],
+      "dropped": []
+    },
+    {
+      "kind": "harness",
+      "mode": "injection",
+      "outcomes": [
+        {
+          "status": "completed"
+        },
+        {
+          "status": "completed"
+        }
+      ],
+      "requests": 2,
+      "bodiesVisible": [
+        false,
+        false
+      ],
+      "instructionFingerprints": [
+        "2d035f6f166389bd669773dec906299221d0621d227f021fab6b7e4debe74bde",
+        "b888f8c614f0419ed99fceba96993bca2e1519d0908a3735cbe5f492bcf5b016"
+      ],
+      "fingerprintChanged": true,
+      "discovered": [
+        {
+          "path": "/workspace/harness-agent/.ci/agent-context-memory-20261004/audit-context/fixtures/harness-injection/AGENTS.md",
+          "scope": "cwd",
+          "sizeBytes": 68,
+          "truncated": false
+        },
+        {
+          "path": "/workspace/harness-agent/.ci/agent-context-memory-20261004/audit-context/fixtures/harness-injection/AGENTS.md",
+          "scope": "cwd",
+          "sizeBytes": 67,
+          "truncated": false
+        }
+      ],
+      "denied": [
+        {
+          "source": "project",
+          "target": "/workspace/harness-agent/.ci/agent-context-memory-20261004/audit-context/fixtures/harness-injection/AGENTS.md",
+          "reason": "injection detected (dismiss-previous-instructions, dismiss-all-instructions, override-own-instructions, extract-system-prompt)",
+          "reasons": [
+            "dismiss-previous-instructions",
+            "dismiss-all-instructions",
+            "override-own-instructions",
+            "extract-system-prompt"
+          ],
+          "code": "INJECTION_DENIED"
+        },
+        {
+          "source": "project",
+          "target": "/workspace/harness-agent/.ci/agent-context-memory-20261004/audit-context/fixtures/harness-injection/AGENTS.md",
+          "reason": "injection detected (dismiss-previous-instructions, dismiss-all-instructions, override-own-instructions, extract-system-prompt)",
+          "reasons": [
+            "dismiss-previous-instructions",
+            "dismiss-all-instructions",
+            "override-own-instructions",
+            "extract-system-prompt"
+          ],
+          "code": "INJECTION_DENIED"
+        }
+      ],
+      "dropped": []
+    },
+    {
+      "kind": "harness",
+      "mode": "budget",
+      "outcomes": [
+        {
+          "status": "completed"
+        },
+        {
+          "status": "completed"
+        }
+      ],
+      "requests": 2,
+      "bodiesVisible": [
+        false,
+        false
+      ],
+      "instructionFingerprints": [
+        "0f8758c89a692b2f4584ae740824051084d24200746f9700af4e4f4666fcfd0e",
+        "8d9edf3e848354d7ad1ac5e093bed2c8c617675bfe2ae708f9258657e324833c"
+      ],
+      "fingerprintChanged": true,
+      "discovered": [
+        {
+          "path": "/workspace/harness-agent/.ci/agent-context-memory-20261004/audit-context/fixtures/harness-budget/AGENTS.md",
+          "scope": "cwd",
+          "sizeBytes": 48300,
+          "truncated": false
+        },
+        {
+          "path": "/workspace/harness-agent/.ci/agent-context-memory-20261004/audit-context/fixtures/harness-budget/AGENTS.md",
+          "scope": "cwd",
+          "sizeBytes": 46200,
+          "truncated": false
+        }
+      ],
+      "denied": [],
+      "dropped": [
+        {
+          "source": "project",
+          "id": "/workspace/harness-agent/.ci/agent-context-memory-20261004/audit-context/fixtures/harness-budget/AGENTS.md",
+          "priority": 1000,
+          "tokens": 12075,
+          "reason": "budget"
+        },
+        {
+          "source": "project",
+          "id": "/workspace/harness-agent/.ci/agent-context-memory-20261004/audit-context/fixtures/harness-budget/AGENTS.md",
+          "priority": 1000,
+          "tokens": 11550,
+          "reason": "budget"
+        }
+      ]
+    }
+  ]
+}

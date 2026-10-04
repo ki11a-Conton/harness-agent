@@ -1,0 +1,324 @@
+[
+  {
+    "id": "event_8cb51d42-bb6b-4b51-8154-185273f92f64",
+    "sessionId": "session_f60d5cd3-84e4-4c51-a0eb-77f61121d3b0",
+    "timestamp": 1791096545882,
+    "type": "session.created",
+    "payload": {
+      "sessionId": "session_f60d5cd3-84e4-4c51-a0eb-77f61121d3b0",
+      "agentId": "agent_40b97712-558c-4b93-a0f1-d6f58b2973e3"
+    },
+    "sequence": 0,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_b9a47a9b-e620-44e9-9bf0-d3c30afcbce0",
+    "sessionId": "session_f60d5cd3-84e4-4c51-a0eb-77f61121d3b0",
+    "turnId": "turn_23abd548-8696-4c7a-a101-0caf745e4eaf",
+    "timestamp": 1791096545888,
+    "type": "turn.started",
+    "payload": {
+      "turnId": "turn_23abd548-8696-4c7a-a101-0caf745e4eaf",
+      "text": "context audit"
+    },
+    "sequence": 1,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_442e42ec-8da0-4d84-903b-711afd764818",
+    "sessionId": "session_f60d5cd3-84e4-4c51-a0eb-77f61121d3b0",
+    "sequence": 2,
+    "timestamp": 1791096545889,
+    "type": "context.selected",
+    "payload": {
+      "source": "system",
+      "id": "system-prompt",
+      "priority": 9007199254740991,
+      "tokens": 130
+    },
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_d6c9c295-a19b-47af-8255-735452a6577b",
+    "sessionId": "session_f60d5cd3-84e4-4c51-a0eb-77f61121d3b0",
+    "turnId": "turn_23abd548-8696-4c7a-a101-0caf745e4eaf",
+    "timestamp": 1791096545889,
+    "type": "instruction.discovered",
+    "payload": {
+      "path": "/workspace/harness-agent/.ci/agent-context-memory-20261004/audit-context/fixtures/harness-injection/AGENTS.md",
+      "scope": "cwd",
+      "sizeBytes": 68,
+      "truncated": false
+    },
+    "sequence": 3,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_adf3e322-d755-4993-94e3-4cc1780b4853",
+    "sessionId": "session_f60d5cd3-84e4-4c51-a0eb-77f61121d3b0",
+    "turnId": "turn_23abd548-8696-4c7a-a101-0caf745e4eaf",
+    "timestamp": 1791096545890,
+    "type": "security.injection_denied",
+    "payload": {
+      "source": "project",
+      "target": "/workspace/harness-agent/.ci/agent-context-memory-20261004/audit-context/fixtures/harness-injection/AGENTS.md",
+      "reason": "injection detected (dismiss-previous-instructions, dismiss-all-instructions, override-own-instructions, extract-system-prompt)",
+      "reasons": [
+        "dismiss-previous-instructions",
+        "dismiss-all-instructions",
+        "override-own-instructions",
+        "extract-system-prompt"
+      ],
+      "code": "INJECTION_DENIED"
+    },
+    "sequence": 4,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_6d03c543-3973-4fe7-8e62-3de1ddc6d051",
+    "sessionId": "session_f60d5cd3-84e4-4c51-a0eb-77f61121d3b0",
+    "turnId": "turn_23abd548-8696-4c7a-a101-0caf745e4eaf",
+    "timestamp": 1791096545891,
+    "type": "context.built",
+    "payload": {
+      "tokens": 130,
+      "used": 130,
+      "budget": 89600,
+      "dropped": 0,
+      "compacted": false,
+      "messagesTokens": 12
+    },
+    "sequence": 5,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_76013db7-10b7-45f2-8d66-4e02b9870e32",
+    "sessionId": "session_f60d5cd3-84e4-4c51-a0eb-77f61121d3b0",
+    "turnId": "turn_23abd548-8696-4c7a-a101-0caf745e4eaf",
+    "spanId": "modelcall_14fc5d7e-4d2d-404b-ad00-4ac18becceb5",
+    "timestamp": 1791096545893,
+    "type": "model.started",
+    "payload": {
+      "callId": "modelcall_14fc5d7e-4d2d-404b-ad00-4ac18becceb5",
+      "stepId": "turn_23abd548-8696-4c7a-a101-0caf745e4eaf:0",
+      "toolRouterFingerprint": "ca0ebb38a3be5d87a9937d67ace0716c3d87948f647fdac76367f62e68a2e09e",
+      "policyFingerprint": "9c8777fa069c9fb1547b1e35832d843aa8057e155fbe93faad29142d8b1c4e43",
+      "environmentFingerprint": "23e1fd919bd8a5f4f1b1a3494efbb440577251b39618deb419ab4793b53f00d9",
+      "contextFingerprint": "6c6f2b67e94ad81741bfe3ae3471c2d3f8577fa904f8c587f20c77d4ccf0816a",
+      "instructionFingerprint": "2d035f6f166389bd669773dec906299221d0621d227f021fab6b7e4debe74bde",
+      "contextMessageIds": [
+        "message_4f71cb2c-f9a2-4ed2-8ff7-f9f7b16af502"
+      ],
+      "contextBlockIds": []
+    },
+    "sequence": 6,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_15f8e633-3307-489a-844a-746b020a2216",
+    "sessionId": "session_f60d5cd3-84e4-4c51-a0eb-77f61121d3b0",
+    "turnId": "turn_23abd548-8696-4c7a-a101-0caf745e4eaf",
+    "timestamp": 1791096545894,
+    "type": "tools.selected",
+    "payload": {
+      "callId": "modelcall_14fc5d7e-4d2d-404b-ad00-4ac18becceb5",
+      "available": 12,
+      "selected": 12,
+      "dropped": [],
+      "advertisedTokens": 1179
+    },
+    "sequence": 7,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_365c5b78-dd81-4870-9013-ebf0a08cf456",
+    "sessionId": "session_f60d5cd3-84e4-4c51-a0eb-77f61121d3b0",
+    "turnId": "turn_23abd548-8696-4c7a-a101-0caf745e4eaf",
+    "spanId": "modelcall_14fc5d7e-4d2d-404b-ad00-4ac18becceb5",
+    "timestamp": 1791096545897,
+    "type": "model.completed",
+    "payload": {
+      "callId": "modelcall_14fc5d7e-4d2d-404b-ad00-4ac18becceb5",
+      "finishReason": "stop",
+      "toolCalls": 0,
+      "durationMs": 4,
+      "usage": {
+        "source": "unknown"
+      }
+    },
+    "sequence": 8,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_c8f78d86-6600-40f4-aaba-ef1a5b08a3be",
+    "sessionId": "session_f60d5cd3-84e4-4c51-a0eb-77f61121d3b0",
+    "turnId": "turn_23abd548-8696-4c7a-a101-0caf745e4eaf",
+    "timestamp": 1791096545900,
+    "type": "turn.completed",
+    "payload": {
+      "turnId": "turn_23abd548-8696-4c7a-a101-0caf745e4eaf",
+      "status": "completed",
+      "statusDetail": "completed",
+      "terminationReason": "model_stopped",
+      "grade": "unverified_complete"
+    },
+    "sequence": 9,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_39ec33d0-8901-48d6-ae0c-b491038cc80b",
+    "sessionId": "session_f60d5cd3-84e4-4c51-a0eb-77f61121d3b0",
+    "turnId": "turn_ae089a3e-2d3c-45be-b061-b170f2077768",
+    "timestamp": 1791096545904,
+    "type": "turn.started",
+    "payload": {
+      "turnId": "turn_ae089a3e-2d3c-45be-b061-b170f2077768",
+      "text": "context audit"
+    },
+    "sequence": 10,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_87326395-fa7c-45de-b965-cd9cc56f4812",
+    "sessionId": "session_f60d5cd3-84e4-4c51-a0eb-77f61121d3b0",
+    "sequence": 11,
+    "timestamp": 1791096545906,
+    "type": "context.selected",
+    "payload": {
+      "source": "system",
+      "id": "system-prompt",
+      "priority": 9007199254740991,
+      "tokens": 130
+    },
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_1a1d9e20-f3e3-4663-b59c-3c1bbf87db71",
+    "sessionId": "session_f60d5cd3-84e4-4c51-a0eb-77f61121d3b0",
+    "turnId": "turn_ae089a3e-2d3c-45be-b061-b170f2077768",
+    "timestamp": 1791096545906,
+    "type": "instruction.discovered",
+    "payload": {
+      "path": "/workspace/harness-agent/.ci/agent-context-memory-20261004/audit-context/fixtures/harness-injection/AGENTS.md",
+      "scope": "cwd",
+      "sizeBytes": 67,
+      "truncated": false
+    },
+    "sequence": 12,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_b5b35fce-36fa-4157-aa56-d51ff72e0d89",
+    "sessionId": "session_f60d5cd3-84e4-4c51-a0eb-77f61121d3b0",
+    "turnId": "turn_ae089a3e-2d3c-45be-b061-b170f2077768",
+    "timestamp": 1791096545908,
+    "type": "security.injection_denied",
+    "payload": {
+      "source": "project",
+      "target": "/workspace/harness-agent/.ci/agent-context-memory-20261004/audit-context/fixtures/harness-injection/AGENTS.md",
+      "reason": "injection detected (dismiss-previous-instructions, dismiss-all-instructions, override-own-instructions, extract-system-prompt)",
+      "reasons": [
+        "dismiss-previous-instructions",
+        "dismiss-all-instructions",
+        "override-own-instructions",
+        "extract-system-prompt"
+      ],
+      "code": "INJECTION_DENIED"
+    },
+    "sequence": 13,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_db18167e-c4c4-4139-aadf-c1b2559cc532",
+    "sessionId": "session_f60d5cd3-84e4-4c51-a0eb-77f61121d3b0",
+    "turnId": "turn_ae089a3e-2d3c-45be-b061-b170f2077768",
+    "timestamp": 1791096545909,
+    "type": "context.built",
+    "payload": {
+      "tokens": 130,
+      "used": 130,
+      "budget": 89600,
+      "dropped": 0,
+      "compacted": false,
+      "messagesTokens": 36
+    },
+    "sequence": 14,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_31c7c731-f451-4c77-88dc-5b077af9e676",
+    "sessionId": "session_f60d5cd3-84e4-4c51-a0eb-77f61121d3b0",
+    "turnId": "turn_ae089a3e-2d3c-45be-b061-b170f2077768",
+    "spanId": "modelcall_6df4e8ec-58d9-496d-9723-b108c6288af1",
+    "timestamp": 1791096545910,
+    "type": "model.started",
+    "payload": {
+      "callId": "modelcall_6df4e8ec-58d9-496d-9723-b108c6288af1",
+      "stepId": "turn_ae089a3e-2d3c-45be-b061-b170f2077768:0",
+      "toolRouterFingerprint": "ca0ebb38a3be5d87a9937d67ace0716c3d87948f647fdac76367f62e68a2e09e",
+      "policyFingerprint": "9c8777fa069c9fb1547b1e35832d843aa8057e155fbe93faad29142d8b1c4e43",
+      "environmentFingerprint": "23e1fd919bd8a5f4f1b1a3494efbb440577251b39618deb419ab4793b53f00d9",
+      "contextFingerprint": "f407b51e50839222016b88f54a5801f51df014e533b61535fb9a464aad9f9eef",
+      "instructionFingerprint": "b888f8c614f0419ed99fceba96993bca2e1519d0908a3735cbe5f492bcf5b016",
+      "contextMessageIds": [
+        "message_4f71cb2c-f9a2-4ed2-8ff7-f9f7b16af502",
+        "message_3b30ee60-377c-4920-b0e3-f6a1bbe28389",
+        "message_bbd2972b-c854-4731-9753-3ac6e6472635"
+      ],
+      "contextBlockIds": []
+    },
+    "sequence": 15,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_fa49ed68-7b79-4bc1-97fc-8e6cc8f9778b",
+    "sessionId": "session_f60d5cd3-84e4-4c51-a0eb-77f61121d3b0",
+    "turnId": "turn_ae089a3e-2d3c-45be-b061-b170f2077768",
+    "timestamp": 1791096545911,
+    "type": "tools.selected",
+    "payload": {
+      "callId": "modelcall_6df4e8ec-58d9-496d-9723-b108c6288af1",
+      "available": 12,
+      "selected": 12,
+      "dropped": [],
+      "advertisedTokens": 1179
+    },
+    "sequence": 16,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_9407d1a8-17ae-4af0-ac55-4a747941dfe0",
+    "sessionId": "session_f60d5cd3-84e4-4c51-a0eb-77f61121d3b0",
+    "turnId": "turn_ae089a3e-2d3c-45be-b061-b170f2077768",
+    "spanId": "modelcall_6df4e8ec-58d9-496d-9723-b108c6288af1",
+    "timestamp": 1791096545912,
+    "type": "model.completed",
+    "payload": {
+      "callId": "modelcall_6df4e8ec-58d9-496d-9723-b108c6288af1",
+      "finishReason": "stop",
+      "toolCalls": 0,
+      "durationMs": 2,
+      "usage": {
+        "source": "unknown"
+      }
+    },
+    "sequence": 17,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_95092a75-3825-4f63-bd6d-fc68ae88cd5d",
+    "sessionId": "session_f60d5cd3-84e4-4c51-a0eb-77f61121d3b0",
+    "turnId": "turn_ae089a3e-2d3c-45be-b061-b170f2077768",
+    "timestamp": 1791096545914,
+    "type": "turn.completed",
+    "payload": {
+      "turnId": "turn_ae089a3e-2d3c-45be-b061-b170f2077768",
+      "status": "completed",
+      "statusDetail": "completed",
+      "terminationReason": "model_stopped",
+      "grade": "unverified_complete"
+    },
+    "sequence": 18,
+    "schemaVersion": 1
+  }
+]

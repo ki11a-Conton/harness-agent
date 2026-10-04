@@ -1,0 +1,105 @@
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+ ❯ packages/gateway/src/gateway.test.ts (31 tests | 2 failed | 29 skipped) 27ms
+     ↓ requires initialize before mutating methods
+     ↓ initialize returns protocol version + server info + capabilities
+     ↓ rejects repeated initialize with ALREADY_INITIALIZED
+     ↓ thread/start creates a session via the runtime
+     ↓ bounded ingress capacity=2: third concurrent call rejects fast with SERVER_OVERLOADED
+     ↓ idempotency key replays the result instead of re-running
+     ↓ unknown method fails closed
+     ↓ routes a channel message into a fresh session and replies with the run result
+     ↓ reuses an existing session when route maps the sender, and falls back to creation on a stale route
+     ↓ replies with an error when no session can be created (no route, no defaults)
+     ↓ P25-3/P25-5: a message while a turn is running is queued as a follow-up, never injected
+     ↓ resolves approve:<id>:allow through session.approve and records human.approval
+     ↓ resolves approve:<id>:deny through session.approve
+     ↓ U3 rejects foreign session allow without resolving or auditing the owner's approval
+     ↓ U3 rejects foreign session deny without resolving or auditing the owner's approval
+     ↓ U3 rejects unbound sender allow without resolving or auditing the owner's approval
+     ↓ U3 rejects unbound sender deny without resolving or auditing the owner's approval
+     ↓ U3 rejects foreign channel allow without resolving or auditing the owner's approval
+     ↓ U3 rejects foreign channel deny without resolving or auditing the owner's approval
+     × U3 rejects delimiter-colliding channel/sender allow without touching the owner's approval 17ms
+     × U3 rejects delimiter-colliding channel/sender deny without touching the owner's approval 9ms
+     ↓ U3 keeps a bound owner's approval one-shot and expires a late allow
+     ↓ replies with an error message for an unknown approval id
+     ↓ pushes approval.created to the channel with full action/target/reason/session fields
+     ↓ pushes tool.permission_requested events to the channel
+     ↓ pushes run.limit_reached events and ignores non-forwarded event types
+     ↓ falls back to event payload fields when the pending approval is already gone
+     ↓ treats a cancel message as human.cancel and aborts the running turn
+     ↓ reports not_running when the sender has no active turn
+     ↓ connects channels on start and disconnects them on stop
+     ↓ keeps channels isolated: separate sessions, replies and approvals per channel
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/gateway/src/gateway.test.ts > Gateway approvals > U3 rejects delimiter-colliding channel/sender allow without touching the owner's approval
+AssertionError: expected [] to deeply equal [ { …(8) } ]
+
+- Expected
++ Received
+
+- [
+-   {
+-     "action": "exec",
+-     "agentId": "agent_8ef007d0-6b64-4b4e-8e9e-5672e77c955c",
+-     "createdAt": 1000,
+-     "expiresAt": 61000,
+-     "id": "approval_f4ba9de9-8afc-4489-acb8-25fdfff61f9a",
+-     "reason": "risky command",
+-     "sessionId": "session_6500ab7b-51de-48b6-999d-eaf2019f8d2b",
+-     "target": "rm -rf /tmp/x",
+-   },
+- ]
++ []
+
+ ❯ packages/gateway/src/gateway.test.ts:606:43
+    604|     // channel's sender has never established any session binding.
+    605|     await foreignChannel.deliver(`approve:${request.id}:${value}`, "al…
+    606|     expect(h.approvalStore.listPending()).toEqual([request]);
+       |                                           ^
+    607|     expect(await h.events.list(ownerSession.id)).toEqual(eventsBefore);
+    608|     expect(invoke).not.toHaveBeenCalled();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  packages/gateway/src/gateway.test.ts > Gateway approvals > U3 rejects delimiter-colliding channel/sender deny without touching the owner's approval
+AssertionError: expected [] to deeply equal [ { …(8) } ]
+
+- Expected
++ Received
+
+- [
+-   {
+-     "action": "exec",
+-     "agentId": "agent_8ef007d0-6b64-4b4e-8e9e-5672e77c955c",
+-     "createdAt": 1000,
+-     "expiresAt": 61000,
+-     "id": "approval_b72f7a35-48bc-43ed-8249-a85ba48fc82c",
+-     "reason": "risky command",
+-     "sessionId": "session_aec3e7d7-e5a0-49a0-8760-c9d9eab3d66c",
+-     "target": "rm -rf /tmp/x",
+-   },
+- ]
++ []
+
+ ❯ packages/gateway/src/gateway.test.ts:606:43
+    604|     // channel's sender has never established any session binding.
+    605|     await foreignChannel.deliver(`approve:${request.id}:${value}`, "al…
+    606|     expect(h.approvalStore.listPending()).toEqual([request]);
+       |                                           ^
+    607|     expect(await h.events.list(ownerSession.id)).toEqual(eventsBefore);
+    608|     expect(invoke).not.toHaveBeenCalled();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 29 skipped (31)
+   Start at  02:17:28
+   Duration  784ms (transform 523ms, setup 0ms, import 645ms, tests 27ms, environment 0ms)
+
+JSON report written to /workspace/harness-agent/.ci/web-dsh-20261004/backend/delimiter-red.json

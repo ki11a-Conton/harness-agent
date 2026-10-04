@@ -1,0 +1,38 @@
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+ ✓ packages/gateway/src/gateway.test.ts (29 tests) 255ms
+[web] listening on http://127.0.0.1:40481
+[web] listening on http://127.0.0.1:39797
+[web] listening on http://127.0.0.1:45341
+[web] listening on http://127.0.0.1:35633
+[web] listening on http://127.0.0.1:36745
+[web] listening on http://127.0.0.1:37289
+[web] listening on http://127.0.0.1:33455
+[web] listening on http://127.0.0.1:46355
+[web] listening on http://127.0.0.1:39515
+[web] listening on http://127.0.0.1:42493
+[web] listening on http://127.0.0.1:39473
+[web] listening on http://127.0.0.1:40033
+[web] listening on http://127.0.0.1:43071
+[web] listening on http://127.0.0.1:39149
+[web] listening on http://127.0.0.1:46339
+ ✓ apps/web/src/server.test.ts (16 tests) 481ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:36531
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:39413
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:44033
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:45467
+[harness] context budget: model capabilities unknown for web-cancellation-probe/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:43275
+ ✓ apps/web/src/harness.integration.test.ts (5 tests) 544ms
+
+ Test Files  3 passed (3)
+      Tests  50 passed (50)
+   Start at  02:13:17
+   Duration  3.86s (transform 1.59s, setup 0ms, import 2.23s, tests 1.28s, environment 0ms)
+
+JSON report written to /workspace/harness-agent/.ci/web-dsh-20261004/backend/green.json

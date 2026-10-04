@@ -1,0 +1,66 @@
+{
+  "schema": "web-dsh-browser-baseline-index-correction.v1",
+  "reason": "Original artifact-index mistakenly filtered absolute path parts: /workspace excluded every file. Original empty artifact-index retained unchanged; this independent post-run index fixes coverage without rerun or rewriting raw observations.",
+  "artifacts": [
+    {
+      "path": "artifact-index.json",
+      "bytes": 66,
+      "sha256": "f9979c1eec24e60e7b915d201d051b01c28be1470c3a0433f300aa6d3aa234ba"
+    },
+    {
+      "path": "baseline-source-receipt.json",
+      "bytes": 1284,
+      "sha256": "8c56014d78e80a28d61b535954d0babf8ade957551a80ddab845c29fb49531ae"
+    },
+    {
+      "path": "browser-errors.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "browser-requests.json",
+      "bytes": 867,
+      "sha256": "92277b0d70abb232bbc0a86d0e6301917adf70987f9b99a5f5252450483e9aa7"
+    },
+    {
+      "path": "browser-result.json",
+      "bytes": 5523,
+      "sha256": "45cce71b0609e92c1908e1728d77587b4f6c46f6d022a1d1cbdb4a46568eaab1"
+    },
+    {
+      "path": "fixture/ready.json",
+      "bytes": 1870,
+      "sha256": "92188d55019e6a3d92fb30673aacd7164bdf771f8edeca2b25bde2fef3cf961f"
+    },
+    {
+      "path": "fixture/runtime-snapshot.json",
+      "bytes": 1861,
+      "sha256": "dff65135dd954551639c83c69c1f99a4a265d700f05012251e5f9f9417dbdf66"
+    },
+    {
+      "path": "fixture.log",
+      "bytes": 1795,
+      "sha256": "4eb700cf375328e48f85ed8e2bd346543f987f5c25995b569d693c476355b44c"
+    },
+    {
+      "path": "network-errors.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "probe-snapshot/browser.py",
+      "bytes": 23555,
+      "sha256": "388e95e550f6f76fab5690328d8bce828b74acc396203bd675a77035924fc80e"
+    },
+    {
+      "path": "probe-snapshot/fixture.mjs",
+      "bytes": 7506,
+      "sha256": "f3e9b709c5d4b6a8844e0d7727cafbd2cc3e2b9c26f497f12e42c9f47bd6d947"
+    },
+    {
+      "path": "probe-snapshot/protocol-control.js",
+      "bytes": 2421,
+      "sha256": "cbd244463d0973ec04181b88a86a4c62ddbebb8350f229b013ca552f45df398d"
+    }
+  ]
+}

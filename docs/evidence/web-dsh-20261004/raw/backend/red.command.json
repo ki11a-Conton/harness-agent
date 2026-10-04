@@ -1,0 +1,23 @@
+{
+  "phase": "RED-before-production-fix",
+  "command": [
+    "pnpm",
+    "exec",
+    "vitest",
+    "run",
+    "packages/gateway/src/gateway.test.ts",
+    "-t",
+    "U3 rejects",
+    "--reporter=default",
+    "--reporter=json",
+    "--outputFile=/workspace/harness-agent/.ci/web-dsh-20261004/backend/red.json"
+  ],
+  "cwd": "/workspace/harness-agent",
+  "startedAt": "2026-10-04T02:09:43.115258+00:00",
+  "sourceHashes": {
+    "packages/gateway/src/gateway.ts": "f0c6fb5721d2e177c61f2d53fd7f01ee89e754cbe1cdf3ee5d687418e4c63fec",
+    "packages/gateway/src/gateway.test.ts": "dca52a334b174af984cab315a0992741222d72e7b83570a4e73f513542d14825"
+  },
+  "exitCode": 1,
+  "finishedAt": "2026-10-04T02:09:44.746321+00:00"
+}

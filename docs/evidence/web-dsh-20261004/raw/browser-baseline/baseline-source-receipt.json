@@ -1,0 +1,38 @@
+{
+  "scope": "Original static UI assets only; runtime source was concurrent working tree and irrelevant to controlled browser callbacks. Original probe files copied immediately after this run before edits.",
+  "staticSourceSha": "dec7bd1237870f1d46aa063a7ba1a635e4c523c0",
+  "staticAssets": [
+    {
+      "name": "app.js",
+      "sha256": "6234c37a8c8e8c19ce2b336cb21d320e9cb8fcf8d52b70601ba4d8e210dfa2f0",
+      "matchesGitBaseline": true
+    },
+    {
+      "name": "index.html",
+      "sha256": "068d5a8ebca3b684fa94f67cdef0f7c8dcd179d79c54caa77b61f1b3d77ab670",
+      "matchesGitBaseline": true
+    },
+    {
+      "name": "style.css",
+      "sha256": "acc59026e4aa20fa4069ba59658a3c0ba8e92c2f17e764d6e0cf0073be267a61",
+      "matchesGitBaseline": true
+    }
+  ],
+  "executedProbes": [
+    {
+      "path": "probe-snapshot/browser.py",
+      "bytes": 23555,
+      "sha256": "388e95e550f6f76fab5690328d8bce828b74acc396203bd675a77035924fc80e"
+    },
+    {
+      "path": "probe-snapshot/fixture.mjs",
+      "bytes": 7506,
+      "sha256": "f3e9b709c5d4b6a8844e0d7727cafbd2cc3e2b9c26f497f12e42c9f47bd6d947"
+    },
+    {
+      "path": "probe-snapshot/protocol-control.js",
+      "bytes": 2421,
+      "sha256": "cbd244463d0973ec04181b88a86a4c62ddbebb8350f229b013ca552f45df398d"
+    }
+  ]
+}

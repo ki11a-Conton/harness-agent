@@ -73,3 +73,20 @@ docs/evidence/agent-measurement-20261003/raw/**/*.log -whitespace
 docs/evidence/agent-trust-20261004/raw/** -text
 docs/evidence/agent-trust-20261004/raw/**/*.log -whitespace
 docs/evidence/agent-trust-20261004/raw/**/*.diff -whitespace
+
+# Preserve original Web UI browser, TDD, and review receipt bytes on every OS.
+docs/evidence/web-dsh-20261004/raw/** -text
+docs/evidence/web-dsh-20261004/raw/**/*.log -whitespace
+docs/evidence/web-dsh-20261004/raw/**/*.diff -whitespace
+# The three original baseline assets use CRLF; preserve and recognize it.
+docs/evidence/web-dsh-20261004/raw/baseline/public/* whitespace=cr-at-eol
+
+# Recognize existing CRLF sources in the instruction/memory correctness round.
+packages/context/src/discovery.ts whitespace=cr-at-eol
+packages/context/src/discovery.test.ts whitespace=cr-at-eol
+packages/memory/src/sqlite-memory-store.ts whitespace=cr-at-eol
+
+# Preserve default context/memory audit and regression receipts as raw bytes.
+docs/evidence/agent-context-memory-20261004/raw/** -text
+docs/evidence/agent-context-memory-20261004/raw/**/*.log -whitespace
+docs/evidence/agent-context-memory-20261004/raw/**/*.diff -whitespace

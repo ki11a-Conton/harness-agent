@@ -1,0 +1,223 @@
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+ ❯ packages/gateway/src/gateway.test.ts (29 tests | 6 failed | 23 skipped) 75ms
+     ↓ requires initialize before mutating methods
+     ↓ initialize returns protocol version + server info + capabilities
+     ↓ rejects repeated initialize with ALREADY_INITIALIZED
+     ↓ thread/start creates a session via the runtime
+     ↓ bounded ingress capacity=2: third concurrent call rejects fast with SERVER_OVERLOADED
+     ↓ idempotency key replays the result instead of re-running
+     ↓ unknown method fails closed
+     ↓ routes a channel message into a fresh session and replies with the run result
+     ↓ reuses an existing session when route maps the sender, and falls back to creation on a stale route
+     ↓ replies with an error when no session can be created (no route, no defaults)
+     ↓ P25-3/P25-5: a message while a turn is running is queued as a follow-up, never injected
+     ↓ resolves approve:<id>:allow through session.approve and records human.approval
+     ↓ resolves approve:<id>:deny through session.approve
+     × U3 rejects foreign session allow without resolving or auditing the owner's approval 27ms
+     × U3 rejects foreign session deny without resolving or auditing the owner's approval 11ms
+     × U3 rejects unbound sender allow without resolving or auditing the owner's approval 6ms
+     × U3 rejects unbound sender deny without resolving or auditing the owner's approval 6ms
+     × U3 rejects foreign channel allow without resolving or auditing the owner's approval 11ms
+     × U3 rejects foreign channel deny without resolving or auditing the owner's approval 12ms
+     ↓ U3 keeps a bound owner's approval one-shot and expires a late allow
+     ↓ replies with an error message for an unknown approval id
+     ↓ pushes approval.created to the channel with full action/target/reason/session fields
+     ↓ pushes tool.permission_requested events to the channel
+     ↓ pushes run.limit_reached events and ignores non-forwarded event types
+     ↓ falls back to event payload fields when the pending approval is already gone
+     ↓ treats a cancel message as human.cancel and aborts the running turn
+     ↓ reports not_running when the sender has no active turn
+     ↓ connects channels on start and disconnects them on stop
+     ↓ keeps channels isolated: separate sessions, replies and approvals per channel
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/gateway/src/gateway.test.ts > Gateway approvals > U3 rejects foreign session allow without resolving or auditing the owner's approval
+AssertionError: expected [] to deeply equal [ { …(8) } ]
+
+- Expected
++ Received
+
+- [
+-   {
+-     "action": "exec",
+-     "agentId": "agent_8ec91e26-b9fe-4389-81b1-4442684394cd",
+-     "createdAt": 1000,
+-     "expiresAt": 61000,
+-     "id": "approval_162023cf-bba1-46fa-9932-bc16fe38c5f3",
+-     "reason": "risky command",
+-     "sessionId": "session_2b1b19a9-6480-42a6-a8ab-785333b76c1c",
+-     "target": "rm -rf /tmp/x",
+-   },
+- ]
++ []
+
+ ❯ packages/gateway/src/gateway.test.ts:569:43
+    567|     const invoke = vi.spyOn(h.rpc, "invoke");
+    568|     await commandChannel.deliver(`approve:${request.id}:${value}`, sen…
+    569|     expect(h.approvalStore.listPending()).toEqual(pendingBefore);
+       |                                           ^
+    570|     expect(await h.events.list(ownerSessionId)).toEqual(eventsBefore);
+    571|     expect(invoke).not.toHaveBeenCalled();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  packages/gateway/src/gateway.test.ts > Gateway approvals > U3 rejects foreign session deny without resolving or auditing the owner's approval
+AssertionError: expected [] to deeply equal [ { …(8) } ]
+
+- Expected
++ Received
+
+- [
+-   {
+-     "action": "exec",
+-     "agentId": "agent_8ec91e26-b9fe-4389-81b1-4442684394cd",
+-     "createdAt": 1000,
+-     "expiresAt": 61000,
+-     "id": "approval_5004d6f4-27af-41b5-88f0-91ab3a62cad5",
+-     "reason": "risky command",
+-     "sessionId": "session_bba56dc4-42e7-47b6-a801-9a244fc43dd7",
+-     "target": "rm -rf /tmp/x",
+-   },
+- ]
++ []
+
+ ❯ packages/gateway/src/gateway.test.ts:569:43
+    567|     const invoke = vi.spyOn(h.rpc, "invoke");
+    568|     await commandChannel.deliver(`approve:${request.id}:${value}`, sen…
+    569|     expect(h.approvalStore.listPending()).toEqual(pendingBefore);
+       |                                           ^
+    570|     expect(await h.events.list(ownerSessionId)).toEqual(eventsBefore);
+    571|     expect(invoke).not.toHaveBeenCalled();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  packages/gateway/src/gateway.test.ts > Gateway approvals > U3 rejects unbound sender allow without resolving or auditing the owner's approval
+AssertionError: expected [] to deeply equal [ { …(8) } ]
+
+- Expected
++ Received
+
+- [
+-   {
+-     "action": "exec",
+-     "agentId": "agent_8ec91e26-b9fe-4389-81b1-4442684394cd",
+-     "createdAt": 1000,
+-     "expiresAt": 61000,
+-     "id": "approval_fdadca8a-883c-44a6-8b5a-22d4de4c31d0",
+-     "reason": "risky command",
+-     "sessionId": "session_d142fd5c-6cf5-4503-a158-6345320b669e",
+-     "target": "rm -rf /tmp/x",
+-   },
+- ]
++ []
+
+ ❯ packages/gateway/src/gateway.test.ts:569:43
+    567|     const invoke = vi.spyOn(h.rpc, "invoke");
+    568|     await commandChannel.deliver(`approve:${request.id}:${value}`, sen…
+    569|     expect(h.approvalStore.listPending()).toEqual(pendingBefore);
+       |                                           ^
+    570|     expect(await h.events.list(ownerSessionId)).toEqual(eventsBefore);
+    571|     expect(invoke).not.toHaveBeenCalled();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+ FAIL  packages/gateway/src/gateway.test.ts > Gateway approvals > U3 rejects unbound sender deny without resolving or auditing the owner's approval
+AssertionError: expected [] to deeply equal [ { …(8) } ]
+
+- Expected
++ Received
+
+- [
+-   {
+-     "action": "exec",
+-     "agentId": "agent_8ec91e26-b9fe-4389-81b1-4442684394cd",
+-     "createdAt": 1000,
+-     "expiresAt": 61000,
+-     "id": "approval_7454cf6d-94a7-420a-943f-490045a8ad12",
+-     "reason": "risky command",
+-     "sessionId": "session_4175e9d1-eb1e-4970-af09-5f41e87dafd7",
+-     "target": "rm -rf /tmp/x",
+-   },
+- ]
++ []
+
+ ❯ packages/gateway/src/gateway.test.ts:569:43
+    567|     const invoke = vi.spyOn(h.rpc, "invoke");
+    568|     await commandChannel.deliver(`approve:${request.id}:${value}`, sen…
+    569|     expect(h.approvalStore.listPending()).toEqual(pendingBefore);
+       |                                           ^
+    570|     expect(await h.events.list(ownerSessionId)).toEqual(eventsBefore);
+    571|     expect(invoke).not.toHaveBeenCalled();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯
+
+ FAIL  packages/gateway/src/gateway.test.ts > Gateway approvals > U3 rejects foreign channel allow without resolving or auditing the owner's approval
+AssertionError: expected [] to deeply equal [ { …(8) } ]
+
+- Expected
++ Received
+
+- [
+-   {
+-     "action": "exec",
+-     "agentId": "agent_8ec91e26-b9fe-4389-81b1-4442684394cd",
+-     "createdAt": 1000,
+-     "expiresAt": 61000,
+-     "id": "approval_5d5092e1-abcf-4f79-8fc8-3d49a25f930e",
+-     "reason": "risky command",
+-     "sessionId": "session_82b1b9eb-4816-4cb0-b6cc-7f68ac0239ed",
+-     "target": "rm -rf /tmp/x",
+-   },
+- ]
++ []
+
+ ❯ packages/gateway/src/gateway.test.ts:569:43
+    567|     const invoke = vi.spyOn(h.rpc, "invoke");
+    568|     await commandChannel.deliver(`approve:${request.id}:${value}`, sen…
+    569|     expect(h.approvalStore.listPending()).toEqual(pendingBefore);
+       |                                           ^
+    570|     expect(await h.events.list(ownerSessionId)).toEqual(eventsBefore);
+    571|     expect(invoke).not.toHaveBeenCalled();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯
+
+ FAIL  packages/gateway/src/gateway.test.ts > Gateway approvals > U3 rejects foreign channel deny without resolving or auditing the owner's approval
+AssertionError: expected [] to deeply equal [ { …(8) } ]
+
+- Expected
++ Received
+
+- [
+-   {
+-     "action": "exec",
+-     "agentId": "agent_8ec91e26-b9fe-4389-81b1-4442684394cd",
+-     "createdAt": 1000,
+-     "expiresAt": 61000,
+-     "id": "approval_6b1a97c8-f842-4a81-99cd-e9821162121e",
+-     "reason": "risky command",
+-     "sessionId": "session_1a4f1489-91f7-47f4-b15f-59656e833603",
+-     "target": "rm -rf /tmp/x",
+-   },
+- ]
++ []
+
+ ❯ packages/gateway/src/gateway.test.ts:569:43
+    567|     const invoke = vi.spyOn(h.rpc, "invoke");
+    568|     await commandChannel.deliver(`approve:${request.id}:${value}`, sen…
+    569|     expect(h.approvalStore.listPending()).toEqual(pendingBefore);
+       |                                           ^
+    570|     expect(await h.events.list(ownerSessionId)).toEqual(eventsBefore);
+    571|     expect(invoke).not.toHaveBeenCalled();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/6]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  6 failed | 23 skipped (29)
+   Start at  02:09:43
+   Duration  826ms (transform 508ms, setup 0ms, import 634ms, tests 75ms, environment 0ms)
+
+JSON report written to /workspace/harness-agent/.ci/web-dsh-20261004/backend/red.json
