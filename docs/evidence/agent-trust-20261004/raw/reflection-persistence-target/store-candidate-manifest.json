@@ -1,0 +1,20 @@
+{
+  "stage": "candidate-dirty-source-target-tests",
+  "sourceSha": "965da0bb123fbdd9b61bded6bc345b767ad0c48f",
+  "command": [
+    "pnpm",
+    "exec",
+    "vitest",
+    "run",
+    "packages/harness/src/candidate-persistence.regressions.test.ts",
+    "packages/harness/src/candidate-store.test.ts",
+    "--reporter=json",
+    "--outputFile=/workspace/harness-agent/.ci/agent-round2-20261004/reflection-persistence-target/store-candidate.json"
+  ],
+  "exitCode": 0,
+  "durationSeconds": 1.0480320453643799,
+  "testSha256": "1693e2f89e0af93481c882cacf4b7140c01325341ee5da09a20d8d0d0829ec35",
+  "sourceSha256": "dbf0d5e85804cb413ea9df1bb0b3130eaa375a775a289e374210dc5d2629894d",
+  "realFilesystemFaults": true,
+  "paidCalls": 0
+}

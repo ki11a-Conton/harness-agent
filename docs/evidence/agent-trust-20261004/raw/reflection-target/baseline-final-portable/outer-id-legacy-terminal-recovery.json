@@ -1,0 +1,144 @@
+{
+  "label": "outer-id-legacy-terminal-recovery",
+  "pass": false,
+  "sessionId": "session_f50dd770-2706-4f0b-b27a-fbc57dbf6b87",
+  "turnId": "turn_1607cc17-23cd-4f74-8841-1e96e155b1ee",
+  "other": "turn_983a13d1-06e6-4c11-b300-76d29b0f2dcc",
+  "result": {
+    "outputs": 2,
+    "candidates": 2
+  },
+  "journal": [
+    {
+      "schemaVersion": 1,
+      "sessionId": "session_f50dd770-2706-4f0b-b27a-fbc57dbf6b87",
+      "turnId": "turn_1607cc17-23cd-4f74-8841-1e96e155b1ee",
+      "outcome": "failed",
+      "at": 1791075872566,
+      "reflection": {
+        "outcome": "failure",
+        "rootCause": "verification",
+        "evidence": "verification.failed event_839e1e0e-13f7-4345-83bf-5471ea33040e@40; task: current task",
+        "lesson": "verification failed (explicit other-turn failure); inspect the evidence, fix the issue, and re-verify",
+        "generalizable": true,
+        "candidate": {
+          "content": "verification failed (explicit other-turn failure); inspect the evidence, fix the issue, and re-verify",
+          "type": "procedural",
+          "sourceSession": "session_f50dd770-2706-4f0b-b27a-fbc57dbf6b87",
+          "importance": 0.8,
+          "confidence": 0.6,
+          "novelty": 0.5,
+          "stability": 0.5,
+          "structured": {
+            "when": "verification failed (explicit other-turn failure)",
+            "do": "inspect the verification evidence, fix the reported issue, and re-verify",
+            "avoid": "declaring completion without a passing gate",
+            "rootCause": "verification",
+            "outcome": "failure",
+            "evidenceRefs": [
+              "event_839e1e0e-13f7-4345-83bf-5471ea33040e"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "sessionId": "session_f50dd770-2706-4f0b-b27a-fbc57dbf6b87",
+      "turnId": "turn_1607cc17-23cd-4f74-8841-1e96e155b1ee",
+      "outcome": "failed",
+      "at": 1791075872567,
+      "reflection": {
+        "outcome": "failure",
+        "rootCause": "tool",
+        "evidence": "tool.failed event_6e85fa33-3e7b-4312-95b4-3e90410591da@42; tool.requested event_da9332a8-a649-466d-bce7-a573fce1a34d@41; task: current task",
+        "lesson": "tool read_file failed with recoverable; verify inputs and environment before retry",
+        "generalizable": true,
+        "candidate": {
+          "content": "tool read_file failed with recoverable; verify inputs and environment before retry",
+          "type": "procedural",
+          "sourceSession": "session_f50dd770-2706-4f0b-b27a-fbc57dbf6b87",
+          "importance": 0.6,
+          "confidence": 0.6,
+          "novelty": 0.5,
+          "stability": 0.5,
+          "structured": {
+            "when": "read_file failed with recoverable",
+            "do": "verify inputs and environment state, then retry",
+            "avoid": "retrying the same call without checking inputs",
+            "rootCause": "tool",
+            "outcome": "failure",
+            "evidenceRefs": [
+              "event_6e85fa33-3e7b-4312-95b4-3e90410591da"
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "events": [
+    {
+      "id": "event_dddd52ec-e4de-438a-8bd1-897022d5b319",
+      "sessionId": "session_f50dd770-2706-4f0b-b27a-fbc57dbf6b87",
+      "turnId": "turn_1607cc17-23cd-4f74-8841-1e96e155b1ee",
+      "timestamp": 39,
+      "type": "turn.started",
+      "payload": {
+        "turnId": "turn_983a13d1-06e6-4c11-b300-76d29b0f2dcc"
+      },
+      "sequence": 0,
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_839e1e0e-13f7-4345-83bf-5471ea33040e",
+      "sessionId": "session_f50dd770-2706-4f0b-b27a-fbc57dbf6b87",
+      "turnId": "turn_983a13d1-06e6-4c11-b300-76d29b0f2dcc",
+      "timestamp": 40,
+      "type": "verification.failed",
+      "payload": {
+        "error": "explicit other-turn failure"
+      },
+      "sequence": 1,
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_da9332a8-a649-466d-bce7-a573fce1a34d",
+      "sessionId": "session_f50dd770-2706-4f0b-b27a-fbc57dbf6b87",
+      "timestamp": 41,
+      "type": "tool.requested",
+      "payload": {
+        "turnId": "turn_983a13d1-06e6-4c11-b300-76d29b0f2dcc",
+        "name": "read_file",
+        "toolCallId": "legacy-call"
+      },
+      "sequence": 2,
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_6e85fa33-3e7b-4312-95b4-3e90410591da",
+      "sessionId": "session_f50dd770-2706-4f0b-b27a-fbc57dbf6b87",
+      "timestamp": 42,
+      "type": "tool.failed",
+      "payload": {
+        "toolCallId": "legacy-call",
+        "error": {
+          "code": "PROCESS_ERROR",
+          "message": "recoverable"
+        }
+      },
+      "sequence": 3,
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_c1355b80-1107-4c0a-81e7-cfd982039162",
+      "sessionId": "session_f50dd770-2706-4f0b-b27a-fbc57dbf6b87",
+      "timestamp": 43,
+      "type": "turn.completed",
+      "payload": {
+        "turnId": "turn_1607cc17-23cd-4f74-8841-1e96e155b1ee"
+      },
+      "sequence": 4,
+      "schemaVersion": 1
+    }
+  ]
+}

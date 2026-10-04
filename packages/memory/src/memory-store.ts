@@ -9,7 +9,7 @@ import type {
 } from "@ar/contracts";
 import { AgentError, errorInfo } from "@ar/contracts";
 import { atomicWriteFile, backupTree, withLock } from "@ar/store-integrity";
-import { checkUnsafeMemory, scanMemoryEntries } from "./security-gate.js";
+import { checkUnsafeMemoryEntry, scanMemoryEntries } from "./security-gate.js";
 
 /** Single JSONL file holding every memory entry (MEMORY-001). */
 export const MEMORY_FILE_NAME = "memories.jsonl";
@@ -140,7 +140,7 @@ export class JsonlMemoryStore implements MemoryStore {
    *  P2-35: serialized under a per-store lock so concurrent writes cannot
    *  lose updates on the read-modify-write cycle. */
   async write(entry: MemoryEntry): Promise<void> {
-    const reason = checkUnsafeMemory(entry.content, "memory-store");
+    const reason = checkUnsafeMemoryEntry(entry, "memory-store");
     if (reason !== null) {
       this.onSecurityDenied?.(reason.event);
       throw new AgentError(errorInfo("SECURITY_DENIED", `memory write blocked: ${reason.message}`));
@@ -194,7 +194,7 @@ export class JsonlMemoryStore implements MemoryStore {
   /** Replaces an existing entry; unknown id fails explicitly.
    *  P2-35: serialized under the same per-store lock as [[write]]. */
   async update(entry: MemoryEntry): Promise<void> {
-    const reason = checkUnsafeMemory(entry.content, "memory-store");
+    const reason = checkUnsafeMemoryEntry(entry, "memory-store");
     if (reason !== null) {
       this.onSecurityDenied?.(reason.event);
       throw new AgentError(errorInfo("SECURITY_DENIED", `memory update blocked: ${reason.message}`));

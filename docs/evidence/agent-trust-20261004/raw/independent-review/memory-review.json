@@ -1,0 +1,390 @@
+{
+  "schema": "agent-round2-independent-memory-v1",
+  "observedAt": "2026-10-04T01:03:27.254571+00:00",
+  "stage": "Independent review of T2 frozen dirty-stage source and owner original target/request receipts; no clean/full/CI acceptance claim.",
+  "reviewedHead": "965da0bb123fbdd9b61bded6bc345b767ad0c48f",
+  "sourceFingerprints": [
+    {
+      "path": "packages/memory/src/memory-store.ts",
+      "bytes": 9981,
+      "sha256": "ff28c1a0f3ba73f312279aa3efff786b618ed3f3d2fb795562c58e936443191b"
+    },
+    {
+      "path": "packages/memory/src/retrieval.ts",
+      "bytes": 8979,
+      "sha256": "0921994bc133782ca2d01ae7e9af05d01e4fd2ac233916cb42c5350ad3621f55"
+    },
+    {
+      "path": "packages/memory/src/security-gate.ts",
+      "bytes": 3210,
+      "sha256": "35dd1c100d6200a862ac50c3b2f1c0fff1d9feb8b7921e31c8805aed319a5efa"
+    },
+    {
+      "path": "packages/memory/src/sqlite-memory-store.ts",
+      "bytes": 21884,
+      "sha256": "0fd23b08c1f370d60c78b7ee7ebf82c939bff066a03696ccc976dcf09dac2773"
+    },
+    {
+      "path": "packages/memory/src/retrieval.test.ts",
+      "bytes": 15570,
+      "sha256": "d0eb4a18baa1fea4d2456da04aec106381b306197abd5b7d51e86deef49c362d"
+    },
+    {
+      "path": "packages/memory/src/memory-visibility.regressions.test.ts",
+      "bytes": 6706,
+      "sha256": "dd3ac623759d726373d4244bb8c71b3c750bc7fa49440790cc3ad7c29cb63edf"
+    },
+    {
+      "path": "packages/memory/src/sqlite-memory-metadata.regressions.test.ts",
+      "bytes": 12801,
+      "sha256": "b740fd65d10909e228f1406670e00b3fec4ce048bca2c14c1ca38deb659afa9e"
+    },
+    {
+      "path": "packages/harness/src/memory-runtime-bridge.ts",
+      "bytes": 10437,
+      "sha256": "2d6cf39686f2884d2c390dcd13e7c7f46a3e368094d807b79124a79297a4f4cf"
+    },
+    {
+      "path": "scripts/research/agent-trust-20261004/memory.mjs",
+      "bytes": 10564,
+      "sha256": "ca0701c5e7a37c4f2d71d3a518b31c484a283d7079977a4f111326477bf4a189"
+    }
+  ],
+  "originalArtifactsChecked": 67,
+  "requestEvidence": [
+    {
+      "label": "portable-baseline",
+      "requestCount": 18,
+      "forbiddenRequestCount": 10,
+      "forbiddenBodiesSeen": 10,
+      "allowedBodiesSeen": 8,
+      "allReportChecks": 32,
+      "reportChecksPassing": 8,
+      "requests": [
+        {
+          "path": "jsonl-session-mismatch-request.json",
+          "forbidden": true,
+          "seen": true,
+          "memoryRefs": [
+            "memoryauditjsonlsessionmismatchmarker"
+          ],
+          "scriptedRequests": 1
+        },
+        {
+          "path": "jsonl-deprecated-request.json",
+          "forbidden": true,
+          "seen": true,
+          "memoryRefs": [
+            "memoryauditjsonldeprecatedmarker"
+          ],
+          "scriptedRequests": 1
+        },
+        {
+          "path": "jsonl-superseded-request.json",
+          "forbidden": true,
+          "seen": true,
+          "memoryRefs": [
+            "memoryauditjsonlsupersededmarker"
+          ],
+          "scriptedRequests": 1
+        },
+        {
+          "path": "jsonl-stale-request.json",
+          "forbidden": true,
+          "seen": true,
+          "memoryRefs": [
+            "memoryauditjsonlstalemarker"
+          ],
+          "scriptedRequests": 1
+        },
+        {
+          "path": "jsonl-conflicting-request.json",
+          "forbidden": true,
+          "seen": true,
+          "memoryRefs": [
+            "memoryauditjsonlconflictingmarker"
+          ],
+          "scriptedRequests": 1
+        },
+        {
+          "path": "jsonl-owned-session-request.json",
+          "forbidden": false,
+          "seen": true,
+          "memoryRefs": [
+            "memoryauditjsonlownedsessionmarker"
+          ],
+          "scriptedRequests": 1
+        },
+        {
+          "path": "jsonl-global-request.json",
+          "forbidden": false,
+          "seen": true,
+          "memoryRefs": [
+            "memoryauditjsonlglobalmarker"
+          ],
+          "scriptedRequests": 1
+        },
+        {
+          "path": "jsonl-workspace-request.json",
+          "forbidden": false,
+          "seen": true,
+          "memoryRefs": [
+            "memoryauditjsonlworkspacemarker"
+          ],
+          "scriptedRequests": 1
+        },
+        {
+          "path": "jsonl-active-request.json",
+          "forbidden": false,
+          "seen": true,
+          "memoryRefs": [
+            "memoryauditjsonlactivemarker"
+          ],
+          "scriptedRequests": 1
+        },
+        {
+          "path": "sqlite-session-mismatch-request.json",
+          "forbidden": true,
+          "seen": true,
+          "memoryRefs": [
+            "memoryauditsqlitesessionmismatchmarker"
+          ],
+          "scriptedRequests": 1
+        },
+        {
+          "path": "sqlite-deprecated-request.json",
+          "forbidden": true,
+          "seen": true,
+          "memoryRefs": [
+            "memoryauditsqlitedeprecatedmarker"
+          ],
+          "scriptedRequests": 1
+        },
+        {
+          "path": "sqlite-superseded-request.json",
+          "forbidden": true,
+          "seen": true,
+          "memoryRefs": [
+            "memoryauditsqlitesupersededmarker"
+          ],
+          "scriptedRequests": 1
+        },
+        {
+          "path": "sqlite-stale-request.json",
+          "forbidden": true,
+          "seen": true,
+          "memoryRefs": [
+            "memoryauditsqlitestalemarker"
+          ],
+          "scriptedRequests": 1
+        },
+        {
+          "path": "sqlite-conflicting-request.json",
+          "forbidden": true,
+          "seen": true,
+          "memoryRefs": [
+            "memoryauditsqliteconflictingmarker"
+          ],
+          "scriptedRequests": 1
+        },
+        {
+          "path": "sqlite-owned-session-request.json",
+          "forbidden": false,
+          "seen": true,
+          "memoryRefs": [
+            "memoryauditsqliteownedsessionmarker"
+          ],
+          "scriptedRequests": 1
+        },
+        {
+          "path": "sqlite-global-request.json",
+          "forbidden": false,
+          "seen": true,
+          "memoryRefs": [
+            "memoryauditsqliteglobalmarker"
+          ],
+          "scriptedRequests": 1
+        },
+        {
+          "path": "sqlite-workspace-request.json",
+          "forbidden": false,
+          "seen": true,
+          "memoryRefs": [
+            "memoryauditsqliteworkspacemarker"
+          ],
+          "scriptedRequests": 1
+        },
+        {
+          "path": "sqlite-active-request.json",
+          "forbidden": false,
+          "seen": true,
+          "memoryRefs": [
+            "memoryauditsqliteactivemarker"
+          ],
+          "scriptedRequests": 1
+        }
+      ]
+    },
+    {
+      "label": "portable-candidate",
+      "requestCount": 18,
+      "forbiddenRequestCount": 10,
+      "forbiddenBodiesSeen": 0,
+      "allowedBodiesSeen": 8,
+      "allReportChecks": 32,
+      "reportChecksPassing": 32,
+      "requests": [
+        {
+          "path": "jsonl-session-mismatch-request.json",
+          "forbidden": true,
+          "seen": false,
+          "memoryRefs": [],
+          "scriptedRequests": 1
+        },
+        {
+          "path": "jsonl-deprecated-request.json",
+          "forbidden": true,
+          "seen": false,
+          "memoryRefs": [],
+          "scriptedRequests": 1
+        },
+        {
+          "path": "jsonl-superseded-request.json",
+          "forbidden": true,
+          "seen": false,
+          "memoryRefs": [],
+          "scriptedRequests": 1
+        },
+        {
+          "path": "jsonl-stale-request.json",
+          "forbidden": true,
+          "seen": false,
+          "memoryRefs": [],
+          "scriptedRequests": 1
+        },
+        {
+          "path": "jsonl-conflicting-request.json",
+          "forbidden": true,
+          "seen": false,
+          "memoryRefs": [],
+          "scriptedRequests": 1
+        },
+        {
+          "path": "jsonl-owned-session-request.json",
+          "forbidden": false,
+          "seen": true,
+          "memoryRefs": [
+            "memoryauditjsonlownedsessionmarker"
+          ],
+          "scriptedRequests": 1
+        },
+        {
+          "path": "jsonl-global-request.json",
+          "forbidden": false,
+          "seen": true,
+          "memoryRefs": [
+            "memoryauditjsonlglobalmarker"
+          ],
+          "scriptedRequests": 1
+        },
+        {
+          "path": "jsonl-workspace-request.json",
+          "forbidden": false,
+          "seen": true,
+          "memoryRefs": [
+            "memoryauditjsonlworkspacemarker"
+          ],
+          "scriptedRequests": 1
+        },
+        {
+          "path": "jsonl-active-request.json",
+          "forbidden": false,
+          "seen": true,
+          "memoryRefs": [
+            "memoryauditjsonlactivemarker"
+          ],
+          "scriptedRequests": 1
+        },
+        {
+          "path": "sqlite-session-mismatch-request.json",
+          "forbidden": true,
+          "seen": false,
+          "memoryRefs": [],
+          "scriptedRequests": 1
+        },
+        {
+          "path": "sqlite-deprecated-request.json",
+          "forbidden": true,
+          "seen": false,
+          "memoryRefs": [],
+          "scriptedRequests": 1
+        },
+        {
+          "path": "sqlite-superseded-request.json",
+          "forbidden": true,
+          "seen": false,
+          "memoryRefs": [],
+          "scriptedRequests": 1
+        },
+        {
+          "path": "sqlite-stale-request.json",
+          "forbidden": true,
+          "seen": false,
+          "memoryRefs": [],
+          "scriptedRequests": 1
+        },
+        {
+          "path": "sqlite-conflicting-request.json",
+          "forbidden": true,
+          "seen": false,
+          "memoryRefs": [],
+          "scriptedRequests": 1
+        },
+        {
+          "path": "sqlite-owned-session-request.json",
+          "forbidden": false,
+          "seen": true,
+          "memoryRefs": [
+            "memoryauditsqliteownedsessionmarker"
+          ],
+          "scriptedRequests": 1
+        },
+        {
+          "path": "sqlite-global-request.json",
+          "forbidden": false,
+          "seen": true,
+          "memoryRefs": [
+            "memoryauditsqliteglobalmarker"
+          ],
+          "scriptedRequests": 1
+        },
+        {
+          "path": "sqlite-workspace-request.json",
+          "forbidden": false,
+          "seen": true,
+          "memoryRefs": [
+            "memoryauditsqliteworkspacemarker"
+          ],
+          "scriptedRequests": 1
+        },
+        {
+          "path": "sqlite-active-request.json",
+          "forbidden": false,
+          "seen": true,
+          "memoryRefs": [
+            "memoryauditsqliteactivemarker"
+          ],
+          "scriptedRequests": 1
+        }
+      ]
+    }
+  ],
+  "ownerTargetTests": {
+    "passed": 209,
+    "failed": 0
+  },
+  "status": "PASS",
+  "paidCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "promotion": "NOT_RUN"
+}

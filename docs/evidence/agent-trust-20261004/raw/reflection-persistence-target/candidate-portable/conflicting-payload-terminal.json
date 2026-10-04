@@ -1,0 +1,51 @@
+{
+  "label": "conflicting-payload-terminal",
+  "pass": true,
+  "sessionId": "session_b51a4f96-7097-438c-977f-e9b309b8e9f2",
+  "turnId": "turn_77ecd401-b752-4a03-af9f-79680593fe6d",
+  "other": "turn_e7688d70-e3fa-4af7-bf32-0e3ca9d31857",
+  "result": {
+    "outputs": 0,
+    "candidates": 0
+  },
+  "events": [
+    {
+      "id": "event_daad52e7-eaad-49b9-8cae-cf104e3b9936",
+      "sessionId": "session_b51a4f96-7097-438c-977f-e9b309b8e9f2",
+      "turnId": "turn_77ecd401-b752-4a03-af9f-79680593fe6d",
+      "timestamp": 44,
+      "type": "turn.started",
+      "payload": {
+        "turnId": "turn_77ecd401-b752-4a03-af9f-79680593fe6d"
+      },
+      "sequence": 0,
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_9d372cc1-4f60-440c-a2ae-f3e7be6d893c",
+      "sessionId": "session_b51a4f96-7097-438c-977f-e9b309b8e9f2",
+      "timestamp": 45,
+      "type": "turn.failed",
+      "payload": {
+        "turnId": "turn_e7688d70-e3fa-4af7-bf32-0e3ca9d31857",
+        "error": {
+          "code": "VERIFICATION_FAILED",
+          "message": "other terminal"
+        }
+      },
+      "sequence": 1,
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_7ad88efe-2d20-4dec-a646-01cf8200a789",
+      "sessionId": "session_b51a4f96-7097-438c-977f-e9b309b8e9f2",
+      "timestamp": 46,
+      "type": "verification.failed",
+      "payload": {
+        "error": "orphan after terminal"
+      },
+      "sequence": 2,
+      "schemaVersion": 1
+    }
+  ]
+}

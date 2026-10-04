@@ -1,0 +1,161 @@
+{
+  "label": "current-legacy-mcp-outer-boundary",
+  "pass": true,
+  "sessionId": "session_40be32f7-e7eb-411b-89c3-6cd64c42ba29",
+  "turnId": "turn_999c92e5-af91-4856-bca2-9ae137eaa4a6",
+  "result": {
+    "outputs": 1,
+    "candidates": 1
+  },
+  "candidates": [
+    {
+      "id": "lc_d0182f3b-3029-43b4-9701-4b9c8f8d25e1",
+      "kind": "memory",
+      "content": "tool mcp_remote_query failed with reproducer failure; verify inputs and environment before retry",
+      "proposedAt": 1791075872547,
+      "securityChecked": true,
+      "sourceCandidate": {
+        "content": "tool mcp_remote_query failed with reproducer failure; verify inputs and environment before retry",
+        "type": "procedural",
+        "sourceSession": "session_40be32f7-e7eb-411b-89c3-6cd64c42ba29",
+        "importance": 0.9,
+        "confidence": 0.6,
+        "novelty": 0.5,
+        "stability": 0.5,
+        "structured": {
+          "when": "mcp_remote_query failed with reproducer failure",
+          "do": "verify inputs and environment state, then retry",
+          "avoid": "retrying the same call without checking inputs",
+          "rootCause": "tool",
+          "outcome": "failure",
+          "evidenceRefs": [
+            "event_8805ffbb-9353-4d62-b710-8cfc0ad3c46e",
+            "event_3978f977-0fec-408e-b774-3269452753f6"
+          ]
+        },
+        "sourceTurn": "turn_999c92e5-af91-4856-bca2-9ae137eaa4a6",
+        "derivability": {
+          "verdict": "non-derivable",
+          "reason": "expresses a (?:environment|ci|toolchain|compiler|sandbox|network proxy|offline)b — a preference/decision/lesson that cannot be re-derived"
+        },
+        "promotionState": "quarantined",
+        "securityScan": {
+          "checked": true,
+          "passed": true,
+          "at": 1791075872547
+        },
+        "pollutionSources": [
+          "mcp:mcp_remote_query"
+        ]
+      },
+      "structured": {
+        "when": "mcp_remote_query failed with reproducer failure",
+        "do": "verify inputs and environment state, then retry",
+        "avoid": "retrying the same call without checking inputs",
+        "rootCause": "tool",
+        "outcome": "failure",
+        "evidenceRefs": [
+          "event_8805ffbb-9353-4d62-b710-8cfc0ad3c46e",
+          "event_3978f977-0fec-408e-b774-3269452753f6"
+        ]
+      }
+    }
+  ],
+  "events": [
+    {
+      "id": "event_57f49b9b-5d58-45bc-8af0-6d039ef30d9f",
+      "sessionId": "session_40be32f7-e7eb-411b-89c3-6cd64c42ba29",
+      "turnId": "turn_999c92e5-af91-4856-bca2-9ae137eaa4a6",
+      "timestamp": 23,
+      "type": "turn.started",
+      "payload": {
+        "turnId": "turn_999c92e5-af91-4856-bca2-9ae137eaa4a6"
+      },
+      "sequence": 0,
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_6ece7902-af09-4c5d-bcde-49a8f09d79ff",
+      "sessionId": "session_40be32f7-e7eb-411b-89c3-6cd64c42ba29",
+      "timestamp": 24,
+      "type": "tool.requested",
+      "payload": {
+        "toolCallId": "shared-call",
+        "name": "mcp_remote_query",
+        "args": {
+          "path": "src/main.ts"
+        }
+      },
+      "sequence": 1,
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_8805ffbb-9353-4d62-b710-8cfc0ad3c46e",
+      "sessionId": "session_40be32f7-e7eb-411b-89c3-6cd64c42ba29",
+      "timestamp": 25,
+      "type": "tool.failed",
+      "payload": {
+        "toolCallId": "shared-call",
+        "name": "mcp_remote_query",
+        "error": {
+          "code": "PROCESS_ERROR",
+          "message": "reproducer failure"
+        }
+      },
+      "sequence": 2,
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_3978f977-0fec-408e-b774-3269452753f6",
+      "sessionId": "session_40be32f7-e7eb-411b-89c3-6cd64c42ba29",
+      "turnId": "turn_999c92e5-af91-4856-bca2-9ae137eaa4a6",
+      "timestamp": 26,
+      "type": "turn.failed",
+      "payload": {
+        "turnId": "turn_999c92e5-af91-4856-bca2-9ae137eaa4a6",
+        "error": {
+          "code": "PROCESS_ERROR",
+          "message": "reproducer failure"
+        }
+      },
+      "sequence": 3,
+      "schemaVersion": 1
+    }
+  ],
+  "journal": [
+    {
+      "schemaVersion": 1,
+      "sessionId": "session_40be32f7-e7eb-411b-89c3-6cd64c42ba29",
+      "turnId": "turn_999c92e5-af91-4856-bca2-9ae137eaa4a6",
+      "outcome": "failed",
+      "at": 1791075872546,
+      "reflection": {
+        "outcome": "failure",
+        "rootCause": "tool",
+        "evidence": "tool.failed event_8805ffbb-9353-4d62-b710-8cfc0ad3c46e@25; tool.requested event_6ece7902-af09-4c5d-bcde-49a8f09d79ff@24; turn.failed event_3978f977-0fec-408e-b774-3269452753f6@26; task: current task; turn.failed event_3978f977-0fec-408e-b774-3269452753f6@26; task: current task",
+        "lesson": "tool mcp_remote_query failed with reproducer failure; verify inputs and environment before retry",
+        "generalizable": true,
+        "candidate": {
+          "content": "tool mcp_remote_query failed with reproducer failure; verify inputs and environment before retry",
+          "type": "procedural",
+          "sourceSession": "session_40be32f7-e7eb-411b-89c3-6cd64c42ba29",
+          "importance": 0.9,
+          "confidence": 0.6,
+          "novelty": 0.5,
+          "stability": 0.5,
+          "structured": {
+            "when": "mcp_remote_query failed with reproducer failure",
+            "do": "verify inputs and environment state, then retry",
+            "avoid": "retrying the same call without checking inputs",
+            "rootCause": "tool",
+            "outcome": "failure",
+            "evidenceRefs": [
+              "event_8805ffbb-9353-4d62-b710-8cfc0ad3c46e",
+              "event_3978f977-0fec-408e-b774-3269452753f6"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

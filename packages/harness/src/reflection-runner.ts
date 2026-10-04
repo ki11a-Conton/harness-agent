@@ -7,9 +7,10 @@
 // `agent learn` command.
 
 import { randomUUID } from "node:crypto";
-import { readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import type {
+  AgentEvent,
   ErrorCode,
   EventStore,
   EventType,
@@ -27,6 +28,7 @@ import {
 import { newEventId, isNodeErrorCode } from "@ar/contracts";
 import type { LearningCandidate, LearningCandidateKind } from "@ar/learning";
 import type { LearningCandidateStore } from "./candidate-store.js";
+import { appendDurable, withLock } from "@ar/store-integrity";
 
 export interface PostTurnReflectorDeps {
   events: EventStore;
@@ -65,8 +67,8 @@ export interface ReflectionJournalRecord {
 const REFLECTION_SCHEMA_VERSION = 1;
 export const REFLECTION_FILE_NAME = "reflection-outputs.jsonl";
 
-/** P2-5: deterministic post-turn reflection. Reads the session event stream,
- *  reflects over failures, journals the outputs, and queues write-gate-passing
+/** P2-5: deterministic post-turn reflection. Reads the target turn's view of
+ *  the session event stream, journals failures, and queues write-gate-passing
  *  procedural candidates (P2-6). Errors are contained per step — a reflection
  *  failure must never break the surrounding application. */
 export class PostTurnReflector {
@@ -80,7 +82,7 @@ export class PostTurnReflector {
   constructor(deps: PostTurnReflectorDeps) {
     this.events = deps.events;
     this.candidateStore = deps.candidateStore;
-    this.journal = join(deps.dataDir, REFLECTION_FILE_NAME);
+    this.journal = resolve(deps.dataDir, REFLECTION_FILE_NAME);
     this.writePolicy = deps.writePolicy ?? DEFAULT_MEMORY_WRITE_POLICY;
     this.now = deps.now ?? Date.now;
     this.makeCandidateId = deps.newCandidateId ?? (() => `lc_${randomUUID()}`);
@@ -90,7 +92,7 @@ export class PostTurnReflector {
   async reflect(input: ReflectionRunInput): Promise<ReflectionRunResult> {
     let events;
     try {
-      events = await this.events.list(input.sessionId);
+      events = turnEvents(await this.events.list(input.sessionId), input.turnId);
     } catch (err) {
       // P14-6: event read failure → skip quietly, but reported, never silent.
       process.stderr.write(`[degraded] reflection.events.list: ${err instanceof Error ? err.message : String(err)}\n`);
@@ -102,14 +104,14 @@ export class PostTurnReflector {
     // P17-2: did this turn USE untrusted external content (MCP tools, remote
     // skills, repository instruction files)? Candidates from such turns are
     // quarantined — never auto-promoted, pollution marked.
-    const pollutionSources = detectPollutionFromEvents(events, input.turnId);
+    const pollutionSources = detectPollutionFromEvents(events);
 
     let outputs = 0;
     let candidates = 0;
     for (const reflection of reflections) {
       // Journal every reflection output first (P2-5: never lose the trace).
-      await this.appendJournal(input.sessionId, input.turnId, input.outcome.status, reflection);
-      outputs += 1;
+      const journaled = await this.appendJournal(input.sessionId, input.turnId, input.outcome.status, reflection);
+      if (journaled) outputs += 1;
       // P2-6: only generalizable procedural candidates with a structured
       // lesson enter the learning pipeline; the write gate re-checks the
       // security + importance/novelty bars.
@@ -125,6 +127,9 @@ export class PostTurnReflector {
         }
         continue;
       }
+      // An unjournaled lesson cannot enter the learning queue. Still evaluate
+      // the gate above: journal degradation must not suppress security audits.
+      if (!journaled) continue;
       const candidate = candidateFromReflection(
         reflection,
         this.makeCandidateId(),
@@ -180,14 +185,16 @@ export class PostTurnReflector {
 
   /** Read the reflection journal (for the CLI / audits). */
   async listJournal(): Promise<ReflectionJournalRecord[]> {
-    let content: string;
-    try {
-      content = await readFile(this.journal, "utf8");
-    } catch (err) {
-      // P14-6: first-run ENOENT is expected — other read failures propagate.
-      if (!isNodeErrorCode(err, "ENOENT")) throw err;
-      return [];
-    }
+    // Share the append lock so an in-process reader never sees a partial line.
+    const content = await withLock(this.journalLockKey(), async () => {
+      try {
+        return await readFile(this.journal, "utf8");
+      } catch (err) {
+        // P14-6: first-run ENOENT is expected — other read failures propagate.
+        if (!isNodeErrorCode(err, "ENOENT")) throw err;
+        return "";
+      }
+    });
     const records: ReflectionJournalRecord[] = [];
     for (const line of content.split("\n")) {
       const trimmed = line.trim();
@@ -208,7 +215,7 @@ export class PostTurnReflector {
     turnId: TurnId,
     outcome: string,
     reflection: ReflectionOutput,
-  ): Promise<void> {
+  ): Promise<boolean> {
     try {
       const record: ReflectionJournalRecord = {
         schemaVersion: REFLECTION_SCHEMA_VERSION,
@@ -218,22 +225,52 @@ export class PostTurnReflector {
         at: this.now(),
         reflection,
       };
-      const line = JSON.stringify(record);
-      let existing = "";
-      try {
-        existing = await readFile(this.journal, "utf8");
-      } catch (err) {
-        // P14-6: first append (ENOENT) is expected — other read failures
-        // propagate (a journal that exists but cannot be read is a real error).
-        if (!isNodeErrorCode(err, "ENOENT")) throw err;
-        existing = "";
-      }
-      await writeFile(this.journal, existing + line + "\n", "utf8");
+      const line = JSON.stringify(record) + "\n";
+      // The shared path lock also covers separate reflector instances in this
+      // process. Durable append preserves history without whole-file rewrites.
+      await withLock(this.journalLockKey(), () => appendDurable(this.journal, line));
+      return true;
     } catch (err) {
       // P14-6: journal write failure must never break the app — reported.
       process.stderr.write(`[degraded] reflection.journal.append: ${err instanceof Error ? err.message : String(err)}\n`);
+      return false;
     }
   }
+
+  private journalLockKey(): string {
+    return `reflection-journal:${this.journal}`;
+  }
+}
+
+/** Keep legacy rows only inside an identified turn span. Explicit outer ids
+ *  remain authoritative; payload ids identify boundaries, never ordinary rows.
+ *  Copies for legacy rows give the pure Reflector complete recovery/evidence
+ *  attribution without modifying the stored events or their sequence order. */
+function turnEvents(events: readonly AgentEvent[], turnId: TurnId): AgentEvent[] {
+  const selected: AgentEvent[] = [];
+  let activeTurn: TurnId | undefined;
+  for (const event of events) {
+    const starts = event.type === "turn.started";
+    const terminal = event.type === "turn.completed" || event.type === "turn.failed" || event.type === "turn.cancelled";
+    const payloadTurn = (starts || terminal) && typeof event.payload.turnId === "string" && event.payload.turnId.length > 0
+      ? event.payload.turnId as TurnId
+      : undefined;
+    if (starts) activeTurn = event.turnId ?? payloadTurn;
+
+    let owner = event.turnId;
+    if (owner === undefined) {
+      if (terminal) {
+        // A conflicting payload-only terminal cannot establish a new span or
+        // relabel its failure as belonging to the currently active turn.
+        owner = payloadTurn === undefined || payloadTurn === activeTurn ? activeTurn : undefined;
+      } else {
+        owner = activeTurn;
+      }
+    }
+    if (owner === turnId) selected.push(event.turnId === undefined ? { ...event, turnId } : event);
+    if (terminal && (event.turnId === undefined || event.turnId === activeTurn)) activeTurn = undefined;
+  }
+  return selected;
 }
 
 /** A write-gate-passing reflection becomes a queued learning candidate. The
@@ -283,8 +320,7 @@ export function detectPollutionFromEvents(
   turnId?: import("@ar/contracts").TurnId,
 ): string[] {
   const sources = new Set<string>();
-  for (const e of events) {
-    if (turnId !== undefined && e.turnId !== undefined && e.turnId !== turnId) continue;
+  for (const e of turnId === undefined ? events : turnEvents(events, turnId)) {
     if (e.type !== "tool.requested") continue;
     const name = typeof e.payload.name === "string" ? e.payload.name : "";
     if (/^mcp[_:]/i.test(name)) {

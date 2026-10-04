@@ -1,0 +1,19 @@
+{
+  "stage": "original-baseline-same-byte-tests",
+  "sourceSha": "968544064f43cfc0a876c4e65fcb967cd466c9a2",
+  "command": [
+    "pnpm",
+    "exec",
+    "vitest",
+    "run",
+    "packages/harness/src/candidate-persistence.regressions.test.ts",
+    "--reporter=json",
+    "--outputFile=/workspace/harness-agent/.ci/agent-round2-20261004/reflection-persistence-target/store-baseline.json"
+  ],
+  "exitCode": 1,
+  "durationSeconds": 0.9374032020568848,
+  "testSha256": "1693e2f89e0af93481c882cacf4b7140c01325341ee5da09a20d8d0d0829ec35",
+  "sourceSha256": "b55af583dd2661df6199526872df080e895bc6d264013e9cf9853b65542f1faf",
+  "realFilesystemFaults": true,
+  "paidCalls": 0
+}

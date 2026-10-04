@@ -29,6 +29,8 @@ export interface DiscoveredCommand {
   source: DiscoverySource;
   file: string;
   confidence: "high" | "medium" | "low";
+  /** Actual package.json script key, never inferred from command text. */
+  scriptName?: string;
 }
 
 export interface CommandDiscoveryResult {
@@ -114,7 +116,7 @@ function parsePackageJson(rel: string, text: string, out: DiscoveredCommand[]): 
       }
     }
     if (!kind) continue;
-    out.push({ kind, command: cmd, source: "package.json", file: rel, confidence: "high" });
+    out.push({ kind, command: cmd, source: "package.json", file: rel, confidence: "high", scriptName: name });
   }
 }
 
@@ -329,6 +331,7 @@ async function discoverFromFiles(root: string): Promise<CommandDiscoveryResult> 
 
   const ciFiles = files
     .filter((f) => /^\.github\/workflows\/[^/]+\.ya?ml$/.test(f))
+    .sort()
     .slice(0, 5);
   for (const rel of ciFiles) {
     sourceFilesChecked.push(rel);
@@ -337,16 +340,42 @@ async function discoverFromFiles(root: string): Promise<CommandDiscoveryResult> 
     for (const d of parseCiRuns(text, rel)) discovered.push(d);
   }
 
-  discovered.sort(
-    (a, b) =>
-      confidenceRank(a) - confidenceRank(b) ||
-      (a.source === "package.json" ? -1 : b.source === "package.json" ? 1 : 0),
-  );
-  return { root: resolve(root), discovered: discovered.slice(0, MAX_DISCOVERED), sourceFilesChecked };
+  discovered.sort(compareDiscovered);
+  // Root main entrypoints must survive the bound even when a repository has
+  // more than 60 workspace or variant commands. The reserved set has at most
+  // one canonical script per kind; fill remaining capacity in the same order.
+  const retained = new Set(discovered.filter(isRootCanonical));
+  for (const command of discovered) {
+    if (retained.size >= MAX_DISCOVERED) break;
+    retained.add(command);
+  }
+  return { root: resolve(root), discovered: [...retained].sort(compareDiscovered), sourceFilesChecked };
 }
 
 function confidenceRank(d: DiscoveredCommand): number {
   return d.confidence === "high" ? 0 : d.confidence === "medium" ? 1 : 2;
+}
+
+function isRootCanonical(d: DiscoveredCommand): boolean {
+  return d.source === "package.json" && d.file === "package.json" && d.scriptName === d.kind;
+}
+
+function compareText(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
+/** A single total ordering for discovery and its summary. Equal sources must
+ *  compare equal at that rank, rather than reversing every package pair. */
+function compareDiscovered(a: DiscoveredCommand, b: DiscoveredCommand): number {
+  return confidenceRank(a) - confidenceRank(b)
+    || Number(b.source === "package.json") - Number(a.source === "package.json")
+    || Number(b.file === "package.json") - Number(a.file === "package.json")
+    || Number(isRootCanonical(b)) - Number(isRootCanonical(a))
+    || compareText(a.file, b.file)
+    || compareText(a.kind, b.kind)
+    || compareText(a.scriptName ?? "", b.scriptName ?? "")
+    || compareText(a.source, b.source)
+    || compareText(a.command, b.command);
 }
 
 /** Pick the single strongest command per kind. */
@@ -355,7 +384,7 @@ export function summarize(discovered: DiscoveredCommand[]): Partial<Record<Disco
   for (const kind of KINDS) {
     const pick = discovered
       .filter((d) => d.kind === kind)
-      .sort((a, b) => confidenceRank(a) - confidenceRank(b) || (a.source === "package.json" ? -1 : 1))[0];
+      .sort(compareDiscovered)[0];
     if (pick) best[kind] = pick.command;
   }
   return best;

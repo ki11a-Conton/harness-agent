@@ -1,0 +1,980 @@
+{
+  "label": "concurrent-journal-9",
+  "pass": true,
+  "round": 9,
+  "multipleInstances": false,
+  "sharedCandidateStore": true,
+  "expected": 20,
+  "announcedOutputs": 20,
+  "journalCount": 20,
+  "candidateCount": 20,
+  "uniqueJournalTurns": 20,
+  "journalBytes": 26120,
+  "journalSha256": "6513d3ef122612b4d17c98e736b815c4fbea71933097a29c53965c99e40817d9",
+  "inputs": [
+    {
+      "sessionId": "session_8fb1e9ab-62b5-44e8-a9b7-df08b01faee0",
+      "turnId": "turn_c5b7ca11-5136-49e2-803e-5e1be14e66b2",
+      "outcome": {
+        "status": "failed",
+        "state": {
+          "goal": "independent session 0"
+        }
+      }
+    },
+    {
+      "sessionId": "session_72d34359-4d64-4f44-b78f-6ffc9e9b932b",
+      "turnId": "turn_29c5d091-df59-4642-9ea9-13e7b91b3533",
+      "outcome": {
+        "status": "failed",
+        "state": {
+          "goal": "independent session 1"
+        }
+      }
+    },
+    {
+      "sessionId": "session_4d5b6ef9-6158-40c6-b602-aea5ae705729",
+      "turnId": "turn_f83a48a6-6080-45eb-afc1-4c4353e365d2",
+      "outcome": {
+        "status": "failed",
+        "state": {
+          "goal": "independent session 2"
+        }
+      }
+    },
+    {
+      "sessionId": "session_0cddb8f5-f24b-4376-b76e-88b78f0139f9",
+      "turnId": "turn_9ab73b5e-0f6f-4f76-8b06-ca2d436d155b",
+      "outcome": {
+        "status": "failed",
+        "state": {
+          "goal": "independent session 3"
+        }
+      }
+    },
+    {
+      "sessionId": "session_a648d060-220a-4efe-ba62-be5fb76c7d40",
+      "turnId": "turn_7f768c3e-81e4-4871-bd9e-3ec767ad564f",
+      "outcome": {
+        "status": "failed",
+        "state": {
+          "goal": "independent session 4"
+        }
+      }
+    },
+    {
+      "sessionId": "session_957cd688-3b88-4c0d-883c-cc7cae9c1052",
+      "turnId": "turn_1380bd47-23e6-474e-967a-921aa3b999a9",
+      "outcome": {
+        "status": "failed",
+        "state": {
+          "goal": "independent session 5"
+        }
+      }
+    },
+    {
+      "sessionId": "session_03c3a0b4-f31b-4a7c-8978-765d017dcb5b",
+      "turnId": "turn_73aee1c6-5c9e-490e-9e4b-f445f77c3d7f",
+      "outcome": {
+        "status": "failed",
+        "state": {
+          "goal": "independent session 6"
+        }
+      }
+    },
+    {
+      "sessionId": "session_9a5df432-dadd-4de7-a3d4-4dc93666a787",
+      "turnId": "turn_ed1799fc-575b-4c82-8ca7-55c405c551af",
+      "outcome": {
+        "status": "failed",
+        "state": {
+          "goal": "independent session 7"
+        }
+      }
+    },
+    {
+      "sessionId": "session_656c5b44-2f4c-436c-ae08-2d62b77886a5",
+      "turnId": "turn_7f8de364-e1bb-48a6-acd6-6f7b172deef2",
+      "outcome": {
+        "status": "failed",
+        "state": {
+          "goal": "independent session 8"
+        }
+      }
+    },
+    {
+      "sessionId": "session_cfd0c57d-8ce3-4ffc-81ed-76b2ce3ac9da",
+      "turnId": "turn_19e52839-f504-4e6d-a5d4-eba86f60e0e7",
+      "outcome": {
+        "status": "failed",
+        "state": {
+          "goal": "independent session 9"
+        }
+      }
+    },
+    {
+      "sessionId": "session_b2631ef0-8549-4c70-9a78-ed52f2682889",
+      "turnId": "turn_8f306247-4d12-4b95-9a43-969644c5fdcb",
+      "outcome": {
+        "status": "failed",
+        "state": {
+          "goal": "independent session 10"
+        }
+      }
+    },
+    {
+      "sessionId": "session_5c5304a1-4a41-4bdd-9dba-cc3b26a5ca3d",
+      "turnId": "turn_65802108-6718-4ca7-ac45-1cbce5c579ac",
+      "outcome": {
+        "status": "failed",
+        "state": {
+          "goal": "independent session 11"
+        }
+      }
+    },
+    {
+      "sessionId": "session_c89ff42d-ecfe-4f10-998b-bf2259732ef1",
+      "turnId": "turn_20549954-8065-46c5-8bbf-00ffaeaab93d",
+      "outcome": {
+        "status": "failed",
+        "state": {
+          "goal": "independent session 12"
+        }
+      }
+    },
+    {
+      "sessionId": "session_7317f63b-94cf-487f-bf10-a9d7b1cc83e7",
+      "turnId": "turn_ffe22a9c-238c-4f64-819e-4f39e95485cc",
+      "outcome": {
+        "status": "failed",
+        "state": {
+          "goal": "independent session 13"
+        }
+      }
+    },
+    {
+      "sessionId": "session_0fb3b815-d66b-404d-bf34-ecc2e08bce37",
+      "turnId": "turn_0fe8b4d2-12f0-41de-9e70-2d9df0a90148",
+      "outcome": {
+        "status": "failed",
+        "state": {
+          "goal": "independent session 14"
+        }
+      }
+    },
+    {
+      "sessionId": "session_66985d84-359b-4dcc-bb0b-ca47a75a3b45",
+      "turnId": "turn_e66e7e1a-5cb2-494a-af15-6065963100f5",
+      "outcome": {
+        "status": "failed",
+        "state": {
+          "goal": "independent session 15"
+        }
+      }
+    },
+    {
+      "sessionId": "session_2dff86fc-17ee-46de-8a09-d659a24d8ef3",
+      "turnId": "turn_e7ef771f-c7ae-4993-8cdd-33622310db46",
+      "outcome": {
+        "status": "failed",
+        "state": {
+          "goal": "independent session 16"
+        }
+      }
+    },
+    {
+      "sessionId": "session_c25e69f4-a4f3-48d9-946d-e574080cfd3e",
+      "turnId": "turn_f1a88cd5-c8ba-46a6-b595-f67c2ad2a305",
+      "outcome": {
+        "status": "failed",
+        "state": {
+          "goal": "independent session 17"
+        }
+      }
+    },
+    {
+      "sessionId": "session_4c290775-4230-4f53-a3a3-575cf4164c86",
+      "turnId": "turn_2a6b1202-62f1-4589-95b6-f404cb732f2c",
+      "outcome": {
+        "status": "failed",
+        "state": {
+          "goal": "independent session 18"
+        }
+      }
+    },
+    {
+      "sessionId": "session_7e40ab81-fee7-4f8f-a384-6dfd42b51946",
+      "turnId": "turn_85b33f4a-ee76-4330-80b1-5b7299776332",
+      "outcome": {
+        "status": "failed",
+        "state": {
+          "goal": "independent session 19"
+        }
+      }
+    }
+  ],
+  "results": [
+    {
+      "outputs": 1,
+      "candidates": 1
+    },
+    {
+      "outputs": 1,
+      "candidates": 1
+    },
+    {
+      "outputs": 1,
+      "candidates": 1
+    },
+    {
+      "outputs": 1,
+      "candidates": 1
+    },
+    {
+      "outputs": 1,
+      "candidates": 1
+    },
+    {
+      "outputs": 1,
+      "candidates": 1
+    },
+    {
+      "outputs": 1,
+      "candidates": 1
+    },
+    {
+      "outputs": 1,
+      "candidates": 1
+    },
+    {
+      "outputs": 1,
+      "candidates": 1
+    },
+    {
+      "outputs": 1,
+      "candidates": 1
+    },
+    {
+      "outputs": 1,
+      "candidates": 1
+    },
+    {
+      "outputs": 1,
+      "candidates": 1
+    },
+    {
+      "outputs": 1,
+      "candidates": 1
+    },
+    {
+      "outputs": 1,
+      "candidates": 1
+    },
+    {
+      "outputs": 1,
+      "candidates": 1
+    },
+    {
+      "outputs": 1,
+      "candidates": 1
+    },
+    {
+      "outputs": 1,
+      "candidates": 1
+    },
+    {
+      "outputs": 1,
+      "candidates": 1
+    },
+    {
+      "outputs": 1,
+      "candidates": 1
+    },
+    {
+      "outputs": 1,
+      "candidates": 1
+    }
+  ],
+  "journal": [
+    {
+      "schemaVersion": 1,
+      "sessionId": "session_8fb1e9ab-62b5-44e8-a9b7-df08b01faee0",
+      "turnId": "turn_c5b7ca11-5136-49e2-803e-5e1be14e66b2",
+      "outcome": "failed",
+      "at": 1791076299744,
+      "reflection": {
+        "outcome": "failure",
+        "rootCause": "tool",
+        "evidence": "tool.failed event_2cda6eca-0300-4e4a-9760-aea55f18fd72@769; tool.requested event_9e63c2d0-3aee-44f0-8d70-51e69a4e5e84@768; turn.failed event_2fa06e9a-5c65-4ddd-b8ab-d09eba991d0e@770; task: independent session 0; turn.failed event_2fa06e9a-5c65-4ddd-b8ab-d09eba991d0e@770; tool.failed event_2cda6eca-0300-4e4a-9760-aea55f18fd72@769; task: independent session 0",
+        "lesson": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+        "generalizable": true,
+        "candidate": {
+          "content": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+          "type": "procedural",
+          "sourceSession": "session_8fb1e9ab-62b5-44e8-a9b7-df08b01faee0",
+          "importance": 0.9,
+          "confidence": 0.6,
+          "novelty": 0.5,
+          "stability": 0.5,
+          "structured": {
+            "when": "read_file failed with reproducer failure",
+            "do": "verify inputs and environment state, then retry",
+            "avoid": "retrying the same call without checking inputs",
+            "rootCause": "tool",
+            "outcome": "failure",
+            "evidenceRefs": [
+              "event_2cda6eca-0300-4e4a-9760-aea55f18fd72",
+              "event_2fa06e9a-5c65-4ddd-b8ab-d09eba991d0e"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "sessionId": "session_72d34359-4d64-4f44-b78f-6ffc9e9b932b",
+      "turnId": "turn_29c5d091-df59-4642-9ea9-13e7b91b3533",
+      "outcome": "failed",
+      "at": 1791076299744,
+      "reflection": {
+        "outcome": "failure",
+        "rootCause": "tool",
+        "evidence": "tool.failed event_2e931ee2-8faa-4429-b533-b2e51b071eb6@773; tool.requested event_ac0f80fe-02fa-4639-8a2a-012774dc58b6@772; turn.failed event_1645b2f5-312d-4074-89ac-a97420b0a634@774; task: independent session 1; turn.failed event_1645b2f5-312d-4074-89ac-a97420b0a634@774; tool.failed event_2e931ee2-8faa-4429-b533-b2e51b071eb6@773; task: independent session 1",
+        "lesson": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+        "generalizable": true,
+        "candidate": {
+          "content": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+          "type": "procedural",
+          "sourceSession": "session_72d34359-4d64-4f44-b78f-6ffc9e9b932b",
+          "importance": 0.9,
+          "confidence": 0.6,
+          "novelty": 0.5,
+          "stability": 0.5,
+          "structured": {
+            "when": "read_file failed with reproducer failure",
+            "do": "verify inputs and environment state, then retry",
+            "avoid": "retrying the same call without checking inputs",
+            "rootCause": "tool",
+            "outcome": "failure",
+            "evidenceRefs": [
+              "event_2e931ee2-8faa-4429-b533-b2e51b071eb6",
+              "event_1645b2f5-312d-4074-89ac-a97420b0a634"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "sessionId": "session_4d5b6ef9-6158-40c6-b602-aea5ae705729",
+      "turnId": "turn_f83a48a6-6080-45eb-afc1-4c4353e365d2",
+      "outcome": "failed",
+      "at": 1791076299744,
+      "reflection": {
+        "outcome": "failure",
+        "rootCause": "tool",
+        "evidence": "tool.failed event_e73dbae9-7931-4000-ab68-78e4be59aa75@777; tool.requested event_99587616-5af5-4015-bb28-5ed902da6b93@776; turn.failed event_c6691d29-7231-4ae4-869b-0f7342453fba@778; task: independent session 2; turn.failed event_c6691d29-7231-4ae4-869b-0f7342453fba@778; tool.failed event_e73dbae9-7931-4000-ab68-78e4be59aa75@777; task: independent session 2",
+        "lesson": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+        "generalizable": true,
+        "candidate": {
+          "content": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+          "type": "procedural",
+          "sourceSession": "session_4d5b6ef9-6158-40c6-b602-aea5ae705729",
+          "importance": 0.9,
+          "confidence": 0.6,
+          "novelty": 0.5,
+          "stability": 0.5,
+          "structured": {
+            "when": "read_file failed with reproducer failure",
+            "do": "verify inputs and environment state, then retry",
+            "avoid": "retrying the same call without checking inputs",
+            "rootCause": "tool",
+            "outcome": "failure",
+            "evidenceRefs": [
+              "event_e73dbae9-7931-4000-ab68-78e4be59aa75",
+              "event_c6691d29-7231-4ae4-869b-0f7342453fba"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "sessionId": "session_0cddb8f5-f24b-4376-b76e-88b78f0139f9",
+      "turnId": "turn_9ab73b5e-0f6f-4f76-8b06-ca2d436d155b",
+      "outcome": "failed",
+      "at": 1791076299744,
+      "reflection": {
+        "outcome": "failure",
+        "rootCause": "tool",
+        "evidence": "tool.failed event_f51ef835-01d1-47fc-8962-fe8ca25ff45b@781; tool.requested event_0d942691-7f4e-4ad7-882a-46175d59be58@780; turn.failed event_9408370e-89c7-4000-badc-302623ecdab5@782; task: independent session 3; turn.failed event_9408370e-89c7-4000-badc-302623ecdab5@782; tool.failed event_f51ef835-01d1-47fc-8962-fe8ca25ff45b@781; task: independent session 3",
+        "lesson": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+        "generalizable": true,
+        "candidate": {
+          "content": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+          "type": "procedural",
+          "sourceSession": "session_0cddb8f5-f24b-4376-b76e-88b78f0139f9",
+          "importance": 0.9,
+          "confidence": 0.6,
+          "novelty": 0.5,
+          "stability": 0.5,
+          "structured": {
+            "when": "read_file failed with reproducer failure",
+            "do": "verify inputs and environment state, then retry",
+            "avoid": "retrying the same call without checking inputs",
+            "rootCause": "tool",
+            "outcome": "failure",
+            "evidenceRefs": [
+              "event_f51ef835-01d1-47fc-8962-fe8ca25ff45b",
+              "event_9408370e-89c7-4000-badc-302623ecdab5"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "sessionId": "session_a648d060-220a-4efe-ba62-be5fb76c7d40",
+      "turnId": "turn_7f768c3e-81e4-4871-bd9e-3ec767ad564f",
+      "outcome": "failed",
+      "at": 1791076299744,
+      "reflection": {
+        "outcome": "failure",
+        "rootCause": "tool",
+        "evidence": "tool.failed event_31ffb97a-eea3-4919-9634-3d698350f008@785; tool.requested event_f4968a3d-b992-4254-b23d-a401c1f8f36a@784; turn.failed event_0cdb30c3-d03c-4f82-acdf-467b70db9005@786; task: independent session 4; turn.failed event_0cdb30c3-d03c-4f82-acdf-467b70db9005@786; tool.failed event_31ffb97a-eea3-4919-9634-3d698350f008@785; task: independent session 4",
+        "lesson": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+        "generalizable": true,
+        "candidate": {
+          "content": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+          "type": "procedural",
+          "sourceSession": "session_a648d060-220a-4efe-ba62-be5fb76c7d40",
+          "importance": 0.9,
+          "confidence": 0.6,
+          "novelty": 0.5,
+          "stability": 0.5,
+          "structured": {
+            "when": "read_file failed with reproducer failure",
+            "do": "verify inputs and environment state, then retry",
+            "avoid": "retrying the same call without checking inputs",
+            "rootCause": "tool",
+            "outcome": "failure",
+            "evidenceRefs": [
+              "event_31ffb97a-eea3-4919-9634-3d698350f008",
+              "event_0cdb30c3-d03c-4f82-acdf-467b70db9005"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "sessionId": "session_957cd688-3b88-4c0d-883c-cc7cae9c1052",
+      "turnId": "turn_1380bd47-23e6-474e-967a-921aa3b999a9",
+      "outcome": "failed",
+      "at": 1791076299744,
+      "reflection": {
+        "outcome": "failure",
+        "rootCause": "tool",
+        "evidence": "tool.failed event_ee9aba51-be7a-43ae-a8ae-840e7ffa786e@789; tool.requested event_f5503afc-4db8-45f7-ae48-9f6894591d3e@788; turn.failed event_98924c4b-cb6e-4478-87ac-970966eb8027@790; task: independent session 5; turn.failed event_98924c4b-cb6e-4478-87ac-970966eb8027@790; tool.failed event_ee9aba51-be7a-43ae-a8ae-840e7ffa786e@789; task: independent session 5",
+        "lesson": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+        "generalizable": true,
+        "candidate": {
+          "content": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+          "type": "procedural",
+          "sourceSession": "session_957cd688-3b88-4c0d-883c-cc7cae9c1052",
+          "importance": 0.9,
+          "confidence": 0.6,
+          "novelty": 0.5,
+          "stability": 0.5,
+          "structured": {
+            "when": "read_file failed with reproducer failure",
+            "do": "verify inputs and environment state, then retry",
+            "avoid": "retrying the same call without checking inputs",
+            "rootCause": "tool",
+            "outcome": "failure",
+            "evidenceRefs": [
+              "event_ee9aba51-be7a-43ae-a8ae-840e7ffa786e",
+              "event_98924c4b-cb6e-4478-87ac-970966eb8027"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "sessionId": "session_03c3a0b4-f31b-4a7c-8978-765d017dcb5b",
+      "turnId": "turn_73aee1c6-5c9e-490e-9e4b-f445f77c3d7f",
+      "outcome": "failed",
+      "at": 1791076299744,
+      "reflection": {
+        "outcome": "failure",
+        "rootCause": "tool",
+        "evidence": "tool.failed event_3435c36d-23c0-46b4-92dc-14fcb3e346c7@793; tool.requested event_d97306dd-f103-4e85-92f1-84ea08079e8d@792; turn.failed event_08a52c0f-7bfd-43f6-9289-ee2ed7f5e9a7@794; task: independent session 6; turn.failed event_08a52c0f-7bfd-43f6-9289-ee2ed7f5e9a7@794; tool.failed event_3435c36d-23c0-46b4-92dc-14fcb3e346c7@793; task: independent session 6",
+        "lesson": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+        "generalizable": true,
+        "candidate": {
+          "content": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+          "type": "procedural",
+          "sourceSession": "session_03c3a0b4-f31b-4a7c-8978-765d017dcb5b",
+          "importance": 0.9,
+          "confidence": 0.6,
+          "novelty": 0.5,
+          "stability": 0.5,
+          "structured": {
+            "when": "read_file failed with reproducer failure",
+            "do": "verify inputs and environment state, then retry",
+            "avoid": "retrying the same call without checking inputs",
+            "rootCause": "tool",
+            "outcome": "failure",
+            "evidenceRefs": [
+              "event_3435c36d-23c0-46b4-92dc-14fcb3e346c7",
+              "event_08a52c0f-7bfd-43f6-9289-ee2ed7f5e9a7"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "sessionId": "session_9a5df432-dadd-4de7-a3d4-4dc93666a787",
+      "turnId": "turn_ed1799fc-575b-4c82-8ca7-55c405c551af",
+      "outcome": "failed",
+      "at": 1791076299744,
+      "reflection": {
+        "outcome": "failure",
+        "rootCause": "tool",
+        "evidence": "tool.failed event_4d9b4afe-1837-4359-aef6-5f0ac59c4cb2@797; tool.requested event_8dc481ea-fac0-4d1d-b1cd-b8503fa66704@796; turn.failed event_a55307ae-adc5-4a7f-996a-58bf7818c899@798; task: independent session 7; turn.failed event_a55307ae-adc5-4a7f-996a-58bf7818c899@798; tool.failed event_4d9b4afe-1837-4359-aef6-5f0ac59c4cb2@797; task: independent session 7",
+        "lesson": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+        "generalizable": true,
+        "candidate": {
+          "content": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+          "type": "procedural",
+          "sourceSession": "session_9a5df432-dadd-4de7-a3d4-4dc93666a787",
+          "importance": 0.9,
+          "confidence": 0.6,
+          "novelty": 0.5,
+          "stability": 0.5,
+          "structured": {
+            "when": "read_file failed with reproducer failure",
+            "do": "verify inputs and environment state, then retry",
+            "avoid": "retrying the same call without checking inputs",
+            "rootCause": "tool",
+            "outcome": "failure",
+            "evidenceRefs": [
+              "event_4d9b4afe-1837-4359-aef6-5f0ac59c4cb2",
+              "event_a55307ae-adc5-4a7f-996a-58bf7818c899"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "sessionId": "session_656c5b44-2f4c-436c-ae08-2d62b77886a5",
+      "turnId": "turn_7f8de364-e1bb-48a6-acd6-6f7b172deef2",
+      "outcome": "failed",
+      "at": 1791076299745,
+      "reflection": {
+        "outcome": "failure",
+        "rootCause": "tool",
+        "evidence": "tool.failed event_0251b546-2dd4-406a-a165-6247f6bb1f9b@801; tool.requested event_ce31bd00-bc25-45e2-ad59-dca81e221244@800; turn.failed event_b20545fa-c0fd-4c31-a6ca-465a3c2fe965@802; task: independent session 8; turn.failed event_b20545fa-c0fd-4c31-a6ca-465a3c2fe965@802; tool.failed event_0251b546-2dd4-406a-a165-6247f6bb1f9b@801; task: independent session 8",
+        "lesson": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+        "generalizable": true,
+        "candidate": {
+          "content": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+          "type": "procedural",
+          "sourceSession": "session_656c5b44-2f4c-436c-ae08-2d62b77886a5",
+          "importance": 0.9,
+          "confidence": 0.6,
+          "novelty": 0.5,
+          "stability": 0.5,
+          "structured": {
+            "when": "read_file failed with reproducer failure",
+            "do": "verify inputs and environment state, then retry",
+            "avoid": "retrying the same call without checking inputs",
+            "rootCause": "tool",
+            "outcome": "failure",
+            "evidenceRefs": [
+              "event_0251b546-2dd4-406a-a165-6247f6bb1f9b",
+              "event_b20545fa-c0fd-4c31-a6ca-465a3c2fe965"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "sessionId": "session_cfd0c57d-8ce3-4ffc-81ed-76b2ce3ac9da",
+      "turnId": "turn_19e52839-f504-4e6d-a5d4-eba86f60e0e7",
+      "outcome": "failed",
+      "at": 1791076299745,
+      "reflection": {
+        "outcome": "failure",
+        "rootCause": "tool",
+        "evidence": "tool.failed event_a4066644-0144-4201-af08-783c435701c9@805; tool.requested event_240df500-d75a-4396-8c41-db113e5bacc6@804; turn.failed event_27195729-25d3-4c15-b244-2de946f34094@806; task: independent session 9; turn.failed event_27195729-25d3-4c15-b244-2de946f34094@806; tool.failed event_a4066644-0144-4201-af08-783c435701c9@805; task: independent session 9",
+        "lesson": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+        "generalizable": true,
+        "candidate": {
+          "content": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+          "type": "procedural",
+          "sourceSession": "session_cfd0c57d-8ce3-4ffc-81ed-76b2ce3ac9da",
+          "importance": 0.9,
+          "confidence": 0.6,
+          "novelty": 0.5,
+          "stability": 0.5,
+          "structured": {
+            "when": "read_file failed with reproducer failure",
+            "do": "verify inputs and environment state, then retry",
+            "avoid": "retrying the same call without checking inputs",
+            "rootCause": "tool",
+            "outcome": "failure",
+            "evidenceRefs": [
+              "event_a4066644-0144-4201-af08-783c435701c9",
+              "event_27195729-25d3-4c15-b244-2de946f34094"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "sessionId": "session_b2631ef0-8549-4c70-9a78-ed52f2682889",
+      "turnId": "turn_8f306247-4d12-4b95-9a43-969644c5fdcb",
+      "outcome": "failed",
+      "at": 1791076299745,
+      "reflection": {
+        "outcome": "failure",
+        "rootCause": "tool",
+        "evidence": "tool.failed event_9939fbd4-3704-43ec-97f6-4665a47450c1@809; tool.requested event_5c7cfe11-cab7-4b99-817b-77c895449098@808; turn.failed event_e3f2fbe1-2072-4965-90e0-938278898564@810; task: independent session 10; turn.failed event_e3f2fbe1-2072-4965-90e0-938278898564@810; tool.failed event_9939fbd4-3704-43ec-97f6-4665a47450c1@809; task: independent session 10",
+        "lesson": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+        "generalizable": true,
+        "candidate": {
+          "content": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+          "type": "procedural",
+          "sourceSession": "session_b2631ef0-8549-4c70-9a78-ed52f2682889",
+          "importance": 0.9,
+          "confidence": 0.6,
+          "novelty": 0.5,
+          "stability": 0.5,
+          "structured": {
+            "when": "read_file failed with reproducer failure",
+            "do": "verify inputs and environment state, then retry",
+            "avoid": "retrying the same call without checking inputs",
+            "rootCause": "tool",
+            "outcome": "failure",
+            "evidenceRefs": [
+              "event_9939fbd4-3704-43ec-97f6-4665a47450c1",
+              "event_e3f2fbe1-2072-4965-90e0-938278898564"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "sessionId": "session_5c5304a1-4a41-4bdd-9dba-cc3b26a5ca3d",
+      "turnId": "turn_65802108-6718-4ca7-ac45-1cbce5c579ac",
+      "outcome": "failed",
+      "at": 1791076299745,
+      "reflection": {
+        "outcome": "failure",
+        "rootCause": "tool",
+        "evidence": "tool.failed event_e151bb57-9f54-42b9-8241-a1ab579110c2@813; tool.requested event_a652f1e8-7fc6-4f4a-99c8-96aeba7ad3ed@812; turn.failed event_cfbb425e-7ef9-4d55-9cb5-bc241be7344b@814; task: independent session 11; turn.failed event_cfbb425e-7ef9-4d55-9cb5-bc241be7344b@814; tool.failed event_e151bb57-9f54-42b9-8241-a1ab579110c2@813; task: independent session 11",
+        "lesson": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+        "generalizable": true,
+        "candidate": {
+          "content": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+          "type": "procedural",
+          "sourceSession": "session_5c5304a1-4a41-4bdd-9dba-cc3b26a5ca3d",
+          "importance": 0.9,
+          "confidence": 0.6,
+          "novelty": 0.5,
+          "stability": 0.5,
+          "structured": {
+            "when": "read_file failed with reproducer failure",
+            "do": "verify inputs and environment state, then retry",
+            "avoid": "retrying the same call without checking inputs",
+            "rootCause": "tool",
+            "outcome": "failure",
+            "evidenceRefs": [
+              "event_e151bb57-9f54-42b9-8241-a1ab579110c2",
+              "event_cfbb425e-7ef9-4d55-9cb5-bc241be7344b"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "sessionId": "session_c89ff42d-ecfe-4f10-998b-bf2259732ef1",
+      "turnId": "turn_20549954-8065-46c5-8bbf-00ffaeaab93d",
+      "outcome": "failed",
+      "at": 1791076299745,
+      "reflection": {
+        "outcome": "failure",
+        "rootCause": "tool",
+        "evidence": "tool.failed event_97167151-506c-4f2b-9edb-6e4ff1ef94a1@817; tool.requested event_0fb90c35-f1a0-46b3-a30c-3f3fef8f7c36@816; turn.failed event_3d45bfde-456f-411c-a305-c3c465364d43@818; task: independent session 12; turn.failed event_3d45bfde-456f-411c-a305-c3c465364d43@818; tool.failed event_97167151-506c-4f2b-9edb-6e4ff1ef94a1@817; task: independent session 12",
+        "lesson": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+        "generalizable": true,
+        "candidate": {
+          "content": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+          "type": "procedural",
+          "sourceSession": "session_c89ff42d-ecfe-4f10-998b-bf2259732ef1",
+          "importance": 0.9,
+          "confidence": 0.6,
+          "novelty": 0.5,
+          "stability": 0.5,
+          "structured": {
+            "when": "read_file failed with reproducer failure",
+            "do": "verify inputs and environment state, then retry",
+            "avoid": "retrying the same call without checking inputs",
+            "rootCause": "tool",
+            "outcome": "failure",
+            "evidenceRefs": [
+              "event_97167151-506c-4f2b-9edb-6e4ff1ef94a1",
+              "event_3d45bfde-456f-411c-a305-c3c465364d43"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "sessionId": "session_7317f63b-94cf-487f-bf10-a9d7b1cc83e7",
+      "turnId": "turn_ffe22a9c-238c-4f64-819e-4f39e95485cc",
+      "outcome": "failed",
+      "at": 1791076299745,
+      "reflection": {
+        "outcome": "failure",
+        "rootCause": "tool",
+        "evidence": "tool.failed event_32c94063-1d44-45cb-8447-538546a3f7a0@821; tool.requested event_91972ed5-6818-4d9a-95f6-0230e6d50d88@820; turn.failed event_f056f10a-12da-4ee2-a211-12d0b846f7cc@822; task: independent session 13; turn.failed event_f056f10a-12da-4ee2-a211-12d0b846f7cc@822; tool.failed event_32c94063-1d44-45cb-8447-538546a3f7a0@821; task: independent session 13",
+        "lesson": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+        "generalizable": true,
+        "candidate": {
+          "content": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+          "type": "procedural",
+          "sourceSession": "session_7317f63b-94cf-487f-bf10-a9d7b1cc83e7",
+          "importance": 0.9,
+          "confidence": 0.6,
+          "novelty": 0.5,
+          "stability": 0.5,
+          "structured": {
+            "when": "read_file failed with reproducer failure",
+            "do": "verify inputs and environment state, then retry",
+            "avoid": "retrying the same call without checking inputs",
+            "rootCause": "tool",
+            "outcome": "failure",
+            "evidenceRefs": [
+              "event_32c94063-1d44-45cb-8447-538546a3f7a0",
+              "event_f056f10a-12da-4ee2-a211-12d0b846f7cc"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "sessionId": "session_0fb3b815-d66b-404d-bf34-ecc2e08bce37",
+      "turnId": "turn_0fe8b4d2-12f0-41de-9e70-2d9df0a90148",
+      "outcome": "failed",
+      "at": 1791076299745,
+      "reflection": {
+        "outcome": "failure",
+        "rootCause": "tool",
+        "evidence": "tool.failed event_dccf12bb-039f-4166-9e14-3ba7fd945685@825; tool.requested event_b0e5dc9c-ebd6-453a-857a-c0781ba9f71e@824; turn.failed event_9c030867-9947-4ef4-85e8-99b433793f34@826; task: independent session 14; turn.failed event_9c030867-9947-4ef4-85e8-99b433793f34@826; tool.failed event_dccf12bb-039f-4166-9e14-3ba7fd945685@825; task: independent session 14",
+        "lesson": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+        "generalizable": true,
+        "candidate": {
+          "content": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+          "type": "procedural",
+          "sourceSession": "session_0fb3b815-d66b-404d-bf34-ecc2e08bce37",
+          "importance": 0.9,
+          "confidence": 0.6,
+          "novelty": 0.5,
+          "stability": 0.5,
+          "structured": {
+            "when": "read_file failed with reproducer failure",
+            "do": "verify inputs and environment state, then retry",
+            "avoid": "retrying the same call without checking inputs",
+            "rootCause": "tool",
+            "outcome": "failure",
+            "evidenceRefs": [
+              "event_dccf12bb-039f-4166-9e14-3ba7fd945685",
+              "event_9c030867-9947-4ef4-85e8-99b433793f34"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "sessionId": "session_66985d84-359b-4dcc-bb0b-ca47a75a3b45",
+      "turnId": "turn_e66e7e1a-5cb2-494a-af15-6065963100f5",
+      "outcome": "failed",
+      "at": 1791076299745,
+      "reflection": {
+        "outcome": "failure",
+        "rootCause": "tool",
+        "evidence": "tool.failed event_4509bd7a-74b9-43a2-ae9a-d3f6c51fa2e6@829; tool.requested event_69a83378-7491-4f96-8bcb-54655f7f6dd5@828; turn.failed event_f2df93b3-aca5-4157-83e0-1f5a2433230b@830; task: independent session 15; turn.failed event_f2df93b3-aca5-4157-83e0-1f5a2433230b@830; tool.failed event_4509bd7a-74b9-43a2-ae9a-d3f6c51fa2e6@829; task: independent session 15",
+        "lesson": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+        "generalizable": true,
+        "candidate": {
+          "content": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+          "type": "procedural",
+          "sourceSession": "session_66985d84-359b-4dcc-bb0b-ca47a75a3b45",
+          "importance": 0.9,
+          "confidence": 0.6,
+          "novelty": 0.5,
+          "stability": 0.5,
+          "structured": {
+            "when": "read_file failed with reproducer failure",
+            "do": "verify inputs and environment state, then retry",
+            "avoid": "retrying the same call without checking inputs",
+            "rootCause": "tool",
+            "outcome": "failure",
+            "evidenceRefs": [
+              "event_4509bd7a-74b9-43a2-ae9a-d3f6c51fa2e6",
+              "event_f2df93b3-aca5-4157-83e0-1f5a2433230b"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "sessionId": "session_2dff86fc-17ee-46de-8a09-d659a24d8ef3",
+      "turnId": "turn_e7ef771f-c7ae-4993-8cdd-33622310db46",
+      "outcome": "failed",
+      "at": 1791076299745,
+      "reflection": {
+        "outcome": "failure",
+        "rootCause": "tool",
+        "evidence": "tool.failed event_9fe16522-c545-4a7b-9b0d-9dfb941f9d61@833; tool.requested event_51c9f74c-2193-41c5-bb29-d9a328ca0385@832; turn.failed event_71c42cf1-3085-46f1-b9e8-c50df4db2bb7@834; task: independent session 16; turn.failed event_71c42cf1-3085-46f1-b9e8-c50df4db2bb7@834; tool.failed event_9fe16522-c545-4a7b-9b0d-9dfb941f9d61@833; task: independent session 16",
+        "lesson": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+        "generalizable": true,
+        "candidate": {
+          "content": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+          "type": "procedural",
+          "sourceSession": "session_2dff86fc-17ee-46de-8a09-d659a24d8ef3",
+          "importance": 0.9,
+          "confidence": 0.6,
+          "novelty": 0.5,
+          "stability": 0.5,
+          "structured": {
+            "when": "read_file failed with reproducer failure",
+            "do": "verify inputs and environment state, then retry",
+            "avoid": "retrying the same call without checking inputs",
+            "rootCause": "tool",
+            "outcome": "failure",
+            "evidenceRefs": [
+              "event_9fe16522-c545-4a7b-9b0d-9dfb941f9d61",
+              "event_71c42cf1-3085-46f1-b9e8-c50df4db2bb7"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "sessionId": "session_c25e69f4-a4f3-48d9-946d-e574080cfd3e",
+      "turnId": "turn_f1a88cd5-c8ba-46a6-b595-f67c2ad2a305",
+      "outcome": "failed",
+      "at": 1791076299745,
+      "reflection": {
+        "outcome": "failure",
+        "rootCause": "tool",
+        "evidence": "tool.failed event_3c465958-bf3f-4b01-962c-bb154ef837d1@837; tool.requested event_55fb0e03-ae8c-4b63-8ece-9a48d3216509@836; turn.failed event_2d957d3d-d799-49c2-904c-bd723a550f0f@838; task: independent session 17; turn.failed event_2d957d3d-d799-49c2-904c-bd723a550f0f@838; tool.failed event_3c465958-bf3f-4b01-962c-bb154ef837d1@837; task: independent session 17",
+        "lesson": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+        "generalizable": true,
+        "candidate": {
+          "content": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+          "type": "procedural",
+          "sourceSession": "session_c25e69f4-a4f3-48d9-946d-e574080cfd3e",
+          "importance": 0.9,
+          "confidence": 0.6,
+          "novelty": 0.5,
+          "stability": 0.5,
+          "structured": {
+            "when": "read_file failed with reproducer failure",
+            "do": "verify inputs and environment state, then retry",
+            "avoid": "retrying the same call without checking inputs",
+            "rootCause": "tool",
+            "outcome": "failure",
+            "evidenceRefs": [
+              "event_3c465958-bf3f-4b01-962c-bb154ef837d1",
+              "event_2d957d3d-d799-49c2-904c-bd723a550f0f"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "sessionId": "session_4c290775-4230-4f53-a3a3-575cf4164c86",
+      "turnId": "turn_2a6b1202-62f1-4589-95b6-f404cb732f2c",
+      "outcome": "failed",
+      "at": 1791076299745,
+      "reflection": {
+        "outcome": "failure",
+        "rootCause": "tool",
+        "evidence": "tool.failed event_373a4c8d-4b3e-44a5-9a83-90f518cfe2b2@841; tool.requested event_050865cb-6cb9-4d1c-a0f5-467d84ebb519@840; turn.failed event_16afd2cd-13c5-4dbc-94bf-09f63037443a@842; task: independent session 18; turn.failed event_16afd2cd-13c5-4dbc-94bf-09f63037443a@842; tool.failed event_373a4c8d-4b3e-44a5-9a83-90f518cfe2b2@841; task: independent session 18",
+        "lesson": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+        "generalizable": true,
+        "candidate": {
+          "content": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+          "type": "procedural",
+          "sourceSession": "session_4c290775-4230-4f53-a3a3-575cf4164c86",
+          "importance": 0.9,
+          "confidence": 0.6,
+          "novelty": 0.5,
+          "stability": 0.5,
+          "structured": {
+            "when": "read_file failed with reproducer failure",
+            "do": "verify inputs and environment state, then retry",
+            "avoid": "retrying the same call without checking inputs",
+            "rootCause": "tool",
+            "outcome": "failure",
+            "evidenceRefs": [
+              "event_373a4c8d-4b3e-44a5-9a83-90f518cfe2b2",
+              "event_16afd2cd-13c5-4dbc-94bf-09f63037443a"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "sessionId": "session_7e40ab81-fee7-4f8f-a384-6dfd42b51946",
+      "turnId": "turn_85b33f4a-ee76-4330-80b1-5b7299776332",
+      "outcome": "failed",
+      "at": 1791076299745,
+      "reflection": {
+        "outcome": "failure",
+        "rootCause": "tool",
+        "evidence": "tool.failed event_70c5d391-b87b-495f-a8ad-2bb1f2d5e21b@845; tool.requested event_6f9e3f0f-4b3e-491a-b551-6d211cf4f1c6@844; turn.failed event_4c1d291f-4d76-4454-9420-67b097e39c5f@846; task: independent session 19; turn.failed event_4c1d291f-4d76-4454-9420-67b097e39c5f@846; tool.failed event_70c5d391-b87b-495f-a8ad-2bb1f2d5e21b@845; task: independent session 19",
+        "lesson": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+        "generalizable": true,
+        "candidate": {
+          "content": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+          "type": "procedural",
+          "sourceSession": "session_7e40ab81-fee7-4f8f-a384-6dfd42b51946",
+          "importance": 0.9,
+          "confidence": 0.6,
+          "novelty": 0.5,
+          "stability": 0.5,
+          "structured": {
+            "when": "read_file failed with reproducer failure",
+            "do": "verify inputs and environment state, then retry",
+            "avoid": "retrying the same call without checking inputs",
+            "rootCause": "tool",
+            "outcome": "failure",
+            "evidenceRefs": [
+              "event_70c5d391-b87b-495f-a8ad-2bb1f2d5e21b",
+              "event_4c1d291f-4d76-4454-9420-67b097e39c5f"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

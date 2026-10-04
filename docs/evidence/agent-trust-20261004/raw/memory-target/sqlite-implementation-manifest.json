@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-10-04T01:00:18.508492+00:00",
+  "baselineCommit": "968544064f43cfc0a876c4e65fcb967cd466c9a2",
+  "candidateHead": "965da0bb123fbdd9b61bded6bc345b767ad0c48f",
+  "candidateSourceState": "dirty scoped TDD measurement, not full clean acceptance",
+  "sourceFingerprints": [
+    {
+      "path": "packages/memory/src/sqlite-memory-store.ts",
+      "bytes": 21884,
+      "sha256": "0fd23b08c1f370d60c78b7ee7ebf82c939bff066a03696ccc976dcf09dac2773"
+    },
+    {
+      "path": "packages/memory/src/sqlite-memory-metadata.regressions.test.ts",
+      "bytes": 12801,
+      "sha256": "b740fd65d10909e228f1406670e00b3fec4ce048bca2c14c1ca38deb659afa9e"
+    },
+    {
+      "path": "packages/memory/src/security-gate.ts",
+      "bytes": 3210,
+      "sha256": "35dd1c100d6200a862ac50c3b2f1c0fff1d9feb8b7921e31c8805aed319a5efa"
+    }
+  ],
+  "testsByteIdenticalBaselineCandidate": true,
+  "baseline": {
+    "exitCode": 1,
+    "total": 29,
+    "failed": 26,
+    "passed": 3,
+    "json": "sqlite-baseline-red.json",
+    "log": "sqlite-baseline-red.log"
+  },
+  "candidateTarget": {
+    "exitCode": 0,
+    "total": 29,
+    "failed": 0,
+    "passed": 29,
+    "json": "sqlite-candidate-green.json",
+    "log": "sqlite-candidate-green.log"
+  },
+  "boundary": {
+    "exitCode": 0,
+    "total": 67,
+    "failed": 0,
+    "passed": 67,
+    "json": "sqlite-boundary-green.json",
+    "log": "sqlite-boundary-green.log"
+  },
+  "typecheck": {
+    "command": "pnpm exec tsc -b packages/memory",
+    "exitCode": 0,
+    "log": "sqlite-typecheck.log"
+  },
+  "diffCheckExitCode": 0,
+  "policy": {
+    "metadataWhitelist": [
+      "sourceTurn",
+      "structured",
+      "derivability",
+      "promotionState",
+      "securityScan",
+      "pollutionSources"
+    ],
+    "schemaVersion": 6,
+    "corruptMetadata": "preserve valid nonactive state; otherwise stable stale projection using updated_at; raw SQL untouched",
+    "corruptState": "stale projection, legacy absent/null/empty means active",
+    "upsertCreatedAt": "existing timestamp preserved"
+  },
+  "paidModelCalls": 0,
+  "liveQuality": "NOT_RUN"
+}

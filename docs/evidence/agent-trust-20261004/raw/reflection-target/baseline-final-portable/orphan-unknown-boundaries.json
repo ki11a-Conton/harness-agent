@@ -1,0 +1,197 @@
+{
+  "label": "orphan-unknown-boundaries",
+  "pass": false,
+  "sessionId": "session_2435d15d-baf6-4416-b7bd-178db38d183f",
+  "turnId": "turn_0c39bf5b-355c-462e-bb7d-c237f3c5a759",
+  "result": {
+    "outputs": 1,
+    "candidates": 1
+  },
+  "events": [
+    {
+      "id": "event_58a2eb54-5566-487e-8bbe-ddcaf3d11a39",
+      "sessionId": "session_2435d15d-baf6-4416-b7bd-178db38d183f",
+      "timestamp": 31,
+      "type": "verification.failed",
+      "payload": {
+        "error": "orphan before start"
+      },
+      "sequence": 0,
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_f1f57d34-c856-4e9d-b7f8-7cb8cc3bd5a6",
+      "sessionId": "session_2435d15d-baf6-4416-b7bd-178db38d183f",
+      "turnId": "turn_0c39bf5b-355c-462e-bb7d-c237f3c5a759",
+      "timestamp": 32,
+      "type": "turn.started",
+      "payload": {
+        "turnId": "turn_0c39bf5b-355c-462e-bb7d-c237f3c5a759"
+      },
+      "sequence": 1,
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_275b2733-9ada-464b-81d3-9c55d877e2ab",
+      "sessionId": "session_2435d15d-baf6-4416-b7bd-178db38d183f",
+      "turnId": "turn_0c39bf5b-355c-462e-bb7d-c237f3c5a759",
+      "timestamp": 33,
+      "type": "model.completed",
+      "payload": {
+        "finishReason": "stop"
+      },
+      "sequence": 2,
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_c5bcab1a-c5e5-45a2-9bba-0705bc1301a5",
+      "sessionId": "session_2435d15d-baf6-4416-b7bd-178db38d183f",
+      "turnId": "turn_0c39bf5b-355c-462e-bb7d-c237f3c5a759",
+      "timestamp": 34,
+      "type": "turn.completed",
+      "payload": {
+        "turnId": "turn_0c39bf5b-355c-462e-bb7d-c237f3c5a759"
+      },
+      "sequence": 3,
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_86eff09a-a03b-483f-b128-3578d056f31c",
+      "sessionId": "session_2435d15d-baf6-4416-b7bd-178db38d183f",
+      "timestamp": 35,
+      "type": "verification.failed",
+      "payload": {
+        "error": "orphan after terminal"
+      },
+      "sequence": 4,
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_53f6951d-7aab-42c4-99ea-c47a58abecc3",
+      "sessionId": "session_2435d15d-baf6-4416-b7bd-178db38d183f",
+      "timestamp": 36,
+      "type": "turn.started",
+      "payload": {},
+      "sequence": 5,
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_2ae65455-bace-4849-858a-125e7470c188",
+      "sessionId": "session_2435d15d-baf6-4416-b7bd-178db38d183f",
+      "timestamp": 37,
+      "type": "verification.failed",
+      "payload": {
+        "error": "unknown span"
+      },
+      "sequence": 6,
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_2943d19e-11bb-4119-b734-2948d0fe049a",
+      "sessionId": "session_2435d15d-baf6-4416-b7bd-178db38d183f",
+      "timestamp": 38,
+      "type": "turn.failed",
+      "payload": {
+        "error": {
+          "code": "VERIFICATION_FAILED",
+          "message": "unknown terminal"
+        }
+      },
+      "sequence": 7,
+      "schemaVersion": 1
+    }
+  ],
+  "candidates": [
+    {
+      "id": "lc_2a391a5d-f11d-442b-a43a-681149a27ebe",
+      "kind": "memory",
+      "content": "verification failed (orphan before start); inspect the evidence, fix the issue, and re-verify",
+      "proposedAt": 1791075872560,
+      "securityChecked": true,
+      "sourceCandidate": {
+        "content": "verification failed (orphan before start); inspect the evidence, fix the issue, and re-verify",
+        "type": "procedural",
+        "sourceSession": "session_2435d15d-baf6-4416-b7bd-178db38d183f",
+        "importance": 0.9,
+        "confidence": 0.6,
+        "novelty": 0.5,
+        "stability": 0.5,
+        "structured": {
+          "when": "verification failed (orphan before start)",
+          "do": "inspect the verification evidence, fix the reported issue, and re-verify",
+          "avoid": "declaring completion without a passing gate",
+          "rootCause": "verification",
+          "outcome": "failure",
+          "evidenceRefs": [
+            "event_58a2eb54-5566-487e-8bbe-ddcaf3d11a39",
+            "event_86eff09a-a03b-483f-b128-3578d056f31c",
+            "event_2ae65455-bace-4849-858a-125e7470c188",
+            "event_2943d19e-11bb-4119-b734-2948d0fe049a"
+          ]
+        },
+        "sourceTurn": "turn_0c39bf5b-355c-462e-bb7d-c237f3c5a759",
+        "derivability": {
+          "verdict": "non-derivable",
+          "reason": "no re-derivable-state signal detected"
+        },
+        "promotionState": "pending",
+        "securityScan": {
+          "checked": true,
+          "passed": true,
+          "at": 1791075872560
+        }
+      },
+      "structured": {
+        "when": "verification failed (orphan before start)",
+        "do": "inspect the verification evidence, fix the reported issue, and re-verify",
+        "avoid": "declaring completion without a passing gate",
+        "rootCause": "verification",
+        "outcome": "failure",
+        "evidenceRefs": [
+          "event_58a2eb54-5566-487e-8bbe-ddcaf3d11a39",
+          "event_86eff09a-a03b-483f-b128-3578d056f31c",
+          "event_2ae65455-bace-4849-858a-125e7470c188",
+          "event_2943d19e-11bb-4119-b734-2948d0fe049a"
+        ]
+      }
+    }
+  ],
+  "journal": [
+    {
+      "schemaVersion": 1,
+      "sessionId": "session_2435d15d-baf6-4416-b7bd-178db38d183f",
+      "turnId": "turn_0c39bf5b-355c-462e-bb7d-c237f3c5a759",
+      "outcome": "failed",
+      "at": 1791075872559,
+      "reflection": {
+        "outcome": "failure",
+        "rootCause": "verification",
+        "evidence": "verification.failed event_58a2eb54-5566-487e-8bbe-ddcaf3d11a39@31; task: current task; verification.failed event_86eff09a-a03b-483f-b128-3578d056f31c@35; task: current task; verification.failed event_2ae65455-bace-4849-858a-125e7470c188@37; task: current task; turn.failed event_2943d19e-11bb-4119-b734-2948d0fe049a@38; task: current task",
+        "lesson": "verification failed (orphan before start); inspect the evidence, fix the issue, and re-verify",
+        "generalizable": true,
+        "candidate": {
+          "content": "verification failed (orphan before start); inspect the evidence, fix the issue, and re-verify",
+          "type": "procedural",
+          "sourceSession": "session_2435d15d-baf6-4416-b7bd-178db38d183f",
+          "importance": 0.9,
+          "confidence": 0.6,
+          "novelty": 0.5,
+          "stability": 0.5,
+          "structured": {
+            "when": "verification failed (orphan before start)",
+            "do": "inspect the verification evidence, fix the reported issue, and re-verify",
+            "avoid": "declaring completion without a passing gate",
+            "rootCause": "verification",
+            "outcome": "failure",
+            "evidenceRefs": [
+              "event_58a2eb54-5566-487e-8bbe-ddcaf3d11a39",
+              "event_86eff09a-a03b-483f-b128-3578d056f31c",
+              "event_2ae65455-bace-4849-858a-125e7470c188",
+              "event_2943d19e-11bb-4119-b734-2948d0fe049a"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

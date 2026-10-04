@@ -1,0 +1,160 @@
+{
+  "label": "candidate-store-write-fault",
+  "pass": false,
+  "sessionId": "session_3594233d-deab-4854-b25f-8a115d8cb664",
+  "turnId": "turn_48a3bf0b-8adc-4939-94ba-770e16ebced5",
+  "candidateId": "candidate-durable-retry",
+  "result": {
+    "outputs": 1,
+    "candidates": 0
+  },
+  "journalAfterFault": [
+    {
+      "schemaVersion": 1,
+      "sessionId": "session_3594233d-deab-4854-b25f-8a115d8cb664",
+      "turnId": "turn_48a3bf0b-8adc-4939-94ba-770e16ebced5",
+      "outcome": "failed",
+      "at": 1791076177074,
+      "reflection": {
+        "outcome": "failure",
+        "rootCause": "tool",
+        "evidence": "tool.failed event_9c8d1c0e-e178-492f-8f14-c47ae29c0f33@933; tool.requested event_9a2c3891-286d-47b9-a2e6-bcd18362f7d1@932; turn.failed event_b34fdfba-e2d0-49a3-a761-9f9b04258878@934; task: current task; turn.failed event_b34fdfba-e2d0-49a3-a761-9f9b04258878@934; tool.failed event_9c8d1c0e-e178-492f-8f14-c47ae29c0f33@933; task: current task",
+        "lesson": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+        "generalizable": true,
+        "candidate": {
+          "content": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+          "type": "procedural",
+          "sourceSession": "session_3594233d-deab-4854-b25f-8a115d8cb664",
+          "importance": 0.9,
+          "confidence": 0.6,
+          "novelty": 0.5,
+          "stability": 0.5,
+          "structured": {
+            "when": "read_file failed with reproducer failure",
+            "do": "verify inputs and environment state, then retry",
+            "avoid": "retrying the same call without checking inputs",
+            "rootCause": "tool",
+            "outcome": "failure",
+            "evidenceRefs": [
+              "event_9c8d1c0e-e178-492f-8f14-c47ae29c0f33",
+              "event_b34fdfba-e2d0-49a3-a761-9f9b04258878"
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "sameInstanceAfterFault": {
+    "count": 1,
+    "get": {
+      "id": "candidate-durable-retry",
+      "kind": "memory",
+      "content": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+      "proposedAt": 1791076177074,
+      "securityChecked": true,
+      "sourceCandidate": {
+        "content": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+        "type": "procedural",
+        "sourceSession": "session_3594233d-deab-4854-b25f-8a115d8cb664",
+        "importance": 0.9,
+        "confidence": 0.6,
+        "novelty": 0.5,
+        "stability": 0.5,
+        "structured": {
+          "when": "read_file failed with reproducer failure",
+          "do": "verify inputs and environment state, then retry",
+          "avoid": "retrying the same call without checking inputs",
+          "rootCause": "tool",
+          "outcome": "failure",
+          "evidenceRefs": [
+            "event_9c8d1c0e-e178-492f-8f14-c47ae29c0f33",
+            "event_b34fdfba-e2d0-49a3-a761-9f9b04258878"
+          ]
+        },
+        "sourceTurn": "turn_48a3bf0b-8adc-4939-94ba-770e16ebced5",
+        "derivability": {
+          "verdict": "non-derivable",
+          "reason": "expresses a (?:environment|ci|toolchain|compiler|sandbox|network proxy|offline)b — a preference/decision/lesson that cannot be re-derived"
+        },
+        "promotionState": "pending",
+        "securityScan": {
+          "checked": true,
+          "passed": true,
+          "at": 1791076177074
+        }
+      },
+      "structured": {
+        "when": "read_file failed with reproducer failure",
+        "do": "verify inputs and environment state, then retry",
+        "avoid": "retrying the same call without checking inputs",
+        "rootCause": "tool",
+        "outcome": "failure",
+        "evidenceRefs": [
+          "event_9c8d1c0e-e178-492f-8f14-c47ae29c0f33",
+          "event_b34fdfba-e2d0-49a3-a761-9f9b04258878"
+        ]
+      }
+    }
+  },
+  "freshInstanceAfterRecovery": {
+    "count": 0,
+    "get": null
+  },
+  "retryResult": {
+    "outputs": 1,
+    "candidates": 1
+  },
+  "freshInstanceAfterRetry": {
+    "count": 1,
+    "get": {
+      "id": "candidate-durable-retry",
+      "kind": "memory",
+      "content": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+      "proposedAt": 1791076177077,
+      "securityChecked": true,
+      "sourceCandidate": {
+        "content": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+        "type": "procedural",
+        "sourceSession": "session_3594233d-deab-4854-b25f-8a115d8cb664",
+        "importance": 0.9,
+        "confidence": 0.6,
+        "novelty": 0.5,
+        "stability": 0.5,
+        "structured": {
+          "when": "read_file failed with reproducer failure",
+          "do": "verify inputs and environment state, then retry",
+          "avoid": "retrying the same call without checking inputs",
+          "rootCause": "tool",
+          "outcome": "failure",
+          "evidenceRefs": [
+            "event_9c8d1c0e-e178-492f-8f14-c47ae29c0f33",
+            "event_b34fdfba-e2d0-49a3-a761-9f9b04258878"
+          ]
+        },
+        "sourceTurn": "turn_48a3bf0b-8adc-4939-94ba-770e16ebced5",
+        "derivability": {
+          "verdict": "non-derivable",
+          "reason": "expresses a (?:environment|ci|toolchain|compiler|sandbox|network proxy|offline)b — a preference/decision/lesson that cannot be re-derived"
+        },
+        "promotionState": "pending",
+        "securityScan": {
+          "checked": true,
+          "passed": true,
+          "at": 1791076177077
+        }
+      },
+      "structured": {
+        "when": "read_file failed with reproducer failure",
+        "do": "verify inputs and environment state, then retry",
+        "avoid": "retrying the same call without checking inputs",
+        "rootCause": "tool",
+        "outcome": "failure",
+        "evidenceRefs": [
+          "event_9c8d1c0e-e178-492f-8f14-c47ae29c0f33",
+          "event_b34fdfba-e2d0-49a3-a761-9f9b04258878"
+        ]
+      }
+    }
+  },
+  "scope": "Same-instance candidate visibility commits only after successful durable persist; no independent-instance cache freshness or cross-process locking claim."
+}

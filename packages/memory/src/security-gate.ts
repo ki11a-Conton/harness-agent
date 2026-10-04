@@ -31,15 +31,38 @@ export function checkUnsafeMemory(content: string, source: string): UnsafeMemory
   return null;
 }
 
+/** Scan the same text the model can receive, including structured lessons.
+ * Keeping content in the scan also protects search/review surfaces. */
+export function checkUnsafeMemoryEntry(
+  entry: Pick<MemoryEntry, "content" | "structured">,
+  source: string,
+): UnsafeMemory | null {
+  for (const content of visibleMemoryContents(entry)) {
+    const reason = checkUnsafeMemory(content, source);
+    if (reason !== null) return reason;
+  }
+  return null;
+}
+
+function visibleMemoryContents(entry: Pick<MemoryEntry, "content" | "structured">): string[] {
+  return entry.structured === undefined ? [entry.content] : [
+    entry.content,
+    // String conversion matches the model renderer's interpolation for
+    // legacy JSONL values; the SQLite metadata decoder checks field shapes.
+    `When: ${entry.structured.when}\nDo: ${entry.structured.do}\nAvoid: ${entry.structured.avoid ?? ""}`,
+  ];
+}
+
 /** Scan persisted entries for injection and secrets (Task B). */
 export function scanMemoryEntries(entries: MemoryEntry[]): Array<{ entry: MemoryEntry; issues: { detection: "injection" | "secret"; reasons: string[] }[] }> {
   const results: Array<{ entry: MemoryEntry; issues: { detection: "injection" | "secret"; reasons: string[] }[] }> = [];
   for (const entry of entries) {
     const issues: { detection: "injection" | "secret"; reasons: string[] }[] = [];
-    const injection = detectPromptInjection(entry.content);
-    if (injection.hasInjection) issues.push({ detection: "injection", reasons: injection.reasons });
-    const secret = detectSecrets(entry.content);
-    if (secret.hasSecret) issues.push({ detection: "secret", reasons: secret.secrets });
+    const contents = visibleMemoryContents(entry);
+    const injectionReasons = new Set(contents.flatMap((content) => detectPromptInjection(content).reasons));
+    if (injectionReasons.size > 0) issues.push({ detection: "injection", reasons: [...injectionReasons] });
+    const secrets = new Set(contents.flatMap((content) => detectSecrets(content).secrets));
+    if (secrets.size > 0) issues.push({ detection: "secret", reasons: [...secrets] });
     if (issues.length > 0) results.push({ entry, issues });
   }
   return results;

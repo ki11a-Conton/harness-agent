@@ -34,6 +34,7 @@ export interface LearningCandidateStore {
 export class JsonlCandidateStore implements LearningCandidateStore {
   private readonly file: string;
   private loaded = false;
+  private loading: Promise<void> | undefined;
   private candidates = new Map<string, LearningCandidate>();
 
   constructor(opts: JsonlCandidateStoreOptions) {
@@ -53,8 +54,12 @@ export class JsonlCandidateStore implements LearningCandidateStore {
   async add(candidate: LearningCandidate): Promise<void> {
     return withLock(this.lockKey(), async () => {
       await this.load();
-      this.candidates.set(candidate.id, candidate);
-      await this.persist();
+      const next = new Map(this.candidates);
+      next.set(candidate.id, candidate);
+      // Publish only durable state; readers keep the previous snapshot while
+      // persistence is pending or when it fails.
+      await this.persist(next);
+      this.candidates = next;
     });
   }
 
@@ -62,48 +67,69 @@ export class JsonlCandidateStore implements LearningCandidateStore {
     return withLock(this.lockKey(), async () => {
       await this.load();
       if (!this.candidates.has(candidate.id)) return; // nothing to update
-      this.candidates.set(candidate.id, candidate);
-      await this.persist();
+      const next = new Map(this.candidates);
+      next.set(candidate.id, candidate);
+      await this.persist(next);
+      this.candidates = next;
     });
   }
 
   async remove(id: string): Promise<void> {
     return withLock(this.lockKey(), async () => {
       await this.load();
-      this.candidates.delete(id);
-      await this.persist();
+      const next = new Map(this.candidates);
+      next.delete(id);
+      await this.persist(next);
+      this.candidates = next;
     });
   }
 
   private async load(): Promise<void> {
     if (this.loaded) return;
-    this.loaded = true;
+    // Initial readers share one snapshot. A failed read stays retryable and
+    // must not publish an empty cache that a later write could persist.
+    if (!this.loading) this.loading = this.loadSnapshot();
+    const loading = this.loading;
+    try {
+      await loading;
+    } finally {
+      if (this.loading === loading) this.loading = undefined;
+    }
+  }
+
+  private async loadSnapshot(): Promise<void> {
     let content: string;
     try {
       content = await readFile(this.file, "utf8");
     } catch (err) {
       // P14-6: only the expected "first run / no file yet" ENOENT is silent —
       // any other read error is a real failure and propagates.
-      if (isNodeError(err, "ENOENT")) return;
+      if (isNodeError(err, "ENOENT")) {
+        this.loaded = true;
+        return;
+      }
       throw err;
     }
+    const next = new Map<string, LearningCandidate>();
     for (const line of content.split("\n")) {
       const trimmed = line.trim();
       if (trimmed === "") continue;
       try {
         const record = JSON.parse(trimmed) as CandidateRecord;
         if (record.schemaVersion !== CANDIDATE_SCHEMA_VERSION) continue;
-        this.candidates.set(record.candidate.id, record.candidate);
+        next.set(record.candidate.id, record.candidate);
       } catch (err) {
         // P14-6: a corrupt line must be observable (it is data-loss evidence),
         // then skipped so the rest of the queue still loads.
         process.stderr.write(`[degraded] candidate-store.corrupt-line: ${err instanceof Error ? err.message : String(err)}\n`);
       }
     }
+    this.candidates = next;
+    this.loaded = true;
   }
 
-  private async persist(): Promise<void> {
-    const lines = [...this.candidates.values()].map(
+  private async persist(candidates: ReadonlyMap<string, LearningCandidate>): Promise<void> {
+    const lines = [...candidates.values()].map(
       (candidate) =>
         JSON.stringify({ schemaVersion: CANDIDATE_SCHEMA_VERSION, candidate } satisfies CandidateRecord),
     );

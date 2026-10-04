@@ -1,0 +1,106 @@
+{
+  "stage": "T2 target dirty-stage source freeze; not clean\u5168\u4ed3\u6216CI\u9a8c\u6536",
+  "sourceHead": "965da0bb123fbdd9b61bded6bc345b767ad0c48f",
+  "baselineHead": "968544064f43cfc0a876c4e65fcb967cd466c9a2",
+  "files": [
+    {
+      "path": "packages/memory/src/memory-store.ts",
+      "bytes": 9981,
+      "sha256": "ff28c1a0f3ba73f312279aa3efff786b618ed3f3d2fb795562c58e936443191b"
+    },
+    {
+      "path": "packages/memory/src/retrieval.ts",
+      "bytes": 8979,
+      "sha256": "0921994bc133782ca2d01ae7e9af05d01e4fd2ac233916cb42c5350ad3621f55"
+    },
+    {
+      "path": "packages/memory/src/security-gate.ts",
+      "bytes": 3210,
+      "sha256": "35dd1c100d6200a862ac50c3b2f1c0fff1d9feb8b7921e31c8805aed319a5efa"
+    },
+    {
+      "path": "packages/memory/src/sqlite-memory-store.ts",
+      "bytes": 21884,
+      "sha256": "0fd23b08c1f370d60c78b7ee7ebf82c939bff066a03696ccc976dcf09dac2773"
+    },
+    {
+      "path": "packages/memory/src/retrieval.test.ts",
+      "bytes": 15570,
+      "sha256": "d0eb4a18baa1fea4d2456da04aec106381b306197abd5b7d51e86deef49c362d"
+    },
+    {
+      "path": "packages/memory/src/memory-visibility.regressions.test.ts",
+      "bytes": 6706,
+      "sha256": "dd3ac623759d726373d4244bb8c71b3c750bc7fa49440790cc3ad7c29cb63edf"
+    },
+    {
+      "path": "packages/memory/src/sqlite-memory-metadata.regressions.test.ts",
+      "bytes": 12801,
+      "sha256": "b740fd65d10909e228f1406670e00b3fec4ce048bca2c14c1ca38deb659afa9e"
+    },
+    {
+      "path": "packages/harness/src/memory-runtime-bridge.ts",
+      "bytes": 10437,
+      "sha256": "2d6cf39686f2884d2c390dcd13e7c7f46a3e368094d807b79124a79297a4f4cf"
+    },
+    {
+      "path": "scripts/research/agent-trust-20261004/memory.mjs",
+      "bytes": 10564,
+      "sha256": "ca0701c5e7a37c4f2d71d3a518b31c484a283d7079977a4f111326477bf4a189"
+    }
+  ],
+  "checks": {
+    "visibilityRed": {
+      "tests": 28,
+      "pass": 5,
+      "fail": 23,
+      "sameNewTestBytes": true
+    },
+    "sqliteRed": {
+      "tests": 29,
+      "pass": 3,
+      "fail": 26,
+      "sameNewTestBytes": true
+    },
+    "allMemoryHarnessTargets": {
+      "tests": 209,
+      "pass": 209,
+      "fail": 0,
+      "exit": 0
+    },
+    "incrementalHarnessBuild": {
+      "exit": 0,
+      "owner": "round2_reflection_audit; after SQLite edits; exact clean typecheck still required"
+    },
+    "portableBaseline": {
+      "checks": 32,
+      "pass": 8,
+      "exit": 1,
+      "forbiddenBodies": 10,
+      "forbiddenCases": 10,
+      "allowedCases": 8
+    },
+    "portableCandidate": {
+      "checks": 32,
+      "pass": 32,
+      "exit": 0,
+      "forbiddenBodies": 0,
+      "forbiddenCases": 10,
+      "allowedCases": 8
+    },
+    "scopedDiffCheck": {
+      "exit": 0
+    }
+  },
+  "scopeExcludes": [
+    "rank",
+    "FTS",
+    "feedback concurrency",
+    "bridge.close",
+    "Core",
+    "plan/report"
+  ],
+  "realProviderCalls": 0,
+  "paidCalls": 0,
+  "realModelQuality": "NOT_RUN"
+}

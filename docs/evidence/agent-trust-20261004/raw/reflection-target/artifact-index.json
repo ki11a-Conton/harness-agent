@@ -1,0 +1,311 @@
+{
+  "schema": 1,
+  "scope": "Final T3 targeted baseline/candidate originals and immutable freeze manifest only; initial development iterations and generated fixtures explicitly excluded. Empty build log is a truthful zero-output successful build receipt.",
+  "files": [
+    {
+      "path": "baseline-final-red.json",
+      "bytes": 11215,
+      "sha256": "fb617bee61d8049006fde3d8435ba0e54eac1ae9c229569a5ec912ae64be60a6"
+    },
+    {
+      "path": "baseline-final-red.log",
+      "bytes": 116,
+      "sha256": "e79559288ab07891baff9191843633bc76014684a55ae47cd6642c004bdb63cb"
+    },
+    {
+      "path": "baseline-final-red-command.json",
+      "bytes": 510,
+      "sha256": "122476fbdc709b8312c862be20bc86ae05badf4342e07d9c7cfee4f466fadf20"
+    },
+    {
+      "path": "candidate-final-green.json",
+      "bytes": 16711,
+      "sha256": "b1d3c68a99a8dc0131a85afc0fe40bb609eb8a17b100d06f38d5365838b6c4c4"
+    },
+    {
+      "path": "candidate-final-green.log",
+      "bytes": 159,
+      "sha256": "e7ae9387654d9a550c2bb88a1355665f2c4b606400d3840d7dc630b4cc1f6366"
+    },
+    {
+      "path": "harness-typecheck-build.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "baseline-final-portable.stdout.log",
+      "bytes": 679,
+      "sha256": "4c95ef9db0dad3cf144f44523d2ff3a173e8e045ccc8bd43d3fdfdd8c57dab23"
+    },
+    {
+      "path": "baseline-final-portable.stderr.log",
+      "bytes": 880,
+      "sha256": "837582cc7b43dd48542ee964bb58dfa6c32004732dd3da34ea07ad5eed197931"
+    },
+    {
+      "path": "candidate-final-portable.stdout.log",
+      "bytes": 184,
+      "sha256": "012606428da40c0121ab5199f11f20b0a6c579d813a592e5253aad6f17111c30"
+    },
+    {
+      "path": "candidate-final-portable.stderr.log",
+      "bytes": 1199,
+      "sha256": "37fdd2499653a7aadc8a6fae4e8a927f1f5277a79e1744c6b198c43bb2e52116"
+    },
+    {
+      "path": "final-manifest.json",
+      "bytes": 3934,
+      "sha256": "651dd4dbe86e6233dd11603c61a7bf97d8f86d8191d1b5383bcb41d1d63458eb"
+    },
+    {
+      "path": "baseline-final-portable/artifact-index.json",
+      "bytes": 4107,
+      "sha256": "a0c34b5720e24f36331dfc60a1e2097cd0ba1c00541951276d216fdd08da2569"
+    },
+    {
+      "path": "baseline-final-portable/candidate-store-write-fault.json",
+      "bytes": 2039,
+      "sha256": "915f35ef50cf719629e9cd885e33767240e7480cb1628d67e967eae9cab91b1f"
+    },
+    {
+      "path": "baseline-final-portable/concurrent-journal-0.json",
+      "bytes": 8539,
+      "sha256": "830c7de8121474cca1d43677051ea2822a28a4b3c9a937522786a0616129b17a"
+    },
+    {
+      "path": "baseline-final-portable/concurrent-journal-1.json",
+      "bytes": 8539,
+      "sha256": "4ebd486659cb98299631496001b816876b0eaee047f32071e52dcedcab29879c"
+    },
+    {
+      "path": "baseline-final-portable/concurrent-journal-2.json",
+      "bytes": 8539,
+      "sha256": "decc70c14165f690fcdcdaa832e2cd310c7f51656d4003d46fd11a19fcca5212"
+    },
+    {
+      "path": "baseline-final-portable/concurrent-journal-3.json",
+      "bytes": 8539,
+      "sha256": "56fef0d99848d30002f8f6c53ad4bd2ac1597755dad66e39afab1f5fb0727bde"
+    },
+    {
+      "path": "baseline-final-portable/concurrent-journal-4.json",
+      "bytes": 8539,
+      "sha256": "bde1eeea4d5b90198ced43ef945c3b457f2e42a76b5459ba0e64a95156caa212"
+    },
+    {
+      "path": "baseline-final-portable/concurrent-journal-5.json",
+      "bytes": 8539,
+      "sha256": "6fe2e673565fe60b7a562c53705fe0c67f852a0b520c909a9bf84a23ad4864a5"
+    },
+    {
+      "path": "baseline-final-portable/concurrent-journal-6.json",
+      "bytes": 8539,
+      "sha256": "bbab0efe482173f45b12c5ee9c63bcfe0b2c0e74187cec546aa6d333f7467407"
+    },
+    {
+      "path": "baseline-final-portable/concurrent-journal-7.json",
+      "bytes": 8537,
+      "sha256": "526eb298c0aa2de08cf868a62e374ca66087ea0feabb0b9357836f1e7aab76b5"
+    },
+    {
+      "path": "baseline-final-portable/concurrent-journal-8.json",
+      "bytes": 8539,
+      "sha256": "6455ac9063b41d82255c35405d27140e3fc3ac8bf50a18ed5d6f6320e999a34f"
+    },
+    {
+      "path": "baseline-final-portable/concurrent-journal-9.json",
+      "bytes": 8539,
+      "sha256": "2f6cb42a0be70d4ed86a2f040dbd5defc259d79fad5c7016e17ce84370dba114"
+    },
+    {
+      "path": "baseline-final-portable/conflicting-payload-terminal.json",
+      "bytes": 1450,
+      "sha256": "82e8c4124875710bea84b7bc5d8783bc4792a070128a3d70dd99fe59757feba8"
+    },
+    {
+      "path": "baseline-final-portable/current-legacy-mcp-outer-boundary.json",
+      "bytes": 5708,
+      "sha256": "fdf8b5b336fbde120a6e9953b6843ab8d1e709a97653338941892fadc823dffd"
+    },
+    {
+      "path": "baseline-final-portable/current-legacy-mcp-payload-boundary.json",
+      "bytes": 5529,
+      "sha256": "f22e84a54d71ed7c9435abf4b4a294a99c2f56ba7882bd15c306d2dda609f636"
+    },
+    {
+      "path": "baseline-final-portable/event-read-fault-audit-append-fault.json",
+      "bytes": 2375,
+      "sha256": "8ce8159b7555a70b9c208530cffe844f1fbfcb286acfae087769954467c144fc"
+    },
+    {
+      "path": "baseline-final-portable/journal-fault-and-recovery.json",
+      "bytes": 2015,
+      "sha256": "7c7875412c4917c177a2b2cec8ca36f70aec0a2e10d0afe45c7238f3617adfaf"
+    },
+    {
+      "path": "baseline-final-portable/journal-fault-security-audit.json",
+      "bytes": 2870,
+      "sha256": "3bafdb3ea441b81fda69bca526758fad9c0f61ef79c0ce8415a2780c9668b3c4"
+    },
+    {
+      "path": "baseline-final-portable/multi-instance-journal.json",
+      "bytes": 8541,
+      "sha256": "83cce5ba93a2e602f035e6ee078ffaa754bd3805d07d5882b4a5b2d588808556"
+    },
+    {
+      "path": "baseline-final-portable/old-legacy-pollution-new-failure.json",
+      "bytes": 15035,
+      "sha256": "feb0c64773a29101e4733d58b0b09a9f7fa4990b7fd06014d8bc3c8ecebd78e3"
+    },
+    {
+      "path": "baseline-final-portable/old-mcp-new-clean-legacy.json",
+      "bytes": 10643,
+      "sha256": "9f0ad07c6dcb7c3d895ace5597447ebb49c6bdef77dcb5860c6a1606c7c7876c"
+    },
+    {
+      "path": "baseline-final-portable/old-mcp-new-clean-tagged.json",
+      "bytes": 10792,
+      "sha256": "8d4897197575f86251d81d9c404c5540ae709740590f53f601fc6454c067c938"
+    },
+    {
+      "path": "baseline-final-portable/orphan-unknown-boundaries.json",
+      "bytes": 6971,
+      "sha256": "9cac1e17ea6392e3a34fd4c39c81abad4c58f0bd242a28e49ba94573f6ce6502"
+    },
+    {
+      "path": "baseline-final-portable/outer-id-legacy-terminal-recovery.json",
+      "bytes": 5012,
+      "sha256": "c308c8355ae217c132ada0dbfe38a700e534017375b3dd1f451ed2850705c6fc"
+    },
+    {
+      "path": "baseline-final-portable/report.json",
+      "bytes": 4240,
+      "sha256": "ca443791a33d72e98de2ec490e3bb80cfb117e264e0dd715717a36adc0413286"
+    },
+    {
+      "path": "candidate-final-portable/artifact-index.json",
+      "bytes": 4116,
+      "sha256": "b513b2f45b538006c1238806b0b635c9e7a054679100778a515ea51508935213"
+    },
+    {
+      "path": "candidate-final-portable/candidate-store-write-fault.json",
+      "bytes": 2039,
+      "sha256": "32bb11bd4291df3b46395888a1ce36db5b4e70da3710e59b11da74bb7a8b1f86"
+    },
+    {
+      "path": "candidate-final-portable/concurrent-journal-0.json",
+      "bytes": 40281,
+      "sha256": "38a295f2152dabeea64854486031263a7029f8777217488d1a7a1ab5973154ea"
+    },
+    {
+      "path": "candidate-final-portable/concurrent-journal-1.json",
+      "bytes": 40346,
+      "sha256": "814032ee01e796e3b7b5e3d6e4505b39d4009e4be1c05281c41aff35383b8512"
+    },
+    {
+      "path": "candidate-final-portable/concurrent-journal-2.json",
+      "bytes": 40346,
+      "sha256": "7c12f42f44d4e29b9b3c29264f3aa12d42bd2ece2b4df919ea5a8589fcbc2aca"
+    },
+    {
+      "path": "candidate-final-portable/concurrent-journal-3.json",
+      "bytes": 40346,
+      "sha256": "fa92eaa5055ba0a2a4fed77a3892b09516640bcc8f9641e68676d594e7a8e4f5"
+    },
+    {
+      "path": "candidate-final-portable/concurrent-journal-4.json",
+      "bytes": 40346,
+      "sha256": "dda6226cb6c535f9817247155c33b88bfb3a105ce813ce8e03fedc2b6629aa87"
+    },
+    {
+      "path": "candidate-final-portable/concurrent-journal-5.json",
+      "bytes": 40346,
+      "sha256": "34298d6168f694331c4ecac78cea0674584930fcb8039c51f567e8aa2b8c0a83"
+    },
+    {
+      "path": "candidate-final-portable/concurrent-journal-6.json",
+      "bytes": 40346,
+      "sha256": "daa84f383d8ac322da21c2f25d6c6885374583495326dfc836981107bc7e03cc"
+    },
+    {
+      "path": "candidate-final-portable/concurrent-journal-7.json",
+      "bytes": 40346,
+      "sha256": "79d3e7af3382b8edbf2f0ee122325448ca2c56eb89e109eb1663970196d7121d"
+    },
+    {
+      "path": "candidate-final-portable/concurrent-journal-8.json",
+      "bytes": 40346,
+      "sha256": "6f6af009b9f1d4eade209856b678b6cddbf1ddf8d2625908d70ecb1a183f018a"
+    },
+    {
+      "path": "candidate-final-portable/concurrent-journal-9.json",
+      "bytes": 40346,
+      "sha256": "bfc4c17c8ee8b399a351ab2553f0078d70258bf68f68cb42a717c2c78881d252"
+    },
+    {
+      "path": "candidate-final-portable/conflicting-payload-terminal.json",
+      "bytes": 1449,
+      "sha256": "74a040e60f5487e77c0e65ce48b81ab2c2eaed3e66aeb9ac5e979c7e0ff4a4e4"
+    },
+    {
+      "path": "candidate-final-portable/current-legacy-mcp-outer-boundary.json",
+      "bytes": 5767,
+      "sha256": "8d904ec1ef8d9c34c28ead5bbbc5ac1b857242d1adcb6e7aa4174c66549eb4c8"
+    },
+    {
+      "path": "candidate-final-portable/current-legacy-mcp-payload-boundary.json",
+      "bytes": 5647,
+      "sha256": "b75e8a3500e479c72b569e6b1a1e8d8fd73e8388f4058984344b110e1444b21b"
+    },
+    {
+      "path": "candidate-final-portable/event-read-fault-audit-append-fault.json",
+      "bytes": 2376,
+      "sha256": "bd8489fe55df12b92ee86fd8e1622310d4ece8ce083af873023bb2cbf8d8396c"
+    },
+    {
+      "path": "candidate-final-portable/journal-fault-and-recovery.json",
+      "bytes": 2014,
+      "sha256": "1f82652d84b56607e84d83277153a2544bac651ac1cfb97b724c70db2c7e9d49"
+    },
+    {
+      "path": "candidate-final-portable/journal-fault-security-audit.json",
+      "bytes": 2869,
+      "sha256": "161207874c07252246dbf8821f21ea79798c9933e19b6e805529b3418caf82c2"
+    },
+    {
+      "path": "candidate-final-portable/multi-instance-journal.json",
+      "bytes": 40348,
+      "sha256": "9ce4b3310adb45c40acddc23ac8ff79e8d5079c6fb5d29efb72dae7af9a34eb9"
+    },
+    {
+      "path": "candidate-final-portable/old-legacy-pollution-new-failure.json",
+      "bytes": 11335,
+      "sha256": "768ee9b7090383c507437def9b8e0869a261a2c358490f4ef9f7aa6243f59b13"
+    },
+    {
+      "path": "candidate-final-portable/old-mcp-new-clean-legacy.json",
+      "bytes": 7015,
+      "sha256": "08712d7c7a741541412c3c1873abf6c0fab1a0bd191d63183a4f37ea9388fa1f"
+    },
+    {
+      "path": "candidate-final-portable/old-mcp-new-clean-tagged.json",
+      "bytes": 7128,
+      "sha256": "0b70c1734c210daaab68c4a52316b0ba31ff1b04c545a4c245ca07c2e4a7ad2c"
+    },
+    {
+      "path": "candidate-final-portable/orphan-unknown-boundaries.json",
+      "bytes": 2989,
+      "sha256": "a6412bc43cb117bc6c2018b809caaf27e27f99137bf5d89593a11996803dc0d8"
+    },
+    {
+      "path": "candidate-final-portable/outer-id-legacy-terminal-recovery.json",
+      "bytes": 3663,
+      "sha256": "62857d1156095285a3d1fc199630eafbb4fc7944c8f6e862dc3da1bae8243e9d"
+    },
+    {
+      "path": "candidate-final-portable/report.json",
+      "bytes": 4256,
+      "sha256": "39b86b70cb4b7c3817d43152bb6e8a2b8effec0c7a3766ea3322057cc937b195"
+    }
+  ]
+}

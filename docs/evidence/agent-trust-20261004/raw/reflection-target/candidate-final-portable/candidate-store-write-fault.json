@@ -1,0 +1,47 @@
+{
+  "label": "candidate-store-write-fault",
+  "pass": true,
+  "sessionId": "session_d7273403-1b5b-4b12-839f-a3b374f5db93",
+  "turnId": "turn_ce2ae372-925b-4cdf-b2b0-22e38a5ba4cf",
+  "result": {
+    "outputs": 1,
+    "candidates": 0
+  },
+  "journal": [
+    {
+      "schemaVersion": 1,
+      "sessionId": "session_d7273403-1b5b-4b12-839f-a3b374f5db93",
+      "turnId": "turn_ce2ae372-925b-4cdf-b2b0-22e38a5ba4cf",
+      "outcome": "failed",
+      "at": 1791075873546,
+      "reflection": {
+        "outcome": "failure",
+        "rootCause": "tool",
+        "evidence": "tool.failed event_1a47ecbe-a52e-4d9d-86b0-240ed2320c17@933; tool.requested event_1def8811-979b-48cc-a549-6b1a7654220b@932; turn.failed event_6d587953-26bc-4ddc-9769-cb3d87fc6207@934; task: current task; turn.failed event_6d587953-26bc-4ddc-9769-cb3d87fc6207@934; tool.failed event_1a47ecbe-a52e-4d9d-86b0-240ed2320c17@933; task: current task",
+        "lesson": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+        "generalizable": true,
+        "candidate": {
+          "content": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+          "type": "procedural",
+          "sourceSession": "session_d7273403-1b5b-4b12-839f-a3b374f5db93",
+          "importance": 0.9,
+          "confidence": 0.6,
+          "novelty": 0.5,
+          "stability": 0.5,
+          "structured": {
+            "when": "read_file failed with reproducer failure",
+            "do": "verify inputs and environment state, then retry",
+            "avoid": "retrying the same call without checking inputs",
+            "rootCause": "tool",
+            "outcome": "failure",
+            "evidenceRefs": [
+              "event_1a47ecbe-a52e-4d9d-86b0-240ed2320c17",
+              "event_6d587953-26bc-4ddc-9769-cb3d87fc6207"
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "scope": "Result counts and durable journal only; no claim about pre-existing candidate-store in-memory rollback behavior."
+}

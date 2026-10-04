@@ -1,0 +1,95 @@
+{
+  "schema": 1,
+  "observedAt": "2026-10-04T01:11:39.872Z",
+  "mode": "actual built production modules, filesystem, JSONLEventStore, JsonlCandidateStore; no implementation mocks",
+  "repo": "/workspace/harness-agent-agent-round2",
+  "head": "965da0bb123fbdd9b61bded6bc345b767ad0c48f",
+  "trackedStatus": "M docs/evidence/agent-trust-20261004.md\n M docs/evidence/agent-trust-20261004/artifact-index.json\n M packages/harness/src/candidate-store.ts\n M packages/harness/src/command-discovery-service.ts\n M packages/harness/src/memory-runtime-bridge.ts\n M packages/harness/src/reflection-runner.ts\n M packages/harness/src/verification-planner.ts\n M packages/memory/src/memory-store.ts\n M packages/memory/src/retrieval.test.ts\n M packages/memory/src/retrieval.ts\n M packages/memory/src/security-gate.ts\n M packages/memory/src/sqlite-memory-store.ts\n M packages/tools/src/command-discovery.ts\n M packages/tools/src/verification-plan.test.ts\n M packages/tools/src/verification/plan-builder.ts\n M plan.md\n M tasks/AGENT-TRUST-20261004.md",
+  "sources": [
+    {
+      "path": "packages/harness/src/reflection-runner.ts",
+      "sha256": "96ff028d2fb18cb7940e70c91f04f2e8a2ff668a9b0f5e8120b1a070e3bb6fc1"
+    },
+    {
+      "path": "packages/harness/dist/reflection-runner.js",
+      "sha256": "71047c8e61ab2b62d65075db697bd03653b14f801422e20551d3f907c3a37b18"
+    },
+    {
+      "path": "packages/harness/src/candidate-store.ts",
+      "sha256": "dbf0d5e85804cb413ea9df1bb0b3130eaa375a775a289e374210dc5d2629894d"
+    },
+    {
+      "path": "packages/harness/dist/candidate-store.js",
+      "sha256": "dd243349092bb47b1d73e1412165ef856e3d42eb5cf93ecdb330f80b4d76dc96"
+    },
+    {
+      "path": "packages/memory/src/reflection.ts",
+      "sha256": "f8764bac7981245bc5fb8eecde8c619c1f8235329e80cf67caedc20103d8a8cb"
+    },
+    {
+      "path": "packages/memory/dist/reflection.js",
+      "sha256": "637b137296d5310668a9f4de73042b250bd0635c56bd9737cfc27c9e5f08e850"
+    },
+    {
+      "path": "packages/memory/src/write-gate.ts",
+      "sha256": "e021a70e44fc9cb5d893eb55ab5c342e099f8e174ce41eaabe47a52e422c3e73"
+    },
+    {
+      "path": "packages/memory/dist/write-gate.js",
+      "sha256": "43cb88042d3b97b9eb43ef042e3fe1d6a26ea876db43e94e30b47e0e97bd58be"
+    },
+    {
+      "path": "packages/memory/src/security-gate.ts",
+      "sha256": "35dd1c100d6200a862ac50c3b2f1c0fff1d9feb8b7921e31c8805aed319a5efa"
+    },
+    {
+      "path": "packages/memory/dist/security-gate.js",
+      "sha256": "4e5b30994c56a51aead532212406056b0f5e84dd80f74979e4b45ebbf85f72fa"
+    },
+    {
+      "path": "packages/memory/src/derivability.ts",
+      "sha256": "39e01bf9c96c9d9aa685b534be39598eb05e046b9709866543d63f616f0cac99"
+    },
+    {
+      "path": "packages/memory/dist/derivability.js",
+      "sha256": "0a4a65a72dbaf1596c47b62ee6b3ef2537c34a2da413b0efb32beccd1e10975a"
+    },
+    {
+      "path": "packages/events/src/event-store.ts",
+      "sha256": "ab7c5e6a2f7bfa8bec5fe9dbbf5249d842776b1fcc281d1f69bda62ca51597bb"
+    },
+    {
+      "path": "packages/events/dist/event-store.js",
+      "sha256": "691402d50f4c065ddf135a3b40f5514df6a36813df663f675c869eff1b3b3eb5"
+    },
+    {
+      "path": "packages/store-integrity/src/index.ts",
+      "sha256": "1f829756aec4b1a49cbb34d7b2d7ae05b33647d9f890c260151affec59bb1862"
+    },
+    {
+      "path": "packages/store-integrity/dist/index.js",
+      "sha256": "1a77d6167d2c8614029d6310b96a93ee72c5802ac3a3cfd3a09bf3fe71275aae"
+    }
+  ],
+  "reproducer": {
+    "path": "/workspace/harness-agent-agent-round2/scripts/research/agent-trust-20261004/reflection.mjs",
+    "sha256": "c79727906c8e710654cc6a99b0c4fce8ee5ec88a0e0e7dd64e8ca1aa5c9518ca"
+  },
+  "paidModelCalls": 0,
+  "liveModelQuality": "NOT_RUN",
+  "promotion": "NOT_RUN",
+  "scope": {
+    "journalMultiInstance": "same process, same normalized path, shared candidateStore; independent candidateStore caches and cross-process coordination are outside this fix",
+    "originalBaselineProbe": "No source behavior is replaced or patched. The same cases assert candidate requirements and report FAIL on baseline."
+  },
+  "summary": {
+    "checks": 23,
+    "passed": 23,
+    "failed": [],
+    "concurrentRounds": 10,
+    "concurrentExpectedJournalRows": 200,
+    "concurrentJournalRows": 200,
+    "concurrentCandidateRows": 200,
+    "multiInstanceJournalRows": 20
+  }
+}

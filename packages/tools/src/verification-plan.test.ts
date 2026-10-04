@@ -17,14 +17,14 @@ describe("P8-4: shared command classifier", () => {
 });
 
 describe("P8-1: verification plan builder", () => {
-  it("targets changed tests, then the package test, then typecheck/build", () => {
+  it("preserves the repository entrypoint without guessing test args or package cwd", () => {
     const plan = buildVerificationPlan({
       root: "/repo",
       filesChanged: ["src/lib/parser.ts", "src/lib/parser.test.ts"],
       commands: { test: "pnpm test", typecheck: "pnpm typecheck", build: "pnpm build" },
     });
-    expect(plan.steps[0]!.command).toContain("parser.test.ts");
-    expect(plan.steps.some((s) => s.command === "pnpm test" && s.cwd === "src")).toBe(true);
+    expect(plan.steps[0]!).toEqual({ kind: "command", command: "pnpm test", required: true });
+    expect(plan.steps.every((s) => s.cwd === undefined)).toBe(true);
     expect(plan.steps.some((s) => s.command === "pnpm typecheck")).toBe(true);
     expect(plan.steps.some((s) => s.command === "pnpm build")).toBe(true);
   });
@@ -46,7 +46,7 @@ describe("P8-1: verification plan builder", () => {
     expect(plan.rationale.some((r) => r.includes("no test command"))).toBe(true);
   });
 
-  it("P8-1: converts a plan into executable verification specs (command + args split)", () => {
+  it("P8-1: converts discovered recipes without manufacturing an argv vector", () => {
     const plan = buildVerificationPlan({
       root: "/repo",
       filesChanged: ["src/parser.test.ts"],
@@ -54,19 +54,19 @@ describe("P8-1: verification plan builder", () => {
     });
     const specs = planToVerificationSpecs(plan);
     expect(specs.length).toBeGreaterThanOrEqual(2);
-    const pnpm = specs.find((s) => s.kind === "command" && s.command === "pnpm");
+    const pnpm = specs.find((s) => s.kind === "command" && s.command === "pnpm test");
     expect(pnpm).toBeDefined();
-    expect((pnpm as { args?: string[] }).args).toEqual(["test", "src/parser.test.ts"]);
+    expect((pnpm as { args?: string[] }).args).toBeUndefined();
     expect(specs.every((s) => s.kind === "command")).toBe(true);
   });
 
-  it("P8-1: shell-special arguments survive the spec conversion (verifier shell-quotes them)", () => {
+  it("P8-1: preserves quotes as shell syntax in the original recipe", () => {
     const specs = planToVerificationSpecs({
       steps: [{ kind: "command", command: 'node -e "process.exit(0)"', required: true }],
       rationale: [],
     });
     expect(specs).toEqual([
-      { kind: "command", command: "node", args: ["-e", '"process.exit(0)"'], description: 'planned: node -e "process.exit(0)"' },
+      { kind: "command", command: 'node -e "process.exit(0)"', description: 'planned: node -e "process.exit(0)"' },
     ]);
   });
 });

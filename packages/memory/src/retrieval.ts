@@ -1,5 +1,6 @@
-import type { MemoryEntry, MemoryScope, MemoryStore, MemoryType } from "@ar/contracts";
-import { checkUnsafeMemory } from "./security-gate.js";
+import type { MemoryEntry, MemoryScope, MemoryStore, MemoryType, SessionId } from "@ar/contracts";
+import { checkUnsafeMemoryEntry } from "./security-gate.js";
+import { isRetrievable } from "./lifecycle.js";
 
 /**
  * P0-4 Memory Retrieval V2.
@@ -84,10 +85,13 @@ export interface RankedMemoryItem {
 
 export interface SuppressedMemory {
   memory: MemoryEntry;
-  reason: "unsafe" | "conflict" | "duplicate";
+  reason: "unsafe" | "conflict" | "duplicate" | "inactive" | "session-mismatch";
 }
 
 export interface RetrieveOptions {
+  /** Trusted caller identity for session-scoped entries. Missing identity
+   * fails closed; goal/tool text is never an ownership signal. */
+  sessionId?: SessionId;
   /** Result cap (default 5). */
   k?: number;
   /** Optional memory-type filter forwarded to the store. */
@@ -198,7 +202,19 @@ export async function retrieveMemories(
       continue;
     }
     if (!scopeVisibleForQuery(memory.scope, queryScope)) continue;
-    const unsafe = checkUnsafeMemory(memory.content, "retrieval");
+    if (memory.scope === "session" && (
+      typeof opts.sessionId !== "string" || opts.sessionId.length === 0 ||
+      typeof memory.sourceSession !== "string" || memory.sourceSession.length === 0 ||
+      memory.sourceSession !== opts.sessionId
+    )) {
+      suppressed.push({ memory, reason: "session-mismatch" });
+      continue;
+    }
+    if (!isRetrievable(memory)) {
+      suppressed.push({ memory, reason: "inactive" });
+      continue;
+    }
+    const unsafe = checkUnsafeMemoryEntry(memory, "retrieval");
     if (unsafe !== null) {
       suppressed.push({ memory, reason: "unsafe" });
       continue;

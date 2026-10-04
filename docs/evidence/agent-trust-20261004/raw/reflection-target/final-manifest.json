@@ -1,0 +1,118 @@
+{
+  "schema": 1,
+  "observedAt": "2026-10-04T01:05:42.659446+00:00",
+  "stage": "T3 owner files frozen; dirty-tree targeted evidence, not final source-SHA acceptance",
+  "repo": "/workspace/harness-agent-agent-round2",
+  "head": "965da0bb123fbdd9b61bded6bc345b767ad0c48f",
+  "baseline": "968544064f43cfc0a876c4e65fcb967cd466c9a2",
+  "ownedFiles": [
+    {
+      "path": "packages/harness/src/reflection-runner.ts",
+      "bytes": 13689,
+      "sha256": "96ff028d2fb18cb7940e70c91f04f2e8a2ff668a9b0f5e8120b1a070e3bb6fc1"
+    },
+    {
+      "path": "packages/harness/src/reflection-turn-isolation.regressions.test.ts",
+      "bytes": 16903,
+      "sha256": "b794469f2cb7d4c4164ccb6e89542da1c2a3b5b9380d81349ce58cf35aea8cef"
+    },
+    {
+      "path": "scripts/research/agent-trust-20261004/reflection.mjs",
+      "bytes": 16872,
+      "sha256": "412b6aab14ceefde770636f23be0e0dbbb31615009539481d48ff15c3e9b5bd1"
+    }
+  ],
+  "targetTests": {
+    "baseline": {
+      "exitCode": 1,
+      "tests": 18,
+      "passed": 8,
+      "failed": 10,
+      "report": "baseline-final-red.json",
+      "commandRecord": "baseline-final-red-command.json"
+    },
+    "candidate": {
+      "exitCode": 0,
+      "tests": 45,
+      "passed": 45,
+      "failed": 0,
+      "report": "candidate-final-green.json",
+      "command": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "packages/harness/src/reflection-turn-isolation.regressions.test.ts",
+        "packages/harness/src/reflection-runner.test.ts",
+        "packages/memory/src/reflection.test.ts",
+        "--reporter=json",
+        "--outputFile=/workspace/harness-agent/.ci/agent-round2-20261004/reflection-target/candidate-final-green.json"
+      ]
+    }
+  },
+  "incrementalTypecheckAndBuild": {
+    "exitCode": 0,
+    "command": [
+      "pnpm",
+      "exec",
+      "tsc",
+      "-b",
+      "packages/harness"
+    ],
+    "stdoutAndStderr": "harness-typecheck-build.log"
+  },
+  "portable": {
+    "baseline": {
+      "exitCode": 1,
+      "checks": 23,
+      "passed": 4,
+      "failed": 19,
+      "report": "baseline-final-portable/report.json"
+    },
+    "candidate": {
+      "exitCode": 0,
+      "checks": 23,
+      "passed": 23,
+      "failed": 0,
+      "report": "candidate-final-portable/report.json"
+    },
+    "concurrent": {
+      "rounds": 10,
+      "sessionsPerRound": 20,
+      "baselineJournalRows": 10,
+      "candidateJournalRows": 200,
+      "candidateCandidateRows": 200
+    },
+    "multiInstance": {
+      "baselineJournalRows": 1,
+      "candidateJournalRows": 20,
+      "scope": "Same process, normalized journal path, shared candidateStore; independent candidateStore caches and cross-process writes are not repaired or claimed."
+    },
+    "command": [
+      "node",
+      "scripts/research/agent-trust-20261004/reflection.mjs",
+      "--repo",
+      "<repository with built production modules>",
+      "--out",
+      "<fresh external output directory>"
+    ]
+  },
+  "validation": {
+    "ownerDiffCheckExitCode": 0,
+    "scriptSyntaxExitCode": 0,
+    "baselinePortableIndexExitCode": 0,
+    "candidatePortableIndexExitCode": 0
+  },
+  "notes": [
+    "Initial baseline14/candidate iteration and first portable-format outputs remain externally preserved, but only final same18-case RED/GREEN and current script portable receipts are selected here.",
+    "Production gate still executes and denial appendNew failure propagates even if journal append fails.",
+    "Journal error outputs0/candidates0; queue write error journal1/candidates0.",
+    "All original stores and actual filesystem used; stderr fault messages are intentional negative controls.",
+    "No source/docs/plan changes outside the three listed owner files.",
+    "Pure Reflector, Runtime, promotion gates unchanged.",
+    "Final root clean source-SHA acceptance and dual-platform CI remain required."
+  ],
+  "paidModelCalls": 0,
+  "liveModelQuality": "NOT_RUN",
+  "promotion": "NOT_RUN"
+}

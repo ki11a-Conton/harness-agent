@@ -87,13 +87,13 @@ describe("retrieveMemories: P0-4 scenarios", () => {
     await store.write(sessionScoped);
     await store.write(globalScoped);
 
-    const sessionView = await retrieveMemories(store, "deploy command", "session", { now: NOW });
+    const sessionView = await retrieveMemories(store, "deploy command", "session", { now: NOW, sessionId: "session_test" as SessionId });
     expect(sessionView.items).toHaveLength(2);
     expect(sessionView.items[0]?.memory.id).toBe(sessionScoped.id);
     expect(sessionView.items[0]?.score.scopeMatch).toBe(1);
     expect(sessionView.items[1]?.score.scopeMatch).toBeCloseTo(0.8 ** 5, 6);
 
-    const globalView = await retrieveMemories(store, "deploy command", "global", { now: NOW });
+    const globalView = await retrieveMemories(store, "deploy command", "global", { now: NOW, sessionId: "session_test" as SessionId });
     expect(globalView.items.map((i) => i.memory.id)).toEqual([globalScoped.id]);
   });
 
@@ -105,7 +105,7 @@ describe("retrieveMemories: P0-4 scenarios", () => {
     });
     await store.write(agentScoped);
 
-    const view = await retrieveMemories(store, "build artifacts", "workspace", { now: NOW });
+    const view = await retrieveMemories(store, "build artifacts", "workspace", { now: NOW, sessionId: "session_test" as SessionId });
     expect(view.items).toHaveLength(0);
   });
 
@@ -127,7 +127,7 @@ describe("retrieveMemories: P0-4 scenarios", () => {
     await store.write(stale);
     await store.write(validated);
 
-    const result = await retrieveMemories(store, "wal journal loss recovery", "session", { now: NOW });
+    const result = await retrieveMemories(store, "wal journal loss recovery", "session", { now: NOW, sessionId: "session_test" as SessionId });
     expect(result.items.map((i) => i.memory.id)).toEqual([validated.id]);
     expect(result.suppressed.map((s) => s.memory.id)).toContain(stale.id);
     expect(result.suppressed.find((s) => s.memory.id === stale.id)?.reason).toBe("conflict");
@@ -144,7 +144,7 @@ describe("retrieveMemories: P0-4 scenarios", () => {
     await store.write(b);
     await store.write(unrelated);
 
-    const result = await retrieveMemories(store, "sqlite wal mode", "session", { now: NOW });
+    const result = await retrieveMemories(store, "sqlite wal mode", "session", { now: NOW, sessionId: "session_test" as SessionId });
     expect(result.items).toHaveLength(2);
     expect(result.suppressed).toHaveLength(1);
     expect(result.suppressed[0]?.reason).toBe("conflict");
@@ -164,7 +164,7 @@ describe("retrieveMemories: P0-4 scenarios", () => {
     await store.write(entry);
     await store.remove(entry.id);
 
-    const result = await retrieveMemories(store, "tombstone topic", "session", { now: NOW });
+    const result = await retrieveMemories(store, "tombstone topic", "session", { now: NOW, sessionId: "session_test" as SessionId });
     expect(result.items).toHaveLength(0);
     expect(result.suppressed).toHaveLength(0);
   });
@@ -190,12 +190,12 @@ describe("retrieveMemories: P0-4 scenarios", () => {
       ftsInsert.run(e.content, e.id);
     }
 
-    const evilView = await retrieveMemories(store, "instructions", "session", { now: NOW });
+    const evilView = await retrieveMemories(store, "instructions", "session", { now: NOW, sessionId: "session_test" as SessionId });
     expect(evilView.items.map((i) => i.memory.id)).not.toContain(evil.id);
     expect(evilView.suppressed.map((s) => s.memory.id)).toContain(evil.id);
     expect(evilView.suppressed.find((s) => s.memory.id === evil.id)?.reason).toBe("unsafe");
 
-    const keyView = await retrieveMemories(store, "token", "session", { now: NOW });
+    const keyView = await retrieveMemories(store, "token", "session", { now: NOW, sessionId: "session_test" as SessionId });
     expect(keyView.items.map((i) => i.memory.id)).not.toContain(key.id);
     expect(keyView.suppressed.map((s) => s.memory.id)).toContain(key.id);
     expect(keyView.suppressed.find((s) => s.memory.id === key.id)?.reason).toBe("unsafe");
@@ -215,7 +215,7 @@ describe("retrieveMemories: P0-4 scenarios", () => {
     await store.write(relevant);
     await store.write(irrelevantFresh);
 
-    const result = await retrieveMemories(store, "wal journaling", "session", { now: NOW });
+    const result = await retrieveMemories(store, "wal journaling", "session", { now: NOW, sessionId: "session_test" as SessionId });
     expect(result.items[0]?.memory.id).toBe(relevant.id);
     expect(result.items[0]?.score.lexical).toBeGreaterThan(
       result.items[1]?.score.lexical ?? 0,
@@ -237,7 +237,7 @@ describe("retrieveMemories: P0-4 scenarios", () => {
     await store.write(precise);
     await store.write(loose);
 
-    const result = await retrieveMemories(store, "WAL journaling concurrent readers", "session", { now: NOW });
+    const result = await retrieveMemories(store, "WAL journaling concurrent readers", "session", { now: NOW, sessionId: "session_test" as SessionId });
     expect(result.items[0]?.memory.id).toBe(precise.id);
     expect(result.items[0]?.score.lexical).toBe(1);
     expect(result.items[1]?.score.lexical).toBe(0);
@@ -250,7 +250,7 @@ describe("retrieveMemories: P0-4 scenarios", () => {
         makeEntry({ id: newMemoryId(), content: `feature note ${i} sqlite ${colors[i]}` }),
       );
     }
-    const result = await retrieveMemories(store, "feature note sqlite", "session", { k: 3, now: NOW });
+    const result = await retrieveMemories(store, "feature note sqlite", "session", { k: 3, now: NOW, sessionId: "session_test" as SessionId });
     expect(result.items).toHaveLength(3);
   });
 
@@ -262,12 +262,14 @@ describe("retrieveMemories: P0-4 scenarios", () => {
     });
     await store.write(strong);
     const result = await retrieveMemories(store, "sqlite wal journaling", "session", {
+      sessionId: "session_test" as SessionId,
       k: 10,
       minScore: 0.999,
       now: NOW,
     });
     expect(result.items).toHaveLength(0);
     const wide = await retrieveMemories(store, "sqlite wal journaling", "session", {
+      sessionId: "session_test" as SessionId,
       k: 10,
       minScore: 0,
       now: NOW,
@@ -367,11 +369,11 @@ describe("retrieval over the JSONL backend", () => {
     await jsonl.write(sessionScoped);
     await jsonl.write(globalScoped);
 
-    const view = await retrieveMemories(jsonl, "deploy", "session", { now: NOW });
+    const view = await retrieveMemories(jsonl, "deploy", "session", { now: NOW, sessionId: "session_test" as SessionId });
     expect(view.items).toHaveLength(2);
     expect(view.items[0]?.memory.id).toBe(sessionScoped.id);
 
-    const globalView = await retrieveMemories(jsonl, "deploy", "global", { now: NOW });
+    const globalView = await retrieveMemories(jsonl, "deploy", "global", { now: NOW, sessionId: "session_test" as SessionId });
     expect(globalView.items.map((i) => i.memory.id)).toEqual([globalScoped.id]);
   });
 });

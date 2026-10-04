@@ -1,0 +1,68 @@
+{
+  "stage": "Independent actual filesystem probe; existing candidate-store failure/cache semantics, no model calls",
+  "result": {
+    "outputs": 1,
+    "candidates": 0
+  },
+  "journalRows": 1,
+  "sameInstanceQueueRows": 1,
+  "freshQueueRows": 0,
+  "sourceFingerprints": {
+    "packages/harness/src/candidate-store.ts": "b55af583dd2661df6199526872df080e895bc6d264013e9cf9853b65542f1faf",
+    "packages/harness/dist/candidate-store.js": "c41af360e643a42efef83f5cf04d19da02a858c2f38dd94cf5a0e516317bce51",
+    "packages/harness/src/reflection-runner.ts": "96ff028d2fb18cb7940e70c91f04f2e8a2ff668a9b0f5e8120b1a070e3bb6fc1",
+    "packages/harness/dist/reflection-runner.js": "71047c8e61ab2b62d65075db697bd03653b14f801422e20551d3f907c3a37b18"
+  },
+  "paidCalls": 0,
+  "queueCandidates": [
+    {
+      "id": "lc_e988f5c2-769e-4178-8d04-0ce6fbfe71a5",
+      "kind": "memory",
+      "content": "verification failed (failed check); inspect the evidence, fix the issue, and re-verify",
+      "proposedAt": 1791075937528,
+      "securityChecked": true,
+      "sourceCandidate": {
+        "content": "verification failed (failed check); inspect the evidence, fix the issue, and re-verify",
+        "type": "procedural",
+        "sourceSession": "session_independent",
+        "importance": 0.9,
+        "confidence": 0.6,
+        "novelty": 0.5,
+        "stability": 0.5,
+        "structured": {
+          "when": "verification failed (failed check)",
+          "do": "inspect the verification evidence, fix the reported issue, and re-verify",
+          "avoid": "declaring completion without a passing gate",
+          "rootCause": "verification",
+          "outcome": "failure",
+          "evidenceRefs": [
+            "event_failure",
+            "event_terminal"
+          ]
+        },
+        "sourceTurn": "turn_independent",
+        "derivability": {
+          "verdict": "non-derivable",
+          "reason": "no re-derivable-state signal detected"
+        },
+        "promotionState": "pending",
+        "securityScan": {
+          "checked": true,
+          "passed": true,
+          "at": 1791075937528
+        }
+      },
+      "structured": {
+        "when": "verification failed (failed check)",
+        "do": "inspect the verification evidence, fix the reported issue, and re-verify",
+        "avoid": "declaring completion without a passing gate",
+        "rootCause": "verification",
+        "outcome": "failure",
+        "evidenceRefs": [
+          "event_failure",
+          "event_terminal"
+        ]
+      }
+    }
+  ]
+}

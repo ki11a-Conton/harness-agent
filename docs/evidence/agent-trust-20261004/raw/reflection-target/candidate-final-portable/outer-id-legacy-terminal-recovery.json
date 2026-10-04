@@ -1,0 +1,111 @@
+{
+  "label": "outer-id-legacy-terminal-recovery",
+  "pass": true,
+  "sessionId": "session_fbc789e1-f87a-47df-ab49-cd98d8eea1dc",
+  "turnId": "turn_a2938ab2-695c-449d-b2f9-99c061445f22",
+  "other": "turn_7454ba2b-70a2-406e-8359-cf99ee1d5c82",
+  "result": {
+    "outputs": 1,
+    "candidates": 1
+  },
+  "journal": [
+    {
+      "schemaVersion": 1,
+      "sessionId": "session_fbc789e1-f87a-47df-ab49-cd98d8eea1dc",
+      "turnId": "turn_a2938ab2-695c-449d-b2f9-99c061445f22",
+      "outcome": "failed",
+      "at": 1791075872573,
+      "reflection": {
+        "outcome": "partial",
+        "rootCause": "tool",
+        "evidence": "tool.failed event_e3f9b160-12b0-4eb7-8570-9571792df1ec@42; tool.requested event_54620d36-4dba-46b0-99f6-03975a01c950@41; turn.completed event_c7676ccc-c717-45dc-8ad1-ad6749483339@43; task: current task",
+        "lesson": "tool read_file failed with recoverable; verify inputs and environment before retry",
+        "generalizable": true,
+        "candidate": {
+          "content": "tool read_file failed with recoverable; verify inputs and environment before retry",
+          "type": "procedural",
+          "sourceSession": "session_fbc789e1-f87a-47df-ab49-cd98d8eea1dc",
+          "importance": 0.6,
+          "confidence": 0.6,
+          "novelty": 0.5,
+          "stability": 0.5,
+          "structured": {
+            "when": "read_file failed with recoverable",
+            "do": "verify inputs and environment state, then retry",
+            "avoid": "retrying the same call without checking inputs",
+            "rootCause": "tool",
+            "outcome": "partial",
+            "evidenceRefs": [
+              "event_e3f9b160-12b0-4eb7-8570-9571792df1ec"
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "events": [
+    {
+      "id": "event_e5539e64-5a6a-4cb9-903b-f9e97edd4347",
+      "sessionId": "session_fbc789e1-f87a-47df-ab49-cd98d8eea1dc",
+      "turnId": "turn_a2938ab2-695c-449d-b2f9-99c061445f22",
+      "timestamp": 39,
+      "type": "turn.started",
+      "payload": {
+        "turnId": "turn_7454ba2b-70a2-406e-8359-cf99ee1d5c82"
+      },
+      "sequence": 0,
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_8df776c8-084f-4bfa-8515-d694248e9efc",
+      "sessionId": "session_fbc789e1-f87a-47df-ab49-cd98d8eea1dc",
+      "turnId": "turn_7454ba2b-70a2-406e-8359-cf99ee1d5c82",
+      "timestamp": 40,
+      "type": "verification.failed",
+      "payload": {
+        "error": "explicit other-turn failure"
+      },
+      "sequence": 1,
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_54620d36-4dba-46b0-99f6-03975a01c950",
+      "sessionId": "session_fbc789e1-f87a-47df-ab49-cd98d8eea1dc",
+      "timestamp": 41,
+      "type": "tool.requested",
+      "payload": {
+        "turnId": "turn_7454ba2b-70a2-406e-8359-cf99ee1d5c82",
+        "name": "read_file",
+        "toolCallId": "legacy-call"
+      },
+      "sequence": 2,
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_e3f9b160-12b0-4eb7-8570-9571792df1ec",
+      "sessionId": "session_fbc789e1-f87a-47df-ab49-cd98d8eea1dc",
+      "timestamp": 42,
+      "type": "tool.failed",
+      "payload": {
+        "toolCallId": "legacy-call",
+        "error": {
+          "code": "PROCESS_ERROR",
+          "message": "recoverable"
+        }
+      },
+      "sequence": 3,
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_c7676ccc-c717-45dc-8ad1-ad6749483339",
+      "sessionId": "session_fbc789e1-f87a-47df-ab49-cd98d8eea1dc",
+      "timestamp": 43,
+      "type": "turn.completed",
+      "payload": {
+        "turnId": "turn_a2938ab2-695c-449d-b2f9-99c061445f22"
+      },
+      "sequence": 4,
+      "schemaVersion": 1
+    }
+  ]
+}

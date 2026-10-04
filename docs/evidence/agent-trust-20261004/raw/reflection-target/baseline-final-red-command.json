@@ -1,0 +1,16 @@
+{
+  "head": "968544064f43cfc0a876c4e65fcb967cd466c9a2",
+  "exitCode": 1,
+  "command": [
+    "pnpm",
+    "exec",
+    "vitest",
+    "run",
+    "packages/harness/src/reflection-turn-isolation.regressions.test.ts",
+    "--reporter=json",
+    "--outputFile=/workspace/harness-agent/.ci/agent-round2-20261004/reflection-target/baseline-final-red.json"
+  ],
+  "testSha256": "b794469f2cb7d4c4164ccb6e89542da1c2a3b5b9380d81349ce58cf35aea8cef",
+  "temporaryTestCopiedToBaseline": true,
+  "trackedSourceChanged": false
+}

@@ -1,0 +1,94 @@
+{
+  "expected": {
+    "id": "metadatamarker",
+    "content": "metadatamarker useful historical coding guidance",
+    "type": "procedural",
+    "sourceSession": "source-session",
+    "scope": "workspace",
+    "importance": 0.9,
+    "confidence": 0.9,
+    "novelty": 0.9,
+    "stability": 0.9,
+    "createdAt": 1791075596568,
+    "updatedAt": 1791075596568,
+    "deleted": false,
+    "sourceTurn": "source-turn",
+    "structured": {
+      "when": "a test command fails",
+      "do": "inspect the failure before retrying",
+      "avoid": "repeating blind retries",
+      "failedStrategy": "blind retry",
+      "rootCause": "tool",
+      "outcome": "failure",
+      "evidenceRefs": [
+        "event-1"
+      ]
+    },
+    "derivability": {
+      "verdict": "non-derivable",
+      "reason": "observed environment"
+    },
+    "promotionState": "promoted",
+    "securityScan": {
+      "checked": true,
+      "passed": true,
+      "at": 1
+    },
+    "pollutionSources": [
+      "tool:read_file#synthetic"
+    ],
+    "evidence": {
+      "sourceSessions": [
+        "source-session"
+      ],
+      "sourceEvents": [
+        "event-1"
+      ],
+      "successCount": 4,
+      "failureCount": 2,
+      "lastValidated": 1
+    },
+    "usefulness": {
+      "retrievedCount": 9,
+      "injectedCount": 8,
+      "usedCount": 7,
+      "taskSuccessCount": 6,
+      "verificationPassedCount": 5,
+      "score": 0.7
+    },
+    "state": {
+      "kind": "deprecated",
+      "at": 1,
+      "reason": "reviewed retirement"
+    }
+  },
+  "actual": {
+    "id": "metadatamarker",
+    "content": "metadatamarker useful historical coding guidance",
+    "type": "procedural",
+    "sourceSession": "source-session",
+    "scope": "workspace",
+    "importance": 0.9,
+    "confidence": 0.9,
+    "novelty": 0.9,
+    "stability": 0.9,
+    "createdAt": 1791075596568,
+    "updatedAt": 1791075596568,
+    "deleted": false
+  },
+  "migration": {
+    "total": 1,
+    "inserted": 1,
+    "skipped": 0,
+    "denied": []
+  },
+  "again": {
+    "total": 1,
+    "inserted": 0,
+    "skipped": 1,
+    "denied": []
+  },
+  "retrieved": [
+    "metadatamarker"
+  ]
+}

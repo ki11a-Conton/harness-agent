@@ -1,0 +1,135 @@
+{
+  "schema": "agent-trust-t1-final-manifest.v1",
+  "frozenAtUTC": "2026-10-04T01:04:43.976444+00:00",
+  "implementationFrozen": true,
+  "sourceSha": "965da0bb123fbdd9b61bded6bc345b767ad0c48f",
+  "dirty": true,
+  "scope": "T1 owner files frozen before root code commit; final exact-SHA clean acceptance still required. Other owners share the worktree.",
+  "files": [
+    {
+      "path": "packages/tools/src/command-discovery.ts",
+      "bytes": 15931,
+      "sha256": "aa0b4310fd47fe7c531d542c79d8288913da166ef76a7c7867b3470fa4db4cf5"
+    },
+    {
+      "path": "packages/tools/src/verification/plan-builder.ts",
+      "bytes": 3141,
+      "sha256": "51f92c9dbdf14ca0bf031fd7163becbc73912bc4926272eaea1e5fdfb04387ac"
+    },
+    {
+      "path": "packages/tools/src/verification-plan.test.ts",
+      "bytes": 4221,
+      "sha256": "24ba814d35fd0c2a69769663119ab669fd319d3bdfb6734760a3f391edea2d4e"
+    },
+    {
+      "path": "packages/harness/src/verification-planner.ts",
+      "bytes": 1445,
+      "sha256": "a1431faa773520fd271681639a95c54b6de2b299ae17165cb5cb92a54953c43a"
+    },
+    {
+      "path": "packages/harness/src/command-discovery-service.ts",
+      "bytes": 4989,
+      "sha256": "44feb71feef13126b388514362f409e41fffe2411882bd5d1344c5ab2284ab0e"
+    },
+    {
+      "path": "packages/harness/src/verification-trust.regressions.test.ts",
+      "bytes": 9715,
+      "sha256": "d6a9642d9426065b3a762965f55dbf5b5dd32e9c9ee5389d36faba5dd4270737"
+    },
+    {
+      "path": "packages/harness/src/command-discovery-cache.regressions.test.ts",
+      "bytes": 3493,
+      "sha256": "748db9ab536c8650e0446c6a1ca3f8dceb5c2ae0a16a0b6068990aaa663cb34e"
+    },
+    {
+      "path": "scripts/research/agent-trust-20261004/verification.mjs",
+      "bytes": 14903,
+      "sha256": "98023edaa02782bd9b88cf74ce483d1bc7ad6887aa45d558d4949d3496e6dbf4"
+    }
+  ],
+  "baselineSha": "968544064f43cfc0a876c4e65fcb967cd466c9a2",
+  "tests": [
+    {
+      "artifact": "baseline-red-final.json",
+      "exitCode": 1,
+      "label": "Frozen 13-case correctness assertions on 9685",
+      "total": 13,
+      "passed": 6,
+      "failed": 7,
+      "skipped": 0
+    },
+    {
+      "artifact": "cache-baseline-red.json",
+      "exitCode": 1,
+      "label": "Frozen 3-case cache generation assertions on 9685",
+      "total": 3,
+      "passed": 1,
+      "failed": 2,
+      "skipped": 0
+    },
+    {
+      "artifact": "target-complete.json",
+      "exitCode": 0,
+      "label": "Final target including unchanged discovery/Verification/execution boundary regressions",
+      "total": 92,
+      "passed": 89,
+      "failed": 0,
+      "skipped": 3
+    }
+  ],
+  "commands": [
+    {
+      "command": "pnpm exec tsc -b packages/tools packages/harness",
+      "exitCode": 0,
+      "artifact": "group-typecheck-complete.log"
+    },
+    {
+      "command": "pnpm exec vitest run packages/harness/src/verification-trust.regressions.test.ts packages/harness/src/command-discovery-cache.regressions.test.ts packages/harness/src/command-discovery-service.test.ts packages/harness/src/verification-wiring.integration.test.ts packages/tools/src/verification-plan.test.ts packages/tools/src/command-discovery.test.ts packages/tools/src/verification/task-verifier.test.ts packages/tools/src/process/r96-windows-execution-boundary.test.ts --reporter=json",
+      "exitCode": 0,
+      "artifact": "target-complete.log"
+    },
+    {
+      "command": "node scripts/research/agent-trust-20261004/verification.mjs --repo /workspace/harness-agent --out <portable-baseline-final>",
+      "exitCode": 1,
+      "artifact": "portable-baseline-final/verification-measurement.json"
+    },
+    {
+      "command": "node scripts/research/agent-trust-20261004/verification.mjs --repo /workspace/harness-agent-agent-round2 --out <portable-candidate-final>",
+      "exitCode": 0,
+      "artifact": "portable-candidate-final/verification-measurement.json"
+    },
+    {
+      "command": "git diff --check",
+      "exitCode": 0
+    }
+  ],
+  "probe": {
+    "originalRequiredExitCodes": [
+      7,
+      9,
+      11
+    ],
+    "baselineIntegrityPass": false,
+    "candidateIntegrityPass": true,
+    "candidateChecksPassed": 12,
+    "candidateChecksTotal": 12,
+    "gatePolicy": "Original Core gate and default three failures limit unchanged; scripted provider repeats stop, no tools/repairs. Every negative final gate fails, positives retain original independent markers.",
+    "paidCalls": 0,
+    "liveModelQuality": "NOT_RUN",
+    "promotion": "NOT_RUN"
+  },
+  "diagnostics": [
+    {
+      "artifact": "candidate-green.json",
+      "label": "Superseded first oracle expected failure verification.completed(false); Core contract emits verification.failed and step_completed(false). Production outcome was already verification_failed; final same-byte baseline rerun included."
+    },
+    {
+      "artifact": "baseline-red.json",
+      "label": "Superseded first 13-case test file SHA6fc36c; final same-byte RED is baseline-red-final.json SHA d6a9642d9426065b3a762965f55dbf5b5dd32e9c9ee5389d36faba5dd4270737."
+    },
+    {
+      "artifact": "portable-baseline/verification-measurement.json",
+      "label": "Initial probe before cache upgrade branch; final identical probe source digest exists in both portable-*-final results."
+    }
+  ]
+}

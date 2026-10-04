@@ -1,0 +1,100 @@
+{
+  "status": "TARGET_PASS_SOURCE_FROZEN",
+  "baselineSha": "968544064f43cfc0a876c4e65fcb967cd466c9a2",
+  "candidateBaseSha": "965da0bb123fbdd9b61bded6bc345b767ad0c48f",
+  "candidateCleanSourceAcceptance": "PENDING_PARENT",
+  "newRegressionCount": 11,
+  "baselinePassed": 2,
+  "baselineFailed": 9,
+  "candidatePassedIncludingThreeExistingTests": 14,
+  "candidateFailed": 0,
+  "diffCheckExitCode": 0,
+  "paidCalls": 0,
+  "sourceFiles": [
+    {
+      "path": "packages/harness/src/candidate-store.ts",
+      "bytes": 5157,
+      "sha256": "dbf0d5e85804cb413ea9df1bb0b3130eaa375a775a289e374210dc5d2629894d"
+    },
+    {
+      "path": "packages/harness/src/candidate-persistence.regressions.test.ts",
+      "bytes": 7707,
+      "sha256": "1693e2f89e0af93481c882cacf4b7140c01325341ee5da09a20d8d0d0829ec35"
+    }
+  ],
+  "guarantees": [
+    "add/update/remove persist a new Map before publishing it",
+    "failed writes preserve prior same-instance list/get snapshot",
+    "same-instance reader observes old snapshot during serialization and pending real filesystem persistence",
+    "initial read failure stays retryable and subsequent add retains restored historical records",
+    "same-instance initial loads share a Promise to avoid competing snapshot publication"
+  ],
+  "boundaries": [
+    "No changes to schema, promotion, cross-process coordination, or independent-store cache freshness",
+    "No stub of filesystem or persist; serialization accessor only schedules a real reader before atomic write",
+    "No production build/typecheck here; parent owns shared build and clean-SHA full acceptance",
+    "Existing candidate object reference mutability is unchanged"
+  ],
+  "rawFiles": [
+    {
+      "path": "baseline-portable.stderr.log",
+      "bytes": 898,
+      "sha256": "b2bb9858c38f501c8f3dc490f789ceb2951d19c24e432c5eb160994e2257fade"
+    },
+    {
+      "path": "baseline-portable.stdout.log",
+      "bytes": 709,
+      "sha256": "8198f28f2fe5260f9287ed807047b8f3ae36ccb8196a4424ec4d75d06f74f192"
+    },
+    {
+      "path": "candidate-portable.stderr.log",
+      "bytes": 1229,
+      "sha256": "41a48424a8a6dd0e0df08d7b0f2c14545a3f5961e51b4458d0b4315ce64d914c"
+    },
+    {
+      "path": "candidate-portable.stdout.log",
+      "bytes": 184,
+      "sha256": "012606428da40c0121ab5199f11f20b0a6c579d813a592e5253aad6f17111c30"
+    },
+    {
+      "path": "harness-typecheck-build.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "store-baseline-manifest.json",
+      "bytes": 670,
+      "sha256": "16d77423c8280def28e0f93f1e47246c09cb4b540abdfa360fe76649b9c21d20"
+    },
+    {
+      "path": "store-baseline.json",
+      "bytes": 8308,
+      "sha256": "39b5a67f49a5adf60536bb321d69ef1be64737c70df23e29a69a0f032bf01bc9"
+    },
+    {
+      "path": "store-baseline.log",
+      "bytes": 124,
+      "sha256": "bba4daecc0a2bc0491045e517af8a4be9d2b6571db6847abada4444e2cb4b953"
+    },
+    {
+      "path": "store-candidate-manifest.json",
+      "bytes": 725,
+      "sha256": "0a7c947006a6a7d3a01d90b737014f41f21a5df2ce830c56decff781b434c2af"
+    },
+    {
+      "path": "store-candidate.json",
+      "bytes": 6405,
+      "sha256": "e5f53b25ffe0611a06922bb8c4b7e32686c8f92ae8d4b1366ad150d60f48eff4"
+    },
+    {
+      "path": "store-candidate.log",
+      "bytes": 217,
+      "sha256": "73c645b4752b9bc82a7b59537d13752ab99ad97883fd1f8e64d98a87a2d05e26"
+    },
+    {
+      "path": "store-diff-check.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}

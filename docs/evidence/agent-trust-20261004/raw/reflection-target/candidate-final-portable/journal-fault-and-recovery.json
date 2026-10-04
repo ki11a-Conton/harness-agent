@@ -1,0 +1,51 @@
+{
+  "label": "journal-fault-and-recovery",
+  "pass": true,
+  "sessionId": "session_b4a06fe8-97a1-4885-a369-183d66fefa5b",
+  "turnId": "turn_84aaad77-ea9b-4562-a77c-21a774441097",
+  "failedResult": {
+    "outputs": 0,
+    "candidates": 0
+  },
+  "candidateCountAfterFault": 0,
+  "resumedResult": {
+    "outputs": 1,
+    "candidates": 1
+  },
+  "journal": [
+    {
+      "schemaVersion": 1,
+      "sessionId": "session_b4a06fe8-97a1-4885-a369-183d66fefa5b",
+      "turnId": "turn_84aaad77-ea9b-4562-a77c-21a774441097",
+      "outcome": "failed",
+      "at": 1791075873542,
+      "reflection": {
+        "outcome": "failure",
+        "rootCause": "tool",
+        "evidence": "tool.failed event_837cb507-9211-4438-846c-95c192498d52@929; tool.requested event_044eb70a-fbe7-4f50-87ee-05b00814e8ed@928; turn.failed event_a7ec1f3d-5767-45e3-bc89-3cc1fe3455c7@930; task: current task; turn.failed event_a7ec1f3d-5767-45e3-bc89-3cc1fe3455c7@930; tool.failed event_837cb507-9211-4438-846c-95c192498d52@929; task: current task",
+        "lesson": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+        "generalizable": true,
+        "candidate": {
+          "content": "tool read_file failed with reproducer failure; verify inputs and environment before retry",
+          "type": "procedural",
+          "sourceSession": "session_b4a06fe8-97a1-4885-a369-183d66fefa5b",
+          "importance": 0.9,
+          "confidence": 0.6,
+          "novelty": 0.5,
+          "stability": 0.5,
+          "structured": {
+            "when": "read_file failed with reproducer failure",
+            "do": "verify inputs and environment state, then retry",
+            "avoid": "retrying the same call without checking inputs",
+            "rootCause": "tool",
+            "outcome": "failure",
+            "evidenceRefs": [
+              "event_837cb507-9211-4438-846c-95c192498d52",
+              "event_a7ec1f3d-5767-45e3-bc89-3cc1fe3455c7"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

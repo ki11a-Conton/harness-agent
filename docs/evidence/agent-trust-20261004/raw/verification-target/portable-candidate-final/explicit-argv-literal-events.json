@@ -1,0 +1,194 @@
+[
+  {
+    "id": "event_02631c1b-4a4d-4e44-a403-152bdc1512ac",
+    "sessionId": "session_973e1ee7-f0d6-4fec-9bda-41ad7a76bb32",
+    "timestamp": 1791075800917,
+    "type": "session.created",
+    "payload": {
+      "sessionId": "session_973e1ee7-f0d6-4fec-9bda-41ad7a76bb32",
+      "agentId": "agent_f29e110d-9f64-4061-84f5-846310b0e2c7"
+    },
+    "sequence": 0,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_8b306470-bda7-4784-8823-fe03d3f6f115",
+    "sessionId": "session_973e1ee7-f0d6-4fec-9bda-41ad7a76bb32",
+    "turnId": "turn_db3b1c5c-6959-4200-90b3-94ec95c09252",
+    "timestamp": 1791075800927,
+    "type": "turn.started",
+    "payload": {
+      "turnId": "turn_db3b1c5c-6959-4200-90b3-94ec95c09252",
+      "text": "finish the task"
+    },
+    "sequence": 1,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_87dfd2fd-30df-466b-89ba-f3903ff78ecc",
+    "sessionId": "session_973e1ee7-f0d6-4fec-9bda-41ad7a76bb32",
+    "sequence": 2,
+    "timestamp": 1791075800929,
+    "type": "context.selected",
+    "payload": {
+      "source": "system",
+      "id": "system-prompt",
+      "priority": 9007199254740991,
+      "tokens": 130
+    },
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_1a8c3a8c-3990-476f-a0bb-3c2711ed760c",
+    "sessionId": "session_973e1ee7-f0d6-4fec-9bda-41ad7a76bb32",
+    "turnId": "turn_db3b1c5c-6959-4200-90b3-94ec95c09252",
+    "timestamp": 1791075800929,
+    "type": "context.built",
+    "payload": {
+      "tokens": 130,
+      "used": 130,
+      "budget": 89600,
+      "dropped": 0,
+      "compacted": false,
+      "messagesTokens": 12
+    },
+    "sequence": 3,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_454e097d-709f-4bf3-955f-6b1dcc03d19a",
+    "sessionId": "session_973e1ee7-f0d6-4fec-9bda-41ad7a76bb32",
+    "turnId": "turn_db3b1c5c-6959-4200-90b3-94ec95c09252",
+    "spanId": "modelcall_d7f44673-bc35-452d-8bf1-f5e908214630",
+    "timestamp": 1791075800931,
+    "type": "model.started",
+    "payload": {
+      "callId": "modelcall_d7f44673-bc35-452d-8bf1-f5e908214630",
+      "stepId": "turn_db3b1c5c-6959-4200-90b3-94ec95c09252:0",
+      "toolRouterFingerprint": "ca0ebb38a3be5d87a9937d67ace0716c3d87948f647fdac76367f62e68a2e09e",
+      "policyFingerprint": "9c8777fa069c9fb1547b1e35832d843aa8057e155fbe93faad29142d8b1c4e43",
+      "environmentFingerprint": "53ed4b825dc6e45d7f87d557f3dee87f2acf06b61e24ea677b262111b69b4af3",
+      "contextFingerprint": "2aebead022934caedfb2e91fd3e8cd008c6fcb6202bcbd78797286c7aa337fe9",
+      "instructionFingerprint": "3181613ce2a6d77e943a0f74b1074ab19c2fd9d68bb596b11a63421b5483d204",
+      "contextMessageIds": [
+        "message_240bd40d-299c-4a63-8842-a368845412df"
+      ],
+      "contextBlockIds": []
+    },
+    "sequence": 4,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_f0658bcb-ba19-472e-89fa-2351f5e6b374",
+    "sessionId": "session_973e1ee7-f0d6-4fec-9bda-41ad7a76bb32",
+    "turnId": "turn_db3b1c5c-6959-4200-90b3-94ec95c09252",
+    "timestamp": 1791075800931,
+    "type": "tools.selected",
+    "payload": {
+      "callId": "modelcall_d7f44673-bc35-452d-8bf1-f5e908214630",
+      "available": 12,
+      "selected": 12,
+      "dropped": [],
+      "advertisedTokens": 1179
+    },
+    "sequence": 5,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_9090bf0a-b75a-4c31-917c-429a6e240f64",
+    "sessionId": "session_973e1ee7-f0d6-4fec-9bda-41ad7a76bb32",
+    "turnId": "turn_db3b1c5c-6959-4200-90b3-94ec95c09252",
+    "spanId": "modelcall_d7f44673-bc35-452d-8bf1-f5e908214630",
+    "timestamp": 1791075800932,
+    "type": "model.completed",
+    "payload": {
+      "callId": "modelcall_d7f44673-bc35-452d-8bf1-f5e908214630",
+      "finishReason": "stop",
+      "toolCalls": 0,
+      "durationMs": 1,
+      "usage": {
+        "source": "unknown"
+      }
+    },
+    "sequence": 6,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_07c42354-ba52-4a9e-b62b-442b6e7f5fe4",
+    "sessionId": "session_973e1ee7-f0d6-4fec-9bda-41ad7a76bb32",
+    "sequence": 7,
+    "timestamp": 1791075800933,
+    "type": "verification.step_started",
+    "payload": {
+      "ref": "verification.step:command:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "kind": "command",
+      "description": "command"
+    },
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_fc620d39-aff7-445a-9694-1ac6a1b2761c",
+    "sessionId": "session_973e1ee7-f0d6-4fec-9bda-41ad7a76bb32",
+    "sequence": 8,
+    "timestamp": 1791075800963,
+    "type": "verification.step_completed",
+    "payload": {
+      "ref": "verification.step:command:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "kind": "command",
+      "description": "command",
+      "passed": true,
+      "detail": "exit code 0 in 30ms"
+    },
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_6a541dd4-7546-4f25-a404-984027d1aa3e",
+    "sessionId": "session_973e1ee7-f0d6-4fec-9bda-41ad7a76bb32",
+    "turnId": "turn_db3b1c5c-6959-4200-90b3-94ec95c09252",
+    "timestamp": 1791075800967,
+    "type": "checkpoint.created",
+    "payload": {
+      "turnId": "turn_db3b1c5c-6959-4200-90b3-94ec95c09252",
+      "checkpointId": "checkpoint_8e7fe1a3-326c-4637-9c61-3aec2dc05184",
+      "reason": "verification:passed",
+      "iteration": 0,
+      "phase": "thinking",
+      "lastEventSequence": 7
+    },
+    "sequence": 9,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_3898ef5d-c0c3-49de-adc4-eeecc8ece083",
+    "sessionId": "session_973e1ee7-f0d6-4fec-9bda-41ad7a76bb32",
+    "turnId": "turn_db3b1c5c-6959-4200-90b3-94ec95c09252",
+    "timestamp": 1791075800967,
+    "type": "verification.completed",
+    "payload": {
+      "passed": true,
+      "durationMs": 34
+    },
+    "sequence": 10,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_87f015e8-f466-4858-8490-f21841697c03",
+    "sessionId": "session_973e1ee7-f0d6-4fec-9bda-41ad7a76bb32",
+    "turnId": "turn_db3b1c5c-6959-4200-90b3-94ec95c09252",
+    "timestamp": 1791075800969,
+    "type": "turn.completed",
+    "payload": {
+      "turnId": "turn_db3b1c5c-6959-4200-90b3-94ec95c09252",
+      "status": "completed",
+      "statusDetail": "completed",
+      "terminationReason": "verified_complete",
+      "grade": "verified_complete",
+      "completionEvidence": {
+        "passedSteps": 1,
+        "totalSteps": 1
+      }
+    },
+    "sequence": 11,
+    "schemaVersion": 1
+  }
+]

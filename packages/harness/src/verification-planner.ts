@@ -7,8 +7,9 @@ import type { CommandHints } from "./command-discovery-service.js";
  *
  * When a task declares no verification specs, the runtime asks this planner to
  * derive them from the change set and the discovered workspace commands
- * (P7-6 / discover_commands): targeted changed test → affected package test →
- * repo test → typecheck → build. No commands discovered → an honest empty
+ * (P7-6 / discover_commands): original repo test → typecheck → build. A recipe
+ * does not justify appending changed paths or guessing a package cwd.
+ * No commands discovered → an honest empty
  * plan (verification is never invented; the TaskVerifier fails closed).
  */
 

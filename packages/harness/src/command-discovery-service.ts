@@ -3,6 +3,10 @@ import { join } from "node:path";
 import { isNodeErrorCode } from "@ar/contracts";
 import { discoverCommands, summarize } from "@ar/tools";
 
+/** Persisted hints from the old discovery ordering can omit root tests.
+ *  This generation identifies the corrected bounded entrypoint selection. */
+export const COMMAND_DISCOVERY_VERSION = "root-entrypoints-v1";
+
 /**
  * P7-6: lazy command discovery for code-changing turns. The agent does not
  * have to remember to call discover_commands; the host discovers once per
@@ -11,6 +15,8 @@ import { discoverCommands, summarize } from "@ar/tools";
  * plan building (P8-1). Never runs when there is nothing to discover against.
  */
 export interface CommandHints {
+  /** Optional for host-provided hints; persisted cache rows must match. */
+  discoveryVersion?: typeof COMMAND_DISCOVERY_VERSION;
   /** Workspace root the hints describe. */
   cwd: string;
   /** command → how to run it (e.g. "test" → "pnpm test"). */
@@ -47,6 +53,7 @@ export class CommandDiscoveryService {
     }
     if (result.discovered.length === 0) return undefined;
     const hints: CommandHints = {
+      discoveryVersion: COMMAND_DISCOVERY_VERSION,
       cwd,
       commands: summarize(result.discovered) as Record<string, string>,
       summary: summarize(result.discovered),
@@ -102,6 +109,9 @@ export class CommandDiscoveryService {
       if (line.trim() === "") continue;
       try {
         const hints = JSON.parse(line) as CommandHints;
+        // Old hints bypass fresh discovery indefinitely. Skip only incompatible
+        // generations; maybeDiscover retains its existing lazy cache policy.
+        if (hints.discoveryVersion !== COMMAND_DISCOVERY_VERSION) continue;
         this.hintsByRoot.set(hints.cwd, hints);
       } catch (err) {
         // P14-6: corrupt line — skipped but reported, never silent.

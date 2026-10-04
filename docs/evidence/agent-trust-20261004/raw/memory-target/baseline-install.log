@@ -1,0 +1,20 @@
+Scope: all 27 workspace projects
+[WARN] There are cyclic workspace dependencies: /workspace/harness-agent-memory-red/packages/evaluation, /workspace/harness-agent-memory-red/packages/observability
+✓ Lockfile passes supply-chain policies (verified 2d ago)
+Lockfile is up to date, resolution step is skipped
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Packages: +69
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Packages are hard linked from the content-addressable store to the virtual store.
+  Content-addressable store is at: /home/agent/.local/share/pnpm/store/v11
+  Virtual store is at:             node_modules/.pnpm
+Progress: resolved 69, reused 69, downloaded 0, added 69, done
+[WARN] Failed to create bin at /workspace/harness-agent-memory-red/apps/web/node_modules/.bin/agent. ENOENT: no such file or directory, open '/workspace/harness-agent-memory-red/apps/cli/dist/main.js'
+
+devDependencies:
++ @types/node 26.2.0
++ @vitest/coverage-v8 4.1.10
++ typescript 7.0.2
++ vitest 4.1.10
+
+Done in 719ms using pnpm v11.19.0

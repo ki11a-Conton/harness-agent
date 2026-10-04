@@ -1,0 +1,115 @@
+{
+  "schema": 1,
+  "observedAt": "2026-10-04T01:04:33.514Z",
+  "mode": "actual built production modules, filesystem, JSONLEventStore, JsonlCandidateStore; no implementation mocks",
+  "repo": "/workspace/harness-agent",
+  "head": "968544064f43cfc0a876c4e65fcb967cd466c9a2",
+  "trackedStatus": "",
+  "sources": [
+    {
+      "path": "packages/harness/src/reflection-runner.ts",
+      "sha256": "0017aa7bb121552460b3dcb6c1f0e6e40bfea73b9161cf7033a4fb85a281b051"
+    },
+    {
+      "path": "packages/harness/dist/reflection-runner.js",
+      "sha256": "e682b04ffac28d4c34605deb16967c40f21f725ec8965dace68e53da83fed215"
+    },
+    {
+      "path": "packages/harness/src/candidate-store.ts",
+      "sha256": "b55af583dd2661df6199526872df080e895bc6d264013e9cf9853b65542f1faf"
+    },
+    {
+      "path": "packages/harness/dist/candidate-store.js",
+      "sha256": "c41af360e643a42efef83f5cf04d19da02a858c2f38dd94cf5a0e516317bce51"
+    },
+    {
+      "path": "packages/memory/src/reflection.ts",
+      "sha256": "f8764bac7981245bc5fb8eecde8c619c1f8235329e80cf67caedc20103d8a8cb"
+    },
+    {
+      "path": "packages/memory/dist/reflection.js",
+      "sha256": "637b137296d5310668a9f4de73042b250bd0635c56bd9737cfc27c9e5f08e850"
+    },
+    {
+      "path": "packages/memory/src/write-gate.ts",
+      "sha256": "e021a70e44fc9cb5d893eb55ab5c342e099f8e174ce41eaabe47a52e422c3e73"
+    },
+    {
+      "path": "packages/memory/dist/write-gate.js",
+      "sha256": "43cb88042d3b97b9eb43ef042e3fe1d6a26ea876db43e94e30b47e0e97bd58be"
+    },
+    {
+      "path": "packages/memory/src/security-gate.ts",
+      "sha256": "c7b116a0bd23063e28382ba1047f2a702c39ec109792c538131aab9517e29864"
+    },
+    {
+      "path": "packages/memory/dist/security-gate.js",
+      "sha256": "dbdaa6513036a38cad0fe00d1ca63be2d49e8411972cb08c0e81cfb472d80758"
+    },
+    {
+      "path": "packages/memory/src/derivability.ts",
+      "sha256": "39e01bf9c96c9d9aa685b534be39598eb05e046b9709866543d63f616f0cac99"
+    },
+    {
+      "path": "packages/memory/dist/derivability.js",
+      "sha256": "0a4a65a72dbaf1596c47b62ee6b3ef2537c34a2da413b0efb32beccd1e10975a"
+    },
+    {
+      "path": "packages/events/src/event-store.ts",
+      "sha256": "ab7c5e6a2f7bfa8bec5fe9dbbf5249d842776b1fcc281d1f69bda62ca51597bb"
+    },
+    {
+      "path": "packages/events/dist/event-store.js",
+      "sha256": "691402d50f4c065ddf135a3b40f5514df6a36813df663f675c869eff1b3b3eb5"
+    },
+    {
+      "path": "packages/store-integrity/src/index.ts",
+      "sha256": "1f829756aec4b1a49cbb34d7b2d7ae05b33647d9f890c260151affec59bb1862"
+    },
+    {
+      "path": "packages/store-integrity/dist/index.js",
+      "sha256": "1a77d6167d2c8614029d6310b96a93ee72c5802ac3a3cfd3a09bf3fe71275aae"
+    }
+  ],
+  "reproducer": {
+    "path": "/workspace/harness-agent-agent-round2/scripts/research/agent-trust-20261004/reflection.mjs",
+    "sha256": "412b6aab14ceefde770636f23be0e0dbbb31615009539481d48ff15c3e9b5bd1"
+  },
+  "paidModelCalls": 0,
+  "liveModelQuality": "NOT_RUN",
+  "promotion": "NOT_RUN",
+  "scope": {
+    "journalMultiInstance": "same process, same normalized path, shared candidateStore; independent candidateStore caches and cross-process coordination are outside this fix",
+    "originalBaselineProbe": "No source behavior is replaced or patched. The same cases assert candidate requirements and report FAIL on baseline."
+  },
+  "summary": {
+    "checks": 23,
+    "passed": 4,
+    "failed": [
+      "old-mcp-new-clean-tagged",
+      "old-mcp-new-clean-legacy",
+      "old-legacy-pollution-new-failure",
+      "orphan-unknown-boundaries",
+      "outer-id-legacy-terminal-recovery",
+      "conflicting-payload-terminal",
+      "concurrent-journal-0",
+      "concurrent-journal-1",
+      "concurrent-journal-2",
+      "concurrent-journal-3",
+      "concurrent-journal-4",
+      "concurrent-journal-5",
+      "concurrent-journal-6",
+      "concurrent-journal-7",
+      "concurrent-journal-8",
+      "concurrent-journal-9",
+      "multi-instance-journal",
+      "journal-fault-and-recovery",
+      "journal-fault-security-audit"
+    ],
+    "concurrentRounds": 10,
+    "concurrentExpectedJournalRows": 200,
+    "concurrentJournalRows": 10,
+    "concurrentCandidateRows": 200,
+    "multiInstanceJournalRows": 1
+  }
+}

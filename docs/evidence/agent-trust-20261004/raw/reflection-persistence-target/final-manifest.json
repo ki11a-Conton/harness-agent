@@ -1,0 +1,118 @@
+{
+  "schema": 1,
+  "observedAt": "2026-10-04T01:13:11.628859+00:00",
+  "stage": "T3 extension owner files all frozen; dirty-tree targeted results, final root clean source-SHA acceptance pending",
+  "repo": "/workspace/harness-agent-agent-round2",
+  "head": "965da0bb123fbdd9b61bded6bc345b767ad0c48f",
+  "baseline": "968544064f43cfc0a876c4e65fcb967cd466c9a2",
+  "ownedFiles": [
+    {
+      "path": "packages/harness/src/reflection-runner.ts",
+      "bytes": 13689,
+      "sha256": "96ff028d2fb18cb7940e70c91f04f2e8a2ff668a9b0f5e8120b1a070e3bb6fc1"
+    },
+    {
+      "path": "packages/harness/src/reflection-turn-isolation.regressions.test.ts",
+      "bytes": 16903,
+      "sha256": "b794469f2cb7d4c4164ccb6e89542da1c2a3b5b9380d81349ce58cf35aea8cef"
+    },
+    {
+      "path": "packages/harness/src/candidate-store.ts",
+      "bytes": 5157,
+      "sha256": "dbf0d5e85804cb413ea9df1bb0b3130eaa375a775a289e374210dc5d2629894d"
+    },
+    {
+      "path": "packages/harness/src/candidate-persistence.regressions.test.ts",
+      "bytes": 7707,
+      "sha256": "1693e2f89e0af93481c882cacf4b7140c01325341ee5da09a20d8d0d0829ec35"
+    },
+    {
+      "path": "scripts/research/agent-trust-20261004/reflection.mjs",
+      "bytes": 18210,
+      "sha256": "c79727906c8e710654cc6a99b0c4fce8ee5ec88a0e0e7dd64e8ca1aa5c9518ca"
+    }
+  ],
+  "implementation": [
+    "Existing per-turn runner and 18 regression tests remain byte-identical to prior T3 freeze.",
+    "Candidate add/update/remove build a new Map and publish only after successful atomic persistence; actual readers during serialization retain committed snapshot.",
+    "Initial read failure leaves loading retryable; loaded only after successful read or expected ENOENT. Recovery preserves prior history. Same-instance concurrent first reads share one loading Promise.",
+    "Portable write-fault receipt now proves actual same-instance list/get0, fresh-store0 after repair, and retry durable fresh-store1."
+  ],
+  "tests": {
+    "previousTurnIsolation": {
+      "report": "../reflection-target/candidate-final-green.json",
+      "tests": 45,
+      "passed": 45,
+      "stage": "Before candidate-store extension; full clean suite must cover final combined revision."
+    },
+    "sameByteStoreBaseline": {
+      "exitCode": 1,
+      "tests": 11,
+      "passed": 2,
+      "failed": 9,
+      "report": "store-baseline.json",
+      "commandRecord": "store-baseline-manifest.json"
+    },
+    "storeCandidate": {
+      "exitCode": 0,
+      "tests": 14,
+      "passed": 14,
+      "failed": 0,
+      "report": "store-candidate.json",
+      "commandRecord": "store-candidate-manifest.json"
+    }
+  },
+  "incrementalTypecheckAndBuild": {
+    "exitCode": 0,
+    "command": [
+      "pnpm",
+      "exec",
+      "tsc",
+      "-b",
+      "packages/harness"
+    ],
+    "stdoutAndStderr": "harness-typecheck-build.log"
+  },
+  "portable": {
+    "baseline": {
+      "exitCode": 1,
+      "checks": 23,
+      "passed": 3,
+      "failed": 20,
+      "report": "baseline-portable/report.json"
+    },
+    "candidate": {
+      "exitCode": 0,
+      "checks": 23,
+      "passed": 23,
+      "failed": 0,
+      "report": "candidate-portable/report.json"
+    },
+    "candidateJournalRows": 200,
+    "candidateCandidateRows": 200,
+    "multiInstanceJournalRows": 20,
+    "ghostFaultReceipt": "candidate-portable/candidate-store-write-fault.json"
+  },
+  "priorEvidencePreserved": {
+    "path": "/workspace/harness-agent/.ci/agent-round2-20261004/reflection-target/artifact-index.json",
+    "bytes": 11488,
+    "sha256": "073a128299ed0de35f0c59cd72ff883a4490aa2e7eefbd502ca148a331cb7b2d",
+    "indexedOriginalFiles": 61,
+    "originalBytes": 714708,
+    "scope": "Original 61 receipts are historical pre-extension evidence and have not been modified."
+  },
+  "validation": {
+    "sourceDiffCheckExitCode": 0,
+    "scriptSyntaxExitCode": 0
+  },
+  "scope": [
+    "Existing schema and successful/missing/corrupt-line semantics retained.",
+    "No independent candidate-store instance cache coordination; multi-reflector journal test deliberately shares a candidateStore.",
+    "No cross-process locking claim.",
+    "No Core/Reflector/promotion changes.",
+    "All failure controls use actual filesystem and actual production stores; persistence functions never stubbed."
+  ],
+  "paidModelCalls": 0,
+  "liveModelQuality": "NOT_RUN",
+  "promotion": "NOT_RUN"
+}

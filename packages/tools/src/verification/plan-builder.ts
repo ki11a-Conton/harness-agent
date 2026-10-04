@@ -1,24 +1,21 @@
-import { classifyCommand } from "../command-classifier.js";
 import type { VerificationSpec } from "@ar/contracts";
 
 /**
- * P8-1: Verification Plan Builder. Instead of "every task runs the whole
- * repository", a plan narrows verification to what the change touched:
- *
- *   changed package → targeted test (when the change matches a test file)
- *                   → affected package test
- *                   → repo typecheck / build
+ * P8-1: Verification Plan Builder. Runs the discovered repository test,
+ * typecheck and build entrypoints without changing their shell semantics.
  *
  * The plan is deterministic and command-driven: it consumes the discovered
- * workspace commands (P7-6 / discover_commands) and the turn's file change
- * set. No commands discovered → an honest empty plan (verification is not
- * invented).
+ * workspace commands (P7-6 / discover_commands). A recipe does not establish
+ * a runner's filename argument contract or a package working directory, so
+ * changed paths cannot be interpolated into it. No commands discovered → an
+ * honest empty plan (verification is not invented).
  */
 
 export interface VerificationPlanStep {
   kind: "command";
   command: string;
-  /** Working directory for the step; defaults to the repo root. */
+  /** Host metadata; command specs execute in the verification context cwd.
+   *  Discovered recipes never infer a package working directory. */
   cwd?: string;
   /** Required steps gate completion; optional steps are advisory only. */
   required: boolean;
@@ -37,19 +34,6 @@ export interface VerificationPlanInput {
   commands?: Record<string, string>;
 }
 
-const TEST_FILE_RE = /\.(test|spec)\.(ts|tsx|js|jsx|mjs|cjs)$/;
-
-/** Best-effort package directory of a changed file (dir containing its
- *  nearest package.json); falls back to the repo root. */
-function packageDirOf(changedFile: string, root: string): string {
-  const segments = changedFile.split("/");
-  // Walk up: repo-relative "src/lib/a.ts" → package boundary heuristic:
-  // treat the top-level dir as the package when it has no package.json
-  // knowledge; a real implementation would consult the package manifest.
-  if (segments.length > 1) return segments[0]!;
-  return root;
-}
-
 /**
  * Build a deterministic verification plan for the change set.
  */
@@ -60,23 +44,9 @@ export function buildVerificationPlan(input: VerificationPlanInput): Verificatio
   const typecheckCommand = input.commands?.["typecheck"];
   const buildCommand = input.commands?.["build"];
 
-  const changedTests = input.filesChanged.filter((file) => TEST_FILE_RE.test(file));
-  const packageDirs = new Set(input.filesChanged.map((file) => packageDirOf(file, input.root)));
-
   if (testCommand !== undefined) {
-    if (changedTests.length > 0) {
-      // 1. Targeted: run the changed test file(s) directly.
-      steps.push({ kind: "command", command: `${testCommand} ${changedTests.join(" ")}`, required: false });
-      rationale.push(`targeted test for changed test file(s): ${changedTests.join(", ")}`);
-    }
-    if (packageDirs.size === 1 && [...packageDirs][0] !== input.root) {
-      steps.push({ kind: "command", command: testCommand, cwd: [...packageDirs][0], required: true });
-      rationale.push(`affected package test (package: ${[...packageDirs][0]})`);
-    }
-    if (!steps.some((step) => step.command === testCommand)) {
-      steps.push({ kind: "command", command: testCommand, required: true });
-      rationale.push("repository test suite");
-    }
+    steps.push({ kind: "command", command: testCommand, required: true });
+    rationale.push("repository test suite — original discovered entrypoint");
   } else {
     rationale.push("no test command discovered — no test step planned");
   }
@@ -95,22 +65,19 @@ export function buildVerificationPlan(input: VerificationPlanInput): Verificatio
 
 /**
  * P8-1 runtime wiring: convert a VerificationPlan into the VerificationSpec
- * list a TaskVerifier executes. Command steps map to `command` specs with the
- * planned cwd; `required` is advisory for the completion gate (the verifier
+ * list a TaskVerifier executes. Recipes remain full `command` strings with
+ * no `args`: TaskVerifier must use its shell-recipe path rather than interpret
+ * quoted source, operators or spaced paths as an argv vector. Explicit
+ * program+args task specs do not pass through this conversion.
+ * `required` is advisory for the completion gate (the verifier
  * has no per-step gating — P8-2 exposes every step as an event instead).
  */
 export function planToVerificationSpecs(plan: VerificationPlan): VerificationSpec[] {
   return plan.steps
     .filter((step) => step.kind === "command")
-    .map((step) => {
-      const parts = step.command.split(/\s+/);
-      const command = parts[0] ?? "";
-      const args = parts.slice(1).filter((arg) => arg.length > 0);
-      return {
-        kind: "command" as const,
-        command,
-        ...(args.length > 0 ? { args } : {}),
-        description: `planned: ${step.command}`,
-      };
-    });
+    .map((step) => ({
+      kind: "command" as const,
+      command: step.command,
+      description: `planned: ${step.command}`,
+    }));
 }

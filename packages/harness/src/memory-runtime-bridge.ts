@@ -145,6 +145,7 @@ export class MemoryRuntimeBridge {
   }): Promise<RetrievedMemoryContext> {
     const query = input.goal.trim() === "" ? input.cwd : input.goal;
     const result = await retrieveMemories(this.store, query, this.scope, {
+      sessionId: input.sessionId,
       k: this.suggestTopK(),
       now: this.now(),
     });
