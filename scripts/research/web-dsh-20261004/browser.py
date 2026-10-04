@@ -409,14 +409,16 @@ try:
                 human_before = sum(event['type'] == 'human.approval' for record in before['records'] for event in record['events'])
                 foreign = page.request.post(ready['base'] + '/api/commands', data={'from': 'foreign-browser-12345', 'text': f"approve:{pending[0]['id']}:allow"})
                 after_foreign = snapshot()
-                expect(foreign.status == 400 and any(item['id'] == pending[0]['id'] for item in after_foreign['pendingApprovals']), 'foreign sender changed approval')
+                # HTTP acknowledges channel delivery; Gateway rejects authority
+                # through its channel reply and leaves the approval untouched.
+                expect(foreign.status == 200 and any(item['id'] == pending[0]['id'] for item in after_foreign['pendingApprovals']), 'foreign sender changed approval')
                 expect(sum(event['type'] == 'human.approval' for record in after_foreign['records'] for event in record['events']) == human_before, 'foreign approval emitted human.approval')
                 page.locator('.approval-card:not(.resolved) .deny-btn').click()
                 page.get_by_text('HARNESS_REPLY:[deny-write]', exact=True).wait_for(timeout=15000)
                 current = snapshot()
                 expect(current['files']['denied.txt'] is None and not current['pendingApprovals'], 'denied tool wrote or approval remains')
                 expect(any(event['type'] == 'human.approval' and event['payload'].get('value') == 'deny' for record in current['records'] for event in record['events']), 'no deny intervention')
-                return {'approvalId': pending[0]['id'], 'fileAbsent': True, 'foreignAttemptStatus': foreign.status, 'foreignPreservedPending': True, 'foreignHumanEventCount': 0}
+                return {'approvalId': pending[0]['id'], 'fileAbsent': True, 'foreignDeliveryAckStatus': foreign.status, 'foreignPreservedPending': True, 'foreignHumanEventCount': 0}
             run_case('real-approval-deny-write', 'production-stack', deny_write)
 
             def sandbox_deny():
