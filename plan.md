@@ -19,3 +19,5 @@
 限制：scripted provider 验证实际生产接线和请求内容，不是模型质量/任务成功收益评测。paid=0，realModelQuality、promotion NOT_RUN；不做 vector/RAG、不更改权限/沙箱/验收路径、不扩张 runtime 架构。默认 discovery 的原先“首行可越预算”例外由本计划的明确硬预算合同取代；历史任务记录和原证据不改写。
 
 证据基线：`.ci/agent-context-memory-20261004/audit-context/` 与 `audit-memory/`；最终复制原始字节到 `docs/evidence/agent-context-memory-20261004/raw/`，索引 sha256/bytes，不覆盖基线。任务：[AGENT-CONTEXT-MEMORY-20261004.md](tasks/AGENT-CONTEXT-MEMORY-20261004.md)。GitHub 仅使用原生 Git/curl，最终联合测试源码与完成证据提交分开标识。
+
+CI 验收补充（Windows ecc45e5）：既有 S2 CLI AB/BA 测试仅统计 readFile，A1 有界句柄读取使其观测为0。将该测试观察器改为首次实际 bytesRead 捕获计数，保留每请求4文档、目录扫描和固定输入/独立内容检查/ABBA身份的全部约束；追加 default readFile=0 断言，不恢复无界读取。纯测试接线变更纳入 A4 与 apps/cli/src/path-scoped-instructions.test.ts，不推广实验策略。原 CI FAIL 与本地中断的部分full记录保留，不能当完整PASS。

@@ -1,0 +1,426 @@
+{
+  "observedAt": "2026-10-04T07:17:59.431Z",
+  "testedSourceSha": "ecc45e51055de66506e0bde2b42e0f8ebc098606",
+  "currentSourceSha": "ecc45e51055de66506e0bde2b42e0f8ebc098606",
+  "clean": true,
+  "role": "Independent source and targeted evidence reviewer; no production source, tests, docs, or plan edited; no build/full-suite invocation",
+  "paidCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "promotion": "NOT_RUN",
+  "checks": [
+    {
+      "name": "frozen source is current and clean",
+      "pass": true
+    },
+    {
+      "name": "independent 512 cap controls and 44 scenarios pass",
+      "pass": true,
+      "sourceHashes": {
+        "packages/context/src/discovery.ts": "1bdec0d2aa562b210870cf577adb56ad872b6c860b66979ae87903d1b83c3a67",
+        "packages/context/dist/discovery.js": "1ce3ddb756a5414cb02f9de2eefb6a1099576c45bce17635cd2690b984afe9d5",
+        "packages/harness/src/compose/compose-context.ts": "4cfd5671140bb1301e533a527bf42ad4d07ee138c69ac676b62bc9e4d41046b2",
+        "packages/harness/dist/compose/compose-context.js": "41bed417a0d28a02c7386e446c75afed2052c2a78565f5e767c63e38a2724d1b",
+        "packages/harness/src/effective-instruction-context.ts": "2de2ef2e1c5f84d269ba3522f26e334e1050492933eb546a99d75f18dddabef4",
+        "packages/harness/dist/effective-instruction-context.js": "c6c292da661bd76e846fa8c58c18ec90e84f106ebc8211977370f6351b9a2927",
+        "packages/memory/src/memory-store.ts": "925f718e3f92baf32fb2868bafcdcd0701cb520e441049892848a4cb6d494caf",
+        "packages/memory/dist/memory-store.js": "8722ce368b39c5626668437f3ced379d035ae938e480f693a6971f12e3cf5ed5",
+        "packages/memory/src/search-text.ts": "e569e7f418e3edf87fba7fd2e9c1a1bdf7511d78ea85abcecd863def5c201fd0",
+        "packages/memory/dist/search-text.js": "077ce28fe2280d104af3d98da7c07d11582f61ea7ad0beec1ccc2f730975b202",
+        "packages/memory/src/sqlite-memory-store.ts": "f278be463dec22f5ed15039e6e727b22a942eb6afbaab19e6961e177ae20cb6f",
+        "packages/memory/dist/sqlite-memory-store.js": "300bf553eb208898c79d7d557b5dfb8b649b5e01f28a5b934ac56eb1d39dceb7"
+      }
+    },
+    {
+      "name": "targeted context probe clean and pass",
+      "pass": true
+    },
+    {
+      "name": "actual request/step/persisted event identity allowed",
+      "pass": false,
+      "requestCount": 2,
+      "modelEventCount": 2,
+      "persistedEvents": 19,
+      "computedFingerprints": [
+        "6919e5b030dde324176cc0ee1dccddb457ecd239e50d2f133d58980676aeb00b",
+        "97b754d19a68846f68b3a983520b68562d55d79e48166e9d28aa06eadc119365"
+      ],
+      "bodiesVisible": [
+        true,
+        true
+      ]
+    },
+    {
+      "name": "actual request/step/persisted event identity injection",
+      "pass": false,
+      "requestCount": 2,
+      "modelEventCount": 2,
+      "persistedEvents": 17,
+      "computedFingerprints": [
+        "3181613ce2a6d77e943a0f74b1074ab19c2fd9d68bb596b11a63421b5483d204",
+        "3181613ce2a6d77e943a0f74b1074ab19c2fd9d68bb596b11a63421b5483d204"
+      ],
+      "bodiesVisible": [
+        false,
+        false
+      ]
+    },
+    {
+      "name": "actual request/step/persisted event identity budget",
+      "pass": false,
+      "requestCount": 2,
+      "modelEventCount": 2,
+      "persistedEvents": 24,
+      "computedFingerprints": [
+        "3181613ce2a6d77e943a0f74b1074ab19c2fd9d68bb596b11a63421b5483d204",
+        "3181613ce2a6d77e943a0f74b1074ab19c2fd9d68bb596b11a63421b5483d204"
+      ],
+      "bodiesVisible": [
+        false,
+        false
+      ]
+    },
+    {
+      "name": "raw ContextPipeline denied document debug preserved",
+      "pass": true
+    },
+    {
+      "name": "memory original 30 store /12 actual Harness controls /2 supplement controls pass",
+      "pass": true,
+      "store": {
+        "total": 30,
+        "passed": 30,
+        "failed": []
+      },
+      "harness": {
+        "total": 12,
+        "passed": 12,
+        "failed": [],
+        "scriptedGenerateCalls": 12
+      }
+    },
+    {
+      "name": "paired 10k performance fixtures identical and candidate correctness passes",
+      "pass": true
+    },
+    {
+      "name": "unchanged architecture/security seam packages/context/src/pipeline.ts",
+      "pass": true,
+      "sha256": "4de75bc3e3dd5b57d694401ee85325793e7e317348a22e4f03beadcd3ee67661"
+    },
+    {
+      "name": "unchanged architecture/security seam packages/core/src/runtime/context-controller.ts",
+      "pass": true,
+      "sha256": "22fe6661072b6674e0ab75a9535a6530de8700cec1a596d6ba858a3d0bda9bfd"
+    },
+    {
+      "name": "unchanged architecture/security seam packages/harness/src/path-scoped-instructions.ts",
+      "pass": true,
+      "sha256": "39bbb653b024c94121a12463bf4e6fe5b01a76f8fb8b3af00656eebf57b3305e"
+    },
+    {
+      "name": "unchanged architecture/security seam packages/memory/src/retrieval.ts",
+      "pass": true,
+      "sha256": "0921994bc133782ca2d01ae7e9af05d01e4fd2ac233916cb42c5350ad3621f55"
+    },
+    {
+      "name": "unchanged architecture/security seam packages/memory/src/security-gate.ts",
+      "pass": true,
+      "sha256": "35dd1c100d6200a862ac50c3b2f1c0fff1d9feb8b7921e31c8805aed319a5efa"
+    },
+    {
+      "name": "unchanged architecture/security seam packages/memory/src/lifecycle.ts",
+      "pass": true,
+      "sha256": "785201bfbfab78fad4cfe8b5781973e00f5149a5fd2c62559b81890642193fa6"
+    },
+    {
+      "name": "Core tree unchanged",
+      "pass": true
+    },
+    {
+      "name": "frozen typecheck/build/security/docs passed",
+      "pass": true
+    }
+  ],
+  "performanceComparison": [
+    {
+      "backend": "jsonl",
+      "case": "warm-fts",
+      "baselineCandidates": [
+        2000,
+        2000,
+        2000,
+        2000,
+        2000
+      ],
+      "candidateCandidates": [
+        2000,
+        2000,
+        2000,
+        2000,
+        2000
+      ],
+      "baselineMedianSearchMs": 31.846048999999994,
+      "candidateMedianSearchMs": 32.88850100000002,
+      "baselineRetrievalMs": 49.07463899999999,
+      "candidateRetrievalMs": 49.784599000000014
+    },
+    {
+      "backend": "jsonl",
+      "case": "chinese-substring",
+      "baselineCandidates": [
+        2000,
+        2000,
+        2000,
+        2000,
+        2000
+      ],
+      "candidateCandidates": [
+        2000,
+        2000,
+        2000,
+        2000,
+        2000
+      ],
+      "baselineMedianSearchMs": 30.93408000000005,
+      "candidateMedianSearchMs": 37.08154300000001,
+      "baselineRetrievalMs": 584.656848,
+      "candidateRetrievalMs": 546.9688329999999
+    },
+    {
+      "backend": "jsonl",
+      "case": "structured-do",
+      "baselineCandidates": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "candidateCandidates": [
+        2000,
+        2000,
+        2000,
+        2000,
+        2000
+      ],
+      "baselineMedianSearchMs": 29.534541999999874,
+      "candidateMedianSearchMs": 31.500882000000047,
+      "baselineRetrievalMs": 28.806359999999813,
+      "candidateRetrievalMs": 53.76614200000017
+    },
+    {
+      "backend": "jsonl",
+      "case": "actual-miss",
+      "baselineCandidates": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "candidateCandidates": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "baselineMedianSearchMs": 29.489332999999988,
+      "candidateMedianSearchMs": 32.479270999999926,
+      "baselineRetrievalMs": 28.682073000000173,
+      "candidateRetrievalMs": 31.711360000000013
+    },
+    {
+      "backend": "sqlite",
+      "case": "warm-fts",
+      "baselineCandidates": [
+        2000,
+        2000,
+        2000,
+        2000,
+        2000
+      ],
+      "candidateCandidates": [
+        2000,
+        2000,
+        2000,
+        2000,
+        2000
+      ],
+      "baselineMedianSearchMs": 9.219685000000027,
+      "candidateMedianSearchMs": 61.53051800000003,
+      "baselineRetrievalMs": 22.436445999999933,
+      "candidateRetrievalMs": 64.29296699999986
+    },
+    {
+      "backend": "sqlite",
+      "case": "chinese-substring",
+      "baselineCandidates": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "candidateCandidates": [
+        2000,
+        2000,
+        2000,
+        2000,
+        2000
+      ],
+      "baselineMedianSearchMs": 0.03158799999982875,
+      "candidateMedianSearchMs": 53.2298209999999,
+      "baselineRetrievalMs": 0.09336099999995895,
+      "candidateRetrievalMs": 570.4069440000003
+    },
+    {
+      "backend": "sqlite",
+      "case": "structured-do",
+      "baselineCandidates": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "candidateCandidates": [
+        2000,
+        2000,
+        2000,
+        2000,
+        2000
+      ],
+      "baselineMedianSearchMs": 0.025970000000143045,
+      "candidateMedianSearchMs": 50.65079000000014,
+      "baselineRetrievalMs": 0.03526299999998628,
+      "candidateRetrievalMs": 72.06348200000002
+    },
+    {
+      "backend": "sqlite",
+      "case": "actual-miss",
+      "baselineCandidates": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "candidateCandidates": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "baselineMedianSearchMs": 0.024085999999897467,
+      "candidateMedianSearchMs": 55.09333099999958,
+      "baselineRetrievalMs": 0.031228000000055545,
+      "candidateRetrievalMs": 48.63146500000039
+    }
+  ],
+  "resolvedFindings": [
+    {
+      "kind": "implementation correctness",
+      "description": "FileHandle close EIO in finally aborted all default discovery, independently reproduced with actual fd closure followed by synthetic EIO. Isolated cleanup now preserves unrelated documents and emits generic degraded status.",
+      "red": "close-failure-result.json",
+      "green": "close-failure-ecc45e5-green.json"
+    },
+    {
+      "kind": "required security gate",
+      "description": "Frozen616ef30 had two comment-only catches rejected by existing no-silent-catch test. Frozen ecc45e5 adds generic degraded stderr without query/body/secrets; security2135 tests now pass.",
+      "failedRun": "../frozen-616ef30/security.log"
+    },
+    {
+      "kind": "probe oracle",
+      "description": "First independent cap/memory probe expected only literal row for underscore, despite actual underscores in command_alpha/command_beta. Original42/44 FAIL retained; corrected oracle includes legal strategy matches. Production code unchanged by oracle correction.",
+      "failed": "independent-results-616ef30.json",
+      "firstProbe": "independent-probe-first.mjs",
+      "corrected": "independent-results-616ef30-corrected.json"
+    },
+    {
+      "kind": "probe invalid boundary",
+      "description": "Initial close probe decorated FileHandle prototype close, while Node24 close is an own property, so it never injected. That observation is invalid evidence and retained separately. Correct repro decorates returned actual handle own close and asserts one injected close call.",
+      "invalid": "close-failure-invalid-probe-observation.json"
+    }
+  ],
+  "limitations": [
+    "Source and targeted evidence approval only; full joint suite/strict usage-audit completion and remote publication are root acceptance responsibilities. Their state at review time is recorded above.",
+    "Scripted providers test actual request/event wiring and deterministic recall correctness; they do not measure real model quality, promotion, or task-success benefit.",
+    "SQLite now supplements ranked FTS hits with an O(n) scan of live rows passing type/scope filters. Warm-hit and actual-miss latency materially increases. Numeric paired costs are recorded; no throughput improvement claim.",
+    "Existing Chinese retrieval dedup work can cost roughly half a second for 2000 candidates; similar cost already exists in JSONL baseline. TopK/security/lifecycle/session/dedup contracts were intentionally preserved.",
+    "Independent probe is Linux Node24. Real file symlink and FIFO controls ran here; Windows matrix is not claimed by this reviewer."
+  ],
+  "fullAcceptance": {
+    "status": "RUNNING",
+    "full": "RUNNING",
+    "usageAudit": "NOT_RUN"
+  },
+  "localReviewArtifacts": [
+    {
+      "path": "independent-probe-first.mjs",
+      "bytes": 10157,
+      "sha256": "1355e89751475e2f813ab17c2ae628766bc0fb42d01b68d53cab7a6d61bf3687"
+    },
+    {
+      "path": "independent-probe.mjs",
+      "bytes": 10570,
+      "sha256": "c12902d30fa4dad5efbf8c37cdce093c965dee0d47983559516d78aca4561b00"
+    },
+    {
+      "path": "independent-results-616ef30.json",
+      "bytes": 7026,
+      "sha256": "6b4472ef63eeb0e95a44da566fd4f663591cc58d1c351c0febc10dfe8c46c1d2"
+    },
+    {
+      "path": "independent-results-616ef30-corrected.json",
+      "bytes": 7861,
+      "sha256": "bf41cb2024201d5b762a6585f1490471f45c8844dd5744b5d04a81801a96f0dc"
+    },
+    {
+      "path": "independent-results-ecc45e5.json",
+      "bytes": 7861,
+      "sha256": "ad2867123f774e68f2ff41de2e692b315cf6158d3c7223a6333010c47ceadc56"
+    },
+    {
+      "path": "close-failure-red-probe.mjs",
+      "bytes": 2226,
+      "sha256": "e9cbd2e31811c24e1b52c87b1296c9336b9d5705930f4a099e8074d6eae2b423"
+    },
+    {
+      "path": "close-failure-repro.mjs",
+      "bytes": 2243,
+      "sha256": "3ee6b03d86b7e74d59009c343c468a22ab40ea3494a7787b916fd89f4bd47d37"
+    },
+    {
+      "path": "close-failure-invalid-probe-observation.json",
+      "bytes": 945,
+      "sha256": "a70f0ac42e6d579649d98c3296449251d1d42db3002fc277abdc4830e5f0008c"
+    },
+    {
+      "path": "close-failure-result.json",
+      "bytes": 619,
+      "sha256": "0f7b8c1be6a51f275456fcc6579e8ff6102e7a0f7088e8135cb391bbfba62668"
+    },
+    {
+      "path": "close-failure-green.json",
+      "bytes": 970,
+      "sha256": "9e4b2fb2e4b89fa5d0cb27c66f8c7c866c2db6c55b59c802a07da1449fbf667f"
+    },
+    {
+      "path": "close-failure-ecc45e5-green.json",
+      "bytes": 970,
+      "sha256": "3ff31aee84be243307c570c0905a5e4def5730b91a0b86d57fdebbafd6d45aa2"
+    }
+  ],
+  "summary": {
+    "checks": 17,
+    "passed": 14,
+    "failed": [
+      "actual request/step/persisted event identity allowed",
+      "actual request/step/persisted event identity injection",
+      "actual request/step/persisted event identity budget"
+    ]
+  },
+  "verdict": "FAIL"
+}

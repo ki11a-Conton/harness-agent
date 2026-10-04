@@ -21,3 +21,9 @@
 独审首个冻结探针42/44的两项失败来自oracle漏计合法structured command_alpha/command_beta中的underscore，属于探针错误；原FAIL及精确旧脚本保留。校正后44/44（包含512个cap矩阵样本）通过，并核对12份source/dist hash。该结果不是全仓替代。
 
 首次冻结10k候选：SQLite既有warmFTS中位9.22→61.06ms，miss0.024→53.85ms，中文2000命中search56.15ms、全retrieve557.67ms；JSONL中文原有584.66ms→554.99ms。这是正确召回付出的filtered-row线性扫描成本；TopK仅限返回，既有主题去重也有成本，不宣称吞吐优化。最终修复只增加降级日志，仍须记录新冻结实际性能值。
+
+第二次冻结ecc45e5：生产29/30/12/2探针、联合浏览器26、security2135、docs均通过。原生Git source分支的CI run37185159270实际FAIL（3success/6failure/1skipped，10jobs）；两平台verify注解都定位到S2 AB/BA旧readFile计数expected0to32。其他coverage/formal只确认步骤失败，无完整日志不硬归因。本地full主动中断，original manifest RUNNING连同独立interruption.json保留，不是完整全仓PASS。
+
+直接相关的CLI观察器仅作test-only适配：真实首个bytesRead计captures与实际字节，default readFile=0但仍4docs/request，实际baseline每轮8请求=32captures/1568B/40目录listing；candidate每轮6请求=3captures/153B、默认发现captures0，与durable discovery.reads一致。保留全部AB/BA、独立checker、内容与身份约束，267项定向回归/CLI编译通过。新增回归数量仍111，没有通过减少断言掩盖失败。原source+dist hash一致；首次selector无匹配只作NO_VERDICT，随后untouched实际focused1FAIL收据保留。
+
+CI公开API原件和注解归档；含临时签名下载URL的尝试记录只留ignored来源，不进入公开包，主索引覆盖实际归档文件，不使用旧CI全目录索引声称完整打包。旧source独立17审查项/44场景/512预算样本及持久化事件验证原件也保留。最终新clean联合回归待完成。

@@ -1,0 +1,21 @@
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+ ❯ apps/cli/src/path-scoped-instructions.test.ts (10 tests | 1 failed | 9 skipped) 463ms
+     ↓ publishes only a bounded redacted diagnostic for a real runtime exception
+     ↓ normalizes both Windows and POSIX fixture document paths before comparing relative scopes
+     ↓ registers one experimental arm and hashes the exact installed discovery policy
+     ↓ changes real target context without sibling contamination and passes an independent content verifier
+     ↓ does not use a denied traversal request as target evidence
+     ↓ keeps a rejected instruction out of both the model request and witnessed instructionSources
+     ↓ detects rejected instruction paths in both denial events and source entries on Windows and POSIX
+     ↓ records zero activation when no project document reaches the request
+     × executes the actual AB/BA paired engine twice with fixed inputs and independent content verification 462ms
+     ↓ binds concurrent child sessions to their own durable request and scoped sources
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 9 skipped (10)
+   Start at  07:24:32
+   Duration  2.94s (transform 1.90s, setup 0ms, import 2.35s, tests 463ms, environment 0ms)
+
+JSON report written to /workspace/harness-agent/.ci/agent-context-memory-20261004/cli-observer-interop/red-focused.json

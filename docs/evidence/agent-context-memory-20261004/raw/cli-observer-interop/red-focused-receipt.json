@@ -1,0 +1,42 @@
+{
+  "observedAt": "2026-10-04T07:26:00.086373+00:00",
+  "stage": "ACTUAL_BEHAVIOR_RED",
+  "sourceHead": "ecc45e51055de66506e0bde2b42e0f8ebc098606",
+  "sourceStatus": "M plan.md\n M tasks/AGENT-CONTEXT-MEMORY-20261004.md",
+  "command": "pnpm exec vitest run apps/cli/src/path-scoped-instructions.test.ts -t 'executes the actual AB/BA' --reporter=default --reporter=json --outputFile=.ci/agent-context-memory-20261004/cli-observer-interop/red-focused.json",
+  "exitCode": 1,
+  "failed": 1,
+  "passed": 0,
+  "selectionExcluded": 9,
+  "newSkip": 0,
+  "actualCounter": 0,
+  "obsoleteExpectedCounter": 32,
+  "files": {
+    "apps/cli/src/path-scoped-instructions.test.ts": {
+      "bytes": 32021,
+      "sha256": "1ddb5f601a231754f36995c7606e3de4eda5d1c62361e9e240ccff3bcf24f9cd"
+    },
+    "packages/context/src/discovery.ts": {
+      "bytes": 10543,
+      "sha256": "1bdec0d2aa562b210870cf577adb56ad872b6c860b66979ae87903d1b83c3a67"
+    },
+    "packages/context/dist/discovery.js": {
+      "bytes": 10638,
+      "sha256": "1ce3ddb756a5414cb02f9de2eefb6a1099576c45bce17635cd2690b984afe9d5"
+    }
+  },
+  "receipts": {
+    "red-focused.json": {
+      "bytes": 4570,
+      "sha256": "d4bd939e42a8f58ec2edcab6fbb6af71f033d10e5565b20fd853006ac772eb2a"
+    },
+    "red-focused.stdout.log": {
+      "bytes": 1370,
+      "sha256": "8916dfadc73c1707a083ead8b0926f4b2130566e62f55423ac438da3e43439a0"
+    },
+    "red-focused.stderr.log": {
+      "bytes": 854,
+      "sha256": "e183bc373f905f5da6ab0f64ab564c917080064a6158ef665876b530bf4da5b5"
+    }
+  }
+}

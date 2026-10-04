@@ -1,0 +1,41 @@
+{
+  "observedAt": "2026-10-04T07:24:11.885727+00:00",
+  "stage": "SELECTOR_NO_MATCH_NO_VERDICT",
+  "sourceHead": "ecc45e51055de66506e0bde2b42e0f8ebc098606",
+  "sourceStatus": "",
+  "command": "pnpm exec vitest run apps/cli/src/path-scoped-instructions.test.ts -t 'executes actual AB/BA' --reporter=default --reporter=json --outputFile=.ci/agent-context-memory-20261004/cli-observer-interop/red.json",
+  "exitCode": 0,
+  "passed": 0,
+  "failed": 0,
+  "selectionExcluded": 10,
+  "newSkip": 0,
+  "files": {
+    "apps/cli/src/path-scoped-instructions.test.ts": {
+      "bytes": 32021,
+      "sha256": "1ddb5f601a231754f36995c7606e3de4eda5d1c62361e9e240ccff3bcf24f9cd"
+    },
+    "packages/context/src/discovery.ts": {
+      "bytes": 10543,
+      "sha256": "1bdec0d2aa562b210870cf577adb56ad872b6c860b66979ae87903d1b83c3a67"
+    },
+    "packages/context/dist/discovery.js": {
+      "bytes": 10638,
+      "sha256": "1ce3ddb756a5414cb02f9de2eefb6a1099576c45bce17635cd2690b984afe9d5"
+    }
+  },
+  "receipts": {
+    "red.json": {
+      "bytes": 4251,
+      "sha256": "4474125656f10e291bfde7cba26e8bc5e6a4ed05d4c3dd297fc80ebf2526093a"
+    },
+    "red.stdout.log": {
+      "bytes": 398,
+      "sha256": "906031a4f98aa130a53f1322090eb6c247ca56599a70aa88c1c548b148bfbe1b"
+    },
+    "red.stderr.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "note": "The first selector omitted the word the; Vitest ran no tests. This attempt provides no RED verdict. Raw stdout/JSON preserved unchanged."
+}

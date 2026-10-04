@@ -1,0 +1,29 @@
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+ ✓ apps/cli/src/path-scoped-instructions.test.ts (10 tests) 812ms
+     ✓ executes the actual AB/BA paired engine twice with fixed inputs and independent content verification  429ms
+ ✓ packages/harness/src/context-wiring.integration.test.ts (3 tests) 539ms
+     ✓ env_snapshot reports the live harness wiring (profile, workspace root, tool list)  510ms
+ ✓ packages/harness/src/path-scoped-instructions.regressions.test.ts (9 tests) 146ms
+ ✓ packages/context/src/default-discovery-budget-regressions.test.ts (49 tests) 124ms
+ ✓ packages/context/src/circuit-breaker.test.ts (6 tests) 72ms
+ ✓ packages/context/src/path-scoped-discovery.test.ts (24 tests) 102ms
+ ✓ packages/context/src/pipeline.test.ts (38 tests) 77ms
+ ✓ packages/harness/src/effective-instruction-context.regressions.test.ts (6 tests) 62ms
+ ✓ packages/context/src/discovery.test.ts (11 tests) 44ms
+ ✓ packages/context/src/context-optimization-regressions.test.ts (39 tests) 20ms
+ ✓ packages/context/src/taxonomy.test.ts (18 tests) 20ms
+ ✓ packages/context/src/default-discovery-read-failures.test.ts (3 tests) 17ms
+ ✓ packages/context/src/compaction.test.ts (10 tests) 9ms
+ ✓ packages/context/src/message-budget-regressions.test.ts (14 tests) 8ms
+ ✓ packages/context/src/policy-versioning.test.ts (10 tests) 7ms
+ ✓ packages/context/src/prompt-versioning.test.ts (9 tests) 12ms
+ ✓ packages/context/src/budget.test.ts (8 tests) 5ms
+
+ Test Files  17 passed (17)
+      Tests  267 passed (267)
+   Start at  07:26:03
+   Duration  8.04s (transform 2.05s, setup 0ms, import 4.03s, tests 2.08s, environment 1ms)
+
+JSON report written to /workspace/harness-agent/.ci/agent-context-memory-20261004/cli-observer-interop/green.json

@@ -1,0 +1,331 @@
+$ tsc -b && vitest run --exclude '**/*.perf.test.ts' --exclude '**/*.soak.test.ts' --exclude '**/e3-repro-current-defects.test.ts' --exclude '**/e4-r40-forensics.test.ts' --exclude '**/r97-driver-closed-loop.test.ts'
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+[degraded] e4-r60 taskkill spawn: spawn taskkill ENOENT
+[degraded] e4-r60 taskkill exit: taskkill exited with 1
+[degraded] e4-r60 taskkill spawn: boom
+[degraded] e4-r60 taskkill exit: taskkill exited with 1
+[degraded] e4-r60 taskkill: sync spawn failure
+[degraded] e4-r60 taskkill spawn: nope
+[degraded] e4-r60 taskkill spawn: injected taskkill failure
+[degraded] e4-r55 evidence root: ENOTDIR: not a directory, mkdir '/tmp/e4-r65-root-WK3KGv/a-file/child'
+[degraded] e4-r55 evidence write child.stdout.txt: EIO: injected write failure for child.stdout.txt
+[degraded] e4-r55 evidence write child.stderr.txt: EACCES: injected write failure for child.stderr.txt
+[degraded] e4-r55 evidence write child-report.json: EIO: injected write failure for child-report.json
+[degraded] e4-r55 evidence write run.json: EIO: injected write failure for run.json
+[degraded] e4-r55 evidence write child.stdout.txt: EIO: injected write failure for child.stdout.txt
+
+R68_SYMLINK_CAPABILITY={"ok":true,"detail":"fs.symlink created a link that lstat reports as a symlink"}
+
+R68_LINK_DIRENT={"isSymbolicLink":true,"isFile":false}
+ ✓ apps/cli/src/e4-r55-failure-wiring.test.ts (65 tests) 14645ms
+     ✓ terminates a never-ending child's whole tree at the deadline and returns a structured timeout  4116ms
+     ✓ drives the real chain, judges its failure evidence, and requires an order mutation to break the acceptance  9868ms
+     ✓ I: a kill that never produces a terminal event resolves as UNCONFIRMED instead of hanging  454ms
+ ✓ packages/evaluation/src/r97-bounded-stop.test.ts (24 tests) 18306ms
+     ✓ returns a NAMED timeout result, and the child is really gone  3516ms
+     ✓ escalates only AFTER the grace: a child that dies on the first signal is not tree-killed  707ms
+     ✓ leaves NO descendant behind: a grandchild that ignores signals is reaped too  3610ms
+     ✓ an AbortSignal cancels a running child and is reported as `cancelled`  2416ms
+     ✓ an output flood past the cap ends the child as `output_limit`, long before the deadline  834ms
+     ✓ leaves NO descendant behind when the CAP is what stops the tree  2037ms
+     ✓ fires its AbortSignal exactly at the deadline, once  402ms
+     ✓ a unit whose deadline is ALREADY spent never dispatches, and reports timeout  784ms
+     ✓ an unspent deadline leaves the normal path completely unchanged  565ms
+     ✓ a stubborn child is stopped well before an independent watchdog would fire  3005ms
+[harness] context budget: model capabilities unknown for scripted/m — using conservative fallback 32000
+ ✓ apps/cli/src/e4-09-production-e2e.test.ts (5 tests) 2779ms
+     ✓ benchmark -> V3 -> evaluator -> promote -> createHarness -> applied, all real stages  1056ms
+     ✓ editing a real V3 artifact's outcomes while only updating the file SHA breaks the chain  593ms
+     ✓ a forged decision field (digest recomputed) is caught by the evaluator replay  526ms
+     ✓ a candidate ref pointing outside the bundle root is rejected  527ms
+ ✓ packages/harness/src/reflection-turn-isolation.regressions.test.ts (18 tests) 95ms
+stdout | apps/cli/src/r0-f6-ci-readiness-classification.test.ts > S0b/F3 — a forged REAL declaration with no raw evidence must not PASS (RED counter-example) > S0b-F3-RED: forged REAL JSON with buildDigest 'x', no raw evidence and no artifact runId must not PASS
+[S0b-F3] raw forged input JSON: {"ok":true,"positiveExecution":{"providerFactoryCalls":0,"physicalProviderCalls":124,"ledgerCommitted":124,"journalChargedTokens":248,"evidenceVerified":124,"evidenceUnverified":0,"decision":"INCONCLUSIVE"},"positiveForward":{"physicalStubRequests":124,"ledgerCommitted":124,"journalChargedTokens":248,"aggregateTokensTotal":248,"aggregateTokensDelta":-60,"aggregateTokensBaseline":100,"aggregateTokensCandidate":40,"independentTokens":{"delta":-60},"costMatchesJournal":true},"ciRunSha":"ecc45e51055de66506e0bde2b42e0f8ebc098606","os":"windows-latest","commandExits":{"typecheck":0,"test":0,"build":0},"dualBuild":{"baselineArm":{"sourceSha":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","buildDigest":"x"},"candidateArm":{"sourceSha":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","buildDigest":"x"},"verifier":{"ran":true,"casesVerified":1,"casesTotal":1}},"readiness":{"productionOfflineReadiness":{"executionKind":"REAL_DUAL_PINNED_BUILD"}}}
+[S0b-F3] raw readiness output JSON: {
+  "schemaVersion": "prereg-ci-readiness-v2",
+  "generatedBy": "scripts/e4/ci-readiness.mjs",
+  "ciRunSha": "ecc45e51055de66506e0bde2b42e0f8ebc098606",
+  "expectedSha": "ecc45e51055de66506e0bde2b42e0f8ebc098606",
+  "ciRunId": "36540000000",
+  "inputs": {
+    "e2ePath": "/tmp/r0-f6-Updp8u/e2e.json",
+    "e2eSha256": "9d34bdff7fca8c87daad0e4a1b6491753644a68a7a1563fb3abec9389ae1a753",
+    "otherPlatformArtifactPath": null,
+    "otherPlatformArtifactSha256": null,
+    "evidenceRoot": null,
+    "attempt": null,
+    "platform": null,
+    "strict": false,
+    "requiredLevels": null
+  },
+  "os": {
+    "label": "windows-local",
+    "platform": "linux",
+    "arch": "x64",
+    "node": "v24.19.0"
+  },
+  "platforms": {
+    "thisProcess": {
+      "platform": "ubuntu",
+      "rawPlatform": "linux",
+      "status": "MEASURED"
+    },
+    "windows": {
+      "status": "NOT_OBSERVED",
+      "detail": "no --other-platform-artifact was supplied, so this platform was not measured by this run (it is NOT assumed unproven, and it is NOT assumed measured)"
+    },
+    "ubuntu": {
+      "status": "MEASURED",
+      "detail": "this process: linux/x64"
+    },
+    "crossPlatform": {
+      "status": "NOT_OBSERVED",
+      "sameSha": false,
+      "selfMeasured": false,
+      "source": null,
+      "detail": "no other-platform artifact was supplied; the other platform stays NOT_OBSERVED rather than being hardcoded NOT_PROVEN"
+    }
+  },
+  "commandExits": {
+    "typecheck": null,
+    "test": null,
+    "build": null,
+    "n0GapGate": 0,
+    "legacyRedNextGaps": 0,
+    "docsSmoke": 0
+  },
+  "counts": {
+    "providerFactoryCalls": 0,
+    "inProcessPhysicalProviderCalls": 124,
+    "inProcessLedgerCommitted": 124,
+    "inProcessJournalChargedTokens": 248,
+    "forwardPhysicalStubRequests": 124,
+    "forwardLedgerCommitted": 124,
+    "forwardJournalChargedTokens": 248,
+    "forwardAggregateTokensTotal": 248,
+    "forwardAggregateTokensDelta": -60,
+    "forwardAggregateTokensBaseline": 100,
+    "forwardAggregateTokensCandidate": 40,
+    "forwardIndependentTokensDelta": -60,
+    "forwardCostMatchesJournal": true,
+    "evidenceVerified": 124,
+    "evidenceUnverified": 0,
+    "decision": "INCONCLUSIVE",
+    "externalProviderCalls": null,
+    "costUsdMicros": null
+  },
+  "executionKind": "REAL_DUAL_PINNED_BUILD",
+  "forwardBasis": "REAL_DUAL_PINNED_BUILD",
+  "forwardBasisSource": "readiness.productionOfflineReadiness.executionKind",
+  "levels": {
+    "fixtureProtocolReady": {
+      "status": "PASS",
+      "basis": "the offline closed loop over SYNTHETIC fixture arm builds (writeArmCheckout equals this)",
+      "counts_ref": [
+        "inProcessPhysicalProviderCalls",
+        "forwardPhysicalStubRequests",
+        "evidenceVerified"
+      ]
+    },
+    "realBuildOfflineReady": {
+      "status": "NOT_PROVEN",
+      "basis": "execution kind declares REAL_DUAL_PINNED_BUILD but its evidence did not verify against the raw evidence root, so this level is NOT_PROVEN (S6/F3: a forged enum and a self-reported digest are not a real build)",
+      "blocker": "REAL_EVIDENCE_UNVERIFIED: NO_ARTIFACT_RUN_ID: the artifact carries no runId, so the run identity of its evidence cannot be established (a caller-supplied --run-id is not a substitute); NO_ARTIFACT_ATTEMPT: the artifact carries no attempt number; NO_ARTIFACT_PLATFORM: the artifact carries no platform; BASELINE_BUILD_DIGEST_MALFORMED: dualBuild.baselineArm.buildDigest is not a 64-hex sha256 (got \"x\"); CANDIDATE_BUILD_DIGEST_MALFORMED: dualBuild.candidateArm.buildDigest is not a 64-hex sha256 (got \"x\"); NO_RAW_EVIDENCE: no --evidence-root was supplied, so no raw arm/verifier/journal file was read and the self-reported fields above are uncorroborated",
+      "evidence": {
+        "executionKind": "REAL_DUAL_PINNED_BUILD",
+        "executionKindSource": "readiness.productionOfflineReadiness.executionKind",
+        "realDeclaration": true,
+        "evidenceRoot": null,
+        "failures": [
+          "NO_ARTIFACT_RUN_ID: the artifact carries no runId, so the run identity of its evidence cannot be established (a caller-supplied --run-id is not a substitute)",
+          "NO_ARTIFACT_ATTEMPT: the artifact carries no attempt number",
+          "NO_ARTIFACT_PLATFORM: the artifact carries no platform",
+          "BASELINE_BUILD_DIGEST_MALFORMED: dualBuild.baselineArm.buildDigest is not a 64-hex sha256 (got \"x\")",
+          "CANDIDATE_BUILD_DIGEST_MALFORMED: dualBuild.candidateArm.buildDigest is not a 64-hex sha256 (got \"x\")",
+          "NO_RAW_EVIDENCE: no --evidence-root was supplied, so no raw arm/verifier/journal file was read and the self-reported fields above are uncorroborated"
+        ],
+        "bundle": null
+      }
+    },
+    "budgetEvidenceReady": {
+      "status": "NOT_PROVEN",
+      "basis": "no raw evidence bundle verified, so the budget cannot be attributed: NO_ARTIFACT_RUN_ID: the artifact carries no runId, so the run identity of its evidence cannot be established (a caller-supplied --run-id is not a substitute); NO_ARTIFACT_ATTEMPT: the artifact carries no attempt number; NO_ARTIFACT_PLATFORM: the artifact carries no platform",
+      "blocker": "no evidence bundle was verified",
+      "evidence": {
+        "journalBinding": "NOT_PROVEN",
+        "journalBindingReason": "no evidence bundle was verified",
+        "requestDispatchBinding": "NOT_PROVEN",
+        "requestDispatchBindingReason": "no evidence bundle was verified",
+        "budget": null,
+        "derivedVerifierCoverage": null
+      },
+      "counts_ref": [
+        "forwardJournalChargedTokens",
+        "forwardAggregateTokensTotal",
+        "forwardAggregateTokensDelta",
+        "forwardAggregateTokensBaseline",
+        "forwardAggregateTokensCandidate",
+        "forwardIndependentTokensDelta",
+        "forwardCostMatchesJournal"
+      ]
+    },
+    "paidExperimentRun": {
+      "status": "NOT_RUN",
+      "basis": "no paid authorization exists; this script never creates one"
+    },
+    "championPromotion": {
+      "status": "NOT_RUN",
+      "basis": "no promotion is performed or authorized by this script"
+    }
+  },
+  "notes": [
+    "counts.* === null means NOT_OBSERVED (an unmeasured value), never zero.",
+    "externalProviderCalls/costUsdMicros are NOT_OBSERVED because nothing is billed offline.",
+    "A green fixtureProtocolReady does not imply realBuildOfflineReady and never authorizes a paid run.",
+    "R7: the execution kind is read from a structured enum field; readiness.productionOfflineReady prose is not read at all, and no log is scanned for the word PASS.",
+    "R7: a platform is MEASURED only by the process that ran on it, or by an other-platform artifact whose ciRunSha equals expectedSha."
+  ]
+}
+
+
+ ✓ apps/cli/src/r0-f6-ci-readiness-classification.test.ts (42 tests) 366357ms
+     ✓ R0-F6-0: the script really runs and the fixture counts really reach the artifact  8155ms
+     ✓ R0-F6-A: LOWERCASE 'synthetic' prose must not be classified as a REAL dual pinned build  8524ms
+     ✓ R0-F6-B: an EMPTY readiness string must not be classified as a REAL dual pinned build  8363ms
+     ✓ R0-F6-C: UNRELATED text must not be classified as a REAL dual pinned build  8200ms
+     ✓ R0-F6-D2: the prose field is NOT read even when it is spelled exactly like the enum  8409ms
+     ✓ R0-F6-D: an ABSENT readiness field is fail-closed (NOT_PROVEN, never PASS)  8254ms
+     ✓ R7-F6-F: a known non-REAL kind is BLOCKED with its own blocker — not PASS, not NOT_PROVEN  16937ms
+     ✓ R0-F6-E: on a Linux/Ubuntu run this process's OWN platform is MEASURED, not hardcoded NOT_PROVEN  8298ms
+     ✓ R7-F6-H: the other platform's artifact is accepted ONLY when its SHA matches AND it measured itself  33572ms
+     ✓ R7-F6-H2: the cross-platform branch is role-symmetric — a Linux process is exercised, not assumed  16675ms
+     ✓ R7-F6-M1: a FORGED REAL enum with no artifact evidence must not upgrade  8315ms
+     ✓ R7-F6-M2: a REAL declaration for a DIFFERENT SHA must not upgrade  8870ms
+     ✓ R7-F6-M3: a replayed/stale artifact with no run identity must not upgrade  8660ms
+     ✓ R7-F6-M4: a null command exit code must not upgrade  8612ms
+     ✓ R7-F6-M5: one arm without the verifier over every case must not upgrade  25768ms
+     ✓ R7-F6-M6: a journal that disagrees with the independently recomputed delta must not upgrade  8268ms
+     ✓ R7-F6-P: the COMPLETE REAL evidence is required and IS sufficient — PASS (the path is not dead code)  8909ms
+     ✓ S6-A: the ARTIFACT must carry its own runId, attempt and platform  26302ms
+     ✓ S6-B: a wrong attempt or platform must refuse even when everything else is complete  16862ms
+     ✓ S6-C: a bundle for a DIFFERENT driver SHA must refuse  8298ms
+     ✓ S6-D: a MALFORMED or mismatched build digest must refuse  17313ms
+     ✓ S6-E: a DELETED per-arm verifier must refuse (a parsed schedule is not evidence)  8548ms
+     ✓ S6-F: a TAMPERED manifest must refuse even though its declared digest is unchanged  8546ms
+     ✓ S6-G: identical arm closures / identical source SHAs must refuse  8471ms
+     ✓ S6-H: a path that escapes the evidence root must refuse  8951ms
+     ✓ S6-J: report mode exits 0 while `--strict` exits non-zero when a required level is unmet  26006ms
+     ✓ S6-K: an UNBOUND budget dimension is NOT_PROVEN with its reason, never flattened to zero  8606ms
+     ✓ S6-L: an unknown-usage journal entry keeps its conservative upper bound and is not reported as measured  8520ms
+     ✓ S6-M: a DUPLICATE journal attempt and an unknown arm are both refused, on the BUDGET level only  8485ms
+     ✓ S0b-F3-RED: forged REAL JSON with buildDigest 'x', no raw evidence and no artifact runId must not PASS  8481ms
+usage: node scripts/e4/r97-arm-worker.mjs --checkout <arm dir> --case <caseId> --suite <suite> --arm <arm>
+                                                --provider <id> --model <id> [--endpoint <url>]
+                                                --plan-digest <hex> --state <execution state dir> --ledger <ledger dir>
+                                                [--source-sha <40-hex>] [--script-shape write-then-stop|text-only] [--json]
+
+The approved --provider/--model are REQUIRED: a worker that defaulted them would execute a
+different identity than the plan approved (plan T4 怎么做 6).
+usage: node scripts/e4/r97-arm-worker.mjs --checkout <arm dir> --case <caseId> --suite <suite> --arm <arm>
+                                                --provider <id> --model <id> [--endpoint <url>]
+                                                --plan-digest <hex> --state <execution state dir> --ledger <ledger dir>
+                                                [--source-sha <40-hex>] [--script-shape write-then-stop|text-only] [--json]
+
+The approved --provider/--model are REQUIRED: a worker that defaulted them would execute a
+different identity than the plan approved (plan T4 怎么做 6).
+usage: node scripts/e4/r97-arm-worker.mjs --checkout <arm dir> --case <caseId> --suite <suite> --arm <arm>
+                                                --provider <id> --model <id> [--endpoint <url>]
+                                                --plan-digest <hex> --state <execution state dir> --ledger <ledger dir>
+                                                [--source-sha <40-hex>] [--script-shape write-then-stop|text-only] [--json]
+
+The approved --provider/--model are REQUIRED: a worker that defaulted them would execute a
+different identity than the plan approved (plan T4 怎么做 6).
+usage: node scripts/e4/r97-arm-worker.mjs --checkout <arm dir> --case <caseId> --suite <suite> --arm <arm>
+                                                --provider <id> --model <id> [--endpoint <url>]
+                                                --plan-digest <hex> --state <execution state dir> --ledger <ledger dir>
+                                                [--source-sha <40-hex>] [--script-shape write-then-stop|text-only] [--json]
+
+The approved --provider/--model are REQUIRED: a worker that defaulted them would execute a
+different identity than the plan approved (plan T4 怎么做 6).
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts (48 tests) 25271ms
+     ✓ executes the case and records a verdict that can ONLY come from the real report  736ms
+     ✓ TWO DIFFERENT CASES each enter their OWN context — no single placeholder request  1186ms
+     ✓ a case MISSING from the arm is refused — never borrowed from the driver repo (T4 怎么做 7)  345ms
+     ✓ leaves a real evidence file on disk after the worker returns  661ms
+     ✓ keeps the staging scratch out of the evidence, and only the scratch  589ms
+     ✓ the stored evidence row is REDACTED: no credential-shaped text reaches it  632ms
+     ✓ the record's detail AGREES with its own evidence on a REAL unit  661ms
+     ✓ grant=1, the consumer breaks mid-stream and the CLI throws: innerCalls=1, NOT abandoned, remaining=0, second reserve refused  394ms
+     ✓ a SETTLEMENT write failure on an ENTERED call is refused as `budget` and the allowance is NOT refunded  426ms
+     ✓ PROTOCOL FIXTURE: the runtime's model ref disagrees with the approval, and the synthetic PASS report must not win  441ms
+     ✓ PROTOCOL FIXTURE: a NULL runtime model ref is a refusal, never 'no drift'  389ms
+     ✓ PROTOCOL FIXTURE: a FAILED dry run ends the unit BEFORE any dispatch  317ms
+     ✓ PROTOCOL FIXTURE: an APPROVED-and-matching unit still reaches a verified PASS  366ms
+     ✓ PROTOCOL FIXTURE: a LEGITIMATE negative stays `case_failed`, not infrastructure  342ms
+     ✓ a dry run that never returns is stopped by the unit deadline, and its code does NOT outlive the unit  10628ms
+     ✓ a DISPATCH that never returns is stopped too, and the admitted call is NOT refunded  6672ms
+[harness] context budget: model capabilities unknown for stub/m — using conservative fallback 32000
+ ✓ apps/cli/src/benchmark-command.test.ts (99 tests) 8848ms
+     ✓ prevents cross-case contamination: case B cannot read case A's workspace file  1146ms
+     ✓ P4-7: subagent requirement runs the REAL Delegator (subagent.started fires)  1110ms
+     ✓ 3. --repeat 2 on 2 cases → exactly 8 logical arm runs (2×2×2)  333ms
+     ✓ N03/N05: a real paired run writes the V3 manifest with the FULL confirmed plan, policy and a unique sample grid  364ms
+ ✓ packages/evaluation/src/r97-claim-anchor-rename.test.ts (3 tests) 8353ms
+     ✓ EXHAUSTED transient retries still end in the named refusal, anchor intact  8173ms
+ ✓ apps/cli/src/r0-f8-formal-budget-cancel-gaps.test.ts (7 tests) 6682ms
+     ✓ [F2] the provider's AbortSignal is aborted and the driver returns inside a bounded window  1526ms
+     ✓ [F2] a provider that IGNORES its AbortSignal still cannot keep the driver waiting  3230ms
+     ✓ [F2] a real HTTP stub observes its connection CLOSED after the client cancels  1575ms
+ ✓ apps/cli/src/n1-worker-lifecycle.test.ts (17 tests) 6637ms
+     ✓ [row 4] a provider that IGNORES abort cannot park the driver, and is marked unconfirmed  2068ms
+     ✓ [row 6] finishes in bounded time when the child writes a result and then will not exit  2058ms
+     ✓ [regression] the deadline still aborts the transport FIRST and records the timeout reason  1529ms
+ ✓ apps/cli/src/e4-r24-final-result-protocol.test.ts (6 tests) 5473ms
+     ✓ green run: observing + passing test commits exactly ONE row; independent strict audit observes the capability  592ms
+     ✓ assert-fail run: observe-then-fail leaves NO committed passed evidence; the green run's rows cannot be borrowed (same name, same HEAD)  665ms
+     ✓ hook-fail run: test body passes + afterAll fails -> NO committed passed evidence  567ms
+     ✓ a LEFTOVER failing fixture is NOT collected by the root config, IS selected by the dedicated config, and cleanup only removes its own file  989ms
+     ✓ with BOTH residues on disk the root config collects only the real parent test, the residue is unrunnable even when named explicitly, and the dedicated config still selects the new fixture  1821ms
+     ✓ a legacy-pattern fixture in src/ is excluded from tsc; real source + real tests remain  836ms
+ ✓ packages/evaluation/src/r97-plan.test.ts (67 tests) 4529ms
+     ✓ 4. a selection whose case list was edited while keeping the OLD digest is REFUSED  372ms
+ ✓ packages/evaluation/src/tool-call-efficiency-formal-run.test.ts (37 tests) 3728ms
+     ✓ refuses a call the ledger cannot afford, before it reaches the provider  3629ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts (60 tests) 3142ms
+     ✓ REGRESSION: the first-open grant write happens UNDER the lock, not before it  771ms
+     ✓ a REAL reader process observing a REAL writer sees only COMPLETE versions, never CORRUPT  1393ms
+ ✓ apps/cli/src/dual-platform-acceptance.test.ts (28 tests) 2786ms
+ ✓ packages/evaluation/src/r97-execution-identity.test.ts (18 tests) 2454ms
+     ✓ runs under the APPROVED model and endpoint, not the default pair  671ms
+     ✓ a DIFFERENT endpoint produces a DIFFERENT endpoint identity — the flag reaches the plan  1269ms
+ ✓ packages/tools/src/process/executor.test.ts (30 tests | 7 skipped) 1330ms
+     ✓ kills the process tree on timeout (no orphan)  303ms
+     ✓ honors timeout, cancellation, output cap and env on the argv path  411ms
+ ✓ packages/model/src/openai.test.ts (40 tests) 1117ms
+     ✓ P1-18: honors Retry-After on 429 and classifies it rate_limit with retryAfterMs  1003ms
+ ❯ apps/cli/src/path-scoped-instructions.test.ts (10 tests | 1 failed) 740ms
+     ✓ publishes only a bounded redacted diagnostic for a real runtime exception 31ms
+     ✓ normalizes both Windows and POSIX fixture document paths before comparing relative scopes 1ms
+     ✓ registers one experimental arm and hashes the exact installed discovery policy 3ms
+     ✓ changes real target context without sibling contamination and passes an independent content verifier 218ms
+     ✓ does not use a denied traversal request as target evidence 24ms
+     ✓ keeps a rejected instruction out of both the model request and witnessed instructionSources 21ms
+     ✓ detects rejected instruction paths in both denial events and source entries on Windows and POSIX 1ms
+     ✓ records zero activation when no project document reaches the request 12ms
+     × executes the actual AB/BA paired engine twice with fixed inputs and independent content verification 382ms
+     ✓ binds concurrent child sessions to their own durable request and scoped sources 43ms
+[skill denied] detection=injection target=/tmp/ar-skill-admission-baARbV/skills/blocked-injection/SKILL.md reasons=dismiss-previous-instructions,dismiss-all-instructions,override-own-instructions,extract-system-prompt
+[skill denied] detection=secret target=/tmp/ar-skill-admission-W2Dhdv/skills/blocked-secret/SKILL.md reasons=openai-key
+[skill denied] detection=required-tools target=/tmp/ar-skill-admission-SKaTGU/skills/blocked-tools/SKILL.md reasons=required tool not allowed by host policy: unavailable_tool
+ ✓ packages/harness/src/skill-admission.regressions.test.ts (11 tests) 347ms
+ ✓ packages/harness/src/verification-trust.regressions.test.ts (13 tests) 827ms
+ ✓ packages/harness/src/candidate-persistence.regressions.test.ts (11 tests) 40ms
+ ✓ packages/harness/src/command-discovery-cache.regressions.test.ts (3 tests) 40ms
+ ✓ apps/cli/src/release-command.test.ts (22 tests) 2907ms
+     ✓ runGate executes the canonical command and writes durable V2 evidence with the REAL exit code  498ms
+     ✓ runGate records the chaos gate's ACTUAL exit code with consistent evidence (a green gate here; the real NON-ZERO path is proven in e4-r42-gate-isolation.test.ts)  1182ms
+     ✓ E4-R19 (N20): the printed verdict derives from the EVIDENCE state — a failed/invalid evidence can never print PASS even with child exit 0  500ms
+     ✓ E4-R12 (N01): a red gate prints the saved log ref + bounded failure summary that names the real cause  392ms
+[ELIFECYCLE] Test failed. See above for more details.

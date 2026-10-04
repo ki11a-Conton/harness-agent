@@ -1,0 +1,148 @@
+{
+  "poll": 14,
+  "timestamp": "2026-10-04T07:24:15.849615+00:00",
+  "runId": 37185159270,
+  "sourceSha": "ecc45e51055de66506e0bde2b42e0f8ebc098606",
+  "runStatus": "completed",
+  "conclusion": "failure",
+  "jobCount": 10,
+  "jobs": [
+    {
+      "id": 111385565046,
+      "name": "offline cold-start (ubuntu)",
+      "status": "completed",
+      "conclusion": "success",
+      "currentStep": null,
+      "failedSteps": []
+    },
+    {
+      "id": 111385565140,
+      "name": "real formal offline (ubuntu)",
+      "status": "completed",
+      "conclusion": "failure",
+      "currentStep": null,
+      "failedSteps": [
+        {
+          "name": "Real formal + release CLI + measured readiness (zero paid requests)",
+          "conclusion": "failure",
+          "number": 7
+        }
+      ]
+    },
+    {
+      "id": 111385565185,
+      "name": "coverage gate (ubuntu)",
+      "status": "completed",
+      "conclusion": "failure",
+      "currentStep": null,
+      "failedSteps": [
+        {
+          "name": "Coverage gate (thresholds fail the job)",
+          "conclusion": "failure",
+          "number": 6
+        }
+      ]
+    },
+    {
+      "id": 111385565187,
+      "name": "r97-r98 closed loop (windows-latest)",
+      "status": "completed",
+      "conclusion": "success",
+      "currentStep": null,
+      "failedSteps": []
+    },
+    {
+      "id": 111385565193,
+      "name": "install · typecheck · test · build · benchmark-smoke · audit (windows-latest, windows)",
+      "status": "completed",
+      "conclusion": "failure",
+      "currentStep": null,
+      "failedSteps": [
+        {
+          "name": "Unit and integration tests",
+          "conclusion": "failure",
+          "number": 7
+        }
+      ]
+    },
+    {
+      "id": 111385565195,
+      "name": "install · typecheck · test · build · benchmark-smoke · audit (ubuntu-latest, ubuntu)",
+      "status": "completed",
+      "conclusion": "failure",
+      "currentStep": null,
+      "failedSteps": [
+        {
+          "name": "Unit and integration tests",
+          "conclusion": "failure",
+          "number": 7
+        }
+      ]
+    },
+    {
+      "id": 111385565221,
+      "name": "r97-r98 closed loop (ubuntu-latest)",
+      "status": "completed",
+      "conclusion": "success",
+      "currentStep": null,
+      "failedSteps": []
+    },
+    {
+      "id": 111385565232,
+      "name": "real formal offline (windows)",
+      "status": "completed",
+      "conclusion": "failure",
+      "currentStep": null,
+      "failedSteps": [
+        {
+          "name": "Real formal + release CLI + measured readiness (zero paid requests)",
+          "conclusion": "failure",
+          "number": 7
+        }
+      ]
+    },
+    {
+      "id": 111386838818,
+      "name": "release attestation (P38-12)",
+      "status": "completed",
+      "conclusion": "skipped",
+      "currentStep": null,
+      "failedSteps": []
+    },
+    {
+      "id": 111386862823,
+      "name": "dual-platform acceptance (same SHA)",
+      "status": "completed",
+      "conclusion": "failure",
+      "currentStep": null,
+      "failedSteps": [
+        {
+          "name": "Fail job when the two legs are not one acceptance unit (S7)",
+          "conclusion": "failure",
+          "number": 12
+        }
+      ]
+    }
+  ],
+  "expectedJobCount": 10,
+  "allTenPassed": false,
+  "workflowUrl": "https://github.com/ki11a-Conton/harness-agent/actions/runs/37185159270",
+  "method": "native curl API via ephemeral credential; no GitHub connector",
+  "finalRunReceipt": "run-0014.json",
+  "finalJobsReceipt": "jobs-0014.json",
+  "receiptHashes": {
+    "run-0014.json": "9c3b9f2c694f9faded477b9764cd4e1a58c08de814879c451201beb70954d609",
+    "jobs-0014.json": "677b730d3f15ff1d61e29276833a4a668015f301078b0458e5a09ecddbe06154"
+  },
+  "jobConclusionCounts": {
+    "success": 3,
+    "failure": 6,
+    "skipped": 1
+  },
+  "diagnostic": {
+    "confirmedVerifyFailure": "Both ubuntu/windows verify annotations identify path-scoped-instructions.test.ts AB/BA observer assertion expected 0 to be 32. Existing test observes only fs.readFile while A1 uses bounded fs.open/handle.read.",
+    "coverageAndFormal": "Failed step confirmed; annotation only exit 1; cannot prove specific cause without signed logs.",
+    "dualPlatform": "Failed refusal stage after prerequisite failures; no pass claim.",
+    "signedLogDownload": "Proxy CONNECT403 to Azure log storage; direct connect exit7; attempts preserved; no further attempts."
+  }
+}

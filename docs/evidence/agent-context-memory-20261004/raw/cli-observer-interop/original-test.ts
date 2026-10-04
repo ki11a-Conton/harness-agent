@@ -28,19 +28,15 @@ function isInstructionPath(path: unknown, relativePath: string): boolean {
 }
 let scratch: string;
 const evidence: Record<string, unknown>[] = [];
-const filesystemCounts = { documentReadFileCalls: 0, documentCaptures: 0, documentCaptureBytes: 0, directoryListings: 0 };
-const defaultDiscoveryCounts = { documentReadFileCalls: 0, documentCaptures: 0, documentCaptureBytes: 0, directoryListings: 0 };
+const filesystemCounts = { documentReadFileCalls: 0, directoryListings: 0 };
+const defaultDiscoveryCounts = { documentReadFileCalls: 0, directoryListings: 0 };
 const inDefaultDiscovery = new AsyncLocalStorage<boolean>();
 function filesystemDelta(before: typeof filesystemCounts) {
   return { documentReadFileCalls: filesystemCounts.documentReadFileCalls - before.documentReadFileCalls,
-    documentCaptures: filesystemCounts.documentCaptures - before.documentCaptures,
-    documentCaptureBytes: filesystemCounts.documentCaptureBytes - before.documentCaptureBytes,
     directoryListings: filesystemCounts.directoryListings - before.directoryListings };
 }
 function defaultDiscoveryDelta(before: typeof defaultDiscoveryCounts) {
   return { documentReadFileCalls: defaultDiscoveryCounts.documentReadFileCalls - before.documentReadFileCalls,
-    documentCaptures: defaultDiscoveryCounts.documentCaptures - before.documentCaptures,
-    documentCaptureBytes: defaultDiscoveryCounts.documentCaptureBytes - before.documentCaptureBytes,
     directoryListings: defaultDiscoveryCounts.directoryListings - before.directoryListings };
 }
 
@@ -49,8 +45,6 @@ beforeEach(async () => {
   vi.spyOn(process, "cwd").mockReturnValue(scratch);
   filesystemCounts.documentReadFileCalls = 0; filesystemCounts.directoryListings = 0;
   defaultDiscoveryCounts.documentReadFileCalls = 0; defaultDiscoveryCounts.directoryListings = 0;
-  filesystemCounts.documentCaptures = 0; filesystemCounts.documentCaptureBytes = 0;
-  defaultDiscoveryCounts.documentCaptures = 0; defaultDiscoveryCounts.documentCaptureBytes = 0;
   const originalDiscovery = HierarchicalInstructionDiscovery.prototype.discover;
   vi.spyOn(HierarchicalInstructionDiscovery.prototype, "discover").mockImplementation(function (this: HierarchicalInstructionDiscovery, cwd, opts) {
     return inDefaultDiscovery.run(true, () => originalDiscovery.call(this, cwd, opts));
@@ -65,33 +59,6 @@ beforeEach(async () => {
     }
     return originalRead(...args);
   }) as typeof fs.readFile);
-  // Both discovery paths capture bounded prefixes through FileHandle.read.
-  // Count successful captures and received bytes, rather than requiring the
-  // default path to call its former whole-file readFile implementation.
-  const originalOpen = fs.open;
-  vi.spyOn(fs, "open").mockImplementation((async (...args: Parameters<typeof fs.open>) => {
-    const handle = await originalOpen(...args);
-    const path = String(args[0]).replaceAll("\\", "/");
-    if (path.includes("/harness-bench-") && path.endsWith("/AGENTS.md")) {
-      const originalHandleRead = handle.read.bind(handle) as (...args: unknown[]) => Promise<{ bytesRead: number }>;
-      const isDefaultDiscovery = inDefaultDiscovery.getStore() === true;
-      let captured = false;
-      handle.read = (async (...readArgs: unknown[]) => {
-        const result = await originalHandleRead(...readArgs);
-        if (result.bytesRead > 0) {
-          if (!captured) {
-            filesystemCounts.documentCaptures++;
-            if (isDefaultDiscovery) defaultDiscoveryCounts.documentCaptures++;
-            captured = true;
-          }
-          filesystemCounts.documentCaptureBytes += result.bytesRead;
-          if (isDefaultDiscovery) defaultDiscoveryCounts.documentCaptureBytes += result.bytesRead;
-        }
-        return result;
-      }) as typeof handle.read;
-    }
-    return handle;
-  }) as typeof fs.open);
   vi.spyOn(fs, "readdir").mockImplementation(((...args: Parameters<typeof fs.readdir>) => {
     if (String(args[0]).replaceAll("\\", "/").includes("/harness-bench-")) {
       filesystemCounts.directoryListings++;
@@ -432,20 +399,11 @@ describe("S2 CLI path-scoped instruction challenger", () => {
     for (const row of observed) {
       const calls = row.observedDefaultDiscoveryCalls as ReturnType<typeof defaultDiscoveryDelta>;
       if (row.arm === "baseline") {
-        const fixtureDocumentBytes = Object.entries(fixture.fixture!).filter(([path]) => path.endsWith("AGENTS.md"))
-          .reduce((bytes, [, content]) => bytes + Buffer.byteLength(content), 0);
-        expect(calls.documentReadFileCalls).toBe(0);
-        expect(calls.documentCaptures).toBe(Number(row.requestCount) * 4);
-        expect(calls.documentCaptureBytes).toBe(Number(row.requestCount) * fixtureDocumentBytes);
+        expect(calls.documentReadFileCalls).toBe(Number(row.requestCount) * 4);
         expect(calls.directoryListings).toBeGreaterThan(0);
       } else {
         expect(calls.documentReadFileCalls).toBe(0);
-        expect(calls.documentCaptures).toBe(0);
-        expect(calls.documentCaptureBytes).toBe(0);
         expect(calls.directoryListings).toBe(0);
-        const actualCaptures = (row.observedFilesystemCalls as ReturnType<typeof filesystemDelta>).documentCaptures;
-        const selection = row.scopedSelection as Array<{ discovery: { reads: number } }>;
-        expect(actualCaptures).toBe(selection.at(-1)!.discovery.reads);
       }
     }
     for (const pair of paired.finalizedPairs) {

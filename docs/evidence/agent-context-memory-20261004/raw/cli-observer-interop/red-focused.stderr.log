@@ -1,0 +1,22 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  apps/cli/src/path-scoped-instructions.test.ts > S2 CLI path-scoped instruction challenger > executes the actual AB/BA paired engine twice with fixed inputs and independent content verification
+AssertionError: expected +0 to be 32 // Object.is equality
+
+- Expected
++ Received
+
+- 32
++ 0
+
+ ❯ apps/cli/src/path-scoped-instructions.test.ts:402:45
+    400|       const calls = row.observedDefaultDiscoveryCalls as ReturnType<ty…
+    401|       if (row.arm === "baseline") {
+    402|         expect(calls.documentReadFileCalls).toBe(Number(row.requestCou…
+       |                                             ^
+    403|         expect(calls.directoryListings).toBeGreaterThan(0);
+    404|       } else {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

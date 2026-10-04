@@ -1,0 +1,200 @@
+{
+  "observedAt": "2026-10-04T07:28:01.408220+00:00",
+  "stage": "BOUNDED_IO_OBSERVER_INTEROP_GREEN",
+  "sourceHead": "ecc45e51055de66506e0bde2b42e0f8ebc098606",
+  "sourceStatus": "M apps/cli/src/path-scoped-instructions.test.ts\n M plan.md\n M tasks/AGENT-CONTEXT-MEMORY-20261004.md",
+  "changedTrackedFile": "apps/cli/src/path-scoped-instructions.test.ts",
+  "runtimeDiscoverySourceAndDistUnchanged": true,
+  "testDiffPurpose": "Existing measurement now observes actual bounded FileHandle reads, retaining whole-file readFile counts, directory listing counts, 4-doc/request controls and AB/BA independent verifier assertions. No production strategy or Runtime change.",
+  "runs": [
+    {
+      "report": "red-focused.json",
+      "exitCode": 1,
+      "passed": 0,
+      "failed": 1,
+      "selectionExcluded": 9,
+      "newSkip": 0
+    },
+    {
+      "report": "green.json",
+      "exitCode": 0,
+      "passed": 267,
+      "failed": 0,
+      "skipped": 0,
+      "files": 17
+    },
+    {
+      "command": "pnpm exec tsc -b apps/cli",
+      "exitCode": 0,
+      "stdout": "typecheck.stdout.log",
+      "stderr": "typecheck.stderr.log"
+    },
+    {
+      "command": "git diff --check -- apps/cli/src/path-scoped-instructions.test.ts",
+      "exitCode": 0
+    }
+  ],
+  "paired": {
+    "status": "ok",
+    "complete": true,
+    "logicalRuns": 4,
+    "modelCallAttempts": 28,
+    "observations": [
+      {
+        "arm": "candidate",
+        "requestCount": 6,
+        "actualDefaultDiscovery": {
+          "documentReadFileCalls": 0,
+          "documentCaptures": 0,
+          "documentCaptureBytes": 0,
+          "directoryListings": 0
+        },
+        "actualFilesystem": {
+          "documentReadFileCalls": 0,
+          "documentCaptures": 3,
+          "documentCaptureBytes": 153,
+          "directoryListings": 5
+        }
+      },
+      {
+        "arm": "baseline",
+        "requestCount": 8,
+        "actualDefaultDiscovery": {
+          "documentReadFileCalls": 0,
+          "documentCaptures": 32,
+          "documentCaptureBytes": 1568,
+          "directoryListings": 40
+        },
+        "actualFilesystem": {
+          "documentReadFileCalls": 0,
+          "documentCaptures": 32,
+          "documentCaptureBytes": 1568,
+          "directoryListings": 45
+        }
+      },
+      {
+        "arm": "baseline",
+        "requestCount": 8,
+        "actualDefaultDiscovery": {
+          "documentReadFileCalls": 0,
+          "documentCaptures": 32,
+          "documentCaptureBytes": 1568,
+          "directoryListings": 40
+        },
+        "actualFilesystem": {
+          "documentReadFileCalls": 0,
+          "documentCaptures": 32,
+          "documentCaptureBytes": 1568,
+          "directoryListings": 45
+        }
+      },
+      {
+        "arm": "candidate",
+        "requestCount": 6,
+        "actualDefaultDiscovery": {
+          "documentReadFileCalls": 0,
+          "documentCaptures": 0,
+          "documentCaptureBytes": 0,
+          "directoryListings": 0
+        },
+        "actualFilesystem": {
+          "documentReadFileCalls": 0,
+          "documentCaptures": 3,
+          "documentCaptureBytes": 153,
+          "directoryListings": 5
+        }
+      }
+    ]
+  },
+  "files": {
+    "apps/cli/src/path-scoped-instructions.test.ts": {
+      "bytes": 34766,
+      "sha256": "2f53176a57e9a5a97683cc1522c72dc207f2c79fd6975baf6cfdde997140b7db"
+    },
+    "packages/context/src/discovery.ts": {
+      "bytes": 10543,
+      "sha256": "1bdec0d2aa562b210870cf577adb56ad872b6c860b66979ae87903d1b83c3a67"
+    },
+    "packages/context/dist/discovery.js": {
+      "bytes": 10638,
+      "sha256": "1ce3ddb756a5414cb02f9de2eefb6a1099576c45bce17635cd2690b984afe9d5"
+    }
+  },
+  "paidCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "promotion": "NOT_RUN",
+  "receipts": {
+    "green-evidence/cli-concurrency-results.json": {
+      "bytes": 19814,
+      "sha256": "aa8e482a9b9af069387b9c35f48d7cc20e583b0bd7878a52ab04376102f0a98c"
+    },
+    "green-evidence/cli-offline-results.json": {
+      "bytes": 65214,
+      "sha256": "99a31cb9111098d6ceb9eef56ebc191c7f3eac4e2f9d68ccf841498ee7079bdf"
+    },
+    "green-evidence/cli-paired-results.json": {
+      "bytes": 366742,
+      "sha256": "28b6917474a8bee676840b311b7d872ae7544bf3a0fa5b772332a3b138eec25e"
+    },
+    "green.json": {
+      "bytes": 127605,
+      "sha256": "6e2f3f2ca6b7510752a03f676b6d1706768868861a33ce6a652783ef9e8cad9f"
+    },
+    "green.stderr.log": {
+      "bytes": 62,
+      "sha256": "58b2b535d855c5778f6574662d0b956105d9c480f17dc9588d9c5694ebb3f48d"
+    },
+    "green.stdout.log": {
+      "bytes": 1760,
+      "sha256": "82dbb924b0be93fadfb01a2936732a371817aa4f0df1002623b9974390d79830"
+    },
+    "observer-only.diff": {
+      "bytes": 5727,
+      "sha256": "1845a89e29605a96603c43c1e6e6d3a7626ef31c5c2766f7b22bd7cac9f964ea"
+    },
+    "original-test.ts": {
+      "bytes": 32021,
+      "sha256": "1ddb5f601a231754f36995c7606e3de4eda5d1c62361e9e240ccff3bcf24f9cd"
+    },
+    "red-focused-receipt.json": {
+      "bytes": 1538,
+      "sha256": "5cba132d4c737ddd4a1274bf6c8d9f960ec804a25fd1178ed8c9c7c6f581de09"
+    },
+    "red-focused.json": {
+      "bytes": 4570,
+      "sha256": "d4bd939e42a8f58ec2edcab6fbb6af71f033d10e5565b20fd853006ac772eb2a"
+    },
+    "red-focused.stderr.log": {
+      "bytes": 854,
+      "sha256": "e183bc373f905f5da6ab0f64ab564c917080064a6158ef665876b530bf4da5b5"
+    },
+    "red-focused.stdout.log": {
+      "bytes": 1370,
+      "sha256": "8916dfadc73c1707a083ead8b0926f4b2130566e62f55423ac438da3e43439a0"
+    },
+    "red-receipt.json": {
+      "bytes": 1552,
+      "sha256": "6b65284865b5ba1cc64890b5c8189773b7a174631072b94361f27d4ba132c695"
+    },
+    "red.json": {
+      "bytes": 4251,
+      "sha256": "4474125656f10e291bfde7cba26e8bc5e6a4ed05d4c3dd297fc80ebf2526093a"
+    },
+    "red.stderr.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "red.stdout.log": {
+      "bytes": 398,
+      "sha256": "906031a4f98aa130a53f1322090eb6c247ca56599a70aa88c1c548b148bfbe1b"
+    },
+    "typecheck.stderr.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "typecheck.stdout.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  }
+}

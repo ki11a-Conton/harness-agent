@@ -1,0 +1,27 @@
+{
+  "sourceHead": "ecc45e51055de66506e0bde2b42e0f8ebc098606",
+  "discoverySourceHash": "1bdec0d2aa562b210870cf577adb56ad872b6c860b66979ae87903d1b83c3a67",
+  "mechanism": "fs.open/FileHandle own close boundary: actually closes descriptor, then throws EIO only for cwd AGENTS; all reads/stat/candidate selection are production code",
+  "expected": "One problematic document must not abort all discovery or suppress remaining regular nested documents",
+  "paidCalls": 0,
+  "documents": [
+    {
+      "path": "/tmp/harness-close-review-JsXRaB/AGENTS.md",
+      "scope": "cwd",
+      "sizeBytes": 9,
+      "content": "safe root",
+      "truncated": false,
+      "detectedAt": 1791098148914
+    },
+    {
+      "path": "/tmp/harness-close-review-JsXRaB/nested/AGENTS.md",
+      "scope": "nested",
+      "sizeBytes": 19,
+      "content": "SAFE_NESTED_CONTROL",
+      "truncated": false,
+      "detectedAt": 1791098148919
+    }
+  ],
+  "passed": true,
+  "injectedCloseCalls": 1
+}
