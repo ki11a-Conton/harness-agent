@@ -1,7 +1,7 @@
 // Offline browser fixture: real composition roots; only the model is scripted.
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { createServer } from 'node:http';
+import { createServer, request as httpRequest } from 'node:http';
 import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -67,6 +67,85 @@ const gateway = new Gateway({ rpc: tracking, channels: [adapter], sessionService
 await gateway.start();
 const server = new WebServer({ adapter, bindings, events: harness.events, store: harness.store, approvalStore: harness.approvalStore, host: '127.0.0.1', port: 0, pollDelayMs: 10, staticDir });
 const address = await server.start();
+// Transparent loopback transport. Faults affect real SSE sockets only; all
+// frames still originate from WebServer and no application data is fabricated.
+const heldStreams = new Set();
+const waitingStreams = new Map();
+const liveStreams = new Map();
+const transportFaults = [];
+const proxy = createServer((req, res) => {
+  const url = new URL(req.url ?? '/', 'http://localhost');
+  const isSse = url.pathname === '/api/events';
+  const from = url.searchParams.get('from');
+  const forward = () => {
+    if (res.destroyed) return;
+  const upstream = httpRequest({ hostname: '127.0.0.1', port: address.port, method: req.method, path: req.url, headers: req.headers }, upstreamRes => {
+    entry.upstreamRes = upstreamRes;
+    res.writeHead(upstreamRes.statusCode ?? 502, upstreamRes.headers);
+    upstreamRes.pipe(res);
+    upstreamRes.on('error', () => res.destroy());
+  });
+  const entry = { upstream, res, upstreamRes: null };
+  if (isSse) {
+    const entries = liveStreams.get(from) ?? new Set();
+    entries.add(entry); liveStreams.set(from, entries);
+    res.on('close', () => {
+      entries.delete(entry);
+      if (entries.size === 0 && liveStreams.get(from) === entries) liveStreams.delete(from);
+      upstream.destroy(); entry.upstreamRes?.destroy();
+    });
+  }
+  upstream.on('error', error => {
+    if (res.destroyed) return;
+    if (!res.headersSent) res.writeHead(502, { 'Content-Type': 'text/plain' });
+    res.end(`Transport error: ${error.code ?? 'unknown'}`);
+  });
+  req.pipe(upstream);
+  };
+  if (isSse && heldStreams.has(from)) {
+    // Keep a real reconnect request pending until release. A non-200 status
+    // can permanently close native EventSource and would test another policy.
+    const entries = waitingStreams.get(from) ?? new Set();
+    const waiting = { res, forward };
+    entries.add(waiting); waitingStreams.set(from, entries);
+    res.on('close', () => {
+      entries.delete(waiting);
+      if (entries.size === 0 && waitingStreams.get(from) === entries) waitingStreams.delete(from);
+    });
+    transportFaults.push({ action: 'held-reconnect', from, at: new Date().toISOString() });
+    return;
+  }
+  forward();
+});
+await new Promise(resolve => proxy.listen(0, '127.0.0.1', resolve));
+// Separate, explicitly named fault controller. Inspector below stays read-only.
+const transportControl = createServer((req, res) => {
+  const url = new URL(req.url ?? '/', 'http://localhost');
+  const from = url.searchParams.get('from');
+  if (req.method !== 'POST' || !['/hold', '/release'].includes(url.pathname) || from === null || !/^[A-Za-z0-9-]{8,64}$/.test(from)) {
+    res.writeHead(400); res.end('invalid transport fault command'); return;
+  }
+  let droppedSockets = 0;
+  let releasedRequests = 0;
+  if (url.pathname === '/hold') {
+    heldStreams.add(from);
+    for (const entry of liveStreams.get(from) ?? []) {
+      droppedSockets++;
+      entry.res.destroy(); entry.upstreamRes?.destroy(); entry.upstream.destroy();
+    }
+  } else {
+    heldStreams.delete(from);
+    const waiting = waitingStreams.get(from);
+    waitingStreams.delete(from);
+    for (const entry of waiting ?? []) {
+      if (!entry.res.destroyed) { releasedRequests++; entry.forward(); }
+    }
+  }
+  const receipt = { action: url.pathname.slice(1), from, droppedSockets, releasedRequests, at: new Date().toISOString() };
+  transportFaults.push(receipt);
+  res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(receipt));
+});
+await new Promise(resolve => transportControl.listen(0, '127.0.0.1', resolve));
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const sourcePaths = ['apps/web/src/server.ts', 'apps/web/src/adapter.ts', 'apps/web/src/bindings.ts', 'packages/gateway/src/gateway.ts', 'packages/harness/src/create-harness.ts'];
 const distPaths = ['apps/web/dist/server.js', 'apps/web/dist/adapter.js', 'apps/web/dist/bindings.js', 'packages/gateway/dist/gateway.js', 'packages/harness/dist/create-harness.js'];
@@ -85,7 +164,7 @@ async function snapshot() {
     try { files[name] = await readFile(join(cwd, name), 'utf8'); }
     catch (error) { if (error.code !== 'ENOENT') throw error; files[name] = null; }
   }
-  return { ...provenance, bindings: bindings.all(), calls, pendingApprovals: harness.approvalStore.listPending(), records, files };
+  return { ...provenance, bindings: bindings.all(), calls, pendingApprovals: harness.approvalStore.listPending(), records, files, transportFaults };
 }
 // Separate loopback-only, READ-ONLY evidence endpoint; never starts/approves turns.
 const inspector = createServer((req, res) => {
@@ -93,13 +172,17 @@ const inspector = createServer((req, res) => {
   void snapshot().then(data => { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(data)); }, error => { res.writeHead(500); res.end(String(error)); });
 });
 await new Promise(resolve => inspector.listen(0, '127.0.0.1', resolve));
-const ready = { base: `http://127.0.0.1:${address.port}`, inspector: `http://127.0.0.1:${inspector.address().port}/snapshot`, cwd, ...provenance };
+const ready = { base: `http://127.0.0.1:${proxy.address().port}`, backend: `http://127.0.0.1:${address.port}`, transportControl: `http://127.0.0.1:${transportControl.address().port}`, inspector: `http://127.0.0.1:${inspector.address().port}/snapshot`, cwd, ...provenance };
 await writeFile(join(out, 'ready.json'), JSON.stringify(ready, null, 2) + '\n');
 console.log(JSON.stringify({ ready: true, ...ready }));
 let stopping = false;
 async function stop() {
   if (stopping) return; stopping = true;
   await writeFile(join(out, 'runtime-snapshot.json'), JSON.stringify(await snapshot(), null, 2) + '\n');
+  for (const entries of liveStreams.values()) for (const entry of entries) { entry.res.destroy(); entry.upstreamRes?.destroy(); entry.upstream.destroy(); }
+  for (const entries of waitingStreams.values()) for (const entry of entries) entry.res.destroy();
+  await new Promise(resolve => proxy.close(resolve));
+  await new Promise(resolve => transportControl.close(resolve));
   await new Promise(resolve => inspector.close(resolve));
   await server.stop(); await gateway.stop(); await harness.close();
 }

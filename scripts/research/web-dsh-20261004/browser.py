@@ -72,6 +72,12 @@ def snapshot():
         return json.load(response)
 
 
+def transport_command(action, from_id):
+    request = urllib.request.Request(ready['transportControl'] + '/' + action + '?from=' + from_id, method='POST', data=b'')
+    with urllib.request.urlopen(request, timeout=10) as response:
+        return json.load(response)
+
+
 def wait_snapshot(predicate, timeout=15):
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -120,7 +126,7 @@ try:
             page.goto(ready['base'], wait_until='domcontentloaded')
             page.wait_for_function("localStorage.getItem('harness.web.activeFrom') !== null")
             if controlled:
-                page.get_by_text('B_ONLY_HISTORY', exact=True).wait_for()
+                page.locator('#messages').get_by_text('B_ONLY_HISTORY', exact=True).wait_for()
             else:
                 page.wait_for_function("document.getElementById('conn-label').textContent.includes('已连接')")
             return context, page
@@ -143,7 +149,7 @@ try:
                     page.locator('[data-from="browser-control-A-123"]').click()
                     page.wait_for_function('__control.historyWaiters.length === 1')
                     page.locator('[data-from="browser-control-B-123"]').click()
-                    page.get_by_text('B_ONLY_HISTORY', exact=True).wait_for()
+                    page.locator('#messages').get_by_text('B_ONLY_HISTORY', exact=True).wait_for()
                     page.evaluate('__control.resolveHistory()')
                     page.wait_for_timeout(100)
                     actual = page.locator('#messages').inner_text()
@@ -162,7 +168,7 @@ try:
                 if kind == 'closed-sse-callback-cannot-pollute-new-session':
                     old_index = page.evaluate('__control.streams.length - 1')
                     page.locator('[data-from="browser-control-A-123"]').click()
-                    page.get_by_text('A_ONLY_HISTORY', exact=True).wait_for()
+                    page.locator('#messages').get_by_text('A_ONLY_HISTORY', exact=True).wait_for()
                     page.evaluate("""i => {
                         __control.emit(i, {type:'assistant_text',messageId:'old-stream',text:'OLD_STREAM_TEXT'});
                         __control.emit(i, {type:'event',event:{type:'turn.started',payload:{}}});
@@ -177,7 +183,7 @@ try:
                     page.locator('#send-btn').click()
                     page.wait_for_function('__control.postWaiters.length === 1')
                     page.locator('[data-from="browser-control-A-123"]').click()
-                    page.get_by_text('A_ONLY_HISTORY', exact=True).wait_for()
+                    page.locator('#messages').get_by_text('A_ONLY_HISTORY', exact=True).wait_for()
                     page.evaluate('__control.resolvePost()')
                     page.wait_for_timeout(100)
                     actual = page.locator('#messages').inner_text()
@@ -211,7 +217,7 @@ try:
                         __control.emit(i,{type:'assistant_text',messageId:'shared-live-id',text:'ONCE_ONLY'});
                         __control.resolveHistory();
                     }""")
-                    page.get_by_text('A_ONLY_HISTORY', exact=True).wait_for()
+                    page.locator('#messages').get_by_text('A_ONLY_HISTORY', exact=True).wait_for()
                     expect(page.get_by_text('ONCE_ONLY', exact=True).count() == 1, 'replayed complete message duplicated')
                     return {'frames': 2, 'historyRecords': 1, 'rendered': 1}
                 if kind == 'hello-handshake-precedes-history-and-preserves-buffered-message':
@@ -231,7 +237,7 @@ try:
                     }""")
                     page.wait_for_function('__control.historyWaiters.length === 1')
                     page.evaluate('__control.resolveHistory()')
-                    page.get_by_text('A_ONLY_HISTORY', exact=True).wait_for()
+                    page.locator('#messages').get_by_text('A_ONLY_HISTORY', exact=True).wait_for()
                     page.get_by_text('HANDSHAKE_BUFFERED_MESSAGE', exact=True).wait_for()
                     expect(page.get_by_text('HANDSHAKE_BUFFERED_MESSAGE', exact=True).count() == 1, 'handshake-buffered message lost or duplicated')
                     return {'historyRequests': page.evaluate('__control.historyRequests'), 'helloFrames': page.evaluate('__control.helloFrames'), 'bufferedMessageCount': 1}
@@ -284,7 +290,7 @@ try:
                         __control.emit(i,{type:'hello'});
                     }""")
                     page.get_by_text('MISSED_DURING_GAP', exact=True).wait_for()
-                    expect(page.get_by_text('B_ONLY_HISTORY', exact=True).count() == 1, 'reconnect repeated known user history')
+                    expect(page.locator('#messages').get_by_text('B_ONLY_HISTORY', exact=True).count() == 1, 'reconnect repeated known user history')
                     expect(page.get_by_text('KNOWN_BEFORE_GAP', exact=True).count() == 1 and page.get_by_text('MISSED_DURING_GAP', exact=True).count() == 1, 'reconnect duplicated known assistant or missed reply')
                     return {'helloFrames': page.evaluate('__control.helloFrames'), 'historyRequests': page.evaluate('__control.historyRequests'), 'knownUserCount': 1, 'knownAssistantCount': 1, 'missedAssistantCount': 1}
                 raise AssertionError(f'unknown controlled case {kind}')
@@ -349,12 +355,14 @@ try:
                 page.wait_for_timeout(250)
                 collapsed_box = page.locator('#sidebar').bounding_box()
                 collapsed = page.evaluate("document.getElementById('app').className")
-                expect(collapsed_box is None or collapsed_box['width'] < 5 or collapsed_box['x'] + collapsed_box['width'] <= 1, f'sidebar still occupies visible layout: {collapsed_box}')
+                sidebar_visibility = page.locator('#sidebar').evaluate('node => getComputedStyle(node).visibility')
+                main_collapsed_box = page.locator('#main').bounding_box()
+                expect(sidebar_visibility == 'hidden' and main_collapsed_box['x'] < 1 and main_collapsed_box['width'] >= 1439, f'sidebar still visible or main not expanded: {sidebar_visibility}, {main_collapsed_box}')
                 page.locator('#sidebar-toggle').click()
                 page.wait_for_function("document.getElementById('sidebar-toggle').getAttribute('aria-expanded') === 'true'")
                 page.wait_for_timeout(250)
                 expect(page.locator('#sidebar').bounding_box()['width'] > 100, 'sidebar failed to expand')
-                return {'lightComputedBackground': light_background, 'darkComputedBackground': dark_background, 'darkThemeSurvivedRefresh': True, 'expandedSidebarBox': expanded, 'collapsedSidebarBox': collapsed_box, 'collapsedAppClass': collapsed}
+                return {'lightComputedBackground': light_background, 'darkComputedBackground': dark_background, 'darkThemeSurvivedRefresh': True, 'expandedSidebarBox': expanded, 'collapsedSidebarBox': collapsed_box, 'collapsedSidebarVisibility': sidebar_visibility, 'mainCollapsedBox': main_collapsed_box, 'collapsedAppClass': collapsed}
             run_case('theme-and-sidebar', 'production-stack', theme_and_sidebar)
 
             def two_replies():
@@ -449,18 +457,28 @@ try:
             def reconnect_production():
                 send('[disconnect-complete]')
                 wait_snapshot(lambda data: any(call['prompt'] == '[disconnect-complete]' for call in data['calls']))
-                context.set_offline(True)
-                current = wait_snapshot(lambda data: any(message.get('content') == 'HARNESS_REPLY:[disconnect-complete]' for record in data['records'] for message in record['messages']))
-                expect('HARNESS_REPLY:[disconnect-complete]' not in page.locator('#messages').inner_text(), 'offline browser received reply before reconnect')
-                context.set_offline(False)
+                outage_started = time.monotonic()
+                try:
+                    held = transport_command('hold', from_id)
+                    expect(held['droppedSockets'] >= 1, 'transport controller did not drop an actual established SSE socket')
+                    current = wait_snapshot(lambda data: any(message.get('content') == 'HARNESS_REPLY:[disconnect-complete]' for record in data['records'] for message in record['messages']))
+                    while time.monotonic() - outage_started < 3.5:
+                        page.wait_for_timeout(100)
+                    expect('HARNESS_REPLY:[disconnect-complete]' not in page.locator('#messages').inner_text(), 'browser received reply while actual SSE socket was dropped and reconnects blocked')
+                    outage_seconds = time.monotonic() - outage_started
+                finally:
+                    released = transport_command('release', from_id)
                 page.get_by_text('HARNESS_REPLY:[disconnect-complete]', exact=True).wait_for(timeout=20000)
                 page.wait_for_function("document.getElementById('conn-label').textContent.includes('已连接')")
                 expect(page.get_by_text('HARNESS_REPLY:[disconnect-complete]', exact=True).count() == 1, 'reconnected production reply duplicated')
                 expect(page.get_by_text('HARNESS_REPLY:BROWSER_FIRST', exact=True).count() == 1 and page.get_by_text('[disconnect-complete]', exact=True).count() == 1, 'reconnect duplicated known/user messages')
-                return {'offlineCompletionPersisted': True, 'reconnectedReplyCount': 1, 'priorReplyCount': 1, 'actualBrowserNetworkOffline': True}
-            run_case('real-offline-completion-reconnect-restores-reply', 'production-stack', reconnect_production)
+                return {'backendCompletionPersistedDuringOutage': True, 'reconnectedReplyCount': 1, 'priorReplyCount': 1, 'transportFault': 'loopback proxy destroys real SSE socket and blocks reconnect requests; other HTTP requests unchanged', 'hold': held, 'release': released, 'outageSeconds': outage_seconds}
+            run_case('real-sse-socket-outage-reconnect-restores-reply', 'production-network-control', reconnect_production)
 
             def new_session():
+                if page.locator('#sidebar-toggle').get_attribute('aria-expanded') != 'true':
+                    page.locator('#sidebar-toggle').click()
+                    page.wait_for_function("document.getElementById('sidebar-toggle').getAttribute('aria-expanded') === 'true'")
                 page.locator('#new-session-btn').click()
                 page.wait_for_function("old => localStorage.getItem('harness.web.activeFrom') !== old", arg=from_id)
                 new_from = page.evaluate("localStorage.getItem('harness.web.activeFrom')")

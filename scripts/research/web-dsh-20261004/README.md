@@ -36,6 +36,24 @@ actions and delivered callbacks to impose otherwise nondeterministic ordering.
 They never invoke application-private handlers. They are labelled individually
 and cannot be represented as a production backend/real-model evaluation.
 
+`production-network-control` exercises that same production backend and actual
+Chromium EventSource through a transparent loopback HTTP proxy. A separate
+loopback-only fault-control port destroys the real SSE socket for the active
+sender and blocks reconnect attempts for at least 3.5 seconds; other HTTP
+requests are forwarded unchanged. The runtime completes during that outage,
+then browser reconnection must recover its persisted reply via actual history.
+No SSE frames or application records are fabricated in this case. The read-only
+inspector remains separate. The transport fault is always released in `finally`.
+
+The first candidate run at `a9878031a8965e59881cb3f03982a3698651a3d9`
+is retained as `FAILED`: its global text locator also matched the newly added
+sidebar/header title, its collapse oracle ignored `visibility: hidden`, and
+Playwright `set_offline` did not disconnect an already established SSE socket.
+That third false assumption left the browser offline and caused dependent
+failures. The corrected probe scopes message locators, verifies actual sidebar
+visibility/main geometry, and controls real sockets through the separate proxy.
+It does not rewrite those original observations or alter production UI code.
+
 Outputs include the exact source SHA, source/dist/static/probe SHA256 hashes,
 Chromium version, case observations, raw runtime snapshot, browser errors,
 request log, screenshots, and a per-file artifact integrity index. Output is
