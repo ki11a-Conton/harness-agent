@@ -11,3 +11,5 @@ UI U1–U4 已验收后执行 agent 默认指令与记忆优化。实施前规�
 验收按方案 A1–A4：行为RED/GREEN、固定基线成对探针、真实model request/step fingerprints、性能观察、独立审查。UI+agent最终干净源码进行一次具名全仓测试，strict usage-audit/typecheck/build/security/docs通过；portable原始证据哈希通过，再原生Git发布main。scripted≠real model quality，付费0，不声称promotion。
 
 CI Windows 确认 S2 CLI 既有I/O观察器只统计readFile，现改为实际bounded capture计数（每handle首次非零bytesRead），保留4doc/request和原ABBA/独立内容verifier控制。纳入直接相关CLI测试范围；source branch旧失败与local full中断证据保留，最终新clean源码重跑全仓。
+
+完成（2026-10-04）：A1–A4全部验收，source35663ba clean全仓8419PASS/12既有SKIP、strictnamedusage与security2135及docs/build/typecheck/diff/index均PASS；CI37185965733同SHA10/10success。source已nativeGit发布main并双ref一致，最终完成docs提交保持程序同字节。计划和完整证据见plan.md与docs/evidence/agent-context-memory-20261004.md。没有真实模型质量/promotion断言。

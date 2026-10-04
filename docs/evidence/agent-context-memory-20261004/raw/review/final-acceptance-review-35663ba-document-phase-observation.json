@@ -1,0 +1,598 @@
+{
+  "observedAt": "2026-10-04T11:50:51.475941+00:00",
+  "reviewer": "Independent final acceptance reviewer /root/final_review_35663ba",
+  "testedSourceSha": "35663ba694ae9358fe6c9ed0a08efbbae0a2faad",
+  "verdict": "FAIL",
+  "summary": {
+    "checks": 19,
+    "passed": 17,
+    "failed": [
+      "clean current source matches frozen source",
+      "every changed tracked file hash and coverage matches"
+    ]
+  },
+  "checks": [
+    {
+      "name": "clean current source matches frozen source",
+      "pass": false
+    },
+    {
+      "name": "every changed tracked file hash and coverage matches",
+      "pass": false,
+      "files": 361,
+      "failures": [
+        "docs/evidence/agent-context-memory-20261004.md",
+        "docs/evidence/agent-context-memory-20261004/artifact-index.json",
+        "docs/evidence/web-dsh-20261004.md",
+        "plan.md",
+        "tasks/AGENT-CONTEXT-MEMORY-20261004.md",
+        "tasks/WEB-DSH-20261004.md"
+      ]
+    },
+    {
+      "name": "thirteen exact source command receipts preserve logs, argv and clean state",
+      "pass": true,
+      "commands": [
+        {
+          "name": "typecheck",
+          "argv": [
+            "corepack",
+            "pnpm",
+            "typecheck"
+          ],
+          "status": "PASS",
+          "exitCode": 0,
+          "cleanBefore": true,
+          "cleanAfter": true,
+          "logSha256Matches": true,
+          "pass": true
+        },
+        {
+          "name": "build",
+          "argv": [
+            "corepack",
+            "pnpm",
+            "build"
+          ],
+          "status": "PASS",
+          "exitCode": 0,
+          "cleanBefore": true,
+          "cleanAfter": true,
+          "logSha256Matches": true,
+          "pass": true
+        },
+        {
+          "name": "context-probe",
+          "argv": [
+            "node",
+            "scripts/research/agent-context-memory-20261004/context-probe.mjs",
+            "/workspace/harness-agent",
+            "/workspace/harness-agent/.ci/agent-context-memory-20261004/frozen-35663ba/context-probe"
+          ],
+          "status": "PASS",
+          "exitCode": 0,
+          "cleanBefore": true,
+          "cleanAfter": true,
+          "logSha256Matches": true,
+          "pass": true
+        },
+        {
+          "name": "memory-probe",
+          "argv": [
+            "node",
+            "scripts/research/agent-context-memory-20261004/memory-probe.mjs",
+            "/workspace/harness-agent",
+            "/workspace/harness-agent/.ci/agent-context-memory-20261004/frozen-35663ba/memory-probe"
+          ],
+          "status": "PASS",
+          "exitCode": 0,
+          "cleanBefore": true,
+          "cleanAfter": true,
+          "logSha256Matches": true,
+          "pass": true
+        },
+        {
+          "name": "memory-performance",
+          "argv": [
+            "node",
+            "scripts/research/agent-context-memory-20261004/memory-performance-probe.mjs",
+            "/workspace/harness-agent",
+            "/workspace/harness-agent/.ci/agent-context-memory-20261004/frozen-35663ba/memory-performance"
+          ],
+          "status": "PASS",
+          "exitCode": 0,
+          "cleanBefore": true,
+          "cleanAfter": true,
+          "logSha256Matches": true,
+          "pass": true
+        },
+        {
+          "name": "joint-browser",
+          "argv": [
+            "python3",
+            "scripts/research/web-dsh-20261004/browser.py",
+            "--mode",
+            "candidate",
+            "--require-clean",
+            "--out",
+            "/workspace/harness-agent/.ci/agent-context-memory-20261004/frozen-35663ba/joint-browser"
+          ],
+          "status": "PASS",
+          "exitCode": 0,
+          "cleanBefore": true,
+          "cleanAfter": true,
+          "logSha256Matches": true,
+          "pass": true
+        },
+        {
+          "name": "security",
+          "argv": [
+            "corepack",
+            "pnpm",
+            "test:security"
+          ],
+          "status": "PASS",
+          "exitCode": 0,
+          "cleanBefore": true,
+          "cleanAfter": true,
+          "logSha256Matches": true,
+          "pass": true
+        },
+        {
+          "name": "docs-verify",
+          "argv": [
+            "corepack",
+            "pnpm",
+            "docs:verify"
+          ],
+          "status": "PASS",
+          "exitCode": 0,
+          "cleanBefore": true,
+          "cleanAfter": true,
+          "logSha256Matches": true,
+          "pass": true
+        },
+        {
+          "name": "full",
+          "argv": [
+            "python3",
+            "/workspace/harness-agent/scripts/research/agent-context-memory-20261004/subreaper.py",
+            "corepack",
+            "pnpm",
+            "test"
+          ],
+          "status": "PASS",
+          "exitCode": 0,
+          "cleanBefore": true,
+          "cleanAfter": true,
+          "logSha256Matches": true,
+          "pass": true
+        },
+        {
+          "name": "usage-audit",
+          "argv": [
+            "node",
+            "apps/cli/dist/main.js",
+            "usage-audit",
+            "--run",
+            "agent-context-memory-linux-35663ba694ae-1791099000",
+            "--strict"
+          ],
+          "status": "PASS",
+          "exitCode": 0,
+          "cleanBefore": true,
+          "cleanAfter": true,
+          "logSha256Matches": true,
+          "pass": true
+        },
+        {
+          "name": "artifact-integrity",
+          "argv": [
+            "node",
+            "scripts/research/agent-trust-20261004/verify-artifacts.mjs",
+            "docs/evidence/web-dsh-20261004/artifact-index.json"
+          ],
+          "status": "PASS",
+          "exitCode": 0,
+          "cleanBefore": true,
+          "cleanAfter": true,
+          "logSha256Matches": true,
+          "pass": true
+        },
+        {
+          "name": "context-memory-artifact-integrity",
+          "argv": [
+            "node",
+            "scripts/research/agent-trust-20261004/verify-artifacts.mjs",
+            "docs/evidence/agent-context-memory-20261004/artifact-index.json"
+          ],
+          "status": "PASS",
+          "exitCode": 0,
+          "cleanBefore": true,
+          "cleanAfter": true,
+          "logSha256Matches": true,
+          "pass": true
+        },
+        {
+          "name": "diff-check",
+          "argv": [
+            "/usr/bin/git",
+            "diff",
+            "--check",
+            "dec7bd1237870f1d46aa063a7ba1a635e4c523c0",
+            "35663ba694ae9358fe6c9ed0a08efbbae0a2faad"
+          ],
+          "status": "PASS",
+          "exitCode": 0,
+          "cleanBefore": true,
+          "cleanAfter": true,
+          "logSha256Matches": true,
+          "pass": true
+        }
+      ],
+      "argvReview": "Compared all13 argv against frozen-acceptance.py required commands; full uses subreaper -> corepack pnpm test, usage uses exact --run with --strict."
+    },
+    {
+      "name": "full suite completed successfully",
+      "pass": true,
+      "testsPassed": 8419,
+      "testsSkipped": 12,
+      "filesPassed": 456,
+      "filesSkipped": 1,
+      "durationSeconds": 648.096
+    },
+    {
+      "name": "no new skip; same twelve platform/fixture skips as previous full",
+      "pass": true,
+      "skips": {
+        "packages/tools/src/process/executor.test.ts": {
+          "total": 30,
+          "skipped": 7
+        },
+        "apps/cli/src/n5-pair-setup.test.ts": {
+          "total": 8,
+          "skipped": 1
+        },
+        "packages/tools/src/process/r96-windows-execution-boundary.test.ts": {
+          "total": 25,
+          "skipped": 3
+        },
+        "apps/cli/src/n2-release-cli-forward.test.ts": {
+          "total": 1,
+          "skipped": 1
+        }
+      },
+      "previousPassed": 8295,
+      "increase": 124,
+      "newUiTests": 13,
+      "newAgentTests": 111
+    },
+    {
+      "name": "strict audit bound to exact full-suite named production observations",
+      "pass": true,
+      "runId": "agent-context-memory-linux-35663ba694ae-1791099000",
+      "observations": 7,
+      "capabilities": [
+        "createActivationRecorderV2",
+        "classifySecurityOutcomeV2",
+        "canonical V3 writer",
+        "strict promotion loader",
+        "durable RecoveryStore",
+        "resolveChampionHarness",
+        "GateEvidenceV2 generator"
+      ]
+    },
+    {
+      "name": "context probe source/dist unchanged and clean",
+      "pass": true,
+      "fingerprints": 11
+    },
+    {
+      "name": "memory probe source/dist unchanged and clean",
+      "pass": true,
+      "fingerprints": 13
+    },
+    {
+      "name": "performance probe source/dist unchanged and clean",
+      "pass": true,
+      "fingerprints": 8
+    },
+    {
+      "name": "production instruction29, memory30, actual Harness12, supplement2 pass",
+      "pass": true,
+      "instructionChecks": 29,
+      "memoryStoreCases": 30,
+      "harnessCases": 12,
+      "supplementCases": 2,
+      "scriptedGenerateCalls": 12,
+      "realProviderCalls": 0,
+      "paidCalls": 0
+    },
+    {
+      "name": "10k fixed performance fixture/probe equality and correctness",
+      "pass": true,
+      "cases": [
+        {
+          "backend": "jsonl",
+          "name": "warm-fts",
+          "baselineSearchMedianMs": 31.846048999999994,
+          "candidateSearchMedianMs": 37.910203999999965,
+          "candidateRetrievalMs": 56.78443000000004,
+          "matchCount": 2000
+        },
+        {
+          "backend": "jsonl",
+          "name": "chinese-substring",
+          "baselineSearchMedianMs": 30.93408000000005,
+          "candidateSearchMedianMs": 39.60208499999999,
+          "candidateRetrievalMs": 573.0319979999999,
+          "matchCount": 2000
+        },
+        {
+          "backend": "jsonl",
+          "name": "structured-do",
+          "baselineSearchMedianMs": 29.534541999999874,
+          "candidateSearchMedianMs": 33.7300580000001,
+          "candidateRetrievalMs": 61.553666999999905,
+          "matchCount": 2000
+        },
+        {
+          "backend": "jsonl",
+          "name": "actual-miss",
+          "baselineSearchMedianMs": 29.489332999999988,
+          "candidateSearchMedianMs": 33.70772499999998,
+          "candidateRetrievalMs": 31.137473999999884,
+          "matchCount": 0
+        },
+        {
+          "backend": "sqlite",
+          "name": "warm-fts",
+          "baselineSearchMedianMs": 9.219685000000027,
+          "candidateSearchMedianMs": 62.455487000000176,
+          "candidateRetrievalMs": 65.06901800000014,
+          "matchCount": 2000
+        },
+        {
+          "backend": "sqlite",
+          "name": "chinese-substring",
+          "baselineSearchMedianMs": 0.03158799999982875,
+          "candidateSearchMedianMs": 55.173251000000164,
+          "candidateRetrievalMs": 644.7070950000002,
+          "matchCount": 2000
+        },
+        {
+          "backend": "sqlite",
+          "name": "structured-do",
+          "baselineSearchMedianMs": 0.025970000000143045,
+          "candidateSearchMedianMs": 53.36886000000004,
+          "candidateRetrievalMs": 89.74531399999978,
+          "matchCount": 2000
+        },
+        {
+          "backend": "sqlite",
+          "name": "actual-miss",
+          "baselineSearchMedianMs": 0.024085999999897467,
+          "candidateSearchMedianMs": 55.453034000000116,
+          "candidateRetrievalMs": 58.01758599999994,
+          "matchCount": 0
+        }
+      ],
+      "interpretation": "SQLite supplement scans live rows passing type/scope filters: O(n) scan cost. No retrieval throughput improvement claim. Runtime still applies existing TopK/safety/lifecycle/session gates; search contract has no new limit."
+    },
+    {
+      "name": "browser26/74 actual observations and indexed14 artifact hashes pass",
+      "pass": true,
+      "groups": {
+        "controlled-protocol": 12,
+        "production-stack": 13,
+        "production-network-control": 1
+      },
+      "caseAssertions": 70,
+      "infrastructureAssertions": 4,
+      "artifacts": 14,
+      "hashFailures": []
+    },
+    {
+      "name": "browser source frozen clean; graceful fixture shutdown",
+      "pass": true
+    },
+    {
+      "name": "persisted real socket outage and exit7 gate observations match",
+      "pass": true,
+      "sessions": 2,
+      "events": 184,
+      "terminalTurns": 9,
+      "terminalStatusCounts": {
+        "turn.completed": 7,
+        "turn.failed": 1,
+        "turn.cancelled": 1
+      },
+      "verificationFailureAttempts": 3,
+      "failedTurnCompleted": 0,
+      "transportFaults": [
+        {
+          "action": "hold",
+          "from": "2f6d9916-22b6-416d-8c75-fb31b3c3cb1d",
+          "droppedSockets": 1,
+          "releasedRequests": 0,
+          "at": "2026-10-04T07:30:19.302Z"
+        },
+        {
+          "action": "held-reconnect",
+          "from": "2f6d9916-22b6-416d-8c75-fb31b3c3cb1d",
+          "at": "2026-10-04T07:30:22.305Z"
+        },
+        {
+          "action": "release",
+          "from": "2f6d9916-22b6-416d-8c75-fb31b3c3cb1d",
+          "droppedSockets": 0,
+          "releasedRequests": 1,
+          "at": "2026-10-04T07:30:22.806Z"
+        }
+      ]
+    },
+    {
+      "name": "pre-completion portable index verifies docs/evidence/web-dsh-20261004/artifact-index.json",
+      "pass": true,
+      "files": 71,
+      "failures": []
+    },
+    {
+      "name": "pre-completion portable index verifies docs/evidence/agent-context-memory-20261004/artifact-index.json",
+      "pass": true,
+      "files": 332,
+      "failures": []
+    },
+    {
+      "name": "prior independent source17/scenarios44/cap512 and observer13 preserved",
+      "pass": true,
+      "sourceChecks": 17,
+      "scenarios": 44,
+      "budgetMatrixSamples": 512,
+      "observerChecks": 13,
+      "probeRerun": false,
+      "reuse": "Production source/dist bytes unchanged as verified by observer-equivalence receipt."
+    },
+    {
+      "name": "earlier security FAIL, interrupted full and failed CI retained honestly",
+      "pass": true,
+      "securityStatus": "FAIL",
+      "interruptedStatus": "INTERRUPTED",
+      "earlierCiRun": 37185159270,
+      "earlierCiConclusion": "failure"
+    },
+    {
+      "name": "native exact-source CI37185965733 all10 jobs successful",
+      "pass": true,
+      "runId": 37185965733,
+      "url": "https://github.com/ki11a-Conton/harness-agent/actions/runs/37185965733",
+      "jobs": [
+        {
+          "name": "offline cold-start (ubuntu)",
+          "headSha": "35663ba694ae9358fe6c9ed0a08efbbae0a2faad",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "real formal offline (windows)",
+          "headSha": "35663ba694ae9358fe6c9ed0a08efbbae0a2faad",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "install · typecheck · test · build · benchmark-smoke · audit (ubuntu-latest, ubuntu)",
+          "headSha": "35663ba694ae9358fe6c9ed0a08efbbae0a2faad",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "coverage gate (ubuntu)",
+          "headSha": "35663ba694ae9358fe6c9ed0a08efbbae0a2faad",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "r97-r98 closed loop (windows-latest)",
+          "headSha": "35663ba694ae9358fe6c9ed0a08efbbae0a2faad",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "r97-r98 closed loop (ubuntu-latest)",
+          "headSha": "35663ba694ae9358fe6c9ed0a08efbbae0a2faad",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "real formal offline (ubuntu)",
+          "headSha": "35663ba694ae9358fe6c9ed0a08efbbae0a2faad",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "install · typecheck · test · build · benchmark-smoke · audit (windows-latest, windows)",
+          "headSha": "35663ba694ae9358fe6c9ed0a08efbbae0a2faad",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "release attestation (P38-12)",
+          "headSha": "35663ba694ae9358fe6c9ed0a08efbbae0a2faad",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "dual-platform acceptance (same SHA)",
+          "headSha": "35663ba694ae9358fe6c9ed0a08efbbae0a2faad",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "runReceiptSha256": "768f19a35706c1d9b806ab28e1cdc15be5318db2f86b2827d2be65ea991adcf6",
+      "jobsReceiptSha256": "26e0efca86906147870297df329a6fa383b696325d912aea290657e464b7b000",
+      "failedSteps": [],
+      "skippedSteps": [
+        {
+          "job": "install · typecheck · test · build · benchmark-smoke · audit (ubuntu-latest, ubuntu)",
+          "step": "Publish failing test names to the public job summary"
+        },
+        {
+          "job": "install · typecheck · test · build · benchmark-smoke · audit (ubuntu-latest, ubuntu)",
+          "step": "Campaign runner self-check — offline, 0 provider calls (E4-R84)"
+        },
+        {
+          "job": "install · typecheck · test · build · benchmark-smoke · audit (ubuntu-latest, ubuntu)",
+          "step": "Upload e4-09 diagnostic bundles (E4-R40, failure only)"
+        },
+        {
+          "job": "install · typecheck · test · build · benchmark-smoke · audit (ubuntu-latest, ubuntu)",
+          "step": "Upload R55 parent-verifier diagnostics (E4-R60, failure only)"
+        },
+        {
+          "job": "r97-r98 closed loop (windows-latest)",
+          "step": "Publish the closed-loop phase + failing tests to the public summary"
+        },
+        {
+          "job": "r97-r98 closed loop (ubuntu-latest)",
+          "step": "Publish the closed-loop phase + failing tests to the public summary"
+        },
+        {
+          "job": "install · typecheck · test · build · benchmark-smoke · audit (windows-latest, windows)",
+          "step": "Publish failing test names to the public job summary"
+        },
+        {
+          "job": "install · typecheck · test · build · benchmark-smoke · audit (windows-latest, windows)",
+          "step": "Upload e4-09 diagnostic bundles (E4-R40, failure only)"
+        },
+        {
+          "job": "install · typecheck · test · build · benchmark-smoke · audit (windows-latest, windows)",
+          "step": "Upload R55 parent-verifier diagnostics (E4-R60, failure only)"
+        },
+        {
+          "job": "release attestation (P38-12)",
+          "step": "Fail job when release not ready (P38.3-7)"
+        },
+        {
+          "job": "dual-platform acceptance (same SHA)",
+          "step": "Fail job when the two legs are not one acceptance unit (S7)"
+        }
+      ]
+    }
+  ],
+  "manifestSha256": "a56e97d7ac004c65490701b103bb971dd5675b770f321ef9560abfd0a51179b5",
+  "paidCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "promotion": "NOT_RUN",
+  "remainingRootWork": [
+    "Package final original raw evidence and CI receipts; update completion plan/report.",
+    "Review completed portable index/source equivalence and native main publication."
+  ],
+  "limitations": [
+    "Reviewer inspected receipts/source/hash equivalence. No tests rerun, no networkconnector, no tracked edits.",
+    "Local Linux manifest windows=NOT_RUN remains truthful. Separate exact-source CI verifies Windows job success. Native API does not provide every internal test count/log.",
+    "Scripted fixtures/strict usage observations prove deterministic wiring/correctness, not real model task quality or strategy promotion benefit.",
+    "SQLite full filtered-row scan adds latency: warmFTS9.22→62.455ms and miss0.024→55.453ms on10krows; no throughput improvement.",
+    "Web sender-session bindings are in-process; same-backend refresh was tested, restart persistence was not.",
+    "Prior source17/scenarios44/cap512 reused via independently recorded unchanged source/dist hashes; observer-only change checked13/13."
+  ]
+}

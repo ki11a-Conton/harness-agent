@@ -1,0 +1,419 @@
+{
+  "observedAt": "2026-10-04T07:33:12.617989+00:00",
+  "reviewer": "Independent context/memory reviewer",
+  "testedSourceSha": "35663ba694ae9358fe6c9ed0a08efbbae0a2faad",
+  "previousIndependentSourceSha": "ecc45e51055de66506e0bde2b42e0f8ebc098606",
+  "verdict": "SOURCE_EQUIVALENCE_AND_OBSERVER_PASS",
+  "summary": {
+    "checks": 13,
+    "passed": 13,
+    "failed": []
+  },
+  "checks": [
+    {
+      "pass": true,
+      "name": "review current clean source",
+      "sourceSha": "35663ba694ae9358fe6c9ed0a08efbbae0a2faad",
+      "gitStatus": ""
+    },
+    {
+      "pass": true,
+      "name": "all twelve production source/distribution bytes unchanged",
+      "fingerprints": [
+        {
+          "path": "packages/context/src/discovery.ts",
+          "sha256": "1bdec0d2aa562b210870cf577adb56ad872b6c860b66979ae87903d1b83c3a67",
+          "bytes": 10543,
+          "equalToIndependentlyTestedEcc45e5": true
+        },
+        {
+          "path": "packages/context/dist/discovery.js",
+          "sha256": "1ce3ddb756a5414cb02f9de2eefb6a1099576c45bce17635cd2690b984afe9d5",
+          "bytes": 10638,
+          "equalToIndependentlyTestedEcc45e5": true
+        },
+        {
+          "path": "packages/harness/src/compose/compose-context.ts",
+          "sha256": "4cfd5671140bb1301e533a527bf42ad4d07ee138c69ac676b62bc9e4d41046b2",
+          "bytes": 6695,
+          "equalToIndependentlyTestedEcc45e5": true
+        },
+        {
+          "path": "packages/harness/dist/compose/compose-context.js",
+          "sha256": "41bed417a0d28a02c7386e446c75afed2052c2a78565f5e767c63e38a2724d1b",
+          "bytes": 5567,
+          "equalToIndependentlyTestedEcc45e5": true
+        },
+        {
+          "path": "packages/harness/src/effective-instruction-context.ts",
+          "sha256": "2de2ef2e1c5f84d269ba3522f26e334e1050492933eb546a99d75f18dddabef4",
+          "bytes": 1042,
+          "equalToIndependentlyTestedEcc45e5": true
+        },
+        {
+          "path": "packages/harness/dist/effective-instruction-context.js",
+          "sha256": "c6c292da661bd76e846fa8c58c18ec90e84f106ebc8211977370f6351b9a2927",
+          "bytes": 996,
+          "equalToIndependentlyTestedEcc45e5": true
+        },
+        {
+          "path": "packages/memory/src/memory-store.ts",
+          "sha256": "925f718e3f92baf32fb2868bafcdcd0701cb520e441049892848a4cb6d494caf",
+          "bytes": 9767,
+          "equalToIndependentlyTestedEcc45e5": true
+        },
+        {
+          "path": "packages/memory/dist/memory-store.js",
+          "sha256": "8722ce368b39c5626668437f3ced379d035ae938e480f693a6971f12e3cf5ed5",
+          "bytes": 8198,
+          "equalToIndependentlyTestedEcc45e5": true
+        },
+        {
+          "path": "packages/memory/src/search-text.ts",
+          "sha256": "e569e7f418e3edf87fba7fd2e9c1a1bdf7511d78ea85abcecd863def5c201fd0",
+          "bytes": 1340,
+          "equalToIndependentlyTestedEcc45e5": true
+        },
+        {
+          "path": "packages/memory/dist/search-text.js",
+          "sha256": "077ce28fe2280d104af3d98da7c07d11582f61ea7ad0beec1ccc2f730975b202",
+          "bytes": 1278,
+          "equalToIndependentlyTestedEcc45e5": true
+        },
+        {
+          "path": "packages/memory/src/sqlite-memory-store.ts",
+          "sha256": "f278be463dec22f5ed15039e6e727b22a942eb6afbaab19e6961e177ae20cb6f",
+          "bytes": 22685,
+          "equalToIndependentlyTestedEcc45e5": true
+        },
+        {
+          "path": "packages/memory/dist/sqlite-memory-store.js",
+          "sha256": "300bf553eb208898c79d7d557b5dfb8b649b5e01f28a5b934ac56eb1d39dceb7",
+          "bytes": 18780,
+          "equalToIndependentlyTestedEcc45e5": true
+        }
+      ]
+    },
+    {
+      "pass": true,
+      "name": "source changes are observer test only",
+      "productionChanged": []
+    },
+    {
+      "pass": true,
+      "name": "original failure and no-match attempt kept honestly"
+    },
+    {
+      "pass": true,
+      "name": "observer GREEN test source matches frozen commit"
+    },
+    {
+      "pass": true,
+      "name": "directed seventeen files267 tests pass with no skips"
+    },
+    {
+      "pass": true,
+      "name": "real bounded IO observation candidate repetition0",
+      "requests": 6,
+      "defaultDiscovery": {
+        "documentReadFileCalls": 0,
+        "documentCaptures": 0,
+        "documentCaptureBytes": 0,
+        "directoryListings": 0
+      },
+      "actualFilesystem": {
+        "documentReadFileCalls": 0,
+        "documentCaptures": 3,
+        "documentCaptureBytes": 153,
+        "directoryListings": 5
+      }
+    },
+    {
+      "pass": true,
+      "name": "real bounded IO observation baseline repetition0",
+      "requests": 8,
+      "defaultDiscovery": {
+        "documentReadFileCalls": 0,
+        "documentCaptures": 32,
+        "documentCaptureBytes": 1568,
+        "directoryListings": 40
+      },
+      "actualFilesystem": {
+        "documentReadFileCalls": 0,
+        "documentCaptures": 32,
+        "documentCaptureBytes": 1568,
+        "directoryListings": 45
+      }
+    },
+    {
+      "pass": true,
+      "name": "real bounded IO observation baseline repetition1",
+      "requests": 8,
+      "defaultDiscovery": {
+        "documentReadFileCalls": 0,
+        "documentCaptures": 32,
+        "documentCaptureBytes": 1568,
+        "directoryListings": 40
+      },
+      "actualFilesystem": {
+        "documentReadFileCalls": 0,
+        "documentCaptures": 32,
+        "documentCaptureBytes": 1568,
+        "directoryListings": 45
+      }
+    },
+    {
+      "pass": true,
+      "name": "real bounded IO observation candidate repetition1",
+      "requests": 6,
+      "defaultDiscovery": {
+        "documentReadFileCalls": 0,
+        "documentCaptures": 0,
+        "documentCaptureBytes": 0,
+        "directoryListings": 0
+      },
+      "actualFilesystem": {
+        "documentReadFileCalls": 0,
+        "documentCaptures": 3,
+        "documentCaptureBytes": 153,
+        "directoryListings": 5
+      }
+    },
+    {
+      "pass": true,
+      "name": "unchanged two AB/BA pairs verify actual independent content",
+      "verifierHash": "c9f2736296fb1e7e3bba73676739c97381d018debafa0ac6a8af5d5086243c26",
+      "orders": [
+        "BA",
+        "AB"
+      ],
+      "logicalRuns": 4,
+      "modelCallAttempts": 28
+    },
+    {
+      "pass": true,
+      "name": "all directed observation artifacts retain receipt hashes",
+      "artifacts": [
+        {
+          "path": "green-evidence/cli-concurrency-results.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "green-evidence/cli-offline-results.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "green-evidence/cli-paired-results.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "green.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "green.stderr.log",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "green.stdout.log",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "observer-only.diff",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "original-test.ts",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "red-focused-receipt.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "red-focused.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "red-focused.stderr.log",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "red-focused.stdout.log",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "red-receipt.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "red.json",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "red.stderr.log",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "red.stdout.log",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "typecheck.stderr.log",
+          "bytesMatch": true,
+          "sha256Match": true
+        },
+        {
+          "path": "typecheck.stdout.log",
+          "bytesMatch": true,
+          "sha256Match": true
+        }
+      ]
+    },
+    {
+      "pass": true,
+      "name": "latest frozen targeted gates pass",
+      "commands": [
+        {
+          "name": "typecheck",
+          "status": "PASS"
+        },
+        {
+          "name": "build",
+          "status": "PASS"
+        },
+        {
+          "name": "context-probe",
+          "status": "PASS"
+        },
+        {
+          "name": "memory-probe",
+          "status": "PASS"
+        },
+        {
+          "name": "memory-performance",
+          "status": "PASS"
+        },
+        {
+          "name": "joint-browser",
+          "status": "PASS"
+        },
+        {
+          "name": "security",
+          "status": "PASS"
+        },
+        {
+          "name": "docs-verify",
+          "status": "PASS"
+        },
+        {
+          "name": "full",
+          "status": "RUNNING"
+        }
+      ]
+    }
+  ],
+  "observations": [
+    {
+      "arm": "candidate",
+      "repetition": 0,
+      "requestCount": 6,
+      "defaultDiscovery": {
+        "documentReadFileCalls": 0,
+        "documentCaptures": 0,
+        "documentCaptureBytes": 0,
+        "directoryListings": 0
+      },
+      "actualFilesystem": {
+        "documentReadFileCalls": 0,
+        "documentCaptures": 3,
+        "documentCaptureBytes": 153,
+        "directoryListings": 5
+      }
+    },
+    {
+      "arm": "baseline",
+      "repetition": 0,
+      "requestCount": 8,
+      "defaultDiscovery": {
+        "documentReadFileCalls": 0,
+        "documentCaptures": 32,
+        "documentCaptureBytes": 1568,
+        "directoryListings": 40
+      },
+      "actualFilesystem": {
+        "documentReadFileCalls": 0,
+        "documentCaptures": 32,
+        "documentCaptureBytes": 1568,
+        "directoryListings": 45
+      }
+    },
+    {
+      "arm": "baseline",
+      "repetition": 1,
+      "requestCount": 8,
+      "defaultDiscovery": {
+        "documentReadFileCalls": 0,
+        "documentCaptures": 32,
+        "documentCaptureBytes": 1568,
+        "directoryListings": 40
+      },
+      "actualFilesystem": {
+        "documentReadFileCalls": 0,
+        "documentCaptures": 32,
+        "documentCaptureBytes": 1568,
+        "directoryListings": 45
+      }
+    },
+    {
+      "arm": "candidate",
+      "repetition": 1,
+      "requestCount": 6,
+      "defaultDiscovery": {
+        "documentReadFileCalls": 0,
+        "documentCaptures": 0,
+        "documentCaptureBytes": 0,
+        "directoryListings": 0
+      },
+      "actualFilesystem": {
+        "documentReadFileCalls": 0,
+        "documentCaptures": 3,
+        "documentCaptureBytes": 153,
+        "directoryListings": 5
+      }
+    }
+  ],
+  "independent512ProbeReRun": false,
+  "reuseReason": "Production source/distribution bytes are identical to the previous clean source with44/44 independent scenarios and512 cap checks. Only CLI test observer and docs/evidence changed; no new production concern.",
+  "observationMethod": "Test decorates actual returned FileHandle.read; counts successful captures once per handle and actual bytesRead, retains readFile/directory counters; AsyncLocalStorage tags actual default discovery. It forwards real open/read and does not supply simulated file bytes.",
+  "scope": "No tracked source/tests/docs/plan edits, no builds, no full-suite run by reviewer. Viewed implementation diff and directed paired raw artifacts.",
+  "fullAcceptance": {
+    "status": "RUNNING",
+    "full": "RUNNING",
+    "usageAudit": "NOT_RUN"
+  },
+  "paidCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "promotion": "NOT_RUN",
+  "limitations": [
+    "Final full joint suite, strict usage-audit, current-source CI and publication remain root acceptance work.",
+    "This is deterministic fixture content/wiring and I/O observation. It does not demonstrate model quality, promoted strategy benefit, or broad performance improvement.",
+    "SQLite linear-scan costs already quantified in prior source review remain unchanged."
+  ]
+}

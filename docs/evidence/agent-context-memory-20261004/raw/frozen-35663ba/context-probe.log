@@ -1,0 +1,387 @@
+{
+  "sourceHead": "35663ba694ae9358fe6c9ed0a08efbbae0a2faad",
+  "status": "PASS",
+  "checks": 29,
+  "passed": 29,
+  "cases": [
+    {
+      "name": "zero",
+      "cap": 0,
+      "sourceBytes": 12,
+      "outputBytes": 0,
+      "readCount": 0,
+      "readReturnedBytes": 0,
+      "overrun": false
+    },
+    {
+      "name": "tiny-one-byte",
+      "cap": 1,
+      "sourceBytes": 12,
+      "outputBytes": 1,
+      "readCount": 0,
+      "readReturnedBytes": 0,
+      "overrun": false
+    },
+    {
+      "name": "tiny-four-byte",
+      "cap": 4,
+      "sourceBytes": 16,
+      "outputBytes": 3,
+      "readCount": 0,
+      "readReturnedBytes": 0,
+      "overrun": false
+    },
+    {
+      "name": "ascii-single-line",
+      "cap": 100,
+      "sourceBytes": 1000,
+      "outputBytes": 100,
+      "readCount": 0,
+      "readReturnedBytes": 0,
+      "overrun": false
+    },
+    {
+      "name": "utf8-single-line",
+      "cap": 99,
+      "sourceBytes": 1000,
+      "outputBytes": 98,
+      "readCount": 0,
+      "readReturnedBytes": 0,
+      "overrun": false
+    },
+    {
+      "name": "multi-line",
+      "cap": 100,
+      "sourceBytes": 800,
+      "outputBytes": 98,
+      "readCount": 0,
+      "readReturnedBytes": 0,
+      "overrun": false
+    },
+    {
+      "name": "exact-cap",
+      "cap": 13,
+      "sourceBytes": 13,
+      "outputBytes": 13,
+      "readCount": 0,
+      "readReturnedBytes": 0,
+      "overrun": false
+    },
+    {
+      "name": "large-one-line",
+      "cap": 50000,
+      "sourceBytes": 16777216,
+      "outputBytes": 50000,
+      "readCount": 0,
+      "readReturnedBytes": 0,
+      "overrun": false
+    },
+    {
+      "name": "large-many-lines",
+      "cap": 50000,
+      "sourceBytes": 16777312,
+      "outputBytes": 49925,
+      "readCount": 0,
+      "readReturnedBytes": 0,
+      "overrun": false
+    },
+    {
+      "name": "cwd-file-symlink",
+      "cap": 100,
+      "sourceBytes": 28,
+      "outputBytes": 0,
+      "readCount": 0,
+      "readReturnedBytes": 0,
+      "overrun": false
+    },
+    {
+      "name": "nan-budget",
+      "cap": null,
+      "sourceBytes": 3,
+      "outputBytes": 0,
+      "readCount": 0,
+      "readReturnedBytes": 0,
+      "overrun": false,
+      "error": "Instruction discovery budget must be finite and non-negative"
+    },
+    {
+      "name": "negative-budget",
+      "cap": -1,
+      "sourceBytes": 3,
+      "outputBytes": 0,
+      "readCount": 0,
+      "readReturnedBytes": 0,
+      "overrun": false,
+      "error": "Instruction discovery budget must be finite and non-negative"
+    }
+  ],
+  "wire": [
+    {
+      "kind": "pipeline",
+      "mode": "allowed",
+      "discovered": [
+        "/workspace/harness-agent/.ci/agent-context-memory-20261004/frozen-35663ba/context-probe/fixtures/pipeline-allowed/AGENTS.md"
+      ],
+      "admitted": [
+        "/workspace/harness-agent/.ci/agent-context-memory-20261004/frozen-35663ba/context-probe/fixtures/pipeline-allowed/AGENTS.md"
+      ],
+      "injected": [],
+      "report": {
+        "used": 9,
+        "available": 9991,
+        "dropped": 0,
+        "compressed": 0,
+        "messagesTokens": 0
+      }
+    },
+    {
+      "kind": "pipeline",
+      "mode": "injection",
+      "discovered": [
+        "/workspace/harness-agent/.ci/agent-context-memory-20261004/frozen-35663ba/context-probe/fixtures/pipeline-injection/AGENTS.md"
+      ],
+      "admitted": [],
+      "injected": [
+        {
+          "id": "/workspace/harness-agent/.ci/agent-context-memory-20261004/frozen-35663ba/context-probe/fixtures/pipeline-injection/AGENTS.md",
+          "source": "project",
+          "reasons": [
+            "dismiss-previous-instructions",
+            "dismiss-all-instructions",
+            "override-own-instructions",
+            "extract-system-prompt"
+          ]
+        }
+      ],
+      "report": {
+        "used": 3,
+        "available": 9997,
+        "dropped": 0,
+        "compressed": 0,
+        "messagesTokens": 0
+      }
+    },
+    {
+      "kind": "pipeline",
+      "mode": "budget",
+      "discovered": [
+        "/workspace/harness-agent/.ci/agent-context-memory-20261004/frozen-35663ba/context-probe/fixtures/pipeline-budget/AGENTS.md"
+      ],
+      "admitted": [],
+      "injected": [],
+      "report": {
+        "used": 3,
+        "available": 97,
+        "dropped": 1,
+        "compressed": 1,
+        "messagesTokens": 0
+      }
+    },
+    {
+      "kind": "harness",
+      "mode": "allowed",
+      "outcomes": [
+        {
+          "status": "completed"
+        },
+        {
+          "status": "completed"
+        }
+      ],
+      "requests": 2,
+      "bodiesVisible": [
+        true,
+        true
+      ],
+      "instructionFingerprints": [
+        "6cabef00789c125f5f27a8945c2dc9b49ed7869e7893616f2ce78ae20cdbabc4",
+        "04d4f5d855af5bf864c8078ea8737a91b0fefd15421eee650bede4a48f51f506"
+      ],
+      "steps": [
+        {
+          "instructionSources": [
+            {
+              "kind": "system",
+              "source": "system",
+              "contentHash": "8287ec591ead036190827207e85ecff23c8324193142e383ddd22775eb51c897"
+            },
+            {
+              "kind": "project_instruction",
+              "source": "/workspace/harness-agent/.ci/agent-context-memory-20261004/frozen-35663ba/context-probe/fixtures/harness-allowed/AGENTS.md",
+              "contentHash": "9ec647f2486301c8afa9bc9722f0e367854a20c6f49824a6e8d797efd52d3358",
+              "path": "/workspace/harness-agent/.ci/agent-context-memory-20261004/frozen-35663ba/context-probe/fixtures/harness-allowed/AGENTS.md"
+            }
+          ],
+          "instructionFingerprint": "6cabef00789c125f5f27a8945c2dc9b49ed7869e7893616f2ce78ae20cdbabc4"
+        },
+        {
+          "instructionSources": [
+            {
+              "kind": "system",
+              "source": "system",
+              "contentHash": "8287ec591ead036190827207e85ecff23c8324193142e383ddd22775eb51c897"
+            },
+            {
+              "kind": "project_instruction",
+              "source": "/workspace/harness-agent/.ci/agent-context-memory-20261004/frozen-35663ba/context-probe/fixtures/harness-allowed/AGENTS.md",
+              "contentHash": "bf1758cfda4f7d1065c0c64360717563f4a9d426a51f41604cec1d28b07526ec",
+              "path": "/workspace/harness-agent/.ci/agent-context-memory-20261004/frozen-35663ba/context-probe/fixtures/harness-allowed/AGENTS.md"
+            }
+          ],
+          "instructionFingerprint": "04d4f5d855af5bf864c8078ea8737a91b0fefd15421eee650bede4a48f51f506"
+        }
+      ],
+      "fingerprintChanged": true,
+      "discovered": [
+        {
+          "path": "/workspace/harness-agent/.ci/agent-context-memory-20261004/frozen-35663ba/context-probe/fixtures/harness-allowed/AGENTS.md",
+          "scope": "cwd",
+          "sizeBytes": 18,
+          "truncated": false
+        },
+        {
+          "path": "/workspace/harness-agent/.ci/agent-context-memory-20261004/frozen-35663ba/context-probe/fixtures/harness-allowed/AGENTS.md",
+          "scope": "cwd",
+          "sizeBytes": 17,
+          "truncated": false
+        }
+      ],
+      "denied": [],
+      "dropped": []
+    },
+    {
+      "kind": "harness",
+      "mode": "injection",
+      "outcomes": [
+        {
+          "status": "completed"
+        },
+        {
+          "status": "completed"
+        }
+      ],
+      "requests": 2,
+      "bodiesVisible": [
+        false,
+        false
+      ],
+      "instructionFingerprints": [
+        "3181613ce2a6d77e943a0f74b1074ab19c2fd9d68bb596b11a63421b5483d204",
+        "3181613ce2a6d77e943a0f74b1074ab19c2fd9d68bb596b11a63421b5483d204"
+      ],
+      "steps": [
+        {
+          "instructionSources": [
+            {
+              "kind": "system",
+              "source": "system",
+              "contentHash": "8287ec591ead036190827207e85ecff23c8324193142e383ddd22775eb51c897"
+            }
+          ],
+          "instructionFingerprint": "3181613ce2a6d77e943a0f74b1074ab19c2fd9d68bb596b11a63421b5483d204"
+        },
+        {
+          "instructionSources": [
+            {
+              "kind": "system",
+              "source": "system",
+              "contentHash": "8287ec591ead036190827207e85ecff23c8324193142e383ddd22775eb51c897"
+            }
+          ],
+          "instructionFingerprint": "3181613ce2a6d77e943a0f74b1074ab19c2fd9d68bb596b11a63421b5483d204"
+        }
+      ],
+      "fingerprintChanged": false,
+      "discovered": [],
+      "denied": [
+        {
+          "source": "project",
+          "target": "/workspace/harness-agent/.ci/agent-context-memory-20261004/frozen-35663ba/context-probe/fixtures/harness-injection/AGENTS.md",
+          "reason": "injection detected (dismiss-previous-instructions, dismiss-all-instructions, override-own-instructions, extract-system-prompt)",
+          "reasons": [
+            "dismiss-previous-instructions",
+            "dismiss-all-instructions",
+            "override-own-instructions",
+            "extract-system-prompt"
+          ],
+          "code": "INJECTION_DENIED"
+        },
+        {
+          "source": "project",
+          "target": "/workspace/harness-agent/.ci/agent-context-memory-20261004/frozen-35663ba/context-probe/fixtures/harness-injection/AGENTS.md",
+          "reason": "injection detected (dismiss-previous-instructions, dismiss-all-instructions, override-own-instructions, extract-system-prompt)",
+          "reasons": [
+            "dismiss-previous-instructions",
+            "dismiss-all-instructions",
+            "override-own-instructions",
+            "extract-system-prompt"
+          ],
+          "code": "INJECTION_DENIED"
+        }
+      ],
+      "dropped": []
+    },
+    {
+      "kind": "harness",
+      "mode": "budget",
+      "outcomes": [
+        {
+          "status": "completed"
+        },
+        {
+          "status": "completed"
+        }
+      ],
+      "requests": 2,
+      "bodiesVisible": [
+        false,
+        false
+      ],
+      "instructionFingerprints": [
+        "3181613ce2a6d77e943a0f74b1074ab19c2fd9d68bb596b11a63421b5483d204",
+        "3181613ce2a6d77e943a0f74b1074ab19c2fd9d68bb596b11a63421b5483d204"
+      ],
+      "steps": [
+        {
+          "instructionSources": [
+            {
+              "kind": "system",
+              "source": "system",
+              "contentHash": "8287ec591ead036190827207e85ecff23c8324193142e383ddd22775eb51c897"
+            }
+          ],
+          "instructionFingerprint": "3181613ce2a6d77e943a0f74b1074ab19c2fd9d68bb596b11a63421b5483d204"
+        },
+        {
+          "instructionSources": [
+            {
+              "kind": "system",
+              "source": "system",
+              "contentHash": "8287ec591ead036190827207e85ecff23c8324193142e383ddd22775eb51c897"
+            }
+          ],
+          "instructionFingerprint": "3181613ce2a6d77e943a0f74b1074ab19c2fd9d68bb596b11a63421b5483d204"
+        }
+      ],
+      "fingerprintChanged": false,
+      "discovered": [],
+      "denied": [],
+      "dropped": [
+        {
+          "source": "project",
+          "id": "/workspace/harness-agent/.ci/agent-context-memory-20261004/frozen-35663ba/context-probe/fixtures/harness-budget/AGENTS.md",
+          "priority": 1000,
+          "tokens": 12075,
+          "reason": "budget"
+        },
+        {
+          "source": "project",
+          "id": "/workspace/harness-agent/.ci/agent-context-memory-20261004/frozen-35663ba/context-probe/fixtures/harness-budget/AGENTS.md",
+          "priority": 1000,
+          "tokens": 11550,
+          "reason": "budget"
+        }
+      ]
+    }
+  ]
+}

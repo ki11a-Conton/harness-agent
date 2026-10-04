@@ -1,4 +1,33 @@
-# 默认指令与中英记忆检索：源码审查和基线
+# 默认指令与中英记忆检索：最终验收
+
+已完成 UI 后的 agent 优化并通过联合验收。冻结受测源码 `35663ba694ae9358fe6c9ed0a08efbbae0a2faad`；本地全仓 **8419 PASS / 12 既有 SKIP**，456 文件通过、1 文件既有跳过，strict named-run usage-audit PASS；typecheck/build/security2135/docs/diff及证据完整性全部PASS。新增111项agent回归及13项UI回归无新增skip。全仓648.096s，使用corepack pnpm11.21.0、Node24.19.0；原始 [最终manifest](agent-context-memory-20261004/raw/frozen-35663ba/manifest.json) 保留各argv、退出码、hash和前后clean检查。
+
+同一源码 [CI37185965733](https://github.com/ki11a-Conton/harness-agent/actions/runs/37185965733) 已 completed/success、**10/10 jobs success**，包含两平台verify/closed-loop/formal、coverage、cold-start、attestation、same-SHA dual-platform。[原生API最终run/jobs](agent-context-memory-20261004/raw/ci-35663ba/final-summary.json)明确指向同SHA。Linuxmanifest的windows=NOT_RUN保留原始含义；Windows工程回归的成功来自独立真实CI，不代表Windows浏览器/性能探针运行过。
+
+生产指令29/29检查；固定存储30/30、实际Harness scripted请求12/12、FTS正命中补集2/2；最终同SHA联合UI浏览器26/26场景、74断言，pageerrors0。独审44场景包含512个预算组合，后续12份生产source/dist同字节复核和CLI观察器13项审查通过；对应完整记录位于raw/review。模型text/messageRef、真实step身份与durable model.started一致；拒绝正文不污染身份，审计仍保存。
+
+默认50,000B cap的16MiB单行输出50,000B、多行49,925B，实际handle捕获均50,004B。基线单行输出16,777,248B并由readFile整文件返回16,777,216B；这里只量化应用捕获/返回，非磁盘IO。非法预算/畸形UTF-8/不完整输入/文件symlink拒绝，原层级和来源保留。Core、权限/沙箱/验收门及实验默认策略未改。
+
+记忆检索只投影content与合法When/Do/Avoid；SQLite保留FTS排名再补集、去重，deleted/type/scope过滤和现有session/lifecycle/safety/TopK门维持；无schema迁移、新依赖或vector/RAG。10k固定safe工程输入，两后端各10,000实际行、2warmup/5search样本，fixture和probe哈希在baseline/candidate完全一致。以下search是中位毫秒，retrieve为一次完整检索计时，不是模型质量或吞吐收益基准。
+
+| 后端 / 查询 | 基线search ms | 最终search ms | 命中数 | 最终retrieve ms |
+| --- | --- | --- | --- | --- |
+| jsonl / warm-fts | 31.846 | 37.910 | 2000 → 2000 | 56.784 |
+| jsonl / chinese-substring | 30.934 | 39.602 | 2000 → 2000 | 573.032 |
+| jsonl / structured-do | 29.535 | 33.730 | 0 → 2000 | 61.554 |
+| jsonl / actual-miss | 29.489 | 33.708 | 0 → 0 | 31.137 |
+| sqlite / warm-fts | 9.220 | 62.455 | 2000 → 2000 | 65.069 |
+| sqlite / chinese-substring | 0.032 | 55.173 | 0 → 2000 | 644.707 |
+| sqlite / structured-do | 0.026 | 53.369 | 0 → 2000 | 89.745 |
+| sqlite / actual-miss | 0.024 | 55.453 | 0 → 0 | 58.018 |
+
+SQLite补集增加filtered-row线性成本：普通FTS及miss变慢，以补回已漏的合法记忆。TopK5只限制返回，既有中文主题去重仍约0.6秒；不宣称检索速度提高。paid=0、realModelQuality/promotion NOT_RUN；真实模型任务成功率未测。
+
+受测source已通过原生Git推送main，并由native ls-remote/native curl ref API确认local/remote/API三者等于35663ba、工作区clean；[发布核验](agent-context-memory-20261004/raw/publish/tested-source-publication-verification.json)。最后完成记录提交只改计划、任务、说明和原始证据，程序代码与受测source同字节；该文档提交的最终main SHA和ref核验存于工作区`.ci/agent-context-memory-20261004/publish/final-publication-verification.json`并在最终答复给出，避免把自身提交SHA写进自身证据造成循环。当前计划标记完成后不再重复已经通过的全仓，文档门与完整性按新增文档另验。
+
+所有原始基线、实际RED、NO_VERDICT选择器、首轮security失败、old observer CI失败、主动中断partial-full、探针oracle错误及修正原件均保留。主索引按原bytes/sha256覆盖实际归档；包含签名下载URL的CI尝试只保留ignored来源。UI进程内bindings/完成消息渲染等边界见 [UI报告](web-dsh-20261004.md)。
+
+历史审查与实施观测（按当时阶段记述，pending/FAIL不改写为PASS）：
 
 实施前方案：[plan(20261004-065049).md](../../plan(20261004-065049).md)。基线 `17aa6c7471faf8bdec020b45bfe7b9bb45470131`。UI 阶段已完成，见 [UI 验收](web-dsh-20261004.md)。
 

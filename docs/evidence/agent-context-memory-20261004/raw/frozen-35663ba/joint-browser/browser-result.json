@@ -1,0 +1,538 @@
+{
+  "schema": "web-dsh-browser.v1",
+  "status": "PASS",
+  "mode": "candidate",
+  "requireCleanSource": true,
+  "scope": "Real Chromium; production cases use actual Harness/Gateway/WebServer/PermissionEngine/SandboxManager/TaskVerifier with scripted provider; controlled-protocol cases replace browser fetch/EventSource only and do not prove model quality.",
+  "source": {
+    "base": "http://127.0.0.1:42943",
+    "backend": "http://127.0.0.1:37745",
+    "transportControl": "http://127.0.0.1:42589",
+    "inspector": "http://127.0.0.1:38693/snapshot",
+    "cwd": "/workspace/harness-agent/.ci/agent-context-memory-20261004/frozen-35663ba/joint-browser/fixture/workspace",
+    "sourceSha": "35663ba694ae9358fe6c9ed0a08efbbae0a2faad",
+    "trackedDirty": false,
+    "fingerprints": {
+      "apps/web/src/server.ts": "1db0bad5f52aefa7b1c7a94a4fc6ba1dda17390ab57283207ea2aafbcd873638",
+      "apps/web/src/adapter.ts": "6ed06e0638b57e5247342675d691b0cf0de4116c22d3f571317e3974ba0ef4b3",
+      "apps/web/src/bindings.ts": "44d30d6bc1d4a79cebd4b53a006e47d76ffe573fd7fd76d4324589b112c0473f",
+      "packages/gateway/src/gateway.ts": "7630a2f67de219787ba72639920f9e6e187c0d430889c7c8c35691c7a03ec6c5",
+      "packages/harness/src/create-harness.ts": "a115aa9c8ec71b86e689e80ab9195c21cd85c8f19a0d9de669e9e19d8becf84e",
+      "apps/web/dist/server.js": "195eb0d3e0f9c3b814c2b820e5e7191d13bd9145d778294a46e1c34bf287205d",
+      "apps/web/dist/adapter.js": "f1aa8a86f5b79f7163a86cfaec50c71860c7983e75a2f65946f9fac2bd2fd529",
+      "apps/web/dist/bindings.js": "e5e0a55554b60cdd9da0b19ebbc6a62ef8555f1ec347dfb3a5d9f3981a59c958",
+      "packages/gateway/dist/gateway.js": "7890f6c217165a79a6cd91599aefa33b82f9ac8f661bdebfc81c2ea4d5becd5c",
+      "packages/harness/dist/create-harness.js": "442874f7297e7e0b7df5e715af249457fbd0bf6cd33f15b75d5e198700ea29e3",
+      "static/app.js": "d6fa3cc612f0e66fd6326cc6067eda9eb8c1ccc9146f2a44b65e8e83367e441c",
+      "static/index.html": "7987bd0b38de59ff679cd052a0069afb4d00132a027ad78633e78116a6971cf5",
+      "static/style.css": "60f6e63348d1a58e65e093c37dc847f065f1f7c2c56455d22f6eec90d695453f",
+      "static/vendor/deepseek/LICENSE": "ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be",
+      "static/vendor/deepseek/base.css": "03704b5ac0e86d9d875c4fa5c985a7dfe5d56e20dc28a8d8221626aaf7aa482a",
+      "static/vendor/deepseek/corner-shape.css": "d94f82e1332b6d37e8345aafe1b6b4129faed65891edd3861c00b88940ec4d3f",
+      "static/vendor/deepseek/design-platform.css": "809b20ae477324fdf5181a2d338655a19919cabbf1b0e60adc149908462c5a66",
+      "static/vendor/deepseek/focus.css": "f7398e7730415592ab1e81cec36f8c5e23065becd06c050f0129a6fa44d247e8",
+      "static/vendor/deepseek/gradient-shadow-text.css": "a32d784be999def56673b5f86bebd250f401cda1c861adc4c1ea0ebb1ce36ad6",
+      "static/vendor/deepseek/scrollbar.css": "673450184fe82a679b5759a7f93ceab17895b9f12e1196f7efb281304afd8398",
+      "static/vendor/deepseek/source-manifest.json": "16844150e74b11c61aa9e6f8745d46c3944406bbccc264eced91eb7796b6597a"
+    },
+    "node": "v24.19.0",
+    "fixtureSha256": "1e035a87d47e9bfc0c8683d9e4e9b9b648132626c0d01741fdd44dbc3605f439",
+    "staticDir": "/workspace/harness-agent/apps/web/public",
+    "paidCalls": 0,
+    "realModelQuality": "NOT_RUN",
+    "promotion": "NOT_RUN"
+  },
+  "probeSha256": {
+    "browser.py": "cf5daf414a0634be7e19fe001d6dbe6b63d27854ce0230010af9cd0713cffe55",
+    "protocol-control.js": "058610e9c1519fb43833538b997484eeb6995f9f2a72e617dd3b3ae527fed0a3",
+    "fixture.mjs": "1e035a87d47e9bfc0c8683d9e4e9b9b648132626c0d01741fdd44dbc3605f439"
+  },
+  "cleanup": {
+    "graceful": true,
+    "exitCode": 0,
+    "forcedKill": false,
+    "runtimeSnapshotReadable": true,
+    "finalSourceSha": "35663ba694ae9358fe6c9ed0a08efbbae0a2faad",
+    "changedFingerprints": []
+  },
+  "chromium": "151.0.7922.173",
+  "viewportDesktop": [
+    1440,
+    900
+  ],
+  "viewportMobile": [
+    390,
+    844
+  ],
+  "paidCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "promotion": "NOT_RUN",
+  "caseCount": 26,
+  "assertCount": 74,
+  "passed": 26,
+  "failed": 0,
+  "browserErrorCount": 0,
+  "receipts": [
+    {
+      "name": "consecutive-assistants-and-id-replay",
+      "group": "controlled-protocol",
+      "passed": true,
+      "observed": {
+        "assistantRows": [
+          "hHarnessCONTROL_REPLY_ONE复制回复",
+          "hHarnessCONTROL_REPLY_TWO复制回复"
+        ],
+        "inputFrames": 3,
+        "uniqueMessageIds": 2
+      },
+      "assertCount": 1
+    },
+    {
+      "name": "slow-a-history-cannot-pollute-b",
+      "group": "controlled-protocol",
+      "passed": true,
+      "observed": {
+        "visibleText": "B_ONLY_HISTORY",
+        "activeFrom": "browser-control-B-123"
+      },
+      "assertCount": 1
+    },
+    {
+      "name": "xss-is-text",
+      "group": "controlled-protocol",
+      "passed": true,
+      "observed": {
+        "payload": "<img src=x onerror=\"window.__XSS_EXECUTED=1\"><script>window.__XSS_EXECUTED=2</script>",
+        "literalText": "B_ONLY_HISTORY\n<img src=x onerror=\"window.__XSS_EXECUTED=1\"><script>window.__XSS_EXECUTED=2</script>\nh\nHarness\n<img src=x onerror=\"window.__XSS_EXECUTED=1\"><script>window.__XSS_EXECUTED=2</script>\n复制回复",
+        "injectedElements": 0,
+        "executionMarker": null
+      },
+      "assertCount": 1
+    },
+    {
+      "name": "closed-sse-callback-cannot-pollute-new-session",
+      "group": "controlled-protocol",
+      "passed": true,
+      "observed": {
+        "oldStreamClosed": true,
+        "oldTextVisible": false,
+        "cancelDisabled": true
+      },
+      "assertCount": 2
+    },
+    {
+      "name": "old-post-error-cannot-pollute-new-session",
+      "group": "controlled-protocol",
+      "passed": true,
+      "observed": {
+        "lateResponseStatus": 400,
+        "activeText": "A_ONLY_HISTORY",
+        "posts": [
+          {
+            "path": "/api/messages",
+            "body": {
+              "from": "browser-control-B-123",
+              "text": "OLD_POST_INPUT"
+            }
+          }
+        ]
+      },
+      "assertCount": 1
+    },
+    {
+      "name": "ime-enter-does-not-send-and-enter-sends-once",
+      "group": "controlled-protocol",
+      "passed": true,
+      "observed": {
+        "posts": [
+          {
+            "path": "/api/messages",
+            "body": {
+              "from": "browser-control-B-123",
+              "text": "输入法正在组合"
+            }
+          }
+        ],
+        "composingPostCount": 0,
+        "shiftEnterPostCount": 0
+      },
+      "assertCount": 3
+    },
+    {
+      "name": "history-and-live-id-replay-does-not-duplicate",
+      "group": "controlled-protocol",
+      "passed": true,
+      "observed": {
+        "frames": 2,
+        "historyRecords": 1,
+        "rendered": 1
+      },
+      "assertCount": 2
+    },
+    {
+      "name": "history-before-live-id-replay-does-not-duplicate",
+      "group": "controlled-protocol",
+      "passed": true,
+      "observed": {
+        "historyRecords": 1,
+        "liveFramesAfterHistory": 2,
+        "rendered": 1
+      },
+      "assertCount": 1
+    },
+    {
+      "name": "hello-handshake-precedes-history-and-preserves-buffered-message",
+      "group": "controlled-protocol",
+      "passed": true,
+      "observed": {
+        "historyRequests": [
+          {
+            "from": "browser-control-B-123",
+            "helloFrames": 1
+          },
+          {
+            "from": "browser-control-A-123",
+            "helloFrames": 2
+          }
+        ],
+        "helloFrames": [
+          0,
+          1
+        ],
+        "bufferedMessageCount": 1
+      },
+      "assertCount": 2
+    },
+    {
+      "name": "historical-and-expired-approvals-are-readonly",
+      "group": "controlled-protocol",
+      "passed": true,
+      "observed": {
+        "cards": 2,
+        "actionableButtons": 0,
+        "commands": 0
+      },
+      "assertCount": 3
+    },
+    {
+      "name": "resolved-approval-replay-is-idempotent",
+      "group": "controlled-protocol",
+      "passed": true,
+      "observed": {
+        "createdFrames": 2,
+        "resolvedFrames": 2,
+        "cards": 1,
+        "results": 1,
+        "actionableButtons": 0
+      },
+      "assertCount": 2
+    },
+    {
+      "name": "reconnect-hello-merges-missed-history-without-duplicates",
+      "group": "controlled-protocol",
+      "passed": true,
+      "observed": {
+        "helloFrames": [
+          0,
+          0
+        ],
+        "historyRequests": [
+          {
+            "from": "browser-control-B-123",
+            "helloFrames": 1
+          },
+          {
+            "from": "browser-control-B-123",
+            "helloFrames": 2
+          }
+        ],
+        "knownUserCount": 1,
+        "knownAssistantCount": 1,
+        "missedAssistantCount": 1
+      },
+      "assertCount": 2
+    },
+    {
+      "name": "desktop-1440x900-layout",
+      "group": "production-stack",
+      "passed": true,
+      "observed": {
+        "viewport": 1440,
+        "document": 1440
+      },
+      "assertCount": 2
+    },
+    {
+      "name": "vendored-assets-local-200-without-cdn",
+      "group": "production-stack",
+      "passed": true,
+      "observed": {
+        "localHttpStatuses": {
+          "/": 200,
+          "/app.js": 200,
+          "/style.css": 200,
+          "/vendor/deepseek/LICENSE": 200,
+          "/vendor/deepseek/source-manifest.json": 200,
+          "/vendor/deepseek/base.css": 200,
+          "/vendor/deepseek/corner-shape.css": 200,
+          "/vendor/deepseek/design-platform.css": 200,
+          "/vendor/deepseek/focus.css": 200,
+          "/vendor/deepseek/scrollbar.css": 200,
+          "/vendor/deepseek/gradient-shadow-text.css": 200
+        },
+        "loadedStylesheets": [
+          "/vendor/deepseek/base.css",
+          "/vendor/deepseek/design-platform.css",
+          "/vendor/deepseek/gradient-shadow-text.css",
+          "/vendor/deepseek/scrollbar.css",
+          "/vendor/deepseek/focus.css",
+          "/vendor/deepseek/corner-shape.css",
+          "/style.css"
+        ],
+        "externalResourceCount": 0
+      },
+      "assertCount": 13
+    },
+    {
+      "name": "theme-and-sidebar",
+      "group": "production-stack",
+      "passed": true,
+      "observed": {
+        "lightComputedBackground": "rgb(255, 255, 255)",
+        "darkComputedBackground": "rgb(21, 21, 23)",
+        "darkThemeSurvivedRefresh": true,
+        "expandedSidebarBox": {
+          "x": 0,
+          "y": 0,
+          "width": 264,
+          "height": 900
+        },
+        "collapsedSidebarBox": {
+          "x": 0,
+          "y": 0,
+          "width": 25,
+          "height": 900
+        },
+        "collapsedSidebarVisibility": "hidden",
+        "mainCollapsedBox": {
+          "x": 0,
+          "y": 0,
+          "width": 1440,
+          "height": 900
+        },
+        "collapsedAppClass": "sidebar-collapsed"
+      },
+      "assertCount": 4
+    },
+    {
+      "name": "two-production-replies-and-verification",
+      "group": "production-stack",
+      "passed": true,
+      "observed": {
+        "completedTurns": 2,
+        "verifiedTurns": 2,
+        "assistantTexts": [
+          "hHarnessHARNESS_REPLY:BROWSER_FIRST复制回复",
+          "hHarnessHARNESS_REPLY:BROWSER_SECOND复制回复"
+        ]
+      },
+      "assertCount": 2
+    },
+    {
+      "name": "refresh-restores-production-history",
+      "group": "production-stack",
+      "passed": true,
+      "observed": {
+        "senderRetained": "2f6d9916-22b6-416d-8c75-fb31b3c3cb1d",
+        "firstReplyCount": 1,
+        "secondReplyCount": 1
+      },
+      "assertCount": 2
+    },
+    {
+      "name": "copy-production-assistant-reply",
+      "group": "production-stack",
+      "passed": true,
+      "observed": {
+        "clipboardText": "HARNESS_REPLY:BROWSER_FIRST",
+        "source": "actual browser clipboard after UI click"
+      },
+      "assertCount": 1
+    },
+    {
+      "name": "real-approval-allow-write",
+      "group": "production-stack",
+      "passed": true,
+      "observed": {
+        "approvalId": "approval_dcdaff16-d751-4952-b3ed-cbcb77e3ee81",
+        "fileBytes": 21,
+        "toolName": "write_file"
+      },
+      "assertCount": 4
+    },
+    {
+      "name": "real-approval-deny-write",
+      "group": "production-stack",
+      "passed": true,
+      "observed": {
+        "approvalId": "approval_36f085ce-f7e8-42a1-84bb-8ff35fcc0a19",
+        "fileAbsent": true,
+        "foreignDeliveryAckStatus": 200,
+        "foreignPreservedPending": true,
+        "foreignHumanEventCount": 0
+      },
+      "assertCount": 4
+    },
+    {
+      "name": "real-sandbox-denies-approved-outside-write",
+      "group": "production-stack",
+      "passed": true,
+      "observed": {
+        "approvalId": "approval_9174867a-771f-4c2e-892e-1a38d25b5fb0",
+        "outsideFileAbsent": true,
+        "sandboxEvents": [
+          {
+            "id": "event_94314cb5-d111-42bb-b280-dce00c31eda8",
+            "sessionId": "session_71bf676f-6ed1-4ba7-a58f-72342f77ea0b",
+            "turnId": "turn_f9285331-4d84-4ead-850c-6255fb50b76c",
+            "sequence": 92,
+            "timestamp": 1791099018969,
+            "type": "tool.failed",
+            "payload": {
+              "toolCallId": "browser-call-7",
+              "tool": "write_file",
+              "error": {
+                "code": "SANDBOX_FILESYSTEM_DENIED",
+                "message": "sandbox denied: path outside workspace: /workspace/harness-agent/.ci/agent-context-memory-20261004/frozen-35663ba/joint-browser/fixture/outside.txt",
+                "retryable": false,
+                "safeToRetry": false
+              },
+              "durationMs": 104
+            },
+            "schemaVersion": 1
+          }
+        ]
+      },
+      "assertCount": 2
+    },
+    {
+      "name": "cancel-real-blocked-turn",
+      "group": "production-stack",
+      "passed": true,
+      "observed": {
+        "cancelledTurns": 1,
+        "providerAbortObserved": true
+      },
+      "assertCount": 1
+    },
+    {
+      "name": "real-sse-socket-outage-reconnect-restores-reply",
+      "group": "production-network-control",
+      "passed": true,
+      "observed": {
+        "backendCompletionPersistedDuringOutage": true,
+        "reconnectedReplyCount": 1,
+        "priorReplyCount": 1,
+        "transportFault": "loopback proxy destroys real SSE socket and blocks reconnect requests; other HTTP requests unchanged",
+        "hold": {
+          "action": "hold",
+          "from": "2f6d9916-22b6-416d-8c75-fb31b3c3cb1d",
+          "droppedSockets": 1,
+          "releasedRequests": 0,
+          "at": "2026-10-04T07:30:19.302Z"
+        },
+        "release": {
+          "action": "release",
+          "from": "2f6d9916-22b6-416d-8c75-fb31b3c3cb1d",
+          "droppedSockets": 0,
+          "releasedRequests": 1,
+          "at": "2026-10-04T07:30:22.806Z"
+        },
+        "outageSeconds": 3.5049313670024276
+      },
+      "assertCount": 4
+    },
+    {
+      "name": "new-session-isolation",
+      "group": "production-stack",
+      "passed": true,
+      "observed": {
+        "previousFrom": "2f6d9916-22b6-416d-8c75-fb31b3c3cb1d",
+        "newFrom": "5b4ca9ed-808d-48c6-b647-196f147791b0",
+        "sessionCount": 2
+      },
+      "assertCount": 2
+    },
+    {
+      "name": "mobile-390x844-layout-and-drawer",
+      "group": "production-stack",
+      "passed": true,
+      "observed": {
+        "viewport": 390,
+        "document": 390
+      },
+      "assertCount": 3
+    },
+    {
+      "name": "real-verification-exit7-prevents-completion",
+      "group": "production-stack",
+      "passed": true,
+      "observed": {
+        "approvalId": "approval_138e4f83-42ae-4576-ba78-5af9a7b7f4bd",
+        "turnId": "turn_79a5654c-57d1-4fef-b5ec-cc3c63431853",
+        "verificationFailureEvents": [
+          {
+            "id": "event_60ecaaa9-71d3-4f08-b478-1006efaab45b",
+            "sessionId": "session_6d044cdc-b374-4e64-99f2-7b812ad008de",
+            "turnId": "turn_79a5654c-57d1-4fef-b5ec-cc3c63431853",
+            "timestamp": 1791099023969,
+            "type": "verification.failed",
+            "payload": {
+              "error": "Actual offline child-process acceptance gate; real marker created only by approved write_file makes it fail: /opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node: exited with code 7",
+              "attempt": 1,
+              "maxAttempts": 3,
+              "durationMs": 42
+            },
+            "sequence": 39,
+            "schemaVersion": 1
+          },
+          {
+            "id": "event_19a623de-7577-498a-92db-d47a7c80fa28",
+            "sessionId": "session_6d044cdc-b374-4e64-99f2-7b812ad008de",
+            "turnId": "turn_79a5654c-57d1-4fef-b5ec-cc3c63431853",
+            "timestamp": 1791099024017,
+            "type": "verification.failed",
+            "payload": {
+              "error": "Actual offline child-process acceptance gate; real marker created only by approved write_file makes it fail: /opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node: exited with code 7",
+              "attempt": 2,
+              "maxAttempts": 3,
+              "durationMs": 41
+            },
+            "sequence": 49,
+            "schemaVersion": 1
+          },
+          {
+            "id": "event_43948e30-b9ff-472d-9f48-ef9fd2c19951",
+            "sessionId": "session_6d044cdc-b374-4e64-99f2-7b812ad008de",
+            "turnId": "turn_79a5654c-57d1-4fef-b5ec-cc3c63431853",
+            "timestamp": 1791099024062,
+            "type": "verification.failed",
+            "payload": {
+              "error": "Actual offline child-process acceptance gate; real marker created only by approved write_file makes it fail: /opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node: exited with code 7",
+              "attempt": 3,
+              "maxAttempts": 3,
+              "durationMs": 38
+            },
+            "sequence": 59,
+            "schemaVersion": 1
+          }
+        ],
+        "terminalTypes": [
+          "turn.failed"
+        ],
+        "markerCreatedBy": "production write_file after UI approval"
+      },
+      "assertCount": 5
+    }
+  ]
+}

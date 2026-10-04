@@ -1,0 +1,179 @@
+{
+  "status": "PASS",
+  "expectBaselineDefects": false,
+  "sourceHead": "35663ba694ae9358fe6c9ed0a08efbbae0a2faad",
+  "fixtureSha256": "1d6be9ccf0eb0205ad5aefb65be1e203fbd9db481281647ec0d929b9697b2081",
+  "rowCount": 10000,
+  "sourceUnchanged": true,
+  "cases": [
+    {
+      "backend": "jsonl",
+      "name": "warm-fts",
+      "query": "retry",
+      "actualRowCount": 10000,
+      "filteredLiveRowCount": 10000,
+      "expectedMatchCount": 2000,
+      "candidateCounts": [
+        2000,
+        2000,
+        2000,
+        2000,
+        2000
+      ],
+      "correctnessPass": true,
+      "retrievalMs": 56.78443000000004,
+      "returnedTopK": 1,
+      "suppressedCount": 1999,
+      "uniqueReturnedIds": 1,
+      "searchMedianMs": 37.910203999999965
+    },
+    {
+      "backend": "jsonl",
+      "name": "chinese-substring",
+      "query": "端口配置",
+      "actualRowCount": 10000,
+      "filteredLiveRowCount": 10000,
+      "expectedMatchCount": 2000,
+      "candidateCounts": [
+        2000,
+        2000,
+        2000,
+        2000,
+        2000
+      ],
+      "correctnessPass": true,
+      "retrievalMs": 573.0319979999999,
+      "returnedTopK": 5,
+      "suppressedCount": 0,
+      "uniqueReturnedIds": 5,
+      "searchMedianMs": 39.60208499999999
+    },
+    {
+      "backend": "jsonl",
+      "name": "structured-do",
+      "query": "portlint",
+      "actualRowCount": 10000,
+      "filteredLiveRowCount": 10000,
+      "expectedMatchCount": 2000,
+      "candidateCounts": [
+        2000,
+        2000,
+        2000,
+        2000,
+        2000
+      ],
+      "correctnessPass": true,
+      "retrievalMs": 61.553666999999905,
+      "returnedTopK": 1,
+      "suppressedCount": 1999,
+      "uniqueReturnedIds": 1,
+      "searchMedianMs": 33.7300580000001
+    },
+    {
+      "backend": "jsonl",
+      "name": "actual-miss",
+      "query": "unmatchedmarkerquantum",
+      "actualRowCount": 10000,
+      "filteredLiveRowCount": 10000,
+      "expectedMatchCount": 0,
+      "candidateCounts": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "correctnessPass": true,
+      "retrievalMs": 31.137473999999884,
+      "returnedTopK": 0,
+      "suppressedCount": 0,
+      "uniqueReturnedIds": 0,
+      "searchMedianMs": 33.70772499999998
+    },
+    {
+      "backend": "sqlite",
+      "name": "warm-fts",
+      "query": "retry",
+      "actualRowCount": 10000,
+      "filteredLiveRowCount": 10000,
+      "expectedMatchCount": 2000,
+      "candidateCounts": [
+        2000,
+        2000,
+        2000,
+        2000,
+        2000
+      ],
+      "correctnessPass": true,
+      "retrievalMs": 65.06901800000014,
+      "returnedTopK": 1,
+      "suppressedCount": 1999,
+      "uniqueReturnedIds": 1,
+      "searchMedianMs": 62.455487000000176
+    },
+    {
+      "backend": "sqlite",
+      "name": "chinese-substring",
+      "query": "端口配置",
+      "actualRowCount": 10000,
+      "filteredLiveRowCount": 10000,
+      "expectedMatchCount": 2000,
+      "candidateCounts": [
+        2000,
+        2000,
+        2000,
+        2000,
+        2000
+      ],
+      "correctnessPass": true,
+      "retrievalMs": 644.7070950000002,
+      "returnedTopK": 5,
+      "suppressedCount": 0,
+      "uniqueReturnedIds": 5,
+      "searchMedianMs": 55.173251000000164
+    },
+    {
+      "backend": "sqlite",
+      "name": "structured-do",
+      "query": "portlint",
+      "actualRowCount": 10000,
+      "filteredLiveRowCount": 10000,
+      "expectedMatchCount": 2000,
+      "candidateCounts": [
+        2000,
+        2000,
+        2000,
+        2000,
+        2000
+      ],
+      "correctnessPass": true,
+      "retrievalMs": 89.74531399999978,
+      "returnedTopK": 1,
+      "suppressedCount": 1999,
+      "uniqueReturnedIds": 1,
+      "searchMedianMs": 53.36886000000004
+    },
+    {
+      "backend": "sqlite",
+      "name": "actual-miss",
+      "query": "unmatchedmarkerquantum",
+      "actualRowCount": 10000,
+      "filteredLiveRowCount": 10000,
+      "expectedMatchCount": 0,
+      "candidateCounts": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "correctnessPass": true,
+      "retrievalMs": 58.01758599999994,
+      "returnedTopK": 0,
+      "suppressedCount": 0,
+      "uniqueReturnedIds": 0,
+      "searchMedianMs": 55.453034000000116
+    }
+  ],
+  "paidCalls": 0
+}

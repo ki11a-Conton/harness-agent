@@ -1,0 +1,75 @@
+{
+  "poll": 16,
+  "timestamp": "2026-10-04T07:41:09.345547+00:00",
+  "runId": 37185965733,
+  "sourceSha": "35663ba694ae9358fe6c9ed0a08efbbae0a2faad",
+  "runStatus": "in_progress",
+  "conclusion": null,
+  "jobCount": 8,
+  "jobs": [
+    {
+      "id": 111387809681,
+      "name": "offline cold-start (ubuntu)",
+      "status": "completed",
+      "conclusion": "success",
+      "currentStep": null,
+      "failedSteps": []
+    },
+    {
+      "id": 111387809754,
+      "name": "real formal offline (windows)",
+      "status": "in_progress",
+      "conclusion": null,
+      "currentStep": "Real formal + release CLI + measured readiness (zero paid requests)",
+      "failedSteps": []
+    },
+    {
+      "id": 111387809762,
+      "name": "install · typecheck · test · build · benchmark-smoke · audit (ubuntu-latest, ubuntu)",
+      "status": "in_progress",
+      "conclusion": null,
+      "currentStep": "Campaign runner authorization/identity/argv contract (E4-R89)",
+      "failedSteps": []
+    },
+    {
+      "id": 111387809799,
+      "name": "coverage gate (ubuntu)",
+      "status": "in_progress",
+      "conclusion": null,
+      "currentStep": "Generate coverage gate evidence (P38-12, E4-R09 V2)",
+      "failedSteps": []
+    },
+    {
+      "id": 111387809830,
+      "name": "r97-r98 closed loop (windows-latest)",
+      "status": "completed",
+      "conclusion": "success",
+      "currentStep": null,
+      "failedSteps": []
+    },
+    {
+      "id": 111387809857,
+      "name": "r97-r98 closed loop (ubuntu-latest)",
+      "status": "completed",
+      "conclusion": "success",
+      "currentStep": null,
+      "failedSteps": []
+    },
+    {
+      "id": 111387809882,
+      "name": "real formal offline (ubuntu)",
+      "status": "completed",
+      "conclusion": "success",
+      "currentStep": null,
+      "failedSteps": []
+    },
+    {
+      "id": 111387809886,
+      "name": "install · typecheck · test · build · benchmark-smoke · audit (windows-latest, windows)",
+      "status": "in_progress",
+      "conclusion": null,
+      "currentStep": "Campaign runner authorization/identity/argv contract (E4-R89)",
+      "failedSteps": []
+    }
+  ]
+}
