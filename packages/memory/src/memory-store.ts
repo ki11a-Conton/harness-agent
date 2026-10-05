@@ -10,7 +10,7 @@ import type {
 import { AgentError, errorInfo } from "@ar/contracts";
 import { atomicWriteFile, backupTree, withLock } from "@ar/store-integrity";
 import { checkUnsafeMemoryEntry, scanMemoryEntries } from "./security-gate.js";
-import { matchesMemoryQuery, memorySearchText } from "./search-text.js";
+import { prepareMemoryQuery, memorySearchText } from "./search-text.js";
 import { recordUsefulness, type UsefulnessFeedback } from "./usefulness.js";
 
 /** Single JSONL file holding every memory entry (MEMORY-001). */
@@ -175,13 +175,14 @@ export class JsonlMemoryStore implements MemoryStore {
     opts: { type?: MemoryType; scope?: MemoryScope } = {},
   ): Promise<MemoryEntry[]> {
     if (query.trim() === "") return [];
+    const matchesQuery = prepareMemoryQuery(query);
     const all = await this.readAll();
     return all.filter(
       (e) =>
         !e.deleted &&
         (opts.type === undefined || e.type === opts.type) &&
         (opts.scope === undefined || e.scope === opts.scope) &&
-        matchesMemoryQuery(query, memorySearchText(e)),
+        matchesQuery(memorySearchText(e)),
     );
   }
 

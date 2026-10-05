@@ -14,7 +14,7 @@ import type {
 } from "@ar/contracts";
 import { AgentError, errorInfo } from "@ar/contracts";
 import { checkUnsafeMemoryEntry, scanMemoryEntries } from "./security-gate.js";
-import { matchesMemoryQuery, memorySearchText } from "./search-text.js";
+import { prepareMemoryQuery, memorySearchText } from "./search-text.js";
 import { recordUsefulness, type UsefulnessFeedback } from "./usefulness.js";
 
 /**
@@ -266,6 +266,7 @@ export class SqliteMemoryStore implements MemoryStore {
     } catch {
       process.stderr.write("[degraded] memory.search: FTS unavailable or query rejected; using literal search\n");
     }
+    const matchesQuery = prepareMemoryQuery(q);
     const hits: MemoryEntry[] = [];
     const seen = new Set<string>();
     for (const row of rows) {
@@ -281,7 +282,7 @@ export class SqliteMemoryStore implements MemoryStore {
     for (const row of supplementalRows) {
       if (seen.has(row.id)) continue;
       const memory = rowToEntry(row);
-      if (!matchesMemoryQuery(q, memorySearchText(memory))) continue;
+      if (!matchesQuery(memorySearchText(memory))) continue;
       seen.add(row.id);
       hits.push(memory);
     }

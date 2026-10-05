@@ -17,12 +17,22 @@ export function memorySearchText(entry: Pick<MemoryEntry, "content" | "structure
 
 /** Case-insensitive literal substring or existing whole-word token matching.
  * No query punctuation is interpreted as SQL LIKE or FTS syntax here. */
-export function matchesMemoryQuery(query: string, content: string): boolean {
+/** Prepare immutable query work once per search. The closure owns no entry
+ * state and is deliberately not cached across requests. */
+export function prepareMemoryQuery(query: string): (content: string) => boolean {
   const q = query.toLowerCase();
-  if (q.trim() === "") return false;
-  const c = content.toLowerCase();
-  if (c.includes(q)) return true;
+  if (q.trim() === "") return () => false;
   const queryTokens = q.split(/\s+/).filter((token) => token !== "");
-  const contentTokens = new Set(c.split(/[^a-z0-9]+/).filter((token) => token !== ""));
-  return queryTokens.every((token) => contentTokens.has(token));
+  return (content) => {
+    const c = content.toLowerCase();
+    if (c.includes(q)) return true;
+    const contentTokens = new Set(c.split(/[^a-z0-9]+/).filter((token) => token !== ""));
+    return queryTokens.every((token) => contentTokens.has(token));
+  };
+}
+
+/** Compatibility for callers matching one body. Stores reuse the prepared
+ * matcher instead of repeating query parsing for each candidate. */
+export function matchesMemoryQuery(query: string, content: string): boolean {
+  return prepareMemoryQuery(query)(content);
 }
