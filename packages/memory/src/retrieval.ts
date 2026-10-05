@@ -229,17 +229,32 @@ export async function retrieveMemories(
   // Cache only within this retrieval. Keep every topic survivor even beyond
   // TopK so later conflicts and their suppression order stay unchanged.
   const kept: Array<{ item: RankedMemoryItem; tokens: Set<string> }> = [];
+  // Positive Jaccard similarity requires a shared token. Index only survivors,
+  // not suppressed items: similarity chains are not necessarily transitive.
+  const postings = new Map<string, number[]>();
   for (const item of scored) {
     const tokens = contentTokens(item.memory.content);
-    const conflict = kept.find(
-      (other) =>
-        tokenSimilarity(tokens, other.tokens) >= CONFLICT_SIMILARITY_THRESHOLD,
+    const candidates = new Set<number>();
+    for (const token of tokens) {
+      for (const index of postings.get(token) ?? []) candidates.add(index);
+    }
+    // Preserve the original first-retained-conflict order, independently of
+    // token iteration order and repeated postings for a shared candidate.
+    const conflict = [...candidates].sort((a, b) => a - b).find(
+      (index) =>
+        tokenSimilarity(tokens, kept[index]!.tokens) >= CONFLICT_SIMILARITY_THRESHOLD,
     );
     if (conflict !== undefined) {
       suppressed.push({ memory: item.memory, reason: "conflict" });
       continue;
     }
+    const index = kept.length;
     kept.push({ item, tokens });
+    for (const token of tokens) {
+      const posting = postings.get(token);
+      if (posting !== undefined) posting.push(index);
+      else postings.set(token, [index]);
+    }
   }
 
   return { items: kept.slice(0, k).map((keptItem) => keptItem.item), suppressed };
