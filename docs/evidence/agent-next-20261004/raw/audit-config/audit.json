@@ -1,0 +1,106 @@
+{
+  "status": "AUDIT_COMPLETE",
+  "sourceSha": "18f162bf7f12c4b8e8cebcebede4034dd1f3efb7",
+  "paidCalls": 0,
+  "externalModelQuality": "NOT_RUN",
+  "runtimeFreezeBasis": "deterministic correctness bug: ModelRequest.system is a declared provider input but omitted by the actual OpenAI HTTP serialization",
+  "selectedBug": {
+    "path": "packages/model/src/openai.ts",
+    "line": 357,
+    "contract": "packages/contracts/src/model.ts ModelRequest.system?:string; core constructs system separately from durable history",
+    "impact": "production provider drops assembled default system prompt, admitted AGENTS instructions, skills and opt-in memory prior blocks despite runtime recording admission",
+    "minimalProbe": "provider-system-baseline-v2.json",
+    "observations": "2 nonempty-system cases dropped; existing history system retained; empty/absent controls retain behavior; every request completed via loopback HTTP/SSE"
+  },
+  "productionCli": {
+    "entrypoint": "apps/cli/dist/main.js",
+    "configuration": {
+      "HARNESS_MEMORY": "1",
+      "HARNESS_DATA_DIR": "isolated seeded JSONL directory",
+      "championState": "no file in isolated cwd -> C0 baseline",
+      "modelEndpoint": "loopback OpenAI-compatible HTTP/SSE"
+    },
+    "terminalCompleted": true,
+    "modelRequests": 1,
+    "actualWireRoles": [
+      "user"
+    ],
+    "seedContentPresentOnWire": false,
+    "memoryFeedback": {
+      "retrievedCount": 1,
+      "injectedCount": 1,
+      "usedCount": 1,
+      "taskSuccessCount": 1,
+      "verificationPassedCount": 0,
+      "score": 0.8425
+    },
+    "originalProbeStatus": "ASSERTION_FAILED (seedMarkerInjected expected true but false); raw outputs retained",
+    "originalProbe": "baseline.py",
+    "evidence": [
+      "cli-optin-data/result.json",
+      "cli-optin-data/model-requests.json",
+      "cli-optin-data/data/memories.jsonl"
+    ]
+  },
+  "memoryWiring": {
+    "default": "memory=false learning=false for CLI and Web interactive/C0; unchanged by proposal",
+    "cliOptIn": "DefaultDepsOptions.memory===true OR HARNESS_MEMORY===1; requires nonempty normalized dataDir from main; base featureFlags={memory:true,learning:true}",
+    "composeEnabled": "features.memory || config.memory?.enabled===true",
+    "backend": "explicit config.memory.dbPath -> SQLite; otherwise dataDir -> JSONL",
+    "recall": "MemoryRuntimeBridge.retrieve -> retrieveMemories(scope,sessionId,k=suggestTopK,now) -> rendered advisory blocks -> ContextPipeline -> ModelRequest.system",
+    "learning": "candidate queue/post-turn reflection when dataDir&&(learning||memoryEnabled); promotion is explicit",
+    "championPrecedence": "championHarnessConfig merges base featureFlags then championFlags; champion flags override user base; pending/proven live final config checked and CAS proof only on equality. C0 preserves CLI explicit opt-in. Memory-retrieval champion may enable both Web/CLI and selects SQLite under dataDir/memory. Other supported champion profiles prescribe memory=false and override CLI base opt-in."
+  },
+  "webGap": {
+    "classification": "feature gap, not selected correctness bug",
+    "facts": "HARNESS_MEMORY ignored by Web main; CLI rejects HARNESS_MEMORY=1 without dataDir while Web starts normally with zero model calls",
+    "contract": "No global documented Web HARNESS_MEMORY contract found. Existing Web integration explicitly asserts default memory false. Do not silently enable strategy or override champion to fix this round.",
+    "evidence": [
+      "cli-optin-no-data/result.json",
+      "web-optin-no-data/result.json"
+    ]
+  },
+  "proposal": {
+    "what": "Serialize nonempty request.system as the leading OpenAI system message, preserving history roles/content and the actual serialized tool protocol gate.",
+    "how": "Change provider adapter only; no Core, feature activation or approval changes. Keep absent/empty system byte-shape behavior; prepend exact UTF-8 system bytes; retain historical system messages independently; check the final wire array before fetch.",
+    "acceptance": "Negative-first direct provider serialization tests + loopback HTTP actual body Unicode, empty/absent/history controls; production CLI opt-in seeded-memory request now carries default system and advisory memory body, durable refs/feedback remain tied to admitted body; normal Web default instruction/system remains on wire without enabling memory; existing provider retry/timeout/cancel/deepseek/tool-protocol tests and security suite pass."
+  },
+  "sourceReferences": [
+    {
+      "path": "apps/cli/src/main.ts",
+      "line": 353
+    },
+    {
+      "path": "apps/web/src/main.ts",
+      "line": 35
+    },
+    {
+      "path": "packages/harness/src/compose/compose-tools.ts",
+      "line": 51
+    },
+    {
+      "path": "packages/harness/src/create-harness.ts",
+      "line": 364
+    },
+    {
+      "path": "packages/harness/src/create-harness.ts",
+      "line": 476
+    },
+    {
+      "path": "packages/harness/src/memory-runtime-bridge.ts",
+      "line": 146
+    },
+    {
+      "path": "apps/cli/src/champion-application.ts",
+      "line": 292
+    },
+    {
+      "path": "packages/model/src/openai.ts",
+      "line": 357
+    },
+    {
+      "path": "packages/core/src/runtime/context-controller.ts",
+      "line": 345
+    }
+  ]
+}

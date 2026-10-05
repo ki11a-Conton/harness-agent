@@ -1,0 +1,93 @@
+{
+  "schema": "AGENT_NEXT_INDEPENDENT_STATIC_REVIEW_V1",
+  "observedAt": "2026-10-05T00:19:34.352171+00:00",
+  "reviewer": "/root/final_static_review",
+  "head": "fbe5098c43060fd066bd5fbdaa4a4d1612abdeb6",
+  "trackedAndUntrackedStatus": " M .gitattributes\n M packages/memory/src/retrieval.ts\n M packages/model/src/openai.ts\n M packages/tools/src/navigate.ts\n?? packages/memory/src/retrieval-work.regressions.test.ts\n?? packages/model/src/openai-system-context.regressions.test.ts\n?? packages/tools/src/navigation-work.regressions.test.ts\n?? scripts/research/agent-next-20261004/\n",
+  "sourceDirty": true,
+  "reviewScope": "working-tree static review only; no runtime verdict and no build/test/performance/full commands executed",
+  "status": "STATIC_NO_BLOCKING_PRODUCTION_FINDINGS",
+  "runtimeAcceptance": "PENDING_FROZEN_SOURCE_EVIDENCE",
+  "productionDiffSha256": "62d189f09ef192a544a78506b2ad946e7658e1144640d1700d092ea29bf6b28b",
+  "reviewedFileSha256": {
+    ".gitattributes": "a3bc7efc2a822758d472ecaf38ce8492b2b22bedc0e2b8f22ac2f08a1e86c092",
+    "AGENTS.md": "ca24b5a24e947195f2c18bfcd24d177ab4bbf14d3933d687800f000cd76d6f15",
+    "tasks/AGENT-EFFICIENCY-20261004.md": "a92f21ea04d8c9461d29d58c371d0ab752f165fc96e40dd9f26a02acce3dc158",
+    "plan(20261004-131935).md": "709eab3a98c2a80c905c33bf0ab01970af7ecc2f93d94decb39147d541d0f0eb",
+    "packages/model/src/openai.ts": "2c909c6c7c0ed377b52e5b26665e991a104c84cd1cad733287576a115d0bd780",
+    "packages/model/src/openai-system-context.regressions.test.ts": "f2614215e52509bd0b8575d1e5d058812e14f9e7b0596d39240a50b8100fd5ab",
+    "packages/memory/src/retrieval.ts": "d3a48b1ff665dd2c3f698d7a2c7e4754081a8fb6ba6306556444262135fca8c9",
+    "packages/memory/src/retrieval-work.regressions.test.ts": "eb6be187b836f91afa8dbb34007576cc7ad22a51dea7326e468e3569043abfe8",
+    "packages/tools/src/navigate.ts": "b0b42636455fe67d3a53c818452a04b1dd68e915cd978781b5da398720b2f866",
+    "packages/tools/src/navigation-work.regressions.test.ts": "c4105ab0f4aa3222d348d1b948b91c93314222f9a2b0ff0661fa390aa98ed39f",
+    "scripts/research/agent-next-20261004/frozen-acceptance.py": "3f2baf792697486c64ab5f35a8539b9e2360e8fc0b80b7aad60c65f01e6fbccb",
+    "scripts/research/agent-next-20261004/README.md": "6000f8d90caffb6972183bef427dfe86358894a21ef682d41369c5e4a7e6b93e",
+    "scripts/research/agent-next-20261004/provider-production.py": "98c17343bd5377904215f5dcb7b39a1199fb59347c02f9f66745fd7688370600",
+    "scripts/research/agent-next-20261004/provider-system-probe.mjs": "67d08d340e834748a9cf078968fd9756d8e2856800253a1a645c147ace035b57",
+    "scripts/research/agent-next-20261004/memory-probe-common.mjs": "db77855cad50c3a572220fc82695b08c839a09245f115693608a0fa34fa7a443",
+    "scripts/research/agent-next-20261004/memory-differential-probe.mjs": "83a87e38dcba01c5d979210871e03b4f6cfafcc28a93af681751d1b64a0d6766",
+    "scripts/research/agent-next-20261004/memory-reference-18f162b.mjs": "642e15428ffcb008e68d6448d5465555477c17f20888b6bf4d76e483eab709d6",
+    "scripts/research/agent-next-20261004/memory-reference-18f162b.source.txt": "0921994bc133782ca2d01ae7e9af05d01e4fd2ac233916cb42c5350ad3621f55",
+    "scripts/research/agent-next-20261004/memory-reference-18f162b.json": "645e8329a648a400ff39d5a279d2a7621904f51a26d27dd2b5263e984f82fc18",
+    "scripts/research/agent-next-20261004/navigation-probe.mjs": "f9fce79705c831d46818009c5f1607fa6215077a02899e221b4f03f08190e147"
+  },
+  "checks": [
+    {
+      "area": "R1",
+      "verdict": "STATIC_PASS",
+      "observations": [
+        "Nonempty separate system is prepended with original bytes. Undefined/empty adds no message. Existing history is mapped in place and preserved in order.",
+        "Wire legality validation remains after serialization and before fetch. Retry/cancellation and diagnostics paths were not bypassed.",
+        "Regression source covers exact Unicode/multiline/whitespace/empty/history/tool pair/immutable request/retry/cancel/diagnostics controls. Actual provider HTTP, CLI and Web probes use synthetic loopback credentials and durable production events."
+      ]
+    },
+    {
+      "area": "R2",
+      "verdict": "STATIC_PASS",
+      "observations": [
+        "The only production policy change is a per-call kept candidate token Set cache. Sort/first conflict/suppressed ordering/full kept set before final TopK remain equivalent.",
+        "No cross-call cache, tokenization/scoring/recall/index/store/gate/session/lifecycle/default changes. Worst-case pair comparisons remain quadratic.",
+        "Differential uses byte-pinned original baseline module, varied fixtures and deterministic token/pair work observations. The corrected score-tie fixture now has a mandatory exact-score and stable-order gate."
+      ]
+    },
+    {
+      "area": "R3",
+      "verdict": "STATIC_PASS",
+      "observations": [
+        "Public walkFiles returns Promise<void>; recursive boolean stop propagates to parents and siblings. grep returns false at the file filling the cap.",
+        "repoTree counts actual file and directory Dirents jointly, prunes root-relative depth before descent, preserves final path sort, skips generated/VCS/symlink Dirents.",
+        "Nonempty subpath ancestors are lstat-verified, count toward cap, and preserve existing output shape. Trusted root aliases remain permitted; selected and intermediate symlink descendants are rejected.",
+        "No Orchestrator/PermissionEngine/Sandbox/schema changes. Permanent fixtures use real orchestrator security controls."
+      ]
+    },
+    {
+      "area": "R4",
+      "verdict": "STATIC_PASS_WITH_PENDING_DEPENDENCIES",
+      "observations": [
+        "Runner requires a clean exact commit and unchanged source/dist fingerprints before and after every command.",
+        "Commands execute serially and include actual HTTP/production navigation/browser, separate R2 oracle/performance/Harness probes, one named full suite and strict usage audit for that observation run.",
+        "Exit codes, test summaries, new-regression no-skip, source-bound reports, all 27 browser cases, and strict usage PASS marker are enforced. Failure and interruption receipts preserve logs rather than manufacturing completion.",
+        "R2 performance/Harness scripts were still pending from the assigned implementation agent at this receipt; their static review and all runtime receipts require a follow-up frozen review."
+      ]
+    }
+  ],
+  "newRegressionNoSkipTodoOnlySourceCheck": {
+    "packages/model/src/openai-system-context.regressions.test.ts": true,
+    "packages/memory/src/retrieval-work.regressions.test.ts": true,
+    "packages/tools/src/navigation-work.regressions.test.ts": true
+  },
+  "changesMadeByReviewer": [
+    "Corrected real equal-score fixture and hard tie gate in memory-differential-probe.mjs.",
+    "Expanded README with stable R2/R3/R4 commands, acceptance conditions and limits."
+  ],
+  "followups": [
+    "Inspect completed R2 paired-performance and Harness scripts before final frozen evidence verdict.",
+    "Confirm score tie, complete-result equivalence, tokenization bound and both backend >=50% elapsed-time gates against actual frozen receipts.",
+    "Confirm actual R1 7-case, R3 7-check, browser 27-case, full test and same-run strict usage receipts, plus exact raw-byte artifact hashes.",
+    "Exclude generated __pycache__ .pyc files from source commit. Pin raw-byte frozen reference source/module files against checkout normalization if portability is claimed.",
+    "All current source fingerprints reflect a dirty working tree; this receipt does not assert completed acceptance, model quality or Windows coverage."
+  ],
+  "paidCalls": 0,
+  "liveModelQuality": "NOT_RUN",
+  "windowsRuntimeValidation": "NOT_RUN"
+}

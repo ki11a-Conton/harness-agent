@@ -1,0 +1,20 @@
+{
+  "status": "PASS",
+  "testedSourceSha": "de346b90dcbf97c9591ae2786e46e80fd0a4e05c",
+  "observedAt": "2026-10-05T01:01:23.887966+00:00",
+  "rawIndexSha256": "35e0f921ffe8bb53b8512ec09c32a6c33c05a170bf822925affea932e40f9463",
+  "rawFilesCheckedInGitIndex": 536,
+  "method": "For every artifact entry native git show :path bytes and SHA-256 equal recorded index; preregistration byte comparison with fbe5098; production index bytes equal frozen de346b9; staged git diff --check exit0; final docs:verify exit0",
+  "scope": "documentation and evidence packaging; no runtime/test/probe changes after frozen acceptance",
+  "completionDocsVerify": {
+    "argv": [
+      "corepack",
+      "pnpm",
+      "docs:verify"
+    ],
+    "exitCode": 0,
+    "logEncoding": "utf-8",
+    "logBodyUtf8": "$ node apps/cli/dist/main.js docs:verify\n[harness] context budget: model capabilities unknown for stub/stub-model \u2014 using conservative fallback 32000\n# Documentation truth verification\n\nPASS  benchmark suite: regression\n      30 case(s) on disk matches README claim 30\nPASS  benchmark suite: holdout\n      32 case(s) on disk matches README claim 32\nPASS  benchmark suite: adversarial\n      13 case(s) on disk matches README claim 13\nPASS  benchmark suite: stress\n      11 case(s) on disk matches README claim 11\nPASS  package count\n      24 packages/ on disk matches the HANDOVER claim 24\nPASS  CI gates\n      .github/workflows/ci.yml runs test and coverage\nPASS  HANDOVER static truth (P38.4-10)\n      HANDOVER.md canonical section contains no volatile SHA/run-id \u2014 a new commit does not make it stale\nPASS  CAPABILITY_MATRIX.md machine-generated\n      CAPABILITY_MATRIX.md carries generatedAt + the audit records table\nPASS  CAPABILITY_MATRIX marked informational (P38.2-11)\n      tracked matrix is explicitly NOT RELEASE EVIDENCE (informational snapshot)\nPASS  capability profiles present\n      CAPABILITY_MATRIX.json carries the per-profile byProfile view\nPASS  evolution ledger consistent (E2-12)\n      evolution-ledger.json verifies: refs exist, digests match, summaries recompute, one active champion\nPASS  current plan entry (E4-00)\n      plan.md is the current entry and references an existing spec plan(20261004-131935).md\nPASS  release gate commands exist in package.json (E4-10)\n      every release-gate command maps to a real package.json script\nPASS  documented pnpm scripts exist in package.json (E4-10 #6)\n      every pnpm command documented in 2 README file(s) maps to a real package.json script\n\nALL CHECKS PASS\n",
+    "logSha256": "77176732ddaa1b2d0bf477fe8590ec8e4d0624c93d841f535983f37ba577a2d6"
+  }
+}

@@ -1,0 +1,81 @@
+{
+  "status": "PASS",
+  "sourceHead": "91967f4dd2442b3d1979dee1c2b165d376c8895c",
+  "sourceUnchanged": true,
+  "gates": {
+    "fixedFixture": true,
+    "originalFixedProbe": true,
+    "exactProductionResults": true,
+    "rowAndMatchCounts": true,
+    "serialABBA": true,
+    "chineseBothBackendsAtLeast50PercentFaster": true,
+    "sourceUnchanged": true
+  },
+  "cases": [
+    {
+      "name": "warm-fts",
+      "backend": "jsonl",
+      "fullResultEquivalent": true,
+      "ratio": 0.9325485298334009,
+      "baselineMs": 41.34436200000005,
+      "candidateMs": 38.555623999999966
+    },
+    {
+      "name": "chinese-substring",
+      "backend": "jsonl",
+      "fullResultEquivalent": true,
+      "ratio": 0.1344957339665508,
+      "baselineMs": 565.6190999999999,
+      "candidateMs": 76.07335599999988
+    },
+    {
+      "name": "structured-do",
+      "backend": "jsonl",
+      "fullResultEquivalent": true,
+      "ratio": 1.0574622974004233,
+      "baselineMs": 45.974615000000085,
+      "candidateMs": 48.61642200000006
+    },
+    {
+      "name": "actual-miss",
+      "backend": "jsonl",
+      "fullResultEquivalent": true,
+      "ratio": 0.9764170672710807,
+      "baselineMs": 32.135401000000456,
+      "candidateMs": 31.3775540000006
+    },
+    {
+      "name": "warm-fts",
+      "backend": "sqlite",
+      "fullResultEquivalent": true,
+      "ratio": 1.0267525524509038,
+      "baselineMs": 66.31116800000018,
+      "candidateMs": 68.08516100000088
+    },
+    {
+      "name": "chinese-substring",
+      "backend": "sqlite",
+      "fullResultEquivalent": true,
+      "ratio": 0.1498736410336369,
+      "baselineMs": 613.5840790000002,
+      "candidateMs": 91.96008000000074
+    },
+    {
+      "name": "structured-do",
+      "backend": "sqlite",
+      "fullResultEquivalent": true,
+      "ratio": 0.9877069791613725,
+      "baselineMs": 65.32112899999993,
+      "candidateMs": 64.51813500000026
+    },
+    {
+      "name": "actual-miss",
+      "backend": "sqlite",
+      "fullResultEquivalent": true,
+      "ratio": 0.9781047995246073,
+      "baselineMs": 50.51814899999954,
+      "candidateMs": 49.41204399999879
+    }
+  ],
+  "paidCalls": 0
+}

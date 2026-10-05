@@ -1,0 +1,87 @@
+diff --git a/packages/core/src/runtime/wire-protocol-e2e.test.ts b/packages/core/src/runtime/wire-protocol-e2e.test.ts
+index 6f3cb9b..e565ea6 100644
+--- a/packages/core/src/runtime/wire-protocol-e2e.test.ts
++++ b/packages/core/src/runtime/wire-protocol-e2e.test.ts
+@@ -287,10 +287,16 @@ function assertWireLegalBody(body: Record<string, unknown>, label: string): Wire
+   return messages;
+ }
+ 
+-function assertAllBodiesLegal(stub: StrictStub, label: string): void {
++function assertAllBodiesLegal(stub: StrictStub, label: string, expectedSystem?: string): void {
+   expect(stub.requests.length, `${label}: at least one request`).toBeGreaterThan(0);
+   stub.requests.forEach((request, index) => {
+-    assertWireLegalBody(request.json, `${label} request#${index + 1}`);
++    const messages = assertWireLegalBody(request.json, `${label} request#${index + 1}`);
++    if (expectedSystem !== undefined) {
++      expect(messages[0], `${label} request#${index + 1}: assembled system bytes`).toEqual({
++        role: "system",
++        content: expectedSystem,
++      });
++    }
+   });
+ }
+ 
+@@ -328,19 +334,22 @@ describe("F7/R6 runtime → real provider → strict local stub (serialized wire
+     expect(outcome.status).toBe("completed");
+     expect(orch.calls.map((c) => c.request.call.name)).toEqual(["read_file"]);
+     expect(stub.requests).toHaveLength(2);
+-    expect(rolesOf(stub.requests[0]!.json)).toEqual(["user"]);
+-    expect(rolesOf(stub.requests[1]!.json)).toEqual(["user", "assistant+tool_calls", "tool"]);
+-    assertAllBodiesLegal(stub, "e2e-normal");
++    expect(rolesOf(stub.requests[0]!.json)).toEqual(["system", "user"]);
++    expect(rolesOf(stub.requests[1]!.json)).toEqual(["system", "user", "assistant+tool_calls", "tool"]);
++    // Without a context pipeline the compiled system is exactly the agent prompt.
++    assertAllBodiesLegal(stub, "e2e-normal", AGENT.systemPrompt);
+ 
+     // The tool result on the wire answers the SAME id the assistant requested.
+     const second = bodyMessages(stub.requests[1]!.json);
+-    const assistant = second[1]!;
++    const assistant = second[2]!;
+     expect(assistant.tool_calls![0]!.id).toBe("call_1");
+-    expect(second[2]!.tool_call_id).toBe("call_1");
+-    expect(second[2]!.content).toContain("file-body");
++    expect(second[3]!.tool_call_id).toBe("call_1");
++    expect(second[3]!.content).toContain("file-body");
+ 
+     // The durable transcript agrees with the wire (P2-41 kept intact).
+     const persisted = await store.listMessages(session.id);
++    // The separately assembled system must not be inserted into durable history.
++    expect(persisted.map((message) => message.role)).toEqual(["user", "assistant", "tool", "assistant"]);
+     const assistantIndex = persisted.findIndex((m) => m.role === "assistant" && m.toolCalls?.length);
+     expect(persisted[assistantIndex + 1]!.role).toBe("tool");
+     expect(persisted[assistantIndex + 1]!.toolCallId).toBe(persisted[assistantIndex]!.toolCalls![0]!.id);
+@@ -365,11 +374,11 @@ describe("F7/R6 runtime → real provider → strict local stub (serialized wire
+     expect(outcome.toolCalls).toBe(2);
+     expect(stub.requests).toHaveLength(2);
+     const second = bodyMessages(stub.requests[1]!.json);
+-    expect(second.map((m) => m.role)).toEqual(["user", "assistant", "tool", "tool"]);
+-    expect(second[1]!.tool_calls!.map((c) => c.id)).toEqual(["call_a", "call_b"]);
+-    expect(second[2]!.tool_call_id).toBe("call_a");
+-    expect(second[3]!.tool_call_id).toBe("call_b");
+-    assertAllBodiesLegal(stub, "e2e-parallel");
++    expect(second.map((m) => m.role)).toEqual(["system", "user", "assistant", "tool", "tool"]);
++    expect(second[2]!.tool_calls!.map((c) => c.id)).toEqual(["call_a", "call_b"]);
++    expect(second[3]!.tool_call_id).toBe("call_a");
++    expect(second[4]!.tool_call_id).toBe("call_b");
++    assertAllBodiesLegal(stub, "e2e-parallel", AGENT.systemPrompt);
+   });
+ 
+   it("e2e-stall-recovery: the stall observation never splits an assistant tool block", async () => {
+@@ -498,14 +507,15 @@ describe("F7/R6 runtime → real provider → strict local stub (serialized wire
+     expect(stub.requests).toHaveLength(1);
+     const replayed = bodyMessages(stub.requests[0]!.json);
+     expect(replayed.map((m) => (m.tool_calls?.length ? "assistant+tool_calls" : m.role))).toEqual([
++      "system",
+       "user",
+       "assistant+tool_calls",
+       "tool",
+       "assistant", // turn 1's final text
+       "user", // turn 2's goal
+     ]);
+-    expect(replayed[1]!.tool_calls![0]!.id).toBe(replayed[2]!.tool_call_id);
+-    assertAllBodiesLegal(stub, "e2e-resume");
++    expect(replayed[2]!.tool_calls![0]!.id).toBe(replayed[3]!.tool_call_id);
++    assertAllBodiesLegal(stub, "e2e-resume", AGENT.systemPrompt);
+   });
+ 
+   it("e2e-trim: the message-history trim path never leaves an orphan tool result", async () => {

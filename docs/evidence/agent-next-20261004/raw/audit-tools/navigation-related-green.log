@@ -1,0 +1,17 @@
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+ ✓ packages/tools/src/production-tools.test.ts (9 tests) 1397ms
+     ✓ env_snapshot tool is wired to the host network mode + tool list  450ms
+     ✓ createProductionTools forwards harness profile + workspace root to env_snapshot  447ms
+     ✓ createEnvSnapshotTool rejects nothing and reports the live injected policy + harness facts  487ms
+ ✓ packages/tools/src/workspace-knowledge-regressions.test.ts (29 tests) 116ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts (21 tests) 66ms
+ ✓ packages/tools/src/navigate.test.ts (7 tests) 16ms
+
+ Test Files  4 passed (4)
+      Tests  66 passed (66)
+   Start at  13:32:08
+   Duration  2.75s (transform 419ms, setup 0ms, import 725ms, tests 1.59s, environment 0ms)
+
+JSON report written to /workspace/harness-agent/.ci/agent-next-20261004/audit-tools/navigation-related-green.json

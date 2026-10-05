@@ -1,0 +1,260 @@
+{
+  "schema": "HARNESS_NAVIGATION_WORK_PROBE_V1",
+  "probeSha256": "f9fce79705c831d46818009c5f1607fa6215077a02899e221b4f03f08190e147",
+  "status": "FAIL",
+  "observedAt": "2026-10-04T13:28:31.705Z",
+  "head": "fbe5098c43060fd066bd5fbdaa4a4d1612abdeb6",
+  "profile": "actual ToolOrchestrator + production registry/tools + real filesystem; read-only tool permission/sandbox preserved",
+  "modelsPaid": 0,
+  "hashes": {
+    "packages/tools/src/navigate.ts": "75ea27a046fb9d2a55f7bb11cd4b04fda598561958e1f107176a2c6a08339932",
+    "packages/tools/src/tools/navigation-tools.ts": "9ad61abf09717afe045103fc53dcf60a2a92442589a59b035c2241b4f4cf708d",
+    "packages/tools/src/orchestrator.ts": "adcd42ba547d15e725b9d0236bd7ca550cf2f363e60f2ed10951f92d1604d3eb",
+    "packages/tools/dist/navigate.js": "b80ce5cbdfca4b3cbc03d8306af661081dc79ee0951e5f6c7d9db4eb1fb56e42",
+    "packages/tools/dist/tools/navigation-tools.js": "0ae512939b4e425b902c5d9259c0e0a23cd2372cfed4f50126444677c2672f7b"
+  },
+  "checks": [
+    {
+      "id": "TREE_DEPTH_ONE_RETURNS_IMMEDIATE_EMPTY_AND_POPULATED_DIRS",
+      "expected": {
+        "entries": 66,
+        "contains": [
+          "a-hit",
+          "empty",
+          "z00",
+          "z63"
+        ],
+        "descendantDirectoryReads": 0
+      },
+      "actual": {
+        "status": "success",
+        "output": [],
+        "directoryReads": 131,
+        "descendantDirectoryReads": 130
+      },
+      "verdict": "FAIL"
+    },
+    {
+      "id": "TREE_DEPTH_ZERO_HAS_ZERO_DESCENT_AND_NO_ENTRY",
+      "expected": {
+        "entries": 0,
+        "directoryReads": 0
+      },
+      "actual": {
+        "status": "success",
+        "output": [],
+        "directoryReads": 131
+      },
+      "verdict": "FAIL"
+    },
+    {
+      "id": "TREE_ENTRY_CAP_COUNTS_DIRECTORIES_AND_STOPS_GLOBALLY",
+      "expected": {
+        "entries": 1,
+        "directoryReadsAtMost": 1
+      },
+      "actual": {
+        "status": "success",
+        "output": [
+          {
+            "path": "a-hit",
+            "type": "dir",
+            "depth": 1
+          }
+        ],
+        "directoryReads": 131
+      },
+      "verdict": "FAIL"
+    },
+    {
+      "id": "GREP_CAP_STOPS_GLOBAL_RECURSION",
+      "expected": {
+        "hits": 1,
+        "directoryReadsAtMost": 2
+      },
+      "actual": {
+        "status": "success",
+        "hits": [
+          {
+            "file": "a-hit/match.txt",
+            "line": 1,
+            "column": 1,
+            "text": "needle"
+          }
+        ],
+        "directoryReads": 131,
+        "visited": [
+          ".",
+          "a-hit",
+          "empty",
+          "z00",
+          "z00/sub",
+          "z01",
+          "z01/sub",
+          "z02",
+          "z02/sub",
+          "z03",
+          "z03/sub",
+          "z04",
+          "z04/sub",
+          "z05",
+          "z05/sub",
+          "z06",
+          "z06/sub",
+          "z07",
+          "z07/sub",
+          "z08",
+          "z08/sub",
+          "z09",
+          "z09/sub",
+          "z10",
+          "z10/sub",
+          "z11",
+          "z11/sub",
+          "z12",
+          "z12/sub",
+          "z13",
+          "z13/sub",
+          "z14",
+          "z14/sub",
+          "z15",
+          "z15/sub",
+          "z16",
+          "z16/sub",
+          "z17",
+          "z17/sub",
+          "z18",
+          "z18/sub",
+          "z19",
+          "z19/sub",
+          "z20",
+          "z20/sub",
+          "z21",
+          "z21/sub",
+          "z22",
+          "z22/sub",
+          "z23",
+          "z23/sub",
+          "z24",
+          "z24/sub",
+          "z25",
+          "z25/sub",
+          "z26",
+          "z26/sub",
+          "z27",
+          "z27/sub",
+          "z28",
+          "z28/sub",
+          "z29",
+          "z29/sub",
+          "z30",
+          "z30/sub",
+          "z31",
+          "z31/sub",
+          "z32",
+          "z32/sub",
+          "z33",
+          "z33/sub",
+          "z34",
+          "z34/sub",
+          "z35",
+          "z35/sub",
+          "z36",
+          "z36/sub",
+          "z37",
+          "z37/sub",
+          "z38",
+          "z38/sub",
+          "z39",
+          "z39/sub",
+          "z40",
+          "z40/sub",
+          "z41",
+          "z41/sub",
+          "z42",
+          "z42/sub",
+          "z43",
+          "z43/sub",
+          "z44",
+          "z44/sub",
+          "z45",
+          "z45/sub",
+          "z46",
+          "z46/sub",
+          "z47",
+          "z47/sub",
+          "z48",
+          "z48/sub",
+          "z49",
+          "z49/sub",
+          "z50",
+          "z50/sub",
+          "z51",
+          "z51/sub",
+          "z52",
+          "z52/sub",
+          "z53",
+          "z53/sub",
+          "z54",
+          "z54/sub",
+          "z55",
+          "z55/sub",
+          "z56",
+          "z56/sub",
+          "z57",
+          "z57/sub",
+          "z58",
+          "z58/sub",
+          "z59",
+          "z59/sub",
+          "z60",
+          "z60/sub",
+          "z61",
+          "z61/sub",
+          "z62",
+          "z62/sub",
+          "z63",
+          "z63/sub"
+        ]
+      },
+      "verdict": "FAIL"
+    },
+    {
+      "id": "TREE_SKIP_GENERATED_AND_SYMLINK_DIRS",
+      "expected": {
+        "hiddenPaths": [],
+        "foreignPaths": []
+      },
+      "actual": {
+        "status": "success",
+        "hiddenPaths": [],
+        "foreignPaths": []
+      },
+      "verdict": "PASS"
+    },
+    {
+      "id": "SANDBOX_OUTSIDE_PATH_PREVENTS_TREE_READ",
+      "expected": {
+        "status": "denied",
+        "directoryReads": 0
+      },
+      "actual": {
+        "status": "denied",
+        "directoryReads": 0
+      },
+      "verdict": "PASS"
+    },
+    {
+      "id": "PERMISSION_DENY_PREVENTS_TREE_READ",
+      "expected": {
+        "status": "denied",
+        "directoryReads": 0
+      },
+      "actual": {
+        "status": "denied",
+        "directoryReads": 0
+      },
+      "verdict": "PASS"
+    }
+  ]
+}

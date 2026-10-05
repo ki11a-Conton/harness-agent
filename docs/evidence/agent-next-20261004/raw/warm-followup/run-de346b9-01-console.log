@@ -1,0 +1,42 @@
+{
+  "status": "PASS",
+  "sourceHead": "de346b90dcbf97c9591ae2786e46e80fd0a4e05c",
+  "sourceUnchanged": true,
+  "gates": {
+    "preregisteredRecipe": true,
+    "cleanFrozenSource": true,
+    "fixedFixture": true,
+    "formalOriginalUnchanged": true,
+    "readOnlyDatabase": true,
+    "fullResultEquivalence": true,
+    "measured15PairsEveryCase": true,
+    "sourceUnchanged": true
+  },
+  "cases": [
+    {
+      "name": "fullRetrieval",
+      "backend": "sqlite",
+      "fullResultEquivalent": true,
+      "ratio": 1.0041543371447104,
+      "baselineMs": 66.46716199999992,
+      "candidateMs": 66.743289
+    },
+    {
+      "name": "sameFunctionSearchControl",
+      "backend": "sqlite",
+      "fullResultEquivalent": true,
+      "ratio": 0.9966294568816559,
+      "baselineMs": 59.05606099999977,
+      "candidateMs": 58.85700999999972
+    },
+    {
+      "name": "postSearchOnlyDiagnostic",
+      "backend": "sqlite",
+      "fullResultEquivalent": true,
+      "ratio": 0.8484433477962329,
+      "baselineMs": 5.869198000000324,
+      "candidateMs": 4.9796819999992294
+    }
+  ],
+  "paidCalls": 0
+}

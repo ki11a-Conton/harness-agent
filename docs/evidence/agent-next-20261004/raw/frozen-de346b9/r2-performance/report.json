@@ -1,0 +1,1918 @@
+{
+  "schema": "R2_MEMORY_ENGINEERING_PROBE",
+  "observedAt": "2026-10-05T00:37:57.053Z",
+  "repo": "/workspace/harness-agent",
+  "sourceHead": "de346b90dcbf97c9591ae2786e46e80fd0a4e05c",
+  "sourceStatus": "",
+  "sourceHashes": {
+    "packages/memory/src/retrieval.ts": "d3a48b1ff665dd2c3f698d7a2c7e4754081a8fb6ba6306556444262135fca8c9",
+    "packages/memory/dist/retrieval.js": "a47651ff6072887a099ae546478a437cf53b75ca4196e163561c7f6e3c73904a",
+    "packages/memory/src/memory-store.ts": "925f718e3f92baf32fb2868bafcdcd0701cb520e441049892848a4cb6d494caf",
+    "packages/memory/dist/memory-store.js": "8722ce368b39c5626668437f3ced379d035ae938e480f693a6971f12e3cf5ed5",
+    "packages/memory/src/sqlite-memory-store.ts": "f278be463dec22f5ed15039e6e727b22a942eb6afbaab19e6961e177ae20cb6f",
+    "packages/memory/dist/sqlite-memory-store.js": "300bf553eb208898c79d7d557b5dfb8b649b5e01f28a5b934ac56eb1d39dceb7",
+    "packages/memory/src/search-text.ts": "e569e7f418e3edf87fba7fd2e9c1a1bdf7511d78ea85abcecd863def5c201fd0",
+    "packages/memory/dist/search-text.js": "077ce28fe2280d104af3d98da7c07d11582f61ea7ad0beec1ccc2f730975b202",
+    "packages/memory/src/security-gate.ts": "35dd1c100d6200a862ac50c3b2f1c0fff1d9feb8b7921e31c8805aed319a5efa",
+    "packages/memory/dist/security-gate.js": "4e5b30994c56a51aead532212406056b0f5e84dd80f74979e4b45ebbf85f72fa",
+    "packages/memory/src/lifecycle.ts": "785201bfbfab78fad4cfe8b5781973e00f5149a5fd2c62559b81890642193fa6",
+    "packages/memory/dist/lifecycle.js": "11a295ece7bdf7bb4130e84ed09304da654e19d5715a8d21ff45be1c7545b183",
+    "packages/harness/src/memory-runtime-bridge.ts": "2d6cf39686f2884d2c390dcd13e7c7f46a3e368094d807b79124a79297a4f4cf",
+    "packages/harness/dist/memory-runtime-bridge.js": "b3b45a131640fad6a294aa8cb30a5c0d0770f1706c3281130a3816037d9eba09",
+    "packages/harness/src/create-harness.ts": "a115aa9c8ec71b86e689e80ab9195c21cd85c8f19a0d9de669e9e19d8becf84e",
+    "packages/harness/dist/create-harness.js": "442874f7297e7e0b7df5e715af249457fbd0bf6cd33f15b75d5e198700ea29e3"
+  },
+  "probeSha256": "2529413f5b7d19e0ca190c5791ace30a3e29bb4f7fb942b190b4aa0320af2017",
+  "helperSha256": "db77855cad50c3a572220fc82695b08c839a09245f115693608a0fa34fa7a443",
+  "baselineHead": "18f162bf7f12c4b8e8cebcebede4034dd1f3efb7",
+  "baselineRetrievalSourceSha256": "0921994bc133782ca2d01ae7e9af05d01e4fd2ac233916cb42c5350ad3621f55",
+  "baselineRetrievalCompiledSha256": "642e15428ffcb008e68d6448d5465555477c17f20888b6bf4d76e483eab709d6",
+  "resolvedReferenceSha256": "bfba0a3fe0f2238ec270f1a73910e08ad75de245cddacc1a970afb14c07a35c1",
+  "unchangedSearchAndGateSources": {
+    "packages/memory/src/memory-store.ts": {
+      "actual": "925f718e3f92baf32fb2868bafcdcd0701cb520e441049892848a4cb6d494caf",
+      "baseline": "925f718e3f92baf32fb2868bafcdcd0701cb520e441049892848a4cb6d494caf",
+      "matches": true
+    },
+    "packages/memory/src/sqlite-memory-store.ts": {
+      "actual": "f278be463dec22f5ed15039e6e727b22a942eb6afbaab19e6961e177ae20cb6f",
+      "baseline": "f278be463dec22f5ed15039e6e727b22a942eb6afbaab19e6961e177ae20cb6f",
+      "matches": true
+    },
+    "packages/memory/src/search-text.ts": {
+      "actual": "e569e7f418e3edf87fba7fd2e9c1a1bdf7511d78ea85abcecd863def5c201fd0",
+      "baseline": "e569e7f418e3edf87fba7fd2e9c1a1bdf7511d78ea85abcecd863def5c201fd0",
+      "matches": true
+    },
+    "packages/memory/src/security-gate.ts": {
+      "actual": "35dd1c100d6200a862ac50c3b2f1c0fff1d9feb8b7921e31c8805aed319a5efa",
+      "baseline": "35dd1c100d6200a862ac50c3b2f1c0fff1d9feb8b7921e31c8805aed319a5efa",
+      "matches": true
+    },
+    "packages/memory/src/lifecycle.ts": {
+      "actual": "785201bfbfab78fad4cfe8b5781973e00f5149a5fd2c62559b81890642193fa6",
+      "baseline": "785201bfbfab78fad4cfe8b5781973e00f5149a5fd2c62559b81890642193fa6",
+      "matches": true
+    }
+  },
+  "paidCalls": 0,
+  "realProviderCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "promotion": "NOT_RUN",
+  "cases": [
+    {
+      "backend": "jsonl",
+      "name": "warm-fts",
+      "query": "retry",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-fixture-owner"
+      },
+      "expectedMatchCount": 2000,
+      "actualMatchCount": 2000,
+      "actualRowCount": 10000,
+      "rowAndMatchCountPass": true,
+      "fullResultEquivalent": true,
+      "baselineResultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+      "candidateResultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+      "returnedTopK": 1,
+      "suppressedCount": 1999,
+      "baseline": {
+        "samplesMs": [
+          51.80306800000005,
+          50.43838399999993,
+          44.85435599999994,
+          37.89610200000004,
+          42.72914300000002
+        ],
+        "minMs": 37.89610200000004,
+        "medianMs": 44.85435599999994,
+        "maxMs": 51.80306800000005
+      },
+      "candidate": {
+        "samplesMs": [
+          52.41458299999999,
+          43.91700900000001,
+          38.006468999999925,
+          42.704916000000026,
+          36.975449000000026
+        ],
+        "minMs": 36.975449000000026,
+        "medianMs": 42.704916000000026,
+        "maxMs": 52.41458299999999
+      },
+      "ratio": 0.9520795705995664,
+      "elapsedReduction": 0.04792042940043362,
+      "executionOrders": [
+        {
+          "phase": "warmup",
+          "sample": 0,
+          "order": [
+            "baseline",
+            "candidate"
+          ]
+        },
+        {
+          "phase": "warmup",
+          "sample": 1,
+          "order": [
+            "candidate",
+            "baseline"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 0,
+          "order": [
+            "baseline",
+            "candidate"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 1,
+          "order": [
+            "candidate",
+            "baseline"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 2,
+          "order": [
+            "baseline",
+            "candidate"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 3,
+          "order": [
+            "candidate",
+            "baseline"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 4,
+          "order": [
+            "baseline",
+            "candidate"
+          ]
+        }
+      ],
+      "measuredCallsPerImplementation": 5,
+      "totalPairedCalls": 14,
+      "calls": [
+        {
+          "phase": "warmup",
+          "sample": 0,
+          "implementation": "baseline",
+          "elapsedMs": 51.42577699999998,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "warmup",
+          "sample": 0,
+          "implementation": "candidate",
+          "elapsedMs": 49.961742000000015,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "warmup",
+          "sample": 1,
+          "implementation": "candidate",
+          "elapsedMs": 44.24891100000002,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "warmup",
+          "sample": 1,
+          "implementation": "baseline",
+          "elapsedMs": 46.12845399999998,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 0,
+          "implementation": "baseline",
+          "elapsedMs": 51.80306800000005,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 0,
+          "implementation": "candidate",
+          "elapsedMs": 52.41458299999999,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 1,
+          "implementation": "candidate",
+          "elapsedMs": 43.91700900000001,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 1,
+          "implementation": "baseline",
+          "elapsedMs": 50.43838399999993,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 2,
+          "implementation": "baseline",
+          "elapsedMs": 44.85435599999994,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 2,
+          "implementation": "candidate",
+          "elapsedMs": 38.006468999999925,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 3,
+          "implementation": "candidate",
+          "elapsedMs": 42.704916000000026,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 3,
+          "implementation": "baseline",
+          "elapsedMs": 37.89610200000004,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 4,
+          "implementation": "baseline",
+          "elapsedMs": 42.72914300000002,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 4,
+          "implementation": "candidate",
+          "elapsedMs": 36.975449000000026,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        }
+      ],
+      "resultFile": "result-jsonl-warm-fts.json",
+      "resultFileSha256": "ed29a75bff5ff27ac5ad0c4de13d8f778c3c832edbffa954656d62d3617b6180"
+    },
+    {
+      "backend": "jsonl",
+      "name": "chinese-substring",
+      "query": "端口配置",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-fixture-owner"
+      },
+      "expectedMatchCount": 2000,
+      "actualMatchCount": 2000,
+      "actualRowCount": 10000,
+      "rowAndMatchCountPass": true,
+      "fullResultEquivalent": true,
+      "baselineResultSha256": "842b4a39fed51a4db1e7ddee3536114d20a16466531d1ad78ed72c1f19fcfeef",
+      "candidateResultSha256": "842b4a39fed51a4db1e7ddee3536114d20a16466531d1ad78ed72c1f19fcfeef",
+      "returnedTopK": 5,
+      "suppressedCount": 0,
+      "baseline": {
+        "samplesMs": [
+          535.868633,
+          527.393458,
+          543.6296059999995,
+          538.2658840000004,
+          539.3285599999999
+        ],
+        "minMs": 527.393458,
+        "medianMs": 538.2658840000004,
+        "maxMs": 543.6296059999995
+      },
+      "candidate": {
+        "samplesMs": [
+          82.9676870000003,
+          77.27391499999976,
+          80.15097699999933,
+          81.83069799999976,
+          109.07540399999925
+        ],
+        "minMs": 77.27391499999976,
+        "medianMs": 81.83069799999976,
+        "maxMs": 109.07540399999925
+      },
+      "ratio": 0.15202653638735852,
+      "elapsedReduction": 0.8479734636126415,
+      "executionOrders": [
+        {
+          "phase": "warmup",
+          "sample": 0,
+          "order": [
+            "baseline",
+            "candidate"
+          ]
+        },
+        {
+          "phase": "warmup",
+          "sample": 1,
+          "order": [
+            "candidate",
+            "baseline"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 0,
+          "order": [
+            "baseline",
+            "candidate"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 1,
+          "order": [
+            "candidate",
+            "baseline"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 2,
+          "order": [
+            "baseline",
+            "candidate"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 3,
+          "order": [
+            "candidate",
+            "baseline"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 4,
+          "order": [
+            "baseline",
+            "candidate"
+          ]
+        }
+      ],
+      "measuredCallsPerImplementation": 5,
+      "totalPairedCalls": 14,
+      "calls": [
+        {
+          "phase": "warmup",
+          "sample": 0,
+          "implementation": "baseline",
+          "elapsedMs": 533.4467849999999,
+          "resultSha256": "842b4a39fed51a4db1e7ddee3536114d20a16466531d1ad78ed72c1f19fcfeef",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "warmup",
+          "sample": 0,
+          "implementation": "candidate",
+          "elapsedMs": 82.38610700000027,
+          "resultSha256": "842b4a39fed51a4db1e7ddee3536114d20a16466531d1ad78ed72c1f19fcfeef",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "warmup",
+          "sample": 1,
+          "implementation": "candidate",
+          "elapsedMs": 80.47801200000004,
+          "resultSha256": "842b4a39fed51a4db1e7ddee3536114d20a16466531d1ad78ed72c1f19fcfeef",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "warmup",
+          "sample": 1,
+          "implementation": "baseline",
+          "elapsedMs": 528.5289940000002,
+          "resultSha256": "842b4a39fed51a4db1e7ddee3536114d20a16466531d1ad78ed72c1f19fcfeef",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 0,
+          "implementation": "baseline",
+          "elapsedMs": 535.868633,
+          "resultSha256": "842b4a39fed51a4db1e7ddee3536114d20a16466531d1ad78ed72c1f19fcfeef",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 0,
+          "implementation": "candidate",
+          "elapsedMs": 82.9676870000003,
+          "resultSha256": "842b4a39fed51a4db1e7ddee3536114d20a16466531d1ad78ed72c1f19fcfeef",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 1,
+          "implementation": "candidate",
+          "elapsedMs": 77.27391499999976,
+          "resultSha256": "842b4a39fed51a4db1e7ddee3536114d20a16466531d1ad78ed72c1f19fcfeef",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 1,
+          "implementation": "baseline",
+          "elapsedMs": 527.393458,
+          "resultSha256": "842b4a39fed51a4db1e7ddee3536114d20a16466531d1ad78ed72c1f19fcfeef",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 2,
+          "implementation": "baseline",
+          "elapsedMs": 543.6296059999995,
+          "resultSha256": "842b4a39fed51a4db1e7ddee3536114d20a16466531d1ad78ed72c1f19fcfeef",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 2,
+          "implementation": "candidate",
+          "elapsedMs": 80.15097699999933,
+          "resultSha256": "842b4a39fed51a4db1e7ddee3536114d20a16466531d1ad78ed72c1f19fcfeef",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 3,
+          "implementation": "candidate",
+          "elapsedMs": 81.83069799999976,
+          "resultSha256": "842b4a39fed51a4db1e7ddee3536114d20a16466531d1ad78ed72c1f19fcfeef",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 3,
+          "implementation": "baseline",
+          "elapsedMs": 538.2658840000004,
+          "resultSha256": "842b4a39fed51a4db1e7ddee3536114d20a16466531d1ad78ed72c1f19fcfeef",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 4,
+          "implementation": "baseline",
+          "elapsedMs": 539.3285599999999,
+          "resultSha256": "842b4a39fed51a4db1e7ddee3536114d20a16466531d1ad78ed72c1f19fcfeef",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 4,
+          "implementation": "candidate",
+          "elapsedMs": 109.07540399999925,
+          "resultSha256": "842b4a39fed51a4db1e7ddee3536114d20a16466531d1ad78ed72c1f19fcfeef",
+          "fullResultEquivalent": true
+        }
+      ],
+      "resultFile": "result-jsonl-chinese-substring.json",
+      "resultFileSha256": "d07b8ba5ade328c0765387ea4e1f448722b5d17eca02f6f1c0f31b80ddb422af"
+    },
+    {
+      "backend": "jsonl",
+      "name": "structured-do",
+      "query": "portlint",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-fixture-owner"
+      },
+      "expectedMatchCount": 2000,
+      "actualMatchCount": 2000,
+      "actualRowCount": 10000,
+      "rowAndMatchCountPass": true,
+      "fullResultEquivalent": true,
+      "baselineResultSha256": "43f5d83804d7176a1213f767be7301412761c4c66b0d9c94de41a841eedfc6c0",
+      "candidateResultSha256": "43f5d83804d7176a1213f767be7301412761c4c66b0d9c94de41a841eedfc6c0",
+      "returnedTopK": 1,
+      "suppressedCount": 1999,
+      "baseline": {
+        "samplesMs": [
+          53.51216299999942,
+          54.595453000000816,
+          50.427638000000115,
+          49.77196600000025,
+          47.57862800000021
+        ],
+        "minMs": 47.57862800000021,
+        "medianMs": 50.427638000000115,
+        "maxMs": 54.595453000000816
+      },
+      "candidate": {
+        "samplesMs": [
+          46.66876200000024,
+          64.7142730000005,
+          51.80974800000058,
+          45.10145100000045,
+          49.776081999999406
+        ],
+        "minMs": 45.10145100000045,
+        "medianMs": 49.776081999999406,
+        "maxMs": 64.7142730000005
+      },
+      "ratio": 0.9870793869028586,
+      "elapsedReduction": 0.012920613097141431,
+      "executionOrders": [
+        {
+          "phase": "warmup",
+          "sample": 0,
+          "order": [
+            "baseline",
+            "candidate"
+          ]
+        },
+        {
+          "phase": "warmup",
+          "sample": 1,
+          "order": [
+            "candidate",
+            "baseline"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 0,
+          "order": [
+            "baseline",
+            "candidate"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 1,
+          "order": [
+            "candidate",
+            "baseline"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 2,
+          "order": [
+            "baseline",
+            "candidate"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 3,
+          "order": [
+            "candidate",
+            "baseline"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 4,
+          "order": [
+            "baseline",
+            "candidate"
+          ]
+        }
+      ],
+      "measuredCallsPerImplementation": 5,
+      "totalPairedCalls": 14,
+      "calls": [
+        {
+          "phase": "warmup",
+          "sample": 0,
+          "implementation": "baseline",
+          "elapsedMs": 53.353933999999754,
+          "resultSha256": "43f5d83804d7176a1213f767be7301412761c4c66b0d9c94de41a841eedfc6c0",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "warmup",
+          "sample": 0,
+          "implementation": "candidate",
+          "elapsedMs": 50.56047900000067,
+          "resultSha256": "43f5d83804d7176a1213f767be7301412761c4c66b0d9c94de41a841eedfc6c0",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "warmup",
+          "sample": 1,
+          "implementation": "candidate",
+          "elapsedMs": 56.55242199999975,
+          "resultSha256": "43f5d83804d7176a1213f767be7301412761c4c66b0d9c94de41a841eedfc6c0",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "warmup",
+          "sample": 1,
+          "implementation": "baseline",
+          "elapsedMs": 49.03597300000001,
+          "resultSha256": "43f5d83804d7176a1213f767be7301412761c4c66b0d9c94de41a841eedfc6c0",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 0,
+          "implementation": "baseline",
+          "elapsedMs": 53.51216299999942,
+          "resultSha256": "43f5d83804d7176a1213f767be7301412761c4c66b0d9c94de41a841eedfc6c0",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 0,
+          "implementation": "candidate",
+          "elapsedMs": 46.66876200000024,
+          "resultSha256": "43f5d83804d7176a1213f767be7301412761c4c66b0d9c94de41a841eedfc6c0",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 1,
+          "implementation": "candidate",
+          "elapsedMs": 64.7142730000005,
+          "resultSha256": "43f5d83804d7176a1213f767be7301412761c4c66b0d9c94de41a841eedfc6c0",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 1,
+          "implementation": "baseline",
+          "elapsedMs": 54.595453000000816,
+          "resultSha256": "43f5d83804d7176a1213f767be7301412761c4c66b0d9c94de41a841eedfc6c0",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 2,
+          "implementation": "baseline",
+          "elapsedMs": 50.427638000000115,
+          "resultSha256": "43f5d83804d7176a1213f767be7301412761c4c66b0d9c94de41a841eedfc6c0",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 2,
+          "implementation": "candidate",
+          "elapsedMs": 51.80974800000058,
+          "resultSha256": "43f5d83804d7176a1213f767be7301412761c4c66b0d9c94de41a841eedfc6c0",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 3,
+          "implementation": "candidate",
+          "elapsedMs": 45.10145100000045,
+          "resultSha256": "43f5d83804d7176a1213f767be7301412761c4c66b0d9c94de41a841eedfc6c0",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 3,
+          "implementation": "baseline",
+          "elapsedMs": 49.77196600000025,
+          "resultSha256": "43f5d83804d7176a1213f767be7301412761c4c66b0d9c94de41a841eedfc6c0",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 4,
+          "implementation": "baseline",
+          "elapsedMs": 47.57862800000021,
+          "resultSha256": "43f5d83804d7176a1213f767be7301412761c4c66b0d9c94de41a841eedfc6c0",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 4,
+          "implementation": "candidate",
+          "elapsedMs": 49.776081999999406,
+          "resultSha256": "43f5d83804d7176a1213f767be7301412761c4c66b0d9c94de41a841eedfc6c0",
+          "fullResultEquivalent": true
+        }
+      ],
+      "resultFile": "result-jsonl-structured-do.json",
+      "resultFileSha256": "51fb0eab8dcc28f0b42e45fd2319f51e3f2e38772d7d470a2474041fbf338719"
+    },
+    {
+      "backend": "jsonl",
+      "name": "actual-miss",
+      "query": "unmatchedmarkerquantum",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-fixture-owner"
+      },
+      "expectedMatchCount": 0,
+      "actualMatchCount": 0,
+      "actualRowCount": 10000,
+      "rowAndMatchCountPass": true,
+      "fullResultEquivalent": true,
+      "baselineResultSha256": "6cb2e8cd3e3c46b466d5734bdf4735cfa924fcd2372f6e2e7c98a3a3efbf6083",
+      "candidateResultSha256": "6cb2e8cd3e3c46b466d5734bdf4735cfa924fcd2372f6e2e7c98a3a3efbf6083",
+      "returnedTopK": 0,
+      "suppressedCount": 0,
+      "baseline": {
+        "samplesMs": [
+          35.93185100000028,
+          33.906888999999865,
+          32.43851699999959,
+          34.24867499999982,
+          33.23227700000007
+        ],
+        "minMs": 32.43851699999959,
+        "medianMs": 33.906888999999865,
+        "maxMs": 35.93185100000028
+      },
+      "candidate": {
+        "samplesMs": [
+          32.85719100000006,
+          31.974044999999933,
+          34.97655499999928,
+          32.694614,
+          32.421580999999605
+        ],
+        "minMs": 31.974044999999933,
+        "medianMs": 32.694614,
+        "maxMs": 34.97655499999928
+      },
+      "ratio": 0.9642469410862239,
+      "elapsedReduction": 0.035753058913776115,
+      "executionOrders": [
+        {
+          "phase": "warmup",
+          "sample": 0,
+          "order": [
+            "baseline",
+            "candidate"
+          ]
+        },
+        {
+          "phase": "warmup",
+          "sample": 1,
+          "order": [
+            "candidate",
+            "baseline"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 0,
+          "order": [
+            "baseline",
+            "candidate"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 1,
+          "order": [
+            "candidate",
+            "baseline"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 2,
+          "order": [
+            "baseline",
+            "candidate"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 3,
+          "order": [
+            "candidate",
+            "baseline"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 4,
+          "order": [
+            "baseline",
+            "candidate"
+          ]
+        }
+      ],
+      "measuredCallsPerImplementation": 5,
+      "totalPairedCalls": 14,
+      "calls": [
+        {
+          "phase": "warmup",
+          "sample": 0,
+          "implementation": "baseline",
+          "elapsedMs": 32.202870000000075,
+          "resultSha256": "6cb2e8cd3e3c46b466d5734bdf4735cfa924fcd2372f6e2e7c98a3a3efbf6083",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "warmup",
+          "sample": 0,
+          "implementation": "candidate",
+          "elapsedMs": 33.57751999999982,
+          "resultSha256": "6cb2e8cd3e3c46b466d5734bdf4735cfa924fcd2372f6e2e7c98a3a3efbf6083",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "warmup",
+          "sample": 1,
+          "implementation": "candidate",
+          "elapsedMs": 34.70260199999939,
+          "resultSha256": "6cb2e8cd3e3c46b466d5734bdf4735cfa924fcd2372f6e2e7c98a3a3efbf6083",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "warmup",
+          "sample": 1,
+          "implementation": "baseline",
+          "elapsedMs": 32.45861700000023,
+          "resultSha256": "6cb2e8cd3e3c46b466d5734bdf4735cfa924fcd2372f6e2e7c98a3a3efbf6083",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 0,
+          "implementation": "baseline",
+          "elapsedMs": 35.93185100000028,
+          "resultSha256": "6cb2e8cd3e3c46b466d5734bdf4735cfa924fcd2372f6e2e7c98a3a3efbf6083",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 0,
+          "implementation": "candidate",
+          "elapsedMs": 32.85719100000006,
+          "resultSha256": "6cb2e8cd3e3c46b466d5734bdf4735cfa924fcd2372f6e2e7c98a3a3efbf6083",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 1,
+          "implementation": "candidate",
+          "elapsedMs": 31.974044999999933,
+          "resultSha256": "6cb2e8cd3e3c46b466d5734bdf4735cfa924fcd2372f6e2e7c98a3a3efbf6083",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 1,
+          "implementation": "baseline",
+          "elapsedMs": 33.906888999999865,
+          "resultSha256": "6cb2e8cd3e3c46b466d5734bdf4735cfa924fcd2372f6e2e7c98a3a3efbf6083",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 2,
+          "implementation": "baseline",
+          "elapsedMs": 32.43851699999959,
+          "resultSha256": "6cb2e8cd3e3c46b466d5734bdf4735cfa924fcd2372f6e2e7c98a3a3efbf6083",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 2,
+          "implementation": "candidate",
+          "elapsedMs": 34.97655499999928,
+          "resultSha256": "6cb2e8cd3e3c46b466d5734bdf4735cfa924fcd2372f6e2e7c98a3a3efbf6083",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 3,
+          "implementation": "candidate",
+          "elapsedMs": 32.694614,
+          "resultSha256": "6cb2e8cd3e3c46b466d5734bdf4735cfa924fcd2372f6e2e7c98a3a3efbf6083",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 3,
+          "implementation": "baseline",
+          "elapsedMs": 34.24867499999982,
+          "resultSha256": "6cb2e8cd3e3c46b466d5734bdf4735cfa924fcd2372f6e2e7c98a3a3efbf6083",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 4,
+          "implementation": "baseline",
+          "elapsedMs": 33.23227700000007,
+          "resultSha256": "6cb2e8cd3e3c46b466d5734bdf4735cfa924fcd2372f6e2e7c98a3a3efbf6083",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 4,
+          "implementation": "candidate",
+          "elapsedMs": 32.421580999999605,
+          "resultSha256": "6cb2e8cd3e3c46b466d5734bdf4735cfa924fcd2372f6e2e7c98a3a3efbf6083",
+          "fullResultEquivalent": true
+        }
+      ],
+      "resultFile": "result-jsonl-actual-miss.json",
+      "resultFileSha256": "f7a7782d97dd158a3acaadf08b22739b6d097330ebcb7b0c1df0b6f456e63cb3"
+    },
+    {
+      "backend": "sqlite",
+      "name": "warm-fts",
+      "query": "retry",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-fixture-owner"
+      },
+      "expectedMatchCount": 2000,
+      "actualMatchCount": 2000,
+      "actualRowCount": 10000,
+      "rowAndMatchCountPass": true,
+      "fullResultEquivalent": true,
+      "baselineResultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+      "candidateResultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+      "returnedTopK": 1,
+      "suppressedCount": 1999,
+      "baseline": {
+        "samplesMs": [
+          62.62320499999987,
+          69.71972900000037,
+          64.53910299999916,
+          66.17538799999966,
+          73.34007500000007
+        ],
+        "minMs": 62.62320499999987,
+        "medianMs": 66.17538799999966,
+        "maxMs": 73.34007500000007
+      },
+      "candidate": {
+        "samplesMs": [
+          64.98994500000026,
+          69.37600900000052,
+          73.14820099999997,
+          73.35317500000019,
+          78.9479680000004
+        ],
+        "minMs": 64.98994500000026,
+        "medianMs": 73.14820099999997,
+        "maxMs": 78.9479680000004
+      },
+      "ratio": 1.1053686757378793,
+      "elapsedReduction": -0.10536867573787934,
+      "executionOrders": [
+        {
+          "phase": "warmup",
+          "sample": 0,
+          "order": [
+            "baseline",
+            "candidate"
+          ]
+        },
+        {
+          "phase": "warmup",
+          "sample": 1,
+          "order": [
+            "candidate",
+            "baseline"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 0,
+          "order": [
+            "baseline",
+            "candidate"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 1,
+          "order": [
+            "candidate",
+            "baseline"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 2,
+          "order": [
+            "baseline",
+            "candidate"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 3,
+          "order": [
+            "candidate",
+            "baseline"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 4,
+          "order": [
+            "baseline",
+            "candidate"
+          ]
+        }
+      ],
+      "measuredCallsPerImplementation": 5,
+      "totalPairedCalls": 14,
+      "calls": [
+        {
+          "phase": "warmup",
+          "sample": 0,
+          "implementation": "baseline",
+          "elapsedMs": 65.47262499999943,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "warmup",
+          "sample": 0,
+          "implementation": "candidate",
+          "elapsedMs": 63.387901999999485,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "warmup",
+          "sample": 1,
+          "implementation": "candidate",
+          "elapsedMs": 68.41829000000052,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "warmup",
+          "sample": 1,
+          "implementation": "baseline",
+          "elapsedMs": 69.81920900000023,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 0,
+          "implementation": "baseline",
+          "elapsedMs": 62.62320499999987,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 0,
+          "implementation": "candidate",
+          "elapsedMs": 64.98994500000026,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 1,
+          "implementation": "candidate",
+          "elapsedMs": 69.37600900000052,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 1,
+          "implementation": "baseline",
+          "elapsedMs": 69.71972900000037,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 2,
+          "implementation": "baseline",
+          "elapsedMs": 64.53910299999916,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 2,
+          "implementation": "candidate",
+          "elapsedMs": 73.14820099999997,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 3,
+          "implementation": "candidate",
+          "elapsedMs": 73.35317500000019,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 3,
+          "implementation": "baseline",
+          "elapsedMs": 66.17538799999966,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 4,
+          "implementation": "baseline",
+          "elapsedMs": 73.34007500000007,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 4,
+          "implementation": "candidate",
+          "elapsedMs": 78.9479680000004,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        }
+      ],
+      "resultFile": "result-sqlite-warm-fts.json",
+      "resultFileSha256": "ed29a75bff5ff27ac5ad0c4de13d8f778c3c832edbffa954656d62d3617b6180"
+    },
+    {
+      "backend": "sqlite",
+      "name": "chinese-substring",
+      "query": "端口配置",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-fixture-owner"
+      },
+      "expectedMatchCount": 2000,
+      "actualMatchCount": 2000,
+      "actualRowCount": 10000,
+      "rowAndMatchCountPass": true,
+      "fullResultEquivalent": true,
+      "baselineResultSha256": "842b4a39fed51a4db1e7ddee3536114d20a16466531d1ad78ed72c1f19fcfeef",
+      "candidateResultSha256": "842b4a39fed51a4db1e7ddee3536114d20a16466531d1ad78ed72c1f19fcfeef",
+      "returnedTopK": 5,
+      "suppressedCount": 0,
+      "baseline": {
+        "samplesMs": [
+          557.5765080000001,
+          616.9711100000004,
+          626.4105180000006,
+          613.0294369999992,
+          624.5431669999998
+        ],
+        "minMs": 557.5765080000001,
+        "medianMs": 616.9711100000004,
+        "maxMs": 626.4105180000006
+      },
+      "candidate": {
+        "samplesMs": [
+          97.04263899999933,
+          94.64751499999875,
+          92.5005970000002,
+          114.48880800000006,
+          123.07627899999898
+        ],
+        "minMs": 92.5005970000002,
+        "medianMs": 97.04263899999933,
+        "maxMs": 123.07627899999898
+      },
+      "ratio": 0.1572887894215975,
+      "elapsedReduction": 0.8427112105784025,
+      "executionOrders": [
+        {
+          "phase": "warmup",
+          "sample": 0,
+          "order": [
+            "baseline",
+            "candidate"
+          ]
+        },
+        {
+          "phase": "warmup",
+          "sample": 1,
+          "order": [
+            "candidate",
+            "baseline"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 0,
+          "order": [
+            "baseline",
+            "candidate"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 1,
+          "order": [
+            "candidate",
+            "baseline"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 2,
+          "order": [
+            "baseline",
+            "candidate"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 3,
+          "order": [
+            "candidate",
+            "baseline"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 4,
+          "order": [
+            "baseline",
+            "candidate"
+          ]
+        }
+      ],
+      "measuredCallsPerImplementation": 5,
+      "totalPairedCalls": 14,
+      "calls": [
+        {
+          "phase": "warmup",
+          "sample": 0,
+          "implementation": "baseline",
+          "elapsedMs": 576.5952660000003,
+          "resultSha256": "842b4a39fed51a4db1e7ddee3536114d20a16466531d1ad78ed72c1f19fcfeef",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "warmup",
+          "sample": 0,
+          "implementation": "candidate",
+          "elapsedMs": 96.81344200000058,
+          "resultSha256": "842b4a39fed51a4db1e7ddee3536114d20a16466531d1ad78ed72c1f19fcfeef",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "warmup",
+          "sample": 1,
+          "implementation": "candidate",
+          "elapsedMs": 101.4618530000007,
+          "resultSha256": "842b4a39fed51a4db1e7ddee3536114d20a16466531d1ad78ed72c1f19fcfeef",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "warmup",
+          "sample": 1,
+          "implementation": "baseline",
+          "elapsedMs": 562.0083620000005,
+          "resultSha256": "842b4a39fed51a4db1e7ddee3536114d20a16466531d1ad78ed72c1f19fcfeef",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 0,
+          "implementation": "baseline",
+          "elapsedMs": 557.5765080000001,
+          "resultSha256": "842b4a39fed51a4db1e7ddee3536114d20a16466531d1ad78ed72c1f19fcfeef",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 0,
+          "implementation": "candidate",
+          "elapsedMs": 97.04263899999933,
+          "resultSha256": "842b4a39fed51a4db1e7ddee3536114d20a16466531d1ad78ed72c1f19fcfeef",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 1,
+          "implementation": "candidate",
+          "elapsedMs": 94.64751499999875,
+          "resultSha256": "842b4a39fed51a4db1e7ddee3536114d20a16466531d1ad78ed72c1f19fcfeef",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 1,
+          "implementation": "baseline",
+          "elapsedMs": 616.9711100000004,
+          "resultSha256": "842b4a39fed51a4db1e7ddee3536114d20a16466531d1ad78ed72c1f19fcfeef",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 2,
+          "implementation": "baseline",
+          "elapsedMs": 626.4105180000006,
+          "resultSha256": "842b4a39fed51a4db1e7ddee3536114d20a16466531d1ad78ed72c1f19fcfeef",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 2,
+          "implementation": "candidate",
+          "elapsedMs": 92.5005970000002,
+          "resultSha256": "842b4a39fed51a4db1e7ddee3536114d20a16466531d1ad78ed72c1f19fcfeef",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 3,
+          "implementation": "candidate",
+          "elapsedMs": 114.48880800000006,
+          "resultSha256": "842b4a39fed51a4db1e7ddee3536114d20a16466531d1ad78ed72c1f19fcfeef",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 3,
+          "implementation": "baseline",
+          "elapsedMs": 613.0294369999992,
+          "resultSha256": "842b4a39fed51a4db1e7ddee3536114d20a16466531d1ad78ed72c1f19fcfeef",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 4,
+          "implementation": "baseline",
+          "elapsedMs": 624.5431669999998,
+          "resultSha256": "842b4a39fed51a4db1e7ddee3536114d20a16466531d1ad78ed72c1f19fcfeef",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 4,
+          "implementation": "candidate",
+          "elapsedMs": 123.07627899999898,
+          "resultSha256": "842b4a39fed51a4db1e7ddee3536114d20a16466531d1ad78ed72c1f19fcfeef",
+          "fullResultEquivalent": true
+        }
+      ],
+      "resultFile": "result-sqlite-chinese-substring.json",
+      "resultFileSha256": "d07b8ba5ade328c0765387ea4e1f448722b5d17eca02f6f1c0f31b80ddb422af"
+    },
+    {
+      "backend": "sqlite",
+      "name": "structured-do",
+      "query": "portlint",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-fixture-owner"
+      },
+      "expectedMatchCount": 2000,
+      "actualMatchCount": 2000,
+      "actualRowCount": 10000,
+      "rowAndMatchCountPass": true,
+      "fullResultEquivalent": true,
+      "baselineResultSha256": "43f5d83804d7176a1213f767be7301412761c4c66b0d9c94de41a841eedfc6c0",
+      "candidateResultSha256": "43f5d83804d7176a1213f767be7301412761c4c66b0d9c94de41a841eedfc6c0",
+      "returnedTopK": 1,
+      "suppressedCount": 1999,
+      "baseline": {
+        "samplesMs": [
+          66.25175499999932,
+          60.46887799999968,
+          68.51478700000007,
+          65.32547300000078,
+          62.75361300000077
+        ],
+        "minMs": 60.46887799999968,
+        "medianMs": 65.32547300000078,
+        "maxMs": 68.51478700000007
+      },
+      "candidate": {
+        "samplesMs": [
+          64.4824979999994,
+          61.579155999999784,
+          66.42398400000093,
+          67.50342799999999,
+          60.52912699999979
+        ],
+        "minMs": 60.52912699999979,
+        "medianMs": 64.4824979999994,
+        "maxMs": 67.50342799999999
+      },
+      "ratio": 0.9870957689047062,
+      "elapsedReduction": 0.012904231095293817,
+      "executionOrders": [
+        {
+          "phase": "warmup",
+          "sample": 0,
+          "order": [
+            "baseline",
+            "candidate"
+          ]
+        },
+        {
+          "phase": "warmup",
+          "sample": 1,
+          "order": [
+            "candidate",
+            "baseline"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 0,
+          "order": [
+            "baseline",
+            "candidate"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 1,
+          "order": [
+            "candidate",
+            "baseline"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 2,
+          "order": [
+            "baseline",
+            "candidate"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 3,
+          "order": [
+            "candidate",
+            "baseline"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 4,
+          "order": [
+            "baseline",
+            "candidate"
+          ]
+        }
+      ],
+      "measuredCallsPerImplementation": 5,
+      "totalPairedCalls": 14,
+      "calls": [
+        {
+          "phase": "warmup",
+          "sample": 0,
+          "implementation": "baseline",
+          "elapsedMs": 66.89631000000008,
+          "resultSha256": "43f5d83804d7176a1213f767be7301412761c4c66b0d9c94de41a841eedfc6c0",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "warmup",
+          "sample": 0,
+          "implementation": "candidate",
+          "elapsedMs": 67.14522700000089,
+          "resultSha256": "43f5d83804d7176a1213f767be7301412761c4c66b0d9c94de41a841eedfc6c0",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "warmup",
+          "sample": 1,
+          "implementation": "candidate",
+          "elapsedMs": 71.43908100000044,
+          "resultSha256": "43f5d83804d7176a1213f767be7301412761c4c66b0d9c94de41a841eedfc6c0",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "warmup",
+          "sample": 1,
+          "implementation": "baseline",
+          "elapsedMs": 68.28520099999878,
+          "resultSha256": "43f5d83804d7176a1213f767be7301412761c4c66b0d9c94de41a841eedfc6c0",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 0,
+          "implementation": "baseline",
+          "elapsedMs": 66.25175499999932,
+          "resultSha256": "43f5d83804d7176a1213f767be7301412761c4c66b0d9c94de41a841eedfc6c0",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 0,
+          "implementation": "candidate",
+          "elapsedMs": 64.4824979999994,
+          "resultSha256": "43f5d83804d7176a1213f767be7301412761c4c66b0d9c94de41a841eedfc6c0",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 1,
+          "implementation": "candidate",
+          "elapsedMs": 61.579155999999784,
+          "resultSha256": "43f5d83804d7176a1213f767be7301412761c4c66b0d9c94de41a841eedfc6c0",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 1,
+          "implementation": "baseline",
+          "elapsedMs": 60.46887799999968,
+          "resultSha256": "43f5d83804d7176a1213f767be7301412761c4c66b0d9c94de41a841eedfc6c0",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 2,
+          "implementation": "baseline",
+          "elapsedMs": 68.51478700000007,
+          "resultSha256": "43f5d83804d7176a1213f767be7301412761c4c66b0d9c94de41a841eedfc6c0",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 2,
+          "implementation": "candidate",
+          "elapsedMs": 66.42398400000093,
+          "resultSha256": "43f5d83804d7176a1213f767be7301412761c4c66b0d9c94de41a841eedfc6c0",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 3,
+          "implementation": "candidate",
+          "elapsedMs": 67.50342799999999,
+          "resultSha256": "43f5d83804d7176a1213f767be7301412761c4c66b0d9c94de41a841eedfc6c0",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 3,
+          "implementation": "baseline",
+          "elapsedMs": 65.32547300000078,
+          "resultSha256": "43f5d83804d7176a1213f767be7301412761c4c66b0d9c94de41a841eedfc6c0",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 4,
+          "implementation": "baseline",
+          "elapsedMs": 62.75361300000077,
+          "resultSha256": "43f5d83804d7176a1213f767be7301412761c4c66b0d9c94de41a841eedfc6c0",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 4,
+          "implementation": "candidate",
+          "elapsedMs": 60.52912699999979,
+          "resultSha256": "43f5d83804d7176a1213f767be7301412761c4c66b0d9c94de41a841eedfc6c0",
+          "fullResultEquivalent": true
+        }
+      ],
+      "resultFile": "result-sqlite-structured-do.json",
+      "resultFileSha256": "51fb0eab8dcc28f0b42e45fd2319f51e3f2e38772d7d470a2474041fbf338719"
+    },
+    {
+      "backend": "sqlite",
+      "name": "actual-miss",
+      "query": "unmatchedmarkerquantum",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-fixture-owner"
+      },
+      "expectedMatchCount": 0,
+      "actualMatchCount": 0,
+      "actualRowCount": 10000,
+      "rowAndMatchCountPass": true,
+      "fullResultEquivalent": true,
+      "baselineResultSha256": "6cb2e8cd3e3c46b466d5734bdf4735cfa924fcd2372f6e2e7c98a3a3efbf6083",
+      "candidateResultSha256": "6cb2e8cd3e3c46b466d5734bdf4735cfa924fcd2372f6e2e7c98a3a3efbf6083",
+      "returnedTopK": 0,
+      "suppressedCount": 0,
+      "baseline": {
+        "samplesMs": [
+          54.142837999999756,
+          49.12143299999843,
+          51.337563999999475,
+          49.96116299999994,
+          46.783596999999645
+        ],
+        "minMs": 46.783596999999645,
+        "medianMs": 49.96116299999994,
+        "maxMs": 54.142837999999756
+      },
+      "candidate": {
+        "samplesMs": [
+          51.920867000000726,
+          46.854905000000144,
+          49.94363599999997,
+          49.99066700000003,
+          49.401325999999244
+        ],
+        "minMs": 46.854905000000144,
+        "medianMs": 49.94363599999997,
+        "maxMs": 51.920867000000726
+      },
+      "ratio": 0.999649187509907,
+      "elapsedReduction": 0.0003508124900930554,
+      "executionOrders": [
+        {
+          "phase": "warmup",
+          "sample": 0,
+          "order": [
+            "baseline",
+            "candidate"
+          ]
+        },
+        {
+          "phase": "warmup",
+          "sample": 1,
+          "order": [
+            "candidate",
+            "baseline"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 0,
+          "order": [
+            "baseline",
+            "candidate"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 1,
+          "order": [
+            "candidate",
+            "baseline"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 2,
+          "order": [
+            "baseline",
+            "candidate"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 3,
+          "order": [
+            "candidate",
+            "baseline"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 4,
+          "order": [
+            "baseline",
+            "candidate"
+          ]
+        }
+      ],
+      "measuredCallsPerImplementation": 5,
+      "totalPairedCalls": 14,
+      "calls": [
+        {
+          "phase": "warmup",
+          "sample": 0,
+          "implementation": "baseline",
+          "elapsedMs": 48.29378100000031,
+          "resultSha256": "6cb2e8cd3e3c46b466d5734bdf4735cfa924fcd2372f6e2e7c98a3a3efbf6083",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "warmup",
+          "sample": 0,
+          "implementation": "candidate",
+          "elapsedMs": 52.66935999999987,
+          "resultSha256": "6cb2e8cd3e3c46b466d5734bdf4735cfa924fcd2372f6e2e7c98a3a3efbf6083",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "warmup",
+          "sample": 1,
+          "implementation": "candidate",
+          "elapsedMs": 51.85166299999946,
+          "resultSha256": "6cb2e8cd3e3c46b466d5734bdf4735cfa924fcd2372f6e2e7c98a3a3efbf6083",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "warmup",
+          "sample": 1,
+          "implementation": "baseline",
+          "elapsedMs": 49.7138589999995,
+          "resultSha256": "6cb2e8cd3e3c46b466d5734bdf4735cfa924fcd2372f6e2e7c98a3a3efbf6083",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 0,
+          "implementation": "baseline",
+          "elapsedMs": 54.142837999999756,
+          "resultSha256": "6cb2e8cd3e3c46b466d5734bdf4735cfa924fcd2372f6e2e7c98a3a3efbf6083",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 0,
+          "implementation": "candidate",
+          "elapsedMs": 51.920867000000726,
+          "resultSha256": "6cb2e8cd3e3c46b466d5734bdf4735cfa924fcd2372f6e2e7c98a3a3efbf6083",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 1,
+          "implementation": "candidate",
+          "elapsedMs": 46.854905000000144,
+          "resultSha256": "6cb2e8cd3e3c46b466d5734bdf4735cfa924fcd2372f6e2e7c98a3a3efbf6083",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 1,
+          "implementation": "baseline",
+          "elapsedMs": 49.12143299999843,
+          "resultSha256": "6cb2e8cd3e3c46b466d5734bdf4735cfa924fcd2372f6e2e7c98a3a3efbf6083",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 2,
+          "implementation": "baseline",
+          "elapsedMs": 51.337563999999475,
+          "resultSha256": "6cb2e8cd3e3c46b466d5734bdf4735cfa924fcd2372f6e2e7c98a3a3efbf6083",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 2,
+          "implementation": "candidate",
+          "elapsedMs": 49.94363599999997,
+          "resultSha256": "6cb2e8cd3e3c46b466d5734bdf4735cfa924fcd2372f6e2e7c98a3a3efbf6083",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 3,
+          "implementation": "candidate",
+          "elapsedMs": 49.99066700000003,
+          "resultSha256": "6cb2e8cd3e3c46b466d5734bdf4735cfa924fcd2372f6e2e7c98a3a3efbf6083",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 3,
+          "implementation": "baseline",
+          "elapsedMs": 49.96116299999994,
+          "resultSha256": "6cb2e8cd3e3c46b466d5734bdf4735cfa924fcd2372f6e2e7c98a3a3efbf6083",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 4,
+          "implementation": "baseline",
+          "elapsedMs": 46.783596999999645,
+          "resultSha256": "6cb2e8cd3e3c46b466d5734bdf4735cfa924fcd2372f6e2e7c98a3a3efbf6083",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 4,
+          "implementation": "candidate",
+          "elapsedMs": 49.401325999999244,
+          "resultSha256": "6cb2e8cd3e3c46b466d5734bdf4735cfa924fcd2372f6e2e7c98a3a3efbf6083",
+          "fullResultEquivalent": true
+        }
+      ],
+      "resultFile": "result-sqlite-actual-miss.json",
+      "resultFileSha256": "f7a7782d97dd158a3acaadf08b22739b6d097330ebcb7b0c1df0b6f456e63cb3"
+    }
+  ],
+  "fixtureSha256": "1d6be9ccf0eb0205ad5aefb65be1e203fbd9db481281647ec0d929b9697b2081",
+  "originalFixedProbeSha256": "7e4d7584d3b91909123d1f5dfebbdea814df237b871e16054b87f1ba78820c28",
+  "rowCount": 10000,
+  "fixedNow": 1791000000000,
+  "warmupsPerImplementation": 2,
+  "measuredSamplesPerImplementation": 5,
+  "execution": "One process, one awaited call at a time; paired AB/BA alternation in both warmup and measurement phases.",
+  "implementations": {
+    "A": "Exact frozen 18f162b retrieveMemories; unchanged current production stores and gates",
+    "B": "Actual built production retrieveMemories, without instrumentation"
+  },
+  "measurementIncludes": [
+    "Production store.search",
+    "Unchanged scope/session/lifecycle/safety gates",
+    "Scoring",
+    "Complete conflict filtering",
+    "Final TopK"
+  ],
+  "measurementExcludes": [
+    "Fixture construction and seeding",
+    "Result serialization/hash checks",
+    "Source fingerprinting"
+  ],
+  "chinesePerformance": [
+    {
+      "backend": "jsonl",
+      "baselineMedianMs": 538.2658840000004,
+      "candidateMedianMs": 81.83069799999976,
+      "ratio": 0.15202653638735852,
+      "reduction": 0.8479734636126415,
+      "passesAtLeast50Percent": true
+    },
+    {
+      "backend": "sqlite",
+      "baselineMedianMs": 616.9711100000004,
+      "candidateMedianMs": 97.04263899999933,
+      "ratio": 0.1572887894215975,
+      "reduction": 0.8427112105784025,
+      "passesAtLeast50Percent": true
+    }
+  ],
+  "limitations": [
+    "Wall-clock measurements are environment-specific; the differential probe independently gates deterministic work and full semantic equality.",
+    "Cache-only change retains worst-case O(n²) pair comparisons and adds per-call retained token Sets.",
+    "SQLite literal supplement still scans filtered live rows; no SQL/search complexity improvement is claimed.",
+    "No model task-success or quality improvement measured; no promotion is authorized by this probe."
+  ],
+  "sourceHeadAfter": "de346b90dcbf97c9591ae2786e46e80fd0a4e05c",
+  "sourceStatusAfter": "",
+  "sourceHashesAfter": {
+    "packages/memory/src/retrieval.ts": "d3a48b1ff665dd2c3f698d7a2c7e4754081a8fb6ba6306556444262135fca8c9",
+    "packages/memory/dist/retrieval.js": "a47651ff6072887a099ae546478a437cf53b75ca4196e163561c7f6e3c73904a",
+    "packages/memory/src/memory-store.ts": "925f718e3f92baf32fb2868bafcdcd0701cb520e441049892848a4cb6d494caf",
+    "packages/memory/dist/memory-store.js": "8722ce368b39c5626668437f3ced379d035ae938e480f693a6971f12e3cf5ed5",
+    "packages/memory/src/sqlite-memory-store.ts": "f278be463dec22f5ed15039e6e727b22a942eb6afbaab19e6961e177ae20cb6f",
+    "packages/memory/dist/sqlite-memory-store.js": "300bf553eb208898c79d7d557b5dfb8b649b5e01f28a5b934ac56eb1d39dceb7",
+    "packages/memory/src/search-text.ts": "e569e7f418e3edf87fba7fd2e9c1a1bdf7511d78ea85abcecd863def5c201fd0",
+    "packages/memory/dist/search-text.js": "077ce28fe2280d104af3d98da7c07d11582f61ea7ad0beec1ccc2f730975b202",
+    "packages/memory/src/security-gate.ts": "35dd1c100d6200a862ac50c3b2f1c0fff1d9feb8b7921e31c8805aed319a5efa",
+    "packages/memory/dist/security-gate.js": "4e5b30994c56a51aead532212406056b0f5e84dd80f74979e4b45ebbf85f72fa",
+    "packages/memory/src/lifecycle.ts": "785201bfbfab78fad4cfe8b5781973e00f5149a5fd2c62559b81890642193fa6",
+    "packages/memory/dist/lifecycle.js": "11a295ece7bdf7bb4130e84ed09304da654e19d5715a8d21ff45be1c7545b183",
+    "packages/harness/src/memory-runtime-bridge.ts": "2d6cf39686f2884d2c390dcd13e7c7f46a3e368094d807b79124a79297a4f4cf",
+    "packages/harness/dist/memory-runtime-bridge.js": "b3b45a131640fad6a294aa8cb30a5c0d0770f1706c3281130a3816037d9eba09",
+    "packages/harness/src/create-harness.ts": "a115aa9c8ec71b86e689e80ab9195c21cd85c8f19a0d9de669e9e19d8becf84e",
+    "packages/harness/dist/create-harness.js": "442874f7297e7e0b7df5e715af249457fbd0bf6cd33f15b75d5e198700ea29e3"
+  },
+  "sourceUnchanged": true,
+  "gates": {
+    "fixedFixture": true,
+    "originalFixedProbe": true,
+    "exactProductionResults": true,
+    "rowAndMatchCounts": true,
+    "serialABBA": true,
+    "chineseBothBackendsAtLeast50PercentFaster": true,
+    "sourceUnchanged": true
+  },
+  "status": "PASS"
+}

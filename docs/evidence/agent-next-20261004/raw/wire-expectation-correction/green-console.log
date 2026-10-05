@@ -1,0 +1,20 @@
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+ ✓ packages/core/src/runtime/wire-protocol-e2e.test.ts (8 tests) 102ms
+ ✓ packages/model/src/openai.test.ts (40 tests) 1117ms
+     ✓ P1-18: honors Retry-After on 429 and classifies it rate_limit with retryAfterMs  1002ms
+ ✓ packages/model/src/openai-request-policy.test.ts (7 tests) 115ms
+ ✓ packages/model/src/openai.wire-stub.test.ts (22 tests) 56ms
+ ✓ packages/model/src/model.test.ts (9 tests) 52ms
+ ✓ packages/model/src/openai-termination-regressions.test.ts (19 tests) 36ms
+ ✓ packages/model/src/openai-system-context.regressions.test.ts (13 tests) 36ms
+ ✓ packages/model/src/provider-diagnostics.test.ts (8 tests) 8ms
+ ✓ packages/model/src/capability-resolver.test.ts (6 tests) 4ms
+
+ Test Files  9 passed (9)
+      Tests  132 passed (132)
+   Start at  00:37:17
+   Duration  3.59s (transform 508ms, setup 0ms, import 1.06s, tests 1.52s, environment 1ms)
+
+JSON report written to /workspace/harness-agent/.ci/agent-next-20261004/wire-expectation-correction/green-vitest.json

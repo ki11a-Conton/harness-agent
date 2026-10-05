@@ -1,0 +1,1179 @@
+{
+  "schema_version": 1,
+  "created_at_utc": "2026-10-05T00:22:47.864684+00:00",
+  "workspace": "/workspace/harness-agent",
+  "source_head_at_inventory": "91967f4dd2442b3d1979dee1c2b165d376c8895c",
+  "scope": "Pre-freeze baseline/RED/exploration/static-review inventory only; not final acceptance.",
+  "selected_root": ".ci/agent-next-20261004",
+  "archive_destination_root": "docs/evidence/agent-next-20261004/raw",
+  "selected_count": 138,
+  "selected_bytes": 875460,
+  "selected": [
+    {
+      "relative_path": "audit-config/audit.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/audit.json",
+      "bytes": 5278,
+      "sha256": "56e4fba87ba9eeb04a733069c1ee46bd70a5a00774735cc8521ee53a12e198ad"
+    },
+    {
+      "relative_path": "audit-config/baseline.py",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/baseline.py",
+      "bytes": 6822,
+      "sha256": "6746c640c41de8c0514c4000abb8416aeddc51d1e2112654d61f73ee401c6c03"
+    },
+    {
+      "relative_path": "audit-config/cli-optin-data/data/memories.jsonl",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/cli-optin-data/data/memories.jsonl",
+      "bytes": 494,
+      "sha256": "d16cc02a148cb1de88b1d10b23df3d9cc2d05bf89ea375520c3fb2e5ae359a42"
+    },
+    {
+      "relative_path": "audit-config/cli-optin-data/data/messages/session_5dc9d32a-49d0-471c-84e4-7291b6fb52df.jsonl",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/cli-optin-data/data/messages/session_5dc9d32a-49d0-471c-84e4-7291b6fb52df.jsonl",
+      "bytes": 537,
+      "sha256": "a5caae17e6dfcf0002e5118c7d091c7d6c4d9a3730a3cca34449bd488d25b25b"
+    },
+    {
+      "relative_path": "audit-config/cli-optin-data/data/session_5dc9d32a-49d0-471c-84e4-7291b6fb52df.jsonl",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/cli-optin-data/data/session_5dc9d32a-49d0-471c-84e4-7291b6fb52df.jsonl",
+      "bytes": 4537,
+      "sha256": "bf8697a6671dd9cb233b1adaaf1f2860aabdffa77b27386c3362dbfbbd3b3dc5"
+    },
+    {
+      "relative_path": "audit-config/cli-optin-data/data/sessions/session_5dc9d32a-49d0-471c-84e4-7291b6fb52df.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/cli-optin-data/data/sessions/session_5dc9d32a-49d0-471c-84e4-7291b6fb52df.json",
+      "bytes": 434,
+      "sha256": "561ec13ac37fb06958f71e8109c74611fc296c833a35e0927f99197c5a4d5c45"
+    },
+    {
+      "relative_path": "audit-config/cli-optin-data/data/state/session_5dc9d32a-49d0-471c-84e4-7291b6fb52df.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/cli-optin-data/data/state/session_5dc9d32a-49d0-471c-84e4-7291b6fb52df.json",
+      "bytes": 2824,
+      "sha256": "98da4512724d7c5909eb21351b8cb6de2dce141449b776fb08b5834075ef11be"
+    },
+    {
+      "relative_path": "audit-config/cli-optin-data/data/turns/turn_2a1939e9-fd32-40f6-ac74-c9898e685fc6.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/cli-optin-data/data/turns/turn_2a1939e9-fd32-40f6-ac74-c9898e685fc6.json",
+      "bytes": 370,
+      "sha256": "921f63efb1ae951617ec306e2fabc9a1f853d4b5ad101995ec4c7fb17823a1e3"
+    },
+    {
+      "relative_path": "audit-config/cli-optin-data/model-requests.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/cli-optin-data/model-requests.json",
+      "bytes": 17743,
+      "sha256": "d52017dd100a891dd6afc3930ba800db75bcaab5883b9db9a24d20b28c11d85c"
+    },
+    {
+      "relative_path": "audit-config/cli-optin-data/result.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/cli-optin-data/result.json",
+      "bytes": 622,
+      "sha256": "2490aa807b40da4b56dec0e372b1c822941bdb83655021cc845149e28b270ab2"
+    },
+    {
+      "relative_path": "audit-config/cli-optin-no-data/model-requests.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/cli-optin-no-data/model-requests.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "relative_path": "audit-config/cli-optin-no-data/result.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/cli-optin-no-data/result.json",
+      "bytes": 388,
+      "sha256": "091f8237ca4621ad26cca6a01396b9f1d9498750250014fe8deb9dc3682ad4bb"
+    },
+    {
+      "relative_path": "audit-config/provider-system-baseline-input-events.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/provider-system-baseline-input-events.json",
+      "bytes": 2377,
+      "sha256": "00592548cf4f9c7d1d4c0b84e364b8242b1e2ccc29681e19790de53f11bf9f8d"
+    },
+    {
+      "relative_path": "audit-config/provider-system-baseline-v2-input-events.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/provider-system-baseline-v2-input-events.json",
+      "bytes": 3695,
+      "sha256": "d2cc34929ad01c1d7636f9a26723bcfac58bb246d6a35c4078e0bffcb456d54f"
+    },
+    {
+      "relative_path": "audit-config/provider-system-baseline-v2-wire.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/provider-system-baseline-v2-wire.json",
+      "bytes": 1315,
+      "sha256": "2707bcd3bfee2b71c493a68eaa2570b41fe3a466a0e4701a0435b9cd0953d792"
+    },
+    {
+      "relative_path": "audit-config/provider-system-baseline-v2.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/provider-system-baseline-v2.json",
+      "bytes": 1591,
+      "sha256": "d25c3dae0b7f1fd7adcc46891b90ba1003e2e8bd8ca262d4a2272ae8fa427fae"
+    },
+    {
+      "relative_path": "audit-config/provider-system-baseline-v2.mjs",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/provider-system-baseline-v2.mjs",
+      "bytes": 1096,
+      "sha256": "dcde81762370182ce977efcee116a327cd188c75a3c55094c53271bbfe4e2029"
+    },
+    {
+      "relative_path": "audit-config/provider-system-baseline-v2.py",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/provider-system-baseline-v2.py",
+      "bytes": 4070,
+      "sha256": "11e2f834d51d642ebc1d3fc6ebbf526ccff8f951f89a6abb4988ac23b8a5d7fe"
+    },
+    {
+      "relative_path": "audit-config/provider-system-baseline-wire.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/provider-system-baseline-wire.json",
+      "bytes": 859,
+      "sha256": "bcd8981c3c3dc053011e09a2c87f331064abcd908ed53503908d62fef54d83f1"
+    },
+    {
+      "relative_path": "audit-config/provider-system-baseline.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/provider-system-baseline.json",
+      "bytes": 1262,
+      "sha256": "6ffc5c83ff58b97d658fb573d0ec671b3c3b0c1b5be5407bfeaf6c2043c04a3b"
+    },
+    {
+      "relative_path": "audit-config/provider-system-baseline.mjs",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/provider-system-baseline.mjs",
+      "bytes": 990,
+      "sha256": "503a4b077377830b415b7dbfe6c372f58d99d73e5cf66b144c0647643101156d"
+    },
+    {
+      "relative_path": "audit-config/provider-system-baseline.py",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/provider-system-baseline.py",
+      "bytes": 3937,
+      "sha256": "cd3f7ddf6bea3bc08b8ca8bb31d8d978749cec65e23e92a7178ab9a5db76bbab"
+    },
+    {
+      "relative_path": "audit-config/r1-implementation-receipt.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/r1-implementation-receipt.json",
+      "bytes": 2063,
+      "sha256": "b6d27a00d6f0d41d85049f0dd725bb89f19bf94cf1eacdfe026c24a9f151ad0a"
+    },
+    {
+      "relative_path": "audit-config/r1-model-green-exit.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/r1-model-green-exit.json",
+      "bytes": 126,
+      "sha256": "25990cb93b6ef2cc9c8fb224206a6d1a57562d019d70b433c3b9a03200502680"
+    },
+    {
+      "relative_path": "audit-config/r1-model-green.log",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/r1-model-green.log",
+      "bytes": 849,
+      "sha256": "838fe0089bdc231e2dc49841c77dc14e620fab401cdfd505333d493de0149201"
+    },
+    {
+      "relative_path": "audit-config/r1-permanent-red-exit.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/r1-permanent-red-exit.json",
+      "bytes": 172,
+      "sha256": "ef6704306ea31f43d4363a1f43ae54fc9cd0bed98dbb1473bcafba66713f119b"
+    },
+    {
+      "relative_path": "audit-config/r1-permanent-red.log",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/r1-permanent-red.log",
+      "bytes": 9038,
+      "sha256": "4e0bdf31dd4c00b24bdd880b1f30725b74c4431aead92d572a4b05a3a7dd7f56"
+    },
+    {
+      "relative_path": "audit-config/r1-typecheck-exit.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/r1-typecheck-exit.json",
+      "bytes": 84,
+      "sha256": "30c2364befb374dd24374125dc2db08d5b3cc6c1e9ef33ea14a964b87cea14c1"
+    },
+    {
+      "relative_path": "audit-config/r1-typecheck.log",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/r1-typecheck.log",
+      "bytes": 9,
+      "sha256": "faeaa94bcf7012d86f91ca647580449f56a263fb7eaf572c54789764f60a9b8f"
+    },
+    {
+      "relative_path": "audit-config/seed.mjs",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/seed.mjs",
+      "bytes": 554,
+      "sha256": "f6cdac2114ec0f7db0e9e4289179bb3c3f5ea62f25e57f69167d55f882efe872"
+    },
+    {
+      "relative_path": "audit-config/web-default-data/data/memories.jsonl",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/web-default-data/data/memories.jsonl",
+      "bytes": 364,
+      "sha256": "0eef73a22564b6412dc73fe00d6738bb03cbd60c7699a0263690e5f09b0ea3ba"
+    },
+    {
+      "relative_path": "audit-config/web-default-data/data/messages/session_75f5f5a0-9365-4b2f-9b7b-7dab9c3fc7dd.jsonl",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/web-default-data/data/messages/session_75f5f5a0-9365-4b2f-9b7b-7dab9c3fc7dd.jsonl",
+      "bytes": 537,
+      "sha256": "2015f72b6b278f2a0742bb6657d104d9fcb0449c281f0be1feeb675387ec0c8d"
+    },
+    {
+      "relative_path": "audit-config/web-default-data/data/session_75f5f5a0-9365-4b2f-9b7b-7dab9c3fc7dd.jsonl",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/web-default-data/data/session_75f5f5a0-9365-4b2f-9b7b-7dab9c3fc7dd.jsonl",
+      "bytes": 3754,
+      "sha256": "073ffbcc763d06169a17effb0eb134bdd2d9147dd856145383f5f563b592d6d3"
+    },
+    {
+      "relative_path": "audit-config/web-default-data/data/sessions/session_75f5f5a0-9365-4b2f-9b7b-7dab9c3fc7dd.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/web-default-data/data/sessions/session_75f5f5a0-9365-4b2f-9b7b-7dab9c3fc7dd.json",
+      "bytes": 436,
+      "sha256": "6e9a66f6b7202161887d3f3af14da73aeae0882c7cf6e9e261ab9e9d910e6fdf"
+    },
+    {
+      "relative_path": "audit-config/web-default-data/data/state/session_75f5f5a0-9365-4b2f-9b7b-7dab9c3fc7dd.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/web-default-data/data/state/session_75f5f5a0-9365-4b2f-9b7b-7dab9c3fc7dd.json",
+      "bytes": 2830,
+      "sha256": "007c1c562d551b3da8dfe13edefd8cb3e2158dc9d6421b344886d6bcc9a90697"
+    },
+    {
+      "relative_path": "audit-config/web-default-data/data/turns/turn_a176ed9f-debc-4083-a217-0a1209f9e554.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/web-default-data/data/turns/turn_a176ed9f-debc-4083-a217-0a1209f9e554.json",
+      "bytes": 370,
+      "sha256": "fba40bbaf6fde28b4ecfdb267177c23af89292647307fafba8981f73f73f5005"
+    },
+    {
+      "relative_path": "audit-config/web-default-data/model-requests.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/web-default-data/model-requests.json",
+      "bytes": 17743,
+      "sha256": "d52017dd100a891dd6afc3930ba800db75bcaab5883b9db9a24d20b28c11d85c"
+    },
+    {
+      "relative_path": "audit-config/web-default-data/result.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/web-default-data/result.json",
+      "bytes": 339,
+      "sha256": "1fb1391c7524e6085b2e174337a371e21855667fe5fdf8920a22986bb5d335f8"
+    },
+    {
+      "relative_path": "audit-config/web-optin-data/data/memories.jsonl",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/web-optin-data/data/memories.jsonl",
+      "bytes": 364,
+      "sha256": "52fef4e6f98d8ce951823d5cae92ecbea4a2ffbe568ee54d041048556c2ab148"
+    },
+    {
+      "relative_path": "audit-config/web-optin-data/data/messages/session_87992916-cb7f-4a96-920a-a7f5798911b2.jsonl",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/web-optin-data/data/messages/session_87992916-cb7f-4a96-920a-a7f5798911b2.jsonl",
+      "bytes": 537,
+      "sha256": "f39e2c7b05296a7f141f7c33b2c70147651d76c80025ae222ccdfeb4c51e3908"
+    },
+    {
+      "relative_path": "audit-config/web-optin-data/data/session_87992916-cb7f-4a96-920a-a7f5798911b2.jsonl",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/web-optin-data/data/session_87992916-cb7f-4a96-920a-a7f5798911b2.jsonl",
+      "bytes": 3754,
+      "sha256": "489df5d8a05c5444e8682a8f12d41a61a7c54e4cc7a5ff10ca9076d7985daf7f"
+    },
+    {
+      "relative_path": "audit-config/web-optin-data/data/sessions/session_87992916-cb7f-4a96-920a-a7f5798911b2.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/web-optin-data/data/sessions/session_87992916-cb7f-4a96-920a-a7f5798911b2.json",
+      "bytes": 434,
+      "sha256": "ca8211c7fe80cdb36d90bd9f6730f624edcc766e0bb1198cd666f05d3ddc857c"
+    },
+    {
+      "relative_path": "audit-config/web-optin-data/data/state/session_87992916-cb7f-4a96-920a-a7f5798911b2.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/web-optin-data/data/state/session_87992916-cb7f-4a96-920a-a7f5798911b2.json",
+      "bytes": 2826,
+      "sha256": "8dc93ef3c047309cb6ca093118905dca44b3e25dabe8b1bb16027ad043ae9ac2"
+    },
+    {
+      "relative_path": "audit-config/web-optin-data/data/turns/turn_ab6da30c-2efa-49a2-bc58-485edc7e7b07.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/web-optin-data/data/turns/turn_ab6da30c-2efa-49a2-bc58-485edc7e7b07.json",
+      "bytes": 370,
+      "sha256": "d964cb0571b12da0c231187202500059cfcb2f8f1444ee8e9fb715776cd39a69"
+    },
+    {
+      "relative_path": "audit-config/web-optin-data/model-requests.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/web-optin-data/model-requests.json",
+      "bytes": 17743,
+      "sha256": "d52017dd100a891dd6afc3930ba800db75bcaab5883b9db9a24d20b28c11d85c"
+    },
+    {
+      "relative_path": "audit-config/web-optin-data/result.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/web-optin-data/result.json",
+      "bytes": 333,
+      "sha256": "46483bcf1289df0b36d09034f38a2afe7a38ab04912e74226e192cd8ceb7e8c0"
+    },
+    {
+      "relative_path": "audit-config/web-optin-no-data/model-requests.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/web-optin-no-data/model-requests.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "relative_path": "audit-config/web-optin-no-data/result.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-config/web-optin-no-data/result.json",
+      "bytes": 338,
+      "sha256": "8f3be0a36023d694e4eeb461250d4ef5caad33cb705b4109a9a4bc78a6417c3e"
+    },
+    {
+      "relative_path": "audit-memory/audit-receipt.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-memory/audit-receipt.json",
+      "bytes": 7141,
+      "sha256": "abf2f64612f182552755232aeb5ec3c23af01ea084b0e936bbeb220a9442c8a5"
+    },
+    {
+      "relative_path": "audit-memory/baseline-18f162b/console.log",
+      "source_relative_path": ".ci/agent-next-20261004/audit-memory/baseline-18f162b/console.log",
+      "bytes": 4285,
+      "sha256": "495756a3047f014c96901035140ea9fba59f53f1749b8c918e486f14df8260ab"
+    },
+    {
+      "relative_path": "audit-memory/baseline-18f162b/report.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-memory/baseline-18f162b/report.json",
+      "bytes": 8940,
+      "sha256": "4f9cf35a0b968d4649bb2d6d7db76804dac81714c51d225545030753997ad4a8"
+    },
+    {
+      "relative_path": "audit-memory/paired-retrieval-indexed-prototype-sequential.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-memory/paired-retrieval-indexed-prototype-sequential.json",
+      "bytes": 7524,
+      "sha256": "cf35e703447ae0b7bd2a778370016a03b667fe2ab60df59cbb26725d61877ab8"
+    },
+    {
+      "relative_path": "audit-memory/paired-retrieval-indexed-prototype-sequential.log",
+      "source_relative_path": ".ci/agent-next-20261004/audit-memory/paired-retrieval-indexed-prototype-sequential.log",
+      "bytes": 1816,
+      "sha256": "3a0e2e3244470f92cb0f5c809d37d6b9c6dc4ae17b9f73d3d35671bae215bdf8"
+    },
+    {
+      "relative_path": "audit-memory/paired-retrieval-indexed-prototype-sequential.mjs",
+      "source_relative_path": ".ci/agent-next-20261004/audit-memory/paired-retrieval-indexed-prototype-sequential.mjs",
+      "bytes": 4245,
+      "sha256": "c04332fe9bbbc88a4f5693e11bbe49a66849a7ab1e6a6d6c2ad343a9b771dc41"
+    },
+    {
+      "relative_path": "audit-memory/paired-retrieval-indexed-prototype.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-memory/paired-retrieval-indexed-prototype.json",
+      "bytes": 7525,
+      "sha256": "a830d6ee1ad599988c2a74842e48f752abd557a3f8d4cdc96c86fd202f904d6e"
+    },
+    {
+      "relative_path": "audit-memory/paired-retrieval-indexed-prototype.log",
+      "source_relative_path": ".ci/agent-next-20261004/audit-memory/paired-retrieval-indexed-prototype.log",
+      "bytes": 1821,
+      "sha256": "cc55af1c122f789eb0c1cc6726420cf2bf483deb5453f0f61b0d7a9f1c9b12b0"
+    },
+    {
+      "relative_path": "audit-memory/paired-retrieval-indexed-prototype.mjs",
+      "source_relative_path": ".ci/agent-next-20261004/audit-memory/paired-retrieval-indexed-prototype.mjs",
+      "bytes": 4234,
+      "sha256": "e85dfda4e1be3d6ab094999d711959abf10284019ee5ac3a73936781609566a1"
+    },
+    {
+      "relative_path": "audit-memory/paired-retrieval-prototype.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-memory/paired-retrieval-prototype.json",
+      "bytes": 7506,
+      "sha256": "3350ea5d536493a76da98d056139d880bbe9e48beac17ad0c49f4211c4a14759"
+    },
+    {
+      "relative_path": "audit-memory/paired-retrieval-prototype.log",
+      "source_relative_path": ".ci/agent-next-20261004/audit-memory/paired-retrieval-prototype.log",
+      "bytes": 1817,
+      "sha256": "175ca6967a27b81b2428282314c3afbf6a10dceae7c791d5733b5a9cc3ac53b4"
+    },
+    {
+      "relative_path": "audit-memory/paired-retrieval-prototype.mjs",
+      "source_relative_path": ".ci/agent-next-20261004/audit-memory/paired-retrieval-prototype.mjs",
+      "bytes": 4222,
+      "sha256": "76a6ff8c10c0d7f77f5d252bbab91de8d8ec814b75d67e80aa9ac622290c47e4"
+    },
+    {
+      "relative_path": "audit-memory/prototype-initial-concurrency-note.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-memory/prototype-initial-concurrency-note.json",
+      "bytes": 466,
+      "sha256": "719d98915480b49433545e4ddac3cf1b7403f13913f31e3b232cc588bacad548"
+    },
+    {
+      "relative_path": "audit-memory/retrieval-baseline-instrumented.mjs",
+      "source_relative_path": ".ci/agent-next-20261004/audit-memory/retrieval-baseline-instrumented.mjs",
+      "bytes": 7171,
+      "sha256": "7bfa5f845cef782759489baa6e8504185886a8b9a6959737aa3ed574cd4fda4b"
+    },
+    {
+      "relative_path": "audit-memory/retrieval-cache-instrumented.mjs",
+      "source_relative_path": ".ci/agent-next-20261004/audit-memory/retrieval-cache-instrumented.mjs",
+      "bytes": 7219,
+      "sha256": "5494b01682a51269ae815a692d68aee47230b473415d76c8b82f5c4f1be9f4cc"
+    },
+    {
+      "relative_path": "audit-memory/retrieval-cache-tokens.mjs",
+      "source_relative_path": ".ci/agent-next-20261004/audit-memory/retrieval-cache-tokens.mjs",
+      "bytes": 6977,
+      "sha256": "3c2ff472197289b89c7eb81ee0f020cb9601096be2369a8d77c989920d006b79"
+    },
+    {
+      "relative_path": "audit-memory/retrieval-indexed-instrumented.mjs",
+      "source_relative_path": ".ci/agent-next-20261004/audit-memory/retrieval-indexed-instrumented.mjs",
+      "bytes": 8202,
+      "sha256": "c2300430f9ff02edb0bac75f4ebe87b9dc2062c1fa7f813ec9f977571d8e15c8"
+    },
+    {
+      "relative_path": "audit-memory/retrieval-indexed-tokens.mjs",
+      "source_relative_path": ".ci/agent-next-20261004/audit-memory/retrieval-indexed-tokens.mjs",
+      "bytes": 7960,
+      "sha256": "5c934d119e00d9a4224e4ed9eec382469ef27784f7cabb8748b61270a5b14d6e"
+    },
+    {
+      "relative_path": "audit-memory/retrieval-stress-prototypes-sequential.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-memory/retrieval-stress-prototypes-sequential.json",
+      "bytes": 8656,
+      "sha256": "5603e8f6ce5d2d2a0ba515e653793237b2cde087a96d11c8550eda983c924522"
+    },
+    {
+      "relative_path": "audit-memory/retrieval-stress-prototypes-sequential.log",
+      "source_relative_path": ".ci/agent-next-20261004/audit-memory/retrieval-stress-prototypes-sequential.log",
+      "bytes": 2642,
+      "sha256": "d90799de34eec735f072356d69d5b2c0c2beebaabc3823d7488efd784f3c0540"
+    },
+    {
+      "relative_path": "audit-memory/retrieval-stress-prototypes-sequential.mjs",
+      "source_relative_path": ".ci/agent-next-20261004/audit-memory/retrieval-stress-prototypes-sequential.mjs",
+      "bytes": 4652,
+      "sha256": "c448ef8bf96cac8819c8cbbe05744909bd494cf203db4c530a6414247a7d440e"
+    },
+    {
+      "relative_path": "audit-memory/retrieval-stress-prototypes.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-memory/retrieval-stress-prototypes.json",
+      "bytes": 8663,
+      "sha256": "401314931f878dc731487a887505f580e9ca81275bcbb251e51db380aac97b08"
+    },
+    {
+      "relative_path": "audit-memory/retrieval-stress-prototypes.log",
+      "source_relative_path": ".ci/agent-next-20261004/audit-memory/retrieval-stress-prototypes.log",
+      "bytes": 2640,
+      "sha256": "309b6b71fa75c42c6848d997e2fd96eb055e218402eb771aad987fb4edcbed91"
+    },
+    {
+      "relative_path": "audit-memory/retrieval-stress-prototypes.mjs",
+      "source_relative_path": ".ci/agent-next-20261004/audit-memory/retrieval-stress-prototypes.mjs",
+      "bytes": 4641,
+      "sha256": "7698ca5a1c3beb1d299f9279a16857bbc39a5a9292fcc47d694dd379b116f4f4"
+    },
+    {
+      "relative_path": "audit-tools/navigate-pre-implementation.ts",
+      "source_relative_path": ".ci/agent-next-20261004/audit-tools/navigate-pre-implementation.ts",
+      "bytes": 9324,
+      "sha256": "75ea27a046fb9d2a55f7bb11cd4b04fda598561958e1f107176a2c6a08339932"
+    },
+    {
+      "relative_path": "audit-tools/navigation-baseline.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-tools/navigation-baseline.json",
+      "bytes": 5779,
+      "sha256": "a8aa8b556ed169763149109d085b5110c9659484c44d4f3ca8d25a4d2836825d"
+    },
+    {
+      "relative_path": "audit-tools/navigation-baseline.mjs",
+      "source_relative_path": ".ci/agent-next-20261004/audit-tools/navigation-baseline.mjs",
+      "bytes": 6280,
+      "sha256": "d849bf6255fc78534819cbe7ca5755d371121690cee4ad851f0eceedbb4373f1"
+    },
+    {
+      "relative_path": "audit-tools/navigation-directed-green.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-tools/navigation-directed-green.json",
+      "bytes": 9537,
+      "sha256": "87394a5e22223c682863b950e8df1d415c6bfa623384ea1d013c3c3a9b7d1d3d"
+    },
+    {
+      "relative_path": "audit-tools/navigation-directed-green.log",
+      "source_relative_path": ".ci/agent-next-20261004/audit-tools/navigation-directed-green.log",
+      "bytes": 457,
+      "sha256": "63b031144156a48be7c5b737a5f51454f28411a43dce98f89359f02741fdffa3"
+    },
+    {
+      "relative_path": "audit-tools/navigation-permanent-red.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-tools/navigation-permanent-red.json",
+      "bytes": 17663,
+      "sha256": "26366dea0d9dfa139aaffce57bdea5c199203b9bde987c4c89370248f429e6df"
+    },
+    {
+      "relative_path": "audit-tools/navigation-permanent-red.log",
+      "source_relative_path": ".ci/agent-next-20261004/audit-tools/navigation-permanent-red.log",
+      "bytes": 15056,
+      "sha256": "82c95cb3d163d7e264e64af5240ecd97e85de7674b0a88a0bcbb0fc4d3fbd1d6"
+    },
+    {
+      "relative_path": "audit-tools/navigation-permanent-red.test.ts",
+      "source_relative_path": ".ci/agent-next-20261004/audit-tools/navigation-permanent-red.test.ts",
+      "bytes": 11287,
+      "sha256": "ee7047e004e1c18be307e07683a8016dbe2c7ea8b715d98e373c51df74bab687"
+    },
+    {
+      "relative_path": "audit-tools/navigation-probe-pre-implementation.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-tools/navigation-probe-pre-implementation.json",
+      "bytes": 5886,
+      "sha256": "75a41beff452017497c679166aa7e490dc33c86ccc2594ac445a01cc4a3fb864"
+    },
+    {
+      "relative_path": "audit-tools/navigation-probe-pre-implementation.mjs",
+      "source_relative_path": ".ci/agent-next-20261004/audit-tools/navigation-probe-pre-implementation.mjs",
+      "bytes": 7007,
+      "sha256": "f9fce79705c831d46818009c5f1607fa6215077a02899e221b4f03f08190e147"
+    },
+    {
+      "relative_path": "audit-tools/navigation-red-observation.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-tools/navigation-red-observation.json",
+      "bytes": 1238,
+      "sha256": "10bf6b8887bef176fab4d407cefae4abe87b84530239313d3a1298b626290040"
+    },
+    {
+      "relative_path": "audit-tools/navigation-related-green.json",
+      "source_relative_path": ".ci/agent-next-20261004/audit-tools/navigation-related-green.json",
+      "bytes": 23834,
+      "sha256": "fa4cb095ee01b20c9b651b87091826c6e3e1dd61641b20dee571a974daade65f"
+    },
+    {
+      "relative_path": "audit-tools/navigation-related-green.log",
+      "source_relative_path": ".ci/agent-next-20261004/audit-tools/navigation-related-green.log",
+      "bytes": 887,
+      "sha256": "b4a7cf5d6c4b29859b3140c52474907f2adffef3d693b93043ae6638c5a90de2"
+    },
+    {
+      "relative_path": "memory-green/console.log",
+      "source_relative_path": ".ci/agent-next-20261004/memory-green/console.log",
+      "bytes": 4383,
+      "sha256": "5c1d3ff4552902a488fd5022b5ced25bacec49b0df7d2bd0aef8aea51d3c2e84"
+    },
+    {
+      "relative_path": "memory-green/vitest.json",
+      "source_relative_path": ".ci/agent-next-20261004/memory-green/vitest.json",
+      "bytes": 102062,
+      "sha256": "65b438422397085e50b12cfd825857acdfc55ae032d234ec194352771bfaca93"
+    },
+    {
+      "relative_path": "memory-red/console.log",
+      "source_relative_path": ".ci/agent-next-20261004/memory-red/console.log",
+      "bytes": 95,
+      "sha256": "c70340198fb8642ece471f770af6cac6bda4a773b38a76429b9d1fb9735bb8d1"
+    },
+    {
+      "relative_path": "memory-red/receipt.json",
+      "source_relative_path": ".ci/agent-next-20261004/memory-red/receipt.json",
+      "bytes": 900,
+      "sha256": "b689ce9bcb0d4dd63926c63200ffebd96707e7565e828187748fcf856d581c01"
+    },
+    {
+      "relative_path": "memory-red/vitest.json",
+      "source_relative_path": ".ci/agent-next-20261004/memory-red/vitest.json",
+      "bytes": 11179,
+      "sha256": "e3c8333689ec1c37399dc316a4d94ed28b183ddeaa9fe1bd58a5cd8fec50f637"
+    },
+    {
+      "relative_path": "preregister-commit.log",
+      "source_relative_path": ".ci/agent-next-20261004/preregister-commit.log",
+      "bytes": 312,
+      "sha256": "d87564322e7d9e9f1ff94b085732feb5120a5b378298a447b2d60281d7e42bce"
+    },
+    {
+      "relative_path": "r1-http-exploration-fbe5098/all-model-requests.json",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-fbe5098/all-model-requests.json",
+      "bytes": 40473,
+      "sha256": "f38089f6815ce10c293ee8f06cef67ec600f8b1c5005756c6b57c51568c77052"
+    },
+    {
+      "relative_path": "r1-http-exploration-fbe5098/cli-memory-tool-loop/data/memories.jsonl",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-fbe5098/cli-memory-tool-loop/data/memories.jsonl",
+      "bytes": 364,
+      "sha256": "f5199067c9838ee586c3bc4e9048332376cca97e386e2c65aaaf54a1859a785b"
+    },
+    {
+      "relative_path": "r1-http-exploration-fbe5098/cli-memory-tool-loop/data/messages/session_ec59670d-02a5-43b4-b04a-ce2e53c16271.jsonl",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-fbe5098/cli-memory-tool-loop/data/messages/session_ec59670d-02a5-43b4-b04a-ce2e53c16271.jsonl",
+      "bytes": 1190,
+      "sha256": "d0a049d355a7047ee5d55876225ed77867ec2d9f35a37230caa9d6484d0e58d5"
+    },
+    {
+      "relative_path": "r1-http-exploration-fbe5098/cli-memory-tool-loop/data/session_ec59670d-02a5-43b4-b04a-ce2e53c16271.jsonl",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-fbe5098/cli-memory-tool-loop/data/session_ec59670d-02a5-43b4-b04a-ce2e53c16271.jsonl",
+      "bytes": 12532,
+      "sha256": "5e7f1ff16b412f60bccddf979d9da0b3e9aa6dd65db87961a733f1e14c1405b1"
+    },
+    {
+      "relative_path": "r1-http-exploration-fbe5098/cli-memory-tool-loop/data/sessions/session_ec59670d-02a5-43b4-b04a-ce2e53c16271.json",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-fbe5098/cli-memory-tool-loop/data/sessions/session_ec59670d-02a5-43b4-b04a-ce2e53c16271.json",
+      "bytes": 455,
+      "sha256": "fd14e088b5469e24ba43d086b26e3905fe4c3c9f3b2f8805cbb56f3278e7ea49"
+    },
+    {
+      "relative_path": "r1-http-exploration-fbe5098/cli-memory-tool-loop/data/state/session_ec59670d-02a5-43b4-b04a-ce2e53c16271.json",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-fbe5098/cli-memory-tool-loop/data/state/session_ec59670d-02a5-43b4-b04a-ce2e53c16271.json",
+      "bytes": 2866,
+      "sha256": "728e2c7bad318c5b4b3014360286c9fe7e6c6cb36f0268d5cb417690345627d1"
+    },
+    {
+      "relative_path": "r1-http-exploration-fbe5098/cli-memory-tool-loop/data/turns/turn_912d9ac6-378d-4cde-9872-c8934701c908.json",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-fbe5098/cli-memory-tool-loop/data/turns/turn_912d9ac6-378d-4cde-9872-c8934701c908.json",
+      "bytes": 380,
+      "sha256": "b1709561960c7976af81c66e39c6b634e1517bf4bbcc2038dbdc40802959b4ff"
+    },
+    {
+      "relative_path": "r1-http-exploration-fbe5098/cli-memory-tool-loop/model-requests.json",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-fbe5098/cli-memory-tool-loop/model-requests.json",
+      "bytes": 38529,
+      "sha256": "a71fa5ec3266d030a9beaeea1494d3ba15cc7b1a29e7b305038e19d2c49e6fba"
+    },
+    {
+      "relative_path": "r1-http-exploration-fbe5098/cli-memory-tool-loop/startup.log",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-fbe5098/cli-memory-tool-loop/startup.log",
+      "bytes": 317,
+      "sha256": "a9c285b0753642a7bfebfc63ad9577a7c335419b1dc9e5575a1e4e8c80caff1b"
+    },
+    {
+      "relative_path": "r1-http-exploration-fbe5098/cli-memory-tool-loop/workspace/AGENTS.md",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-fbe5098/cli-memory-tool-loop/workspace/AGENTS.md",
+      "bytes": 59,
+      "sha256": "cd692f71ce7b7b26eafb6db73d63b0fecb1c5dd0070a84628056d93f47b3b959"
+    },
+    {
+      "relative_path": "r1-http-exploration-fbe5098/cli-memory-tool-loop/workspace/blocked/AGENTS.md",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-fbe5098/cli-memory-tool-loop/workspace/blocked/AGENTS.md",
+      "bytes": 88,
+      "sha256": "7e761d7227d4907c47f9d0c711a97b4ed3f46491a3a57e53bf8e77c50e4fbafb"
+    },
+    {
+      "relative_path": "r1-http-exploration-fbe5098/cli-memory-tool-loop/workspace/probe.txt",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-fbe5098/cli-memory-tool-loop/workspace/probe.txt",
+      "bytes": 23,
+      "sha256": "5feb7d382faa8d595438fa6634d8777c705268813f4ad8accb9478d61be3d4fe"
+    },
+    {
+      "relative_path": "r1-http-exploration-fbe5098/direct-input-events.json",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-fbe5098/direct-input-events.json",
+      "bytes": 3877,
+      "sha256": "f76d7728fa7002da9e9e3c040d0d2e71fc57615b1154c96e9421e3093557912d"
+    },
+    {
+      "relative_path": "r1-http-exploration-fbe5098/direct-wire.json",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-fbe5098/direct-wire.json",
+      "bytes": 1947,
+      "sha256": "a4008140940cfadbc8c20b68d2753b5caf0aa34d1ccc22aee5c7b19d2ca78c71"
+    },
+    {
+      "relative_path": "r1-http-exploration-fbe5098/provider-production-failed.py",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-fbe5098/provider-production-failed.py",
+      "bytes": 13886,
+      "sha256": "2c452d1892be294417259103f921e08a2dee891495007acfcca14c178769b2da"
+    },
+    {
+      "relative_path": "r1-http-exploration-fbe5098/provider-system-probe-failed.mjs",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-fbe5098/provider-system-probe-failed.mjs",
+      "bytes": 2276,
+      "sha256": "9169109ac4e6fa73f43471b076d15411a714ad5abc12f6a2313f19fe53874366"
+    },
+    {
+      "relative_path": "r1-http-exploration-fbe5098/result.json",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-fbe5098/result.json",
+      "bytes": 4508,
+      "sha256": "02ab4e7c3c393bb180032168ae17af7395145465f03e221e4dc983d3e18ab4dd"
+    },
+    {
+      "relative_path": "r1-http-exploration-v2-fbe5098/all-model-requests.json",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-v2-fbe5098/all-model-requests.json",
+      "bytes": 98678,
+      "sha256": "78a8e137f7a0d07e2d75cbdec0183b1152056f76120f8026475086f1055f0ccb"
+    },
+    {
+      "relative_path": "r1-http-exploration-v2-fbe5098/cli-memory-tool-loop/data/memories.jsonl",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-v2-fbe5098/cli-memory-tool-loop/data/memories.jsonl",
+      "bytes": 494,
+      "sha256": "f3225b6183c1165bbe5d194ffeac270d03e55c8b2046d546786d18db832b6f19"
+    },
+    {
+      "relative_path": "r1-http-exploration-v2-fbe5098/cli-memory-tool-loop/data/messages/session_cbf943af-5e3e-4c70-9494-8bbc15e8d34a.jsonl",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-v2-fbe5098/cli-memory-tool-loop/data/messages/session_cbf943af-5e3e-4c70-9494-8bbc15e8d34a.jsonl",
+      "bytes": 1180,
+      "sha256": "b7cf1d50b31785076b1b2020c9e663182282967a711f9e555240d9aaddeb87c3"
+    },
+    {
+      "relative_path": "r1-http-exploration-v2-fbe5098/cli-memory-tool-loop/data/session_cbf943af-5e3e-4c70-9494-8bbc15e8d34a.jsonl",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-v2-fbe5098/cli-memory-tool-loop/data/session_cbf943af-5e3e-4c70-9494-8bbc15e8d34a.jsonl",
+      "bytes": 13719,
+      "sha256": "6e0ec6a4a587a86b899ab3241b0b89ea3e72f1ea0656293c6db8276d187377e1"
+    },
+    {
+      "relative_path": "r1-http-exploration-v2-fbe5098/cli-memory-tool-loop/data/sessions/session_cbf943af-5e3e-4c70-9494-8bbc15e8d34a.json",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-v2-fbe5098/cli-memory-tool-loop/data/sessions/session_cbf943af-5e3e-4c70-9494-8bbc15e8d34a.json",
+      "bytes": 458,
+      "sha256": "2eac10168220fcc8458521d7a7966185cf47eba9e0af4a6d4a2cfc89968cf372"
+    },
+    {
+      "relative_path": "r1-http-exploration-v2-fbe5098/cli-memory-tool-loop/data/state/session_cbf943af-5e3e-4c70-9494-8bbc15e8d34a.json",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-v2-fbe5098/cli-memory-tool-loop/data/state/session_cbf943af-5e3e-4c70-9494-8bbc15e8d34a.json",
+      "bytes": 2872,
+      "sha256": "1fd6ce0ac86dd5fe307effe267e8880ebde4444778d8e21543b3e4942e4b4d43"
+    },
+    {
+      "relative_path": "r1-http-exploration-v2-fbe5098/cli-memory-tool-loop/data/turns/turn_fe7a2674-fa37-42cc-9a26-fb459ca1d2bc.json",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-v2-fbe5098/cli-memory-tool-loop/data/turns/turn_fe7a2674-fa37-42cc-9a26-fb459ca1d2bc.json",
+      "bytes": 370,
+      "sha256": "8c78c9ace9b77f34e0836cb9779045eb8e1d394030b4f0ccf69fc92881098049"
+    },
+    {
+      "relative_path": "r1-http-exploration-v2-fbe5098/cli-memory-tool-loop/model-requests.json",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-v2-fbe5098/cli-memory-tool-loop/model-requests.json",
+      "bytes": 38891,
+      "sha256": "7d737af3eb396e31823b399476735846981175b51194cdaca2f019d1a7c53cdc"
+    },
+    {
+      "relative_path": "r1-http-exploration-v2-fbe5098/cli-memory-tool-loop/startup.log",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-v2-fbe5098/cli-memory-tool-loop/startup.log",
+      "bytes": 317,
+      "sha256": "218b0353c9d5f8b13049784cf1ade1f5a63d9c170ca1ad11243f2e08f2df47b0"
+    },
+    {
+      "relative_path": "r1-http-exploration-v2-fbe5098/cli-memory-tool-loop/workspace/AGENTS.md",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-v2-fbe5098/cli-memory-tool-loop/workspace/AGENTS.md",
+      "bytes": 59,
+      "sha256": "cd692f71ce7b7b26eafb6db73d63b0fecb1c5dd0070a84628056d93f47b3b959"
+    },
+    {
+      "relative_path": "r1-http-exploration-v2-fbe5098/cli-memory-tool-loop/workspace/blocked/AGENTS.md",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-v2-fbe5098/cli-memory-tool-loop/workspace/blocked/AGENTS.md",
+      "bytes": 88,
+      "sha256": "7e761d7227d4907c47f9d0c711a97b4ed3f46491a3a57e53bf8e77c50e4fbafb"
+    },
+    {
+      "relative_path": "r1-http-exploration-v2-fbe5098/cli-memory-tool-loop/workspace/probe.txt",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-v2-fbe5098/cli-memory-tool-loop/workspace/probe.txt",
+      "bytes": 23,
+      "sha256": "5feb7d382faa8d595438fa6634d8777c705268813f4ad8accb9478d61be3d4fe"
+    },
+    {
+      "relative_path": "r1-http-exploration-v2-fbe5098/direct-input-events.json",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-v2-fbe5098/direct-input-events.json",
+      "bytes": 3877,
+      "sha256": "b493960479bc2e9240ec841c7d07b1625dbf87ecad948b0f14ab2557688596d8"
+    },
+    {
+      "relative_path": "r1-http-exploration-v2-fbe5098/direct-wire.json",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-v2-fbe5098/direct-wire.json",
+      "bytes": 1947,
+      "sha256": "a4008140940cfadbc8c20b68d2753b5caf0aa34d1ccc22aee5c7b19d2ca78c71"
+    },
+    {
+      "relative_path": "r1-http-exploration-v2-fbe5098/result.json",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-v2-fbe5098/result.json",
+      "bytes": 4584,
+      "sha256": "b25e22800e6b626d8783d510e9dcbb3d30dbb9a7d467a0fa452e82cb28b7334a"
+    },
+    {
+      "relative_path": "r1-http-exploration-v2-fbe5098/web-default-system/data/messages/session_c6d6c06f-1d1a-4f66-a3dd-635af0ecfeda.jsonl",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-v2-fbe5098/web-default-system/data/messages/session_c6d6c06f-1d1a-4f66-a3dd-635af0ecfeda.jsonl",
+      "bytes": 1719,
+      "sha256": "db45bd082833961207e293376edb471360b8eabda39125c98d0e5dcc6f49295b"
+    },
+    {
+      "relative_path": "r1-http-exploration-v2-fbe5098/web-default-system/data/session_c6d6c06f-1d1a-4f66-a3dd-635af0ecfeda.jsonl",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-v2-fbe5098/web-default-system/data/session_c6d6c06f-1d1a-4f66-a3dd-635af0ecfeda.jsonl",
+      "bytes": 17702,
+      "sha256": "be20b915aa166bbacf91ddfac4c8dd0e005dce9fb966c326d9f69e22df2b5b3a"
+    },
+    {
+      "relative_path": "r1-http-exploration-v2-fbe5098/web-default-system/data/sessions/session_c6d6c06f-1d1a-4f66-a3dd-635af0ecfeda.json",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-v2-fbe5098/web-default-system/data/sessions/session_c6d6c06f-1d1a-4f66-a3dd-635af0ecfeda.json",
+      "bytes": 456,
+      "sha256": "7053e27dc15eb1155128c84cf46a2b79017f9e63b18db73fe1994a3626739c74"
+    },
+    {
+      "relative_path": "r1-http-exploration-v2-fbe5098/web-default-system/data/state/session_c6d6c06f-1d1a-4f66-a3dd-635af0ecfeda.json",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-v2-fbe5098/web-default-system/data/state/session_c6d6c06f-1d1a-4f66-a3dd-635af0ecfeda.json",
+      "bytes": 2870,
+      "sha256": "274cba34748fc9119fdd943a1431dc2b4fce50cbe7bdfc49782858231f5a2f0f"
+    },
+    {
+      "relative_path": "r1-http-exploration-v2-fbe5098/web-default-system/data/turns/turn_2499598e-7c16-43cb-a638-32138e3d05d3.json",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-v2-fbe5098/web-default-system/data/turns/turn_2499598e-7c16-43cb-a638-32138e3d05d3.json",
+      "bytes": 369,
+      "sha256": "e7a5bd39dbe8232f99891a7d40ae47525bd28d9d26a594e005020aacf46e3fea"
+    },
+    {
+      "relative_path": "r1-http-exploration-v2-fbe5098/web-default-system/data/turns/turn_5d424e7d-686d-463a-b637-5a1670f5ff38.json",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-v2-fbe5098/web-default-system/data/turns/turn_5d424e7d-686d-463a-b637-5a1670f5ff38.json",
+      "bytes": 372,
+      "sha256": "016612d0df969c5877523ac8b4a72e1c37bb30919da67453157efae44b2c0af1"
+    },
+    {
+      "relative_path": "r1-http-exploration-v2-fbe5098/web-default-system/model-requests.json",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-v2-fbe5098/web-default-system/model-requests.json",
+      "bytes": 57846,
+      "sha256": "3a723680b18e01154047b0af94ce5565d47093423a875bf1c4d694a153f89a24"
+    },
+    {
+      "relative_path": "r1-http-exploration-v2-fbe5098/web-default-system/startup.log",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-v2-fbe5098/web-default-system/startup.log",
+      "bytes": 74,
+      "sha256": "fb736c9d96a0f3358fc9e714eb759ae08a54a08bc2e152cd09f5a2bbf04b0371"
+    },
+    {
+      "relative_path": "r1-http-exploration-v2-fbe5098/web-default-system/workspace/AGENTS.md",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-v2-fbe5098/web-default-system/workspace/AGENTS.md",
+      "bytes": 59,
+      "sha256": "cd692f71ce7b7b26eafb6db73d63b0fecb1c5dd0070a84628056d93f47b3b959"
+    },
+    {
+      "relative_path": "r1-http-exploration-v2-fbe5098/web-default-system/workspace/blocked/AGENTS.md",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-v2-fbe5098/web-default-system/workspace/blocked/AGENTS.md",
+      "bytes": 88,
+      "sha256": "7e761d7227d4907c47f9d0c711a97b4ed3f46491a3a57e53bf8e77c50e4fbafb"
+    },
+    {
+      "relative_path": "r1-http-exploration-v2-fbe5098/web-default-system/workspace/probe.txt",
+      "source_relative_path": ".ci/agent-next-20261004/r1-http-exploration-v2-fbe5098/web-default-system/workspace/probe.txt",
+      "bytes": 23,
+      "sha256": "5feb7d382faa8d595438fa6634d8777c705268813f4ad8accb9478d61be3d4fe"
+    },
+    {
+      "relative_path": "resumed-directed-receipt.json",
+      "source_relative_path": ".ci/agent-next-20261004/resumed-directed-receipt.json",
+      "bytes": 632,
+      "sha256": "ff9e55452d738fb9ffa5c9cf23725e915036d161b65bea2f5b9bb7abf1736c90"
+    },
+    {
+      "relative_path": "resumed-directed.log",
+      "source_relative_path": ".ci/agent-next-20261004/resumed-directed.log",
+      "bytes": 445,
+      "sha256": "9cb81e4637e9c6d1c2556e8f989d39d7720a773e5578b228b31ae9325d7cd480"
+    },
+    {
+      "relative_path": "review/static-review-pre-freeze.json",
+      "source_relative_path": ".ci/agent-next-20261004/review/static-review-pre-freeze.json",
+      "bytes": 2392,
+      "sha256": "25edd345a3b2c549f69770bf6e703e968e8adaa7c6d77a9076cdfe3373ca2cbe"
+    },
+    {
+      "relative_path": "review/static-review-resumed.json",
+      "source_relative_path": ".ci/agent-next-20261004/review/static-review-resumed.json",
+      "bytes": 7741,
+      "sha256": "d00359e8f610a37e195061b00b43ae4166b8334d38d879a2f2e552c2c03b361b"
+    }
+  ],
+  "excluded_count": 44,
+  "excluded_bytes": 14593924,
+  "excluded": [
+    {
+      "relative_path": "active-state.json",
+      "source_relative_path": ".ci/agent-next-20261004/active-state.json",
+      "bytes": 331,
+      "sha256": "40cc8566d788de722a6a3c9e2c09cf3a3d071c6c80f06168fa08b51dab5a424e",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "audit-memory/baseline-18f162b/fixtures-9YOEfX/jsonl/memories.jsonl",
+      "source_relative_path": ".ci/agent-next-20261004/audit-memory/baseline-18f162b/fixtures-9YOEfX/jsonl/memories.jsonl",
+      "bytes": 3430224,
+      "sha256": "1d6be9ccf0eb0205ad5aefb65be1e203fbd9db481281647ec0d929b9697b2081",
+      "reason": "Recreatable 10k-row benchmark fixture storage; generator and report/fixture digest remain selected."
+    },
+    {
+      "relative_path": "audit-memory/baseline-18f162b/fixtures-9YOEfX/sqlite/memories.db",
+      "source_relative_path": ".ci/agent-next-20261004/audit-memory/baseline-18f162b/fixtures-9YOEfX/sqlite/memories.db",
+      "bytes": 4214784,
+      "sha256": "fa67f84a78729a5e6516894bd186af0e7cb7a08ce6c311ceba31efb2b6cde714",
+      "reason": "Recreatable 10k-row benchmark fixture storage; generator and report/fixture digest remain selected."
+    },
+    {
+      "relative_path": "frozen-91967f4/build.log",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/build.log",
+      "bytes": 9,
+      "sha256": "faeaa94bcf7012d86f91ca647580449f56a263fb7eaf572c54789764f60a9b8f",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4/manifest.json",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/manifest.json",
+      "bytes": 989138,
+      "sha256": "dffd64b79145a50fbdf01f5d5fd6e11bc5dd25037f3501127ab14d69bb590d47",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4/memory-differential.log",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/memory-differential.log",
+      "bytes": 19620,
+      "sha256": "c9a5c67762ab3763e5f338723d4713339b485231c7702bb4bea2a018eafa60a4",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4/memory-paired-performance.log",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/memory-paired-performance.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4/new-regressions.log",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/new-regressions.log",
+      "bytes": 445,
+      "sha256": "f561679a8a32e7bfa18c274c7a5139f453113be6e45946a6e5b08af5f82ff28c",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4/provider-production.log",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/provider-production.log",
+      "bytes": 1623,
+      "sha256": "0449e5bede52968f39337466163f33d69cb5d39b1d3a04a92615156348f7afb9",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4/r1-http/all-model-requests.json",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/r1-http/all-model-requests.json",
+      "bytes": 98638,
+      "sha256": "8bab0057ad066fe846dea7a501d1cc43d7ea66d7fb1a2e7c24ddd26bce795fba",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4/r1-http/cli-memory-tool-loop/data/memories.jsonl",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/r1-http/cli-memory-tool-loop/data/memories.jsonl",
+      "bytes": 494,
+      "sha256": "e7210d1271c1502c7eec4adfeab15e37fd7e8c5cba8a1ef74468a9342f21c6e0",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4/r1-http/cli-memory-tool-loop/data/messages/session_d5331fe7-089a-4d31-a133-778ad81df076.jsonl",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/r1-http/cli-memory-tool-loop/data/messages/session_d5331fe7-089a-4d31-a133-778ad81df076.jsonl",
+      "bytes": 1180,
+      "sha256": "ec832cea4f7384a4d3c84b4729ace3cd16fddb60857687ccda56d672fc2514d6",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4/r1-http/cli-memory-tool-loop/data/session_d5331fe7-089a-4d31-a133-778ad81df076.jsonl",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/r1-http/cli-memory-tool-loop/data/session_d5331fe7-089a-4d31-a133-778ad81df076.jsonl",
+      "bytes": 13663,
+      "sha256": "d982e1c5082ad9a4ce7483996a01f545d4344542797274ef93b3a6779b08af96",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4/r1-http/cli-memory-tool-loop/data/sessions/session_d5331fe7-089a-4d31-a133-778ad81df076.json",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/r1-http/cli-memory-tool-loop/data/sessions/session_d5331fe7-089a-4d31-a133-778ad81df076.json",
+      "bytes": 450,
+      "sha256": "2aed0a6dfdecc73fedac149ab7e538c0c990a713eb1b2a71fa288ed044a58125",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4/r1-http/cli-memory-tool-loop/data/state/session_d5331fe7-089a-4d31-a133-778ad81df076.json",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/r1-http/cli-memory-tool-loop/data/state/session_d5331fe7-089a-4d31-a133-778ad81df076.json",
+      "bytes": 2856,
+      "sha256": "512782aed6f00b7eaaa0276c6e6fbf682b59cb11a744969d1a798a7eccdd266f",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4/r1-http/cli-memory-tool-loop/data/turns/turn_f1211132-9869-4d5a-815b-cc3a6a1c04af.json",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/r1-http/cli-memory-tool-loop/data/turns/turn_f1211132-9869-4d5a-815b-cc3a6a1c04af.json",
+      "bytes": 370,
+      "sha256": "6a999f9bf5644313590610979622f18ff5206b73eb4eac4de9e65adcabfa2072",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4/r1-http/cli-memory-tool-loop/model-requests.json",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/r1-http/cli-memory-tool-loop/model-requests.json",
+      "bytes": 38875,
+      "sha256": "641fbc7a1485d6b554c9c033b7f687f294999fe2d0ec8afbfe31606bfcf4b785",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4/r1-http/cli-memory-tool-loop/startup.log",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/r1-http/cli-memory-tool-loop/startup.log",
+      "bytes": 317,
+      "sha256": "003d40c0cd92896ae03dba588da0e4a92cbca302e12ce3e13b53cb3eef6e87ed",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4/r1-http/cli-memory-tool-loop/workspace/AGENTS.md",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/r1-http/cli-memory-tool-loop/workspace/AGENTS.md",
+      "bytes": 59,
+      "sha256": "cd692f71ce7b7b26eafb6db73d63b0fecb1c5dd0070a84628056d93f47b3b959",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4/r1-http/cli-memory-tool-loop/workspace/blocked/AGENTS.md",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/r1-http/cli-memory-tool-loop/workspace/blocked/AGENTS.md",
+      "bytes": 88,
+      "sha256": "7e761d7227d4907c47f9d0c711a97b4ed3f46491a3a57e53bf8e77c50e4fbafb",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4/r1-http/cli-memory-tool-loop/workspace/probe.txt",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/r1-http/cli-memory-tool-loop/workspace/probe.txt",
+      "bytes": 23,
+      "sha256": "5feb7d382faa8d595438fa6634d8777c705268813f4ad8accb9478d61be3d4fe",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4/r1-http/direct-input-events.json",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/r1-http/direct-input-events.json",
+      "bytes": 3877,
+      "sha256": "4cbba014a360f5736adf0c40803d60da003d7d8eb59179141b01cbcdf799a4d8",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4/r1-http/direct-wire.json",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/r1-http/direct-wire.json",
+      "bytes": 1947,
+      "sha256": "a4008140940cfadbc8c20b68d2753b5caf0aa34d1ccc22aee5c7b19d2ca78c71",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4/r1-http/result.json",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/r1-http/result.json",
+      "bytes": 4586,
+      "sha256": "511f823cdaf0fd94b6e029476e81f520691743056d8c31648d0f31ded5019058",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4/r1-http/web-default-system/data/messages/session_91bb800d-a728-44ee-b61b-e618c17cef76.jsonl",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/r1-http/web-default-system/data/messages/session_91bb800d-a728-44ee-b61b-e618c17cef76.jsonl",
+      "bytes": 1719,
+      "sha256": "511ee6683b75e70be5549d10024ec5b697ec3e9645370140cc145bf8fc28f4c3",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4/r1-http/web-default-system/data/session_91bb800d-a728-44ee-b61b-e618c17cef76.jsonl",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/r1-http/web-default-system/data/session_91bb800d-a728-44ee-b61b-e618c17cef76.jsonl",
+      "bytes": 17623,
+      "sha256": "915693824d32805c5c75ef4d83bb5ec7876f2d44798bcbce5d92a9c6abd46f67",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4/r1-http/web-default-system/data/sessions/session_91bb800d-a728-44ee-b61b-e618c17cef76.json",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/r1-http/web-default-system/data/sessions/session_91bb800d-a728-44ee-b61b-e618c17cef76.json",
+      "bytes": 448,
+      "sha256": "07316ea2981f98d763d11e857adba0f50c37cd0124ea7716ce27887329187742",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4/r1-http/web-default-system/data/state/session_91bb800d-a728-44ee-b61b-e618c17cef76.json",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/r1-http/web-default-system/data/state/session_91bb800d-a728-44ee-b61b-e618c17cef76.json",
+      "bytes": 2854,
+      "sha256": "83dbd09ae5d31dbe95aee3aba31c47761a01640ae5c5d7f301fefd7fd586c813",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4/r1-http/web-default-system/data/turns/turn_490aeba1-117a-46d3-8c0c-b39c6b095376.json",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/r1-http/web-default-system/data/turns/turn_490aeba1-117a-46d3-8c0c-b39c6b095376.json",
+      "bytes": 369,
+      "sha256": "72405a0f3ebe9de4e88fa75af9c8916b2ffdb33d14e219438410f3edadea2606",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4/r1-http/web-default-system/data/turns/turn_e662b188-bd0f-4301-8706-3ba6b7e82981.json",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/r1-http/web-default-system/data/turns/turn_e662b188-bd0f-4301-8706-3ba6b7e82981.json",
+      "bytes": 372,
+      "sha256": "9e8bf3a0b301b0124bfdb346b561385f5866c565629dd9a24c113bfeb0f8d589",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4/r1-http/web-default-system/model-requests.json",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/r1-http/web-default-system/model-requests.json",
+      "bytes": 57822,
+      "sha256": "6c3edca07cbe3f3532fa92ae22668c6aff0fdad5d1d5f0807ba94f342671ea97",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4/r1-http/web-default-system/startup.log",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/r1-http/web-default-system/startup.log",
+      "bytes": 74,
+      "sha256": "318480b53c3a6968e6ba734478daf337c4db121413c77c973becf767eb78f92a",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4/r1-http/web-default-system/workspace/AGENTS.md",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/r1-http/web-default-system/workspace/AGENTS.md",
+      "bytes": 59,
+      "sha256": "cd692f71ce7b7b26eafb6db73d63b0fecb1c5dd0070a84628056d93f47b3b959",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4/r1-http/web-default-system/workspace/blocked/AGENTS.md",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/r1-http/web-default-system/workspace/blocked/AGENTS.md",
+      "bytes": 88,
+      "sha256": "7e761d7227d4907c47f9d0c711a97b4ed3f46491a3a57e53bf8e77c50e4fbafb",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4/r1-http/web-default-system/workspace/probe.txt",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/r1-http/web-default-system/workspace/probe.txt",
+      "bytes": 23,
+      "sha256": "5feb7d382faa8d595438fa6634d8777c705268813f4ad8accb9478d61be3d4fe",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4/r2-differential/instrumented-baseline.mjs",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/r2-differential/instrumented-baseline.mjs",
+      "bytes": 7241,
+      "sha256": "3f0cafb3738d0ebc90e81eeb85f12112f5684079821310baa7fecab2fd862c94",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4/r2-differential/instrumented-candidate.mjs",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/r2-differential/instrumented-candidate.mjs",
+      "bytes": 7417,
+      "sha256": "b9e1a57e2b51da3de3062503d357b311bc1cf24675c42bca2b567a740db4848f",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4/r2-differential/report.json",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/r2-differential/report.json",
+      "bytes": 161483,
+      "sha256": "0f91c936309efcd1341416753b49bd3ea9da6d66b6a99fa86fd84aa23b6f1e7a",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4/r2-differential/resolved-reference.mjs",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/r2-differential/resolved-reference.mjs",
+      "bytes": 6929,
+      "sha256": "bfba0a3fe0f2238ec270f1a73910e08ad75de245cddacc1a970afb14c07a35c1",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4/r2-performance/fixtures/jsonl/memories.jsonl",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/r2-performance/fixtures/jsonl/memories.jsonl",
+      "bytes": 3430224,
+      "sha256": "1d6be9ccf0eb0205ad5aefb65be1e203fbd9db481281647ec0d929b9697b2081",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4/r2-performance/resolved-reference.mjs",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/r2-performance/resolved-reference.mjs",
+      "bytes": 6929,
+      "sha256": "bfba0a3fe0f2238ec270f1a73910e08ad75de245cddacc1a970afb14c07a35c1",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4/r2-performance/result-jsonl-warm-fts.json",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/r2-performance/result-jsonl-warm-fts.json",
+      "bytes": 2068221,
+      "sha256": "ed29a75bff5ff27ac5ad0c4de13d8f778c3c832edbffa954656d62d3617b6180",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4/typecheck.log",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4/typecheck.log",
+      "bytes": 9,
+      "sha256": "faeaa94bcf7012d86f91ca647580449f56a263fb7eaf572c54789764f60a9b8f",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    },
+    {
+      "relative_path": "frozen-91967f4-driver.log",
+      "source_relative_path": ".ci/agent-next-20261004/frozen-91967f4-driver.log",
+      "bytes": 423,
+      "sha256": "4ccdae203f2a3d89a5b6f25edbd13005a7edd4c5c60e66d2a3a0fde4ded152e2",
+      "reason": "Outside the explicitly requested baseline/RED/exploration/pre-static inventory; frozen acceptance/publication evidence is added by root separately."
+    }
+  ],
+  "sensitive_scan": {
+    "scope": "Selected exact bytes only",
+    "pattern_match_counts": {
+      "github_classic_pat": 0,
+      "github_fine_grained_pat": 0,
+      "openai_style_secret": 0,
+      "private_key_header": 0
+    },
+    "matching_file_counts": {
+      "github_classic_pat": 0,
+      "github_fine_grained_pat": 0,
+      "openai_style_secret": 0,
+      "private_key_header": 0
+    },
+    "raw_matches_disclosed": false,
+    "limitation": "Pattern scan checks recognizable credential/private-key syntax; it is not a complete secret audit."
+  },
+  "collection_rules": {
+    "preserve_original_bytes": true,
+    "include_failed_oracle_exploration": true,
+    "include_logs_ignored_by_git": true,
+    "include_small_synthetic_request_event_state_memory_fixtures": true,
+    "exclude_recreatable_10k_jsonl_and_sqlite_storage": true,
+    "frozen_results_included": false,
+    "tests_builds_performance_runs_started": false
+  }
+}

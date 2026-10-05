@@ -1,0 +1,4383 @@
+{
+  "schema": "R2_MEMORY_ENGINEERING_PROBE",
+  "observedAt": "2026-10-05T00:37:54.577Z",
+  "repo": "/workspace/harness-agent",
+  "sourceHead": "de346b90dcbf97c9591ae2786e46e80fd0a4e05c",
+  "sourceStatus": "",
+  "sourceHashes": {
+    "packages/memory/src/retrieval.ts": "d3a48b1ff665dd2c3f698d7a2c7e4754081a8fb6ba6306556444262135fca8c9",
+    "packages/memory/dist/retrieval.js": "a47651ff6072887a099ae546478a437cf53b75ca4196e163561c7f6e3c73904a",
+    "packages/memory/src/memory-store.ts": "925f718e3f92baf32fb2868bafcdcd0701cb520e441049892848a4cb6d494caf",
+    "packages/memory/dist/memory-store.js": "8722ce368b39c5626668437f3ced379d035ae938e480f693a6971f12e3cf5ed5",
+    "packages/memory/src/sqlite-memory-store.ts": "f278be463dec22f5ed15039e6e727b22a942eb6afbaab19e6961e177ae20cb6f",
+    "packages/memory/dist/sqlite-memory-store.js": "300bf553eb208898c79d7d557b5dfb8b649b5e01f28a5b934ac56eb1d39dceb7",
+    "packages/memory/src/search-text.ts": "e569e7f418e3edf87fba7fd2e9c1a1bdf7511d78ea85abcecd863def5c201fd0",
+    "packages/memory/dist/search-text.js": "077ce28fe2280d104af3d98da7c07d11582f61ea7ad0beec1ccc2f730975b202",
+    "packages/memory/src/security-gate.ts": "35dd1c100d6200a862ac50c3b2f1c0fff1d9feb8b7921e31c8805aed319a5efa",
+    "packages/memory/dist/security-gate.js": "4e5b30994c56a51aead532212406056b0f5e84dd80f74979e4b45ebbf85f72fa",
+    "packages/memory/src/lifecycle.ts": "785201bfbfab78fad4cfe8b5781973e00f5149a5fd2c62559b81890642193fa6",
+    "packages/memory/dist/lifecycle.js": "11a295ece7bdf7bb4130e84ed09304da654e19d5715a8d21ff45be1c7545b183",
+    "packages/harness/src/memory-runtime-bridge.ts": "2d6cf39686f2884d2c390dcd13e7c7f46a3e368094d807b79124a79297a4f4cf",
+    "packages/harness/dist/memory-runtime-bridge.js": "b3b45a131640fad6a294aa8cb30a5c0d0770f1706c3281130a3816037d9eba09",
+    "packages/harness/src/create-harness.ts": "a115aa9c8ec71b86e689e80ab9195c21cd85c8f19a0d9de669e9e19d8becf84e",
+    "packages/harness/dist/create-harness.js": "442874f7297e7e0b7df5e715af249457fbd0bf6cd33f15b75d5e198700ea29e3"
+  },
+  "probeSha256": "83a87e38dcba01c5d979210871e03b4f6cfafcc28a93af681751d1b64a0d6766",
+  "helperSha256": "db77855cad50c3a572220fc82695b08c839a09245f115693608a0fa34fa7a443",
+  "baselineHead": "18f162bf7f12c4b8e8cebcebede4034dd1f3efb7",
+  "baselineRetrievalSourceSha256": "0921994bc133782ca2d01ae7e9af05d01e4fd2ac233916cb42c5350ad3621f55",
+  "baselineRetrievalCompiledSha256": "642e15428ffcb008e68d6448d5465555477c17f20888b6bf4d76e483eab709d6",
+  "resolvedReferenceSha256": "bfba0a3fe0f2238ec270f1a73910e08ad75de245cddacc1a970afb14c07a35c1",
+  "unchangedSearchAndGateSources": {
+    "packages/memory/src/memory-store.ts": {
+      "actual": "925f718e3f92baf32fb2868bafcdcd0701cb520e441049892848a4cb6d494caf",
+      "baseline": "925f718e3f92baf32fb2868bafcdcd0701cb520e441049892848a4cb6d494caf",
+      "matches": true
+    },
+    "packages/memory/src/sqlite-memory-store.ts": {
+      "actual": "f278be463dec22f5ed15039e6e727b22a942eb6afbaab19e6961e177ae20cb6f",
+      "baseline": "f278be463dec22f5ed15039e6e727b22a942eb6afbaab19e6961e177ae20cb6f",
+      "matches": true
+    },
+    "packages/memory/src/search-text.ts": {
+      "actual": "e569e7f418e3edf87fba7fd2e9c1a1bdf7511d78ea85abcecd863def5c201fd0",
+      "baseline": "e569e7f418e3edf87fba7fd2e9c1a1bdf7511d78ea85abcecd863def5c201fd0",
+      "matches": true
+    },
+    "packages/memory/src/security-gate.ts": {
+      "actual": "35dd1c100d6200a862ac50c3b2f1c0fff1d9feb8b7921e31c8805aed319a5efa",
+      "baseline": "35dd1c100d6200a862ac50c3b2f1c0fff1d9feb8b7921e31c8805aed319a5efa",
+      "matches": true
+    },
+    "packages/memory/src/lifecycle.ts": {
+      "actual": "785201bfbfab78fad4cfe8b5781973e00f5149a5fd2c62559b81890642193fa6",
+      "baseline": "785201bfbfab78fad4cfe8b5781973e00f5149a5fd2c62559b81890642193fa6",
+      "matches": true
+    }
+  },
+  "paidCalls": 0,
+  "realProviderCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "promotion": "NOT_RUN",
+  "cases": [
+    {
+      "name": "nontransitive-conflict-chain",
+      "fixtureSha256": "529ef4464650372386505b8e6408a20adb254179f3dfa9025dbeb8242ef0b0e3",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 10,
+        "sessionId": "session-work-owner"
+      },
+      "baselineResultSha256": "24b9f2b52fb35e65767514d8de77c866a0b214971576fe064798dc00ac963b14",
+      "candidateResultSha256": "24b9f2b52fb35e65767514d8de77c866a0b214971576fe064798dc00ac963b14",
+      "fullResultEquivalent": true,
+      "returnedCount": 2,
+      "suppressedCount": 1
+    },
+    {
+      "name": "empty-unicode-tokens",
+      "fixtureSha256": "0d897f977f8ddc80266a3821c71d0adc08c5f89f0a1096b5422ebb8589d90dc7",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 10,
+        "sessionId": "session-work-owner"
+      },
+      "baselineResultSha256": "b900a48259f03f8fc5343f3d340d4f8e9e2caed8902c1e631cf4e4323833e962",
+      "candidateResultSha256": "b900a48259f03f8fc5343f3d340d4f8e9e2caed8902c1e631cf4e4323833e962",
+      "fullResultEquivalent": true,
+      "returnedCount": 4,
+      "suppressedCount": 0
+    },
+    {
+      "name": "conflict-beyond-top-k",
+      "fixtureSha256": "691ee308d064addb7f0678b60de165716cd26ce07cea037b79da447220389b52",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner"
+      },
+      "baselineResultSha256": "423f708b8e8662e8ec8ce04b3a3d223a7e26f080369d8b226c1a8cea26a08bce",
+      "candidateResultSha256": "423f708b8e8662e8ec8ce04b3a3d223a7e26f080369d8b226c1a8cea26a08bce",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 1
+    },
+    {
+      "name": "same-score-stable-order",
+      "fixtureSha256": "a616199475e8ae1bbd7de78465ba2c61f1fc8651e4335ee3c77ca6587564dca3",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 10,
+        "sessionId": "session-work-owner"
+      },
+      "baselineResultSha256": "94b07eb2e1c895d04592aabe18721a1d6004dad3f7b03af77fec42e2ba34007b",
+      "candidateResultSha256": "94b07eb2e1c895d04592aabe18721a1d6004dad3f7b03af77fec42e2ba34007b",
+      "fullResultEquivalent": true,
+      "returnedCount": 2,
+      "suppressedCount": 0
+    },
+    {
+      "name": "all-gates-structured-unicode",
+      "fixtureSha256": "4f9554c719f4bff8ea850bbb491357866f31bf74271842b3476de87035ca869b",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 10,
+        "sessionId": "session-work-owner"
+      },
+      "baselineResultSha256": "39a806225ae5f292005d50ff64305b280271976ee2aa4781bcddad465ca347e5",
+      "candidateResultSha256": "39a806225ae5f292005d50ff64305b280271976ee2aa4781bcddad465ca347e5",
+      "fullResultEquivalent": true,
+      "returnedCount": 3,
+      "suppressedCount": 8
+    },
+    {
+      "name": "seed-1",
+      "fixtureSha256": "7979c30482a274956da6a619c60cad97ff6d0aeb7b18879d017105f53ba844e4",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "1e72b3091d341fb41e32152a097be7e1c99a3d87884a3a9261a0847e8555b411",
+      "candidateResultSha256": "1e72b3091d341fb41e32152a097be7e1c99a3d87884a3a9261a0847e8555b411",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 2
+    },
+    {
+      "name": "seed-2",
+      "fixtureSha256": "d97ae7db22c652364ebb4cf39b4fade722baf892c8af07c93b18e340f54b44f9",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "de1cf2b9e15977de341b3b5ddf83a2e8769c2e5b84fe8f499749fa3260545e41",
+      "candidateResultSha256": "de1cf2b9e15977de341b3b5ddf83a2e8769c2e5b84fe8f499749fa3260545e41",
+      "fullResultEquivalent": true,
+      "returnedCount": 5,
+      "suppressedCount": 7
+    },
+    {
+      "name": "seed-3",
+      "fixtureSha256": "df106377f1d44740a8ca7d9969e713723d2518c0c488ab639dcb8a307f41b96e",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "minScore": 0
+      },
+      "baselineResultSha256": "fe279268e599828c31f93cce5838506e34c524a50249fa3c0defd003f34cc02b",
+      "candidateResultSha256": "fe279268e599828c31f93cce5838506e34c524a50249fa3c0defd003f34cc02b",
+      "fullResultEquivalent": true,
+      "returnedCount": 12,
+      "suppressedCount": 22
+    },
+    {
+      "name": "seed-4",
+      "fixtureSha256": "ba60fcd1a6119031b9c29d1fc6849650e3000a06ed7b5e892e93fa49a3b07414",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "6e5a8639a2121451666fdaad55445a5165567d90b2065ae3bd64773078e20dd5",
+      "candidateResultSha256": "6e5a8639a2121451666fdaad55445a5165567d90b2065ae3bd64773078e20dd5",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 8
+    },
+    {
+      "name": "seed-5",
+      "fixtureSha256": "630131e8b2d50ea06e27ada2fa998910b87e48cd6c95075f90e08fd438a78cfa",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "e165b3b462000a7d28beaabebaf1cb7221db9ca89b703a068f2c2d4575d2ded2",
+      "candidateResultSha256": "e165b3b462000a7d28beaabebaf1cb7221db9ca89b703a068f2c2d4575d2ded2",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 9
+    },
+    {
+      "name": "seed-6",
+      "fixtureSha256": "c7062d6a9177d9b6e6385d69c6028411b02bd1baadc158bb0d6224cfc2c708f2",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "minScore": 0
+      },
+      "baselineResultSha256": "972d9fa3bd37043302364c140e514cd09357e467a6e678fe52a565ae8c9ea24e",
+      "candidateResultSha256": "972d9fa3bd37043302364c140e514cd09357e467a6e678fe52a565ae8c9ea24e",
+      "fullResultEquivalent": true,
+      "returnedCount": 4,
+      "suppressedCount": 9
+    },
+    {
+      "name": "seed-7",
+      "fixtureSha256": "28d3865621ed42bf2d27514c83b56599168fc8275c819dab7d63717d1707d8e0",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "14c873f0fd137aa9687e17a394c2652770c6a6621bcf341800de680a9feb4a71",
+      "candidateResultSha256": "14c873f0fd137aa9687e17a394c2652770c6a6621bcf341800de680a9feb4a71",
+      "fullResultEquivalent": true,
+      "returnedCount": 4,
+      "suppressedCount": 8
+    },
+    {
+      "name": "seed-8",
+      "fixtureSha256": "1bf298dfb8b16357a7da56be0741f117f6520d209f2fa7008fbd581317ddabf2",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "3c4db74fa7f6e4e4332b825b34fe83b77ff7f5cf294a5de16738ae2abc1ecf0d",
+      "candidateResultSha256": "3c4db74fa7f6e4e4332b825b34fe83b77ff7f5cf294a5de16738ae2abc1ecf0d",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 7
+    },
+    {
+      "name": "seed-9",
+      "fixtureSha256": "61f7d7a86e5098582cd70e534658418c5fcd723cce0c32b4a48cfbebacb039fd",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "minScore": 0
+      },
+      "baselineResultSha256": "50c25a45d0db6de7839c2092c335c1a71f86b3acd4881a65a40f0a258577c0b7",
+      "candidateResultSha256": "50c25a45d0db6de7839c2092c335c1a71f86b3acd4881a65a40f0a258577c0b7",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 25
+    },
+    {
+      "name": "seed-10",
+      "fixtureSha256": "00a9d2ebd1607868e5a035f2f14e46499de05921100b74155f08acd61aad2087",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "4f87a5719bfccb44c65ca577d5acf2469fa282a341f79e677d6aeced330cc3fd",
+      "candidateResultSha256": "4f87a5719bfccb44c65ca577d5acf2469fa282a341f79e677d6aeced330cc3fd",
+      "fullResultEquivalent": true,
+      "returnedCount": 5,
+      "suppressedCount": 15
+    },
+    {
+      "name": "seed-11",
+      "fixtureSha256": "a82bbbcee80f664a47bb0491e4df97fcde01685fd9c295808d090732d3982fed",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "3f7b4f51b1d7565ec29ba682682c3f9e46cb6517ba742c36dfdb6553f6150965",
+      "candidateResultSha256": "3f7b4f51b1d7565ec29ba682682c3f9e46cb6517ba742c36dfdb6553f6150965",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 15
+    },
+    {
+      "name": "seed-12",
+      "fixtureSha256": "464b27563b6c295bdcb2359ceb21cd76c4ed1cae9da7112f38f0485875407168",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "minScore": 0
+      },
+      "baselineResultSha256": "8e5f72d7c28138f5ae4b15296774365b439f826053cc40dbb53a4ea8f69c03f7",
+      "candidateResultSha256": "8e5f72d7c28138f5ae4b15296774365b439f826053cc40dbb53a4ea8f69c03f7",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 9
+    },
+    {
+      "name": "seed-13",
+      "fixtureSha256": "2566abd850b87f84d052f75a9f3b417d439a91158b51889bc9d793312d3166d1",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "958f8e9cc55eb3f6f86ce65073ee9f6e8a59284d2c6b669f3e5250a4ac3d50ca",
+      "candidateResultSha256": "958f8e9cc55eb3f6f86ce65073ee9f6e8a59284d2c6b669f3e5250a4ac3d50ca",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 6
+    },
+    {
+      "name": "seed-14",
+      "fixtureSha256": "3298758ab15549be699a01704b99bfde6878f8e3631c568e9bae86647ec4c1b7",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "cb5879e75484d837a4c13a6118e370f8f20afec9fe827e453a27494a7398d785",
+      "candidateResultSha256": "cb5879e75484d837a4c13a6118e370f8f20afec9fe827e453a27494a7398d785",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 10
+    },
+    {
+      "name": "seed-15",
+      "fixtureSha256": "7186e68824b9539ee2fd75d1955c7975d77db06c7c2b8d37f463b541d4b53fbe",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "minScore": 0
+      },
+      "baselineResultSha256": "57f652ad89b1743c7686611df3dd052a46db9facb887716dd5774302a236a191",
+      "candidateResultSha256": "57f652ad89b1743c7686611df3dd052a46db9facb887716dd5774302a236a191",
+      "fullResultEquivalent": true,
+      "returnedCount": 7,
+      "suppressedCount": 24
+    },
+    {
+      "name": "seed-16",
+      "fixtureSha256": "ac1a3564c26d1df7178e35f09011bed4ebe9fc6f0fb881703e5d10b2051631cf",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "b51cebe530af3a1f0617fa8231fd01a4e6f8045a1062d3a7b9adfe632f2fe975",
+      "candidateResultSha256": "b51cebe530af3a1f0617fa8231fd01a4e6f8045a1062d3a7b9adfe632f2fe975",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 14
+    },
+    {
+      "name": "seed-17",
+      "fixtureSha256": "a4fa38c98e6c0edb2a05e065bf8f071475422443055de602a12b6c3afe62e776",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "93316c8eb73ffe0a35dccd9e10ebf95cd8859230849b2b36166cf71ee98a3aee",
+      "candidateResultSha256": "93316c8eb73ffe0a35dccd9e10ebf95cd8859230849b2b36166cf71ee98a3aee",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 15
+    },
+    {
+      "name": "seed-18",
+      "fixtureSha256": "a063c6ce2dcb3269cedc904bfc68ca1029d9e69ed9e74e36d47b2086b4fd0e71",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "minScore": 0
+      },
+      "baselineResultSha256": "2fb74cfac2f99092cba4a08cc89da27fba9f3514434b2feda9e249e62911dee4",
+      "candidateResultSha256": "2fb74cfac2f99092cba4a08cc89da27fba9f3514434b2feda9e249e62911dee4",
+      "fullResultEquivalent": true,
+      "returnedCount": 4,
+      "suppressedCount": 9
+    },
+    {
+      "name": "seed-19",
+      "fixtureSha256": "665364aa4f5121272cb1a8534cfb2bee9f0b45d5296bd241a5a59d0288245ad7",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "f00ffde4aa1438a798c12257e7146392f47f5e3dea292b07402344740ae7b6e8",
+      "candidateResultSha256": "f00ffde4aa1438a798c12257e7146392f47f5e3dea292b07402344740ae7b6e8",
+      "fullResultEquivalent": true,
+      "returnedCount": 8,
+      "suppressedCount": 2
+    },
+    {
+      "name": "seed-20",
+      "fixtureSha256": "fdad0d5699caeca7ba2eb44e8b41bbe88dbc0804ee415ad84aced5a6abd3f00b",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "4de7e29d2418447c9e525c49b0a5af22d3e06eec12d6b0d358de1ccf2b4de507",
+      "candidateResultSha256": "4de7e29d2418447c9e525c49b0a5af22d3e06eec12d6b0d358de1ccf2b4de507",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 8
+    },
+    {
+      "name": "seed-21",
+      "fixtureSha256": "48a41920e644fe1ad48e0ddac292aae68527c922379ae649c5f0a8b162c5baa9",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "minScore": 0
+      },
+      "baselineResultSha256": "a61c722e86aaec133cc4fc7b4233ec53dd1b20a6ed9b48b8df4e6866ea143379",
+      "candidateResultSha256": "a61c722e86aaec133cc4fc7b4233ec53dd1b20a6ed9b48b8df4e6866ea143379",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 27
+    },
+    {
+      "name": "seed-22",
+      "fixtureSha256": "2534c065454ab1c052d886f213bfee54dd128479b82b080b43e8428ec8be5b79",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "149ed4510777c62d26c373ec2bd2f67fe5d3ef0fcdd036c98912a37c7b76de32",
+      "candidateResultSha256": "149ed4510777c62d26c373ec2bd2f67fe5d3ef0fcdd036c98912a37c7b76de32",
+      "fullResultEquivalent": true,
+      "returnedCount": 5,
+      "suppressedCount": 9
+    },
+    {
+      "name": "seed-23",
+      "fixtureSha256": "1fedcd5b8a0b1e0195cd535f7c05206cedb1aa0fe4ba83a1eea49ed23c8aac76",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "aa235de992ff5d96407ea26c716d9179446016811d5360a940d9cb7c75a0bcf4",
+      "candidateResultSha256": "aa235de992ff5d96407ea26c716d9179446016811d5360a940d9cb7c75a0bcf4",
+      "fullResultEquivalent": true,
+      "returnedCount": 2,
+      "suppressedCount": 17
+    },
+    {
+      "name": "seed-24",
+      "fixtureSha256": "1702785ad718e3ca3a4c9e294d87859f99c1decb34ceae7baefde6e93204b2e4",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "minScore": 0
+      },
+      "baselineResultSha256": "a8233481302db8106a16249d760c513433bfddbedf35b6b97ce7ed0001ed205d",
+      "candidateResultSha256": "a8233481302db8106a16249d760c513433bfddbedf35b6b97ce7ed0001ed205d",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 5
+    },
+    {
+      "name": "seed-25",
+      "fixtureSha256": "e33bc1dc86b8ae549136e3597150d33d6d971bbf188c62b1070908befe650a9a",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "f4f9954f3e26bcb1ded799865a50985b5ea577b31cd05440f3474475c8668677",
+      "candidateResultSha256": "f4f9954f3e26bcb1ded799865a50985b5ea577b31cd05440f3474475c8668677",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 3
+    },
+    {
+      "name": "seed-26",
+      "fixtureSha256": "2fe04f218252c0f3810e4fa24050a183f8291fc362b0661f02d03dafa3e72c84",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "216148b8c18c3de32e50e79e99c04b29bd89e70ce4e8c62645a55ac4ad4751f8",
+      "candidateResultSha256": "216148b8c18c3de32e50e79e99c04b29bd89e70ce4e8c62645a55ac4ad4751f8",
+      "fullResultEquivalent": true,
+      "returnedCount": 2,
+      "suppressedCount": 6
+    },
+    {
+      "name": "seed-27",
+      "fixtureSha256": "eacfe19ac39494b9f067664ab9d34c64e5bff61ba86ba4fbcec8469db129867d",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "minScore": 0
+      },
+      "baselineResultSha256": "e056700ebc1078fae9cf92166bb47b817eaafa56105fc3ff29d1c4287a3b59b8",
+      "candidateResultSha256": "e056700ebc1078fae9cf92166bb47b817eaafa56105fc3ff29d1c4287a3b59b8",
+      "fullResultEquivalent": true,
+      "returnedCount": 8,
+      "suppressedCount": 23
+    },
+    {
+      "name": "seed-28",
+      "fixtureSha256": "193c4a77f080082f30ad38dea51c6b68c6c32b488eaaa518dc8e2df407551432",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "bd9790926c73032ff719c43a5240be37d16779f0a8a02adf1e7383edc0efe629",
+      "candidateResultSha256": "bd9790926c73032ff719c43a5240be37d16779f0a8a02adf1e7383edc0efe629",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 14
+    },
+    {
+      "name": "seed-29",
+      "fixtureSha256": "375d6e602117d26e12ff533b96a6c685404b688909c528b73b3abee5eefa75de",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "629741938dc1500601a5a4077e9e0676a2b9f205fe2ff0401199ce21ebc8c9bd",
+      "candidateResultSha256": "629741938dc1500601a5a4077e9e0676a2b9f205fe2ff0401199ce21ebc8c9bd",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 15
+    },
+    {
+      "name": "seed-30",
+      "fixtureSha256": "886e14e0c9ed1babfb1e09af5c62ca6c0b8c9cc7d1c8693bcf588beee017eacf",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "minScore": 0
+      },
+      "baselineResultSha256": "fe7de35f0c41df436d98f3ef18d95eebc7643dc6d4d5a39e4d73a5e33e079ebb",
+      "candidateResultSha256": "fe7de35f0c41df436d98f3ef18d95eebc7643dc6d4d5a39e4d73a5e33e079ebb",
+      "fullResultEquivalent": true,
+      "returnedCount": 3,
+      "suppressedCount": 5
+    },
+    {
+      "name": "seed-31",
+      "fixtureSha256": "75a4376fdba75a62cf936efbc3b2246056a59ac716ea566b449ab9bc3f6c74cf",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "b299108308816e992b8f00e144dae3bc6147c9c23be0463f3046527f7a20ed49",
+      "candidateResultSha256": "b299108308816e992b8f00e144dae3bc6147c9c23be0463f3046527f7a20ed49",
+      "fullResultEquivalent": true,
+      "returnedCount": 3,
+      "suppressedCount": 8
+    },
+    {
+      "name": "seed-32",
+      "fixtureSha256": "b2a4ccf75da774ade3d5b38cf6074252af8042ca2071a76be1e89a6b6309a247",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "b80106272d4eea459b7c4650a234b0e2061622090c1694807f00b2ba6bebe568",
+      "candidateResultSha256": "b80106272d4eea459b7c4650a234b0e2061622090c1694807f00b2ba6bebe568",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 3
+    },
+    {
+      "name": "seed-33",
+      "fixtureSha256": "a7a1b1c1f3e76a203d0a5a677887fc00663384b7e8fabb187480bacb526dd7de",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "minScore": 0
+      },
+      "baselineResultSha256": "cc985a56a1c32c28358ba58516e564910b3ea2784fa346c6fdae77f4ebd03761",
+      "candidateResultSha256": "cc985a56a1c32c28358ba58516e564910b3ea2784fa346c6fdae77f4ebd03761",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 24
+    },
+    {
+      "name": "seed-34",
+      "fixtureSha256": "6392b2bfcbb0a801080021e76a22e3caa68c4321d4dddc77f7369ecd4deae09a",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "f3dbbf3fc6819b1dae40eb55b4e35ae7953ec97e65349e49359b91d209976056",
+      "candidateResultSha256": "f3dbbf3fc6819b1dae40eb55b4e35ae7953ec97e65349e49359b91d209976056",
+      "fullResultEquivalent": true,
+      "returnedCount": 5,
+      "suppressedCount": 19
+    },
+    {
+      "name": "seed-35",
+      "fixtureSha256": "877a4f41e01fc14374441fb1fd3cdb784b10fea8764f7dcb53f982c2542d7522",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "ad1f6eb92807baf1e4bfeb07df3c654b0be55843b5389425c97657d06fbfa606",
+      "candidateResultSha256": "ad1f6eb92807baf1e4bfeb07df3c654b0be55843b5389425c97657d06fbfa606",
+      "fullResultEquivalent": true,
+      "returnedCount": 3,
+      "suppressedCount": 14
+    },
+    {
+      "name": "seed-36",
+      "fixtureSha256": "cddb63790e340112e434b0a58282fb4827ecd7803ab53d4bf16454562caf64ab",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "minScore": 0
+      },
+      "baselineResultSha256": "99600e464f956082e18d2dafcaabd5f970708ffb2e1718400d90924c2b69608e",
+      "candidateResultSha256": "99600e464f956082e18d2dafcaabd5f970708ffb2e1718400d90924c2b69608e",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 7
+    },
+    {
+      "name": "seed-37",
+      "fixtureSha256": "b27ba1b7c99d4f1c3c67072e491015ee8e9e30705cd6a8c3e186ee70dcf9712e",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "24fbcf3798e38910e698937197834d8c78b2feac65ca9d59e59d6b95824a9b51",
+      "candidateResultSha256": "24fbcf3798e38910e698937197834d8c78b2feac65ca9d59e59d6b95824a9b51",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 3
+    },
+    {
+      "name": "seed-38",
+      "fixtureSha256": "d7103b2bd51b5f0fc91c93736a6c2308e727ac94e8c9bacc636325833ae98347",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "bc831d781b5409ebc10ba5c1e6cc4a526fbcfce722e5d45b2158a6a0aad39d90",
+      "candidateResultSha256": "bc831d781b5409ebc10ba5c1e6cc4a526fbcfce722e5d45b2158a6a0aad39d90",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 0
+    },
+    {
+      "name": "seed-39",
+      "fixtureSha256": "23e8ae9ef492638e6ae90215cc6c9285ba3bc60d90f012c3469e725ebfd7c336",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "minScore": 0
+      },
+      "baselineResultSha256": "8a833b5f9470e3499f40746b8b7e24efa999957e7c0bd0b3cb4f8c3eccc4ecfa",
+      "candidateResultSha256": "8a833b5f9470e3499f40746b8b7e24efa999957e7c0bd0b3cb4f8c3eccc4ecfa",
+      "fullResultEquivalent": true,
+      "returnedCount": 8,
+      "suppressedCount": 25
+    },
+    {
+      "name": "seed-40",
+      "fixtureSha256": "a23b86dd86c405026f328cd25c4f228e1412b7487b4bd447a1b04d18819fd21c",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "45a2d24f505f204615c09efad4a60405ed512ad5245e15cd5d65b9d997321d51",
+      "candidateResultSha256": "45a2d24f505f204615c09efad4a60405ed512ad5245e15cd5d65b9d997321d51",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 9
+    },
+    {
+      "name": "seed-41",
+      "fixtureSha256": "a13d44e6d4fab71251cd2cbfa161615500de3f4f26ffcea98c7a678a462eeb25",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "7ec11216415c546459a1252d3bb06178446a3ad7fd87c34d5ff92c3a056397da",
+      "candidateResultSha256": "7ec11216415c546459a1252d3bb06178446a3ad7fd87c34d5ff92c3a056397da",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 18
+    },
+    {
+      "name": "seed-42",
+      "fixtureSha256": "6f10e9e1cfef8c60a53f0a1c779154811967e8dc5a9ee8aceba5da098878b719",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "minScore": 0
+      },
+      "baselineResultSha256": "32ebd480b7371a425f842b712966017176ac9150c6689c25a2ff7e79836dde69",
+      "candidateResultSha256": "32ebd480b7371a425f842b712966017176ac9150c6689c25a2ff7e79836dde69",
+      "fullResultEquivalent": true,
+      "returnedCount": 5,
+      "suppressedCount": 3
+    },
+    {
+      "name": "seed-43",
+      "fixtureSha256": "cd68282624fb047e830080926b49c5e099418cbcfda7f9afb537c046e71e8215",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "a7ca20c5df21184e453c870b618aa333291d061d2b48d10b91d48055c63298ef",
+      "candidateResultSha256": "a7ca20c5df21184e453c870b618aa333291d061d2b48d10b91d48055c63298ef",
+      "fullResultEquivalent": true,
+      "returnedCount": 7,
+      "suppressedCount": 5
+    },
+    {
+      "name": "seed-44",
+      "fixtureSha256": "fd92fe20a6f1bf0cd1fe09278034dd8d1e1ec309f280b397d2fd0b481a3e8e39",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "031451249be6693e2792cd60a8f65acafc964e2aea32c1440aa3d09895a803e8",
+      "candidateResultSha256": "031451249be6693e2792cd60a8f65acafc964e2aea32c1440aa3d09895a803e8",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 5
+    },
+    {
+      "name": "seed-45",
+      "fixtureSha256": "cd6c0047eae34f93154f964a60c7f8b9dd20b564811f3d854933bf2eadf6d55a",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "minScore": 0
+      },
+      "baselineResultSha256": "5e6e6d568744851bb01e40c8685fb27ca189f4ae44979079c6bc0649b6a4da97",
+      "candidateResultSha256": "5e6e6d568744851bb01e40c8685fb27ca189f4ae44979079c6bc0649b6a4da97",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 25
+    },
+    {
+      "name": "seed-46",
+      "fixtureSha256": "d4004a86ec9e080851f99d20d5ba05cb8dde3b8faa4506b5589461f5bda58183",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "fe128a14ab6bdde587a3f8100c040403b68bc4795df6642a093ff3cc2d7ea661",
+      "candidateResultSha256": "fe128a14ab6bdde587a3f8100c040403b68bc4795df6642a093ff3cc2d7ea661",
+      "fullResultEquivalent": true,
+      "returnedCount": 5,
+      "suppressedCount": 11
+    },
+    {
+      "name": "seed-47",
+      "fixtureSha256": "61908386b5006555d8b2ac933c11f2ab01d33c1b3e17aedfcfb729b60f3b15cb",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "63dc587944c80918a00accce42123fc51aef46a2d04d9f2434b418aaec5b6355",
+      "candidateResultSha256": "63dc587944c80918a00accce42123fc51aef46a2d04d9f2434b418aaec5b6355",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 19
+    },
+    {
+      "name": "seed-48",
+      "fixtureSha256": "5a020b70f86d14f359b0b68cc92f5320243c82f45d6bb2aefebc5376e70a3d3f",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "minScore": 0
+      },
+      "baselineResultSha256": "35d8a992cb18ab110f3fce56a9cf2fb52a621ee38e080a54e8bb794414d6926e",
+      "candidateResultSha256": "35d8a992cb18ab110f3fce56a9cf2fb52a621ee38e080a54e8bb794414d6926e",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 3
+    },
+    {
+      "name": "seed-49",
+      "fixtureSha256": "c0def3770dc675de78f2ea4e3e17642b3310348883420f2be2226ad3c43da50c",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "db923544aa1b21c0816ca6aa5371950e98816d388862b3f78e9fab6048851f1f",
+      "candidateResultSha256": "db923544aa1b21c0816ca6aa5371950e98816d388862b3f78e9fab6048851f1f",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 7
+    },
+    {
+      "name": "seed-50",
+      "fixtureSha256": "e20d33b3d58194547179ee253fe626aa51abc429c45100ca64e9f3dc3c3e270b",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "79442191f9024a393f2d6128821a41c3eb345fc646f7a33d9756c79310cc981a",
+      "candidateResultSha256": "79442191f9024a393f2d6128821a41c3eb345fc646f7a33d9756c79310cc981a",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 7
+    },
+    {
+      "name": "seed-51",
+      "fixtureSha256": "9ab5e5c7c1030952d46d3882615226a6a1c6760fcdabcd570fa4afa29147b383",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "minScore": 0
+      },
+      "baselineResultSha256": "d4d997a8b419a9c0c5cf6688d8e3a3567b3643da9b4b274c135672074bc26db3",
+      "candidateResultSha256": "d4d997a8b419a9c0c5cf6688d8e3a3567b3643da9b4b274c135672074bc26db3",
+      "fullResultEquivalent": true,
+      "returnedCount": 11,
+      "suppressedCount": 28
+    },
+    {
+      "name": "seed-52",
+      "fixtureSha256": "68b7319c20fe0b8140cd9bb2a1b79a4018ad40119ae2c8fe62e26c7b3c6f80b4",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "1cbb0be0a130172f7354b9fc699fa33a8cf684d44a7eb8ba60f2c3bb2fb94c4f",
+      "candidateResultSha256": "1cbb0be0a130172f7354b9fc699fa33a8cf684d44a7eb8ba60f2c3bb2fb94c4f",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 11
+    },
+    {
+      "name": "seed-53",
+      "fixtureSha256": "132327a703de469591dc5f53c982e0c44f0d13e9019fbec0952fc9de501eb60f",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "cf4f3d8688b4fbcffb670357680a965fb096fbf16aa9f6fc2739cc3e47039f6d",
+      "candidateResultSha256": "cf4f3d8688b4fbcffb670357680a965fb096fbf16aa9f6fc2739cc3e47039f6d",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 11
+    },
+    {
+      "name": "seed-54",
+      "fixtureSha256": "ab1b2bbf662b58d3a994679bdca75708dec08ca9e9484452fc511c8c9b9e9b83",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "minScore": 0
+      },
+      "baselineResultSha256": "3ebf50eea9dfb2a7377bfe87bf3379e210d99ca29a9581269dc5a0cfaf5d425c",
+      "candidateResultSha256": "3ebf50eea9dfb2a7377bfe87bf3379e210d99ca29a9581269dc5a0cfaf5d425c",
+      "fullResultEquivalent": true,
+      "returnedCount": 5,
+      "suppressedCount": 2
+    },
+    {
+      "name": "seed-55",
+      "fixtureSha256": "da16be31bebf7b533267a991c4fc324b407cdc09df8dca614a9c0fc37e90ce6e",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "1ecd57799d9705fd35edd77247bd6e65bd65ef593f9203226cbf01a3646cbffa",
+      "candidateResultSha256": "1ecd57799d9705fd35edd77247bd6e65bd65ef593f9203226cbf01a3646cbffa",
+      "fullResultEquivalent": true,
+      "returnedCount": 7,
+      "suppressedCount": 5
+    },
+    {
+      "name": "seed-56",
+      "fixtureSha256": "09623823eaafaa09df365735a58294cf84b96ab617ae2e8b55cce6be776b98d7",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "6128c6b9abd86ee5c334d60856a22d5ebf43788ebc61d9c808ae1a6991b5ca8d",
+      "candidateResultSha256": "6128c6b9abd86ee5c334d60856a22d5ebf43788ebc61d9c808ae1a6991b5ca8d",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 8
+    },
+    {
+      "name": "seed-57",
+      "fixtureSha256": "2b862cea57f46a3c46dba9eff83ddff22ab9346113ffa6a8fdf11565f1f22ec4",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "minScore": 0
+      },
+      "baselineResultSha256": "3a116d4ec097dc91d7d3aa77a5b2efce5242b60646e1c0197c1beb7634a9d18e",
+      "candidateResultSha256": "3a116d4ec097dc91d7d3aa77a5b2efce5242b60646e1c0197c1beb7634a9d18e",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 23
+    },
+    {
+      "name": "seed-58",
+      "fixtureSha256": "3a26e441725322236ad31a608c521867c2df514b80bac012c00b65192149ed33",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "6aba483cc78f1036c492e3e7c55da4cd670dc8b7d96602a807914b5e3780f576",
+      "candidateResultSha256": "6aba483cc78f1036c492e3e7c55da4cd670dc8b7d96602a807914b5e3780f576",
+      "fullResultEquivalent": true,
+      "returnedCount": 5,
+      "suppressedCount": 13
+    },
+    {
+      "name": "seed-59",
+      "fixtureSha256": "db6911c10919fe61d61c4df9b422881ff2879f83c5c14b3a0dba8eabb6e2cd1d",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "2b6133921a50312293c639335af2768c5ff7fb4d9b8ba79c4469dc4a1ddc2e64",
+      "candidateResultSha256": "2b6133921a50312293c639335af2768c5ff7fb4d9b8ba79c4469dc4a1ddc2e64",
+      "fullResultEquivalent": true,
+      "returnedCount": 2,
+      "suppressedCount": 12
+    },
+    {
+      "name": "seed-60",
+      "fixtureSha256": "727dfb5dadad67f4fd116136b093d7f692c1372b1a57f0699bb47b5004ba81bd",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "minScore": 0
+      },
+      "baselineResultSha256": "e4d92f0f5ee68bfb7aa748e0c9b97d2bb46187a8e8a0be11feb0a9634435bfe2",
+      "candidateResultSha256": "e4d92f0f5ee68bfb7aa748e0c9b97d2bb46187a8e8a0be11feb0a9634435bfe2",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 5
+    },
+    {
+      "name": "seed-61",
+      "fixtureSha256": "ffb6be1c40361efe21f580803b98a2299af679cfef90d95c38c89df160cb17cd",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "5c5ba08854f78822534e425d2b26479834aa3d965a4c201b12d2674e9c76ca1a",
+      "candidateResultSha256": "5c5ba08854f78822534e425d2b26479834aa3d965a4c201b12d2674e9c76ca1a",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 2
+    },
+    {
+      "name": "seed-62",
+      "fixtureSha256": "86dfbbcd4997bf65c94586ccc7c45125cb88b16eaab2a8022181695fa16a74c8",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "732b204cf0fdd82d6a860073f2a8ec7ace8bb23670c390811a1f6e581b82dded",
+      "candidateResultSha256": "732b204cf0fdd82d6a860073f2a8ec7ace8bb23670c390811a1f6e581b82dded",
+      "fullResultEquivalent": true,
+      "returnedCount": 2,
+      "suppressedCount": 9
+    },
+    {
+      "name": "seed-63",
+      "fixtureSha256": "05e307e9ab5acc21c297a7a2b0db93d6509327450d52f159ac6cb2076a4138a8",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "minScore": 0
+      },
+      "baselineResultSha256": "c2805fa050592072ecc878a7cc639d9932452278dd61854c91022d3e65291a08",
+      "candidateResultSha256": "c2805fa050592072ecc878a7cc639d9932452278dd61854c91022d3e65291a08",
+      "fullResultEquivalent": true,
+      "returnedCount": 8,
+      "suppressedCount": 24
+    },
+    {
+      "name": "seed-64",
+      "fixtureSha256": "aa0095c8c17308a8b08d69730f6f848de3ffc3b358c708968b7f721aaefa18dc",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "3069f75b9b606ec2f81d88152a76033b5f05d024caa5b279bc05ce7d030c2553",
+      "candidateResultSha256": "3069f75b9b606ec2f81d88152a76033b5f05d024caa5b279bc05ce7d030c2553",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 14
+    },
+    {
+      "name": "seed-65",
+      "fixtureSha256": "a4aae5ad5b4adc44905d4805c309b327b26bcca2df8e87210568d09328fdaa6f",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "cd651f8165051b8c25749424038e2fcadf7c4271b93b2fb60a0bb43fd9872b84",
+      "candidateResultSha256": "cd651f8165051b8c25749424038e2fcadf7c4271b93b2fb60a0bb43fd9872b84",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 12
+    },
+    {
+      "name": "seed-66",
+      "fixtureSha256": "be52acbe7425838aed739c1a89187feff6feaa409301a1008dfc2f15dd38e375",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "minScore": 0
+      },
+      "baselineResultSha256": "3880a161e5f60ce41d7fbb2673f39027b813e97de17fccd0c1017697dc35fb6e",
+      "candidateResultSha256": "3880a161e5f60ce41d7fbb2673f39027b813e97de17fccd0c1017697dc35fb6e",
+      "fullResultEquivalent": true,
+      "returnedCount": 4,
+      "suppressedCount": 4
+    },
+    {
+      "name": "seed-67",
+      "fixtureSha256": "53bd5b7ee90a76d143a8143fff4d8fd834c442fc598d4f339ae4bd5574ac007f",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "577a8078e7291272f92f59929339ca3f2e896e0d67445f3c3c3db04db2771e5d",
+      "candidateResultSha256": "577a8078e7291272f92f59929339ca3f2e896e0d67445f3c3c3db04db2771e5d",
+      "fullResultEquivalent": true,
+      "returnedCount": 7,
+      "suppressedCount": 4
+    },
+    {
+      "name": "seed-68",
+      "fixtureSha256": "1b2eb27e9269018b3890c2b8ec36a1b690478e0f1b2fe1f0c74964e8c6bbdf0b",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "37badc8cdc5b224c33efc5098c072b6f1696de7ac270fb80bfcd3278342a3b0f",
+      "candidateResultSha256": "37badc8cdc5b224c33efc5098c072b6f1696de7ac270fb80bfcd3278342a3b0f",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 6
+    },
+    {
+      "name": "seed-69",
+      "fixtureSha256": "e96b73b1333c361e2ade50ab4ad12f200be1e8235991779354fe55928a3dcd74",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "minScore": 0
+      },
+      "baselineResultSha256": "37d16872f883d036e01cd7bc447ae67579c9acae50d8d0b23ea23dc583daf03f",
+      "candidateResultSha256": "37d16872f883d036e01cd7bc447ae67579c9acae50d8d0b23ea23dc583daf03f",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 20
+    },
+    {
+      "name": "seed-70",
+      "fixtureSha256": "eeed52d2bb8352ca442e6f1be02845a58d17a1e08a5d2a10287a1bf8940efe8c",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "f61797a367f1759bb3f102af434b67a332c3844f87f41376642fd730de87798b",
+      "candidateResultSha256": "f61797a367f1759bb3f102af434b67a332c3844f87f41376642fd730de87798b",
+      "fullResultEquivalent": true,
+      "returnedCount": 5,
+      "suppressedCount": 8
+    },
+    {
+      "name": "seed-71",
+      "fixtureSha256": "ca52196102b95dc9bd43d12e9f150759fde9526d12270d5ecfb4da9408581a62",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "a9ea765f31a605e051ffc6f33f869f714941119ab2e476ddc9a8362fbea7db26",
+      "candidateResultSha256": "a9ea765f31a605e051ffc6f33f869f714941119ab2e476ddc9a8362fbea7db26",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 10
+    },
+    {
+      "name": "seed-72",
+      "fixtureSha256": "de844da54357a715272af866cebf9add39d693c9b297603fba07ec3e2b957454",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "minScore": 0
+      },
+      "baselineResultSha256": "619617f46f37a0d25d6940a9fb3b53e3cb3145861607cf8bcf41bab4cee7a3da",
+      "candidateResultSha256": "619617f46f37a0d25d6940a9fb3b53e3cb3145861607cf8bcf41bab4cee7a3da",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 14
+    },
+    {
+      "name": "seed-73",
+      "fixtureSha256": "b98cdafe2d3f1f99c6f6fb7dab57e5168ddf9c72d7ed190edeeee3181a34acb1",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "099f0739e767f9371fec749478aeac5024ad048a79ca01fa2c86e734d58775e4",
+      "candidateResultSha256": "099f0739e767f9371fec749478aeac5024ad048a79ca01fa2c86e734d58775e4",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 3
+    },
+    {
+      "name": "seed-74",
+      "fixtureSha256": "f65f856f58012f1e2a3c4397789527d025a1b0496182cf220ceda0b7366ccfc1",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "421b53589858a411873b2c69255b39526665586bacae488d2314d825e7979f39",
+      "candidateResultSha256": "421b53589858a411873b2c69255b39526665586bacae488d2314d825e7979f39",
+      "fullResultEquivalent": true,
+      "returnedCount": 4,
+      "suppressedCount": 4
+    },
+    {
+      "name": "seed-75",
+      "fixtureSha256": "357286ffbcb8dba2ee9158b40fcf558e8e5f17d4e6298572e6f72d68ce7bc758",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "minScore": 0
+      },
+      "baselineResultSha256": "9c431227d2286df77573cfea1100eba9a9a13354a84e1db53f70579717bedbc6",
+      "candidateResultSha256": "9c431227d2286df77573cfea1100eba9a9a13354a84e1db53f70579717bedbc6",
+      "fullResultEquivalent": true,
+      "returnedCount": 10,
+      "suppressedCount": 22
+    },
+    {
+      "name": "seed-76",
+      "fixtureSha256": "f40e2816fc6f1bab6a1580fbc1cc0f2a5261d0620a3a8a1b38f701d238187fa0",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "8906323062b00ec2525a958d220e9325e5ebaac22dc5e918433113afda26b1e2",
+      "candidateResultSha256": "8906323062b00ec2525a958d220e9325e5ebaac22dc5e918433113afda26b1e2",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 12
+    },
+    {
+      "name": "seed-77",
+      "fixtureSha256": "e59c1647146769d51564daaa873e0d158d8a436717ddf2e1d846920fc78965ad",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "0c740f017958e3bcadbf2763fee8b53b88b959d80b8eab3844cc648b7d8bbba8",
+      "candidateResultSha256": "0c740f017958e3bcadbf2763fee8b53b88b959d80b8eab3844cc648b7d8bbba8",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 10
+    },
+    {
+      "name": "seed-78",
+      "fixtureSha256": "458116bea24ed0471e775195d7b7ae62204c8d5796dae6dde9fee89aa4d85e0b",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "minScore": 0
+      },
+      "baselineResultSha256": "51ef11436cce7918264c6cb049540810bf31f3409bf3118a20c6d895d3bea6e1",
+      "candidateResultSha256": "51ef11436cce7918264c6cb049540810bf31f3409bf3118a20c6d895d3bea6e1",
+      "fullResultEquivalent": true,
+      "returnedCount": 5,
+      "suppressedCount": 7
+    },
+    {
+      "name": "seed-79",
+      "fixtureSha256": "cc86730973f2a1a5ab3bd5784a92e9dc3b02bc3ad4a39959421a4b1c86d8b536",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "c595a650c45f23c9a7e8e257647d2273a511fc83a4460c01f213db02e7eef753",
+      "candidateResultSha256": "c595a650c45f23c9a7e8e257647d2273a511fc83a4460c01f213db02e7eef753",
+      "fullResultEquivalent": true,
+      "returnedCount": 5,
+      "suppressedCount": 5
+    },
+    {
+      "name": "seed-80",
+      "fixtureSha256": "6102f62e1396d5165d29d9ddc873c2dff336ac485a4f7b1c168d1cbb347e0573",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "abd1326ee060fc51cd68c588bb087cd74c5e651b560e5f501651e317be927d1a",
+      "candidateResultSha256": "abd1326ee060fc51cd68c588bb087cd74c5e651b560e5f501651e317be927d1a",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 3
+    },
+    {
+      "name": "seed-81",
+      "fixtureSha256": "951c83aca1215272f6372a0557c75e262a4da0c3fc5ba23820e9f65d77b834ce",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "minScore": 0
+      },
+      "baselineResultSha256": "cb8cc0520166d367c65ec8c992ff7352747b74f884c31262defc0f5acc5875a4",
+      "candidateResultSha256": "cb8cc0520166d367c65ec8c992ff7352747b74f884c31262defc0f5acc5875a4",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 27
+    },
+    {
+      "name": "seed-82",
+      "fixtureSha256": "b13532d42b0639c86a07078428dd25d8a20d673adac2983a59c1d2c3c93d4525",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "b1e0ccbbcb43c5ed65de9298ce7265c87a85d3eaa33d5f6bacc28cecaa016749",
+      "candidateResultSha256": "b1e0ccbbcb43c5ed65de9298ce7265c87a85d3eaa33d5f6bacc28cecaa016749",
+      "fullResultEquivalent": true,
+      "returnedCount": 5,
+      "suppressedCount": 15
+    },
+    {
+      "name": "seed-83",
+      "fixtureSha256": "bc147bf407de19100182402f4bb2d31844bcade53a68f5dbeaa299d509128c5c",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "8118205aa109dae72dab22812fd2d57035347fe490e8ab70b8fe1b2d6416dcbe",
+      "candidateResultSha256": "8118205aa109dae72dab22812fd2d57035347fe490e8ab70b8fe1b2d6416dcbe",
+      "fullResultEquivalent": true,
+      "returnedCount": 3,
+      "suppressedCount": 13
+    },
+    {
+      "name": "seed-84",
+      "fixtureSha256": "e98bc77d9cfe3973b57d1dcdfbcc1a2fc3b86ea26e56ea5165a89d60ca66e3de",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "minScore": 0
+      },
+      "baselineResultSha256": "da8446df20f8b3b568736e3669be6bceda7bd0746749f8efb394f7b2c55bd326",
+      "candidateResultSha256": "da8446df20f8b3b568736e3669be6bceda7bd0746749f8efb394f7b2c55bd326",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 6
+    },
+    {
+      "name": "seed-85",
+      "fixtureSha256": "c5721823521c065f4da82925e75a791075058f51125575047744b55c892e5a4b",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "cd6e32d2832687696dc315afb51d8ece6ee49380f40423869ad097147e8992bc",
+      "candidateResultSha256": "cd6e32d2832687696dc315afb51d8ece6ee49380f40423869ad097147e8992bc",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 5
+    },
+    {
+      "name": "seed-86",
+      "fixtureSha256": "35eba16e5cfca12dd9198e2cd297519a4ec25deb8ba605644a875e9551dc3021",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "e8f5448292ee106d39e9fbf8a887ccb4751739b2ae40a1cd1a157592ea4e4fa1",
+      "candidateResultSha256": "e8f5448292ee106d39e9fbf8a887ccb4751739b2ae40a1cd1a157592ea4e4fa1",
+      "fullResultEquivalent": true,
+      "returnedCount": 2,
+      "suppressedCount": 5
+    },
+    {
+      "name": "seed-87",
+      "fixtureSha256": "e261e5c49c988a44f786a6f28928a74c161ca0aecd930fc03e59267ec856de75",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "minScore": 0
+      },
+      "baselineResultSha256": "4f675254438e77aa2b0e1414ff736859d7a9486aaa300440abd6e71e75debd6b",
+      "candidateResultSha256": "4f675254438e77aa2b0e1414ff736859d7a9486aaa300440abd6e71e75debd6b",
+      "fullResultEquivalent": true,
+      "returnedCount": 16,
+      "suppressedCount": 19
+    },
+    {
+      "name": "seed-88",
+      "fixtureSha256": "adab1f131834f1542b6a56c09839d7e058956d479af99fc25ec489af74f603ab",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "b320eabf6579b49be62a9adfe257f58381b2fec5ceefecae1fbb6419000b0fd1",
+      "candidateResultSha256": "b320eabf6579b49be62a9adfe257f58381b2fec5ceefecae1fbb6419000b0fd1",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 8
+    },
+    {
+      "name": "seed-89",
+      "fixtureSha256": "dba0a100ae3354a41d151d4a79990b1f910c3af264cc1e86a8093d6335ba83f9",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "8a7508b7ecc26bf6a2cb64013d96f72d7c41dd66a0cfc8155f2061ff62113d94",
+      "candidateResultSha256": "8a7508b7ecc26bf6a2cb64013d96f72d7c41dd66a0cfc8155f2061ff62113d94",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 16
+    },
+    {
+      "name": "seed-90",
+      "fixtureSha256": "44fcbd47256b8a9e38118b5773784bc31739c0ded89624d353394b71a61fcf6f",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "minScore": 0
+      },
+      "baselineResultSha256": "b82c99a5e160a1a961a3183d6ae0bf3e4a602464cb0ffada7070d63b87f3d10e",
+      "candidateResultSha256": "b82c99a5e160a1a961a3183d6ae0bf3e4a602464cb0ffada7070d63b87f3d10e",
+      "fullResultEquivalent": true,
+      "returnedCount": 4,
+      "suppressedCount": 6
+    },
+    {
+      "name": "seed-91",
+      "fixtureSha256": "9f4d7f7266693f95e17ba8513638209fb178fd6b26be5ddc3224aa8a15576668",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "7a734e03c5c642470e071320b901cd8f0a4e5d0add16df95b50518cbe1c0f18a",
+      "candidateResultSha256": "7a734e03c5c642470e071320b901cd8f0a4e5d0add16df95b50518cbe1c0f18a",
+      "fullResultEquivalent": true,
+      "returnedCount": 7,
+      "suppressedCount": 3
+    },
+    {
+      "name": "seed-92",
+      "fixtureSha256": "ba2a63a82f4378435f69dcc084c6e8d34ad7772adb07b25d941495ba27015155",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "5c947098d11a16ba3dcd9899fe03ab3f950182a5c7e0f592dafa65b2b2c68b6f",
+      "candidateResultSha256": "5c947098d11a16ba3dcd9899fe03ab3f950182a5c7e0f592dafa65b2b2c68b6f",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 6
+    },
+    {
+      "name": "seed-93",
+      "fixtureSha256": "964c9f8d86cb5e06c4704c72bf109c60a5d75e04518d4eb4c9050992d0b1ce37",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "minScore": 0
+      },
+      "baselineResultSha256": "3d2cb97cf8b394d5f44db842efea2ca458de4b1bb1c5688319b68e4de33171d7",
+      "candidateResultSha256": "3d2cb97cf8b394d5f44db842efea2ca458de4b1bb1c5688319b68e4de33171d7",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 18
+    },
+    {
+      "name": "seed-94",
+      "fixtureSha256": "77db6450bd57eb26f91f0d938bdae95e5256646197274284b78920756300a593",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "14a57ff1a0d1fe822fcdcbe58e65aab69db0b71ee5492ce330b73991a94fc9db",
+      "candidateResultSha256": "14a57ff1a0d1fe822fcdcbe58e65aab69db0b71ee5492ce330b73991a94fc9db",
+      "fullResultEquivalent": true,
+      "returnedCount": 5,
+      "suppressedCount": 11
+    },
+    {
+      "name": "seed-95",
+      "fixtureSha256": "088141dfe023cfc67e9a326796be9c62baa795e02f1dc32f095cf091fcb71468",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "3e04bc9f4a27bbde789d6dc37f6bf148e24ffefc2a2712b4345a700a3b815ff7",
+      "candidateResultSha256": "3e04bc9f4a27bbde789d6dc37f6bf148e24ffefc2a2712b4345a700a3b815ff7",
+      "fullResultEquivalent": true,
+      "returnedCount": 2,
+      "suppressedCount": 16
+    },
+    {
+      "name": "seed-96",
+      "fixtureSha256": "25c412d8aba16fe61e97b4c68eff13701833811fb80bf8d24e8c5c959963ea3f",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "minScore": 0
+      },
+      "baselineResultSha256": "7fc23caae94fb17f504b614bbf8b442076c26f8a10ff553ececade82d9a07895",
+      "candidateResultSha256": "7fc23caae94fb17f504b614bbf8b442076c26f8a10ff553ececade82d9a07895",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 5
+    },
+    {
+      "name": "seed-97",
+      "fixtureSha256": "ad783a310551b211db4d966f895b8cfa6d1c10e95f91a80c6e038e1e91daef10",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "35c9996602462746d695e548193d1f58d66e48ef5ff3d61d79cc42a62191b036",
+      "candidateResultSha256": "35c9996602462746d695e548193d1f58d66e48ef5ff3d61d79cc42a62191b036",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 8
+    },
+    {
+      "name": "seed-98",
+      "fixtureSha256": "ecab273a6c50bd20fa6504ae572c44c9e5890dc1da9060314a57b113dfd88380",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "5f927fc978ef0ed40f7808e92f42efc6319255cabd8880ae067ed2d31a85fa39",
+      "candidateResultSha256": "5f927fc978ef0ed40f7808e92f42efc6319255cabd8880ae067ed2d31a85fa39",
+      "fullResultEquivalent": true,
+      "returnedCount": 2,
+      "suppressedCount": 8
+    },
+    {
+      "name": "seed-99",
+      "fixtureSha256": "e84c582e93876c9e51e6c511399119675d8cd11497fc547c4ce422ec050ee3d1",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "minScore": 0
+      },
+      "baselineResultSha256": "dd97073d223ab9b3383277a17217f36dd9a3d0690dd13f6c4062622087a0ca9e",
+      "candidateResultSha256": "dd97073d223ab9b3383277a17217f36dd9a3d0690dd13f6c4062622087a0ca9e",
+      "fullResultEquivalent": true,
+      "returnedCount": 8,
+      "suppressedCount": 26
+    },
+    {
+      "name": "seed-100",
+      "fixtureSha256": "c0bb1629bc70ec56e9a269b2adbd55a50dc1c9e4075adfd3817da207dc9ff189",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "f3a3063d98b8d051d1b0045701c457bc1aa52872caf5b5f5858d757f78d24a77",
+      "candidateResultSha256": "f3a3063d98b8d051d1b0045701c457bc1aa52872caf5b5f5858d757f78d24a77",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 14
+    },
+    {
+      "name": "seed-101",
+      "fixtureSha256": "16a6a62d7244626b797c4052ec662295bb7914a1feffc046f62c93d40d7f38ba",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "6ddf3ac81404a70c6234e891afabcf0bf7d1eb772835f0673790262818341fca",
+      "candidateResultSha256": "6ddf3ac81404a70c6234e891afabcf0bf7d1eb772835f0673790262818341fca",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 12
+    },
+    {
+      "name": "seed-102",
+      "fixtureSha256": "5f4bdf1b852376671f0e55955f0c7cf3569e9ec70f4de84fee753e4d74045b37",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "minScore": 0
+      },
+      "baselineResultSha256": "47a7b1701b30962991ff802fe3969e76fe3a3403a47e8929bc0982b8238132fe",
+      "candidateResultSha256": "47a7b1701b30962991ff802fe3969e76fe3a3403a47e8929bc0982b8238132fe",
+      "fullResultEquivalent": true,
+      "returnedCount": 4,
+      "suppressedCount": 9
+    },
+    {
+      "name": "seed-103",
+      "fixtureSha256": "65fcaa6c83a8b8d01a98920a0a48882bd182510c916730f4b79aa1ad355b4a43",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "a65471f02a3b6eb9bdd4727b7f6a6922c48366719a2a5574ce7983354fac44c0",
+      "candidateResultSha256": "a65471f02a3b6eb9bdd4727b7f6a6922c48366719a2a5574ce7983354fac44c0",
+      "fullResultEquivalent": true,
+      "returnedCount": 5,
+      "suppressedCount": 2
+    },
+    {
+      "name": "seed-104",
+      "fixtureSha256": "7fceeb7f94a2af1dff2c36b8c66dd7fc847b25ed7066e1316b85c14b1cc12223",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "0427c754b94a79a544c37a8db8948eb84143b54fd750ad805d10cf83046920e0",
+      "candidateResultSha256": "0427c754b94a79a544c37a8db8948eb84143b54fd750ad805d10cf83046920e0",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 5
+    },
+    {
+      "name": "seed-105",
+      "fixtureSha256": "7447b21ad3da20eec426ccc7c26e1a16136e8f8f89012f30f37b8525cd6e5a66",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "minScore": 0
+      },
+      "baselineResultSha256": "68334ae766a561ba478bffce39923dada6ccbeba46302240122e35a62240a849",
+      "candidateResultSha256": "68334ae766a561ba478bffce39923dada6ccbeba46302240122e35a62240a849",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 28
+    },
+    {
+      "name": "seed-106",
+      "fixtureSha256": "bee61ed4effd0fa6fc64b18d76e88e6354989edb4824d309d00a9a483d103a3c",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "025efdd79cbe359c301fb586556adeff0adbd267510264444f90265b0dc0d62d",
+      "candidateResultSha256": "025efdd79cbe359c301fb586556adeff0adbd267510264444f90265b0dc0d62d",
+      "fullResultEquivalent": true,
+      "returnedCount": 5,
+      "suppressedCount": 12
+    },
+    {
+      "name": "seed-107",
+      "fixtureSha256": "9bab0b195c284bd04e6020a62eff0ce347b442065e810addf7b04471d63c9290",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "79ee2be5be79a134b4efa7e0e52019670faafa9bee177d634bef2d2264325386",
+      "candidateResultSha256": "79ee2be5be79a134b4efa7e0e52019670faafa9bee177d634bef2d2264325386",
+      "fullResultEquivalent": true,
+      "returnedCount": 2,
+      "suppressedCount": 14
+    },
+    {
+      "name": "seed-108",
+      "fixtureSha256": "c92284d162131e0dfeb8d4d6333c09aa14fe24a3a76abfa38e47277ac01d53c2",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "minScore": 0
+      },
+      "baselineResultSha256": "a71929b2f015eeef92c2eef6553a6f21303037040774499eb504be6532e2ebb1",
+      "candidateResultSha256": "a71929b2f015eeef92c2eef6553a6f21303037040774499eb504be6532e2ebb1",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 7
+    },
+    {
+      "name": "seed-109",
+      "fixtureSha256": "e9eceb398d044797dd7c3c7ce6f3f7070655e94106deeba80d431cf12520c0a3",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "316825a567b8272e4af823715805cc9ebe0f984865e348db6eafd37d81e7d910",
+      "candidateResultSha256": "316825a567b8272e4af823715805cc9ebe0f984865e348db6eafd37d81e7d910",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 1
+    },
+    {
+      "name": "seed-110",
+      "fixtureSha256": "ff6eb267f9a77cf8c340ca24b474fe7ebab94da2f34638aa2e01455099121ab7",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "9482398e76fa55bb51f66a0fca44224a89db2528ec9a4dfb9c23ffb1eb816971",
+      "candidateResultSha256": "9482398e76fa55bb51f66a0fca44224a89db2528ec9a4dfb9c23ffb1eb816971",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 3
+    },
+    {
+      "name": "seed-111",
+      "fixtureSha256": "7abb80a511a5fb5cc32b7cd67b9c048cc8805ab674e5fe5f8ffdce5eb6cc98cc",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "minScore": 0
+      },
+      "baselineResultSha256": "983114224d067a6831e5da98fbda65869d7336d52978cecfddab9713e0def72a",
+      "candidateResultSha256": "983114224d067a6831e5da98fbda65869d7336d52978cecfddab9713e0def72a",
+      "fullResultEquivalent": true,
+      "returnedCount": 12,
+      "suppressedCount": 17
+    },
+    {
+      "name": "seed-112",
+      "fixtureSha256": "24c0e82f89785dda8249e52f0a5bc9c7476f689c049caa92c28a8abda0fee511",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "7d8366103fc64bfb043727e561b4a3c2b72b2fd134fa1e7463f492e368f9b38e",
+      "candidateResultSha256": "7d8366103fc64bfb043727e561b4a3c2b72b2fd134fa1e7463f492e368f9b38e",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 15
+    },
+    {
+      "name": "seed-113",
+      "fixtureSha256": "5e5f0c78b42c3e65230cdb365beff5ae9c7827f94fdd6606bbec42b81964b5af",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "1593cd49d7d522dbef497c100bed32772901528ff0b28c0bd921968fd1fc9ca8",
+      "candidateResultSha256": "1593cd49d7d522dbef497c100bed32772901528ff0b28c0bd921968fd1fc9ca8",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 13
+    },
+    {
+      "name": "seed-114",
+      "fixtureSha256": "faa21d621e2f941ae02e1edbf4660c8fd71cc80b2ce02171e1eb58738ecf498a",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "minScore": 0
+      },
+      "baselineResultSha256": "ceb6422cf8c2176f716bd3a33cf90d17aa13ed4128ddab6c62897551f7edbf12",
+      "candidateResultSha256": "ceb6422cf8c2176f716bd3a33cf90d17aa13ed4128ddab6c62897551f7edbf12",
+      "fullResultEquivalent": true,
+      "returnedCount": 3,
+      "suppressedCount": 3
+    },
+    {
+      "name": "seed-115",
+      "fixtureSha256": "2b263b5c88883e99cf1d079cf34f633f642446db014d1061bad0f6bc00cd49de",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "57a4e62fbeff6100cd3a9974747531b85076c488314d082e808fd74cec78220d",
+      "candidateResultSha256": "57a4e62fbeff6100cd3a9974747531b85076c488314d082e808fd74cec78220d",
+      "fullResultEquivalent": true,
+      "returnedCount": 3,
+      "suppressedCount": 8
+    },
+    {
+      "name": "seed-116",
+      "fixtureSha256": "bfb6cb34dd688a1653df69899bd34424ac0e347295d7ad2e3b8187caf5dd51c0",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "135b146f53ce1b3a3373825c70bba48fb8ab97a5df432740bfd2f467c5fa172f",
+      "candidateResultSha256": "135b146f53ce1b3a3373825c70bba48fb8ab97a5df432740bfd2f467c5fa172f",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 6
+    },
+    {
+      "name": "seed-117",
+      "fixtureSha256": "663cb22010dec53ec5598a532ea09cc8ab25019f7ccba36d9f90f4bfea23c036",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "minScore": 0
+      },
+      "baselineResultSha256": "d93d192abae4974ae5826611cf03a6deacf39ddf6bdeece18c016048b6543eb1",
+      "candidateResultSha256": "d93d192abae4974ae5826611cf03a6deacf39ddf6bdeece18c016048b6543eb1",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 25
+    },
+    {
+      "name": "seed-118",
+      "fixtureSha256": "d50e000893d5695d531d9b3532fe52c8201cf594ae232f2dbb4f4046504a0363",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "d551d84649317ccd9b848935f1f0a4b5c76c5e4a1846248330f575a4e186c5f2",
+      "candidateResultSha256": "d551d84649317ccd9b848935f1f0a4b5c76c5e4a1846248330f575a4e186c5f2",
+      "fullResultEquivalent": true,
+      "returnedCount": 5,
+      "suppressedCount": 9
+    },
+    {
+      "name": "seed-119",
+      "fixtureSha256": "2bc1355a99b372438b0ee58dfe153012126ab7682147f6083c89cbc8989091fd",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "5a6d0a7c65dacb58a1663b0901b48e4dbaab82aecd04e3415c04ce86e340c305",
+      "candidateResultSha256": "5a6d0a7c65dacb58a1663b0901b48e4dbaab82aecd04e3415c04ce86e340c305",
+      "fullResultEquivalent": true,
+      "returnedCount": 4,
+      "suppressedCount": 10
+    },
+    {
+      "name": "seed-120",
+      "fixtureSha256": "d0b0d83fc1b1fd6d29fcb4567b34e335bf084e768c41db505f750f2ea225dab7",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "minScore": 0
+      },
+      "baselineResultSha256": "1722405d73dddf650cb7ff21ddd948784103e74bb1fdc40057bf997337787435",
+      "candidateResultSha256": "1722405d73dddf650cb7ff21ddd948784103e74bb1fdc40057bf997337787435",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 10
+    },
+    {
+      "name": "seed-121",
+      "fixtureSha256": "6e2c1cb650241c5885ef68d0f0f8e66c27ebc5592cc178981ad127fa8859ef09",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "6074a3c55b93dab2ce850230da14f0c2ab93c80d27ae17f7bc0b27b3f86d3320",
+      "candidateResultSha256": "6074a3c55b93dab2ce850230da14f0c2ab93c80d27ae17f7bc0b27b3f86d3320",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 4
+    },
+    {
+      "name": "seed-122",
+      "fixtureSha256": "91312cbd8e07d73717e2bfb44c99632330ae5d6d8f103a04598a943c868b70aa",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "85c063dd1736cd83cdfe16858d5d256ac72eefe68911674093bd2944b51d9237",
+      "candidateResultSha256": "85c063dd1736cd83cdfe16858d5d256ac72eefe68911674093bd2944b51d9237",
+      "fullResultEquivalent": true,
+      "returnedCount": 2,
+      "suppressedCount": 5
+    },
+    {
+      "name": "seed-123",
+      "fixtureSha256": "d04a0f424113bd074dc282e9f5a909d8cd579a57f847da1b3c32fd18d6007abc",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "minScore": 0
+      },
+      "baselineResultSha256": "32b73cb8672eca0acafc13858f022907aaca8d7d75159961f6d3c5b9c1f021df",
+      "candidateResultSha256": "32b73cb8672eca0acafc13858f022907aaca8d7d75159961f6d3c5b9c1f021df",
+      "fullResultEquivalent": true,
+      "returnedCount": 8,
+      "suppressedCount": 22
+    },
+    {
+      "name": "seed-124",
+      "fixtureSha256": "77cf76c58b1ef588c291ac22433f036a25d7985687a949e64a9b99085dc0ff86",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "949279f8351e93cfb09d762bd22a77e4d84a65b9036c268dacb115551dd00213",
+      "candidateResultSha256": "949279f8351e93cfb09d762bd22a77e4d84a65b9036c268dacb115551dd00213",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 11
+    },
+    {
+      "name": "seed-125",
+      "fixtureSha256": "b53eb516330c1906c3ab51c6bf5e006e8f2f9ce6bc084b0bacabbd2a732140c7",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "267260d85791f3b7d4d5ddd681227b9a45760c8ab73b5780ce979b20e5c54561",
+      "candidateResultSha256": "267260d85791f3b7d4d5ddd681227b9a45760c8ab73b5780ce979b20e5c54561",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 12
+    },
+    {
+      "name": "seed-126",
+      "fixtureSha256": "e220ef4831db8cc7e5fd41407019f5c817daea34c6436cfd4d1e220dfbe9959f",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "minScore": 0
+      },
+      "baselineResultSha256": "89f86b59e9bc70568ed87bbd6df7f81c7a7be1c61d447380f0c646fa72cc545a",
+      "candidateResultSha256": "89f86b59e9bc70568ed87bbd6df7f81c7a7be1c61d447380f0c646fa72cc545a",
+      "fullResultEquivalent": true,
+      "returnedCount": 5,
+      "suppressedCount": 8
+    },
+    {
+      "name": "seed-127",
+      "fixtureSha256": "371bfca7d7302526830b9d6a4b67a21aed3861f61fb056e96195229886b2ee4c",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "735da0562c4847698c15a890835ce8f3d1216ff2b99f72f243f3ee9c769610f1",
+      "candidateResultSha256": "735da0562c4847698c15a890835ce8f3d1216ff2b99f72f243f3ee9c769610f1",
+      "fullResultEquivalent": true,
+      "returnedCount": 4,
+      "suppressedCount": 4
+    },
+    {
+      "name": "seed-128",
+      "fixtureSha256": "a2431f190f12fa5f2a9328c2f2c44ddf874bab7fb2c6e33084dc5d3ff0e06c67",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "49ec5420a2ec0abb5f8c4ec4793b569b194e0aa0e40e37a41a90764d2cad1f93",
+      "candidateResultSha256": "49ec5420a2ec0abb5f8c4ec4793b569b194e0aa0e40e37a41a90764d2cad1f93",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 3
+    },
+    {
+      "name": "seed-129",
+      "fixtureSha256": "4ce77f77f9c376dd95471496bae60dcc395654aebd0e927e582da3143e67f790",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "minScore": 0
+      },
+      "baselineResultSha256": "dd8da826488208cd58f282a1d9a9b9df9b2d70a90587fb9dcab590b5c38f7c64",
+      "candidateResultSha256": "dd8da826488208cd58f282a1d9a9b9df9b2d70a90587fb9dcab590b5c38f7c64",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 24
+    },
+    {
+      "name": "seed-130",
+      "fixtureSha256": "8003760c8631763850d64ab7fedcfea12dedf8cb0d3567c4f52f6df1a6d03844",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "eabc33e3081014b103a67322e0ce33ba5aae9d541dc53242ce43f2a3e846d78e",
+      "candidateResultSha256": "eabc33e3081014b103a67322e0ce33ba5aae9d541dc53242ce43f2a3e846d78e",
+      "fullResultEquivalent": true,
+      "returnedCount": 5,
+      "suppressedCount": 10
+    },
+    {
+      "name": "seed-131",
+      "fixtureSha256": "574cb78f50658eeb16c6629045a5010696ac7249e8846d9a749e990aa6ef3a8d",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "026a14a7e89646f68d7715721450c7793484111634438d9a376608d71670c219",
+      "candidateResultSha256": "026a14a7e89646f68d7715721450c7793484111634438d9a376608d71670c219",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 13
+    },
+    {
+      "name": "seed-132",
+      "fixtureSha256": "1e5187e963b5e70368870e973f6f5c69d6c1ffd2f5f801a290eacfbdf232199e",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "minScore": 0
+      },
+      "baselineResultSha256": "3973ebbecf9a8cb3f20333df2a27514885c13fbf5666e2ad0328ead07ee078c5",
+      "candidateResultSha256": "3973ebbecf9a8cb3f20333df2a27514885c13fbf5666e2ad0328ead07ee078c5",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 9
+    },
+    {
+      "name": "seed-133",
+      "fixtureSha256": "021ad89b061961aceef19bc3d3a7364009e13eb525d9c3b3ddff40d969e0fee3",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "f8a408f9fc8f901c7e5a877421472207b9753586fbf0e966296e563a7732d1d8",
+      "candidateResultSha256": "f8a408f9fc8f901c7e5a877421472207b9753586fbf0e966296e563a7732d1d8",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 4
+    },
+    {
+      "name": "seed-134",
+      "fixtureSha256": "19ea4951ad1ac9273f70c11d18f4971b02c7158a44ed80a9c5974d361600af11",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "ed3cd6c38cc7d5dd7e1cd2fd0fcf148511eee4f4eeb0b2ba7f3dca5bea6475d7",
+      "candidateResultSha256": "ed3cd6c38cc7d5dd7e1cd2fd0fcf148511eee4f4eeb0b2ba7f3dca5bea6475d7",
+      "fullResultEquivalent": true,
+      "returnedCount": 2,
+      "suppressedCount": 4
+    },
+    {
+      "name": "seed-135",
+      "fixtureSha256": "bd2a2370ec38131e7da999843446b408fb4e2ef6c93ba61f47b0b34c0f938c6a",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "minScore": 0
+      },
+      "baselineResultSha256": "ee789f301cadb5b07aefb0fbe77feb9b8e8097ef97801eebffc0623560b1d2c2",
+      "candidateResultSha256": "ee789f301cadb5b07aefb0fbe77feb9b8e8097ef97801eebffc0623560b1d2c2",
+      "fullResultEquivalent": true,
+      "returnedCount": 8,
+      "suppressedCount": 25
+    },
+    {
+      "name": "seed-136",
+      "fixtureSha256": "678e3cc680169bc251050f27241dcac6139cbd940b24830f3a7115654be188d4",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "e936d245d206c67cef50cee2ae8cd98b03f7cdb42442e1c22373cdb12dd1157e",
+      "candidateResultSha256": "e936d245d206c67cef50cee2ae8cd98b03f7cdb42442e1c22373cdb12dd1157e",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 10
+    },
+    {
+      "name": "seed-137",
+      "fixtureSha256": "95c1890b422b23edcd3bcc2441bad42daa17e1e0dae6a793790d111bee70aaf1",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "83fa2617a0904c270e83f393661a948d58e7f20b60e42539784e1c54c2de9923",
+      "candidateResultSha256": "83fa2617a0904c270e83f393661a948d58e7f20b60e42539784e1c54c2de9923",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 14
+    },
+    {
+      "name": "seed-138",
+      "fixtureSha256": "369eb44755d8cad6d7c33e6fe1ebe71f125da0cec9d35e1fa0ec3af94ea81057",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "minScore": 0
+      },
+      "baselineResultSha256": "b2df41d460937951832336657d38dc192651daf068a8c772a5d62aa6ab7bdcdd",
+      "candidateResultSha256": "b2df41d460937951832336657d38dc192651daf068a8c772a5d62aa6ab7bdcdd",
+      "fullResultEquivalent": true,
+      "returnedCount": 3,
+      "suppressedCount": 5
+    },
+    {
+      "name": "seed-139",
+      "fixtureSha256": "f288cbd7860fe2c91916ffd883bd8cb38fe85cd009f6258b4ed3863cfe90750e",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "548d9d07ade312e7adaa3d1d693ba958c2f4802ac0a873b2e028a358451d1a3e",
+      "candidateResultSha256": "548d9d07ade312e7adaa3d1d693ba958c2f4802ac0a873b2e028a358451d1a3e",
+      "fullResultEquivalent": true,
+      "returnedCount": 5,
+      "suppressedCount": 4
+    },
+    {
+      "name": "seed-140",
+      "fixtureSha256": "7fe6b55b66a52824fa31da7c5e895d5fb3e241f497212202152fea5b685bcd1b",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "91dd4b00e32ff645d70883b600685b52786c9da0c4f9aac54d989c2177a5e16c",
+      "candidateResultSha256": "91dd4b00e32ff645d70883b600685b52786c9da0c4f9aac54d989c2177a5e16c",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 10
+    },
+    {
+      "name": "seed-141",
+      "fixtureSha256": "845b7615e056b3fcdf707f1686b9ab64163def58f255cb5711d65ebe0f009299",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "minScore": 0
+      },
+      "baselineResultSha256": "8b73dab5eb715a1ed29e34e9537b711968d19d20edec3693e362b04f442d4874",
+      "candidateResultSha256": "8b73dab5eb715a1ed29e34e9537b711968d19d20edec3693e362b04f442d4874",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 28
+    },
+    {
+      "name": "seed-142",
+      "fixtureSha256": "aef6f60d91cd19228b9b79fb1a962eb8cb65dcb9680d4c7330499f9a509bf165",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "1ee185f041fb6373d0cff80d7000a9540dd1e7d69d578e0cc2cf5a5ced8b133f",
+      "candidateResultSha256": "1ee185f041fb6373d0cff80d7000a9540dd1e7d69d578e0cc2cf5a5ced8b133f",
+      "fullResultEquivalent": true,
+      "returnedCount": 5,
+      "suppressedCount": 8
+    },
+    {
+      "name": "seed-143",
+      "fixtureSha256": "e1f22ad8f6e061ccd465271dd8c6112de6948c81e065d608bd7af9a2f671c48e",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "e059c5edaf6fab22d1adc18269a1ddca78c6344089b061e97567c91a21e8daae",
+      "candidateResultSha256": "e059c5edaf6fab22d1adc18269a1ddca78c6344089b061e97567c91a21e8daae",
+      "fullResultEquivalent": true,
+      "returnedCount": 3,
+      "suppressedCount": 8
+    },
+    {
+      "name": "seed-144",
+      "fixtureSha256": "5b2e25edf87306274ad45c23d3a4168500ae0b31e09c0f2f7aea3b277b99f68b",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "minScore": 0
+      },
+      "baselineResultSha256": "73bffb37fe281ab9c2c15ef76596022379dd03e02bbc96095dbdc3dc0747b204",
+      "candidateResultSha256": "73bffb37fe281ab9c2c15ef76596022379dd03e02bbc96095dbdc3dc0747b204",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 8
+    },
+    {
+      "name": "seed-145",
+      "fixtureSha256": "bedf7cbe5443d381e01b39d8e3d3479e34330d4bd9e4f7e2b8d7f4565f6a72ff",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "868e3b42f50746f42878eae028341951c28b7a9bb8b237e92d80b37691b9315e",
+      "candidateResultSha256": "868e3b42f50746f42878eae028341951c28b7a9bb8b237e92d80b37691b9315e",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 4
+    },
+    {
+      "name": "seed-146",
+      "fixtureSha256": "38ee16655b113f0f355ee06e743ac2654371c3159dca3283a3bee37239397b41",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "af99852e27e32cdc5ed9120818163f109e937ea33cf022ea1e613be4b2612efe",
+      "candidateResultSha256": "af99852e27e32cdc5ed9120818163f109e937ea33cf022ea1e613be4b2612efe",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 5
+    },
+    {
+      "name": "seed-147",
+      "fixtureSha256": "6677e1cf810bc3361861bbfc2682f44d9c26b797351dad4fa6c63dee38fc5dd6",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "minScore": 0
+      },
+      "baselineResultSha256": "5e8ecb4e779ef98d62a731d7c70941e260ea564aa05c64ff137c88244b5a6487",
+      "candidateResultSha256": "5e8ecb4e779ef98d62a731d7c70941e260ea564aa05c64ff137c88244b5a6487",
+      "fullResultEquivalent": true,
+      "returnedCount": 9,
+      "suppressedCount": 26
+    },
+    {
+      "name": "seed-148",
+      "fixtureSha256": "6790cb429e1497676bbdebddffa0f07ab6bb6c1e2de1399622a70a426050e1ce",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "df5d7f0df712510123c9567d640f31394342783b78fdb7e89d5a22c5183cc818",
+      "candidateResultSha256": "df5d7f0df712510123c9567d640f31394342783b78fdb7e89d5a22c5183cc818",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 11
+    },
+    {
+      "name": "seed-149",
+      "fixtureSha256": "1435bbf8ad6d973e8a2388d47f5209e2b77e25fae696187b13fd477cc15c43b5",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "b6857c4af3abefb80e955490befcb4d854a48799892ec2f3e0696f4e04733fbc",
+      "candidateResultSha256": "b6857c4af3abefb80e955490befcb4d854a48799892ec2f3e0696f4e04733fbc",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 17
+    },
+    {
+      "name": "seed-150",
+      "fixtureSha256": "cbad25547a2777630e9685e554174eb273506801dbfb72f22e7fafe96c495d65",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "minScore": 0
+      },
+      "baselineResultSha256": "01962c957f53a9ed3ec8e0ce23bc2655e9ddf9c176358b5de92fe8deb897e7c9",
+      "candidateResultSha256": "01962c957f53a9ed3ec8e0ce23bc2655e9ddf9c176358b5de92fe8deb897e7c9",
+      "fullResultEquivalent": true,
+      "returnedCount": 5,
+      "suppressedCount": 11
+    },
+    {
+      "name": "seed-151",
+      "fixtureSha256": "2a7a916871e1a560f10c781af081f42b97ae5caeb5c38d17bad39a044fe1d47b",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "914f5999cb85d535098b560b521bfb1347125a8ac848ba44cc2e7efd6873cc04",
+      "candidateResultSha256": "914f5999cb85d535098b560b521bfb1347125a8ac848ba44cc2e7efd6873cc04",
+      "fullResultEquivalent": true,
+      "returnedCount": 5,
+      "suppressedCount": 5
+    },
+    {
+      "name": "seed-152",
+      "fixtureSha256": "77dafb78fc356928d143bf66b709b6635a72c440d45e5faef57d47c73fa57c2d",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "99e4307b200ffa6fe30970476a8aed5879e69fc4badaf731347d51d7cc7a5ce1",
+      "candidateResultSha256": "99e4307b200ffa6fe30970476a8aed5879e69fc4badaf731347d51d7cc7a5ce1",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 6
+    },
+    {
+      "name": "seed-153",
+      "fixtureSha256": "fc3c090918522bd50305212be0395b253ec3fe4f9a591bce54cbb709356446f3",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "minScore": 0
+      },
+      "baselineResultSha256": "fc17566c16ac6a141048e960760d051f2816c19cc9c446ddb9491ddbfce9edc8",
+      "candidateResultSha256": "fc17566c16ac6a141048e960760d051f2816c19cc9c446ddb9491ddbfce9edc8",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 19
+    },
+    {
+      "name": "seed-154",
+      "fixtureSha256": "d4f322043e919393354009dfd6b284e5d713f36c9ec02ead6c48e8b0e698a791",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "b2de85bcba954042ae43b1d09e92a320f46d7ac0fe34f45f5a6061baccce7c9e",
+      "candidateResultSha256": "b2de85bcba954042ae43b1d09e92a320f46d7ac0fe34f45f5a6061baccce7c9e",
+      "fullResultEquivalent": true,
+      "returnedCount": 5,
+      "suppressedCount": 9
+    },
+    {
+      "name": "seed-155",
+      "fixtureSha256": "7e1d525556dab4094228e91fec3250c8146a1ab92c3f6b65eb1febfc18881b8a",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "917aaca6d440195ae9c7b6593b7349adf7012a53dd3c6425e4c9fac83ef35cb2",
+      "candidateResultSha256": "917aaca6d440195ae9c7b6593b7349adf7012a53dd3c6425e4c9fac83ef35cb2",
+      "fullResultEquivalent": true,
+      "returnedCount": 4,
+      "suppressedCount": 13
+    },
+    {
+      "name": "seed-156",
+      "fixtureSha256": "df89a9a979ead069e84f686997a1ccfb801a65c9baf06c207aaba0483d13f539",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "minScore": 0
+      },
+      "baselineResultSha256": "28878a8b1f5841a136445a775becee825b699d59b51bdbc934fd1f9ebbc8ece1",
+      "candidateResultSha256": "28878a8b1f5841a136445a775becee825b699d59b51bdbc934fd1f9ebbc8ece1",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 2
+    },
+    {
+      "name": "seed-157",
+      "fixtureSha256": "658fd8df32b72e0a3acc61631b14c5ea147575b4b7b43c43a0747088fa5775d0",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "e9d134d47e4548a120472f45873f9637f83ad994e3197f3eba06a08a64dabdfb",
+      "candidateResultSha256": "e9d134d47e4548a120472f45873f9637f83ad994e3197f3eba06a08a64dabdfb",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 4
+    },
+    {
+      "name": "seed-158",
+      "fixtureSha256": "2744299df80c97f9780feca861ac601bc0f33d9334041e2b2ad4e6d809e59eb2",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "ab50f40842e2658423a740e5909ad1529fbcd96791cd13d62dd11eae6a4f0fff",
+      "candidateResultSha256": "ab50f40842e2658423a740e5909ad1529fbcd96791cd13d62dd11eae6a4f0fff",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 7
+    },
+    {
+      "name": "seed-159",
+      "fixtureSha256": "480e8335b1b3b741be3103be7b5fe73afd85effe7e3f04ff9603fedd7c00eab6",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "minScore": 0
+      },
+      "baselineResultSha256": "367a65a3bd255f7c484c446d9e5bb012173b191b97421d37f79fb2d930926fe1",
+      "candidateResultSha256": "367a65a3bd255f7c484c446d9e5bb012173b191b97421d37f79fb2d930926fe1",
+      "fullResultEquivalent": true,
+      "returnedCount": 12,
+      "suppressedCount": 25
+    },
+    {
+      "name": "seed-160",
+      "fixtureSha256": "67be9ee0ffee68a2eb9ce0bd3906da1157ed1923b4a0cd95644a4e128ab31cf6",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "18e9ab83caba9062dd39668a5ed085222a476f31f799aa53f0af4fc28044af11",
+      "candidateResultSha256": "18e9ab83caba9062dd39668a5ed085222a476f31f799aa53f0af4fc28044af11",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 14
+    },
+    {
+      "name": "seed-161",
+      "fixtureSha256": "6cc784668cf77f475719212e6eb87936566b46a7ca5f4b5f2dde52682b3b1ee1",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "85bf5a148777a3e6885d54bd946a9a65454f14442082e73387de3a6ac39fdded",
+      "candidateResultSha256": "85bf5a148777a3e6885d54bd946a9a65454f14442082e73387de3a6ac39fdded",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 9
+    },
+    {
+      "name": "seed-162",
+      "fixtureSha256": "a8a2fa3480f985a97e5b52eed581513eb1db113b562ad7ff8863ea1dca718685",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "minScore": 0
+      },
+      "baselineResultSha256": "65c293889fcb91e130bc651fcd3abe4f1d4b6b6f9c8733cb73ff65498a7f4cd7",
+      "candidateResultSha256": "65c293889fcb91e130bc651fcd3abe4f1d4b6b6f9c8733cb73ff65498a7f4cd7",
+      "fullResultEquivalent": true,
+      "returnedCount": 5,
+      "suppressedCount": 8
+    },
+    {
+      "name": "seed-163",
+      "fixtureSha256": "667daf144a9d10696a3a44208f48adc5fbc246d1d6611e0f61536be012f32aac",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "3a1421a35b0ca93a4a61a12b35fc48ecfb3db4ffff0bb6171b99ae4393fc4e71",
+      "candidateResultSha256": "3a1421a35b0ca93a4a61a12b35fc48ecfb3db4ffff0bb6171b99ae4393fc4e71",
+      "fullResultEquivalent": true,
+      "returnedCount": 5,
+      "suppressedCount": 6
+    },
+    {
+      "name": "seed-164",
+      "fixtureSha256": "b5975d528d9085762c85750215988a828a4dc9b027a8a082292953ee301b758f",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "057533d3f47430833628adc9d0e053b68604711f696592ea0bdafccfd6f38e19",
+      "candidateResultSha256": "057533d3f47430833628adc9d0e053b68604711f696592ea0bdafccfd6f38e19",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 10
+    },
+    {
+      "name": "seed-165",
+      "fixtureSha256": "f1818199bbf79e45da3d15f31660d1fe96514d053c0bf5440ba9daa2bc98b6c5",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "minScore": 0
+      },
+      "baselineResultSha256": "77073dc9262e56061ec8a317ec51ec4e1a5184a015ff829d0152a89954d33686",
+      "candidateResultSha256": "77073dc9262e56061ec8a317ec51ec4e1a5184a015ff829d0152a89954d33686",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 28
+    },
+    {
+      "name": "seed-166",
+      "fixtureSha256": "e4ffe270fdbe16c39e5ec63ca7297a15cbfaf49840c4cfb518a82cbc75b2eae3",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "a39864a4d97661ab72bb430bcc16a859b08adb89f7d365b6c519ed8f97132a58",
+      "candidateResultSha256": "a39864a4d97661ab72bb430bcc16a859b08adb89f7d365b6c519ed8f97132a58",
+      "fullResultEquivalent": true,
+      "returnedCount": 5,
+      "suppressedCount": 6
+    },
+    {
+      "name": "seed-167",
+      "fixtureSha256": "4cd3a77af22474eea2b62bb239759eb8a7e4b67cb964bad310cc16fcf29b7b07",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "eb6f1d94bce58157ea19dbaba921a214b6e831ad2fa8d2fe731a9bea6734ada1",
+      "candidateResultSha256": "eb6f1d94bce58157ea19dbaba921a214b6e831ad2fa8d2fe731a9bea6734ada1",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 13
+    },
+    {
+      "name": "seed-168",
+      "fixtureSha256": "0b1c9aeb9d55ab11c2127cffc135c903ad3a4aeea34ca4cf499412c6019a16d9",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "minScore": 0
+      },
+      "baselineResultSha256": "ea249a8a39312877285f4633f381444437b003d1a990b2a5312051af8ed4ca57",
+      "candidateResultSha256": "ea249a8a39312877285f4633f381444437b003d1a990b2a5312051af8ed4ca57",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 4
+    },
+    {
+      "name": "seed-169",
+      "fixtureSha256": "4c35c5b0a35d9fcd5e29cf6484670e3607014eae43480ce28f97ba53f0839815",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "536472ba96cf87c6632f5417f07d519a4f8f66761ee9fb9eacae37ba50ad0def",
+      "candidateResultSha256": "536472ba96cf87c6632f5417f07d519a4f8f66761ee9fb9eacae37ba50ad0def",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 4
+    },
+    {
+      "name": "seed-170",
+      "fixtureSha256": "ea51954d494cf35e404bd8e90dde5fe0f1a1a76779dd033c2414e4919e2edc58",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "66374a7d5bcfba4c730eec10547533f5d8de2ee82c83ab3dc69990e415cd3e85",
+      "candidateResultSha256": "66374a7d5bcfba4c730eec10547533f5d8de2ee82c83ab3dc69990e415cd3e85",
+      "fullResultEquivalent": true,
+      "returnedCount": 3,
+      "suppressedCount": 3
+    },
+    {
+      "name": "seed-171",
+      "fixtureSha256": "ec08924a5f7a8207c8f44986652a64741d3ca91e7058a799d0aea21a67d76cb7",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "minScore": 0
+      },
+      "baselineResultSha256": "5a49c38d3c298b4df25bf21161bb5413fe42a546250c627a467a4831824eed42",
+      "candidateResultSha256": "5a49c38d3c298b4df25bf21161bb5413fe42a546250c627a467a4831824eed42",
+      "fullResultEquivalent": true,
+      "returnedCount": 10,
+      "suppressedCount": 25
+    },
+    {
+      "name": "seed-172",
+      "fixtureSha256": "852f39cfde07600f80473e84def8b6564daed59ff62da3c7c5bce670d3dbbae5",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "25d07514207e339c7d40a3fd207275bb316e46dc50e87eb3000d27493e5359a2",
+      "candidateResultSha256": "25d07514207e339c7d40a3fd207275bb316e46dc50e87eb3000d27493e5359a2",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 12
+    },
+    {
+      "name": "seed-173",
+      "fixtureSha256": "b99bcad07a4b2944c8e9ea3b5de56350e936a45a84bb23a9185629e49e8eb3ea",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "ff410185badc77ac7d5eb88a4996e8a2fb24817474fad168783db73f5ec224ff",
+      "candidateResultSha256": "ff410185badc77ac7d5eb88a4996e8a2fb24817474fad168783db73f5ec224ff",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 14
+    },
+    {
+      "name": "seed-174",
+      "fixtureSha256": "b6e256f4f25bcfdcff18ae2d9696a107fbe9670f3c7910df91d823cb9f49b221",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "minScore": 0
+      },
+      "baselineResultSha256": "662deb5b967b2c088ea76b307325729fdda18279eab5718780cda52562ec80a4",
+      "candidateResultSha256": "662deb5b967b2c088ea76b307325729fdda18279eab5718780cda52562ec80a4",
+      "fullResultEquivalent": true,
+      "returnedCount": 5,
+      "suppressedCount": 7
+    },
+    {
+      "name": "seed-175",
+      "fixtureSha256": "7f1a90a2aec313c2c818397a22cc7f1dd7a719dd1f5cef735a84b8513203f49e",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "afb0afd2acc6965edb07d08dc44d171718cc8bb16587db21706d52a16bd8d282",
+      "candidateResultSha256": "afb0afd2acc6965edb07d08dc44d171718cc8bb16587db21706d52a16bd8d282",
+      "fullResultEquivalent": true,
+      "returnedCount": 3,
+      "suppressedCount": 2
+    },
+    {
+      "name": "seed-176",
+      "fixtureSha256": "ad9dd701a14ae7f2fb346443a5b2498f345f36952141c04f7122c4354ea79cb0",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "55f1adbdac5c4ef448210a4678c1e755d7d1c968108cbc25cd6a3ce828e6dc6e",
+      "candidateResultSha256": "55f1adbdac5c4ef448210a4678c1e755d7d1c968108cbc25cd6a3ce828e6dc6e",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 8
+    },
+    {
+      "name": "seed-177",
+      "fixtureSha256": "fbe4c38b5f001fbf15e6890669dc807367abeab66f17b8bf3c37e8ad5ef5af60",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "minScore": 0
+      },
+      "baselineResultSha256": "1fd3fdee2bba35005d89f0e42feee19fffb11afcd10d827687979cd0598b4f73",
+      "candidateResultSha256": "1fd3fdee2bba35005d89f0e42feee19fffb11afcd10d827687979cd0598b4f73",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 26
+    },
+    {
+      "name": "seed-178",
+      "fixtureSha256": "100a114f71ccdfea1a0c434831a6ccba0c97894daff1ad7d8945ad59fcc88be3",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "27534a413bcfab4eac859d4ae4ff735cf283a10dddd1c3d0a4357b3108436d50",
+      "candidateResultSha256": "27534a413bcfab4eac859d4ae4ff735cf283a10dddd1c3d0a4357b3108436d50",
+      "fullResultEquivalent": true,
+      "returnedCount": 5,
+      "suppressedCount": 10
+    },
+    {
+      "name": "seed-179",
+      "fixtureSha256": "73ee823f696f4b5c8a2e7d3ea26e7b448d7137e156ff76a12d9ebc1d27ab81d4",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "5082d8d23358738fac3c5f0e40b570a514122f256a7659a3a9b46a0e7ab3cbef",
+      "candidateResultSha256": "5082d8d23358738fac3c5f0e40b570a514122f256a7659a3a9b46a0e7ab3cbef",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 8
+    },
+    {
+      "name": "seed-180",
+      "fixtureSha256": "ef1b3fd7fd29afd7d62905d8139484137d6434f9af599c80e727e070fbc8a106",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "minScore": 0
+      },
+      "baselineResultSha256": "de0570037e5e44a943cf9c87f8c0b1309e752c331de3cb1c47d7e0d563289686",
+      "candidateResultSha256": "de0570037e5e44a943cf9c87f8c0b1309e752c331de3cb1c47d7e0d563289686",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 5
+    },
+    {
+      "name": "seed-181",
+      "fixtureSha256": "d1b10c6cab41d2d19d1ff3ed062e9582b09cfbcbf173794cf4dc4a85de1e26ad",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "8fc2a494b0f56a979ce3b7c85454c434ce7101818b67e5eb4b3b10b87a6971b0",
+      "candidateResultSha256": "8fc2a494b0f56a979ce3b7c85454c434ce7101818b67e5eb4b3b10b87a6971b0",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 4
+    },
+    {
+      "name": "seed-182",
+      "fixtureSha256": "39c71caa42f8b7b33b419e80acd986fd98f6be68041aa23bbc40608956d22dfe",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "73c93153c5156c463eab541a0286e3291f387aeeae0bf12cfaed24ede6fe7001",
+      "candidateResultSha256": "73c93153c5156c463eab541a0286e3291f387aeeae0bf12cfaed24ede6fe7001",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 6
+    },
+    {
+      "name": "seed-183",
+      "fixtureSha256": "d45e023648f7a021f59d501e92666e248a021443994947a1a147ba15ae7586d6",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "minScore": 0
+      },
+      "baselineResultSha256": "9d06ec200af9d783ecaa42df6cacd901b31acc24856709c7c3124ef0cfd5a97e",
+      "candidateResultSha256": "9d06ec200af9d783ecaa42df6cacd901b31acc24856709c7c3124ef0cfd5a97e",
+      "fullResultEquivalent": true,
+      "returnedCount": 8,
+      "suppressedCount": 26
+    },
+    {
+      "name": "seed-184",
+      "fixtureSha256": "605d8f65056aceed3c8cfc73c0e8e9cc40ea153f280892a84a519138d279ef9c",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "9da984573e79d73fdbf9f63209cc7102696f2647cb3ef50d27cf58e6ea28af8d",
+      "candidateResultSha256": "9da984573e79d73fdbf9f63209cc7102696f2647cb3ef50d27cf58e6ea28af8d",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 8
+    },
+    {
+      "name": "seed-185",
+      "fixtureSha256": "9769cea7517f97209e76910914e8526d9e61ba013fa187562566e47a58dc78a2",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "17abfcde0ce0892f00d351da72ca2f6c94829f1485299ac200fbc130b283f272",
+      "candidateResultSha256": "17abfcde0ce0892f00d351da72ca2f6c94829f1485299ac200fbc130b283f272",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 11
+    },
+    {
+      "name": "seed-186",
+      "fixtureSha256": "d299372afd3e942af2994ed8b44365dc46f9270f31496f6375a9a466e875cf2a",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "minScore": 0
+      },
+      "baselineResultSha256": "b13013ba4cf18c52a9b3c3448dad846df39b88e1269faa3bacb69e259a0ed2a4",
+      "candidateResultSha256": "b13013ba4cf18c52a9b3c3448dad846df39b88e1269faa3bacb69e259a0ed2a4",
+      "fullResultEquivalent": true,
+      "returnedCount": 5,
+      "suppressedCount": 9
+    },
+    {
+      "name": "seed-187",
+      "fixtureSha256": "8f0e809803bc0789e969a3039204e5d569fe4b099d0731c5db530aad4929b883",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "ea9c3b10612c1e5c90cea05f09b97957c2059522fc4775b30c54ef9ddd06e2c2",
+      "candidateResultSha256": "ea9c3b10612c1e5c90cea05f09b97957c2059522fc4775b30c54ef9ddd06e2c2",
+      "fullResultEquivalent": true,
+      "returnedCount": 5,
+      "suppressedCount": 3
+    },
+    {
+      "name": "seed-188",
+      "fixtureSha256": "79030c92b3e5d64f5aa9ddaa477af39c6c5cb467aa55b121af6899713afbf6ad",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "fceece9f659915b973667fe89b603fd496de58e1cc01f5c2f82dd8b6f4da87e9",
+      "candidateResultSha256": "fceece9f659915b973667fe89b603fd496de58e1cc01f5c2f82dd8b6f4da87e9",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 11
+    },
+    {
+      "name": "seed-189",
+      "fixtureSha256": "47d9682e3ce77ea2be7811dccd7c3801b691f87a53b1a595a886badc85943ebf",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "minScore": 0
+      },
+      "baselineResultSha256": "48c6ba4ec93bfd75ddba717ec836cafa793f2e9cce1a94530b40b6ed5aceaf4b",
+      "candidateResultSha256": "48c6ba4ec93bfd75ddba717ec836cafa793f2e9cce1a94530b40b6ed5aceaf4b",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 26
+    },
+    {
+      "name": "seed-190",
+      "fixtureSha256": "b6040addf1d991ab9102bdfd78984afd7106f70c19886ffe99e589154b7ee88a",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "7ba4af2c2f4f8d0643df142037db79f940ec269fd5cdf20610a32cfa61a58af4",
+      "candidateResultSha256": "7ba4af2c2f4f8d0643df142037db79f940ec269fd5cdf20610a32cfa61a58af4",
+      "fullResultEquivalent": true,
+      "returnedCount": 5,
+      "suppressedCount": 8
+    },
+    {
+      "name": "seed-191",
+      "fixtureSha256": "4f6eed25b28370f75fdee7925b2889bd0907a08c10a5a6570b7a95e2541bca62",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "5e07e2012feaae44615b024402dbaf036c040766565932a43edb981f3c505863",
+      "candidateResultSha256": "5e07e2012feaae44615b024402dbaf036c040766565932a43edb981f3c505863",
+      "fullResultEquivalent": true,
+      "returnedCount": 3,
+      "suppressedCount": 17
+    },
+    {
+      "name": "seed-192",
+      "fixtureSha256": "05d39dd7c13c569afb3e96202393073d07225ea16896339d2c70ec68e28d9816",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "minScore": 0
+      },
+      "baselineResultSha256": "1032abe17c0847fdd17bd0755d00ec32ad23815ba4fad68e81d4f76b10955596",
+      "candidateResultSha256": "1032abe17c0847fdd17bd0755d00ec32ad23815ba4fad68e81d4f76b10955596",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 6
+    },
+    {
+      "name": "seed-193",
+      "fixtureSha256": "8d83c8a17b96204624dd30cd96e0f03d0e8b94ec595241e472516b77f0e7f85a",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "651ba131b07b83a6b0894c2a889af468ae26ed331aa950d48c18be05d0043635",
+      "candidateResultSha256": "651ba131b07b83a6b0894c2a889af468ae26ed331aa950d48c18be05d0043635",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 6
+    },
+    {
+      "name": "seed-194",
+      "fixtureSha256": "f4937c3bd040dcc09873cfda677d65e6129408e150be1826b2444d838a86928d",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "1d8876f9e231a7d7165cd8cc1ad1eb699f4b999af7d6784d21b915e83d6069e3",
+      "candidateResultSha256": "1d8876f9e231a7d7165cd8cc1ad1eb699f4b999af7d6784d21b915e83d6069e3",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 9
+    },
+    {
+      "name": "seed-195",
+      "fixtureSha256": "7afa5c88e5c68063c0d0586c8dc100581f39734f2dd19ee5c71b56aa976c9545",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "minScore": 0
+      },
+      "baselineResultSha256": "0133175393323a07104e0c2ca2418d0d6f220672d3deedfabd76da4887ba0efd",
+      "candidateResultSha256": "0133175393323a07104e0c2ca2418d0d6f220672d3deedfabd76da4887ba0efd",
+      "fullResultEquivalent": true,
+      "returnedCount": 13,
+      "suppressedCount": 27
+    },
+    {
+      "name": "seed-196",
+      "fixtureSha256": "5dafa60c28139ac2a77111e5a52ee77b0e149fefd942e20954340b6c7b7b64d2",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "13f31a2a060dbc439bcb507ac95f2f993386bdc6e732d191fe01cb5456b3e464",
+      "candidateResultSha256": "13f31a2a060dbc439bcb507ac95f2f993386bdc6e732d191fe01cb5456b3e464",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 13
+    },
+    {
+      "name": "seed-197",
+      "fixtureSha256": "0943ad845676770fdd890eeb9f3b217477ca5b97f02ebc4de01518f4f1cdaff6",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "2644b6fa4f45821305c3006915f107c2cd1ef29e84286f48715000bd2a86f7d5",
+      "candidateResultSha256": "2644b6fa4f45821305c3006915f107c2cd1ef29e84286f48715000bd2a86f7d5",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 9
+    },
+    {
+      "name": "seed-198",
+      "fixtureSha256": "872a964b50249b7bcab97d4d9ddc932c7ae188f111aec385c833931ad485b2b4",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "minScore": 0
+      },
+      "baselineResultSha256": "0fa72044cee218f9bd26497b5db32d3e07baa1cf1423e5c06478eb8a8c8ae6b0",
+      "candidateResultSha256": "0fa72044cee218f9bd26497b5db32d3e07baa1cf1423e5c06478eb8a8c8ae6b0",
+      "fullResultEquivalent": true,
+      "returnedCount": 2,
+      "suppressedCount": 3
+    },
+    {
+      "name": "seed-199",
+      "fixtureSha256": "05302b73be90b9a752cfb8edfce5ccce2e5d48d1dea90c14e474d65393578e33",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "00454e4b24cb898de883fcad8f1c6d9d1875a2e3cea959d77f653c543a0b341f",
+      "candidateResultSha256": "00454e4b24cb898de883fcad8f1c6d9d1875a2e3cea959d77f653c543a0b341f",
+      "fullResultEquivalent": true,
+      "returnedCount": 4,
+      "suppressedCount": 7
+    },
+    {
+      "name": "seed-200",
+      "fixtureSha256": "bea44684f5c696c40e5aaf2907f4a597ed658d8db240389b1a618f64799c1ca4",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "62ce987d6655866b732341b007edda7ea1fe0939110781ccae7513946268e449",
+      "candidateResultSha256": "62ce987d6655866b732341b007edda7ea1fe0939110781ccae7513946268e449",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 8
+    },
+    {
+      "name": "seed-201",
+      "fixtureSha256": "28ceee86aa350dd129d4edefeba9f0077262ad6e7edee32fc02770efb491b299",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "minScore": 0
+      },
+      "baselineResultSha256": "dd72ba2fb38a3e045cd62619f132626d6bf8a86482d3791dc28331f23b8bbdcf",
+      "candidateResultSha256": "dd72ba2fb38a3e045cd62619f132626d6bf8a86482d3791dc28331f23b8bbdcf",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 20
+    },
+    {
+      "name": "seed-202",
+      "fixtureSha256": "d30f8eb349b03708a05870316342476c9386f53095a215a2a8385687f1dabfb9",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "eeeb110839ee3bb76abd9bd4df4cbceb1c884d97839e8fcf3e9e11eb73351bcb",
+      "candidateResultSha256": "eeeb110839ee3bb76abd9bd4df4cbceb1c884d97839e8fcf3e9e11eb73351bcb",
+      "fullResultEquivalent": true,
+      "returnedCount": 5,
+      "suppressedCount": 11
+    },
+    {
+      "name": "seed-203",
+      "fixtureSha256": "0709ad64d5e66ba2eec77494ed1a5d318c6f10cc0fc7814b01099acc7dfa250b",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "a0044267f5e1cc4682d46ca8e1063741eece283c4b9e403d7686c551671d4aea",
+      "candidateResultSha256": "a0044267f5e1cc4682d46ca8e1063741eece283c4b9e403d7686c551671d4aea",
+      "fullResultEquivalent": true,
+      "returnedCount": 3,
+      "suppressedCount": 13
+    },
+    {
+      "name": "seed-204",
+      "fixtureSha256": "329c314b5d7c82629fbf24f3037a6a2607d900ca444deaf3ab2cae341d8d94e1",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "minScore": 0
+      },
+      "baselineResultSha256": "e22c9e1840200eae481326f719d5006f96fc22c5b75aaf476aa2a7491583b61a",
+      "candidateResultSha256": "e22c9e1840200eae481326f719d5006f96fc22c5b75aaf476aa2a7491583b61a",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 5
+    },
+    {
+      "name": "seed-205",
+      "fixtureSha256": "402c7c2bfb253630b672315e97a2546bdbef5372384208d9338b715f1f5a9566",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "22fa65095928f05c97198eda59a0f62b93d97857c40a8d3bccf35461f93915a3",
+      "candidateResultSha256": "22fa65095928f05c97198eda59a0f62b93d97857c40a8d3bccf35461f93915a3",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 5
+    },
+    {
+      "name": "seed-206",
+      "fixtureSha256": "3563a3f0b6980d0e9e55cc1c5ce4a14c247e2f86971614eaad1d7f6ab0518317",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "102c6ca97ce39d2b904d890af08f09b748013eb64ee4387eac14cb9cdea8901f",
+      "candidateResultSha256": "102c6ca97ce39d2b904d890af08f09b748013eb64ee4387eac14cb9cdea8901f",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 9
+    },
+    {
+      "name": "seed-207",
+      "fixtureSha256": "45a55d593daac87f9546ff441f4c2ce7bbb52acf7237383b5b73cf4c65760116",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "minScore": 0
+      },
+      "baselineResultSha256": "e4e67928f5ea877df39aecab223658b9aacf380771f13d2a7b0877207986107b",
+      "candidateResultSha256": "e4e67928f5ea877df39aecab223658b9aacf380771f13d2a7b0877207986107b",
+      "fullResultEquivalent": true,
+      "returnedCount": 12,
+      "suppressedCount": 26
+    },
+    {
+      "name": "seed-208",
+      "fixtureSha256": "182c656024b4f09a97ae60b94e5f8f9ca3247dd79916565ce5c7e6ac4827c19a",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "cb7b0ea71e5b6683e7c37696c8888e08c94b3315ce31e030b72c5e87f0898e19",
+      "candidateResultSha256": "cb7b0ea71e5b6683e7c37696c8888e08c94b3315ce31e030b72c5e87f0898e19",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 15
+    },
+    {
+      "name": "seed-209",
+      "fixtureSha256": "644fecaa6eb6516272b062725583f6c51577a45d25a3f048736123e8d25ad041",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "0f84fb3d8d6d11e2dec813159271cdad1c60f5cf66f7aa2ee773a5192aafb0c2",
+      "candidateResultSha256": "0f84fb3d8d6d11e2dec813159271cdad1c60f5cf66f7aa2ee773a5192aafb0c2",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 14
+    },
+    {
+      "name": "seed-210",
+      "fixtureSha256": "5ebfceba163708e5856b8e60b14167dcd34847d0ac41da7f02922af458241d66",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "minScore": 0
+      },
+      "baselineResultSha256": "627a82b5e0261a5cc63ab2a62d830c395dd17da20af6e19f32623d69916ab4e9",
+      "candidateResultSha256": "627a82b5e0261a5cc63ab2a62d830c395dd17da20af6e19f32623d69916ab4e9",
+      "fullResultEquivalent": true,
+      "returnedCount": 5,
+      "suppressedCount": 7
+    },
+    {
+      "name": "seed-211",
+      "fixtureSha256": "c7a11180687b108db1f80d8b89cbe17a136f9f411802f6a58ed768d9f1c34484",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "99a7fd845cb9f0a67edb7a42dd8abe8228c6042317d74218bb5c728b2e4bbb62",
+      "candidateResultSha256": "99a7fd845cb9f0a67edb7a42dd8abe8228c6042317d74218bb5c728b2e4bbb62",
+      "fullResultEquivalent": true,
+      "returnedCount": 5,
+      "suppressedCount": 2
+    },
+    {
+      "name": "seed-212",
+      "fixtureSha256": "e08ed33d593f2b477ad3f027269a100d890a8ec664e6a3e5d7633ab25dc8eaf8",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "8b22626e058244d4744a951683d093026578fd75829d780bd134f4683508e549",
+      "candidateResultSha256": "8b22626e058244d4744a951683d093026578fd75829d780bd134f4683508e549",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 4
+    },
+    {
+      "name": "seed-213",
+      "fixtureSha256": "ea4876f6f4ebe0f2eb01bf66c671e362fd838363921cd7df50643ee2982b8cd6",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "minScore": 0
+      },
+      "baselineResultSha256": "93685ca2c768b79ec0e834ccee0fc532dc1105d16d3e8e2af1d016024349be37",
+      "candidateResultSha256": "93685ca2c768b79ec0e834ccee0fc532dc1105d16d3e8e2af1d016024349be37",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 19
+    },
+    {
+      "name": "seed-214",
+      "fixtureSha256": "30203cf96935457c5d90c36c98bdb8c3d4ecfb3d5da4e9af4bdf85992de1b7c7",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "5cf1e194267c3c240b6af30f3e6a9fb72717988ce7720f433147c1ec0b56d467",
+      "candidateResultSha256": "5cf1e194267c3c240b6af30f3e6a9fb72717988ce7720f433147c1ec0b56d467",
+      "fullResultEquivalent": true,
+      "returnedCount": 5,
+      "suppressedCount": 12
+    },
+    {
+      "name": "seed-215",
+      "fixtureSha256": "ad251cca60b6e95d391fcd4784165a3c03bff0f8731335a4dbfffd7ed7f21257",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "4492a90533aa78ee8a37250ac9d0807a0da09d9c439b825b00ce0a33c793fbef",
+      "candidateResultSha256": "4492a90533aa78ee8a37250ac9d0807a0da09d9c439b825b00ce0a33c793fbef",
+      "fullResultEquivalent": true,
+      "returnedCount": 2,
+      "suppressedCount": 17
+    },
+    {
+      "name": "seed-216",
+      "fixtureSha256": "e92f08f76f34e33bf009c29c1ad15c3f98091fedc08c1d438c073dd00ddd9834",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "minScore": 0
+      },
+      "baselineResultSha256": "a9f78bd7559e8869568d156c6bad4baa593d90919450666045a111e6beef2b33",
+      "candidateResultSha256": "a9f78bd7559e8869568d156c6bad4baa593d90919450666045a111e6beef2b33",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 11
+    },
+    {
+      "name": "seed-217",
+      "fixtureSha256": "28b4bf5e7deddb58953f3d30121c40b34984a126608a666f5e111c16fbd15a4f",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "7a9e89888a7cf54fac042a2b9938a4b144d9478080d732bebaaf94bb94ff33ea",
+      "candidateResultSha256": "7a9e89888a7cf54fac042a2b9938a4b144d9478080d732bebaaf94bb94ff33ea",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 1
+    },
+    {
+      "name": "seed-218",
+      "fixtureSha256": "aa596477047743a4827cc2bf88d33ded4b542d15d24eb0834031a3e141fdc86e",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "550f1c9bd8268507f6bdf849829cb5c5fe7f94d4039668c74849f7a94248ed94",
+      "candidateResultSha256": "550f1c9bd8268507f6bdf849829cb5c5fe7f94d4039668c74849f7a94248ed94",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 6
+    },
+    {
+      "name": "seed-219",
+      "fixtureSha256": "fc4498f680ebb0adc707986e3e079934c08787a8c2a865d13f139ddea5f1882e",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "minScore": 0
+      },
+      "baselineResultSha256": "8444ccc1d45a96b4f649441c66e0a69fa58eef376418629027226f5ae8809f16",
+      "candidateResultSha256": "8444ccc1d45a96b4f649441c66e0a69fa58eef376418629027226f5ae8809f16",
+      "fullResultEquivalent": true,
+      "returnedCount": 10,
+      "suppressedCount": 22
+    },
+    {
+      "name": "seed-220",
+      "fixtureSha256": "e992e3ea5516aa0ae52b05de6b04fa72d15f9ebd6553ec8306d2c63febb0cb7a",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "17aa0bafce8982c207afa77e8296f2d3dfeb7887473fe417fa5b653570fc9e82",
+      "candidateResultSha256": "17aa0bafce8982c207afa77e8296f2d3dfeb7887473fe417fa5b653570fc9e82",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 10
+    },
+    {
+      "name": "seed-221",
+      "fixtureSha256": "0a8968147ec0bf0217eec2a3653af401866af48238d8f34384b510ae6d2fdb61",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "4a626f82dd3a5a02e321a3791cf4b7d912f9d70343ef6df00106f8e410df2cb7",
+      "candidateResultSha256": "4a626f82dd3a5a02e321a3791cf4b7d912f9d70343ef6df00106f8e410df2cb7",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 11
+    },
+    {
+      "name": "seed-222",
+      "fixtureSha256": "a450473ce31f68a99db8b704022d788fe396b365dc9ab9ab820930c29b98ba83",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "minScore": 0
+      },
+      "baselineResultSha256": "d4a341bb5d0b6c38020d2b9a3d7b70cee9f1782fba3077d02de4375644a9bee2",
+      "candidateResultSha256": "d4a341bb5d0b6c38020d2b9a3d7b70cee9f1782fba3077d02de4375644a9bee2",
+      "fullResultEquivalent": true,
+      "returnedCount": 4,
+      "suppressedCount": 8
+    },
+    {
+      "name": "seed-223",
+      "fixtureSha256": "414d917629ae3731946689140d0100e0730b6df2ecc22cd96e0c0525263a9c28",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "14efaa261488f7ec21c1b01447157cff3dc6f65954c832e42bf1424c9ed39532",
+      "candidateResultSha256": "14efaa261488f7ec21c1b01447157cff3dc6f65954c832e42bf1424c9ed39532",
+      "fullResultEquivalent": true,
+      "returnedCount": 4,
+      "suppressedCount": 7
+    },
+    {
+      "name": "seed-224",
+      "fixtureSha256": "3d1581b5323e1917a0bf10b25699a4847119530df8f36af2419b6150428dd115",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "f552789653f41db075dd6c8f29f91eae492d2f81b399294b64a8dd39fb1fc283",
+      "candidateResultSha256": "f552789653f41db075dd6c8f29f91eae492d2f81b399294b64a8dd39fb1fc283",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 12
+    },
+    {
+      "name": "seed-225",
+      "fixtureSha256": "30c761ecf41b0e5f5d0e6ee29cd930e8897d68ebd06760f36cd573550e6e9335",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "minScore": 0
+      },
+      "baselineResultSha256": "7b30c921ac014fdb71f8f661c662e6deb1c50d94ac4f18ba5c74b8ddfe783365",
+      "candidateResultSha256": "7b30c921ac014fdb71f8f661c662e6deb1c50d94ac4f18ba5c74b8ddfe783365",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 18
+    },
+    {
+      "name": "seed-226",
+      "fixtureSha256": "128ede14c62cf6a054a95d3c3ec34b647a555e713db8bc5abf800e7502c91e6a",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "badcb818a3ee7aebb2f3bd00bef68d5767e554ac5f518348af44b2de575a5818",
+      "candidateResultSha256": "badcb818a3ee7aebb2f3bd00bef68d5767e554ac5f518348af44b2de575a5818",
+      "fullResultEquivalent": true,
+      "returnedCount": 5,
+      "suppressedCount": 14
+    },
+    {
+      "name": "seed-227",
+      "fixtureSha256": "f433ba3da77c3ada033862644cd64f840a8a1a0596cc91d09d467be1c81cca84",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "f0ff996b4c30178073b980fc2f1b3020b6066dedaca00b719a4dc9cc7f9df282",
+      "candidateResultSha256": "f0ff996b4c30178073b980fc2f1b3020b6066dedaca00b719a4dc9cc7f9df282",
+      "fullResultEquivalent": true,
+      "returnedCount": 2,
+      "suppressedCount": 12
+    },
+    {
+      "name": "seed-228",
+      "fixtureSha256": "c7f0064465ce39b25a5043134dbf4a0b6e1aa558ca6d5cdafc38c36b2150730f",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "minScore": 0
+      },
+      "baselineResultSha256": "07dd0fe791b39019b8f5d12d4f8ac88ca745f5561a0bf77e4f448747cb2544f1",
+      "candidateResultSha256": "07dd0fe791b39019b8f5d12d4f8ac88ca745f5561a0bf77e4f448747cb2544f1",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 9
+    },
+    {
+      "name": "seed-229",
+      "fixtureSha256": "71b1eba403ac52faa596c8974ab3d06a21043fe02ab8608a09d9a4382246c97f",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "c5d681eaccba93a486e2f368eddd9c04663786d6a403da11649db57b95350e61",
+      "candidateResultSha256": "c5d681eaccba93a486e2f368eddd9c04663786d6a403da11649db57b95350e61",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 6
+    },
+    {
+      "name": "seed-230",
+      "fixtureSha256": "ede743a8170a08ce818e2de29327351e30b78ba95de39a00397ec4b220edaabb",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "2a1f434a1d8deb68fab42934d4db19f3a8dbcd3085b4d2224a763308241c0003",
+      "candidateResultSha256": "2a1f434a1d8deb68fab42934d4db19f3a8dbcd3085b4d2224a763308241c0003",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 7
+    },
+    {
+      "name": "seed-231",
+      "fixtureSha256": "268e1482fb2c0a2a5f70b1249e18538e65678009949cb9cb358ddea1bc40ab68",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "minScore": 0
+      },
+      "baselineResultSha256": "4e26f0340104af9012ede82709a83b5c5cf654564f194cd157c07caa2b4084a7",
+      "candidateResultSha256": "4e26f0340104af9012ede82709a83b5c5cf654564f194cd157c07caa2b4084a7",
+      "fullResultEquivalent": true,
+      "returnedCount": 8,
+      "suppressedCount": 21
+    },
+    {
+      "name": "seed-232",
+      "fixtureSha256": "6c9deb3bf69f5549edf82ea7efa1fe46eeedcf21f4d43850ffd8b20d6a8bfdea",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "c3707af7962165dc8f3be79d5371ffc69583a34aa440f58914ce4043d62e93d7",
+      "candidateResultSha256": "c3707af7962165dc8f3be79d5371ffc69583a34aa440f58914ce4043d62e93d7",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 13
+    },
+    {
+      "name": "seed-233",
+      "fixtureSha256": "1efbea433277e9ceebad874088e872aa5c7d7222546203dbefc11a1a460b9bdf",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "f45ad1cb83c1a72f50ff3cac3e7513f24515d723e125a6a958ad2c32d7908ae7",
+      "candidateResultSha256": "f45ad1cb83c1a72f50ff3cac3e7513f24515d723e125a6a958ad2c32d7908ae7",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 14
+    },
+    {
+      "name": "seed-234",
+      "fixtureSha256": "69a94dba8faba324b52740623f11dab833bb1e9907ed6b6362ee19951a56132b",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "minScore": 0
+      },
+      "baselineResultSha256": "cb08991e3560c5a230dd4ab871c5539469a639bef2b096282a31f583129714c2",
+      "candidateResultSha256": "cb08991e3560c5a230dd4ab871c5539469a639bef2b096282a31f583129714c2",
+      "fullResultEquivalent": true,
+      "returnedCount": 3,
+      "suppressedCount": 5
+    },
+    {
+      "name": "seed-235",
+      "fixtureSha256": "761915a298e0ff47aae3e96c04470b2f983219a307d7b524e7f210efcd43e806",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "fae3255cce3ce6afef2034e75cb04ac7da5757a11787185661b09867110c522e",
+      "candidateResultSha256": "fae3255cce3ce6afef2034e75cb04ac7da5757a11787185661b09867110c522e",
+      "fullResultEquivalent": true,
+      "returnedCount": 4,
+      "suppressedCount": 6
+    },
+    {
+      "name": "seed-236",
+      "fixtureSha256": "d3ca2dd233e0398af8f1d9f313ba8261a32f69466d3db095d6181e1df533cd6a",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "eb81b204a502389712c3df4ff1689413957a0301a584dbb8d43666da567463fd",
+      "candidateResultSha256": "eb81b204a502389712c3df4ff1689413957a0301a584dbb8d43666da567463fd",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 8
+    },
+    {
+      "name": "seed-237",
+      "fixtureSha256": "b39883c5bfb010289dcb7f7fece265203b72db1c98b578893a30b4461861dd69",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "minScore": 0
+      },
+      "baselineResultSha256": "1c75f7503d2bb7b285a3f6f6190985df58873c040d5d0e55da4c0a2529e4a58d",
+      "candidateResultSha256": "1c75f7503d2bb7b285a3f6f6190985df58873c040d5d0e55da4c0a2529e4a58d",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 25
+    },
+    {
+      "name": "seed-238",
+      "fixtureSha256": "69ca084bbefc6677bc090e9c3e4807bea940ec0d83e00e6265701f50dc90c712",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "19fb90133f2f98d304f8301bf6bb4eb95fded14c9684a9a00786ac99dd99a995",
+      "candidateResultSha256": "19fb90133f2f98d304f8301bf6bb4eb95fded14c9684a9a00786ac99dd99a995",
+      "fullResultEquivalent": true,
+      "returnedCount": 5,
+      "suppressedCount": 9
+    },
+    {
+      "name": "seed-239",
+      "fixtureSha256": "1d4cdd85ae4f99239b471f922b0228db3b0b5b9492f2787c9c1a9c69fcc11b4e",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "6826dc2778333b396082faa01c8a4a20a13baa57ed06e8aaeaa4d25fd4d4001c",
+      "candidateResultSha256": "6826dc2778333b396082faa01c8a4a20a13baa57ed06e8aaeaa4d25fd4d4001c",
+      "fullResultEquivalent": true,
+      "returnedCount": 3,
+      "suppressedCount": 11
+    },
+    {
+      "name": "seed-240",
+      "fixtureSha256": "c41b1d0d0d833e93fff1acf5bfa0fd12178d8277d21a355d5acae964204ef04e",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "minScore": 0
+      },
+      "baselineResultSha256": "cfad99ec0470788bb770cb58db4abb2c65eaa2f7c42d43254e9b4d192c52333a",
+      "candidateResultSha256": "cfad99ec0470788bb770cb58db4abb2c65eaa2f7c42d43254e9b4d192c52333a",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 5
+    },
+    {
+      "name": "seed-241",
+      "fixtureSha256": "3cecb252f0ff39909a9e7175aaa0ddfd69bac2f41f7c180da6f376e705120a4d",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "15bc83ba7c308506aa7dd25056240e357122237413a2142cbbb7a027a19bac7a",
+      "candidateResultSha256": "15bc83ba7c308506aa7dd25056240e357122237413a2142cbbb7a027a19bac7a",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 5
+    },
+    {
+      "name": "seed-242",
+      "fixtureSha256": "a32ea6e4250d4c4e2a22cf57294aff798d09c55b1c8d3292b5f76252d5f8908c",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "596dc78e4c8bdb45b769a3afa8dc26aa5e9b0d8605328906d46f7080b69d4ba4",
+      "candidateResultSha256": "596dc78e4c8bdb45b769a3afa8dc26aa5e9b0d8605328906d46f7080b69d4ba4",
+      "fullResultEquivalent": true,
+      "returnedCount": 2,
+      "suppressedCount": 4
+    },
+    {
+      "name": "seed-243",
+      "fixtureSha256": "0db39877f6480affcbc437b3740d90edf025a8f7ab74784bf0e700083251bd77",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "minScore": 0
+      },
+      "baselineResultSha256": "7cbc0ecdca83a3bf91595331a77e90306ea225dedbea2ea1005339d4950ae4e0",
+      "candidateResultSha256": "7cbc0ecdca83a3bf91595331a77e90306ea225dedbea2ea1005339d4950ae4e0",
+      "fullResultEquivalent": true,
+      "returnedCount": 12,
+      "suppressedCount": 18
+    },
+    {
+      "name": "seed-244",
+      "fixtureSha256": "327434c40f55c68627c752d456511223250f3cf0e8a3cecd5f3baf1e77219051",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "1b7286f1d88d3310ba72bec5085a41da37c57cd18908bc9ae59d7b1c396f4561",
+      "candidateResultSha256": "1b7286f1d88d3310ba72bec5085a41da37c57cd18908bc9ae59d7b1c396f4561",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 12
+    },
+    {
+      "name": "seed-245",
+      "fixtureSha256": "3b38b71c5ac412b883ede168f2ce939850c09850d82586143181d31bb1d5344f",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "5508b7bb743f1f3114e9f4b2896942e0ee4b41996da10890842451687a2c576f",
+      "candidateResultSha256": "5508b7bb743f1f3114e9f4b2896942e0ee4b41996da10890842451687a2c576f",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 13
+    },
+    {
+      "name": "seed-246",
+      "fixtureSha256": "851fe9a7edea052857352e4bd740150651f0fbdba576e1e17080a119007bb603",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "minScore": 0
+      },
+      "baselineResultSha256": "1c2c3104666ece8a3d996006227cdc01321bcabc7ee22282ad4da4337a2af3f9",
+      "candidateResultSha256": "1c2c3104666ece8a3d996006227cdc01321bcabc7ee22282ad4da4337a2af3f9",
+      "fullResultEquivalent": true,
+      "returnedCount": 3,
+      "suppressedCount": 6
+    },
+    {
+      "name": "seed-247",
+      "fixtureSha256": "8d00b2afd2b29b96d1bd1766c141576b1a658932703b32b7632d84e36f90a211",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "3116c1b9913b695e52f4c9a09c0e954a04966826917bfc902829d7f121f7bc92",
+      "candidateResultSha256": "3116c1b9913b695e52f4c9a09c0e954a04966826917bfc902829d7f121f7bc92",
+      "fullResultEquivalent": true,
+      "returnedCount": 6,
+      "suppressedCount": 2
+    },
+    {
+      "name": "seed-248",
+      "fixtureSha256": "ab233efb04c8d492a59ae254804f3f9985e751b53c0e472d037b11883a7bfa09",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "c669772f98bf4452897af9a9742a0257814db3a2cf0eeb4dc01281901e52f401",
+      "candidateResultSha256": "c669772f98bf4452897af9a9742a0257814db3a2cf0eeb4dc01281901e52f401",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 8
+    },
+    {
+      "name": "seed-249",
+      "fixtureSha256": "27a3feb62b7568430634a60af131e71bd05a136d47e83ac2c7d66ac7a014ebfd",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "minScore": 0
+      },
+      "baselineResultSha256": "ec94836afcc3a7ea18afc347650d92b4dbbea047b7ff90c746dfcfd70cfe438c",
+      "candidateResultSha256": "ec94836afcc3a7ea18afc347650d92b4dbbea047b7ff90c746dfcfd70cfe438c",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 19
+    },
+    {
+      "name": "seed-250",
+      "fixtureSha256": "5b877b4369ce2e0b04a9bf439f3bf25e426f21dfb4678e805745bc8175122012",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "6ebf85d6e8934f6aeec79b70907adf2437a8b4f4924a410c35053a091c41400a",
+      "candidateResultSha256": "6ebf85d6e8934f6aeec79b70907adf2437a8b4f4924a410c35053a091c41400a",
+      "fullResultEquivalent": true,
+      "returnedCount": 5,
+      "suppressedCount": 11
+    },
+    {
+      "name": "seed-251",
+      "fixtureSha256": "cff23d49e379432f5176da8fabda3759166e5a311714930c0f401f8dc12fcc01",
+      "queryScope": "session",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "75f89479e9b87b07b44b11dfbee50fea0cd4bcfa22454af6812953bb2d2705ab",
+      "candidateResultSha256": "75f89479e9b87b07b44b11dfbee50fea0cd4bcfa22454af6812953bb2d2705ab",
+      "fullResultEquivalent": true,
+      "returnedCount": 3,
+      "suppressedCount": 16
+    },
+    {
+      "name": "seed-252",
+      "fixtureSha256": "54e13011e6ae73fd0c833cb80f57bdaa9e7ea41c51a6b2869e9a0278af3f6d7c",
+      "queryScope": "global",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "minScore": 0
+      },
+      "baselineResultSha256": "eb30f8ed5c3e3067a71b7828c992b7094f8d5dec941890e2e9162dd53cabe158",
+      "candidateResultSha256": "eb30f8ed5c3e3067a71b7828c992b7094f8d5dec941890e2e9162dd53cabe158",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 12
+    },
+    {
+      "name": "seed-253",
+      "fixtureSha256": "2249354e2593d94b947367dd4072c248294256c794756d358a6a5ea735b9180b",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 1,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "6c54116e08204e85715c7158c76feea60ac710d25102f9875d568daf25ee9496",
+      "candidateResultSha256": "6c54116e08204e85715c7158c76feea60ac710d25102f9875d568daf25ee9496",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 6
+    },
+    {
+      "name": "seed-254",
+      "fixtureSha256": "41bdf8d321a762e1734a4da2d940c11ce1218e0141db01a099d04e38a51e3727",
+      "queryScope": "repository",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-work-owner",
+        "minScore": 0.7
+      },
+      "baselineResultSha256": "36f98a1f695fe0f5814f25da917cbe2e2a94e84385f4ec08baa1134fe2bfebe5",
+      "candidateResultSha256": "36f98a1f695fe0f5814f25da917cbe2e2a94e84385f4ec08baa1134fe2bfebe5",
+      "fullResultEquivalent": true,
+      "returnedCount": 1,
+      "suppressedCount": 5
+    },
+    {
+      "name": "seed-255",
+      "fixtureSha256": "e8653813f634552d1a02aaaded3662620714b1dd2d1a3834c23dce86b7c2a1f6",
+      "queryScope": "agent",
+      "opts": {
+        "now": 1791000000000,
+        "k": 100,
+        "minScore": 0
+      },
+      "baselineResultSha256": "7dec051df142481562dcdfa494f332720f135927c6a766d387d689829e814279",
+      "candidateResultSha256": "7dec051df142481562dcdfa494f332720f135927c6a766d387d689829e814279",
+      "fullResultEquivalent": true,
+      "returnedCount": 12,
+      "suppressedCount": 25
+    },
+    {
+      "name": "seed-256",
+      "fixtureSha256": "21cd2badd44b9ba2f1fe43bf10e793adcdbf2f54eff23a910913ac3a930f20ad",
+      "queryScope": "task-family",
+      "opts": {
+        "now": 1791000000000,
+        "k": 0,
+        "sessionId": "session-work-owner",
+        "minScore": 0.3,
+        "type": "explicit"
+      },
+      "baselineResultSha256": "d519980fd925bc62038ce034a8e4cf054322f01bd849e61019e037e63137dbd3",
+      "candidateResultSha256": "d519980fd925bc62038ce034a8e4cf054322f01bd849e61019e037e63137dbd3",
+      "fullResultEquivalent": true,
+      "returnedCount": 0,
+      "suppressedCount": 12
+    }
+  ],
+  "fixtureMode": "Identical MemoryStore.search hits isolate retrieval work; raw hostile rows intentionally exercise unchanged read gates.",
+  "sameScoreTie": {
+    "name": "same-score-stable-order",
+    "baselineTotals": [
+      0.6,
+      0.6
+    ],
+    "candidateTotals": [
+      0.6,
+      0.6
+    ],
+    "expectedOrder": [
+      "work-memory-0",
+      "work-memory-1"
+    ],
+    "baselineOrder": [
+      "work-memory-0",
+      "work-memory-1"
+    ],
+    "candidateOrder": [
+      "work-memory-0",
+      "work-memory-1"
+    ],
+    "exactEquality": true,
+    "stableOrder": true
+  },
+  "instrumentedCopySha256": {
+    "baseline": "3f0cafb3738d0ebc90e81eeb85f12112f5684079821310baa7fecab2fd862c94",
+    "candidate": "b9e1a57e2b51da3de3062503d357b311bc1cf24675c42bca2b567a740db4848f"
+  },
+  "workCases": [
+    {
+      "name": "disjoint-2000",
+      "rowCount": 2000,
+      "fixtureSha256": "21039eef143bff7630c3f7e3c0c0a54ac286c4f9297ed3a486116c88f2c1ea4f",
+      "baseline": {
+        "tokenizations": 2001000,
+        "pairComparisons": 1999000,
+        "scoredCandidates": 2000
+      },
+      "candidate": {
+        "tokenizations": 2000,
+        "pairComparisons": 1999000,
+        "scoredCandidates": 2000
+      },
+      "instrumentedFullResultsEqual": true,
+      "tokenizationBoundPass": true,
+      "resultSha256": "cbee8b9d6ddcfa88dbbdfec696a923a827ea60b4110ee0368916c0bf51c1ed53",
+      "retainedTopK": 5,
+      "suppressed": 0
+    },
+    {
+      "name": "partial-common-2000",
+      "rowCount": 2000,
+      "fixtureSha256": "543a06ff745cb7fe2e93b927b2d54be7e0e790309d23e937765f0dca685c0bbf",
+      "baseline": {
+        "tokenizations": 2001000,
+        "pairComparisons": 1999000,
+        "scoredCandidates": 2000
+      },
+      "candidate": {
+        "tokenizations": 2000,
+        "pairComparisons": 1999000,
+        "scoredCandidates": 2000
+      },
+      "instrumentedFullResultsEqual": true,
+      "tokenizationBoundPass": true,
+      "resultSha256": "17ed89971a63c0e7a7d80fe0cd9bb79d302a8efb44d156107f71a4aa8cda85c4",
+      "retainedTopK": 5,
+      "suppressed": 0
+    },
+    {
+      "name": "worst-common-2000",
+      "rowCount": 2000,
+      "fixtureSha256": "84c38f7ab34c0b6199310da7c4ec3f85f432eb5eb7d998cc96003575965590da",
+      "baseline": {
+        "tokenizations": 2001000,
+        "pairComparisons": 1999000,
+        "scoredCandidates": 2000
+      },
+      "candidate": {
+        "tokenizations": 2000,
+        "pairComparisons": 1999000,
+        "scoredCandidates": 2000
+      },
+      "instrumentedFullResultsEqual": true,
+      "tokenizationBoundPass": true,
+      "resultSha256": "82d1faf21b019d31c8a752d8d68316974e22dfb02de4a01bcb5f1424afb419c7",
+      "retainedTopK": 5,
+      "suppressed": 0
+    },
+    {
+      "name": "dense-conflicts-2000",
+      "rowCount": 2000,
+      "fixtureSha256": "03fe4c4b37160894de8d57c6b90b821e5742901fee955e8df4bc3574c096fbf0",
+      "baseline": {
+        "tokenizations": 3999,
+        "pairComparisons": 1999,
+        "scoredCandidates": 2000
+      },
+      "candidate": {
+        "tokenizations": 2000,
+        "pairComparisons": 1999,
+        "scoredCandidates": 2000
+      },
+      "instrumentedFullResultsEqual": true,
+      "tokenizationBoundPass": true,
+      "resultSha256": "63511c7bdc7b572e765d768e52c2b0633305584c05358ccbd924f805dd48e42e",
+      "retainedTopK": 1,
+      "suppressed": 1999
+    }
+  ],
+  "cacheIsolationPass": true,
+  "limitations": [
+    "Same ASCII token/Jaccard policy; empty-token Unicode duplication remains unchanged.",
+    "Pair comparisons remain quadratic in the worst case; retained Sets add per-call memory.",
+    "Search costs and real model quality are outside this work reduction probe."
+  ],
+  "sourceHeadAfter": "de346b90dcbf97c9591ae2786e46e80fd0a4e05c",
+  "sourceStatusAfter": "",
+  "sourceHashesAfter": {
+    "packages/memory/src/retrieval.ts": "d3a48b1ff665dd2c3f698d7a2c7e4754081a8fb6ba6306556444262135fca8c9",
+    "packages/memory/dist/retrieval.js": "a47651ff6072887a099ae546478a437cf53b75ca4196e163561c7f6e3c73904a",
+    "packages/memory/src/memory-store.ts": "925f718e3f92baf32fb2868bafcdcd0701cb520e441049892848a4cb6d494caf",
+    "packages/memory/dist/memory-store.js": "8722ce368b39c5626668437f3ced379d035ae938e480f693a6971f12e3cf5ed5",
+    "packages/memory/src/sqlite-memory-store.ts": "f278be463dec22f5ed15039e6e727b22a942eb6afbaab19e6961e177ae20cb6f",
+    "packages/memory/dist/sqlite-memory-store.js": "300bf553eb208898c79d7d557b5dfb8b649b5e01f28a5b934ac56eb1d39dceb7",
+    "packages/memory/src/search-text.ts": "e569e7f418e3edf87fba7fd2e9c1a1bdf7511d78ea85abcecd863def5c201fd0",
+    "packages/memory/dist/search-text.js": "077ce28fe2280d104af3d98da7c07d11582f61ea7ad0beec1ccc2f730975b202",
+    "packages/memory/src/security-gate.ts": "35dd1c100d6200a862ac50c3b2f1c0fff1d9feb8b7921e31c8805aed319a5efa",
+    "packages/memory/dist/security-gate.js": "4e5b30994c56a51aead532212406056b0f5e84dd80f74979e4b45ebbf85f72fa",
+    "packages/memory/src/lifecycle.ts": "785201bfbfab78fad4cfe8b5781973e00f5149a5fd2c62559b81890642193fa6",
+    "packages/memory/dist/lifecycle.js": "11a295ece7bdf7bb4130e84ed09304da654e19d5715a8d21ff45be1c7545b183",
+    "packages/harness/src/memory-runtime-bridge.ts": "2d6cf39686f2884d2c390dcd13e7c7f46a3e368094d807b79124a79297a4f4cf",
+    "packages/harness/dist/memory-runtime-bridge.js": "b3b45a131640fad6a294aa8cb30a5c0d0770f1706c3281130a3816037d9eba09",
+    "packages/harness/src/create-harness.ts": "a115aa9c8ec71b86e689e80ab9195c21cd85c8f19a0d9de669e9e19d8becf84e",
+    "packages/harness/dist/create-harness.js": "442874f7297e7e0b7df5e715af249457fbd0bf6cd33f15b75d5e198700ea29e3"
+  },
+  "sourceUnchanged": true,
+  "gates": {
+    "fullResultsEqual": true,
+    "exactScoreTieAndStableOrder": true,
+    "deterministicTokenizationBound": true,
+    "cacheIsolation": true,
+    "sourceUnchanged": true
+  },
+  "status": "PASS"
+}

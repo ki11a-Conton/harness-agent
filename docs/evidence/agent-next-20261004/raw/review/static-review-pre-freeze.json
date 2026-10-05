@@ -1,0 +1,36 @@
+{
+  "schema": "HARNESS_AGENT_EFFICIENCY_INDEPENDENT_STATIC_REVIEW_V1",
+  "observedAt": "2026-10-04T13:32:34.079751+00:00",
+  "phase": "post implementation working tree, before source freeze",
+  "sourceHead": "fbe5098c43060fd066bd5fbdaa4a4d1612abdeb6",
+  "trackedDirty": true,
+  "scope": [
+    "packages/model/src/openai.ts",
+    "packages/memory/src/retrieval.ts",
+    "packages/tools/src/navigate.ts",
+    "plan(20261004-131935).md",
+    "tasks/AGENT-EFFICIENCY-20261004.md"
+  ],
+  "sha256": {
+    "packages/model/src/openai.ts": "2c909c6c7c0ed377b52e5b26665e991a104c84cd1cad733287576a115d0bd780",
+    "packages/memory/src/retrieval.ts": "d3a48b1ff665dd2c3f698d7a2c7e4754081a8fb6ba6306556444262135fca8c9",
+    "packages/tools/src/navigate.ts": "b0b42636455fe67d3a53c818452a04b1dd68e915cd978781b5da398720b2f866",
+    "plan(20261004-131935).md": "709eab3a98c2a80c905c33bf0ab01970af7ecc2f93d94decb39147d541d0f0eb",
+    "tasks/AGENT-EFFICIENCY-20261004.md": "a92f21ea04d8c9461d29d58c371d0ab752f165fc96e40dd9f26a02acce3dc158"
+  },
+  "result": "NO_BLOCKING_STATIC_FINDING",
+  "runtimeAcceptance": "NOT_YET_REVIEWED",
+  "findings": [],
+  "reviewedContracts": [
+    "R1 exact nonempty system prepended to final serialized array without mutating durable history; final wire protocol checker still runs on that array and all retry requests reuse same body",
+    "R1 diagnostic helper persists structural roles, counts and content byte lengths rather than system body; new focused regression asserts system marker and synthetic API key absent from evidence",
+    "R2 tokens cached only within synchronous per-call dedup; all kept candidates remain until final TopK slice, first-conflict and suppression order unchanged; no changes to scope/session/security/lifecycle/ranking",
+    "R3 private recursive false propagates through all ancestors while public walker Promise<void> and onDir names contract remain; current grep matching file halts immediately at cap",
+    "R3 real Dirent dirs/files share cap; root-relative depth prunes child listing; ancestor lstat rejects selected/intermediate symlinks, trusted root alias remains permitted; empty selected subtree stays empty"
+  ],
+  "limitations": [
+    "No independent frozen source/probe execution review yet",
+    "No paid model quality or throughput claim",
+    "Existing filesystem race behavior and indexed symbol path outside this change"
+  ]
+}

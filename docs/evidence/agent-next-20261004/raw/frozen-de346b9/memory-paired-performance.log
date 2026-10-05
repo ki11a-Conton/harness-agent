@@ -1,0 +1,81 @@
+{
+  "status": "PASS",
+  "sourceHead": "de346b90dcbf97c9591ae2786e46e80fd0a4e05c",
+  "sourceUnchanged": true,
+  "gates": {
+    "fixedFixture": true,
+    "originalFixedProbe": true,
+    "exactProductionResults": true,
+    "rowAndMatchCounts": true,
+    "serialABBA": true,
+    "chineseBothBackendsAtLeast50PercentFaster": true,
+    "sourceUnchanged": true
+  },
+  "cases": [
+    {
+      "name": "warm-fts",
+      "backend": "jsonl",
+      "fullResultEquivalent": true,
+      "ratio": 0.9520795705995664,
+      "baselineMs": 44.85435599999994,
+      "candidateMs": 42.704916000000026
+    },
+    {
+      "name": "chinese-substring",
+      "backend": "jsonl",
+      "fullResultEquivalent": true,
+      "ratio": 0.15202653638735852,
+      "baselineMs": 538.2658840000004,
+      "candidateMs": 81.83069799999976
+    },
+    {
+      "name": "structured-do",
+      "backend": "jsonl",
+      "fullResultEquivalent": true,
+      "ratio": 0.9870793869028586,
+      "baselineMs": 50.427638000000115,
+      "candidateMs": 49.776081999999406
+    },
+    {
+      "name": "actual-miss",
+      "backend": "jsonl",
+      "fullResultEquivalent": true,
+      "ratio": 0.9642469410862239,
+      "baselineMs": 33.906888999999865,
+      "candidateMs": 32.694614
+    },
+    {
+      "name": "warm-fts",
+      "backend": "sqlite",
+      "fullResultEquivalent": true,
+      "ratio": 1.1053686757378793,
+      "baselineMs": 66.17538799999966,
+      "candidateMs": 73.14820099999997
+    },
+    {
+      "name": "chinese-substring",
+      "backend": "sqlite",
+      "fullResultEquivalent": true,
+      "ratio": 0.1572887894215975,
+      "baselineMs": 616.9711100000004,
+      "candidateMs": 97.04263899999933
+    },
+    {
+      "name": "structured-do",
+      "backend": "sqlite",
+      "fullResultEquivalent": true,
+      "ratio": 0.9870957689047062,
+      "baselineMs": 65.32547300000078,
+      "candidateMs": 64.4824979999994
+    },
+    {
+      "name": "actual-miss",
+      "backend": "sqlite",
+      "fullResultEquivalent": true,
+      "ratio": 0.999649187509907,
+      "baselineMs": 49.96116299999994,
+      "candidateMs": 49.94363599999997
+    }
+  ],
+  "paidCalls": 0
+}

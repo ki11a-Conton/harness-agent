@@ -1,0 +1,499 @@
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+ ❯ packages/tools/src/navigation-work.regressions.test.ts (19 tests | 12 failed) 91ms
+     × propagates a nested callback stop across all ancestor/sibling directories 16ms
+     × keeps directory callbacks and their entry-name contract while stopping 3ms
+     × stops grep immediately when the first file fills the hit cap 6ms
+     × stops at a cap inside a multi-line file without entering later siblings 9ms
+     × also stops the unchanged regex symbol fallback globally 4ms
+     × returns all 66 immediate directories including empty ones with one read 21ms
+     × performs no listing at absolute depth zero 7ms
+     × counts real directories toward the entry cap and stops before descent 6ms
+     × shares one cap for mixed files and directories and preserves path sort 3ms
+     × prunes recursion exactly at the root-relative depth boundary 3ms
+     × keeps verified ancestors for a nonempty subpath and root-relative depth 2ms
+     ✓ counts subpath ancestors toward the same cap 1ms
+     ✓ keeps missing and empty directories as empty output 1ms
+     ✓ does not invent ancestor directories for a file path 1ms
+     ✓ treats an unreadable directory as empty rather than fabricating entries 1ms
+     ✓ skips generated, VCS, dependency and directory symlink entries before descent 2ms
+     × does not follow a directory symlink supplied as the subtree 1ms
+     ✓ rejects a denied permission before any directory read 3ms
+     ✓ rejects an outside path through the real sandbox before any directory read 1ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 12 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: global traversal stop > propagates a nested callback stop across all ancestor/sibling directories
+AssertionError: expected [ 'group-00/nested/one.txt', …(11) ] to have a length of 1 but got 12
+
+- Expected
++ Received
+
+- 1
++ 12
+
+ ❯ packages/tools/src/navigation-work.regressions.test.ts:62:21
+     60|     const result: void = await walkFiles(root, ".", async (_abs, rel) …
+     61|     expect(result).toBeUndefined(); // public Promise<void> remains un…
+     62|     expect(visited).toHaveLength(1);
+       |                     ^
+     63|     expect(reads).toHaveBeenCalledTimes(3); // root, first group, firs…
+     64|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/12]⎯
+
+ FAIL  packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: global traversal stop > keeps directory callbacks and their entry-name contract while stopping
+AssertionError: expected [ { rel: '.', names: [ …(3) ] }, …(3) ] to have a length of 2 but got 4
+
+- Expected
++ Received
+
+- 2
++ 4
+
+ ❯ packages/tools/src/navigation-work.regressions.test.ts:70:18
+     68|     const seen: Array<{ rel: string; names: string[] }> = [];
+     69|     await walkFiles(root, ".", async () => false, (names, _abs, rel) =…
+     70|     expect(seen).toHaveLength(2);
+       |                  ^
+     71|     expect(seen[0]?.rel).toBe(".");
+     72|     expect(seen[0]?.names.sort()).toEqual(["group-00", "group-01", "gr…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/12]⎯
+
+ FAIL  packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: global traversal stop > stops grep immediately when the first file fills the hit cap
+AssertionError: expected "readdir" to be called 2 times, but got 13 times
+ ❯ packages/tools/src/navigation-work.regressions.test.ts:83:19
+     81|     expect(hits).toHaveLength(1);
+     82|     expect(hits[0]).toMatchObject({ line: 1, column: 1, text: "needle"…
+     83|     expect(reads).toHaveBeenCalledTimes(2);
+       |                   ^
+     84|     expect(files).toHaveBeenCalledTimes(1);
+     85|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/12]⎯
+
+ FAIL  packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: global traversal stop > stops at a cap inside a multi-line file without entering later siblings
+AssertionError: expected "readdir" to be called 2 times, but got 9 times
+ ❯ packages/tools/src/navigation-work.regressions.test.ts:94:19
+     92|     expect(result.status).toBe("success");
+     93|     expect(result.output).toMatchObject([{ line: 1 }, { line: 2 }]);
+     94|     expect(reads).toHaveBeenCalledTimes(2);
+       |                   ^
+     95|     expect(files).toHaveBeenCalledTimes(1);
+     96|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/12]⎯
+
+ FAIL  packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: global traversal stop > also stops the unchanged regex symbol fallback globally
+AssertionError: expected "readdir" to be called 2 times, but got 11 times
+ ❯ packages/tools/src/navigation-work.regressions.test.ts:104:19
+    102|     const result = await symbolSearch({ root, symbol: "KnownSymbol", m…
+    103|     expect(result).toMatchObject({ fallback: true, hits: [{ name: "Kno…
+    104|     expect(reads).toHaveBeenCalledTimes(2);
+       |                   ^
+    105|     expect(files).toHaveBeenCalledTimes(1);
+    106|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/12]⎯
+
+ FAIL  packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: real directory entries and work bounds > returns all 66 immediate directories including empty ones with one read
+AssertionError: expected [] to have a length of 66 but got +0
+
+- Expected
++ Received
+
+- 66
++ 0
+
+ ❯ packages/tools/src/navigation-work.regressions.test.ts:117:27
+    115|     const result = await run("repo_tree", { depth: 1, maxEntries: 1000…
+    116|     expect(result.status).toBe("success");
+    117|     expect(result.output).toHaveLength(66);
+       |                           ^
+    118|     expect(result.output).toContainEqual({ path: "empty", type: "dir",…
+    119|     expect(reads).toHaveBeenCalledTimes(1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/12]⎯
+
+ FAIL  packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: real directory entries and work bounds > performs no listing at absolute depth zero
+AssertionError: expected "readdir" to not be called at all, but actually been called 25 times
+
+Received:
+
+  1st readdir call:
+
+    Array [
+      "/tmp/ar-navigation-work-jPaFzT",
+      Object {
+        "withFileTypes": true,
+      },
+    ]
+
+  2nd readdir call:
+
+    Array [
+      "/tmp/ar-navigation-work-jPaFzT/group-00",
+      Object {
+        "withFileTypes": true,
+      },
+    ]
+
+  3rd readdir call:
+
+    Array [
+      "/tmp/ar-navigation-work-jPaFzT/group-00/nested",
+      Object {
+        "withFileTypes": true,
+      },
+    ]
+
+  4th readdir call:
+
+    Array [
+      "/tmp/ar-navigation-work-jPaFzT/group-01",
+      Object {
+        "withFileTypes": true,
+      },
+    ]
+
+  5th readdir call:
+
+    Array [
+      "/tmp/ar-navigation-work-jPaFzT/group-01/nested",
+      Object {
+        "withFileTypes": true,
+      },
+    ]
+
+  6th readdir call:
+
+    Array [
+      "/tmp/ar-navigation-work-jPaFzT/group-02",
+      Object {
+        "withFileTypes": true,
+      },
+    ]
+
+  7th readdir call:
+
+    Array [
+      "/tmp/ar-navigation-work-jPaFzT/group-02/nested",
+      Object {
+        "withFileTypes": true,
+      },
+    ]
+
+  8th readdir call:
+
+    Array [
+      "/tmp/ar-navigation-work-jPaFzT/group-03",
+      Object {
+        "withFileTypes": true,
+      },
+    ]
+
+  9th readdir call:
+
+    Array [
+      "/tmp/ar-navigation-work-jPaFzT/group-03/nested",
+      Object {
+        "withFileTypes": true,
+      },
+    ]
+
+  10th readdir call:
+
+    Array [
+      "/tmp/ar-navigation-work-jPaFzT/group-04",
+      Object {
+        "withFileTypes": true,
+      },
+    ]
+
+  11th readdir call:
+
+    Array [
+      "/tmp/ar-navigation-work-jPaFzT/group-04/nested",
+      Object {
+        "withFileTypes": true,
+      },
+    ]
+
+  12th readdir call:
+
+    Array [
+      "/tmp/ar-navigation-work-jPaFzT/group-05",
+      Object {
+        "withFileTypes": true,
+      },
+    ]
+
+  13th readdir call:
+
+    Array [
+      "/tmp/ar-navigation-work-jPaFzT/group-05/nested",
+      Object {
+        "withFileTypes": true,
+      },
+    ]
+
+  14th readdir call:
+
+    Array [
+      "/tmp/ar-navigation-work-jPaFzT/group-06",
+      Object {
+        "withFileTypes": true,
+      },
+    ]
+
+  15th readdir call:
+
+    Array [
+      "/tmp/ar-navigation-work-jPaFzT/group-06/nested",
+      Object {
+        "withFileTypes": true,
+      },
+    ]
+
+  16th readdir call:
+
+    Array [
+      "/tmp/ar-navigation-work-jPaFzT/group-07",
+      Object {
+        "withFileTypes": true,
+      },
+    ]
+
+  17th readdir call:
+
+    Array [
+      "/tmp/ar-navigation-work-jPaFzT/group-07/nested",
+      Object {
+        "withFileTypes": true,
+      },
+    ]
+
+  18th readdir call:
+
+    Array [
+      "/tmp/ar-navigation-work-jPaFzT/group-08",
+      Object {
+        "withFileTypes": true,
+      },
+    ]
+
+  19th readdir call:
+
+    Array [
+      "/tmp/ar-navigation-work-jPaFzT/group-08/nested",
+      Object {
+        "withFileTypes": true,
+      },
+    ]
+
+  20th readdir call:
+
+    Array [
+      "/tmp/ar-navigation-work-jPaFzT/group-09",
+      Object {
+        "withFileTypes": true,
+      },
+    ]
+
+  21st readdir call:
+
+    Array [
+      "/tmp/ar-navigation-work-jPaFzT/group-09/nested",
+      Object {
+        "withFileTypes": true,
+      },
+    ]
+
+  22nd readdir call:
+
+    Array [
+      "/tmp/ar-navigation-work-jPaFzT/group-10",
+      Object {
+        "withFileTypes": true,
+      },
+    ]
+
+  23rd readdir call:
+
+    Array [
+      "/tmp/ar-navigation-work-jPaFzT/group-10/nested",
+      Object {
+        "withFileTypes": true,
+      },
+    ]
+
+  24th readdir call:
+
+    Array [
+      "/tmp/ar-navigation-work-jPaFzT/group-11",
+      Object {
+        "withFileTypes": true,
+      },
+    ]
+
+  25th readdir call:
+
+    Array [
+      "/tmp/ar-navigation-work-jPaFzT/group-11/nested",
+      Object {
+        "withFileTypes": true,
+      },
+    ]
+
+
+Number of calls: 25
+
+ ❯ packages/tools/src/navigation-work.regressions.test.ts:126:23
+    124|     const reads = vi.spyOn(fs, "readdir");
+    125|     expect(await repoTree({ root, depth: 0 })).toEqual([]);
+    126|     expect(reads).not.toHaveBeenCalled();
+       |                       ^
+    127|   });
+    128|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/12]⎯
+
+ FAIL  packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: real directory entries and work bounds > counts real directories toward the entry cap and stops before descent
+AssertionError: expected "readdir" to be called 1 times, but got 25 times
+ ❯ packages/tools/src/navigation-work.regressions.test.ts:136:19
+    134|     expect(result.output).toHaveLength(1);
+    135|     expect(result.output).toMatchObject([{ type: "dir", depth: 1 }]);
+    136|     expect(reads).toHaveBeenCalledTimes(1);
+       |                   ^
+    137|   });
+    138|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/12]⎯
+
+ FAIL  packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: real directory entries and work bounds > shares one cap for mixed files and directories and preserves path sort
+AssertionError: expected [ { path: 'full', …(2) }, …(2) ] to deeply equal [ { path: 'empty', …(2) }, …(3) ]
+
+- Expected
++ Received
+
+@@ -1,13 +1,8 @@
+  [
+    {
+      "depth": 1,
+-     "path": "empty",
+-     "type": "dir",
+-   },
+-   {
+-     "depth": 1,
+      "path": "full",
+      "type": "dir",
+    },
+    {
+      "depth": 2,
+
+ ❯ packages/tools/src/navigation-work.regressions.test.ts:142:20
+    140|     await write("top.txt"); await write("full/child.txt"); await fs.mk…
+    141|     const result = await repoTree({ root, maxEntries: 10 });
+    142|     expect(result).toEqual([
+       |                    ^
+    143|       { path: "empty", type: "dir", depth: 1 },
+    144|       { path: "full", type: "dir", depth: 1 },
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/12]⎯
+
+ FAIL  packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: real directory entries and work bounds > prunes recursion exactly at the root-relative depth boundary
+AssertionError: expected [] to deeply equal [ …(2) ]
+
+- Expected
++ Received
+
+- [
+-   {
+-     "depth": 1,
+-     "path": "a",
+-     "type": "dir",
+-   },
+-   {
+-     "depth": 2,
+-     "path": "a/b",
+-     "type": "dir",
+-   },
+- ]
++ []
+
+ ❯ packages/tools/src/navigation-work.regressions.test.ts:156:48
+    154|     await write("a/b/c/leaf.txt");
+    155|     const reads = vi.spyOn(fs, "readdir");
+    156|     expect(await repoTree({ root, depth: 2 })).toEqual([
+       |                                                ^
+    157|       { path: "a", type: "dir", depth: 1 }, { path: "a/b", type: "dir"…
+    158|     ]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/12]⎯
+
+ FAIL  packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: real directory entries and work bounds > keeps verified ancestors for a nonempty subpath and root-relative depth
+AssertionError: expected "readdir" to not be called at all, but actually been called 1 times
+
+Received:
+
+  1st readdir call:
+
+    Array [
+      "/tmp/ar-navigation-work-IYCjKr/a/b",
+      Object {
+        "withFileTypes": true,
+      },
+    ]
+
+
+Number of calls: 1
+
+ ❯ packages/tools/src/navigation-work.regressions.test.ts:171:23
+    169|     const reads = vi.spyOn(fs, "readdir");
+    170|     expect(await repoTree({ root, relPath: "a/b", depth: 2 })).toEqual…
+    171|     expect(reads).not.toHaveBeenCalled();
+       |                       ^
+    172|   });
+    173|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/12]⎯
+
+ FAIL  packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: production security controls > does not follow a directory symlink supplied as the subtree
+AssertionError: expected [ …(2) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   {
++     "depth": 1,
++     "path": "external-link",
++     "type": "dir",
++   },
++   {
++     "depth": 2,
++     "path": "external-link/secret.txt",
++     "type": "file",
++   },
++ ]
+
+ ❯ packages/tools/src/navigation-work.regressions.test.ts:220:64
+    218|     await fs.symlink(outside, join(root, "external-link"), process.pla…
+    219|     const reads = vi.spyOn(fs, "readdir");
+    220|     expect(await repoTree({ root, relPath: "external-link" })).toEqual…
+       |                                                                ^
+    221|     expect(reads).not.toHaveBeenCalled();
+    222|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/12]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  12 failed | 7 passed (19)
+   Start at  13:27:57
+   Duration  597ms (transform 289ms, setup 0ms, import 378ms, tests 91ms, environment 0ms)
+
+JSON report written to /workspace/harness-agent/.ci/agent-next-20261004/audit-tools/navigation-permanent-red.json

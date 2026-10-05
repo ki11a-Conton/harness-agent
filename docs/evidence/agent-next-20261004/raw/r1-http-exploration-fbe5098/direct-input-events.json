@@ -1,0 +1,179 @@
+[
+  {
+    "request": {
+      "system": "TOPLEVEL_SYSTEM_中文marker\n保留空白  和换行\n",
+      "messages": [
+        {
+          "id": "message_fixture",
+          "sessionId": "session_fixture",
+          "role": "user",
+          "content": "USER_MARKER",
+          "createdAt": 0
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "started",
+        "timestamp": 1791120596081
+      },
+      {
+        "type": "text_delta",
+        "text": "LOCAL_CONTEXT_PROBE_DONE",
+        "timestamp": 1791120596114
+      },
+      {
+        "type": "completed",
+        "result": {
+          "finishReason": "stop",
+          "text": "LOCAL_CONTEXT_PROBE_DONE"
+        },
+        "timestamp": 1791120596114
+      }
+    ]
+  },
+  {
+    "request": {
+      "system": "TOPLEVEL_SYSTEM_中文marker\n保留空白  和换行\n",
+      "messages": [
+        {
+          "id": "message_fixture",
+          "sessionId": "session_fixture",
+          "role": "system",
+          "content": "HISTORY_SYSTEM_MARKER",
+          "createdAt": 0
+        },
+        {
+          "id": "message_fixture",
+          "sessionId": "session_fixture",
+          "role": "user",
+          "content": "USER_MARKER",
+          "createdAt": 0
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "started",
+        "timestamp": 1791120596114
+      },
+      {
+        "type": "text_delta",
+        "text": "LOCAL_CONTEXT_PROBE_DONE",
+        "timestamp": 1791120596120
+      },
+      {
+        "type": "completed",
+        "result": {
+          "finishReason": "stop",
+          "text": "LOCAL_CONTEXT_PROBE_DONE"
+        },
+        "timestamp": 1791120596120
+      }
+    ]
+  },
+  {
+    "request": {
+      "messages": [
+        {
+          "id": "message_fixture",
+          "sessionId": "session_fixture",
+          "role": "system",
+          "content": "HISTORY_SYSTEM_MARKER",
+          "createdAt": 0
+        },
+        {
+          "id": "message_fixture",
+          "sessionId": "session_fixture",
+          "role": "user",
+          "content": "USER_MARKER",
+          "createdAt": 0
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "started",
+        "timestamp": 1791120596120
+      },
+      {
+        "type": "text_delta",
+        "text": "LOCAL_CONTEXT_PROBE_DONE",
+        "timestamp": 1791120596122
+      },
+      {
+        "type": "completed",
+        "result": {
+          "finishReason": "stop",
+          "text": "LOCAL_CONTEXT_PROBE_DONE"
+        },
+        "timestamp": 1791120596122
+      }
+    ]
+  },
+  {
+    "request": {
+      "system": "",
+      "messages": [
+        {
+          "id": "message_fixture",
+          "sessionId": "session_fixture",
+          "role": "user",
+          "content": "USER_MARKER",
+          "createdAt": 0
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "started",
+        "timestamp": 1791120596122
+      },
+      {
+        "type": "text_delta",
+        "text": "LOCAL_CONTEXT_PROBE_DONE",
+        "timestamp": 1791120596124
+      },
+      {
+        "type": "completed",
+        "result": {
+          "finishReason": "stop",
+          "text": "LOCAL_CONTEXT_PROBE_DONE"
+        },
+        "timestamp": 1791120596124
+      }
+    ]
+  },
+  {
+    "request": {
+      "messages": [
+        {
+          "id": "message_fixture",
+          "sessionId": "session_fixture",
+          "role": "user",
+          "content": "USER_MARKER",
+          "createdAt": 0
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "started",
+        "timestamp": 1791120596124
+      },
+      {
+        "type": "text_delta",
+        "text": "LOCAL_CONTEXT_PROBE_DONE",
+        "timestamp": 1791120596126
+      },
+      {
+        "type": "completed",
+        "result": {
+          "finishReason": "stop",
+          "text": "LOCAL_CONTEXT_PROBE_DONE"
+        },
+        "timestamp": 1791120596126
+      }
+    ]
+  }
+]

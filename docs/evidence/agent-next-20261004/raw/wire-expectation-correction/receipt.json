@@ -1,0 +1,110 @@
+{
+  "task": "wire expectation correction after R1 admitted system transport",
+  "startedAt": "2026-10-05T00:36:49.800738+00:00",
+  "headBefore": "91967f4dd2442b3d1979dee1c2b165d376c8895c",
+  "sourceDirtyBefore": true,
+  "testBeforeSha256": "fcae2c9bf1968c8d5ea4d190d1fca81b9df865c9ace823a0ee86b0ea2155bae9",
+  "testLineEndings": "LF",
+  "productionCoreChanged": false,
+  "redReference": {
+    "path": ".ci/agent-next-20261004/frozen-91967f4/full.log",
+    "sha256": "fd3f0c355a556a25df638c618672f16d29e99708bd8f2a7db8b55058ee5686ee",
+    "bytes": 94836,
+    "testedSourceSha": "91967f4dd2442b3d1979dee1c2b165d376c8895c",
+    "tests": {
+      "failed": 3,
+      "passed": 8481,
+      "skipped": 12
+    },
+    "scope": "three existing wire E2E assertions omitted newly transported request.system"
+  },
+  "status": "PASS",
+  "command": {
+    "argv": [
+      "corepack",
+      "pnpm",
+      "exec",
+      "vitest",
+      "run",
+      "packages/core/src/runtime/wire-protocol-e2e.test.ts",
+      "packages/model/src",
+      "--reporter=default",
+      "--reporter=json",
+      "--outputFile.json=/workspace/harness-agent/.ci/agent-next-20261004/wire-expectation-correction/green-vitest.json"
+    ],
+    "exitCode": 0,
+    "durationSeconds": 4.357,
+    "paidProviderCalls": 0,
+    "buildOrFullRun": false
+  },
+  "testAfterSha256": "9c72d7e940583ce7498a95fab5c82a02f8604ace768f3d917455333046527e33",
+  "greenArtifacts": {
+    "green-console.log": {
+      "bytes": 1040,
+      "sha256": "3f05fd6ccd7c4a3fa39ca3c69304b88426b7b0f2a3eca3b160a7728f1924fb61"
+    },
+    "green-vitest.json": {
+      "bytes": 50921,
+      "sha256": "4662bc47850c6211c22777d8633326ef03967e8aca3160d13158e7269b0a5015"
+    }
+  },
+  "greenCounts": {
+    "numTotalTests": 132,
+    "numPassedTests": 132,
+    "numFailedTests": 0,
+    "numPendingTests": 0,
+    "success": true
+  },
+  "files": [
+    {
+      "name": "/workspace/harness-agent/packages/model/src/capability-resolver.test.ts",
+      "status": "passed",
+      "tests": 6
+    },
+    {
+      "name": "/workspace/harness-agent/packages/model/src/model.test.ts",
+      "status": "passed",
+      "tests": 9
+    },
+    {
+      "name": "/workspace/harness-agent/packages/model/src/openai-request-policy.test.ts",
+      "status": "passed",
+      "tests": 7
+    },
+    {
+      "name": "/workspace/harness-agent/packages/model/src/openai-system-context.regressions.test.ts",
+      "status": "passed",
+      "tests": 13
+    },
+    {
+      "name": "/workspace/harness-agent/packages/model/src/openai-termination-regressions.test.ts",
+      "status": "passed",
+      "tests": 19
+    },
+    {
+      "name": "/workspace/harness-agent/packages/model/src/openai.test.ts",
+      "status": "passed",
+      "tests": 40
+    },
+    {
+      "name": "/workspace/harness-agent/packages/model/src/openai.wire-stub.test.ts",
+      "status": "passed",
+      "tests": 22
+    },
+    {
+      "name": "/workspace/harness-agent/packages/model/src/provider-diagnostics.test.ts",
+      "status": "passed",
+      "tests": 8
+    },
+    {
+      "name": "/workspace/harness-agent/packages/core/src/runtime/wire-protocol-e2e.test.ts",
+      "status": "passed",
+      "tests": 8
+    }
+  ],
+  "completedAt": "2026-10-05T00:37:20.721627+00:00",
+  "diffCheckExitCode": 0,
+  "correctionDiffSha256": "77132126951d02c633ff5fb2e6bfde3f7088c0167eb44593027ad6caa8067e8f",
+  "scope": "Only packages/core/src/runtime/wire-protocol-e2e.test.ts tracked mutation; no production source edits, no build, no full run, no commit.",
+  "lineEndingsAfter": "LF"
+}

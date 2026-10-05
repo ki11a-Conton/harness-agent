@@ -1,0 +1,52 @@
+{
+  "status": "DETERMINISTIC_SYSTEM_FIELD_DROP_OBSERVED",
+  "sourceSha": "18f162bf7f12c4b8e8cebcebede4034dd1f3efb7",
+  "paidCalls": 0,
+  "externalModelQuality": "NOT_RUN",
+  "minimalEnvironment": true,
+  "endpoint": "loopback-only",
+  "cases": [
+    {
+      "index": 0,
+      "requestSystemProvided": true,
+      "requestSystemOnWire": false,
+      "historySystemOnWire": false,
+      "completed": true
+    },
+    {
+      "index": 1,
+      "requestSystemProvided": true,
+      "requestSystemOnWire": false,
+      "historySystemOnWire": true,
+      "completed": true
+    },
+    {
+      "index": 2,
+      "requestSystemProvided": false,
+      "requestSystemOnWire": false,
+      "historySystemOnWire": true,
+      "completed": true
+    },
+    {
+      "index": 3,
+      "requestSystemProvided": true,
+      "requestSystemOnWire": false,
+      "historySystemOnWire": false,
+      "completed": true
+    },
+    {
+      "index": 4,
+      "requestSystemProvided": false,
+      "requestSystemOnWire": false,
+      "historySystemOnWire": false,
+      "completed": true
+    }
+  ],
+  "sourceFingerprints": {
+    "packages/model/src/openai.ts": "a3b12a1677711843a90d3299be6136432e7c18c635d3045121750913600d6319",
+    "packages/model/dist/openai.js": "a2f84104e560443ba6522673ad46d926f953fff2c53c694edd77ea78b8a2906e",
+    "packages/contracts/src/model.ts": "9db29ab4aa47a76f25d255d04905d12b4ec1b50ad7672387c11d34656e292fd3"
+  },
+  "probeSha256": "11e2f834d51d642ebc1d3fc6ebbf526ccff8f951f89a6abb4988ac23b8a5d7fe",
+  "nodeProbeSha256": "dcde81762370182ce977efcee116a327cd188c75a3c55094c53271bbfe4e2029"
+}

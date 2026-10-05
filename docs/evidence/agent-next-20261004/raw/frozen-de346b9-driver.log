@@ -1,0 +1,36 @@
+START typecheck
+END typecheck 0 0.805 []
+START build
+END build 0 0.537 []
+START new-regressions
+END new-regressions 0 1.68 ['Test Files  3 passed (3)', 'Tests  63 passed (63)', 'Duration  995ms (transform 309ms, setup 0ms, import 504ms, tests 154ms, environment 0ms)']
+START wire-e2e-regressions
+END wire-e2e-regressions 0 1.561 ['Test Files  1 passed (1)', 'Tests  8 passed (8)', 'Duration  816ms (transform 439ms, setup 0ms, import 583ms, tests 109ms, environment 0ms)']
+START provider-production
+END provider-production 0 1.733 []
+START memory-differential
+END memory-differential 0 1.988 []
+START memory-paired-performance
+END memory-paired-performance 0 16.22 []
+START memory-harness
+END memory-harness 0 2.505 []
+START navigation-production
+END navigation-production 0 0.115 []
+START joint-browser
+END joint-browser 0 15.867 []
+START security
+END security 0 5.215 ['Test Files  19 passed (19)', 'Tests  2135 passed (2135)', 'Duration  4.54s (transform 382ms, setup 0ms, import 981ms, tests 1.49s, environment 1ms)']
+START docs-verify
+END docs-verify 0 0.626 []
+START full
+END full 0 649.593 ['Test Files  459 passed | 1 skipped (460)', 'Tests  8484 passed | 12 skipped (8496)', 'Duration  648.65s (transform 7.52s, setup 0ms, import 48.60s, tests 548.55s, environment 36ms)', '[review supervisor] command exit=0; reaped orphan descendants=70']
+START usage-audit
+END usage-audit 0 0.389 []
+START web-artifact-integrity
+END web-artifact-integrity 0 0.056 []
+START context-memory-artifact-integrity
+END context-memory-artifact-integrity 0 0.098 []
+START web-recheck-artifact-integrity
+END web-recheck-artifact-integrity 0 0.059 []
+START diff-check
+END diff-check 0 0.005 []

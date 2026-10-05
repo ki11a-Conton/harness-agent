@@ -1,0 +1,53 @@
+{
+  "schema": "R2_SQLITE_WARM_FOLLOWUP_ATTRIBUTION_REVIEW",
+  "reviewedAt": "2026-10-05T00:52:06.229772+00:00",
+  "sourceHead": "de346b90dcbf97c9591ae2786e46e80fd0a4e05c",
+  "sourceClean": true,
+  "measurementIntegrity": "PASS",
+  "formalReportSha256": "30a0db48b0b306efa83c60c4d43c5507701f4d68a9575cda28fd9807db6c622e",
+  "followupReportSha256": "2dae3657efebba9e6d0eb22d85e806c0bc945c5dc54e8a3bff115b0fa19a70d7",
+  "recipeSha256": "534527564783bc325b09b8fdfa1e8835f411fca848b3de7c510990fd1f9d0904",
+  "probeSha256": "eb45a35b1cf32de76cd4ac7b26041fe715d9eb1cdcde008d62f316daba04bb98",
+  "originalFormalObservation": {
+    "baselineMedianMs": 66.17538799999966,
+    "candidateMedianMs": 73.14820099999997,
+    "ratio": 1.1053686757378793,
+    "candidateSlowerPairs": 4,
+    "pairCount": 5,
+    "retained": true
+  },
+  "followupFull": {
+    "baselineMedianMs": 66.46716199999992,
+    "candidateMedianMs": 66.743289,
+    "ratio": 1.0041543371447104,
+    "pairedMedianDifferenceMs": -1.1038789999993242,
+    "candidateSlowerPairs": 6,
+    "pairCount": 15
+  },
+  "identicalSearchControl": {
+    "ratio": 0.9966294568816559,
+    "pairedMedianDifferenceMs": 5.3608989999993355,
+    "pairedMinDifferenceMs": -16.536074000000553,
+    "pairedMaxDifferenceMs": 14.102351999999883,
+    "candidateSlowerPairs": 8
+  },
+  "postSearchDiagnostic": {
+    "baselineMedianMs": 5.869198000000324,
+    "candidateMedianMs": 4.9796819999992294,
+    "ratio": 0.8484433477962329,
+    "pairedMedianDifferenceMs": -0.7156019999993077,
+    "candidateSlowerPairs": 3
+  },
+  "findings": [
+    "Original 5-pair +10.54% warm observation is preserved and remains true for that sample.",
+    "Follow-up full retrieval has +0.415% ratio of medians, -1.104ms median paired difference and only 6/15 slower pairs; the preregistered material-regression rule is false.",
+    "Identical production store.search A/A calls have paired differences from -16.536ms to +14.102ms and +5.361ms median paired difference despite performing exactly the same code. This establishes scan/ordering/runtime variation at the original-effect scale, rather than merely assuming it.",
+    "Post-search-only old/candidate retrieval on identical actual hit rows improves median from5.869 to4.980ms (ratio0.848), with candidate faster in12/15 pairs. This does not reproduce a deterministic CPU cost regression in the changed dedup path.",
+    "SQLite search still dominates the warm full-retrieval cost and its O(n) supplement remains unchanged. No warm end-to-end speedup or universal nonregression is claimed.",
+    "Exact scheduler/GC/scan contribution to the original 5 pairs is not directly measured; causal certainty is limited."
+  ],
+  "decision": "NO_REPRODUCED_MATERIAL_WARM_REGRESSION_IN_FOLLOWUP; NON_BLOCKING_FOR_R2_WITH_ORIGINAL_AND_CONTROLLED_RESULTS_DISCLOSED",
+  "formalChineseAcceptance": "UNCHANGED",
+  "realModelQuality": "NOT_RUN",
+  "paidCalls": 0
+}

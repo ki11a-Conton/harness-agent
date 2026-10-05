@@ -1,0 +1,185 @@
+{
+  "schema": "AGENT_NEXT_MEMORY_READONLY_AUDIT",
+  "status": "PASS",
+  "observedAt": "2026-10-04T13:21:52.614241+00:00",
+  "baselineHead": "18f162bf7f12c4b8e8cebcebede4034dd1f3efb7",
+  "baselineSourceClean": true,
+  "baselineSourceUnchanged": true,
+  "fixtureSha256": "1d6be9ccf0eb0205ad5aefb65be1e203fbd9db481281647ec0d929b9697b2081",
+  "existingFixedProbeSha256": "7e4d7584d3b91909123d1f5dfebbdea814df237b871e16054b87f1ba78820c28",
+  "auditWritesConfinedToIgnoredDirectory": true,
+  "productionOrTrackedCodeChangedByAudit": false,
+  "measuredRegression": {
+    "sqliteWarmSearchMedianMs": 67.5391709999999,
+    "sqliteMissSearchMedianMs": 56.52404900000056,
+    "chineseFullRetrievalMs": {
+      "jsonl": 628.896046,
+      "sqlite": 594.7393940000002
+    },
+    "rootCause": "Dedup repeatedly tokenizes retained memory content inside each pair comparison; Chinese fixed fixture has 2000 disjoint numeric token sets and keeps all candidates before final TopK."
+  },
+  "selectedCandidate": {
+    "strategy": "cache-only per retrieve call",
+    "decisionBy": "root",
+    "implementation": "Store each retained candidate with tokens computed once; compare exactly the same Jaccard in same kept order. Final items remain kept.slice(0,k); conflict suppression still considers every kept memory even beyond k. Cache discarded between calls.",
+    "formalTargets": [
+      "ScoredN candidates incur at most N content tokenizations",
+      "Same10k fixture two backend Chinese total retrieval paired median at least50% less than baseline",
+      "All full items including every score and suppressed rows/reasons/order equal frozen baseline reference",
+      "No changes to SQLite/JSONL search or FTS order, scope/session/safety/lifecycle/minScore/TopK gates"
+    ],
+    "scopeExcluded": [
+      "SQL scan optimization",
+      "cross-call cache",
+      "token policy or Chinese dedup policy change",
+      "inverted index production adoption"
+    ]
+  },
+  "alternatives": {
+    "cacheOnly": {
+      "eightActualStoreCasesFullResultEquivalent": true,
+      "pairedChineseMedianMs": [
+        {
+          "backend": "jsonl",
+          "baseline": 558.6962510000003,
+          "candidate": 76.24108399999977,
+          "ratio": 0.1364624943581369
+        },
+        {
+          "backend": "sqlite",
+          "baseline": 589.5900199999996,
+          "candidate": 94.05320500000016,
+          "ratio": 0.15952306146566086
+        }
+      ]
+    },
+    "invertedIndex": {
+      "prototypeOnly": true,
+      "notSelected": "Local postings plus dense fallback are semantically correct on explored controls and faster for sparse pairs, but add state/branch complexity. Root selected smaller cache-only change which already exceeds prereg intended performance threshold.",
+      "risk": "Worst-case pair comparisons remain quadratic; index overhead and new collection allocations. No universal linear-time claim."
+    }
+  },
+  "deterministic2000DisjointWork": {
+    "baseline": {
+      "tokenizations": 2001000,
+      "pairComparisons": 1999000
+    },
+    "cache": {
+      "tokenizations": 2000,
+      "pairComparisons": 1999000
+    },
+    "indexed": {
+      "tokenizations": 2000,
+      "pairComparisons": 0
+    }
+  },
+  "limitations": [
+    "Engineering fixtures with0 paid or real model calls; no model-quality claim",
+    "Retained token cache adds memory proportional to retained content tokens",
+    "Pair comparisons still O(n²) in disjoint/common-token worst case; only repeated tokenization removed",
+    "SQLite literal supplement O(n) JS scan/search costs unchanged",
+    "Initial index+stress exploratory timings overlapped and are explicitly annotated; sequential receipts preserved separately"
+  ],
+  "evidence": [
+    {
+      "path": "baseline-18f162b/report.json",
+      "bytes": 8940,
+      "sha256": "4f9cf35a0b968d4649bb2d6d7db76804dac81714c51d225545030753997ad4a8"
+    },
+    {
+      "path": "baseline-18f162b/console.log",
+      "bytes": 4285,
+      "sha256": "495756a3047f014c96901035140ea9fba59f53f1749b8c918e486f14df8260ab"
+    },
+    {
+      "path": "paired-retrieval-prototype.mjs",
+      "bytes": 4222,
+      "sha256": "76a6ff8c10c0d7f77f5d252bbab91de8d8ec814b75d67e80aa9ac622290c47e4"
+    },
+    {
+      "path": "paired-retrieval-prototype.json",
+      "bytes": 7506,
+      "sha256": "3350ea5d536493a76da98d056139d880bbe9e48beac17ad0c49f4211c4a14759"
+    },
+    {
+      "path": "paired-retrieval-prototype.log",
+      "bytes": 1817,
+      "sha256": "175ca6967a27b81b2428282314c3afbf6a10dceae7c791d5733b5a9cc3ac53b4"
+    },
+    {
+      "path": "retrieval-cache-tokens.mjs",
+      "bytes": 6977,
+      "sha256": "3c2ff472197289b89c7eb81ee0f020cb9601096be2369a8d77c989920d006b79"
+    },
+    {
+      "path": "retrieval-indexed-tokens.mjs",
+      "bytes": 7960,
+      "sha256": "5c934d119e00d9a4224e4ed9eec382469ef27784f7cabb8748b61270a5b14d6e"
+    },
+    {
+      "path": "retrieval-stress-prototypes.mjs",
+      "bytes": 4641,
+      "sha256": "7698ca5a1c3beb1d299f9279a16857bbc39a5a9292fcc47d694dd379b116f4f4"
+    },
+    {
+      "path": "retrieval-stress-prototypes.json",
+      "bytes": 8663,
+      "sha256": "401314931f878dc731487a887505f580e9ca81275bcbb251e51db380aac97b08"
+    },
+    {
+      "path": "retrieval-stress-prototypes.log",
+      "bytes": 2640,
+      "sha256": "309b6b71fa75c42c6848d997e2fd96eb055e218402eb771aad987fb4edcbed91"
+    },
+    {
+      "path": "retrieval-stress-prototypes-sequential.mjs",
+      "bytes": 4652,
+      "sha256": "c448ef8bf96cac8819c8cbbe05744909bd494cf203db4c530a6414247a7d440e"
+    },
+    {
+      "path": "retrieval-stress-prototypes-sequential.json",
+      "bytes": 8656,
+      "sha256": "5603e8f6ce5d2d2a0ba515e653793237b2cde087a96d11c8550eda983c924522"
+    },
+    {
+      "path": "retrieval-stress-prototypes-sequential.log",
+      "bytes": 2642,
+      "sha256": "d90799de34eec735f072356d69d5b2c0c2beebaabc3823d7488efd784f3c0540"
+    },
+    {
+      "path": "prototype-initial-concurrency-note.json",
+      "bytes": 466,
+      "sha256": "719d98915480b49433545e4ddac3cf1b7403f13913f31e3b232cc588bacad548"
+    },
+    {
+      "path": "paired-retrieval-indexed-prototype.mjs",
+      "bytes": 4234,
+      "sha256": "e85dfda4e1be3d6ab094999d711959abf10284019ee5ac3a73936781609566a1"
+    },
+    {
+      "path": "paired-retrieval-indexed-prototype.json",
+      "bytes": 7525,
+      "sha256": "a830d6ee1ad599988c2a74842e48f752abd557a3f8d4cdc96c86fd202f904d6e"
+    },
+    {
+      "path": "paired-retrieval-indexed-prototype.log",
+      "bytes": 1821,
+      "sha256": "cc55af1c122f789eb0c1cc6726420cf2bf483deb5453f0f61b0d7a9f1c9b12b0"
+    },
+    {
+      "path": "paired-retrieval-indexed-prototype-sequential.mjs",
+      "bytes": 4245,
+      "sha256": "c04332fe9bbbc88a4f5693e11bbe49a66849a7ab1e6a6d6c2ad343a9b771dc41"
+    },
+    {
+      "path": "paired-retrieval-indexed-prototype-sequential.json",
+      "bytes": 7524,
+      "sha256": "cf35e703447ae0b7bd2a778370016a03b667fe2ab60df59cbb26725d61877ab8"
+    },
+    {
+      "path": "paired-retrieval-indexed-prototype-sequential.log",
+      "bytes": 1816,
+      "sha256": "3a0e2e3244470f92cb0f5c809d37d6b9c6dc4ae17b9f73d3d35671bae215bdf8"
+    }
+  ]
+}

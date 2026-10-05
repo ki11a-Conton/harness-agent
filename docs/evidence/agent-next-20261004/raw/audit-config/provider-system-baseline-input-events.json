@@ -1,0 +1,114 @@
+[
+  {
+    "request": {
+      "system": "SYSTEM_FIELD_MARKER",
+      "messages": [
+        {
+          "id": "message_fixture",
+          "sessionId": "session_fixture",
+          "role": "user",
+          "content": "USER_MARKER",
+          "createdAt": 0
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "started",
+        "timestamp": 1791119892523
+      },
+      {
+        "type": "text_delta",
+        "text": "LOCAL_DONE",
+        "timestamp": 1791119892564
+      },
+      {
+        "type": "completed",
+        "result": {
+          "finishReason": "stop",
+          "text": "LOCAL_DONE"
+        },
+        "timestamp": 1791119892564
+      }
+    ]
+  },
+  {
+    "request": {
+      "system": "SYSTEM_FIELD_MARKER",
+      "messages": [
+        {
+          "id": "message_fixture",
+          "sessionId": "session_fixture",
+          "role": "system",
+          "content": "HISTORY_SYSTEM_MARKER",
+          "createdAt": 0
+        },
+        {
+          "id": "message_fixture",
+          "sessionId": "session_fixture",
+          "role": "user",
+          "content": "USER_MARKER",
+          "createdAt": 0
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "started",
+        "timestamp": 1791119892564
+      },
+      {
+        "type": "text_delta",
+        "text": "LOCAL_DONE",
+        "timestamp": 1791119892570
+      },
+      {
+        "type": "completed",
+        "result": {
+          "finishReason": "stop",
+          "text": "LOCAL_DONE"
+        },
+        "timestamp": 1791119892570
+      }
+    ]
+  },
+  {
+    "request": {
+      "messages": [
+        {
+          "id": "message_fixture",
+          "sessionId": "session_fixture",
+          "role": "system",
+          "content": "HISTORY_SYSTEM_MARKER",
+          "createdAt": 0
+        },
+        {
+          "id": "message_fixture",
+          "sessionId": "session_fixture",
+          "role": "user",
+          "content": "USER_MARKER",
+          "createdAt": 0
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "started",
+        "timestamp": 1791119892570
+      },
+      {
+        "type": "text_delta",
+        "text": "LOCAL_DONE",
+        "timestamp": 1791119892572
+      },
+      {
+        "type": "completed",
+        "result": {
+          "finishReason": "stop",
+          "text": "LOCAL_DONE"
+        },
+        "timestamp": 1791119892572
+      }
+    ]
+  }
+]

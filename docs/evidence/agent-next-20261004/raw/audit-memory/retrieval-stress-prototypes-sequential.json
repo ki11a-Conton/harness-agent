@@ -1,0 +1,319 @@
+{
+  "status": "PASS",
+  "prototypeOnly": true,
+  "trackedOrProductionModified": false,
+  "fixedNow": 1791000000000,
+  "paidCalls": 0,
+  "realProviderCalls": 0,
+  "fixtureMode": "Mock MemoryStore.search returns identical fully persisted MemoryEntry hits; isolates retrieval work",
+  "warmupsPerVariant": 2,
+  "measuredSamplesPerVariant": 5,
+  "cases": [
+    {
+      "name": "disjoint-2000",
+      "rowCount": 2000,
+      "fixtureSha256": "38dde9d5c1d0560431645807b549016487db18ace96cb81f3f077dc3e9c62984",
+      "expectedResultSha256": "3e78deb57ea9ff4b30f5dfb233518bec3795ce30228a8082e5413cbe3f9271f3",
+      "fullResultEquivalent": true,
+      "returned": [
+        "stress-memory-0",
+        "stress-memory-1",
+        "stress-memory-2",
+        "stress-memory-3",
+        "stress-memory-4"
+      ],
+      "suppressed": 0,
+      "work": {
+        "baseline": {
+          "tokenizations": 2001000,
+          "pairComparisons": 1999000
+        },
+        "cache": {
+          "tokenizations": 2000,
+          "pairComparisons": 1999000
+        },
+        "indexed": {
+          "tokenizations": 2000,
+          "pairComparisons": 0
+        }
+      },
+      "timing": {
+        "baseline": {
+          "samplesMs": [
+            416.9412510000002,
+            419.1854659999999,
+            415.30062,
+            443.56312000000025,
+            447.55408700000044
+          ],
+          "medianMs": 419.1854659999999
+        },
+        "cache": {
+          "samplesMs": [
+            42.801782,
+            40.430585000000065,
+            34.791915999999674,
+            49.32790299999988,
+            40.429212999999436
+          ],
+          "medianMs": 40.430585000000065
+        },
+        "indexed": {
+          "samplesMs": [
+            5.254077000000052,
+            5.620210999999927,
+            7.666165999999976,
+            7.844955999999911,
+            8.356190000000424
+          ],
+          "medianMs": 7.666165999999976
+        }
+      }
+    },
+    {
+      "name": "partially-common-2000",
+      "rowCount": 2000,
+      "fixtureSha256": "e82849675872fd511504633564fbdd413e0a4d139f305002684bdbbe09bded63",
+      "expectedResultSha256": "dce6747bd54b8716bc70338fd30b7eabedecdbfbfa946e9a73939c45ba4e4807",
+      "fullResultEquivalent": true,
+      "returned": [
+        "stress-memory-0",
+        "stress-memory-1",
+        "stress-memory-2",
+        "stress-memory-3",
+        "stress-memory-4"
+      ],
+      "suppressed": 0,
+      "work": {
+        "baseline": {
+          "tokenizations": 2001000,
+          "pairComparisons": 1999000
+        },
+        "cache": {
+          "tokenizations": 2000,
+          "pairComparisons": 1999000
+        },
+        "indexed": {
+          "tokenizations": 2000,
+          "pairComparisons": 9000
+        }
+      },
+      "timing": {
+        "baseline": {
+          "samplesMs": [
+            477.96775999999954,
+            484.57592399999976,
+            511.03159100000084,
+            497.92937299999903,
+            483.9323800000002
+          ],
+          "medianMs": 484.57592399999976
+        },
+        "cache": {
+          "samplesMs": [
+            60.832604000000174,
+            60.93902600000001,
+            64.70071500000086,
+            66.01519299999927,
+            65.80908199999976
+          ],
+          "medianMs": 64.70071500000086
+        },
+        "indexed": {
+          "samplesMs": [
+            8.240404000000126,
+            7.515567999999803,
+            6.714716000000408,
+            7.5476159999998345,
+            6.8223589999997785
+          ],
+          "medianMs": 7.515567999999803
+        }
+      }
+    },
+    {
+      "name": "worst-common-2000",
+      "rowCount": 2000,
+      "fixtureSha256": "6446c2ae0d8d0cb7856fd734e568727e6bd74ccbe5c76122309373102e343e4d",
+      "expectedResultSha256": "cee565c1ed4be2912546af9f9bb07e375f5974cb2b95c5c2e4581597dcccb79e",
+      "fullResultEquivalent": true,
+      "returned": [
+        "stress-memory-0",
+        "stress-memory-1",
+        "stress-memory-2",
+        "stress-memory-3",
+        "stress-memory-4"
+      ],
+      "suppressed": 0,
+      "work": {
+        "baseline": {
+          "tokenizations": 2001000,
+          "pairComparisons": 1999000
+        },
+        "cache": {
+          "tokenizations": 2000,
+          "pairComparisons": 1999000
+        },
+        "indexed": {
+          "tokenizations": 2000,
+          "pairComparisons": 1999000
+        }
+      },
+      "timing": {
+        "baseline": {
+          "samplesMs": [
+            470.73697600000014,
+            455.84086000000025,
+            458.16829999999936,
+            467.160973,
+            468.584245
+          ],
+          "medianMs": 467.160973
+        },
+        "cache": {
+          "samplesMs": [
+            64.47049700000025,
+            70.58483500000148,
+            67.13885300000038,
+            66.17424499999834,
+            70.26726600000075
+          ],
+          "medianMs": 67.13885300000038
+        },
+        "indexed": {
+          "samplesMs": [
+            88.45083999999952,
+            71.7682560000012,
+            66.61406999999963,
+            69.72255199999927,
+            72.02842000000055
+          ],
+          "medianMs": 71.7682560000012
+        }
+      }
+    },
+    {
+      "name": "dense-conflicts-2000",
+      "rowCount": 2000,
+      "fixtureSha256": "b682895a4e318b1bdcfb789d885f915e312137f9afaaaa9b804e4921c02f20d4",
+      "expectedResultSha256": "77c78e0ca9e51529293ac411dbfe7e99f1870e0e86597302ad0c1e11cce85b26",
+      "fullResultEquivalent": true,
+      "returned": [
+        "stress-memory-0"
+      ],
+      "suppressed": 1999,
+      "work": {
+        "baseline": {
+          "tokenizations": 3999,
+          "pairComparisons": 1999
+        },
+        "cache": {
+          "tokenizations": 2000,
+          "pairComparisons": 1999
+        },
+        "indexed": {
+          "tokenizations": 2000,
+          "pairComparisons": 1999
+        }
+      },
+      "timing": {
+        "baseline": {
+          "samplesMs": [
+            6.0087189999994735,
+            5.752431999999317,
+            6.324106000000029,
+            5.846293000000514,
+            5.825823000001037
+          ],
+          "medianMs": 5.846293000000514
+        },
+        "cache": {
+          "samplesMs": [
+            5.3430219999991095,
+            5.021505999999135,
+            5.229499999999462,
+            5.5653480000000854,
+            5.705410000000484
+          ],
+          "medianMs": 5.3430219999991095
+        },
+        "indexed": {
+          "samplesMs": [
+            5.303100999999515,
+            8.156879000000117,
+            4.927021999999852,
+            9.807033999999476,
+            5.186125000000175
+          ],
+          "medianMs": 5.303100999999515
+        }
+      }
+    },
+    {
+      "name": "nontransitive-and-gates",
+      "rowCount": 10,
+      "fixtureSha256": "5a8b928b89605633f677b56f256041f2074e90325f1676afe158b9962a204338",
+      "expectedResultSha256": "077120456bf763fbd9f5874ae37385cd6dcc4edac8e1d04ba255b457a6a90b53",
+      "fullResultEquivalent": true,
+      "returned": [
+        "stress-memory-0",
+        "stress-memory-2",
+        "stress-memory-3",
+        "stress-memory-4",
+        "stress-memory-8"
+      ],
+      "suppressed": 5,
+      "work": {
+        "baseline": {
+          "tokenizations": 17,
+          "pairComparisons": 11
+        },
+        "cache": {
+          "tokenizations": 6,
+          "pairComparisons": 11
+        },
+        "indexed": {
+          "tokenizations": 6,
+          "pairComparisons": 2
+        }
+      },
+      "timing": {
+        "baseline": {
+          "samplesMs": [
+            0.030215000000680448,
+            0.07200899999952526,
+            0.107081999998627,
+            0.059449999998832936,
+            0.16402799999923445
+          ],
+          "medianMs": 0.07200899999952526
+        },
+        "cache": {
+          "samplesMs": [
+            0.06921500000134984,
+            0.06971599999997125,
+            0.07029599999987113,
+            0.06107300000076066,
+            0.0668310000000929
+          ],
+          "medianMs": 0.06921500000134984
+        },
+        "indexed": {
+          "samplesMs": [
+            0.07781800000157091,
+            0.0799910000005184,
+            0.07617500000014843,
+            0.07267999999930908,
+            0.07303999999930966
+          ],
+          "medianMs": 0.07617500000014843
+        }
+      }
+    }
+  ],
+  "variantSha256": {
+    "baseline": "642e15428ffcb008e68d6448d5465555477c17f20888b6bf4d76e483eab709d6",
+    "cache": "3c2ff472197289b89c7eb81ee0f020cb9601096be2369a8d77c989920d006b79",
+    "indexed": "5c934d119e00d9a4224e4ed9eec382469ef27784f7cabb8748b61270a5b14d6e"
+  }
+}

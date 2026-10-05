@@ -1,0 +1,70 @@
+{
+  "status": "PASS",
+  "prototypeOnly": true,
+  "cases": [
+    {
+      "backend": "jsonl",
+      "name": "warm-fts",
+      "fullResultEquivalent": true,
+      "baselineMs": 39.51640299999997,
+      "prototypeMs": 39.31089200000008,
+      "ratio": 0.9947993495258187
+    },
+    {
+      "backend": "jsonl",
+      "name": "chinese-substring",
+      "fullResultEquivalent": true,
+      "baselineMs": 558.6962510000003,
+      "prototypeMs": 76.24108399999977,
+      "ratio": 0.1364624943581369
+    },
+    {
+      "backend": "jsonl",
+      "name": "structured-do",
+      "fullResultEquivalent": true,
+      "baselineMs": 48.624840000000404,
+      "prototypeMs": 46.63931700000012,
+      "ratio": 0.959166487745764
+    },
+    {
+      "backend": "jsonl",
+      "name": "actual-miss",
+      "fullResultEquivalent": true,
+      "baselineMs": 32.772061000000576,
+      "prototypeMs": 31.85345099999995,
+      "ratio": 0.9719697214038321
+    },
+    {
+      "backend": "sqlite",
+      "name": "warm-fts",
+      "fullResultEquivalent": true,
+      "baselineMs": 68.95570299999963,
+      "prototypeMs": 69.35179199999948,
+      "ratio": 1.005744107923892
+    },
+    {
+      "backend": "sqlite",
+      "name": "chinese-substring",
+      "fullResultEquivalent": true,
+      "baselineMs": 589.5900199999996,
+      "prototypeMs": 94.05320500000016,
+      "ratio": 0.15952306146566086
+    },
+    {
+      "backend": "sqlite",
+      "name": "structured-do",
+      "fullResultEquivalent": true,
+      "baselineMs": 71.57589100000041,
+      "prototypeMs": 71.52929600000061,
+      "ratio": 0.9993490126444979
+    },
+    {
+      "backend": "sqlite",
+      "name": "actual-miss",
+      "fullResultEquivalent": true,
+      "baselineMs": 56.20576799999981,
+      "prototypeMs": 53.865647999999055,
+      "ratio": 0.9583651272232281
+    }
+  ]
+}

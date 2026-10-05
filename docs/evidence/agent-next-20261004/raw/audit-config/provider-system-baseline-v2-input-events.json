@@ -1,0 +1,179 @@
+[
+  {
+    "request": {
+      "system": "TOPLEVEL_SYSTEM_\u4e2d\u6587marker",
+      "messages": [
+        {
+          "id": "message_fixture",
+          "sessionId": "session_fixture",
+          "role": "user",
+          "content": "USER_MARKER",
+          "createdAt": 0
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "started",
+        "timestamp": 1791119914264
+      },
+      {
+        "type": "text_delta",
+        "text": "LOCAL_DONE",
+        "timestamp": 1791119914362
+      },
+      {
+        "type": "completed",
+        "result": {
+          "finishReason": "stop",
+          "text": "LOCAL_DONE"
+        },
+        "timestamp": 1791119914362
+      }
+    ]
+  },
+  {
+    "request": {
+      "system": "TOPLEVEL_SYSTEM_\u4e2d\u6587marker",
+      "messages": [
+        {
+          "id": "message_fixture",
+          "sessionId": "session_fixture",
+          "role": "system",
+          "content": "HISTORY_SYSTEM_MARKER",
+          "createdAt": 0
+        },
+        {
+          "id": "message_fixture",
+          "sessionId": "session_fixture",
+          "role": "user",
+          "content": "USER_MARKER",
+          "createdAt": 0
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "started",
+        "timestamp": 1791119914362
+      },
+      {
+        "type": "text_delta",
+        "text": "LOCAL_DONE",
+        "timestamp": 1791119914370
+      },
+      {
+        "type": "completed",
+        "result": {
+          "finishReason": "stop",
+          "text": "LOCAL_DONE"
+        },
+        "timestamp": 1791119914370
+      }
+    ]
+  },
+  {
+    "request": {
+      "messages": [
+        {
+          "id": "message_fixture",
+          "sessionId": "session_fixture",
+          "role": "system",
+          "content": "HISTORY_SYSTEM_MARKER",
+          "createdAt": 0
+        },
+        {
+          "id": "message_fixture",
+          "sessionId": "session_fixture",
+          "role": "user",
+          "content": "USER_MARKER",
+          "createdAt": 0
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "started",
+        "timestamp": 1791119914370
+      },
+      {
+        "type": "text_delta",
+        "text": "LOCAL_DONE",
+        "timestamp": 1791119914375
+      },
+      {
+        "type": "completed",
+        "result": {
+          "finishReason": "stop",
+          "text": "LOCAL_DONE"
+        },
+        "timestamp": 1791119914375
+      }
+    ]
+  },
+  {
+    "request": {
+      "system": "",
+      "messages": [
+        {
+          "id": "message_fixture",
+          "sessionId": "session_fixture",
+          "role": "user",
+          "content": "USER_MARKER",
+          "createdAt": 0
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "started",
+        "timestamp": 1791119914375
+      },
+      {
+        "type": "text_delta",
+        "text": "LOCAL_DONE",
+        "timestamp": 1791119914378
+      },
+      {
+        "type": "completed",
+        "result": {
+          "finishReason": "stop",
+          "text": "LOCAL_DONE"
+        },
+        "timestamp": 1791119914378
+      }
+    ]
+  },
+  {
+    "request": {
+      "messages": [
+        {
+          "id": "message_fixture",
+          "sessionId": "session_fixture",
+          "role": "user",
+          "content": "USER_MARKER",
+          "createdAt": 0
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "started",
+        "timestamp": 1791119914378
+      },
+      {
+        "type": "text_delta",
+        "text": "LOCAL_DONE",
+        "timestamp": 1791119914384
+      },
+      {
+        "type": "completed",
+        "result": {
+          "finishReason": "stop",
+          "text": "LOCAL_DONE"
+        },
+        "timestamp": 1791119914384
+      }
+    ]
+  }
+]

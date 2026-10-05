@@ -1,0 +1,270 @@
+{
+  "status": "PASS",
+  "observedAt": "2026-10-04T13:18:19.489Z",
+  "sourceHead": "18f162bf7f12c4b8e8cebcebede4034dd1f3efb7",
+  "prototypeOnly": true,
+  "trackedOrProductionModified": false,
+  "prototypeSha256": "5c934d119e00d9a4224e4ed9eec382469ef27784f7cabb8748b61270a5b14d6e",
+  "fixtureSha256": "1d6be9ccf0eb0205ad5aefb65be1e203fbd9db481281647ec0d929b9697b2081",
+  "fixtureSource": "actual existing baseline 10000-row stores",
+  "fixedNow": 1791000000000,
+  "warmupsPerImplementation": 2,
+  "measuredSamplesPerImplementation": 5,
+  "order": "AB/BA alternation for every paired sample",
+  "realProviderCalls": 0,
+  "paidCalls": 0,
+  "modelQuality": "NOT_RUN",
+  "cases": [
+    {
+      "backend": "jsonl",
+      "name": "warm-fts",
+      "query": "retry",
+      "totalCalls": 14,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+      "returnedTopK": 1,
+      "suppressedCount": 1999,
+      "baseline": {
+        "samplesMs": [
+          41.71181200000001,
+          42.112258,
+          48.022477000000094,
+          49.10741800000005,
+          43.309739000000036
+        ],
+        "medianMs": 43.309739000000036
+      },
+      "prototype": {
+        "samplesMs": [
+          57.20693,
+          48.55779799999999,
+          47.393966999999975,
+          45.4346129999999,
+          46.00326299999995
+        ],
+        "medianMs": 47.393966999999975
+      },
+      "ratio": 1.0943027617875956
+    },
+    {
+      "backend": "jsonl",
+      "name": "chinese-substring",
+      "query": "端口配置",
+      "totalCalls": 14,
+      "fullResultEquivalent": true,
+      "resultSha256": "842b4a39fed51a4db1e7ddee3536114d20a16466531d1ad78ed72c1f19fcfeef",
+      "returnedTopK": 5,
+      "suppressedCount": 0,
+      "baseline": {
+        "samplesMs": [
+          595.9702359999997,
+          572.0501100000001,
+          583.0354399999997,
+          555.3887370000002,
+          572.0489470000002
+        ],
+        "medianMs": 572.0501100000001
+      },
+      "prototype": {
+        "samplesMs": [
+          41.53048800000033,
+          49.524938999999904,
+          39.14793499999996,
+          37.5368780000008,
+          37.746085000000676
+        ],
+        "medianMs": 39.14793499999996
+      },
+      "ratio": 0.06843445061132836
+    },
+    {
+      "backend": "jsonl",
+      "name": "structured-do",
+      "query": "portlint",
+      "totalCalls": 14,
+      "fullResultEquivalent": true,
+      "resultSha256": "43f5d83804d7176a1213f767be7301412761c4c66b0d9c94de41a841eedfc6c0",
+      "returnedTopK": 1,
+      "suppressedCount": 1999,
+      "baseline": {
+        "samplesMs": [
+          47.97064000000046,
+          52.95383700000002,
+          51.00268600000072,
+          52.13221500000054,
+          57.843213000000105
+        ],
+        "medianMs": 52.13221500000054
+      },
+      "prototype": {
+        "samplesMs": [
+          51.33211400000073,
+          48.72868600000038,
+          50.804267000000436,
+          50.830745999999635,
+          80.45569100000012
+        ],
+        "medianMs": 50.830745999999635
+      },
+      "ratio": 0.975035225340015
+    },
+    {
+      "backend": "jsonl",
+      "name": "actual-miss",
+      "query": "unmatchedmarkerquantum",
+      "totalCalls": 14,
+      "fullResultEquivalent": true,
+      "resultSha256": "6cb2e8cd3e3c46b466d5734bdf4735cfa924fcd2372f6e2e7c98a3a3efbf6083",
+      "returnedTopK": 0,
+      "suppressedCount": 0,
+      "baseline": {
+        "samplesMs": [
+          40.667443000000276,
+          36.97458199999983,
+          36.85391499999969,
+          32.34434400000009,
+          47.56458599999951
+        ],
+        "medianMs": 36.97458199999983
+      },
+      "prototype": {
+        "samplesMs": [
+          32.88757600000008,
+          33.23252700000012,
+          38.078787999999804,
+          35.10585600000013,
+          32.95234400000027
+        ],
+        "medianMs": 33.23252700000012
+      },
+      "ratio": 0.8987938524903479
+    },
+    {
+      "backend": "sqlite",
+      "name": "warm-fts",
+      "query": "retry",
+      "totalCalls": 14,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+      "returnedTopK": 1,
+      "suppressedCount": 1999,
+      "baseline": {
+        "samplesMs": [
+          109.3963619999995,
+          80.57554799999889,
+          83.58739799999967,
+          81.69099399999868,
+          80.55481700000018
+        ],
+        "medianMs": 81.69099399999868
+      },
+      "prototype": {
+        "samplesMs": [
+          75.78825700000016,
+          82.44394399999874,
+          86.87424500000088,
+          68.70747599999959,
+          91.674226000001
+        ],
+        "medianMs": 82.44394399999874
+      },
+      "ratio": 1.0092170502907587
+    },
+    {
+      "backend": "sqlite",
+      "name": "chinese-substring",
+      "query": "端口配置",
+      "totalCalls": 14,
+      "fullResultEquivalent": true,
+      "resultSha256": "842b4a39fed51a4db1e7ddee3536114d20a16466531d1ad78ed72c1f19fcfeef",
+      "returnedTopK": 5,
+      "suppressedCount": 0,
+      "baseline": {
+        "samplesMs": [
+          600.250152999999,
+          616.0602770000005,
+          712.988691999999,
+          613.6534069999998,
+          612.1805199999999
+        ],
+        "medianMs": 613.6534069999998
+      },
+      "prototype": {
+        "samplesMs": [
+          62.495607999999265,
+          76.40278299999954,
+          59.26861800000006,
+          55.44097799999872,
+          89.64925099999891
+        ],
+        "medianMs": 62.495607999999265
+      },
+      "ratio": 0.10184186592481395
+    },
+    {
+      "backend": "sqlite",
+      "name": "structured-do",
+      "query": "portlint",
+      "totalCalls": 14,
+      "fullResultEquivalent": true,
+      "resultSha256": "43f5d83804d7176a1213f767be7301412761c4c66b0d9c94de41a841eedfc6c0",
+      "returnedTopK": 1,
+      "suppressedCount": 1999,
+      "baseline": {
+        "samplesMs": [
+          108.70093699999961,
+          88.34107200000108,
+          97.95053999999982,
+          71.94058399999994,
+          65.08384300000034
+        ],
+        "medianMs": 88.34107200000108
+      },
+      "prototype": {
+        "samplesMs": [
+          97.34109399999943,
+          85.09462100000019,
+          87.47026900000128,
+          72.77013000000079,
+          76.64805399999932
+        ],
+        "medianMs": 85.09462100000019
+      },
+      "ratio": 0.9632509440229472
+    },
+    {
+      "backend": "sqlite",
+      "name": "actual-miss",
+      "query": "unmatchedmarkerquantum",
+      "totalCalls": 14,
+      "fullResultEquivalent": true,
+      "resultSha256": "6cb2e8cd3e3c46b466d5734bdf4735cfa924fcd2372f6e2e7c98a3a3efbf6083",
+      "returnedTopK": 0,
+      "suppressedCount": 0,
+      "baseline": {
+        "samplesMs": [
+          53.39292999999816,
+          48.91536699999779,
+          54.628850000000966,
+          53.67856199999733,
+          52.34924099999989
+        ],
+        "medianMs": 53.39292999999816
+      },
+      "prototype": {
+        "samplesMs": [
+          52.92618500000026,
+          52.475743000002694,
+          49.35505199999898,
+          48.54420599999867,
+          56.026183000001765
+        ],
+        "medianMs": 52.475743000002694
+      },
+      "ratio": 0.9828219391594449
+    }
+  ],
+  "sourceHashBefore": "0921994bc133782ca2d01ae7e9af05d01e4fd2ac233916cb42c5350ad3621f55",
+  "sourceHashAfter": "0921994bc133782ca2d01ae7e9af05d01e4fd2ac233916cb42c5350ad3621f55",
+  "sourceUnchanged": true
+}

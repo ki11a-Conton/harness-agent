@@ -1,0 +1,1139 @@
+$ tsc -b && vitest run --exclude '**/*.perf.test.ts' --exclude '**/*.soak.test.ts' --exclude '**/e3-repro-current-defects.test.ts' --exclude '**/e4-r40-forensics.test.ts' --exclude '**/r97-driver-closed-loop.test.ts'
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+stdout | apps/cli/src/r0-f6-ci-readiness-classification.test.ts > S0b/F3 — a forged REAL declaration with no raw evidence must not PASS (RED counter-example) > S0b-F3-RED: forged REAL JSON with buildDigest 'x', no raw evidence and no artifact runId must not PASS
+[S0b-F3] raw forged input JSON: {"ok":true,"positiveExecution":{"providerFactoryCalls":0,"physicalProviderCalls":124,"ledgerCommitted":124,"journalChargedTokens":248,"evidenceVerified":124,"evidenceUnverified":0,"decision":"INCONCLUSIVE"},"positiveForward":{"physicalStubRequests":124,"ledgerCommitted":124,"journalChargedTokens":248,"aggregateTokensTotal":248,"aggregateTokensDelta":-60,"aggregateTokensBaseline":100,"aggregateTokensCandidate":40,"independentTokens":{"delta":-60},"costMatchesJournal":true},"ciRunSha":"de346b90dcbf97c9591ae2786e46e80fd0a4e05c","os":"windows-latest","commandExits":{"typecheck":0,"test":0,"build":0},"dualBuild":{"baselineArm":{"sourceSha":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","buildDigest":"x"},"candidateArm":{"sourceSha":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","buildDigest":"x"},"verifier":{"ran":true,"casesVerified":1,"casesTotal":1}},"readiness":{"productionOfflineReadiness":{"executionKind":"REAL_DUAL_PINNED_BUILD"}}}
+[S0b-F3] raw readiness output JSON: {
+  "schemaVersion": "prereg-ci-readiness-v2",
+  "generatedBy": "scripts/e4/ci-readiness.mjs",
+  "ciRunSha": "de346b90dcbf97c9591ae2786e46e80fd0a4e05c",
+  "expectedSha": "de346b90dcbf97c9591ae2786e46e80fd0a4e05c",
+  "ciRunId": "36540000000",
+  "inputs": {
+    "e2ePath": "/tmp/r0-f6-YBU6jp/e2e.json",
+    "e2eSha256": "5463d3ebe25f72c8031741713922859aa22da416dd3e4edc08b8ad2181d5cd9f",
+    "otherPlatformArtifactPath": null,
+    "otherPlatformArtifactSha256": null,
+    "evidenceRoot": null,
+    "attempt": null,
+    "platform": null,
+    "strict": false,
+    "requiredLevels": null
+  },
+  "os": {
+    "label": "windows-local",
+    "platform": "linux",
+    "arch": "x64",
+    "node": "v24.19.0"
+  },
+  "platforms": {
+    "thisProcess": {
+      "platform": "ubuntu",
+      "rawPlatform": "linux",
+      "status": "MEASURED"
+    },
+    "windows": {
+      "status": "NOT_OBSERVED",
+      "detail": "no --other-platform-artifact was supplied, so this platform was not measured by this run (it is NOT assumed unproven, and it is NOT assumed measured)"
+    },
+    "ubuntu": {
+      "status": "MEASURED",
+      "detail": "this process: linux/x64"
+    },
+    "crossPlatform": {
+      "status": "NOT_OBSERVED",
+      "sameSha": false,
+      "selfMeasured": false,
+      "source": null,
+      "detail": "no other-platform artifact was supplied; the other platform stays NOT_OBSERVED rather than being hardcoded NOT_PROVEN"
+    }
+  },
+  "commandExits": {
+    "typecheck": null,
+    "test": null,
+    "build": null,
+    "n0GapGate": 0,
+    "legacyRedNextGaps": 0,
+    "docsSmoke": 0
+  },
+  "counts": {
+    "providerFactoryCalls": 0,
+    "inProcessPhysicalProviderCalls": 124,
+    "inProcessLedgerCommitted": 124,
+    "inProcessJournalChargedTokens": 248,
+    "forwardPhysicalStubRequests": 124,
+    "forwardLedgerCommitted": 124,
+    "forwardJournalChargedTokens": 248,
+    "forwardAggregateTokensTotal": 248,
+    "forwardAggregateTokensDelta": -60,
+    "forwardAggregateTokensBaseline": 100,
+    "forwardAggregateTokensCandidate": 40,
+    "forwardIndependentTokensDelta": -60,
+    "forwardCostMatchesJournal": true,
+    "evidenceVerified": 124,
+    "evidenceUnverified": 0,
+    "decision": "INCONCLUSIVE",
+    "externalProviderCalls": null,
+    "costUsdMicros": null
+  },
+  "executionKind": "REAL_DUAL_PINNED_BUILD",
+  "forwardBasis": "REAL_DUAL_PINNED_BUILD",
+  "forwardBasisSource": "readiness.productionOfflineReadiness.executionKind",
+  "levels": {
+    "fixtureProtocolReady": {
+      "status": "PASS",
+      "basis": "the offline closed loop over SYNTHETIC fixture arm builds (writeArmCheckout equals this)",
+      "counts_ref": [
+        "inProcessPhysicalProviderCalls",
+        "forwardPhysicalStubRequests",
+        "evidenceVerified"
+      ]
+    },
+    "realBuildOfflineReady": {
+      "status": "NOT_PROVEN",
+      "basis": "execution kind declares REAL_DUAL_PINNED_BUILD but its evidence did not verify against the raw evidence root, so this level is NOT_PROVEN (S6/F3: a forged enum and a self-reported digest are not a real build)",
+      "blocker": "REAL_EVIDENCE_UNVERIFIED: NO_ARTIFACT_RUN_ID: the artifact carries no runId, so the run identity of its evidence cannot be established (a caller-supplied --run-id is not a substitute); NO_ARTIFACT_ATTEMPT: the artifact carries no attempt number; NO_ARTIFACT_PLATFORM: the artifact carries no platform; BASELINE_BUILD_DIGEST_MALFORMED: dualBuild.baselineArm.buildDigest is not a 64-hex sha256 (got \"x\"); CANDIDATE_BUILD_DIGEST_MALFORMED: dualBuild.candidateArm.buildDigest is not a 64-hex sha256 (got \"x\"); NO_RAW_EVIDENCE: no --evidence-root was supplied, so no raw arm/verifier/journal file was read and the self-reported fields above are uncorroborated",
+      "evidence": {
+        "executionKind": "REAL_DUAL_PINNED_BUILD",
+        "executionKindSource": "readiness.productionOfflineReadiness.executionKind",
+        "realDeclaration": true,
+        "evidenceRoot": null,
+        "failures": [
+          "NO_ARTIFACT_RUN_ID: the artifact carries no runId, so the run identity of its evidence cannot be established (a caller-supplied --run-id is not a substitute)",
+          "NO_ARTIFACT_ATTEMPT: the artifact carries no attempt number",
+          "NO_ARTIFACT_PLATFORM: the artifact carries no platform",
+          "BASELINE_BUILD_DIGEST_MALFORMED: dualBuild.baselineArm.buildDigest is not a 64-hex sha256 (got \"x\")",
+          "CANDIDATE_BUILD_DIGEST_MALFORMED: dualBuild.candidateArm.buildDigest is not a 64-hex sha256 (got \"x\")",
+          "NO_RAW_EVIDENCE: no --evidence-root was supplied, so no raw arm/verifier/journal file was read and the self-reported fields above are uncorroborated"
+        ],
+        "bundle": null
+      }
+    },
+    "budgetEvidenceReady": {
+      "status": "NOT_PROVEN",
+      "basis": "no raw evidence bundle verified, so the budget cannot be attributed: NO_ARTIFACT_RUN_ID: the artifact carries no runId, so the run identity of its evidence cannot be established (a caller-supplied --run-id is not a substitute); NO_ARTIFACT_ATTEMPT: the artifact carries no attempt number; NO_ARTIFACT_PLATFORM: the artifact carries no platform",
+      "blocker": "no evidence bundle was verified",
+      "evidence": {
+        "journalBinding": "NOT_PROVEN",
+        "journalBindingReason": "no evidence bundle was verified",
+        "requestDispatchBinding": "NOT_PROVEN",
+        "requestDispatchBindingReason": "no evidence bundle was verified",
+        "budget": null,
+        "derivedVerifierCoverage": null
+      },
+      "counts_ref": [
+        "forwardJournalChargedTokens",
+        "forwardAggregateTokensTotal",
+        "forwardAggregateTokensDelta",
+        "forwardAggregateTokensBaseline",
+        "forwardAggregateTokensCandidate",
+        "forwardIndependentTokensDelta",
+        "forwardCostMatchesJournal"
+      ]
+    },
+    "paidExperimentRun": {
+      "status": "NOT_RUN",
+      "basis": "no paid authorization exists; this script never creates one"
+    },
+    "championPromotion": {
+      "status": "NOT_RUN",
+      "basis": "no promotion is performed or authorized by this script"
+    }
+  },
+  "notes": [
+    "counts.* === null means NOT_OBSERVED (an unmeasured value), never zero.",
+    "externalProviderCalls/costUsdMicros are NOT_OBSERVED because nothing is billed offline.",
+    "A green fixtureProtocolReady does not imply realBuildOfflineReady and never authorizes a paid run.",
+    "R7: the execution kind is read from a structured enum field; readiness.productionOfflineReady prose is not read at all, and no log is scanned for the word PASS.",
+    "R7: a platform is MEASURED only by the process that ran on it, or by an other-platform artifact whose ciRunSha equals expectedSha."
+  ]
+}
+
+
+ ✓ apps/cli/src/r0-f6-ci-readiness-classification.test.ts (42 tests) 368296ms
+     ✓ R0-F6-0: the script really runs and the fixture counts really reach the artifact  8522ms
+     ✓ R0-F6-A: LOWERCASE 'synthetic' prose must not be classified as a REAL dual pinned build  8718ms
+     ✓ R0-F6-B: an EMPTY readiness string must not be classified as a REAL dual pinned build  8513ms
+     ✓ R0-F6-C: UNRELATED text must not be classified as a REAL dual pinned build  8501ms
+     ✓ R0-F6-D2: the prose field is NOT read even when it is spelled exactly like the enum  8939ms
+     ✓ R0-F6-D: an ABSENT readiness field is fail-closed (NOT_PROVEN, never PASS)  8323ms
+     ✓ R7-F6-F: a known non-REAL kind is BLOCKED with its own blocker — not PASS, not NOT_PROVEN  17264ms
+     ✓ R0-F6-E: on a Linux/Ubuntu run this process's OWN platform is MEASURED, not hardcoded NOT_PROVEN  8701ms
+     ✓ R7-F6-H: the other platform's artifact is accepted ONLY when its SHA matches AND it measured itself  34166ms
+     ✓ R7-F6-H2: the cross-platform branch is role-symmetric — a Linux process is exercised, not assumed  16919ms
+     ✓ R7-F6-M1: a FORGED REAL enum with no artifact evidence must not upgrade  8970ms
+     ✓ R7-F6-M2: a REAL declaration for a DIFFERENT SHA must not upgrade  9041ms
+     ✓ R7-F6-M3: a replayed/stale artifact with no run identity must not upgrade  8355ms
+     ✓ R7-F6-M4: a null command exit code must not upgrade  8397ms
+     ✓ R7-F6-M5: one arm without the verifier over every case must not upgrade  25114ms
+     ✓ R7-F6-M6: a journal that disagrees with the independently recomputed delta must not upgrade  8533ms
+     ✓ R7-F6-P: the COMPLETE REAL evidence is required and IS sufficient — PASS (the path is not dead code)  8530ms
+     ✓ S6-A: the ARTIFACT must carry its own runId, attempt and platform  25985ms
+     ✓ S6-B: a wrong attempt or platform must refuse even when everything else is complete  16949ms
+     ✓ S6-C: a bundle for a DIFFERENT driver SHA must refuse  8653ms
+     ✓ S6-D: a MALFORMED or mismatched build digest must refuse  17054ms
+     ✓ S6-E: a DELETED per-arm verifier must refuse (a parsed schedule is not evidence)  8656ms
+     ✓ S6-F: a TAMPERED manifest must refuse even though its declared digest is unchanged  8656ms
+     ✓ S6-G: identical arm closures / identical source SHAs must refuse  8431ms
+     ✓ S6-H: a path that escapes the evidence root must refuse  8445ms
+     ✓ S6-J: report mode exits 0 while `--strict` exits non-zero when a required level is unmet  26109ms
+     ✓ S6-K: an UNBOUND budget dimension is NOT_PROVEN with its reason, never flattened to zero  8733ms
+     ✓ S6-L: an unknown-usage journal entry keeps its conservative upper bound and is not reported as measured  8338ms
+     ✓ S6-M: a DUPLICATE journal attempt and an unknown arm are both refused, on the BUDGET level only  8427ms
+     ✓ S0b-F3-RED: forged REAL JSON with buildDigest 'x', no raw evidence and no artifact runId must not PASS  8152ms
+usage: node scripts/e4/r97-arm-worker.mjs --checkout <arm dir> --case <caseId> --suite <suite> --arm <arm>
+                                                --provider <id> --model <id> [--endpoint <url>]
+                                                --plan-digest <hex> --state <execution state dir> --ledger <ledger dir>
+                                                [--source-sha <40-hex>] [--script-shape write-then-stop|text-only] [--json]
+
+The approved --provider/--model are REQUIRED: a worker that defaulted them would execute a
+different identity than the plan approved (plan T4 怎么做 6).
+usage: node scripts/e4/r97-arm-worker.mjs --checkout <arm dir> --case <caseId> --suite <suite> --arm <arm>
+                                                --provider <id> --model <id> [--endpoint <url>]
+                                                --plan-digest <hex> --state <execution state dir> --ledger <ledger dir>
+                                                [--source-sha <40-hex>] [--script-shape write-then-stop|text-only] [--json]
+
+The approved --provider/--model are REQUIRED: a worker that defaulted them would execute a
+different identity than the plan approved (plan T4 怎么做 6).
+usage: node scripts/e4/r97-arm-worker.mjs --checkout <arm dir> --case <caseId> --suite <suite> --arm <arm>
+                                                --provider <id> --model <id> [--endpoint <url>]
+                                                --plan-digest <hex> --state <execution state dir> --ledger <ledger dir>
+                                                [--source-sha <40-hex>] [--script-shape write-then-stop|text-only] [--json]
+
+The approved --provider/--model are REQUIRED: a worker that defaulted them would execute a
+different identity than the plan approved (plan T4 怎么做 6).
+usage: node scripts/e4/r97-arm-worker.mjs --checkout <arm dir> --case <caseId> --suite <suite> --arm <arm>
+                                                --provider <id> --model <id> [--endpoint <url>]
+                                                --plan-digest <hex> --state <execution state dir> --ledger <ledger dir>
+                                                [--source-sha <40-hex>] [--script-shape write-then-stop|text-only] [--json]
+
+The approved --provider/--model are REQUIRED: a worker that defaulted them would execute a
+different identity than the plan approved (plan T4 怎么做 6).
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts (48 tests) 26056ms
+     ✓ executes the case and records a verdict that can ONLY come from the real report  1327ms
+     ✓ TWO DIFFERENT CASES each enter their OWN context — no single placeholder request  1218ms
+     ✓ a case MISSING from the arm is refused — never borrowed from the driver repo (T4 怎么做 7)  389ms
+     ✓ leaves a real evidence file on disk after the worker returns  661ms
+     ✓ keeps the staging scratch out of the evidence, and only the scratch  630ms
+     ✓ the stored evidence row is REDACTED: no credential-shaped text reaches it  641ms
+     ✓ the record's detail AGREES with its own evidence on a REAL unit  662ms
+     ✓ grant=1, the consumer breaks mid-stream and the CLI throws: innerCalls=1, NOT abandoned, remaining=0, second reserve refused  436ms
+     ✓ a SETTLEMENT write failure on an ENTERED call is refused as `budget` and the allowance is NOT refunded  390ms
+     ✓ PROTOCOL FIXTURE: the runtime's model ref disagrees with the approval, and the synthetic PASS report must not win  441ms
+     ✓ PROTOCOL FIXTURE: a NULL runtime model ref is a refusal, never 'no drift'  356ms
+     ✓ PROTOCOL FIXTURE: a FAILED dry run ends the unit BEFORE any dispatch  338ms
+     ✓ PROTOCOL FIXTURE: an APPROVED-and-matching unit still reaches a verified PASS  391ms
+     ✓ PROTOCOL FIXTURE: a LEGITIMATE negative stays `case_failed`, not infrastructure  372ms
+     ✓ a dry run that never returns is stopped by the unit deadline, and its code does NOT outlive the unit  10647ms
+     ✓ a DISPATCH that never returns is stopped too, and the admitted call is NOT refunded  6657ms
+ ✓ packages/evaluation/src/r97-bounded-stop.test.ts (24 tests) 17806ms
+     ✓ returns a NAMED timeout result, and the child is really gone  3516ms
+     ✓ escalates only AFTER the grace: a child that dies on the first signal is not tree-killed  708ms
+     ✓ leaves NO descendant behind: a grandchild that ignores signals is reaped too  3611ms
+     ✓ an AbortSignal cancels a running child and is reported as `cancelled`  2414ms
+     ✓ an output flood past the cap ends the child as `output_limit`, long before the deadline  836ms
+     ✓ leaves NO descendant behind when the CAP is what stops the tree  2035ms
+     ✓ fires its AbortSignal exactly at the deadline, once  401ms
+     ✓ an unspent deadline leaves the normal path completely unchanged  604ms
+     ✓ a stubborn child is stopped well before an independent watchdog would fire  3008ms
+[degraded] e4-r60 taskkill spawn: spawn taskkill ENOENT
+[degraded] e4-r60 taskkill exit: taskkill exited with 1
+[degraded] e4-r60 taskkill spawn: boom
+[degraded] e4-r60 taskkill exit: taskkill exited with 1
+[degraded] e4-r60 taskkill: sync spawn failure
+[degraded] e4-r60 taskkill spawn: nope
+[degraded] e4-r60 taskkill spawn: injected taskkill failure
+[degraded] e4-r55 evidence root: ENOTDIR: not a directory, mkdir '/tmp/e4-r65-root-qe5EYu/a-file/child'
+[degraded] e4-r55 evidence write child.stdout.txt: EIO: injected write failure for child.stdout.txt
+[degraded] e4-r55 evidence write child.stderr.txt: EACCES: injected write failure for child.stderr.txt
+[degraded] e4-r55 evidence write child-report.json: EIO: injected write failure for child-report.json
+[degraded] e4-r55 evidence write run.json: EIO: injected write failure for run.json
+[degraded] e4-r55 evidence write child.stdout.txt: EIO: injected write failure for child.stdout.txt
+
+R68_SYMLINK_CAPABILITY={"ok":true,"detail":"fs.symlink created a link that lstat reports as a symlink"}
+
+R68_LINK_DIRENT={"isSymbolicLink":true,"isFile":false}
+ ✓ apps/cli/src/e4-r55-failure-wiring.test.ts (65 tests) 14179ms
+     ✓ terminates a never-ending child's whole tree at the deadline and returns a structured timeout  4120ms
+     ✓ drives the real chain, judges its failure evidence, and requires an order mutation to break the acceptance  9411ms
+     ✓ I: a kill that never produces a terminal event resolves as UNCONFIRMED instead of hanging  454ms
+[harness] context budget: model capabilities unknown for stub/m — using conservative fallback 32000
+ ✓ apps/cli/src/benchmark-command.test.ts (99 tests) 8911ms
+     ✓ prevents cross-case contamination: case B cannot read case A's workspace file  1140ms
+     ✓ P4-7: subagent requirement runs the REAL Delegator (subagent.started fires)  1093ms
+     ✓ 3. --repeat 2 on 2 cases → exactly 8 logical arm runs (2×2×2)  406ms
+     ✓ N03/N05: a real paired run writes the V3 manifest with the FULL confirmed plan, policy and a unique sample grid  367ms
+ ✓ packages/evaluation/src/r97-claim-anchor-rename.test.ts (3 tests) 8155ms
+     ✓ EXHAUSTED transient retries still end in the named refusal, anchor intact  7948ms
+ ✓ apps/cli/src/r0-f8-formal-budget-cancel-gaps.test.ts (7 tests) 6626ms
+     ✓ [F2] the provider's AbortSignal is aborted and the driver returns inside a bounded window  1530ms
+     ✓ [F2] a provider that IGNORES its AbortSignal still cannot keep the driver waiting  3225ms
+     ✓ [F2] a real HTTP stub observes its connection CLOSED after the client cancels  1539ms
+ ✓ apps/cli/src/n1-worker-lifecycle.test.ts (17 tests) 6672ms
+     ✓ [row 4] a provider that IGNORES abort cannot park the driver, and is marked unconfirmed  2064ms
+     ✓ [row 6] finishes in bounded time when the child writes a result and then will not exit  2062ms
+     ✓ [regression] the deadline still aborts the transport FIRST and records the timeout reason  1527ms
+ ✓ apps/cli/src/e4-r24-final-result-protocol.test.ts (6 tests) 6054ms
+     ✓ green run: observing + passing test commits exactly ONE row; independent strict audit observes the capability  661ms
+     ✓ assert-fail run: observe-then-fail leaves NO committed passed evidence; the green run's rows cannot be borrowed (same name, same HEAD)  726ms
+     ✓ hook-fail run: test body passes + afterAll fails -> NO committed passed evidence  626ms
+     ✓ a LEFTOVER failing fixture is NOT collected by the root config, IS selected by the dedicated config, and cleanup only removes its own file  1087ms
+     ✓ with BOTH residues on disk the root config collects only the real parent test, the residue is unrunnable even when named explicitly, and the dedicated config still selects the new fixture  1951ms
+     ✓ a legacy-pattern fixture in src/ is excluded from tsc; real source + real tests remain  1000ms
+ ✓ apps/cli/src/diagnostic-first-repair.test.ts (10 tests) 4163ms
+     ✓ gets actual assertion diagnostics after exit 1, repairs, reruns the same command, then passes the original gate  373ms
+     ✓ gets actual syntax diagnostics after exit 1, repairs, reruns the same command, then passes the original gate  331ms
+     ✓ bounds repeated identical failures with existing Runtime limits  1395ms
+     ✓ executes independent S1 through the existing identity-bound AB/BA paired engine  1284ms
+ ✓ packages/evaluation/src/r97-plan.test.ts (67 tests) 3997ms
+     ✓ 4. a selection whose case list was edited while keeping the OLD digest is REFUSED  387ms
+ ✓ packages/evaluation/src/tool-call-efficiency-formal-run.test.ts (37 tests) 4056ms
+     ✓ refuses a call the ledger cannot afford, before it reaches the provider  3947ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts (60 tests) 3205ms
+     ✓ REGRESSION: the first-open grant write happens UNDER the lock, not before it  766ms
+     ✓ a REAL reader process observing a REAL writer sees only COMPLETE versions, never CORRUPT  1430ms
+ ✓ apps/cli/src/prereg-command.test.ts (43 tests) 3081ms
+     ✓ runs the frozen schedule with one root digest and reaches ACCEPT  674ms
+     ✓ resumes the SAME digest without re-spending calls  609ms
+     ✓ refuses to resume when a run record binds a DIFFERENT experiment identity  630ms
+     ✓ refuses to resume when the run records are corrupt  651ms
+ ✓ apps/cli/src/dual-platform-acceptance.test.ts (28 tests) 2952ms
+ ✓ apps/cli/src/release-command.test.ts (22 tests) 3222ms
+     ✓ runGate executes the canonical command and writes durable V2 evidence with the REAL exit code  571ms
+     ✓ runGate records the chaos gate's ACTUAL exit code with consistent evidence (a green gate here; the real NON-ZERO path is proven in e4-r42-gate-isolation.test.ts)  1357ms
+     ✓ E4-R19 (N20): the printed verdict derives from the EVIDENCE state — a failed/invalid evidence can never print PASS even with child exit 0  555ms
+     ✓ E4-R12 (N01): a red gate prints the saved log ref + bounded failure summary that names the real cause  454ms
+[harness] context budget: model capabilities unknown for scripted/m — using conservative fallback 32000
+ ✓ apps/cli/src/e4-09-production-e2e.test.ts (5 tests) 2894ms
+     ✓ benchmark -> V3 -> evaluator -> promote -> createHarness -> applied, all real stages  958ms
+     ✓ editing a real V3 artifact's outcomes while only updating the file SHA breaks the chain  654ms
+     ✓ a forged decision field (digest recomputed) is caught by the evaluator replay  614ms
+     ✓ a candidate ref pointing outside the bundle root is rejected  583ms
+ ✓ packages/evaluation/src/r97-execution-identity.test.ts (18 tests) 2694ms
+     ✓ runs under the APPROVED model and endpoint, not the default pair  779ms
+     ✓ a DIFFERENT endpoint produces a DIFFERENT endpoint identity — the flag reaches the plan  1367ms
+ ✓ packages/harness/src/durable-recovery-store-xproc.test.ts (1 test) 2545ms
+     ✓ a live child's old lock is NOT stolen; after the child exits it is reclaimed  2544ms
+ ✓ packages/core/src/runtime/fault-injection.test.ts (22 tests) 2126ms
+     ✓ model.error with recovery policy retries and then completes  504ms
+     ✓ exhausted retries turn.failed with MODEL_ERROR and no turn.completed  1004ms
+     ✓ mid-stream error triggers retry and fallback completes  503ms
+ ✓ packages/evaluation/src/r97-campaign-validator-cli.test.ts (17 tests) 2043ms
+ ✓ apps/cli/src/r5-formal-gate.test.ts (34 tests) 1545ms
+ ✓ packages/tools/src/production-tools.test.ts (9 tests) 1433ms
+     ✓ env_snapshot tool is wired to the host network mode + tool list  468ms
+     ✓ createProductionTools forwards harness profile + workspace root to env_snapshot  470ms
+     ✓ createEnvSnapshotTool rejects nothing and reports the live injected policy + harness facts  484ms
+ ✓ packages/tools/src/process/executor.test.ts (30 tests | 7 skipped) 1350ms
+     ✓ kills the process tree on timeout (no orphan)  303ms
+     ✓ honors timeout, cancellation, output cap and env on the argv path  414ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:37511
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:39687
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:42599
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:38855
+[harness] context budget: model capabilities unknown for web-cancellation-probe/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:37239
+[harness] context budget: model capabilities unknown for web-queued-followup-stop-probe/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:37265
+ ✓ apps/web/src/harness.integration.test.ts (6 tests) 1450ms
+     ✓ serves a full turn end-to-end through the harness runtime  351ms
+     ✓ U4 stops the active queued follow-up through HTTP without cancelling another sender's session  562ms
+ ✓ apps/cli/src/task-scoped-skills.test.ts (8 tests) 1264ms
+     ✓ admits the relevant body at 8k, preserves tools/task/verifier and binds evidence to actual requests  363ms
+     ✓ reduces 100-skill system bytes by at least 90% with the same model task and tool schemas  305ms
+     ✓ executes AB/BA through the real paired engine with independent verification and no partial pairs  435ms
+ ✓ packages/evaluation/src/r97-budget-ledger-lock-eperm.test.ts (4 tests) 1139ms
+     ✓ [EPERM-1] concurrent acquire/release of ONE lock path never throws a raw EPERM  833ms
+     ✓ [EPERM-2] a genuinely wedged lock still fails CLOSED with R97_LOCK_HELD  302ms
+ ✓ packages/model/src/openai.test.ts (40 tests) 1120ms
+     ✓ P1-18: honors Retry-After on 429 and classifies it rate_limit with retryAfterMs  1002ms
+ ✓ packages/evaluation/src/tool-call-efficiency-token-attribution.test.ts (12 tests) 1357ms
+ ✓ packages/evaluation/src/runner.test.ts (58 tests) 1065ms
+     ✓ aborts a turn that exceeds timeoutMs (cancelled outcome, reason recorded)  502ms
+     ✓ classifies a wall-clock timeout as an infrastructure outcome  502ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ packages/harness/src/mcp-wiring.integration.test.ts (6 tests) 1509ms
+     ✓ connects an http MCP server LAZILY when a step needs it, binds its tool and executes over the real transport  536ms
+     ✓ connects a stdio MCP server lazily (local IPC — default sandbox suffices)  508ms
+     ✓ P24-7: an unreachable NON-needed server does NOT abort startup; needing it yields MCP_CONNECT_FAILED  451ms
+ ✓ apps/cli/src/e4-r46-diagnostics-noclobber.test.ts (3 tests) 1074ms
+     ✓ two independent processes with the same root+runId+label write two distinct bundles; the second leaves the first intact  998ms
+ ✓ packages/security/src/approval.test.ts (15 tests) 1022ms
+     ✓ expire  1001ms
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+[degraded] observation-evidence unreadable row: ObservationEvidence invalid: evidenceDigest does not recompute over the row body
+[degraded] observation-evidence unreadable row: ObservationEvidence invalid: testedSourceSha must be a 40-hex git sha (got null)
+[degraded] observation-evidence: row runId "old-run" != requested run "new-run" (rows copied from another run are diagnostic only) — dropped
+ ✓ apps/cli/src/usage-audit.test.ts (29 tests) 937ms
+     ✓ --strict WITHOUT --run fails up front — a strict verdict must name ONE run (no global-history fallback)  303ms
+ ✓ packages/harness/src/verification-trust.regressions.test.ts (13 tests) 854ms
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/custom-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+ ✓ apps/cli/src/cli.test.ts (37 tests) 837ms
+     ✓ runs an end-to-end read through the real orchestrator and tools  420ms
+     ✓ asks for approval on write_file (edit:ask) and applies the denial  335ms
+ ✓ packages/agents/src/parallel-delegator.test.ts (21 tests) 839ms
+ ✓ packages/evaluation/src/e4-r77-baseline-oracle.test.ts (26 tests) 831ms
+ ✓ apps/cli/src/path-scoped-instructions.test.ts (10 tests) 728ms
+     ✓ executes the actual AB/BA paired engine twice with fixed inputs and independent content verification  374ms
+ ✓ packages/evaluation/src/benchmark-suite.test.ts (7 tests) 543ms
+ ✓ packages/evaluation/src/r92-plan.test.ts (13 tests) 448ms
+[prereg] trusted-build mode: baseline @ ef7760a6b98d closure 473ddff35857… network sandbox=none
+[prereg] trusted-build mode: baseline @ b32498cfcf09 closure 6aab2834f8f3… network sandbox=none
+ ✓ apps/cli/src/prereg-trusted-build.test.ts (11 tests) 540ms
+ ✓ packages/evaluation/src/r97-mutation-check-guard.test.ts (51 tests) 543ms
+     ✓ REAL second OS process: a concurrent rewrite of the file is detected after the build step  402ms
+ ✓ apps/cli/src/e4-r52-raw-bytes.test.ts (4 tests) 506ms
+     ✓ 4: cap-1 / cap / cap+1 boundaries stay correct, and a multi-byte char straddling the cut is preserved as BYTES  417ms
+ ✓ packages/tools/src/r4-file-regressions.test.ts (41 tests) 507ms
+ ✓ packages/harness/src/context-wiring.integration.test.ts (3 tests) 478ms
+     ✓ env_snapshot reports the live harness wiring (profile, workspace root, tool list)  450ms
+ ✓ apps/cli/src/benchmark-provider-policy.test.ts (6 tests) 453ms
+[harness] context budget: model capabilities unknown for fake/unknown-window — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ packages/harness/src/create-harness.test.ts (17 tests) 497ms
+ ✓ packages/observability/src/trace-exporter.test.ts (21 tests) 481ms
+[web] listening on http://127.0.0.1:44145
+[web] listening on http://127.0.0.1:45333
+[web] listening on http://127.0.0.1:40283
+[web] listening on http://127.0.0.1:40055
+[web] listening on http://127.0.0.1:36511
+[web] listening on http://127.0.0.1:43417
+[web] listening on http://127.0.0.1:40849
+[web] listening on http://127.0.0.1:41109
+[web] listening on http://127.0.0.1:40435
+[web] listening on http://127.0.0.1:34681
+[web] listening on http://127.0.0.1:44065
+[web] listening on http://127.0.0.1:43205
+[web] listening on http://127.0.0.1:46157
+[web] listening on http://127.0.0.1:36985
+[web] listening on http://127.0.0.1:40619
+ ✓ apps/web/src/server.test.ts (16 tests) 449ms
+ ✓ apps/cli/src/e4-r42-gate-isolation.test.ts (7 tests) 552ms
+     ✓ green AND real-nonzero child commands record consistent evidence; the shared dist/buildinfo is untouched  380ms
+ ✓ packages/harness/src/delegation-worker.integration.test.ts (13 tests) 407ms
+ ✓ apps/cli/src/e4-r21-release-reverify.test.ts (12 tests) 431ms
+ ✓ apps/cli/src/n5-pair-setup.test.ts (8 tests | 1 skipped) 424ms
+ ✓ packages/evaluation/src/tool-call-efficiency-tool-budget.test.ts (15 tests) 392ms
+     ✓ [R3-mid-stream] a provider that stalls PAST the deadline is aborted and the unit converges  306ms
+[skill denied] detection=injection target=/tmp/ar-skill-admission-4v7Vb8/skills/blocked-injection/SKILL.md reasons=dismiss-previous-instructions,dismiss-all-instructions,override-own-instructions,extract-system-prompt
+[skill denied] detection=secret target=/tmp/ar-skill-admission-VnRrit/skills/blocked-secret/SKILL.md reasons=openai-key
+[skill denied] detection=required-tools target=/tmp/ar-skill-admission-rUiiCp/skills/blocked-tools/SKILL.md reasons=required tool not allowed by host policy: unavailable_tool
+ ✓ packages/harness/src/skill-admission.regressions.test.ts (11 tests) 355ms
+ ✓ apps/cli/src/e4-r47-bounded-copy.test.ts (6 tests) 373ms
+ ✓ packages/agents/src/delegator.test.ts (40 tests) 359ms
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-xPURLs/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-uQjWUe/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-xwLOPc/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-SNLSZS/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-zf8lPv/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-QbxHeq/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-E7VwLK/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-WNlQN2/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-SQalox/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-Edj0On/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-9cbciT/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-pGckYf/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-I8BtK5/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-njY3C7/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-XApePn/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-QsUoO5/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-gN2xvg/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-iTOLBm/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-blsnw5/package.json'
+ ✓ apps/cli/src/docs-verify.test.ts (20 tests) 321ms
+ ✓ packages/tools/src/vs001.test.ts (13 tests) 346ms
+[degraded] prereg observer refused case holdout/ho-esc-01: not a readable benchmarks case directory
+[degraded] prereg observer refused case ../outside/esc-01: not a readable benchmarks case directory
+ ✓ apps/cli/src/prereg-formal-gaps.test.ts (15 tests) 344ms
+ ✓ packages/evaluation/src/e4-r38-execution-plan-boundary.test.ts (3 tests) 333ms
+     ✓ R38-c: the parser still accepts a 130,000-case `limit=null` plan and the small-plan digest protocol is unchanged  309ms
+ ✓ packages/evaluation/src/r92-rehearsal.test.ts (11 tests) 338ms
+ ✓ packages/evaluation/src/e4-r33-execution-plan-scale.test.ts (7 tests) 371ms
+ ✓ packages/gateway/src/gateway.test.ts (32 tests) 279ms
+ ✓ packages/core/src/runtime/r87-zero-call-replay-ab.test.ts (16 tests) 303ms
+ ✓ packages/evaluation/src/campaign-validate.test.ts (42 tests) 284ms
+ ✓ apps/cli/src/n3-dispatch-journal.test.ts (19 tests) 309ms
+[n2-arm:baseline] build copied + links created: 0 ms
+[n2-arm:baseline] closure digest computed: 2 ms
+[n2-arm:baseline] git tree committed: 21 ms
+[n2-arm:candidate] build copied + links created: 0 ms
+[n2-arm:candidate] closure digest computed: 0 ms
+[n2-arm:candidate] git tree committed: 19 ms
+[n2-arm:baseline] build copied + links created: 0 ms
+[n2-arm:baseline] closure digest computed: 1 ms
+[n2-arm:baseline] git tree committed: 20 ms
+[n2-arm:candidate] build copied + links created: 0 ms
+[n2-arm:candidate] closure digest computed: 0 ms
+[n2-arm:candidate] git tree committed: 20 ms
+ ✓ apps/cli/src/n2-pricing-guard-armed.test.ts (2 tests) 256ms
+ ✓ apps/cli/src/prereg-arm-executor.test.ts (9 tests) 257ms
+[skill denied] detection=required-tools target=/tmp/ar-task-skills-tZ06Jm/skills/danger/SKILL.md reasons=required tool not allowed by host policy: ungranted-tool
+[skill denied] detection=injection target=/tmp/ar-task-skills-tZ06Jm/skills/hostile/SKILL.md reasons=dismiss-previous-instructions,dismiss-all-instructions,override-own-instructions,extract-system-prompt
+ ✓ packages/harness/src/task-scoped-skills.integration.test.ts (10 tests) 279ms
+ ✓ packages/evaluation/src/r97-campaign-lifecycle.test.ts (23 tests) 259ms
+ ✓ packages/evaluation/src/campaign-triage.test.ts (55 tests) 234ms
+ ✓ packages/evaluation/src/r97-execution-state-ownership.test.ts (20 tests) 251ms
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+ ✓ packages/harness/src/memory-search-production.regressions.test.ts (10 tests) 272ms
+ ✓ packages/evaluation/src/tool-call-efficiency-token-delta-red-probe.test.ts (2 tests) 224ms
+ ✓ packages/core/src/runtime/r88-replay-evidence-gate.test.ts (27 tests) 262ms
+ ✓ apps/cli/src/prereg-fixture-checkout-grant.test.ts (7 tests) 252ms
+[skill denied] detection=required-tools target=/tmp/ar-skill-revision-i4zE1l/skills/lint/SKILL.md reasons=required tool not allowed by host policy: exec_command
+[skill denied] detection=injection target=/tmp/ar-skill-revision-9DmM2j/skills/lint/SKILL.md reasons=dismiss-previous-instructions,dismiss-all-instructions,override-own-instructions
+[skill denied] detection=secret target=/tmp/ar-skill-revision-0dpbvL/skills/lint/SKILL.md reasons=openai-key
+ ✓ packages/harness/src/skill-revision-regressions.test.ts (20 tests) 223ms
+ ✓ apps/cli/src/r97-ci-diagnostics.test.ts (6 tests) 218ms
+ ✓ packages/core/src/runtime/r93-manifest-full-validation.test.ts (91 tests) 228ms
+ ✓ packages/security/src/parser-fuzz.test.ts (1812 tests) 251ms
+ ✓ packages/tools/src/orchestrator.test.ts (32 tests) 183ms
+[prereg] trusted-build mode: baseline @ b97a1d6fbcc6 closure 278587dce214… network sandbox=none
+ ✓ apps/cli/src/prereg-declared-posture-forward-path.test.ts (4 tests) 168ms
+ ✓ packages/evaluation/src/tool-call-efficiency-formal-gaps.test.ts (15 tests) 231ms
+ ✓ apps/cli/src/e4-r85-triage-cli.test.ts (14 tests) 156ms
+ ✓ packages/evaluation/src/r97-execution-state.test.ts (27 tests) 195ms
+ ✓ packages/agents/src/scheduler.test.ts (19 tests) 173ms
+ ✓ apps/cli/src/e4-r84-campaign-cli.test.ts (21 tests) 186ms
+ ✓ apps/cli/src/n6-real-formal-ci.test.ts (3 tests) 153ms
+ ✓ packages/evaluation/src/promotion-envelope-forgery.test.ts (18 tests) 121ms
+ ✓ apps/cli/src/e3-13-production-path.test.ts (3 tests) 146ms
+ ✓ apps/cli/src/n2-script-scope.test.ts (10 tests) 184ms
+ ✓ packages/harness/src/path-scoped-instructions.regressions.test.ts (9 tests) 143ms
+ ✓ packages/mcp/src/mcp-transport.test.ts (13 tests) 164ms
+ ✓ packages/core/src/runtime/runtime.test.ts (83 tests) 150ms
+ ✓ packages/sdk/src/event-stream.test.ts (13 tests) 155ms
+ ✓ packages/tools/src/process/sandbox-executor.test.ts (33 tests) 147ms
+ ✓ packages/evaluation/src/gate-evidence-v2.test.ts (43 tests) 166ms
+[degraded] memory-store.corrupt-line: Expected property name or '}' in JSON at position 1 (line 1 column 2)
+[degraded] memory-store.corrupt-line: Expected property name or '}' in JSON at position 1 (line 1 column 2)
+ ✓ packages/memory/src/memory-store.test.ts (25 tests) 123ms
+ ✓ packages/evaluation/src/e4-r22-execution-plan.test.ts (7 tests) 110ms
+ ✓ packages/tools/src/verification/task-verifier.test.ts (20 tests) 118ms
+ ✓ packages/context/src/default-discovery-budget-regressions.test.ts (49 tests) 122ms
+ ✓ packages/agents/src/nested-delegation.test.ts (12 tests) 130ms
+ ✓ packages/security/src/no-silent-catch.test.ts (4 tests) 103ms
+ ✓ packages/harness/src/verification-wiring.integration.test.ts (4 tests) 117ms
+ ✓ packages/agents/src/completion-protocol.test.ts (5 tests) 119ms
+ ✓ apps/cli/src/e4-r51-read-settle.test.ts (6 tests) 123ms
+ ✓ packages/evaluation/src/benchmark-isolation.test.ts (20 tests) 102ms
+ ✓ packages/model/src/openai-request-policy.test.ts (7 tests) 118ms
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+ ✓ packages/harness/src/memory-prefetch-production.regressions.test.ts (4 tests) 108ms
+ ✓ packages/tools/src/workspace-knowledge-regressions.test.ts (29 tests) 113ms
+ ✓ packages/evaluation/src/r97-budget-channel.test.ts (17 tests) 118ms
+ ✓ packages/core/src/runtime/wire-protocol-e2e.test.ts (8 tests) 107ms
+ ✓ packages/harness/src/reflection-turn-isolation.regressions.test.ts (18 tests) 111ms
+ ✓ apps/cli/src/prereg-egress-trust-boundary.test.ts (4 tests) 115ms
+ ✓ apps/cli/src/prereg-fixture-checkout-trust.test.ts (5 tests) 119ms
+ ✓ packages/context/src/path-scoped-discovery.test.ts (24 tests) 97ms
+[degraded] session session_7544931b-88dc-4795-8825-efae018e03b5 failed to persist recovery record for turn_a623c08f-3b33-48d0-a593-df4a2bb1915b: store down
+[degraded] session session_7544931b-88dc-4795-8825-efae018e03b5 recovery lease failed for turn_a623c08f-3b33-48d0-a593-df4a2bb1915b: store down
+[degraded] session session_b62cc131-8ebd-4a73-b465-36fe54c927f3 recovery lease failed for turn_93358a31-3254-4a8c-b916-9f2a49087ddf: recovery CAS conflict for turn_93358a31-3254-4a8c-b916-9f2a49087ddf: expected version 1, stored 2
+[degraded] session session_c29e251a-1e4e-408c-bc8c-2059038fbf77 terminal recovery ACK failed for turn_22ce35ab-8f77-4371-9c77-385f57bb3ee2: review terminal ACK failure — entering pending-commit (reconcile), queue frozen
+[degraded] session session_692bc68f-907d-4a25-b1e0-d47af51f73fc terminal recovery ACK failed for turn_db5feab7-6b5c-4294-aa3b-c0228572c10b: review terminal ACK failure — entering pending-commit (reconcile), queue frozen
+[degraded] session session_ab301de3-dcc1-411d-9b09-43f45c4f7b00 terminal recovery ACK failed for turn_897a7f4a-6d2d-4927-9001-43c528942ff5: review terminal ACK failure — entering pending-commit (reconcile), queue frozen
+[degraded] session session_5e7b9845-592a-4224-99b7-d8db02f2609d terminal recovery ACK failed for turn_e0061cf8-88e3-43a2-8128-ada59d87ada2: compound terminal/marker write outage — entering pending-commit (reconcile), queue frozen
+[degraded] session session_5e7b9845-592a-4224-99b7-d8db02f2609d failed to persist recovery record for turn_e0061cf8-88e3-43a2-8128-ada59d87ada2: compound terminal/marker write outage
+[degraded] session session_07531469-8265-49e2-815a-7c53e1c85e11 terminal recovery ACK failed for turn_4e1e6eb5-0f57-48da-8344-1ec2bf91e99e: compound terminal/marker write outage — entering pending-commit (reconcile), queue frozen
+[degraded] session session_07531469-8265-49e2-815a-7c53e1c85e11 failed to persist recovery record for turn_4e1e6eb5-0f57-48da-8344-1ec2bf91e99e: compound terminal/marker write outage
+[degraded] session session_dfd0d479-7708-4d26-92ef-74a51902433b terminal recovery ACK failed for turn_1899267b-8dea-45a9-8d33-3e414c33e82c: compound terminal/marker write outage — entering pending-commit (reconcile), queue frozen
+[degraded] session session_dfd0d479-7708-4d26-92ef-74a51902433b failed to persist recovery record for turn_1899267b-8dea-45a9-8d33-3e414c33e82c: compound terminal/marker write outage
+[degraded] session session_22bdb799-c7f4-407a-9fa5-013c05095923 failed to persist recovery record for turn_b08dfdf5-db89-4c2a-b89d-88b217fbbeb8: whole recovery store write outage
+[degraded] session session_22bdb799-c7f4-407a-9fa5-013c05095923 recovery lease failed for turn_b08dfdf5-db89-4c2a-b89d-88b217fbbeb8: whole recovery store write outage
+[degraded] session session_007d9c94-bbc6-4584-be42-2312d35ea00c recovery lease failed for turn_462334c2-a0e6-4508-87f7-659b9308d163: recovery store temporarily refuses the lease write
+[degraded] session session_b05bb630-b14d-42b9-b0d0-1398e7926edd recovery lease failed for turn_f08b5dc0-d4ff-434b-b93e-9254c4056500: recovery store temporarily refuses the lease write
+[degraded] session session_32ad9c3e-0bba-4f6f-908e-734b700cb707 recovery attempt-intent persist failed for turn_c15ca028-c1ac-4831-9ee1-62c7f227bf01 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_61f79fa1-c664-4e73-88e3-e46c76d1071f recovery lease failed for turn_5ce82abd-9790-4141-ad19-18bdb033ad00: recovery CAS conflict for turn_5ce82abd-9790-4141-ad19-18bdb033ad00: expected version 0, stored 1
+[degraded] session session_e6017bce-364b-4d06-985a-f0bbeb3f2f47 recovery lease failed for turn_8c68ae3c-dd6b-47fc-a0b3-bd58b33cee0d: recovery store temporarily refuses the lease write
+[degraded] session session_67f2af14-1abc-4fba-83e3-4ec34352bc36 recovery lease failed for turn_a48c07eb-129b-4f97-9f62-5cf727aac3ba: recovery store temporarily refuses the lease write
+[degraded] session session_67f2af14-1abc-4fba-83e3-4ec34352bc36 recovery lease failed for turn_a48c07eb-129b-4f97-9f62-5cf727aac3ba: recovery store temporarily refuses the lease write
+[degraded] session session_67f2af14-1abc-4fba-83e3-4ec34352bc36 recovery lease failed for turn_a48c07eb-129b-4f97-9f62-5cf727aac3ba: recovery store temporarily refuses the lease write
+[degraded] session session_67f2af14-1abc-4fba-83e3-4ec34352bc36 recovery lease failed for turn_a48c07eb-129b-4f97-9f62-5cf727aac3ba: recovery store temporarily refuses the lease write
+[degraded] session session_67f2af14-1abc-4fba-83e3-4ec34352bc36 recovery lease failed for turn_a48c07eb-129b-4f97-9f62-5cf727aac3ba: recovery store temporarily refuses the lease write
+[degraded] session session_67f2af14-1abc-4fba-83e3-4ec34352bc36 recovery lease failed for turn_a48c07eb-129b-4f97-9f62-5cf727aac3ba: recovery store temporarily refuses the lease write
+[degraded] session session_9b2f11e6-76ed-44ed-9082-80e09baab97d recovery attempt-intent persist failed for turn_4172fa26-b2e6-4d6b-82bc-751d078238d0 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_9b2f11e6-76ed-44ed-9082-80e09baab97d release lease read failed for turn_4172fa26-b2e6-4d6b-82bc-751d078238d0: recovery read outage
+[degraded] session session_276703e4-0ed4-4f3b-90bf-4ff8ed30efbb recovery attempt-intent persist failed for turn_29334851-e774-47af-806a-c61f5b3d840e — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_276703e4-0ed4-4f3b-90bf-4ff8ed30efbb recovery attempt-intent persist failed for turn_29334851-e774-47af-806a-c61f5b3d840e — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_276703e4-0ed4-4f3b-90bf-4ff8ed30efbb recovery attempt-intent persist failed for turn_29334851-e774-47af-806a-c61f5b3d840e — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_276703e4-0ed4-4f3b-90bf-4ff8ed30efbb recovery attempt-intent persist failed for turn_29334851-e774-47af-806a-c61f5b3d840e — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_276703e4-0ed4-4f3b-90bf-4ff8ed30efbb recovery attempt-intent persist failed for turn_29334851-e774-47af-806a-c61f5b3d840e — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_276703e4-0ed4-4f3b-90bf-4ff8ed30efbb recovery attempt-intent persist failed for turn_29334851-e774-47af-806a-c61f5b3d840e — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_276703e4-0ed4-4f3b-90bf-4ff8ed30efbb recovery attempt-intent persist failed for turn_29334851-e774-47af-806a-c61f5b3d840e — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_91934e5e-6f93-4609-ba83-d346bfa034e3 recovery attempt-intent persist failed for turn_96393cdd-5766-4448-beb1-93241d3a5ed7 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_91934e5e-6f93-4609-ba83-d346bfa034e3 release lease read failed for turn_96393cdd-5766-4448-beb1-93241d3a5ed7: recovery read outage
+[degraded] session session_91934e5e-6f93-4609-ba83-d346bfa034e3 recovery record load failed for turn_96393cdd-5766-4448-beb1-93241d3a5ed7: recovery read outage
+[degraded] session session_9727d7a6-dbee-4e10-a947-e4906f1461e6 recovery attempt-intent persist failed for turn_f819c8e5-49f9-4df5-beb1-0dd5779c6a14 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_9727d7a6-dbee-4e10-a947-e4906f1461e6 release lease read failed for turn_f819c8e5-49f9-4df5-beb1-0dd5779c6a14: recovery read outage
+[degraded] session session_1e5c0c45-d227-44d3-af0d-4c2d99445f61 recovery discovery: durable read failed — session store temporarily unavailable
+[degraded] session session_a45e41e7-3d60-46ce-af4c-2dbcf0df6fb5 recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_a45e41e7-3d60-46ce-af4c-2dbcf0df6fb5 recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_a45e41e7-3d60-46ce-af4c-2dbcf0df6fb5 recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_a45e41e7-3d60-46ce-af4c-2dbcf0df6fb5 recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_a45e41e7-3d60-46ce-af4c-2dbcf0df6fb5 recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_a45e41e7-3d60-46ce-af4c-2dbcf0df6fb5 recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_a45e41e7-3d60-46ce-af4c-2dbcf0df6fb5 recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_dd1cdfd0-9e63-4967-96c0-174b51b17a60 recovery discovery: durable read failed — session store unavailable for turn turn_8ca78a5f-52d8-407d-a886-852c2e8bb834
+[degraded] session session_d73d50fc-3454-4b35-994c-49889168a5a5 recovery discovery: durable read failed — session store temporarily unavailable
+[degraded] session session_37c89fc4-ed12-4515-87e3-453d78bd22d6 terminal recovery ACK failed for turn_b21b3863-0766-4568-8985-5fce05498db1: compound terminal/marker write outage — entering pending-commit (reconcile), queue frozen
+[degraded] session session_37c89fc4-ed12-4515-87e3-453d78bd22d6 failed to persist recovery record for turn_b21b3863-0766-4568-8985-5fce05498db1: compound terminal/marker write outage
+[degraded] session session_37c89fc4-ed12-4515-87e3-453d78bd22d6 recovery discovery: durable read failed — recovery store lookup outage
+[degraded] session session_82b4d46f-ad88-41cb-876a-19e62f2e5d1a recovery discovery: durable read failed — session store temporarily unavailable
+ ✓ packages/core/src/runtime/recovery-durable.test.ts (29 tests) 90ms
+[degraded] sqlite-store.close-journal-mode: database is locked
+[degraded] migrate.append: duplicate event id: event_212f5d30-7432-438e-8842-25ef02bfea12
+[degraded] migrate.append: duplicate event id: event_9004e238-dada-4e24-9b56-af17907dc3a5
+ ✓ packages/store/src/sqlite-runtime-store.test.ts (15 tests) 94ms
+r101-mutation: --only definitely-not-a-mutation matches no mutation
+ ✓ packages/evaluation/src/r97-mutation-check.test.ts (35 tests) 83ms
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+ ✓ apps/cli/src/audit.benchmark-profile.test.ts (11 tests) 109ms
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+ ✓ apps/cli/src/champion-application.integration.test.ts (11 tests) 88ms
+[degraded] memory.search: FTS unavailable or query rejected; using literal search
+ ✓ packages/memory/src/memory-search-contract.regressions.test.ts (43 tests) 94ms
+[degraded] memory.search: FTS unavailable or query rejected; using literal search
+ ✓ packages/memory/src/sqlite-memory-store.test.ts (31 tests) 81ms
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+ ✓ packages/harness/src/memory.integration.test.ts (2 tests) 75ms
+ ✓ apps/cli/src/e4-r45-diagnostics-order.test.ts (4 tests) 82ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts (21 tests) 74ms
+ ✓ packages/tools/src/process/utf8-output.regressions.test.ts (34 tests) 90ms
+ ✓ packages/core/src/runtime/active-user-context.test.ts (24 tests) 77ms
+ ✓ packages/evaluation/src/e4-r27-promotion-eligibility.test.ts (18 tests) 88ms
+ ✓ packages/gateway/src/desktop-client.test.ts (17 tests) 80ms
+ ✓ packages/context/src/circuit-breaker.test.ts (6 tests) 69ms
+ ✓ packages/context/src/pipeline.test.ts (38 tests) 59ms
+ ✓ packages/memory/src/sqlite-memory-metadata.regressions.test.ts (29 tests) 78ms
+[degraded] session session_be4ec693-2442-4bc4-8a3b-c19e0088991e durable followup consume failed for fup-1 (prompt remains bound to turn turn_b69df557-29a0-4e7c-83aa-965424b0730d): durable ack down
+[degraded] session session_c4994da7-577b-47c5-9364-4b63d926bee5 durable followup bind failed for fup-1 (created turn turn_8bdf2a3d-8d83-4d0b-a349-d6d425f15d70 will not execute): bind down
+[degraded] inbox.promotion-identity-missing: session session_9cb5fc3a-4db1-484d-bd82-ff661a8ea83a prompt prompt_d5cc6894-a198-484a-9487-56488cd4bc11 is promoted but has no promotedTurnId — recovery-required, not replayed
+[degraded] session session_d45c389b-dfea-41c7-aa25-c5d35ba0fdcb failed to persist turn turn_0cc95428-6529-4ea1-8736-f002793b78fb as cancelled: P38.2-9 simulated updateTurn failure
+[degraded] session session_191ad04d-5989-46f7-a829-aa8f8e5fe9c6 failed to persist turn turn_6c3d92d7-c395-49be-862d-1b8f7474f9bc as cancelled: P38.2-9 simulated updateTurn failure
+[degraded] session session_191ad04d-5989-46f7-a829-aa8f8e5fe9c6 failed to emit turn.cancelled for turn_6c3d92d7-c395-49be-862d-1b8f7474f9bc: P38.2-9 simulated emit failure
+[degraded] session session_6eb2aa8b-9d85-4eee-9fd2-fb1a6ded4af0 failed to persist turn turn_20843a14-0c70-4a85-99fb-e548a9e19531 as cancelled: P38.2-9 simulated updateTurn failure
+[degraded] session session_12369a23-f9ae-42e2-8e03-6f3d131bb349 failed to persist turn turn_e726d3e3-b453-4525-bfe9-fa3e81b0f7ca as cancelled: P38.3-8 simulated updateTurn failure
+ ✓ packages/core/src/runtime/session-actor.test.ts (68 tests) 63ms
+ ✓ packages/session/src/session-store.test.ts (20 tests) 73ms
+ ✓ packages/evaluation/src/baseline.test.ts (61 tests) 60ms
+ ✓ packages/events/src/event-store.test.ts (28 tests) 87ms
+ ✓ packages/evaluation/src/tool-call-efficiency-fixture-billing-boundary.test.ts (7 tests) 64ms
+[degraded] prereg observer refused case regression/reg-01: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/reg-02: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/reg-06: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/reg-08: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/adv-03: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/adv-07: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/st-02: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/st-05: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/reg-01: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/reg-02: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/reg-06: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/reg-08: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/adv-03: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/adv-07: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/st-02: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/st-05: not a readable benchmarks case directory
+ ✓ apps/cli/src/prereg-production-wiring.test.ts (2 tests) 66ms
+ ✓ packages/skills/src/skill-loader.test.ts (22 tests) 60ms
+ ✓ packages/memory/src/memory-visibility.regressions.test.ts (28 tests) 67ms
+ ✓ packages/harness/src/config-wiring.test.ts (10 tests) 63ms
+ ✓ packages/evaluation/src/tool-call-efficiency-pricing-basis-wiring.test.ts (16 tests) 67ms
+ ✓ packages/evaluation/src/tool-call-efficiency-pricing-send-guard.test.ts (9 tests) 75ms
+ ✓ packages/evaluation/src/artifact-v3/artifact-v3.test.ts (40 tests) 65ms
+ ✓ packages/store-integrity/src/index.test.ts (11 tests) 57ms
+ ✓ apps/cli/src/n2-unified-selection.test.ts (9 tests) 57ms
+ ✓ apps/cli/src/prereg-declared-pricing.test.ts (73 tests) 64ms
+ ✓ packages/contracts/src/contracts.test.ts (65 tests) 38ms
+ ✓ packages/evaluation/src/promotion-envelope-r15.test.ts (5 tests) 57ms
+r101-closed-loop: nothing to do — pass --all, or one or more of --setup-only --acceptance --suite --matrix --identity
+r101-closed-loop: the baseline arm has no built CLI at /workspace/harness-agent/.ci/definitely-not-prepared/baseline/apps/cli/dist/main.js — run --setup-only first (a missing arm is a setup failure, never a skip)
+ ✓ packages/evaluation/src/r97-closed-loop.test.ts (24 tests) 65ms
+ ✓ packages/model/src/openai.wire-stub.test.ts (22 tests) 59ms
+ ✓ packages/harness/src/candidate-persistence.regressions.test.ts (11 tests) 39ms
+ ✓ apps/cli/src/champion-application-r05.test.ts (4 tests) 58ms
+ ✓ packages/evaluation/src/e2-final-integration.test.ts (5 tests) 53ms
+ ✓ packages/memory/src/retrieval.test.ts (19 tests) 57ms
+ ✓ packages/harness/src/effective-instruction-context.regressions.test.ts (6 tests) 67ms
+ ✓ packages/core/src/runtime/run-budget.test.ts (8 tests) 54ms
+ ✓ packages/core/src/runtime/provider-termination-regressions.test.ts (11 tests) 81ms
+ ✓ packages/model/src/model.test.ts (9 tests) 47ms
+ ✓ packages/tools/src/tools/exec-workspace-policy.test.ts (12 tests) 50ms
+ ✓ packages/core/src/runtime/fault-injection-v2.test.ts (17 tests) 54ms
+ ✓ packages/evaluation/src/e2-arch-invariants.test.ts (12 tests) 46ms
+ ✓ packages/core/src/runtime/loop-integration.test.ts (26 tests) 55ms
+[degraded] durable-recovery-store.release-lock (ownership changed, not deleting /tmp/e4-08-rec-hNPkRV/recovery/t10.json.lock): lock token "9999 newer-owner" != mine
+ ✓ packages/harness/src/durable-recovery-store.test.ts (15 tests) 59ms
+ ✓ packages/checkpoint/src/checkpoint-store.test.ts (12 tests) 54ms
+ ✓ packages/observability/src/inventory.test.ts (8 tests) 46ms
+ ✓ packages/core/src/runtime/message-history-regressions.test.ts (24 tests) 46ms
+ ✓ packages/session/src/service.test.ts (11 tests) 39ms
+ ✓ packages/evaluation/src/tool-call-efficiency-pricing-admission.test.ts (16 tests) 50ms
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+ ✓ packages/harness/src/scope-resolver.test.ts (6 tests) 39ms
+ ✓ packages/evaluation/src/r97-campaign-evidence.test.ts (24 tests) 41ms
+ ✓ packages/evaluation/src/r97-offline-seam.test.ts (18 tests) 38ms
+ ✓ apps/cli/src/n5-offline-provider.test.ts (1 test) 46ms
+ ✓ packages/model/src/openai-system-context.regressions.test.ts (13 tests) 35ms
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any of the parent directories): .git
+
+ ✓ apps/cli/src/learn-command.test.ts (12 tests) 40ms
+ ✓ packages/mcp/src/mcp-client-hardened.test.ts (10 tests) 40ms
+ ✓ packages/plugins/src/plugin-host-hardened.test.ts (21 tests) 40ms
+ ✓ packages/harness/src/memory-runtime-bridge.test.ts (7 tests) 32ms
+ ✓ packages/tools/src/verification-plan.test.ts (9 tests) 36ms
+ ✓ packages/harness/src/command-discovery-cache.regressions.test.ts (3 tests) 37ms
+ ✓ packages/evaluation/src/paired-execution-identity.test.ts (7 tests) 43ms
+ ✓ packages/memory/src/migration.test.ts (7 tests) 50ms
+ ✓ packages/tools/src/review-regressions.test.ts (42 tests) 36ms
+ ✓ packages/harness/src/skill.integration.test.ts (1 test) 54ms
+ ✓ packages/core/src/runtime/encoded-tool-output-security.regressions.test.ts (36 tests) 42ms
+ ✓ packages/evaluation/src/bench.test.ts (18 tests) 43ms
+ ✓ packages/evaluation/src/e4-r43-execution-plan-capacity.test.ts (3 tests) 63ms
+ ✓ packages/evaluation/src/tool-call-efficiency-fixture-transport-grant.test.ts (4 tests) 34ms
+ ✓ packages/model/src/openai-termination-regressions.test.ts (19 tests) 45ms
+ ✓ packages/evaluation/src/artifact-validate.test.ts (15 tests) 37ms
+ ✓ apps/cli/src/audit.evidence-probe.test.ts (8 tests) 43ms
+ ✓ packages/tools/src/command-discovery.test.ts (15 tests) 42ms
+ ✓ packages/evaluation/src/tool-call-efficiency-preregistration-v2.test.ts (54 tests) 35ms
+ ✓ packages/evaluation/src/r97-redaction.test.ts (12 tests) 32ms
+[degraded] inbox.corrupt-line: Expected property name or '}' in JSON at position 1 (line 1 column 2)
+ ✓ packages/session/src/inbox.test.ts (14 tests) 40ms
+ ✓ packages/mcp/src/mcp-chaos.test.ts (12 tests) 33ms
+ ✓ packages/core/src/runtime/step-snapshot.test.ts (28 tests) 31ms
+ ✓ apps/cli/src/champion-eval.test.ts (15 tests) 27ms
+ ✓ packages/evaluation/src/r97-budget-write-fault.test.ts (4 tests) 29ms
+ ✓ packages/evaluation/src/e2-baseline-audit.test.ts (10 tests) 32ms
+ ✓ packages/gateway/src/rpc.test.ts (26 tests) 34ms
+ ✓ packages/core/src/runtime/crash-matrix.test.ts (8 tests) 30ms
+ ✓ packages/tools/src/repo-map.test.ts (12 tests) 43ms
+ ✓ apps/cli/src/champion-application-r16.test.ts (6 tests) 31ms
+ ✓ packages/context/src/discovery.test.ts (11 tests) 31ms
+ ✓ packages/evaluation/src/champion-eval-strict-read.test.ts (4 tests) 35ms
+ ✓ packages/evaluation/src/e4-r28-execution-plan-fields.test.ts (14 tests) 34ms
+ ✓ packages/harness/src/skill-context.test.ts (7 tests) 27ms
+ ✓ packages/core/src/runtime/race-split.test.ts (5 tests) 28ms
+ ✓ packages/core/src/runtime/session-race2.test.ts (5 tests) 28ms
+ ✓ packages/core/src/runtime/tool-output-boundary.regressions.test.ts (21 tests) 32ms
+[degraded] skill-store.corrupt-line: Expected property name or '}' in JSON at position 1 (line 1 column 2)
+ ✓ packages/skills/src/skill-evolution.test.ts (22 tests) 32ms
+[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath '/tmp/e2-07-aftgUo/runs/candidate.json'
+[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath '/tmp/e2-07-aftgUo/runs/baseline.json'
+[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath '/tmp/e2-07-aftgUo/runs/baseline.json'
+[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath '/tmp/e2-07-aftgUo/runs/candidate.json'
+[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath '/tmp/e2-07-aftgUo/runs/candidate.json'
+[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath '/tmp/e2-07-aftgUo/runs/baseline.json'
+[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath '/tmp/e2-07-QEUuAy/decision.json'
+ ✓ packages/evaluation/src/promotion-envelope.test.ts (11 tests) 30ms
+ ✓ packages/tools/src/symbol-index.test.ts (6 tests) 22ms
+ ✓ packages/mcp/src/mcp-runtime-v2.test.ts (13 tests) 27ms
+ ✓ packages/harness/src/workspace-manager.test.ts (6 tests) 29ms
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+ ✓ apps/cli/src/champion-application-p1.test.ts (4 tests) 29ms
+ ✓ packages/evaluation/src/r98-fixture-cases.test.ts (8 tests) 18ms
+ ✓ apps/cli/src/r0-f5-pricing-declaration-gaps.test.ts (6 tests) 27ms
+ ✓ packages/core/src/runtime/crash-sideeffect.test.ts (5 tests) 32ms
+ ✓ packages/evaluation/src/r97-acceptance-matrix.test.ts (26 tests) 26ms
+ ✓ apps/cli/src/production-audit.test.ts (5 tests) 16ms
+ ✓ packages/core/src/runtime/followup-recovery.test.ts (7 tests) 23ms
+ ✓ packages/evaluation/src/champion-eval-v3.test.ts (15 tests) 20ms
+ ✓ packages/memory/src/retrieval-work.regressions.test.ts (29 tests) 25ms
+ ✓ packages/core/src/runtime/checkpoint.test.ts (6 tests) 27ms
+ ✓ packages/skills/src/skill-store.test.ts (6 tests) 26ms
+ ✓ packages/tools/src/process/windows-fixture-guard.test.ts (15 tests) 23ms
+ ✓ packages/security/src/boundary-guard.test.ts (49 tests) 22ms
+[degraded] reflection.events.list: boom
+ ✓ packages/harness/src/reflection-runner.test.ts (8 tests) 28ms
+ ✓ packages/tools/src/env-snapshot.test.ts (6 tests) 26ms
+ ✓ packages/core/src/runtime/resume.test.ts (13 tests) 22ms
+ ✓ packages/evaluation/src/mining.test.ts (20 tests) 29ms
+ ✓ apps/cli/src/experiment-command.test.ts (4 tests) 24ms
+ ✓ packages/session/src/replay.test.ts (14 tests) 22ms
+ ✓ packages/evaluation/src/r95-authorization-strictness.test.ts (60 tests) 36ms
+ ✓ packages/evaluation/src/champion-eval-grid.test.ts (5 tests) 16ms
+ ✓ packages/evaluation/src/champion-eval-r14.test.ts (16 tests) 22ms
+ ✓ packages/evaluation/src/evolution-ledger.test.ts (8 tests) 16ms
+ ✓ packages/core/src/runtime/structured-output-security.regressions.test.ts (26 tests) 24ms
+ ✓ packages/tools/src/transaction.test.ts (9 tests) 21ms
+ ✓ packages/core/src/runtime/r86-h2-offline-replay.test.ts (4 tests) 22ms
+ ✓ packages/session/src/p2-integration.test.ts (3 tests) 16ms
+ ✓ packages/core/src/runtime/step-snapshot.invariant.test.ts (10 tests) 21ms
+ ✓ packages/evaluation/src/paired-executor.test.ts (9 tests) 29ms
+ ✓ apps/cli/src/explain-command.test.ts (5 tests) 15ms
+ ✓ packages/gateway/src/transport-conformance.test.ts (20 tests) 21ms
+ ✓ packages/evaluation/src/r92-authorization.test.ts (44 tests) 23ms
+ ✓ packages/harness/src/tool-budget-binding.test.ts (3 tests) 20ms
+ ✓ packages/core/src/runtime/effective-config.test.ts (8 tests) 21ms
+ ✓ apps/cli/src/provider-offline-profile.test.ts (33 tests) 19ms
+ ✓ apps/cli/src/e3-07-promotion-trust.test.ts (5 tests) 21ms
+ ✓ packages/core/src/runtime/memory-prefetch.regressions.test.ts (15 tests) 24ms
+ ✓ packages/security/src/sandbox.test.ts (52 tests) 23ms
+ ✓ packages/core/src/lifecycle/hooks.test.ts (18 tests) 21ms
+ ✓ apps/cli/src/default-harness.integration.test.ts (4 tests) 22ms
+ ✓ packages/core/src/runtime/r85-h2-progress-blind-gate.test.ts (4 tests) 27ms
+ ✓ packages/evaluation/src/experiment-harness.test.ts (5 tests) 20ms
+[degraded] ask-user-store.corrupt-line: Unexpected token 'o', "not-json" is not valid JSON
+ ✓ packages/session/src/ask-user-store.test.ts (7 tests) 21ms
+ ✓ packages/context/src/context-optimization-regressions.test.ts (39 tests) 22ms
+[degraded] session session_dfb4a318-46cb-4c45-b5e9-1d976eaab2aa durable followup consume failed for fup-1 (prompt remains bound to turn turn_e1860227-e236-45de-9505-04a483a24212): injected consume failure
+[degraded] session session_b522da50-167d-4779-a783-94743561f62d durable followup bind failed for fup-1 (created turn turn_d9b2ec2e-0a2f-42ee-a86f-4c2f9a4f4938 will not execute): injected bind failure
+ ✓ packages/core/src/runtime/followup-crash-matrix.test.ts (9 tests) 19ms
+ ✓ packages/evaluation/src/challenger-reaudit.test.ts (5 tests) 13ms
+ ✓ packages/harness/src/trust-envelope.test.ts (8 tests) 20ms
+ ✓ packages/harness/src/child-merge.test.ts (3 tests) 25ms
+ ✓ packages/skills/src/task-scoped-selection.test.ts (23 tests) 19ms
+ ✓ packages/sdk/src/conformance.test.ts (3 tests) 19ms
+ ✓ apps/cli/src/champion-state-file.test.ts (6 tests) 19ms
+ ✓ packages/tools/src/source-matrix.test.ts (22 tests) 17ms
+[degraded] discovery.close: instruction handle cleanup failed
+ ✓ packages/context/src/default-discovery-read-failures.test.ts (3 tests) 17ms
+ ✓ packages/context/src/taxonomy.test.ts (18 tests) 19ms
+ ✓ packages/core/src/runtime/session-race.test.ts (5 tests) 17ms
+ ✓ packages/core/src/runtime/race-part1.test.ts (1 test) 18ms
+ ✓ packages/contracts/src/non-fatal.test.ts (6 tests) 20ms
+ ✓ packages/core/src/runtime/race-part4.test.ts (1 test) 14ms
+ ✓ packages/tools/src/write-file-safety.test.ts (4 tests) 14ms
+ ✓ packages/tools/src/navigate.test.ts (7 tests) 18ms
+ ✓ packages/evaluation/src/arm-factory.test.ts (18 tests) 14ms
+ ✓ packages/mcp/src/mcp-tool-adapter.test.ts (17 tests) 16ms
+ ✓ apps/cli/src/audit.default-profile.test.ts (23 tests) 13ms
+ ✓ packages/tools/src/tool-dispatch-budget.test.ts (6 tests) 14ms
+ ✓ packages/core/src/runtime/world-snapshot.conformance.test.ts (8 tests) 20ms
+ ✓ packages/evaluation/src/champion-eval-recovery-security.test.ts (8 tests) 15ms
+ ✓ packages/harness/src/security-regression-matrix.test.ts (12 tests) 15ms
+ ✓ packages/evaluation/src/champion-application.test.ts (18 tests) 14ms
+ ✓ apps/cli/src/release-verify.test.ts (45 tests) 14ms
+ ✓ packages/evaluation/src/prereg-activation-binding.test.ts (6 tests) 11ms
+ ✓ packages/contracts/src/timer.test.ts (13 tests) 16ms
+[degraded] candidate-store.corrupt-line: Unexpected token 'o', "not-json" is not valid JSON
+ ✓ packages/harness/src/candidate-store.test.ts (3 tests) 12ms
+ ✓ apps/cli/src/release-artifacts.test.ts (3 tests) 20ms
+ ✓ packages/tools/src/process/r96-windows-execution-boundary.test.ts (25 tests | 3 skipped) 14ms
+ ✓ packages/learning/src/promoter-v2.test.ts (17 tests) 13ms
+ ✓ packages/plugins/src/plugin-host.test.ts (17 tests) 11ms
+ ✓ packages/evaluation/src/r97-arm-report-evidence.test.ts (18 tests) 9ms
+ ✓ packages/harness/src/adversarial-regression.test.ts (12 tests) 13ms
+ ✓ packages/harness/src/command-discovery-service.test.ts (3 tests) 10ms
+ ✓ packages/security/src/canonical-path.test.ts (26 tests) 12ms
+ ✓ packages/learning/src/promoter.test.ts (21 tests) 12ms
+ ✓ packages/tools/src/workspace.test.ts (8 tests) 11ms
+ ✓ packages/memory/src/write-gate.test.ts (15 tests) 11ms
+ ✓ packages/evaluation/src/paired-plan.test.ts (12 tests) 11ms
+ ✓ packages/evaluation/src/provenance-v3.test.ts (10 tests) 11ms
+ ✓ packages/security/src/process-gate.test.ts (33 tests) 12ms
+ ✓ packages/observability/src/harness-evolution.test.ts (19 tests) 11ms
+ ✓ apps/cli/src/e4-r58-mutation-newlines.test.ts (5 tests) 10ms
+ ✓ packages/contracts/src/message-protocol.wire.test.ts (26 tests) 12ms
+ ✓ packages/learning/src/sandbox.test.ts (7 tests) 14ms
+ ✓ packages/core/src/runtime/race-part3.test.ts (1 test) 11ms
+ ✓ packages/evaluation/src/prompt-rules.test.ts (18 tests) 9ms
+ ✓ packages/context/src/policy-versioning.test.ts (10 tests) 7ms
+ ✓ packages/core/src/runtime/race-part2.test.ts (1 test) 11ms
+ ✓ packages/security/src/capability-guard.test.ts (17 tests) 11ms
+ ✓ packages/core/src/runtime/race-part0.test.ts (1 test) 10ms
+ ✓ packages/core/src/runtime/race-bisect5.test.ts (1 test) 10ms
+ ✓ packages/mcp/src/mcp-client.test.ts (15 tests) 11ms
+ ✓ packages/memory/src/reflection.test.ts (19 tests) 10ms
+ ✓ packages/harness/src/config-drift.test.ts (14 tests) 9ms
+ ✓ packages/protocol/src/idempotency.test.ts (5 tests) 12ms
+ ✓ packages/evaluation/src/manifest.test.ts (31 tests) 10ms
+ ✓ packages/evaluation/src/load-runs.test.ts (5 tests) 13ms
+ ✓ packages/core/src/runtime/race-bisect3.test.ts (1 test) 12ms
+ ✓ packages/core/src/runtime/tool-output-artifact-path.regressions.test.ts (2 tests) 10ms
+ ✓ packages/security/src/injection-gate.test.ts (13 tests) 11ms
+ ✓ packages/evaluation/src/formal-invariants.test.ts (40 tests) 11ms
+ ✓ apps/cli/src/mechanisms.test.ts (7 tests) 21ms
+ ✓ packages/evaluation/src/tool-selection.test.ts (17 tests) 9ms
+ ✓ packages/tools/src/tools/exec-workspace-root-alias.test.ts (7 tests) 8ms
+ ✓ packages/sdk/src/client.test.ts (9 tests) 9ms
+ ✓ packages/evaluation/src/mechanism-contract.test.ts (9 tests) 11ms
+ ✓ packages/evaluation/src/tool-call-efficiency-preregistration.test.ts (9 tests) 12ms
+ ✓ packages/evaluation/src/champion-state.test.ts (11 tests) 9ms
+ ✓ packages/evaluation/src/paired-v3-identity.test.ts (7 tests) 8ms
+ ✓ packages/security/src/network-gate.test.ts (20 tests) 10ms
+ ✓ packages/evaluation/src/champion-profile.test.ts (10 tests) 9ms
+ ✓ packages/harness/src/config-drift-matrix.test.ts (13 tests) 10ms
+ ✓ packages/orchestration/src/orchestration.test.ts (18 tests) 9ms
+ ✓ packages/protocol/src/bounded.test.ts (6 tests) 10ms
+ ✓ packages/evaluation/src/experiment-config.test.ts (7 tests) 9ms
+ ✓ packages/evaluation/src/independent-reviewer.test.ts (17 tests) 10ms
+ ✓ packages/evaluation/src/learned-workflow.test.ts (15 tests) 8ms
+ ✓ packages/evaluation/src/repeated-run.test.ts (7 tests) 11ms
+ ✓ packages/protocol/src/schema.test.ts (4 tests) 8ms
+ ✓ packages/evaluation/src/specialist-routing.test.ts (18 tests) 8ms
+ ✓ packages/evaluation/src/champion-decision-v3.test.ts (13 tests) 8ms
+ ✓ packages/security/src/approval-capability.test.ts (23 tests) 8ms
+ ✓ packages/evaluation/src/review-experiment.test.ts (14 tests) 10ms
+ ✓ packages/evaluation/src/candidate-registry.test.ts (9 tests) 9ms
+ ✓ packages/context/src/compaction.test.ts (10 tests) 10ms
+ ✓ packages/evaluation/src/planner-executor.test.ts (18 tests) 7ms
+ ✓ packages/core/src/runtime/environment-snapshot.p31.test.ts (10 tests) 8ms
+ ✓ packages/harness/src/delegation-tools.test.ts (7 tests) 8ms
+ ✓ packages/evaluation/src/tool-call-efficiency.test.ts (7 tests) 8ms
+ ✓ packages/learning/src/paired.test.ts (19 tests) 8ms
+ ✓ packages/evaluation/src/activation-evidence-execution.test.ts (9 tests) 7ms
+ ✓ packages/model/src/provider-diagnostics.test.ts (8 tests) 8ms
+ ✓ packages/harness/src/config-resolver.test.ts (12 tests) 8ms
+ ✓ packages/core/src/verification/runtime-verifier.test.ts (13 tests) 8ms
+ ✓ packages/skills/src/skill-capability.test.ts (7 tests) 5ms
+ ✓ packages/core/src/runtime/recovery-state-machine.test.ts (8 tests) 7ms
+ ✓ packages/evaluation/src/artifact-v3/event-records.test.ts (7 tests) 8ms
+ ✓ packages/context/src/message-budget-regressions.test.ts (14 tests) 7ms
+ ✓ packages/agents/src/state-handoff.test.ts (9 tests) 7ms
+ ✓ packages/context/src/prompt-versioning.test.ts (9 tests) 8ms
+ ✓ packages/mcp/src/mcp-tool-view.test.ts (9 tests) 7ms
+ ✓ packages/evaluation/src/tool-preference.test.ts (16 tests) 8ms
+ ✓ packages/evaluation/src/provenance-v2.test.ts (8 tests) 8ms
+ ✓ packages/core/src/runtime/skill-instruction-snapshot.p32.test.ts (10 tests) 8ms
+ ✓ packages/plugins/src/plugin-registry.test.ts (12 tests) 7ms
+ ✓ packages/orchestration/src/orchestrator.test.ts (7 tests) 7ms
+ ✓ packages/security/src/secret-gate.test.ts (16 tests) 7ms
+ ✓ packages/harness/src/config-layers.test.ts (10 tests) 6ms
+ ✓ packages/memory/src/evidence.test.ts (6 tests) 5ms
+ ✓ packages/evaluation/src/failure-cluster-backlog.test.ts (3 tests) 6ms
+ ✓ packages/core/src/state/projections.test.ts (6 tests) 7ms
+ ✓ apps/cli/src/audit.persistent-profile.test.ts (6 tests) 6ms
+ ✓ packages/contracts/src/message-protocol.test.ts (9 tests) 8ms
+ ✓ packages/learning/src/evolution.test.ts (6 tests) 8ms
+ ✓ apps/cli/src/audit.profiles.test.ts (11 tests) 8ms
+ ✓ packages/core/src/recovery/recovery.test.ts (16 tests) 9ms
+ ✓ packages/evaluation/src/candidate-matrix.test.ts (6 tests) 7ms
+ ✓ packages/evaluation/src/attribution.test.ts (11 tests) 7ms
+ ✓ packages/contracts/src/path-containment.test.ts (41 tests) 7ms
+ ✓ packages/tools/src/write-safety.test.ts (11 tests) 6ms
+ ✓ apps/cli/src/app-server-layering.test.ts (3 tests) 9ms
+ ✓ packages/evaluation/src/activation-evidence.test.ts (13 tests) 6ms
+ ✓ packages/evaluation/src/champion-harness-config.test.ts (5 tests) 7ms
+ ✓ packages/tools/src/edit.test.ts (14 tests) 11ms
+ ✓ packages/contracts/src/serialization.test.ts (10 tests) 6ms
+ ✓ packages/tools/src/schema-advert.test.ts (7 tests) 6ms
+ ✓ packages/evaluation/src/cross-model.test.ts (8 tests) 7ms
+ ✓ packages/tools/src/tool-lookup.test.ts (2 tests) 6ms
+ ✓ packages/evaluation/src/cost-model.test.ts (13 tests) 7ms
+ ✓ apps/cli/src/config-command.test.ts (4 tests) 7ms
+ ✓ packages/evaluation/src/false-complete-cases.test.ts (4 tests) 5ms
+ ✓ packages/core/src/runtime/artifact-store.test.ts (3 tests) 5ms
+ ✓ packages/learning/src/scorecard.test.ts (12 tests) 7ms
+ ✓ packages/evaluation/src/promotion-gate.test.ts (11 tests) 5ms
+ ✓ packages/evaluation/src/paired-key.test.ts (9 tests) 6ms
+ ✓ packages/evaluation/src/benchmark-candidates.test.ts (16 tests) 6ms
+ ✓ packages/contracts/src/taxonomy.test.ts (7 tests) 6ms
+ ✓ packages/core/src/state/agent-state.test.ts (9 tests) 6ms
+ ✓ packages/evaluation/src/paired-v3-security-per-sample.test.ts (2 tests) 6ms
+ ✓ apps/cli/src/prereg-docs-smoke.test.ts (4 tests) 11ms
+ ✓ packages/evaluation/src/paired-eval.test.ts (6 tests) 5ms
+ ✓ apps/cli/src/promotion-decision.test.ts (5 tests) 5ms
+ ✓ packages/evaluation/src/champion-manifest.test.ts (5 tests) 6ms
+ ✓ packages/protocol/src/mapper.test.ts (9 tests) 5ms
+ ✓ packages/core/src/runtime/recovery-controller.test.ts (9 tests) 6ms
+ ✓ packages/evaluation/src/security-taxonomy.test.ts (12 tests) 7ms
+ ✓ packages/evaluation/src/security-outcome-v2.test.ts (7 tests) 5ms
+ ✓ packages/evaluation/src/activation-evidence-v2.test.ts (9 tests) 6ms
+ ✓ packages/security/src/permission.test.ts (11 tests) 5ms
+ ✓ packages/contracts/src/message-protocol.wire-gap.test.ts (8 tests) 6ms
+ ✓ packages/contracts/src/tool-name.test.ts (4 tests) 5ms
+ ✓ packages/contracts/src/testing.test.ts (9 tests) 6ms
+ ✓ packages/core/src/runtime/command-classification.test.ts (9 tests) 5ms
+ ✓ packages/security/src/path-parity.test.ts (11 tests) 5ms
+ ✓ packages/context/src/budget.test.ts (8 tests) 5ms
+ ✓ packages/evaluation/src/security-evidence-execution.test.ts (9 tests) 6ms
+ ✓ packages/security/src/supply-chain.test.ts (8 tests) 5ms
+ ✓ packages/evaluation/src/path-scoped-eligibility.test.ts (3 tests) 6ms
+ ✓ packages/security/src/permission-grant.test.ts (7 tests) 5ms
+ ✓ packages/core/src/tools/tool-selector.test.ts (4 tests) 5ms
+ ✓ packages/evaluation/src/decision-policy-v3.test.ts (3 tests) 5ms
+ ✓ packages/mcp/src/mcp-provenance.test.ts (7 tests) 5ms
+ ✓ apps/cli/src/schema-advert-policy.test.ts (3 tests) 5ms
+ ✓ packages/memory/src/lifecycle.test.ts (8 tests) 5ms
+ ✓ packages/core/src/runtime/turn-helpers.protocol.test.ts (5 tests) 5ms
+ ✓ apps/cli/src/audit.strict.test.ts (4 tests) 5ms
+ ✓ packages/evaluation/src/model-routing.test.ts (7 tests) 5ms
+ ✓ packages/contracts/src/event-payloads.test.ts (9 tests) 5ms
+ ✓ apps/cli/src/recover-command.test.ts (2 tests) 4ms
+ ✓ packages/observability/src/trace-tree.test.ts (4 tests) 4ms
+ ✓ packages/tools/src/semantics.test.ts (4 tests) 6ms
+ ✓ packages/evaluation/src/counterfactual.test.ts (4 tests) 4ms
+ ✓ packages/evaluation/src/self-mod-sandbox.test.ts (9 tests) 5ms
+ ✓ packages/protocol/src/handshake.test.ts (5 tests) 5ms
+ ✓ packages/skills/src/selection.test.ts (5 tests) 5ms
+ ✓ packages/memory/src/derivability.test.ts (4 tests) 5ms
+ ✓ packages/evaluation/src/offline-replay.test.ts (4 tests) 5ms
+ ✓ packages/observability/src/metrics.test.ts (4 tests) 4ms
+ ✓ packages/security/src/denial.test.ts (4 tests) 4ms
+ ✓ packages/security/src/workflow-paid-authorization.test.ts (2 tests) 4ms
+ ✓ packages/contracts/src/ids.test.ts (3 tests) 5ms
+ ✓ packages/skills/src/effectiveness.test.ts (5 tests) 4ms
+ ✓ packages/model/src/capability-resolver.test.ts (6 tests) 4ms
+ ✓ packages/evaluation/src/evolution-loop.test.ts (8 tests) 4ms
+ ✓ packages/learning/src/experiments.test.ts (4 tests) 4ms
+ ✓ packages/core/src/runtime/race-bisect.test.ts (1 test) 4ms
+ ✓ packages/orchestration/src/worker.test.ts (4 tests) 4ms
+ ✓ packages/memory/src/usefulness.test.ts (5 tests) 4ms
+ ✓ packages/evaluation/src/recovery-policy.test.ts (5 tests) 4ms
+ ✓ packages/harness/src/champion-profile.test.ts (5 tests) 4ms
+ ✓ packages/contracts/src/limits.test.ts (4 tests) 4ms
+ ✓ packages/evaluation/src/context-policy.test.ts (3 tests) 3ms
+ ✓ packages/skills/src/skill-security.test.ts (2 tests) 3ms
+ ✓ packages/evaluation/src/scheduler-policy.test.ts (4 tests) 3ms
+ ↓ apps/cli/src/n2-release-cli-forward.test.ts (1 test | 1 skipped)
+
+ Test Files  459 passed | 1 skipped (460)
+      Tests  8484 passed | 12 skipped (8496)
+   Start at  00:38:41
+   Duration  648.65s (transform 7.52s, setup 0ms, import 48.60s, tests 548.55s, environment 36ms)
+
+[observation] run agent-next-linux-de346b90dcbf-1791160665881839487: committed 7 row(s), dropped 0 candidate(s)
+[review supervisor] command exit=0; reaped orphan descendants=70

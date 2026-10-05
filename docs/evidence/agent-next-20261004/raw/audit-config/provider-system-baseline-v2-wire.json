@@ -1,0 +1,75 @@
+[
+  {
+    "model": "system-serialization-probe",
+    "messages": [
+      {
+        "role": "user",
+        "content": "USER_MARKER"
+      }
+    ],
+    "stream": true,
+    "stream_options": {
+      "include_usage": true
+    }
+  },
+  {
+    "model": "system-serialization-probe",
+    "messages": [
+      {
+        "role": "system",
+        "content": "HISTORY_SYSTEM_MARKER"
+      },
+      {
+        "role": "user",
+        "content": "USER_MARKER"
+      }
+    ],
+    "stream": true,
+    "stream_options": {
+      "include_usage": true
+    }
+  },
+  {
+    "model": "system-serialization-probe",
+    "messages": [
+      {
+        "role": "system",
+        "content": "HISTORY_SYSTEM_MARKER"
+      },
+      {
+        "role": "user",
+        "content": "USER_MARKER"
+      }
+    ],
+    "stream": true,
+    "stream_options": {
+      "include_usage": true
+    }
+  },
+  {
+    "model": "system-serialization-probe",
+    "messages": [
+      {
+        "role": "user",
+        "content": "USER_MARKER"
+      }
+    ],
+    "stream": true,
+    "stream_options": {
+      "include_usage": true
+    }
+  },
+  {
+    "model": "system-serialization-probe",
+    "messages": [
+      {
+        "role": "user",
+        "content": "USER_MARKER"
+      }
+    ],
+    "stream": true,
+    "stream_options": {
+      "include_usage": true
+    }
+  }
+]

@@ -1,0 +1,1716 @@
+{
+  "schema": "R2_MEMORY_ENGINEERING_PROBE",
+  "observedAt": "2026-10-05T00:38:13.735Z",
+  "repo": "/workspace/harness-agent",
+  "sourceHead": "de346b90dcbf97c9591ae2786e46e80fd0a4e05c",
+  "sourceStatus": "",
+  "sourceHashes": {
+    "packages/memory/src/retrieval.ts": "d3a48b1ff665dd2c3f698d7a2c7e4754081a8fb6ba6306556444262135fca8c9",
+    "packages/memory/dist/retrieval.js": "a47651ff6072887a099ae546478a437cf53b75ca4196e163561c7f6e3c73904a",
+    "packages/memory/src/memory-store.ts": "925f718e3f92baf32fb2868bafcdcd0701cb520e441049892848a4cb6d494caf",
+    "packages/memory/dist/memory-store.js": "8722ce368b39c5626668437f3ced379d035ae938e480f693a6971f12e3cf5ed5",
+    "packages/memory/src/sqlite-memory-store.ts": "f278be463dec22f5ed15039e6e727b22a942eb6afbaab19e6961e177ae20cb6f",
+    "packages/memory/dist/sqlite-memory-store.js": "300bf553eb208898c79d7d557b5dfb8b649b5e01f28a5b934ac56eb1d39dceb7",
+    "packages/memory/src/search-text.ts": "e569e7f418e3edf87fba7fd2e9c1a1bdf7511d78ea85abcecd863def5c201fd0",
+    "packages/memory/dist/search-text.js": "077ce28fe2280d104af3d98da7c07d11582f61ea7ad0beec1ccc2f730975b202",
+    "packages/memory/src/security-gate.ts": "35dd1c100d6200a862ac50c3b2f1c0fff1d9feb8b7921e31c8805aed319a5efa",
+    "packages/memory/dist/security-gate.js": "4e5b30994c56a51aead532212406056b0f5e84dd80f74979e4b45ebbf85f72fa",
+    "packages/memory/src/lifecycle.ts": "785201bfbfab78fad4cfe8b5781973e00f5149a5fd2c62559b81890642193fa6",
+    "packages/memory/dist/lifecycle.js": "11a295ece7bdf7bb4130e84ed09304da654e19d5715a8d21ff45be1c7545b183",
+    "packages/harness/src/memory-runtime-bridge.ts": "2d6cf39686f2884d2c390dcd13e7c7f46a3e368094d807b79124a79297a4f4cf",
+    "packages/harness/dist/memory-runtime-bridge.js": "b3b45a131640fad6a294aa8cb30a5c0d0770f1706c3281130a3816037d9eba09",
+    "packages/harness/src/create-harness.ts": "a115aa9c8ec71b86e689e80ab9195c21cd85c8f19a0d9de669e9e19d8becf84e",
+    "packages/harness/dist/create-harness.js": "442874f7297e7e0b7df5e715af249457fbd0bf6cd33f15b75d5e198700ea29e3"
+  },
+  "probeSha256": "f80caaac1784c5428f9ea501656f41b3de3038c990a0ad3ab4f258117f15d5e3",
+  "helperSha256": "db77855cad50c3a572220fc82695b08c839a09245f115693608a0fa34fa7a443",
+  "baselineHead": "18f162bf7f12c4b8e8cebcebede4034dd1f3efb7",
+  "baselineRetrievalSourceSha256": "0921994bc133782ca2d01ae7e9af05d01e4fd2ac233916cb42c5350ad3621f55",
+  "baselineRetrievalCompiledSha256": "642e15428ffcb008e68d6448d5465555477c17f20888b6bf4d76e483eab709d6",
+  "resolvedReferenceSha256": "bfba0a3fe0f2238ec270f1a73910e08ad75de245cddacc1a970afb14c07a35c1",
+  "unchangedSearchAndGateSources": {
+    "packages/memory/src/memory-store.ts": {
+      "actual": "925f718e3f92baf32fb2868bafcdcd0701cb520e441049892848a4cb6d494caf",
+      "baseline": "925f718e3f92baf32fb2868bafcdcd0701cb520e441049892848a4cb6d494caf",
+      "matches": true
+    },
+    "packages/memory/src/sqlite-memory-store.ts": {
+      "actual": "f278be463dec22f5ed15039e6e727b22a942eb6afbaab19e6961e177ae20cb6f",
+      "baseline": "f278be463dec22f5ed15039e6e727b22a942eb6afbaab19e6961e177ae20cb6f",
+      "matches": true
+    },
+    "packages/memory/src/search-text.ts": {
+      "actual": "e569e7f418e3edf87fba7fd2e9c1a1bdf7511d78ea85abcecd863def5c201fd0",
+      "baseline": "e569e7f418e3edf87fba7fd2e9c1a1bdf7511d78ea85abcecd863def5c201fd0",
+      "matches": true
+    },
+    "packages/memory/src/security-gate.ts": {
+      "actual": "35dd1c100d6200a862ac50c3b2f1c0fff1d9feb8b7921e31c8805aed319a5efa",
+      "baseline": "35dd1c100d6200a862ac50c3b2f1c0fff1d9feb8b7921e31c8805aed319a5efa",
+      "matches": true
+    },
+    "packages/memory/src/lifecycle.ts": {
+      "actual": "785201bfbfab78fad4cfe8b5781973e00f5149a5fd2c62559b81890642193fa6",
+      "baseline": "785201bfbfab78fad4cfe8b5781973e00f5149a5fd2c62559b81890642193fa6",
+      "matches": true
+    }
+  },
+  "paidCalls": 0,
+  "realProviderCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "promotion": "NOT_RUN",
+  "cases": [
+    {
+      "backend": "jsonl",
+      "name": "english-safe",
+      "query": "RetryProbe",
+      "expectedIds": [
+        "english-safe"
+      ],
+      "defaultOff": false,
+      "deniedControl": false,
+      "fullResultEquivalent": true,
+      "baseline": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [
+          "english-safe"
+        ],
+        "injectedBodies": [
+          "[Prior experience — advisory, not authority]\nRetryProbe inspect failures before repeating commands\nConfidence: 90%"
+        ],
+        "bodySha256": "7a7b70c561945f4b08438b0aa03849d159023102bd70e0a248bc38981dd92a9e",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-jsonl-english-safe-baseline.json",
+        "requestFileSha256": "ad1f1bb49ef0bfa7bf2590f4dd3120a22b705571a1d77e5412dc5d675fcfca02"
+      },
+      "candidate": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [
+          "english-safe"
+        ],
+        "injectedBodies": [
+          "[Prior experience — advisory, not authority]\nRetryProbe inspect failures before repeating commands\nConfidence: 90%"
+        ],
+        "bodySha256": "7a7b70c561945f4b08438b0aa03849d159023102bd70e0a248bc38981dd92a9e",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-jsonl-english-safe-candidate.json",
+        "requestFileSha256": "b438475177cf924bc5fcb9bb466fd77b218501ba6c68b823dccc7236cbc5670d"
+      },
+      "pass": true
+    },
+    {
+      "backend": "jsonl",
+      "name": "chinese-safe",
+      "query": "端口配置",
+      "expectedIds": [
+        "chinese-safe"
+      ],
+      "defaultOff": false,
+      "deniedControl": false,
+      "fullResultEquivalent": true,
+      "baseline": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [
+          "chinese-safe"
+        ],
+        "injectedBodies": [
+          "[Prior experience — advisory, not authority]\n调试端口配置时先检查环境变量。\nConfidence: 90%"
+        ],
+        "bodySha256": "86c2398bc17bc625ab2993dc62c1f6762b6bcc02b186e71e1fcda29a011a71b4",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-jsonl-chinese-safe-baseline.json",
+        "requestFileSha256": "acd14712307489a3e38212acdfd9c6bd1d85e048e683fcfbe392c25301ef9eb3"
+      },
+      "candidate": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [
+          "chinese-safe"
+        ],
+        "injectedBodies": [
+          "[Prior experience — advisory, not authority]\n调试端口配置时先检查环境变量。\nConfidence: 90%"
+        ],
+        "bodySha256": "86c2398bc17bc625ab2993dc62c1f6762b6bcc02b186e71e1fcda29a011a71b4",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-jsonl-chinese-safe-candidate.json",
+        "requestFileSha256": "4205cefe14e5e858d5848b9400df74ca53a2ac75a0324157f830b0ab615aa31a"
+      },
+      "pass": true
+    },
+    {
+      "backend": "jsonl",
+      "name": "mixed-safe",
+      "query": "EADDRINUSE 端口",
+      "expectedIds": [
+        "mixed-safe"
+      ],
+      "defaultOff": false,
+      "deniedControl": false,
+      "fullResultEquivalent": true,
+      "baseline": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [
+          "mixed-safe"
+        ],
+        "injectedBodies": [
+          "[Prior experience — advisory, not authority]\n如果EADDRINUSE 端口冲突先停服务。\nConfidence: 90%"
+        ],
+        "bodySha256": "3920e5e95c2cc3156d845ecadc93888d1a6b7bcfd35c5ef7093039e092c65a65",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-jsonl-mixed-safe-baseline.json",
+        "requestFileSha256": "e1dfc01b2228181ae394ab21a479426712d1a62438b71dd25184c1d619f3cb76"
+      },
+      "candidate": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [
+          "mixed-safe"
+        ],
+        "injectedBodies": [
+          "[Prior experience — advisory, not authority]\n如果EADDRINUSE 端口冲突先停服务。\nConfidence: 90%"
+        ],
+        "bodySha256": "3920e5e95c2cc3156d845ecadc93888d1a6b7bcfd35c5ef7093039e092c65a65",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-jsonl-mixed-safe-candidate.json",
+        "requestFileSha256": "d86ba8d0ffe19da9b1437a03a89b4a98631701b344eaec7fd502d8f967eeb22a"
+      },
+      "pass": true
+    },
+    {
+      "backend": "jsonl",
+      "name": "structured-safe",
+      "query": "portlint",
+      "expectedIds": [
+        "structured-safe"
+      ],
+      "defaultOff": false,
+      "deniedControl": false,
+      "fullResultEquivalent": true,
+      "baseline": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [
+          "structured-safe"
+        ],
+        "injectedBodies": [
+          "[Prior experience — advisory, not authority]\nWhen: 遇到端口配置错误时\nDo: 执行 portlint 然后重启\nAvoid: 重复 blindretry\nConfidence: 90%"
+        ],
+        "bodySha256": "41351ea35709949fe5a559332352132c36d422dbbc6f07a1b0871abe0ecc949c",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-jsonl-structured-safe-baseline.json",
+        "requestFileSha256": "7b7b4b080f5032e24c3d4d8abeadc34ba6c4df8a9fad461839c9c407b613f764"
+      },
+      "candidate": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [
+          "structured-safe"
+        ],
+        "injectedBodies": [
+          "[Prior experience — advisory, not authority]\nWhen: 遇到端口配置错误时\nDo: 执行 portlint 然后重启\nAvoid: 重复 blindretry\nConfidence: 90%"
+        ],
+        "bodySha256": "41351ea35709949fe5a559332352132c36d422dbbc6f07a1b0871abe0ecc949c",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-jsonl-structured-safe-candidate.json",
+        "requestFileSha256": "4b0565336bc00cee0111b62de6b6e7ed457c75b00f13a080e6528c40a4171e50"
+      },
+      "pass": true
+    },
+    {
+      "backend": "jsonl",
+      "name": "nontransitive-conflict",
+      "query": "TopicProbe",
+      "expectedIds": [
+        "topic-0",
+        "topic-2"
+      ],
+      "defaultOff": false,
+      "deniedControl": false,
+      "fullResultEquivalent": true,
+      "baseline": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [
+          "topic-0",
+          "topic-2"
+        ],
+        "injectedBodies": [
+          "[Prior experience — advisory, not authority]\nTopicProbe a b c\nConfidence: 90%",
+          "[Prior experience — advisory, not authority]\nTopicProbe c d e\nConfidence: 90%"
+        ],
+        "bodySha256": "9c409fe4fcff6d2f8ef32f4de180db64ce5d1a88a25f573378fc069039de9277",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-jsonl-nontransitive-conflict-baseline.json",
+        "requestFileSha256": "0c9bf81757ff998451d9d91e60875cd1c6df7cacc820b89d0ef47c1bc5e80735"
+      },
+      "candidate": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [
+          "topic-0",
+          "topic-2"
+        ],
+        "injectedBodies": [
+          "[Prior experience — advisory, not authority]\nTopicProbe a b c\nConfidence: 90%",
+          "[Prior experience — advisory, not authority]\nTopicProbe c d e\nConfidence: 90%"
+        ],
+        "bodySha256": "9c409fe4fcff6d2f8ef32f4de180db64ce5d1a88a25f573378fc069039de9277",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-jsonl-nontransitive-conflict-candidate.json",
+        "requestFileSha256": "93f9e671918d620451c858709f46316a155f39d7b0bb745ea73f974da755e451"
+      },
+      "pass": true
+    },
+    {
+      "backend": "jsonl",
+      "name": "final-top-k",
+      "query": "TopKProbe",
+      "expectedIds": [
+        "topk-0",
+        "topk-1"
+      ],
+      "defaultOff": false,
+      "deniedControl": false,
+      "fullResultEquivalent": true,
+      "baseline": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [
+          "topk-0",
+          "topk-1"
+        ],
+        "injectedBodies": [
+          "[Prior experience — advisory, not authority]\nTopKProbe unique0\nConfidence: 90%",
+          "[Prior experience — advisory, not authority]\nTopKProbe unique1\nConfidence: 90%"
+        ],
+        "bodySha256": "338dec41ebe1209950b42bc48cb82bd55ad492b40819c70d81bb73a26d47d413",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-jsonl-final-top-k-baseline.json",
+        "requestFileSha256": "5464ff7c350b968a081a51e3f07f6fedcfbcf690a1d74dbdcbfcd34c2649111a"
+      },
+      "candidate": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [
+          "topk-0",
+          "topk-1"
+        ],
+        "injectedBodies": [
+          "[Prior experience — advisory, not authority]\nTopKProbe unique0\nConfidence: 90%",
+          "[Prior experience — advisory, not authority]\nTopKProbe unique1\nConfidence: 90%"
+        ],
+        "bodySha256": "338dec41ebe1209950b42bc48cb82bd55ad492b40819c70d81bb73a26d47d413",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-jsonl-final-top-k-candidate.json",
+        "requestFileSha256": "da46f350e5494578165f8aacd23b9a2d803756adbc1ac1a5718ff4b2c2339e3d"
+      },
+      "pass": true
+    },
+    {
+      "backend": "jsonl",
+      "name": "unsafe-content-denied",
+      "query": "UnsafeProbe",
+      "expectedIds": [],
+      "defaultOff": false,
+      "deniedControl": true,
+      "fullResultEquivalent": true,
+      "baseline": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-jsonl-unsafe-content-denied-baseline.json",
+        "requestFileSha256": "bac435cabf74703407c4e14bab6f78550c2b1de236d4c90d45042c875f4c7367"
+      },
+      "candidate": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-jsonl-unsafe-content-denied-candidate.json",
+        "requestFileSha256": "69aa758d851b091282a9fba9cd3be85f2fe9e6712cbb551e8fde13ade8fa0cfe"
+      },
+      "pass": true
+    },
+    {
+      "backend": "jsonl",
+      "name": "unsafe-structured-denied",
+      "query": "UnsafeStructuredProbe",
+      "expectedIds": [],
+      "defaultOff": false,
+      "deniedControl": true,
+      "fullResultEquivalent": true,
+      "baseline": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-jsonl-unsafe-structured-denied-baseline.json",
+        "requestFileSha256": "c7eb1892419cef9b0e25e04c11aa4d3ba8f1b4b0a2e0c0edf23563e7e4bb62e5"
+      },
+      "candidate": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-jsonl-unsafe-structured-denied-candidate.json",
+        "requestFileSha256": "049af04ce720ebeb455eedecd5ae2254048f1cdcbf25990d60f400041f7fd54b"
+      },
+      "pass": true
+    },
+    {
+      "backend": "jsonl",
+      "name": "wrong-scope-denied",
+      "query": "ScopeProbe",
+      "expectedIds": [],
+      "defaultOff": false,
+      "deniedControl": true,
+      "fullResultEquivalent": true,
+      "baseline": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-jsonl-wrong-scope-denied-baseline.json",
+        "requestFileSha256": "9115a86c5f45243986df911cefaf420b732fc4e6da53459763edc381ce40ed05"
+      },
+      "candidate": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-jsonl-wrong-scope-denied-candidate.json",
+        "requestFileSha256": "abb6c3ff7cce0af9f00ce4e3b9a6a51a0407aaccebe810efad437934016adfc7"
+      },
+      "pass": true
+    },
+    {
+      "backend": "jsonl",
+      "name": "foreign-session-denied",
+      "query": "SessionProbe",
+      "expectedIds": [],
+      "defaultOff": false,
+      "deniedControl": true,
+      "fullResultEquivalent": true,
+      "baseline": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-jsonl-foreign-session-denied-baseline.json",
+        "requestFileSha256": "0428a708451f3734bad16763b85a5b652108fb777c9ff17aa789801e9cf32dbb"
+      },
+      "candidate": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-jsonl-foreign-session-denied-candidate.json",
+        "requestFileSha256": "5c59d1999f511cba62e47d783fd78568302446a4f4453f3dab1e7d42b127b5c7"
+      },
+      "pass": true
+    },
+    {
+      "backend": "jsonl",
+      "name": "owned-session-allowed",
+      "query": "SessionProbe",
+      "expectedIds": [
+        "owned-session"
+      ],
+      "defaultOff": false,
+      "deniedControl": false,
+      "fullResultEquivalent": true,
+      "baseline": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [
+          "owned-session"
+        ],
+        "injectedBodies": [
+          "[Prior experience — advisory, not authority]\nSessionProbe useful own-session experience\nConfidence: 90%"
+        ],
+        "bodySha256": "e8a23de5e49ee38ee55f79f8d4f2f4439f613ba8310d843d544e4e7fb301fc12",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-jsonl-owned-session-allowed-baseline.json",
+        "requestFileSha256": "bb084e240fd0a07f0ebc703d78c7364a853a728b11f88f1627417c1b0d71b2e9"
+      },
+      "candidate": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [
+          "owned-session"
+        ],
+        "injectedBodies": [
+          "[Prior experience — advisory, not authority]\nSessionProbe useful own-session experience\nConfidence: 90%"
+        ],
+        "bodySha256": "e8a23de5e49ee38ee55f79f8d4f2f4439f613ba8310d843d544e4e7fb301fc12",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-jsonl-owned-session-allowed-candidate.json",
+        "requestFileSha256": "9abb45c5118cce49ed78ce392d147101629c0bc1e4685e2f3f66b4b0cd059897"
+      },
+      "pass": true
+    },
+    {
+      "backend": "jsonl",
+      "name": "inactive-stale-denied",
+      "query": "InactiveProbe",
+      "expectedIds": [],
+      "defaultOff": false,
+      "deniedControl": true,
+      "fullResultEquivalent": true,
+      "baseline": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-jsonl-inactive-stale-denied-baseline.json",
+        "requestFileSha256": "acba60c1cfb38a51ca089f6692c74ed1d1d4940a7e02b4611ac03005bbb2a812"
+      },
+      "candidate": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-jsonl-inactive-stale-denied-candidate.json",
+        "requestFileSha256": "ffce5fbcbaff8c598d95ee29b26ce795ce3bf8fb11ab266961d08536d4b13898"
+      },
+      "pass": true
+    },
+    {
+      "backend": "jsonl",
+      "name": "inactive-deprecated-denied",
+      "query": "InactiveProbe",
+      "expectedIds": [],
+      "defaultOff": false,
+      "deniedControl": true,
+      "fullResultEquivalent": true,
+      "baseline": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-jsonl-inactive-deprecated-denied-baseline.json",
+        "requestFileSha256": "765c80fcef1ab0a0415f61b92b7300db40e38298f296c9fc0d66083676fea7dc"
+      },
+      "candidate": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-jsonl-inactive-deprecated-denied-candidate.json",
+        "requestFileSha256": "4a2cdc31116390e31bcce5b3a3a1a30171d53fdcc12c2a3eb7fe6477d028b4c6"
+      },
+      "pass": true
+    },
+    {
+      "backend": "jsonl",
+      "name": "inactive-superseded-denied",
+      "query": "InactiveProbe",
+      "expectedIds": [],
+      "defaultOff": false,
+      "deniedControl": true,
+      "fullResultEquivalent": true,
+      "baseline": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-jsonl-inactive-superseded-denied-baseline.json",
+        "requestFileSha256": "d7f4d3868bedf82ae5205f77330c010f16da825a4b8635ee00418eca1c9d1a77"
+      },
+      "candidate": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-jsonl-inactive-superseded-denied-candidate.json",
+        "requestFileSha256": "097d8613d531761c5a09eea6f6074e06bbb0ba3c8d5bea5fec85c506828529e7"
+      },
+      "pass": true
+    },
+    {
+      "backend": "jsonl",
+      "name": "inactive-conflicting-denied",
+      "query": "InactiveProbe",
+      "expectedIds": [],
+      "defaultOff": false,
+      "deniedControl": true,
+      "fullResultEquivalent": true,
+      "baseline": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-jsonl-inactive-conflicting-denied-baseline.json",
+        "requestFileSha256": "f7ccefb7b73ac180ad63500e7ab9f157e2728c77eacf260b9bbb64af72243421"
+      },
+      "candidate": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-jsonl-inactive-conflicting-denied-candidate.json",
+        "requestFileSha256": "cbe115df2786ca9a93c4c323248e2a2f2584e2ad24429a5e5b54a4f7f98ae113"
+      },
+      "pass": true
+    },
+    {
+      "backend": "jsonl",
+      "name": "deleted-denied",
+      "query": "DeletedProbe",
+      "expectedIds": [],
+      "defaultOff": false,
+      "deniedControl": true,
+      "fullResultEquivalent": true,
+      "baseline": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-jsonl-deleted-denied-baseline.json",
+        "requestFileSha256": "562cf5118ad52d9884f9e0b605ce55a1f78802e6a7c359558eba7f0b39b8e9c1"
+      },
+      "candidate": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-jsonl-deleted-denied-candidate.json",
+        "requestFileSha256": "4a070d7d46a07edf2aba2817f2182774317c710f924610ea34ead8165f5d53c5"
+      },
+      "pass": true
+    },
+    {
+      "backend": "jsonl",
+      "name": "actual-miss",
+      "query": "unmatchedmarkerquantum",
+      "expectedIds": [],
+      "defaultOff": false,
+      "deniedControl": false,
+      "fullResultEquivalent": true,
+      "baseline": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-jsonl-actual-miss-baseline.json",
+        "requestFileSha256": "5dce0fcc54f97217360064240d7f018bdd5c66cb46af7364cd35f21b66f542a7"
+      },
+      "candidate": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-jsonl-actual-miss-candidate.json",
+        "requestFileSha256": "b2024c042ae7998f17e4d612b73c51c07da44be03dfa6f7220783d59a4d5527d"
+      },
+      "pass": true
+    },
+    {
+      "backend": "jsonl",
+      "name": "default-memory-off",
+      "query": "DefaultOffProbe",
+      "expectedIds": [],
+      "defaultOff": true,
+      "deniedControl": true,
+      "fullResultEquivalent": true,
+      "baseline": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-jsonl-default-memory-off-baseline.json",
+        "requestFileSha256": "f1e65ab28e2e86d823bfde82cca3aec958ee79185aeba9592b73bf1e0ffdfa3a"
+      },
+      "candidate": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-jsonl-default-memory-off-candidate.json",
+        "requestFileSha256": "12d21f556d98369fe6beb81d14d0f3f7cd966a4d50fb461278caf4efa972a993"
+      },
+      "pass": true
+    },
+    {
+      "backend": "sqlite",
+      "name": "english-safe",
+      "query": "RetryProbe",
+      "expectedIds": [
+        "english-safe"
+      ],
+      "defaultOff": false,
+      "deniedControl": false,
+      "fullResultEquivalent": true,
+      "baseline": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [
+          "english-safe"
+        ],
+        "injectedBodies": [
+          "[Prior experience — advisory, not authority]\nRetryProbe inspect failures before repeating commands\nConfidence: 90%"
+        ],
+        "bodySha256": "7a7b70c561945f4b08438b0aa03849d159023102bd70e0a248bc38981dd92a9e",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-sqlite-english-safe-baseline.json",
+        "requestFileSha256": "a483af9ad01bad6128da846c1dc22b70a43e77491f7a34b5c4c8ac78e7d36603"
+      },
+      "candidate": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [
+          "english-safe"
+        ],
+        "injectedBodies": [
+          "[Prior experience — advisory, not authority]\nRetryProbe inspect failures before repeating commands\nConfidence: 90%"
+        ],
+        "bodySha256": "7a7b70c561945f4b08438b0aa03849d159023102bd70e0a248bc38981dd92a9e",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-sqlite-english-safe-candidate.json",
+        "requestFileSha256": "c6327ae99c0030692cd6c8cedf43f7a9d604d799dce92da54dd42e189e2a5342"
+      },
+      "pass": true
+    },
+    {
+      "backend": "sqlite",
+      "name": "chinese-safe",
+      "query": "端口配置",
+      "expectedIds": [
+        "chinese-safe"
+      ],
+      "defaultOff": false,
+      "deniedControl": false,
+      "fullResultEquivalent": true,
+      "baseline": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [
+          "chinese-safe"
+        ],
+        "injectedBodies": [
+          "[Prior experience — advisory, not authority]\n调试端口配置时先检查环境变量。\nConfidence: 90%"
+        ],
+        "bodySha256": "86c2398bc17bc625ab2993dc62c1f6762b6bcc02b186e71e1fcda29a011a71b4",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-sqlite-chinese-safe-baseline.json",
+        "requestFileSha256": "249d2e377120758955dae47d88fa606fa3729deceeb91822035be82798fc77a7"
+      },
+      "candidate": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [
+          "chinese-safe"
+        ],
+        "injectedBodies": [
+          "[Prior experience — advisory, not authority]\n调试端口配置时先检查环境变量。\nConfidence: 90%"
+        ],
+        "bodySha256": "86c2398bc17bc625ab2993dc62c1f6762b6bcc02b186e71e1fcda29a011a71b4",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-sqlite-chinese-safe-candidate.json",
+        "requestFileSha256": "b989b54b328ea5b4114261e96ada38f46bdf790dc53c0c094e51513410e325e1"
+      },
+      "pass": true
+    },
+    {
+      "backend": "sqlite",
+      "name": "mixed-safe",
+      "query": "EADDRINUSE 端口",
+      "expectedIds": [
+        "mixed-safe"
+      ],
+      "defaultOff": false,
+      "deniedControl": false,
+      "fullResultEquivalent": true,
+      "baseline": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [
+          "mixed-safe"
+        ],
+        "injectedBodies": [
+          "[Prior experience — advisory, not authority]\n如果EADDRINUSE 端口冲突先停服务。\nConfidence: 90%"
+        ],
+        "bodySha256": "3920e5e95c2cc3156d845ecadc93888d1a6b7bcfd35c5ef7093039e092c65a65",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-sqlite-mixed-safe-baseline.json",
+        "requestFileSha256": "8ecfd0514de95a29a6031c7d7c39e7764fdb8c625ead2464e8316d8d78843117"
+      },
+      "candidate": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [
+          "mixed-safe"
+        ],
+        "injectedBodies": [
+          "[Prior experience — advisory, not authority]\n如果EADDRINUSE 端口冲突先停服务。\nConfidence: 90%"
+        ],
+        "bodySha256": "3920e5e95c2cc3156d845ecadc93888d1a6b7bcfd35c5ef7093039e092c65a65",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-sqlite-mixed-safe-candidate.json",
+        "requestFileSha256": "fdeb93d9caf8445bd8f84c5163550663947c15d2e5a0ad25f7fbcbb34a0884dc"
+      },
+      "pass": true
+    },
+    {
+      "backend": "sqlite",
+      "name": "structured-safe",
+      "query": "portlint",
+      "expectedIds": [
+        "structured-safe"
+      ],
+      "defaultOff": false,
+      "deniedControl": false,
+      "fullResultEquivalent": true,
+      "baseline": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [
+          "structured-safe"
+        ],
+        "injectedBodies": [
+          "[Prior experience — advisory, not authority]\nWhen: 遇到端口配置错误时\nDo: 执行 portlint 然后重启\nAvoid: 重复 blindretry\nConfidence: 90%"
+        ],
+        "bodySha256": "41351ea35709949fe5a559332352132c36d422dbbc6f07a1b0871abe0ecc949c",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-sqlite-structured-safe-baseline.json",
+        "requestFileSha256": "c921afb3d97b7df521044c60935b7ae8ff2eb7b16ccce095e3f563fbb06389c9"
+      },
+      "candidate": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [
+          "structured-safe"
+        ],
+        "injectedBodies": [
+          "[Prior experience — advisory, not authority]\nWhen: 遇到端口配置错误时\nDo: 执行 portlint 然后重启\nAvoid: 重复 blindretry\nConfidence: 90%"
+        ],
+        "bodySha256": "41351ea35709949fe5a559332352132c36d422dbbc6f07a1b0871abe0ecc949c",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-sqlite-structured-safe-candidate.json",
+        "requestFileSha256": "4f1d15b8d63c0364993ed10b2f28a8ff8eff3323d972be4fb0f55839084213ec"
+      },
+      "pass": true
+    },
+    {
+      "backend": "sqlite",
+      "name": "nontransitive-conflict",
+      "query": "TopicProbe",
+      "expectedIds": [
+        "topic-0",
+        "topic-2"
+      ],
+      "defaultOff": false,
+      "deniedControl": false,
+      "fullResultEquivalent": true,
+      "baseline": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [
+          "topic-0",
+          "topic-2"
+        ],
+        "injectedBodies": [
+          "[Prior experience — advisory, not authority]\nTopicProbe a b c\nConfidence: 90%",
+          "[Prior experience — advisory, not authority]\nTopicProbe c d e\nConfidence: 90%"
+        ],
+        "bodySha256": "9c409fe4fcff6d2f8ef32f4de180db64ce5d1a88a25f573378fc069039de9277",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-sqlite-nontransitive-conflict-baseline.json",
+        "requestFileSha256": "3b4ceede0359b381cf8ee019bc6c19d12370f50b9d878c3086c3f91f9fecd1b6"
+      },
+      "candidate": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [
+          "topic-0",
+          "topic-2"
+        ],
+        "injectedBodies": [
+          "[Prior experience — advisory, not authority]\nTopicProbe a b c\nConfidence: 90%",
+          "[Prior experience — advisory, not authority]\nTopicProbe c d e\nConfidence: 90%"
+        ],
+        "bodySha256": "9c409fe4fcff6d2f8ef32f4de180db64ce5d1a88a25f573378fc069039de9277",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-sqlite-nontransitive-conflict-candidate.json",
+        "requestFileSha256": "0b476d44bb4cf8df170b32e32d07a1f84f3acd1763ca9f10a2e2d60879e4d5c0"
+      },
+      "pass": true
+    },
+    {
+      "backend": "sqlite",
+      "name": "final-top-k",
+      "query": "TopKProbe",
+      "expectedIds": [
+        "topk-0",
+        "topk-1"
+      ],
+      "defaultOff": false,
+      "deniedControl": false,
+      "fullResultEquivalent": true,
+      "baseline": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [
+          "topk-0",
+          "topk-1"
+        ],
+        "injectedBodies": [
+          "[Prior experience — advisory, not authority]\nTopKProbe unique0\nConfidence: 90%",
+          "[Prior experience — advisory, not authority]\nTopKProbe unique1\nConfidence: 90%"
+        ],
+        "bodySha256": "338dec41ebe1209950b42bc48cb82bd55ad492b40819c70d81bb73a26d47d413",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-sqlite-final-top-k-baseline.json",
+        "requestFileSha256": "9ac05684e651a0fa63f817c47ef9f3b8d8a9f3d11a7a84433d10b564a967f48e"
+      },
+      "candidate": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [
+          "topk-0",
+          "topk-1"
+        ],
+        "injectedBodies": [
+          "[Prior experience — advisory, not authority]\nTopKProbe unique0\nConfidence: 90%",
+          "[Prior experience — advisory, not authority]\nTopKProbe unique1\nConfidence: 90%"
+        ],
+        "bodySha256": "338dec41ebe1209950b42bc48cb82bd55ad492b40819c70d81bb73a26d47d413",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-sqlite-final-top-k-candidate.json",
+        "requestFileSha256": "690eda7f1e53c112b4872ba8dbded3ad1ef5df841926da1de659c49018cf4e5b"
+      },
+      "pass": true
+    },
+    {
+      "backend": "sqlite",
+      "name": "unsafe-content-denied",
+      "query": "UnsafeProbe",
+      "expectedIds": [],
+      "defaultOff": false,
+      "deniedControl": true,
+      "fullResultEquivalent": true,
+      "baseline": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-sqlite-unsafe-content-denied-baseline.json",
+        "requestFileSha256": "04033d5ad26da8a76a833e14507ff36ad856985b4edc537e3cb43d7cf68a3b7f"
+      },
+      "candidate": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-sqlite-unsafe-content-denied-candidate.json",
+        "requestFileSha256": "c20441453d99842ae9209c707faac26fdb516ba489380fd1a60b0acd8a2df367"
+      },
+      "pass": true
+    },
+    {
+      "backend": "sqlite",
+      "name": "unsafe-structured-denied",
+      "query": "UnsafeStructuredProbe",
+      "expectedIds": [],
+      "defaultOff": false,
+      "deniedControl": true,
+      "fullResultEquivalent": true,
+      "baseline": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-sqlite-unsafe-structured-denied-baseline.json",
+        "requestFileSha256": "69898372ed77b736f4c5b95c80939493c3a4036d26a260655496ffe6b1b6d514"
+      },
+      "candidate": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-sqlite-unsafe-structured-denied-candidate.json",
+        "requestFileSha256": "fec0bc0929f7c8ef7727f09bcd52be8fec89fb78573891ada2fda3f0ba50c181"
+      },
+      "pass": true
+    },
+    {
+      "backend": "sqlite",
+      "name": "wrong-scope-denied",
+      "query": "ScopeProbe",
+      "expectedIds": [],
+      "defaultOff": false,
+      "deniedControl": true,
+      "fullResultEquivalent": true,
+      "baseline": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-sqlite-wrong-scope-denied-baseline.json",
+        "requestFileSha256": "f7855b94493bd2b62693abad4a2b65e0ee1dcc8dec1298731c794bd6fd4f1d78"
+      },
+      "candidate": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-sqlite-wrong-scope-denied-candidate.json",
+        "requestFileSha256": "e7cc234a1c648d63ee2cd40221d5152b02e9d839507f34e5b042cd771dc10c46"
+      },
+      "pass": true
+    },
+    {
+      "backend": "sqlite",
+      "name": "foreign-session-denied",
+      "query": "SessionProbe",
+      "expectedIds": [],
+      "defaultOff": false,
+      "deniedControl": true,
+      "fullResultEquivalent": true,
+      "baseline": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-sqlite-foreign-session-denied-baseline.json",
+        "requestFileSha256": "17f5d3898eccfcd02d921e2ca98e6707f91e7672ff84cd756401accab2721653"
+      },
+      "candidate": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-sqlite-foreign-session-denied-candidate.json",
+        "requestFileSha256": "19f54414148e997aab6bfd1dfeeef5464f70bf3c376bd570f16e25902c0497cd"
+      },
+      "pass": true
+    },
+    {
+      "backend": "sqlite",
+      "name": "owned-session-allowed",
+      "query": "SessionProbe",
+      "expectedIds": [
+        "owned-session"
+      ],
+      "defaultOff": false,
+      "deniedControl": false,
+      "fullResultEquivalent": true,
+      "baseline": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [
+          "owned-session"
+        ],
+        "injectedBodies": [
+          "[Prior experience — advisory, not authority]\nSessionProbe useful own-session experience\nConfidence: 90%"
+        ],
+        "bodySha256": "e8a23de5e49ee38ee55f79f8d4f2f4439f613ba8310d843d544e4e7fb301fc12",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-sqlite-owned-session-allowed-baseline.json",
+        "requestFileSha256": "d027f0a0ba706aa3990d45d5a170e370b654436af2b147f4369fbc4e205baff7"
+      },
+      "candidate": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [
+          "owned-session"
+        ],
+        "injectedBodies": [
+          "[Prior experience — advisory, not authority]\nSessionProbe useful own-session experience\nConfidence: 90%"
+        ],
+        "bodySha256": "e8a23de5e49ee38ee55f79f8d4f2f4439f613ba8310d843d544e4e7fb301fc12",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-sqlite-owned-session-allowed-candidate.json",
+        "requestFileSha256": "405b40ae29a5b010a56decdb18be4008acc5cb8c847ba3f479addfb1b9e322c7"
+      },
+      "pass": true
+    },
+    {
+      "backend": "sqlite",
+      "name": "inactive-stale-denied",
+      "query": "InactiveProbe",
+      "expectedIds": [],
+      "defaultOff": false,
+      "deniedControl": true,
+      "fullResultEquivalent": true,
+      "baseline": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-sqlite-inactive-stale-denied-baseline.json",
+        "requestFileSha256": "7bb3a788ec6cc1f1af63546916b711b67d642981b718c9e4d9c5beae3fad74fd"
+      },
+      "candidate": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-sqlite-inactive-stale-denied-candidate.json",
+        "requestFileSha256": "4c7b0a49b66e43245cf82d5ab62bd35083b348818ed3085c992b84e1a88c862a"
+      },
+      "pass": true
+    },
+    {
+      "backend": "sqlite",
+      "name": "inactive-deprecated-denied",
+      "query": "InactiveProbe",
+      "expectedIds": [],
+      "defaultOff": false,
+      "deniedControl": true,
+      "fullResultEquivalent": true,
+      "baseline": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-sqlite-inactive-deprecated-denied-baseline.json",
+        "requestFileSha256": "a7a8b31ae2a527fc5bb5374a4434cfaed5a3c47c7b1968c2a9f7fba6d349280b"
+      },
+      "candidate": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-sqlite-inactive-deprecated-denied-candidate.json",
+        "requestFileSha256": "8f363ad6b27cc064f6ee6c0ae17e6bc2095c6ce02cf8c9b2dcaeec8c1b78b197"
+      },
+      "pass": true
+    },
+    {
+      "backend": "sqlite",
+      "name": "inactive-superseded-denied",
+      "query": "InactiveProbe",
+      "expectedIds": [],
+      "defaultOff": false,
+      "deniedControl": true,
+      "fullResultEquivalent": true,
+      "baseline": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-sqlite-inactive-superseded-denied-baseline.json",
+        "requestFileSha256": "496b2d86303ba56a05da3520bb0cc9909073107ff08946d5066d0414fb5d8905"
+      },
+      "candidate": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-sqlite-inactive-superseded-denied-candidate.json",
+        "requestFileSha256": "2b184b3f4d623573c05129bcda5a9e239f0d251484716c437bf0392c715c34bd"
+      },
+      "pass": true
+    },
+    {
+      "backend": "sqlite",
+      "name": "inactive-conflicting-denied",
+      "query": "InactiveProbe",
+      "expectedIds": [],
+      "defaultOff": false,
+      "deniedControl": true,
+      "fullResultEquivalent": true,
+      "baseline": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-sqlite-inactive-conflicting-denied-baseline.json",
+        "requestFileSha256": "282ff3a8167d08123d1182a9d408b8a82993ccf1fc0f8c830b906b5bf67fa724"
+      },
+      "candidate": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-sqlite-inactive-conflicting-denied-candidate.json",
+        "requestFileSha256": "beb266557aaa2b52bf82fd8fc5ac2585e48e7c26819c5cd1487eb49ba1591a3a"
+      },
+      "pass": true
+    },
+    {
+      "backend": "sqlite",
+      "name": "deleted-denied",
+      "query": "DeletedProbe",
+      "expectedIds": [],
+      "defaultOff": false,
+      "deniedControl": true,
+      "fullResultEquivalent": true,
+      "baseline": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-sqlite-deleted-denied-baseline.json",
+        "requestFileSha256": "0b0e42014bdf5fd82a073f0daf9349cc3a9f62d5004210121e24394e0f5c8262"
+      },
+      "candidate": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-sqlite-deleted-denied-candidate.json",
+        "requestFileSha256": "2aa99354db42b3a43b1455716f6a9685d62a50eec10622749225aec312428e46"
+      },
+      "pass": true
+    },
+    {
+      "backend": "sqlite",
+      "name": "actual-miss",
+      "query": "unmatchedmarkerquantum",
+      "expectedIds": [],
+      "defaultOff": false,
+      "deniedControl": false,
+      "fullResultEquivalent": true,
+      "baseline": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-sqlite-actual-miss-baseline.json",
+        "requestFileSha256": "18dc9223d2c00e90d466cb6f234f86a6aaf378f67aad8cf401236680013637b0"
+      },
+      "candidate": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-sqlite-actual-miss-candidate.json",
+        "requestFileSha256": "9e5c5cfd0b31969fd7edf7a2abe5680ebfe75559b4c2692eb796085bbc6937e1"
+      },
+      "pass": true
+    },
+    {
+      "backend": "sqlite",
+      "name": "default-memory-off",
+      "query": "DefaultOffProbe",
+      "expectedIds": [],
+      "defaultOff": true,
+      "deniedControl": true,
+      "fullResultEquivalent": true,
+      "baseline": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-sqlite-default-memory-off-baseline.json",
+        "requestFileSha256": "7993f8efb81e63fc0274c68a5bc08d9a860cb9f288fb7e401f5ee5589b1bf496"
+      },
+      "candidate": {
+        "fullResultEquivalent": true,
+        "memoryRefs": [],
+        "injectedBodies": [],
+        "bodySha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "requestCount": 1,
+        "outcome": "completed",
+        "actualIdsPass": true,
+        "advisoryBodyPass": true,
+        "deniedContentAbsent": true,
+        "defaultOffPass": true,
+        "pass": true,
+        "requestFile": "request-sqlite-default-memory-off-candidate.json",
+        "requestFileSha256": "9bc6143a35d74ed54dd366b05958474419f3e297cfdba735f839f169ed36a8ac"
+      },
+      "pass": true
+    }
+  ],
+  "bridgeSourceUnchangedFromBaseline": true,
+  "bridgeOnlyImportRewrites": true,
+  "baselineBridge": {
+    "productionSourceSha256": "2d6cf39686f2884d2c390dcd13e7c7f46a3e368094d807b79124a79297a4f4cf",
+    "baselineSourceSha256": "2d6cf39686f2884d2c390dcd13e7c7f46a3e368094d807b79124a79297a4f4cf",
+    "productionCompiledSha256": "b3b45a131640fad6a294aa8cb30a5c0d0770f1706c3281130a3816037d9eba09",
+    "resolvedCompiledSha256": "f8cbc09db38d954c38e9b5ce0c8eb391eb08784e83d59358ec144ca9e0f0ee38",
+    "memoryImportsSha256": "90f26d8b09ff42a58e7eae87c9454f81d9b8e3a3599968edd9d3aecc4e00c9c9",
+    "invocation": "Copied production MemoryRuntimeBridge.prototype.retrieve bound to the actual Harness bridge object; all other methods and Core admission remain production methods."
+  },
+  "fixtureMode": "Actual JSONL/SQLite stores; hostile/deleted/retired fixtures seeded directly solely to exercise read gates. Production write gates are not changed.",
+  "clock": {
+    "fixedNow": 1791000000000,
+    "method": "Date.now temporarily fixed before Harness creation in this disposable probe process; Harness config.now also fixed; restored afterwards."
+  },
+  "scriptedGenerateCalls": 72,
+  "limitations": [
+    "Scripted provider observes admitted request.system only; actual HTTP delivery is separately gated by R1.",
+    "Baseline bridge differs solely in retriever/import resolution in disposable files; no repository production file is patched.",
+    "Direct hostile fixture seeding does not imply the production write gate accepts hostile memory.",
+    "Same advisory bodies and references do not establish real-model task quality or justify default-on memory."
+  ],
+  "sourceHeadAfter": "de346b90dcbf97c9591ae2786e46e80fd0a4e05c",
+  "sourceStatusAfter": "",
+  "sourceHashesAfter": {
+    "packages/memory/src/retrieval.ts": "d3a48b1ff665dd2c3f698d7a2c7e4754081a8fb6ba6306556444262135fca8c9",
+    "packages/memory/dist/retrieval.js": "a47651ff6072887a099ae546478a437cf53b75ca4196e163561c7f6e3c73904a",
+    "packages/memory/src/memory-store.ts": "925f718e3f92baf32fb2868bafcdcd0701cb520e441049892848a4cb6d494caf",
+    "packages/memory/dist/memory-store.js": "8722ce368b39c5626668437f3ced379d035ae938e480f693a6971f12e3cf5ed5",
+    "packages/memory/src/sqlite-memory-store.ts": "f278be463dec22f5ed15039e6e727b22a942eb6afbaab19e6961e177ae20cb6f",
+    "packages/memory/dist/sqlite-memory-store.js": "300bf553eb208898c79d7d557b5dfb8b649b5e01f28a5b934ac56eb1d39dceb7",
+    "packages/memory/src/search-text.ts": "e569e7f418e3edf87fba7fd2e9c1a1bdf7511d78ea85abcecd863def5c201fd0",
+    "packages/memory/dist/search-text.js": "077ce28fe2280d104af3d98da7c07d11582f61ea7ad0beec1ccc2f730975b202",
+    "packages/memory/src/security-gate.ts": "35dd1c100d6200a862ac50c3b2f1c0fff1d9feb8b7921e31c8805aed319a5efa",
+    "packages/memory/dist/security-gate.js": "4e5b30994c56a51aead532212406056b0f5e84dd80f74979e4b45ebbf85f72fa",
+    "packages/memory/src/lifecycle.ts": "785201bfbfab78fad4cfe8b5781973e00f5149a5fd2c62559b81890642193fa6",
+    "packages/memory/dist/lifecycle.js": "11a295ece7bdf7bb4130e84ed09304da654e19d5715a8d21ff45be1c7545b183",
+    "packages/harness/src/memory-runtime-bridge.ts": "2d6cf39686f2884d2c390dcd13e7c7f46a3e368094d807b79124a79297a4f4cf",
+    "packages/harness/dist/memory-runtime-bridge.js": "b3b45a131640fad6a294aa8cb30a5c0d0770f1706c3281130a3816037d9eba09",
+    "packages/harness/src/create-harness.ts": "a115aa9c8ec71b86e689e80ab9195c21cd85c8f19a0d9de669e9e19d8becf84e",
+    "packages/harness/dist/create-harness.js": "442874f7297e7e0b7df5e715af249457fbd0bf6cd33f15b75d5e198700ea29e3"
+  },
+  "sourceUnchanged": true,
+  "gates": {
+    "bridgeSourceUnchanged": true,
+    "bridgeOnlyImportRewrites": true,
+    "actualHarnessFullResultsEqual": true,
+    "defaultMemoryRemainsOff": true,
+    "deniedControlsStayDenied": true,
+    "sourceUnchanged": true
+  },
+  "status": "PASS"
+}

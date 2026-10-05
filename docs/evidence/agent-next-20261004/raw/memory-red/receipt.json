@@ -1,0 +1,18 @@
+{
+  "phase": "RED_BEFORE_R2_IMPLEMENTATION",
+  "sourceHead": "fbe5098c43060fd066bd5fbdaa4a4d1612abdeb6",
+  "sourceHash": "0921994bc133782ca2d01ae7e9af05d01e4fd2ac233916cb42c5350ad3621f55",
+  "testHash": "eb6be187b836f91afa8dbb34007576cc7ad22a51dea7326e468e3569043abfe8",
+  "exitCode": 1,
+  "passed": 28,
+  "failed": 1,
+  "pending": 0,
+  "failures": [
+    {
+      "name": "retrieval work and unchanged policy (R2) tokenizes each scored candidate at most once within a retrieval",
+      "messages": [
+        "AssertionError: expected 4656 to be less than or equal to 96\n    at /workspace/harness-agent/packages/memory/src/retrieval-work.regressions.test.ts:80:27\n    at processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at file:///workspace/harness-agent/node_modules/.pnpm/@vitest+runner@4.1.10/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+      ]
+    }
+  ]
+}

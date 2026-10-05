@@ -1,0 +1,65 @@
+{
+  "schema": "AGENT_NEXT_INDEPENDENT_R2_STATIC_FOLLOWUP_V1",
+  "observedAt": "2026-10-05T00:23:36.626651+00:00",
+  "reviewer": "/root/final_static_review",
+  "sourceHead": "91967f4dd2442b3d1979dee1c2b165d376c8895c",
+  "expectedFrozenSource": "91967f4dd2442b3d1979dee1c2b165d376c8895c",
+  "sourceClean": true,
+  "sourceStatus": "",
+  "status": "STATIC_PASS",
+  "runtimeAcceptance": "PENDING_RUNNING_FROZEN_RUNNER",
+  "previousReceipt": ".ci/agent-next-20261004/review/static-review-resumed.json",
+  "previousReceiptSha256": "d00359e8f610a37e195061b00b43ae4166b8334d38d879a2f2e552c2c03b361b",
+  "reviewedFileSha256": {
+    "scripts/research/agent-next-20261004/memory-paired-performance-probe.mjs": "2529413f5b7d19e0ca190c5791ace30a3e29bb4f7fb942b190b4aa0320af2017",
+    "scripts/research/agent-next-20261004/memory-harness-probe.mjs": "f80caaac1784c5428f9ea501656f41b3de3038c990a0ad3ab4f258117f15d5e3",
+    "scripts/research/agent-next-20261004/memory-probe-common.mjs": "db77855cad50c3a572220fc82695b08c839a09245f115693608a0fa34fa7a443",
+    "scripts/research/agent-next-20261004/memory-differential-probe.mjs": "83a87e38dcba01c5d979210871e03b4f6cfafcc28a93af681751d1b64a0d6766",
+    "scripts/research/agent-next-20261004/frozen-acceptance.py": "3f2baf792697486c64ab5f35a8539b9e2360e8fc0b80b7aad60c65f01e6fbccb",
+    "scripts/research/agent-next-20261004/README.md": "6000f8d90caffb6972183bef427dfe86358894a21ef682d41369c5e4a7e6b93e",
+    ".gitattributes": "a3bc7efc2a822758d472ecaf38ce8492b2b22bedc0e2b8f22ac2f08a1e86c092"
+  },
+  "productionBytesUnchangedFromPreviousStaticReview": {
+    "packages/model/src/openai.ts": true,
+    "packages/memory/src/retrieval.ts": true,
+    "packages/tools/src/navigate.ts": true
+  },
+  "frozenBaselineSourceBytesEqualNativeGit": true,
+  "checks": [
+    {
+      "area": "R2 paired-performance",
+      "verdict": "STATIC_PASS",
+      "facts": [
+        "Uses actual uninstrumented built candidate module and frozen baseline retriever with the same actual production store. Each timed call includes fresh store.search, gates, scoring, full conflict filtering and TopK.",
+        "Exact 10,000-row fixture hash and original probe hash are hard gates. Clock, options, backend row counts and expected raw hit counts are fixed.",
+        "Runs serial AB/BA with 2 warmups plus 5 measured calls per implementation per scenario. Hashing/result serialization and seeding are outside timing.",
+        "Compares complete baseline/candidate JSON results on every call. Both Chinese backend median ratios <=0.5 and 8 full-result scenarios are hard gates. Additional scenarios and environmental limits remain visible."
+      ]
+    },
+    {
+      "area": "R2 actual Harness equivalence",
+      "verdict": "STATIC_PASS",
+      "facts": [
+        "Checks unchanged bridge source against native baseline Git and reversibility of only two imports in a disposable compiled bridge copy. No tracked source/dist patch.",
+        "Runs 18 specs * 2 backends * 2 retrievers = 72 actual Harness runs; each uses its real runtime/context admission/memory bridge with a scripted provider.",
+        "Each variant compares full retrieved items/suppressed with its own oracle, then validates expected references, advisory body admission, denied content absence, no default-off memory bridge/store, and completed outcome.",
+        "Between baseline/candidate, compares actual memoryRefs and injected advisory block bodies; dynamic session and whole system text are deliberately not claimed byte-identical.",
+        "Includes English, Chinese, mixed, structured, nontransitive conflict, TopK, unsafe/structured unsafe, scope/foreign/owned session, inactive/deleted/miss/default-off controls. Fixed Date.now is restored in finally and all Harness/store instances close."
+      ]
+    },
+    {
+      "area": "R4 provenance and portability",
+      "verdict": "STATIC_PASS",
+      "facts": [
+        "Clean source exact SHA observed. R2 receipts require same source SHA and empty before/after status in runner, plus unchanged fingerprints.",
+        "Frozen baseline reference source and compiled module are now marked -text; other probe files text eol=lf. Raw evidence stays -text with reporter whitespace exceptions only in evidence paths.",
+        "No build/test/performance/full execution was started by this reviewer. Actual frozen runner evidence remains pending and cannot be inferred from static review."
+      ]
+    }
+  ],
+  "blockingFindings": [],
+  "pendingEvidencePath": ".ci/agent-next-20261004/frozen-91967f4/manifest.json",
+  "paidCalls": 0,
+  "liveModelQuality": "NOT_RUN",
+  "windowsRuntimeValidation": "NOT_RUN"
+}

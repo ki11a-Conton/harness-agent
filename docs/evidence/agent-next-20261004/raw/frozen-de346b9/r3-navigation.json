@@ -1,0 +1,462 @@
+{
+  "schema": "HARNESS_NAVIGATION_WORK_PROBE_V1",
+  "probeSha256": "f9fce79705c831d46818009c5f1607fa6215077a02899e221b4f03f08190e147",
+  "status": "PASS",
+  "observedAt": "2026-10-05T00:38:16.709Z",
+  "head": "de346b90dcbf97c9591ae2786e46e80fd0a4e05c",
+  "profile": "actual ToolOrchestrator + production registry/tools + real filesystem; read-only tool permission/sandbox preserved",
+  "modelsPaid": 0,
+  "hashes": {
+    "packages/tools/src/navigate.ts": "b0b42636455fe67d3a53c818452a04b1dd68e915cd978781b5da398720b2f866",
+    "packages/tools/src/tools/navigation-tools.ts": "9ad61abf09717afe045103fc53dcf60a2a92442589a59b035c2241b4f4cf708d",
+    "packages/tools/src/orchestrator.ts": "adcd42ba547d15e725b9d0236bd7ca550cf2f363e60f2ed10951f92d1604d3eb",
+    "packages/tools/dist/navigate.js": "cb54641c91805789209ab1e73521542cceb022dbea41654c1b27663ca61273db",
+    "packages/tools/dist/tools/navigation-tools.js": "0ae512939b4e425b902c5d9259c0e0a23cd2372cfed4f50126444677c2672f7b"
+  },
+  "checks": [
+    {
+      "id": "TREE_DEPTH_ONE_RETURNS_IMMEDIATE_EMPTY_AND_POPULATED_DIRS",
+      "expected": {
+        "entries": 66,
+        "contains": [
+          "a-hit",
+          "empty",
+          "z00",
+          "z63"
+        ],
+        "descendantDirectoryReads": 0
+      },
+      "actual": {
+        "status": "success",
+        "output": [
+          {
+            "path": "a-hit",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "empty",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z00",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z01",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z02",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z03",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z04",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z05",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z06",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z07",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z08",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z09",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z10",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z11",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z12",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z13",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z14",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z15",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z16",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z17",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z18",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z19",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z20",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z21",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z22",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z23",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z24",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z25",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z26",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z27",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z28",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z29",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z30",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z31",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z32",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z33",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z34",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z35",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z36",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z37",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z38",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z39",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z40",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z41",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z42",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z43",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z44",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z45",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z46",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z47",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z48",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z49",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z50",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z51",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z52",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z53",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z54",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z55",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z56",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z57",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z58",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z59",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z60",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z61",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z62",
+            "type": "dir",
+            "depth": 1
+          },
+          {
+            "path": "z63",
+            "type": "dir",
+            "depth": 1
+          }
+        ],
+        "directoryReads": 1,
+        "descendantDirectoryReads": 0
+      },
+      "verdict": "PASS"
+    },
+    {
+      "id": "TREE_DEPTH_ZERO_HAS_ZERO_DESCENT_AND_NO_ENTRY",
+      "expected": {
+        "entries": 0,
+        "directoryReads": 0
+      },
+      "actual": {
+        "status": "success",
+        "output": [],
+        "directoryReads": 0
+      },
+      "verdict": "PASS"
+    },
+    {
+      "id": "TREE_ENTRY_CAP_COUNTS_DIRECTORIES_AND_STOPS_GLOBALLY",
+      "expected": {
+        "entries": 1,
+        "directoryReadsAtMost": 1
+      },
+      "actual": {
+        "status": "success",
+        "output": [
+          {
+            "path": "a-hit",
+            "type": "dir",
+            "depth": 1
+          }
+        ],
+        "directoryReads": 1
+      },
+      "verdict": "PASS"
+    },
+    {
+      "id": "GREP_CAP_STOPS_GLOBAL_RECURSION",
+      "expected": {
+        "hits": 1,
+        "directoryReadsAtMost": 2
+      },
+      "actual": {
+        "status": "success",
+        "hits": [
+          {
+            "file": "a-hit/match.txt",
+            "line": 1,
+            "column": 1,
+            "text": "needle"
+          }
+        ],
+        "directoryReads": 2,
+        "visited": [
+          ".",
+          "a-hit"
+        ]
+      },
+      "verdict": "PASS"
+    },
+    {
+      "id": "TREE_SKIP_GENERATED_AND_SYMLINK_DIRS",
+      "expected": {
+        "hiddenPaths": [],
+        "foreignPaths": []
+      },
+      "actual": {
+        "status": "success",
+        "hiddenPaths": [],
+        "foreignPaths": []
+      },
+      "verdict": "PASS"
+    },
+    {
+      "id": "SANDBOX_OUTSIDE_PATH_PREVENTS_TREE_READ",
+      "expected": {
+        "status": "denied",
+        "directoryReads": 0
+      },
+      "actual": {
+        "status": "denied",
+        "directoryReads": 0
+      },
+      "verdict": "PASS"
+    },
+    {
+      "id": "PERMISSION_DENY_PREVENTS_TREE_READ",
+      "expected": {
+        "status": "denied",
+        "directoryReads": 0
+      },
+      "actual": {
+        "status": "denied",
+        "directoryReads": 0
+      },
+      "verdict": "PASS"
+    }
+  ]
+}

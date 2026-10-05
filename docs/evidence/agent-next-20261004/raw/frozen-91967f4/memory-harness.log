@@ -1,0 +1,196 @@
+{
+  "status": "PASS",
+  "sourceHead": "91967f4dd2442b3d1979dee1c2b165d376c8895c",
+  "sourceUnchanged": true,
+  "gates": {
+    "bridgeSourceUnchanged": true,
+    "bridgeOnlyImportRewrites": true,
+    "actualHarnessFullResultsEqual": true,
+    "defaultMemoryRemainsOff": true,
+    "deniedControlsStayDenied": true,
+    "sourceUnchanged": true
+  },
+  "cases": [
+    {
+      "name": "english-safe",
+      "backend": "jsonl",
+      "fullResultEquivalent": true
+    },
+    {
+      "name": "chinese-safe",
+      "backend": "jsonl",
+      "fullResultEquivalent": true
+    },
+    {
+      "name": "mixed-safe",
+      "backend": "jsonl",
+      "fullResultEquivalent": true
+    },
+    {
+      "name": "structured-safe",
+      "backend": "jsonl",
+      "fullResultEquivalent": true
+    },
+    {
+      "name": "nontransitive-conflict",
+      "backend": "jsonl",
+      "fullResultEquivalent": true
+    },
+    {
+      "name": "final-top-k",
+      "backend": "jsonl",
+      "fullResultEquivalent": true
+    },
+    {
+      "name": "unsafe-content-denied",
+      "backend": "jsonl",
+      "fullResultEquivalent": true
+    },
+    {
+      "name": "unsafe-structured-denied",
+      "backend": "jsonl",
+      "fullResultEquivalent": true
+    },
+    {
+      "name": "wrong-scope-denied",
+      "backend": "jsonl",
+      "fullResultEquivalent": true
+    },
+    {
+      "name": "foreign-session-denied",
+      "backend": "jsonl",
+      "fullResultEquivalent": true
+    },
+    {
+      "name": "owned-session-allowed",
+      "backend": "jsonl",
+      "fullResultEquivalent": true
+    },
+    {
+      "name": "inactive-stale-denied",
+      "backend": "jsonl",
+      "fullResultEquivalent": true
+    },
+    {
+      "name": "inactive-deprecated-denied",
+      "backend": "jsonl",
+      "fullResultEquivalent": true
+    },
+    {
+      "name": "inactive-superseded-denied",
+      "backend": "jsonl",
+      "fullResultEquivalent": true
+    },
+    {
+      "name": "inactive-conflicting-denied",
+      "backend": "jsonl",
+      "fullResultEquivalent": true
+    },
+    {
+      "name": "deleted-denied",
+      "backend": "jsonl",
+      "fullResultEquivalent": true
+    },
+    {
+      "name": "actual-miss",
+      "backend": "jsonl",
+      "fullResultEquivalent": true
+    },
+    {
+      "name": "default-memory-off",
+      "backend": "jsonl",
+      "fullResultEquivalent": true
+    },
+    {
+      "name": "english-safe",
+      "backend": "sqlite",
+      "fullResultEquivalent": true
+    },
+    {
+      "name": "chinese-safe",
+      "backend": "sqlite",
+      "fullResultEquivalent": true
+    },
+    {
+      "name": "mixed-safe",
+      "backend": "sqlite",
+      "fullResultEquivalent": true
+    },
+    {
+      "name": "structured-safe",
+      "backend": "sqlite",
+      "fullResultEquivalent": true
+    },
+    {
+      "name": "nontransitive-conflict",
+      "backend": "sqlite",
+      "fullResultEquivalent": true
+    },
+    {
+      "name": "final-top-k",
+      "backend": "sqlite",
+      "fullResultEquivalent": true
+    },
+    {
+      "name": "unsafe-content-denied",
+      "backend": "sqlite",
+      "fullResultEquivalent": true
+    },
+    {
+      "name": "unsafe-structured-denied",
+      "backend": "sqlite",
+      "fullResultEquivalent": true
+    },
+    {
+      "name": "wrong-scope-denied",
+      "backend": "sqlite",
+      "fullResultEquivalent": true
+    },
+    {
+      "name": "foreign-session-denied",
+      "backend": "sqlite",
+      "fullResultEquivalent": true
+    },
+    {
+      "name": "owned-session-allowed",
+      "backend": "sqlite",
+      "fullResultEquivalent": true
+    },
+    {
+      "name": "inactive-stale-denied",
+      "backend": "sqlite",
+      "fullResultEquivalent": true
+    },
+    {
+      "name": "inactive-deprecated-denied",
+      "backend": "sqlite",
+      "fullResultEquivalent": true
+    },
+    {
+      "name": "inactive-superseded-denied",
+      "backend": "sqlite",
+      "fullResultEquivalent": true
+    },
+    {
+      "name": "inactive-conflicting-denied",
+      "backend": "sqlite",
+      "fullResultEquivalent": true
+    },
+    {
+      "name": "deleted-denied",
+      "backend": "sqlite",
+      "fullResultEquivalent": true
+    },
+    {
+      "name": "actual-miss",
+      "backend": "sqlite",
+      "fullResultEquivalent": true
+    },
+    {
+      "name": "default-memory-off",
+      "backend": "sqlite",
+      "fullResultEquivalent": true
+    }
+  ],
+  "paidCalls": 0
+}

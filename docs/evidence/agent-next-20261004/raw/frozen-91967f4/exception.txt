@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "/workspace/harness-agent/scripts/research/agent-next-20261004/frozen-acceptance.py", line 214, in <module>
+    require(exit_code == 0, name + " exited " + str(exit_code))
+  File "/workspace/harness-agent/scripts/research/agent-next-20261004/frozen-acceptance.py", line 96, in require
+    raise RuntimeError(message)
+RuntimeError: full exited 1

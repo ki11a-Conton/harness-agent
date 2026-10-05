@@ -1,0 +1,33 @@
+{
+  "schema": "R2_WARM_FOLLOWUP_PREREGISTERED_RECIPE",
+  "registeredAt": "2026-10-05T00:46:11.487717+00:00",
+  "status": "REGISTERED_NOT_RUN",
+  "expectedSourceHead": "de346b90dcbf97c9591ae2786e46e80fd0a4e05c",
+  "probeSha256": "eb45a35b1cf32de76cd4ac7b26041fe715d9eb1cdcde008d62f316daba04bb98",
+  "formalReportRelative": ".ci/agent-next-20261004/frozen-de346b9/r2-performance/report.json",
+  "formalReportSha256": "30a0db48b0b306efa83c60c4d43c5507701f4d68a9575cda28fd9807db6c622e",
+  "sqliteDatabaseRelative": ".ci/agent-next-20261004/frozen-de346b9/r2-performance/fixtures/sqlite/memories.db",
+  "fixtureSha256": "1d6be9ccf0eb0205ad5aefb65be1e203fbd9db481281647ec0d929b9697b2081",
+  "query": "retry",
+  "warmupsPerImplementation": 4,
+  "measuredPairs": 15,
+  "execution": "One process; await every call. Interleave full-retrieval and identical store.search A/A blocks; both block order and within-block A/B order reverse on alternate samples. Separate post-search-only diagnostic runs last, same fixed actual search hits. No builds/full suite/concurrent benchmark permitted.",
+  "formalOriginalObservation": {
+    "baselineMedianMs": 66.17538799999966,
+    "candidateMedianMs": 73.14820099999997,
+    "ratio": 1.1053686757378793,
+    "bSlowerPairs": 4,
+    "pairs": 5
+  },
+  "followupReviewRules": {
+    "reproducedRatioAbove": 1.05,
+    "reproducedPairedMedianAboveMs": 2,
+    "reproducedSlowerAtLeast": 11,
+    "effect": "Flag material reproduced warm overhead as pending independent attribution/completion concern; measurement PASS itself is not permission to dismiss it. All full/search-control/post-search samples must be interpreted together, and original five samples remain visible."
+  },
+  "acceptanceImpact": "Original formal Chinese two-backend >=50% improvement gate is unchanged. This supplemental probe only gates integrity/equivalence/frozen provenance; performance observations are independently reviewed.",
+  "paidCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "sourceWrites": "Only Git-ignored recipe/script/output; no tracked edits",
+  "output": "Invoke node focused-probe.mjs <repo> <fresh-output-directory>; existing output is refused by tracked common helper."
+}

@@ -1,0 +1,91 @@
+{
+  "schema": "AGENT_NEXT_INDEPENDENT_FULL_FAILURE_REVIEW_V1",
+  "observedAt": "2026-10-05T00:36:23.605427+00:00",
+  "reviewer": "/root/final_static_review",
+  "sourceSha": "91967f4dd2442b3d1979dee1c2b165d376c8895c",
+  "status": "CONFIRMED_FULL_ACCEPTANCE_FAIL",
+  "overallAcceptance": "FAIL",
+  "manifestSha256": "4fcd49d734a0b20d841e3d7799ca524ea32c932b8689938b33934077571e5ead",
+  "fullRawLogSha256": "fd3f0c355a556a25df638c618672f16d29e99708bd8f2a7db8b55058ee5686ee",
+  "fullExitCode": 1,
+  "fullTestCounts": {
+    "files": {
+      "failed": 1,
+      "passed": 458,
+      "skipped": 1,
+      "total": 460
+    },
+    "tests": {
+      "failed": 3,
+      "passed": 8481,
+      "skipped": 12,
+      "total": 8496
+    }
+  },
+  "failures": [
+    "packages/core/src/runtime/wire-protocol-e2e.test.ts > F7/R6 runtime → real provider → strict local stub (serialized wire body) > e2e-normal: a tool block is persisted contiguously and replayed contiguously",
+    "packages/core/src/runtime/wire-protocol-e2e.test.ts > F7/R6 runtime → real provider → strict local stub (serialized wire body) > e2e-parallel: two tools in one assistant message yield exactly two contiguous results",
+    "packages/core/src/runtime/wire-protocol-e2e.test.ts > F7/R6 runtime → real provider → strict local stub (serialized wire body) > e2e-resume: a second turn replays the persisted block contiguously"
+  ],
+  "failureAttribution": "The three existing assertions hardcode wire roles without the separate ModelRequest.system field; actual wire adds only the expected leading system to the otherwise unchanged role sequence. The production fix exposes an old test expectation tied to the previous missing-system defect.",
+  "assertionObservations": [
+    {
+      "case": "e2e-normal",
+      "expectedBefore": [
+        "user"
+      ],
+      "actualReceived": [
+        "system",
+        "user"
+      ],
+      "locationBefore": "wire-protocol-e2e.test.ts:331"
+    },
+    {
+      "case": "e2e-parallel",
+      "expectedBefore": [
+        "user",
+        "assistant",
+        "tool",
+        "tool"
+      ],
+      "actualReceived": [
+        "system",
+        "user",
+        "assistant",
+        "tool",
+        "tool"
+      ],
+      "locationBefore": "wire-protocol-e2e.test.ts:368"
+    },
+    {
+      "case": "e2e-resume",
+      "expectedBefore": [
+        "user",
+        "assistant+tool_calls",
+        "tool",
+        "assistant",
+        "user"
+      ],
+      "actualReceived": [
+        "system",
+        "user",
+        "assistant+tool_calls",
+        "tool",
+        "assistant",
+        "user"
+      ],
+      "locationBefore": "wire-protocol-e2e.test.ts:500"
+    }
+  ],
+  "allowedFollowup": "Update only these test role expectations/offsets and assert actual system content, retaining full wire legality, history role ordering, tool adjacency/id correlation and durable transcript assertions. No production Core change or filtering system out of test observation.",
+  "notRunAfterFailure": [
+    "strict usage-audit",
+    "three historical artifact integrity commands",
+    "baseline-to-source diff-check"
+  ],
+  "previousProbeReviewStatus": "PROBES_PASS_FULL_ACCEPTANCE_PENDING; not a completed run",
+  "nextRequiredAction": "Freeze a new clean source SHA after reviewed test changes and rerun the entire serial frozen acceptance. Keep the 91967f4 failed manifest/log bytes unchanged.",
+  "paidCalls": 0,
+  "liveModelQuality": "NOT_RUN",
+  "windowsRuntimeValidation": "NOT_RUN"
+}

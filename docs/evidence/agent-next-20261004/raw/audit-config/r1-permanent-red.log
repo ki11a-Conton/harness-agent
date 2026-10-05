@@ -1,0 +1,241 @@
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+ ❯ packages/model/src/openai-system-context.regressions.test.ts (13 tests | 8 failed) 48ms
+     × prepends nonempty system bytes without trimming: "TOPLEVEL_SYSTEM_中文marker\n保留空白  和换行\n" 27ms
+     × prepends nonempty system bytes without trimming: "English policy and project instructions" 1ms
+     × prepends nonempty system bytes without trimming: "   " 1ms
+     × sends an explicit system even when history is empty 1ms
+     ✓ preserves the legacy wire for system=undefined 1ms
+     ✓ preserves the legacy wire for system="" 1ms
+     × retains history system messages and ordering after the separate assembled system 1ms
+     × leaves a parallel assistant/tool group adjacent and retains reasoning content 3ms
+     ✓ still rejects a missing tool result before HTTP when system is supplied 2ms
+     × does not mutate a frozen request or accumulate system messages when reused 2ms
+     × retries the same complete wire context after a transient HTTP failure 3ms
+     ✓ does not send system context when already cancelled 0ms
+     ✓ keeps system content and credentials out of provider diagnostic evidence 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/model/src/openai-system-context.regressions.test.ts > production OpenAI wire preserves admitted system context > prepends nonempty system bytes without trimming: "TOPLEVEL_SYSTEM_中文marker\n保留空白  和换行\n"
+AssertionError: expected [ { role: 'user', …(1) } ] to deeply equal [ { role: 'system', …(1) }, …(1) ]
+
+- Expected
++ Received
+
+  [
+    {
+-     "content": "TOPLEVEL_SYSTEM_中文marker
+- 保留空白  和换行
+- ",
+-     "role": "system",
+-   },
+-   {
+      "content": "current task",
+      "role": "user",
+    },
+  ]
+
+ ❯ packages/model/src/openai-system-context.regressions.test.ts:45:35
+     43|       const events = await env.generate({ system, messages: [message("…
+     44|       expect(events.at(-1)).toMatchObject({ type: "completed", result:…
+     45|       expect(env.body().messages).toEqual([{ role: "system", content: …
+       |                                   ^
+     46|     },
+     47|   );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+ FAIL  packages/model/src/openai-system-context.regressions.test.ts > production OpenAI wire preserves admitted system context > prepends nonempty system bytes without trimming: "English policy and project instructions"
+AssertionError: expected [ { role: 'user', …(1) } ] to deeply equal [ { role: 'system', …(1) }, …(1) ]
+
+- Expected
++ Received
+
+  [
+    {
+-     "content": "English policy and project instructions",
+-     "role": "system",
+-   },
+-   {
+      "content": "current task",
+      "role": "user",
+    },
+  ]
+
+ ❯ packages/model/src/openai-system-context.regressions.test.ts:45:35
+     43|       const events = await env.generate({ system, messages: [message("…
+     44|       expect(events.at(-1)).toMatchObject({ type: "completed", result:…
+     45|       expect(env.body().messages).toEqual([{ role: "system", content: …
+       |                                   ^
+     46|     },
+     47|   );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯
+
+ FAIL  packages/model/src/openai-system-context.regressions.test.ts > production OpenAI wire preserves admitted system context > prepends nonempty system bytes without trimming: "   "
+AssertionError: expected [ { role: 'user', …(1) } ] to deeply equal [ …(2) ]
+
+- Expected
++ Received
+
+  [
+    {
+-     "content": "   ",
+-     "role": "system",
+-   },
+-   {
+      "content": "current task",
+      "role": "user",
+    },
+  ]
+
+ ❯ packages/model/src/openai-system-context.regressions.test.ts:45:35
+     43|       const events = await env.generate({ system, messages: [message("…
+     44|       expect(events.at(-1)).toMatchObject({ type: "completed", result:…
+     45|       expect(env.body().messages).toEqual([{ role: "system", content: …
+       |                                   ^
+     46|     },
+     47|   );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯
+
+ FAIL  packages/model/src/openai-system-context.regressions.test.ts > production OpenAI wire preserves admitted system context > sends an explicit system even when history is empty
+AssertionError: expected [] to deeply equal [ { role: 'system', …(1) } ]
+
+- Expected
++ Received
+
+- [
+-   {
+-     "content": "TOPLEVEL_SYSTEM_中文marker
+- 保留空白  和换行
+- ",
+-     "role": "system",
+-   },
+- ]
++ []
+
+ ❯ packages/model/src/openai-system-context.regressions.test.ts:52:33
+     50|     const env = setup();
+     51|     await env.generate({ system: SYSTEM, messages: [] });
+     52|     expect(env.body().messages).toEqual([{ role: "system", content: SY…
+       |                                 ^
+     53|   });
+     54|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯
+
+ FAIL  packages/model/src/openai-system-context.regressions.test.ts > production OpenAI wire preserves admitted system context > retains history system messages and ordering after the separate assembled system
+AssertionError: expected [ { role: 'system', …(1) }, …(3) ] to deeply equal [ { role: 'system', …(1) }, …(4) ]
+
+- Expected
++ Received
+
+@@ -1,13 +1,7 @@
+  [
+    {
+-     "content": "TOPLEVEL_SYSTEM_中文marker
+- 保留空白  和换行
+- ",
+-     "role": "system",
+-   },
+-   {
+      "content": "old compacted state",
+      "role": "system",
+    },
+    {
+      "content": "task",
+
+ ❯ packages/model/src/openai-system-context.regressions.test.ts:64:33
+     62|     const env = setup();
+     63|     await env.generate({ system: SYSTEM, messages: [message("system", …
+     64|     expect(env.body().messages).toEqual([
+       |                                 ^
+     65|       { role: "system", content: SYSTEM }, { role: "system", content: …
+     66|       { role: "user", content: "task" }, { role: "assistant", content:…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/8]⎯
+
+ FAIL  packages/model/src/openai-system-context.regressions.test.ts > production OpenAI wire preserves admitted system context > leaves a parallel assistant/tool group adjacent and retains reasoning content
+AssertionError: expected [ { role: 'user', …(1) }, …(3) ] to deeply equal [ { role: 'system', …(1) }, …(4) ]
+
+- Expected
++ Received
+
+@@ -1,13 +1,7 @@
+  [
+    {
+-     "content": "TOPLEVEL_SYSTEM_中文marker
+- 保留空白  和换行
+- ",
+-     "role": "system",
+-   },
+-   {
+      "content": "read two files",
+      "role": "user",
+    },
+    {
+      "content": "",
+
+ ❯ packages/model/src/openai-system-context.regressions.test.ts:79:33
+     77|       message("tool", "file a", { toolCallId: first }), message("tool"…
+     78|     ] });
+     79|     expect(env.body().messages).toEqual([
+       |                                 ^
+     80|       { role: "system", content: SYSTEM }, { role: "user", content: "r…
+     81|       { role: "assistant", content: "", reasoning_content: "retained r…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/8]⎯
+
+ FAIL  packages/model/src/openai-system-context.regressions.test.ts > production OpenAI wire preserves admitted system context > does not mutate a frozen request or accumulate system messages when reused
+AssertionError: expected [ { role: 'user', content: 'task' } ] to have a length of 2 but got 1
+
+- Expected
++ Received
+
+- 2
++ 1
+
+ ❯ packages/model/src/openai-system-context.regressions.test.ts:104:34
+    102|     expect(request).toEqual(before);
+    103|     expect(env.body(0)).toEqual(env.body(1));
+    104|     expect(env.body(0).messages).toHaveLength(2);
+       |                                  ^
+    105|   });
+    106|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/8]⎯
+
+ FAIL  packages/model/src/openai-system-context.regressions.test.ts > production OpenAI wire preserves admitted system context > retries the same complete wire context after a transient HTTP failure
+AssertionError: expected { role: 'user', content: 'task' } to deeply equal { role: 'system', …(1) }
+
+- Expected
++ Received
+
+  {
+-   "content": "TOPLEVEL_SYSTEM_中文marker
+- 保留空白  和换行
+- ",
+-   "role": "system",
++   "content": "task",
++   "role": "user",
+  }
+
+ ❯ packages/model/src/openai-system-context.regressions.test.ts:115:37
+    113|     expect(env.fetch).toHaveBeenCalledTimes(2);
+    114|     expect(env.body(0)).toEqual(env.body(1));
+    115|     expect(env.body(1).messages[0]).toEqual({ role: "system", content:…
+       |                                     ^
+    116|   });
+    117|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/8]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  8 failed | 5 passed (13)
+   Start at  13:24:51
+   Duration  513ms (transform 269ms, setup 0ms, import 337ms, tests 48ms, environment 0ms)
+

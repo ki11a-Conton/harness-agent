@@ -1,0 +1,21 @@
+{
+  "schema": "R2_WARM_SUPPLEMENTAL_INDEPENDENT_STATIC_REVIEW_V1",
+  "observedAt": "2026-10-05T00:48:27.753451+00:00",
+  "reviewer": "/root/final_static_review",
+  "sourceSha": "de346b90dcbf97c9591ae2786e46e80fd0a4e05c",
+  "status": "STATIC_PASS_NOT_RUN",
+  "recipeSha256": "534527564783bc325b09b8fdfa1e8835f411fca848b3de7c510990fd1f9d0904",
+  "probeSha256": "eb45a35b1cf32de76cd4ac7b26041fe715d9eb1cdcde008d62f316daba04bb98",
+  "formalOriginalReportSha256": "30a0db48b0b306efa83c60c4d43c5507701f4d68a9575cda28fd9807db6c622e",
+  "facts": [
+    "Original 5 samples and +10.54% warm observation stay immutable and visible.",
+    "4 warmups and 15 pairs per variant. Reverses both within-block implementation order and block order on alternating samples.",
+    "Identical bound store.search A/A timing control separates scan/order variability; separate post-search-only actual retrieval isolates retriever work and is not misrepresented as the full metric.",
+    "Actual readOnly SQLite connection to existing formal fixture plus query_only prevents writes; constructor existing schema/journal checks do not authorize writes. Database and formal report bytes are checked after execution.",
+    "Every call checks complete result identity and the recipe/probe hash/source/fixture/sample count gates are strict.",
+    "The preregistered material regression rule flags >5% full median ratio, >2ms paired median and >=11/15 slower pairs jointly. Measurement PASS alone does not declare performance pass or dismiss the concern."
+  ],
+  "blockingFindings": [],
+  "executionPolicy": "After full ends, serial, no builds/concurrent benchmark; reviewer did not start the probe.",
+  "pending": "Await actual full/search-control/post-search samples before attribution or final completion review."
+}

@@ -1,0 +1,76 @@
+{
+  "sourceSha": "fbe5098c43060fd066bd5fbdaa4a4d1612abdeb6",
+  "sourceTrackedDirtyAtStart": true,
+  "paidCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "modelEndpoint": "loopback-only",
+  "credentialPolicy": "minimal child environment; synthetic key; no inherited credential values read",
+  "cases": [
+    {
+      "name": "direct-system-0",
+      "status": "PASS",
+      "requestSystem": "nonempty",
+      "historicalSystemPreserved": false
+    },
+    {
+      "name": "direct-system-1",
+      "status": "PASS",
+      "requestSystem": "nonempty",
+      "historicalSystemPreserved": true
+    },
+    {
+      "name": "direct-system-2",
+      "status": "PASS",
+      "requestSystem": "absent",
+      "historicalSystemPreserved": true
+    },
+    {
+      "name": "direct-system-3",
+      "status": "PASS",
+      "requestSystem": "empty",
+      "historicalSystemPreserved": false
+    },
+    {
+      "name": "direct-system-4",
+      "status": "PASS",
+      "requestSystem": "absent",
+      "historicalSystemPreserved": false
+    }
+  ],
+  "status": "FAILED",
+  "error": "memory opt-in/body mismatch",
+  "traceback": "Traceback (most recent call last):\n  File \"/workspace/harness-agent/scripts/research/agent-next-20261004/provider-production.py\", line 141, in <module>\n    check_wire(rows, True, 2)\n  File \"/workspace/harness-agent/scripts/research/agent-next-20261004/provider-production.py\", line 114, in check_wire\n    assert (MEMORY in messages[0]['content']) == memory, 'memory opt-in/body mismatch'\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: memory opt-in/body mismatch\n",
+  "sourceShaAtEnd": "fbe5098c43060fd066bd5fbdaa4a4d1612abdeb6",
+  "sourceFingerprintsBefore": {
+    "packages/model/src/openai.ts": "2c909c6c7c0ed377b52e5b26665e991a104c84cd1cad733287576a115d0bd780",
+    "packages/model/dist/openai.js": "1aa9acd6f9e49f5a417009ad10047bddfbbd9ff6e47c2ffcd337f606b9d476aa",
+    "apps/cli/src/main.ts": "883fc942de4dcc4adac47d5a54fbe2d42a20322dd98e6d4e2ec56171440d8cc9",
+    "apps/cli/dist/main.js": "eeeea352f78ffb3647befb3cc856974765d110c896682dd7df5f5e7d33ea3a50",
+    "apps/cli/src/champion-application.ts": "b999ab04721366fa4d17e603ecbc1bff6ece1f6b2d4f246ed3926594f0f71080",
+    "apps/cli/dist/champion-application.js": "173318830d3bf233c278f14642952e27dcdfdd554ad3fc8572c6a162944181e8",
+    "apps/web/src/main.ts": "8635759dd6e63f6296ad16a7756285ed23145192d20ded04609fbab4efd78402",
+    "apps/web/dist/main.js": "672cd366b19ef2ab8c7d2d938588c9ab3bb0eab6f46848b05a872b21fcef25c4",
+    "packages/harness/src/create-harness.ts": "a115aa9c8ec71b86e689e80ab9195c21cd85c8f19a0d9de669e9e19d8becf84e",
+    "packages/harness/dist/create-harness.js": "442874f7297e7e0b7df5e715af249457fbd0bf6cd33f15b75d5e198700ea29e3",
+    "packages/context/src/discovery.ts": "1bdec0d2aa562b210870cf577adb56ad872b6c860b66979ae87903d1b83c3a67",
+    "packages/context/dist/discovery.js": "1ce3ddb756a5414cb02f9de2eefb6a1099576c45bce17635cd2690b984afe9d5"
+  },
+  "sourceFingerprintsAfter": {
+    "packages/model/src/openai.ts": "2c909c6c7c0ed377b52e5b26665e991a104c84cd1cad733287576a115d0bd780",
+    "packages/model/dist/openai.js": "1aa9acd6f9e49f5a417009ad10047bddfbbd9ff6e47c2ffcd337f606b9d476aa",
+    "apps/cli/src/main.ts": "883fc942de4dcc4adac47d5a54fbe2d42a20322dd98e6d4e2ec56171440d8cc9",
+    "apps/cli/dist/main.js": "eeeea352f78ffb3647befb3cc856974765d110c896682dd7df5f5e7d33ea3a50",
+    "apps/cli/src/champion-application.ts": "b999ab04721366fa4d17e603ecbc1bff6ece1f6b2d4f246ed3926594f0f71080",
+    "apps/cli/dist/champion-application.js": "173318830d3bf233c278f14642952e27dcdfdd554ad3fc8572c6a162944181e8",
+    "apps/web/src/main.ts": "8635759dd6e63f6296ad16a7756285ed23145192d20ded04609fbab4efd78402",
+    "apps/web/dist/main.js": "672cd366b19ef2ab8c7d2d938588c9ab3bb0eab6f46848b05a872b21fcef25c4",
+    "packages/harness/src/create-harness.ts": "a115aa9c8ec71b86e689e80ab9195c21cd85c8f19a0d9de669e9e19d8becf84e",
+    "packages/harness/dist/create-harness.js": "442874f7297e7e0b7df5e715af249457fbd0bf6cd33f15b75d5e198700ea29e3",
+    "packages/context/src/discovery.ts": "1bdec0d2aa562b210870cf577adb56ad872b6c860b66979ae87903d1b83c3a67",
+    "packages/context/dist/discovery.js": "1ce3ddb756a5414cb02f9de2eefb6a1099576c45bce17635cd2690b984afe9d5"
+  },
+  "sourceTrackedDirtyAtEnd": true,
+  "modelRequests": 7,
+  "probeSha256": "2c452d1892be294417259103f921e08a2dee891495007acfcca14c178769b2da",
+  "workerSha256": "9169109ac4e6fa73f43471b076d15411a714ad5abc12f6a2313f19fe53874366"
+}

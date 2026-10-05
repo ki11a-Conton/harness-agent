@@ -1,0 +1,24 @@
+START typecheck
+END typecheck 0 0.49 []
+START build
+END build 0 0.559 []
+START new-regressions
+END new-regressions 0 1.621 ['Test Files  3 passed (3)', 'Tests  63 passed (63)', 'Duration  940ms (transform 299ms, setup 0ms, import 485ms, tests 128ms, environment 0ms)']
+START provider-production
+END provider-production 0 1.724 []
+START memory-differential
+END memory-differential 0 2.019 []
+START memory-paired-performance
+END memory-paired-performance 0 16.349 []
+START memory-harness
+END memory-harness 0 2.625 []
+START navigation-production
+END navigation-production 0 0.11 []
+START joint-browser
+END joint-browser 0 16.179 []
+START security
+END security 0 5.377 ['Test Files  19 passed (19)', 'Tests  2135 passed (2135)', 'Duration  4.65s (transform 380ms, setup 0ms, import 987ms, tests 1.50s, environment 2ms)']
+START docs-verify
+END docs-verify 0 0.617 []
+START full
+FAIL RuntimeError full exited 1

@@ -1,0 +1,36 @@
+{
+  "schema": "AGENT_NEXT_INDEPENDENT_WIRE_EXPECTATION_REVIEW_V1",
+  "observedAt": "2026-10-05T00:37:56.875498+00:00",
+  "reviewer": "/root/final_static_review",
+  "baselineFrozenAttempt": "91967f4dd2442b3d1979dee1c2b165d376c8895c",
+  "head": "de346b90dcbf97c9591ae2786e46e80fd0a4e05c",
+  "sourceStatus": "",
+  "status": "STATIC_PASS",
+  "runtimeAcceptance": "PENDING_NEW_CLEAN_SHA_FULL_RERUN",
+  "reviewedDiffSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "reviewedFileSha256": {
+    "packages/core/src/runtime/wire-protocol-e2e.test.ts": "9c72d7e940583ce7498a95fab5c82a02f8604ace768f3d917455333046527e33",
+    "scripts/research/agent-next-20261004/frozen-acceptance.py": "aec232c9f57c5059460161f239b96af0fa5429f767f8a9682ba29a5c19d9f49d",
+    "scripts/research/agent-next-20261004/README.md": "5787281ea5be3c19a824d4fda14510f0f2e4b02e3bb6d21d4fcf09fcfe67310d",
+    "tasks/AGENT-EFFICIENCY-20261004.md": "5f84282f4bbc24470883fb5fd7830b37786b8e495085029b02a5b5be1b3b604b"
+  },
+  "threeProductionModuleBytesUnchangedFromInitialStaticReview": {
+    "packages/model/src/openai.ts": true,
+    "packages/memory/src/retrieval.ts": true,
+    "packages/tools/src/navigate.ts": true
+  },
+  "coreProductionBytesUnchangedFromFailedSource": true,
+  "findings": [
+    "Only related Core wire E2E test changes, no Core production edit.",
+    "Normal and parallel full role sequences explicitly add system; resume preserves full historical sequence with leading system. All tool-call/result indices are shifted exactly by one.",
+    "Each affected request asserts exact system object content == AGENT.systemPrompt, not only presence. Existing strict unified wire legality, contiguous ordered result IDs, HTTP request counts and durable matching assertions remain intact.",
+    "Normal durable history adds a stronger full roles assertion without a persisted system message. No filtering of system or relaxation to subsequence matching.",
+    "Runner adds an early gate requiring all 8 existing wire E2E cases to pass with no skip/todo. Other mandatory full and strict usage gates remain required.",
+    "README/task explicitly retain first FAIL and require a new frozen full run; the immutable preregistration spec is not altered."
+  ],
+  "blockingFindings": [],
+  "executedByReviewer": "Static read/hash/diff only; no build, test, performance or full commands.",
+  "paidCalls": 0,
+  "liveModelQuality": "NOT_RUN",
+  "windowsRuntimeValidation": "NOT_RUN"
+}

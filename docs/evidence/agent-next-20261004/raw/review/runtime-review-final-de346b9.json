@@ -1,0 +1,160 @@
+{
+  "schema": "AGENT_NEXT_INDEPENDENT_FINAL_RUNTIME_REVIEW_V1",
+  "observedAt": "2026-10-05T00:53:36.481849+00:00",
+  "reviewer": "/root/final_static_review",
+  "sourceSha": "de346b90dcbf97c9591ae2786e46e80fd0a4e05c",
+  "status": "RUNTIME_ACCEPTANCE_PASS",
+  "artifactArchiveAndPublication": "PENDING_SEPARATE_REVIEW",
+  "manifestSha256": "da1400ed730f6a5c742c37bc89798c8f07165d0b0478e86e37fc476f24300e0e",
+  "verifiedCommandCount": 18,
+  "rawCommandLogHashesVerified": {
+    "typecheck": "faeaa94bcf7012d86f91ca647580449f56a263fb7eaf572c54789764f60a9b8f",
+    "build": "faeaa94bcf7012d86f91ca647580449f56a263fb7eaf572c54789764f60a9b8f",
+    "new-regressions": "9ecb12a24d80de2e6f7be77ba0d41942bf9307369254aa1d546c0772ee650b02",
+    "wire-e2e-regressions": "e926fb2106955cb09106ba1bdddccad68602e96417b1cfa51847f4a49473e479",
+    "provider-production": "0f8221e737f20950b3b191738db0b840bbb243e6379e1aacf2fff976c7286646",
+    "memory-differential": "2788236f88f9ac82b15b81b957776d5f3ac293957e810eb951c06910e8d32b29",
+    "memory-paired-performance": "691244deab2d865b8e6e6a5f2c30870e9d41fcfb0cbb981be26653f41f4a5b5b",
+    "memory-harness": "e7a04343d07e095c383d885fb88d2912410931bfbb5c6489fa16eae96f7254f4",
+    "navigation-production": "1c30368475d5c9642c8ab935f09aaa402bdb6fe8bfaee702c9497488de8b04c8",
+    "joint-browser": "aabd340b02ab7228779db3bcbd4c559482a289bb0a206698a2159d0182ea00f6",
+    "security": "0e44726ac336ec49522b9e28ec2c6f0c3534232dac40c51ca49d3d0760760812",
+    "docs-verify": "77176732ddaa1b2d0bf477fe8590ec8e4d0624c93d841f535983f37ba577a2d6",
+    "full": "bbcfa5550e659087dc9ee5f49497fa0470558bcc33f57b686202434b4538927f",
+    "usage-audit": "f2cf7a87fa38978ce86d8717f2c58808bb41b78ea4b0f95a8c1d383987323dba",
+    "web-artifact-integrity": "7f8cb4a3808de7506fabb92076a6ffd8a6c74242602057fdbe5a98a0a2b80ac0",
+    "context-memory-artifact-integrity": "77ead82a9d2ad4e70a49fd6b23079afb49bc0fb95f7f9e5cb9f4ef96cb11cb3e",
+    "web-recheck-artifact-integrity": "c1b89b4b3d161c9ee8b45623d97c6e537903292d1c0dfeba8baf846a23ae7149",
+    "diff-check": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "frozenSourceGitBlobHashesVerified": 1071,
+  "currentBuiltDistHashesVerified": 3472,
+  "fullTestCounts": {
+    "files": {
+      "passed": 459,
+      "skipped": 1,
+      "total": 460
+    },
+    "tests": {
+      "passed": 8484,
+      "skipped": 12,
+      "total": 8496
+    }
+  },
+  "newRegressionPass": 63,
+  "newRegressionSkip": 0,
+  "wireExistingCasesPass": 8,
+  "wireExistingCasesSkip": 0,
+  "securityPass": 2135,
+  "existingSkipLineage": {
+    "packages/tools/src/process/executor.test.ts": 7,
+    "apps/cli/src/n5-pair-setup.test.ts": 1,
+    "packages/tools/src/process/r96-windows-execution-boundary.test.ts": 3,
+    "apps/cli/src/n2-release-cli-forward.test.ts": 1
+  },
+  "strictUsage": {
+    "runId": "agent-next-linux-de346b90dcbf-1791160665881839487",
+    "argv": [
+      "node",
+      "apps/cli/dist/main.js",
+      "usage-audit",
+      "--run",
+      "agent-next-linux-de346b90dcbf-1791160665881839487",
+      "--strict"
+    ],
+    "status": "PASS",
+    "observations": {
+      "agent-next-linux-de346b90dcbf-1791160665881839487.jsonl": {
+        "rowCount": 7,
+        "bytes": 4908,
+        "sha256": "7ebe5aadbde25f7628160c2056b457447aea63b4156708187487ba54a7d961fe",
+        "capabilities": [
+          "createActivationRecorderV2",
+          "classifySecurityOutcomeV2",
+          "canonical V3 writer",
+          "strict promotion loader",
+          "durable RecoveryStore",
+          "resolveChampionHarness",
+          "GateEvidenceV2 generator"
+        ]
+      },
+      "agent-next-linux-de346b90dcbf-1791160665881839487.candidates.jsonl": {
+        "rowCount": 7,
+        "bytes": 3473,
+        "sha256": "6d5df0ddd2d871fec57ebe19b5243bd87e30ea286ffb35b73345578392870304",
+        "capabilities": [
+          "createActivationRecorderV2",
+          "classifySecurityOutcomeV2",
+          "canonical V3 writer",
+          "strict promotion loader",
+          "durable RecoveryStore",
+          "resolveChampionHarness",
+          "GateEvidenceV2 generator"
+        ]
+      }
+    }
+  },
+  "probeReview": "New de probe outputs independently verified earlier: R1 7/10 HTTP, R2 261 full-result fixtures/exact tie/4 work controls/8 paired scenarios/72 actual Harness runs, R3 7 actual checks, browser27/77/0error. Three production modules unchanged from reviewed implementation.",
+  "warmFollowup": {
+    "status": "VALID_MEASUREMENT_NO_MATERIAL_REGRESSION_REPRODUCED",
+    "reportSha256": "2dae3657efebba9e6d0eb22d85e806c0bc945c5dc54e8a3bff115b0fa19a70d7",
+    "recipeSha256": "534527564783bc325b09b8fdfa1e8835f411fca848b3de7c510990fd1f9d0904",
+    "probeSha256": "eb45a35b1cf32de76cd4ac7b26041fe715d9eb1cdcde008d62f316daba04bb98",
+    "beganAfterFrozenAcceptanceFinished": true,
+    "callsVerified": 114,
+    "summaries": [
+      {
+        "name": "fullRetrieval",
+        "baselineMedianMs": 66.46716199999992,
+        "candidateMedianMs": 66.743289,
+        "ratio": 1.0041543371447104,
+        "pairedMedianDifferenceMs": -1.1038789999993242,
+        "candidateSlowerPairs": 6,
+        "measuredPairs": 15
+      },
+      {
+        "name": "sameFunctionSearchControl",
+        "baselineMedianMs": 59.05606099999977,
+        "candidateMedianMs": 58.85700999999972,
+        "ratio": 0.9966294568816559,
+        "pairedMedianDifferenceMs": 5.3608989999993355,
+        "candidateSlowerPairs": 8,
+        "measuredPairs": 15
+      },
+      {
+        "name": "postSearchOnlyDiagnostic",
+        "baselineMedianMs": 5.869198000000324,
+        "candidateMedianMs": 4.9796819999992294,
+        "ratio": 0.8484433477962329,
+        "pairedMedianDifferenceMs": -0.7156019999993077,
+        "candidateSlowerPairs": 3,
+        "measuredPairs": 15
+      }
+    ],
+    "materialRuleReproduced": false,
+    "originalFormalWarmObservation": {
+      "ratio": 1.1053686757378793,
+      "baselineMedianMs": 66.17538799999966,
+      "candidateMedianMs": 73.14820099999997,
+      "bSlowerCount": 4,
+      "sampleCount": 5
+    },
+    "formalReportAndDatabaseBytesUnchanged": true,
+    "independentInterpretation": "A stable material SQLite warm regression was not reproduced under the preregistered 15-pair rule. Full ratio is +0.4154% with paired median -1.103879ms and only 6/15 candidate-slower pairs; identical-search control exhibits multi-ms order/scan variability; post-search candidate median is lower. The original +10.54% observation remains visible. These samples do not prove every query is faster or prove the original increase was exclusively environmental noise."
+  },
+  "portability": {
+    "frozenRawEvidenceAttributesPreserveBytes": true,
+    "frozenReferenceSourceEqualsNativeBaselineGitBlob": true,
+    "preregistrationBytesUnchanged": true,
+    "windowsRuntime": "NOT_RUN"
+  },
+  "blockingFindings": [],
+  "remainingCompletionGates": [
+    "New portable raw archive/index byte and staged-Git-blob verification.",
+    "Completion documents must use de source metrics and preserve first failed run/warm concern.",
+    "Native Git/curl main publication and local/ls-remote/API SHA equality."
+  ],
+  "paidCalls": 0,
+  "liveModelQuality": "NOT_RUN",
+  "promotion": "NOT_RUN"
+}

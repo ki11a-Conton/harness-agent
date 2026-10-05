@@ -1,0 +1,2683 @@
+{
+  "schema": "R2_SQLITE_WARM_SUPPLEMENTAL_PROBE",
+  "observedAt": "2026-10-05T00:49:58.811Z",
+  "repo": "/workspace/harness-agent",
+  "sourceHead": "de346b90dcbf97c9591ae2786e46e80fd0a4e05c",
+  "sourceStatus": "",
+  "sourceHashes": {
+    "packages/memory/src/retrieval.ts": "d3a48b1ff665dd2c3f698d7a2c7e4754081a8fb6ba6306556444262135fca8c9",
+    "packages/memory/dist/retrieval.js": "a47651ff6072887a099ae546478a437cf53b75ca4196e163561c7f6e3c73904a",
+    "packages/memory/src/memory-store.ts": "925f718e3f92baf32fb2868bafcdcd0701cb520e441049892848a4cb6d494caf",
+    "packages/memory/dist/memory-store.js": "8722ce368b39c5626668437f3ced379d035ae938e480f693a6971f12e3cf5ed5",
+    "packages/memory/src/sqlite-memory-store.ts": "f278be463dec22f5ed15039e6e727b22a942eb6afbaab19e6961e177ae20cb6f",
+    "packages/memory/dist/sqlite-memory-store.js": "300bf553eb208898c79d7d557b5dfb8b649b5e01f28a5b934ac56eb1d39dceb7",
+    "packages/memory/src/search-text.ts": "e569e7f418e3edf87fba7fd2e9c1a1bdf7511d78ea85abcecd863def5c201fd0",
+    "packages/memory/dist/search-text.js": "077ce28fe2280d104af3d98da7c07d11582f61ea7ad0beec1ccc2f730975b202",
+    "packages/memory/src/security-gate.ts": "35dd1c100d6200a862ac50c3b2f1c0fff1d9feb8b7921e31c8805aed319a5efa",
+    "packages/memory/dist/security-gate.js": "4e5b30994c56a51aead532212406056b0f5e84dd80f74979e4b45ebbf85f72fa",
+    "packages/memory/src/lifecycle.ts": "785201bfbfab78fad4cfe8b5781973e00f5149a5fd2c62559b81890642193fa6",
+    "packages/memory/dist/lifecycle.js": "11a295ece7bdf7bb4130e84ed09304da654e19d5715a8d21ff45be1c7545b183",
+    "packages/harness/src/memory-runtime-bridge.ts": "2d6cf39686f2884d2c390dcd13e7c7f46a3e368094d807b79124a79297a4f4cf",
+    "packages/harness/dist/memory-runtime-bridge.js": "b3b45a131640fad6a294aa8cb30a5c0d0770f1706c3281130a3816037d9eba09",
+    "packages/harness/src/create-harness.ts": "a115aa9c8ec71b86e689e80ab9195c21cd85c8f19a0d9de669e9e19d8becf84e",
+    "packages/harness/dist/create-harness.js": "442874f7297e7e0b7df5e715af249457fbd0bf6cd33f15b75d5e198700ea29e3"
+  },
+  "probeSha256": "eb45a35b1cf32de76cd4ac7b26041fe715d9eb1cdcde008d62f316daba04bb98",
+  "helperSha256": "db77855cad50c3a572220fc82695b08c839a09245f115693608a0fa34fa7a443",
+  "baselineHead": "18f162bf7f12c4b8e8cebcebede4034dd1f3efb7",
+  "baselineRetrievalSourceSha256": "0921994bc133782ca2d01ae7e9af05d01e4fd2ac233916cb42c5350ad3621f55",
+  "baselineRetrievalCompiledSha256": "642e15428ffcb008e68d6448d5465555477c17f20888b6bf4d76e483eab709d6",
+  "resolvedReferenceSha256": "bfba0a3fe0f2238ec270f1a73910e08ad75de245cddacc1a970afb14c07a35c1",
+  "unchangedSearchAndGateSources": {
+    "packages/memory/src/memory-store.ts": {
+      "actual": "925f718e3f92baf32fb2868bafcdcd0701cb520e441049892848a4cb6d494caf",
+      "baseline": "925f718e3f92baf32fb2868bafcdcd0701cb520e441049892848a4cb6d494caf",
+      "matches": true
+    },
+    "packages/memory/src/sqlite-memory-store.ts": {
+      "actual": "f278be463dec22f5ed15039e6e727b22a942eb6afbaab19e6961e177ae20cb6f",
+      "baseline": "f278be463dec22f5ed15039e6e727b22a942eb6afbaab19e6961e177ae20cb6f",
+      "matches": true
+    },
+    "packages/memory/src/search-text.ts": {
+      "actual": "e569e7f418e3edf87fba7fd2e9c1a1bdf7511d78ea85abcecd863def5c201fd0",
+      "baseline": "e569e7f418e3edf87fba7fd2e9c1a1bdf7511d78ea85abcecd863def5c201fd0",
+      "matches": true
+    },
+    "packages/memory/src/security-gate.ts": {
+      "actual": "35dd1c100d6200a862ac50c3b2f1c0fff1d9feb8b7921e31c8805aed319a5efa",
+      "baseline": "35dd1c100d6200a862ac50c3b2f1c0fff1d9feb8b7921e31c8805aed319a5efa",
+      "matches": true
+    },
+    "packages/memory/src/lifecycle.ts": {
+      "actual": "785201bfbfab78fad4cfe8b5781973e00f5149a5fd2c62559b81890642193fa6",
+      "baseline": "785201bfbfab78fad4cfe8b5781973e00f5149a5fd2c62559b81890642193fa6",
+      "matches": true
+    }
+  },
+  "paidCalls": 0,
+  "realProviderCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "promotion": "NOT_RUN",
+  "cases": [
+    {
+      "name": "fullRetrieval",
+      "backend": "sqlite",
+      "baseline": {
+        "samplesMs": [
+          72.939752,
+          60.268886000000066,
+          61.91786499999989,
+          69.8681160000001,
+          70.85819399999991,
+          65.77277099999992,
+          70.11917500000027,
+          87.16941700000007,
+          63.903714000000036,
+          74.41751699999986,
+          64.35678999999982,
+          66.03132199999982,
+          66.46716199999992,
+          64.81127699999979,
+          68.69989800000076
+        ],
+        "minMs": 60.268886000000066,
+        "medianMs": 66.46716199999992,
+        "maxMs": 87.16941700000007
+      },
+      "candidate": {
+        "samplesMs": [
+          58.831290999999965,
+          69.25343599999997,
+          61.96422000000007,
+          66.743289,
+          70.86913099999992,
+          75.23799899999995,
+          94.49385699999993,
+          81.47786700000006,
+          63.53510700000015,
+          67.87521100000004,
+          75.24835399999938,
+          64.9274430000005,
+          59.63435599999957,
+          59.259829999999965,
+          64.69026400000075
+        ],
+        "minMs": 58.831290999999965,
+        "medianMs": 66.743289,
+        "maxMs": 94.49385699999993
+      },
+      "ratio": 1.0041543371447104,
+      "pairedDifferenceMs": {
+        "samplesMs": [
+          -14.108461000000034,
+          8.9845499999999,
+          0.046355000000176005,
+          -3.1248270000000957,
+          0.010937000000012631,
+          9.465228000000025,
+          24.374681999999666,
+          -5.6915500000000065,
+          -0.36860699999988356,
+          -6.542305999999826,
+          10.891563999999562,
+          -1.1038789999993242,
+          -6.832806000000346,
+          -5.5514469999998255,
+          -4.0096340000000055
+        ],
+        "minMs": -14.108461000000034,
+        "medianMs": -1.1038789999993242,
+        "maxMs": 24.374681999999666
+      },
+      "pairedRatios": {
+        "samplesMs": [
+          0.8065737733794319,
+          1.1490744328673985,
+          1.0007486530745233,
+          0.9552753504903425,
+          1.0001543505328405,
+          1.1439080010784408,
+          1.347617923342646,
+          0.9347070314810066,
+          0.9942318376049335,
+          0.9120864782414086,
+          1.1692372164615357,
+          0.9832824943289894,
+          0.8972002746258317,
+          0.9143444280537808,
+          0.9416355174210017
+        ],
+        "minMs": 0.8065737733794319,
+        "medianMs": 0.9832824943289894,
+        "maxMs": 1.347617923342646
+      },
+      "bSlowerCount": 6,
+      "measuredPairs": 15,
+      "byOrder": {
+        "AB": {
+          "count": 8,
+          "pairedDifferenceMs": {
+            "samplesMs": [
+              -14.108461000000034,
+              0.046355000000176005,
+              0.010937000000012631,
+              24.374681999999666,
+              -0.36860699999988356,
+              10.891563999999562,
+              -6.832806000000346,
+              -4.0096340000000055
+            ],
+            "minMs": -14.108461000000034,
+            "medianMs": 0.010937000000012631,
+            "maxMs": 24.374681999999666
+          },
+          "pairedRatios": {
+            "samplesMs": [
+              0.8065737733794319,
+              1.0007486530745233,
+              1.0001543505328405,
+              1.347617923342646,
+              0.9942318376049335,
+              1.1692372164615357,
+              0.8972002746258317,
+              0.9416355174210017
+            ],
+            "minMs": 0.8065737733794319,
+            "medianMs": 1.0001543505328405,
+            "maxMs": 1.347617923342646
+          }
+        },
+        "BA": {
+          "count": 7,
+          "pairedDifferenceMs": {
+            "samplesMs": [
+              8.9845499999999,
+              -3.1248270000000957,
+              9.465228000000025,
+              -5.6915500000000065,
+              -6.542305999999826,
+              -1.1038789999993242,
+              -5.5514469999998255
+            ],
+            "minMs": -6.542305999999826,
+            "medianMs": -3.1248270000000957,
+            "maxMs": 9.465228000000025
+          },
+          "pairedRatios": {
+            "samplesMs": [
+              1.1490744328673985,
+              0.9552753504903425,
+              1.1439080010784408,
+              0.9347070314810066,
+              0.9120864782414086,
+              0.9832824943289894,
+              0.9143444280537808
+            ],
+            "minMs": 0.9120864782414086,
+            "medianMs": 0.9552753504903425,
+            "maxMs": 1.1490744328673985
+          }
+        }
+      },
+      "pairs": [
+        {
+          "phase": "warmup",
+          "sample": 0,
+          "order": [
+            "A",
+            "B"
+          ],
+          "aMs": 77.30994300000003,
+          "bMs": 82.13790599999999,
+          "differenceMs": 4.827962999999954,
+          "ratio": 1.0624494445688564,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "warmup",
+          "sample": 1,
+          "order": [
+            "B",
+            "A"
+          ],
+          "aMs": 69.041786,
+          "bMs": 60.69846499999994,
+          "differenceMs": -8.34332100000006,
+          "ratio": 0.879155487084299,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "warmup",
+          "sample": 2,
+          "order": [
+            "A",
+            "B"
+          ],
+          "aMs": 67.05754400000001,
+          "bMs": 65.60102099999995,
+          "differenceMs": -1.456523000000061,
+          "ratio": 0.9782795057331646,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "warmup",
+          "sample": 3,
+          "order": [
+            "B",
+            "A"
+          ],
+          "aMs": 60.492794,
+          "bMs": 70.52952600000003,
+          "differenceMs": 10.036732000000029,
+          "ratio": 1.1659161585427849,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 0,
+          "order": [
+            "A",
+            "B"
+          ],
+          "aMs": 72.939752,
+          "bMs": 58.831290999999965,
+          "differenceMs": -14.108461000000034,
+          "ratio": 0.8065737733794319,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 1,
+          "order": [
+            "B",
+            "A"
+          ],
+          "aMs": 60.268886000000066,
+          "bMs": 69.25343599999997,
+          "differenceMs": 8.9845499999999,
+          "ratio": 1.1490744328673985,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 2,
+          "order": [
+            "A",
+            "B"
+          ],
+          "aMs": 61.91786499999989,
+          "bMs": 61.96422000000007,
+          "differenceMs": 0.046355000000176005,
+          "ratio": 1.0007486530745233,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 3,
+          "order": [
+            "B",
+            "A"
+          ],
+          "aMs": 69.8681160000001,
+          "bMs": 66.743289,
+          "differenceMs": -3.1248270000000957,
+          "ratio": 0.9552753504903425,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 4,
+          "order": [
+            "A",
+            "B"
+          ],
+          "aMs": 70.85819399999991,
+          "bMs": 70.86913099999992,
+          "differenceMs": 0.010937000000012631,
+          "ratio": 1.0001543505328405,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 5,
+          "order": [
+            "B",
+            "A"
+          ],
+          "aMs": 65.77277099999992,
+          "bMs": 75.23799899999995,
+          "differenceMs": 9.465228000000025,
+          "ratio": 1.1439080010784408,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 6,
+          "order": [
+            "A",
+            "B"
+          ],
+          "aMs": 70.11917500000027,
+          "bMs": 94.49385699999993,
+          "differenceMs": 24.374681999999666,
+          "ratio": 1.347617923342646,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 7,
+          "order": [
+            "B",
+            "A"
+          ],
+          "aMs": 87.16941700000007,
+          "bMs": 81.47786700000006,
+          "differenceMs": -5.6915500000000065,
+          "ratio": 0.9347070314810066,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 8,
+          "order": [
+            "A",
+            "B"
+          ],
+          "aMs": 63.903714000000036,
+          "bMs": 63.53510700000015,
+          "differenceMs": -0.36860699999988356,
+          "ratio": 0.9942318376049335,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 9,
+          "order": [
+            "B",
+            "A"
+          ],
+          "aMs": 74.41751699999986,
+          "bMs": 67.87521100000004,
+          "differenceMs": -6.542305999999826,
+          "ratio": 0.9120864782414086,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 10,
+          "order": [
+            "A",
+            "B"
+          ],
+          "aMs": 64.35678999999982,
+          "bMs": 75.24835399999938,
+          "differenceMs": 10.891563999999562,
+          "ratio": 1.1692372164615357,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 11,
+          "order": [
+            "B",
+            "A"
+          ],
+          "aMs": 66.03132199999982,
+          "bMs": 64.9274430000005,
+          "differenceMs": -1.1038789999993242,
+          "ratio": 0.9832824943289894,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 12,
+          "order": [
+            "A",
+            "B"
+          ],
+          "aMs": 66.46716199999992,
+          "bMs": 59.63435599999957,
+          "differenceMs": -6.832806000000346,
+          "ratio": 0.8972002746258317,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 13,
+          "order": [
+            "B",
+            "A"
+          ],
+          "aMs": 64.81127699999979,
+          "bMs": 59.259829999999965,
+          "differenceMs": -5.5514469999998255,
+          "ratio": 0.9143444280537808,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 14,
+          "order": [
+            "A",
+            "B"
+          ],
+          "aMs": 68.69989800000076,
+          "bMs": 64.69026400000075,
+          "differenceMs": -4.0096340000000055,
+          "ratio": 0.9416355174210017,
+          "fullResultEquivalent": true
+        }
+      ],
+      "fullResultEquivalent": true
+    },
+    {
+      "name": "sameFunctionSearchControl",
+      "backend": "sqlite",
+      "baseline": {
+        "samplesMs": [
+          78.40583100000003,
+          60.399192000000085,
+          57.45225500000015,
+          52.435737999999674,
+          77.11491699999988,
+          67.95609400000012,
+          53.43739300000016,
+          53.67943800000012,
+          59.05606099999977,
+          67.64906999999994,
+          53.49611100000038,
+          54.09108000000015,
+          72.99480600000061,
+          61.998672999999144,
+          52.92592799999966
+        ],
+        "minMs": 52.435737999999674,
+        "medianMs": 59.05606099999977,
+        "maxMs": 78.40583100000003
+      },
+      "candidate": {
+        "samplesMs": [
+          62.784331000000066,
+          52.16918400000009,
+          51.232426999999916,
+          58.84079500000007,
+          91.21726899999976,
+          78.56260800000018,
+          59.071613999999954,
+          62.790469999999914,
+          52.96755200000007,
+          58.79718999999977,
+          58.85700999999972,
+          60.35399400000006,
+          56.458732000000055,
+          61.755739000000176,
+          58.82906800000001
+        ],
+        "minMs": 51.232426999999916,
+        "medianMs": 58.85700999999972,
+        "maxMs": 91.21726899999976
+      },
+      "ratio": 0.9966294568816559,
+      "pairedDifferenceMs": {
+        "samplesMs": [
+          -15.621499999999969,
+          -8.230007999999998,
+          -6.219828000000234,
+          6.405057000000397,
+          14.102351999999883,
+          10.606514000000061,
+          5.634220999999798,
+          9.111031999999796,
+          -6.0885089999997035,
+          -8.851880000000165,
+          5.3608989999993355,
+          6.26291399999991,
+          -16.536074000000553,
+          -0.24293399999896792,
+          5.903140000000349
+        ],
+        "minMs": -16.536074000000553,
+        "medianMs": 5.3608989999993355,
+        "maxMs": 14.102351999999883
+      },
+      "pairedRatios": {
+        "samplesMs": [
+          0.8007609918706179,
+          0.8637397665849572,
+          0.8917391841277559,
+          1.1221506027053616,
+          1.1828745014404918,
+          1.1560789235473135,
+          1.1054359257383641,
+          1.1697303909925394,
+          0.8969028936758967,
+          0.8691500119661634,
+          1.1002110041232585,
+          1.115784598865467,
+          0.7734623200450671,
+          0.9960816258115884,
+          1.1115358808635418
+        ],
+        "minMs": 0.7734623200450671,
+        "medianMs": 1.1002110041232585,
+        "maxMs": 1.1828745014404918
+      },
+      "bSlowerCount": 8,
+      "measuredPairs": 15,
+      "byOrder": {
+        "AB": {
+          "count": 8,
+          "pairedDifferenceMs": {
+            "samplesMs": [
+              -15.621499999999969,
+              -6.219828000000234,
+              14.102351999999883,
+              5.634220999999798,
+              -6.0885089999997035,
+              5.3608989999993355,
+              -16.536074000000553,
+              5.903140000000349
+            ],
+            "minMs": -16.536074000000553,
+            "medianMs": 5.3608989999993355,
+            "maxMs": 14.102351999999883
+          },
+          "pairedRatios": {
+            "samplesMs": [
+              0.8007609918706179,
+              0.8917391841277559,
+              1.1828745014404918,
+              1.1054359257383641,
+              0.8969028936758967,
+              1.1002110041232585,
+              0.7734623200450671,
+              1.1115358808635418
+            ],
+            "minMs": 0.7734623200450671,
+            "medianMs": 1.1002110041232585,
+            "maxMs": 1.1828745014404918
+          }
+        },
+        "BA": {
+          "count": 7,
+          "pairedDifferenceMs": {
+            "samplesMs": [
+              -8.230007999999998,
+              6.405057000000397,
+              10.606514000000061,
+              9.111031999999796,
+              -8.851880000000165,
+              6.26291399999991,
+              -0.24293399999896792
+            ],
+            "minMs": -8.851880000000165,
+            "medianMs": 6.26291399999991,
+            "maxMs": 10.606514000000061
+          },
+          "pairedRatios": {
+            "samplesMs": [
+              0.8637397665849572,
+              1.1221506027053616,
+              1.1560789235473135,
+              1.1697303909925394,
+              0.8691500119661634,
+              1.115784598865467,
+              0.9960816258115884
+            ],
+            "minMs": 0.8637397665849572,
+            "medianMs": 1.115784598865467,
+            "maxMs": 1.1697303909925394
+          }
+        }
+      },
+      "pairs": [
+        {
+          "phase": "warmup",
+          "sample": 0,
+          "order": [
+            "A",
+            "B"
+          ],
+          "aMs": 74.78544399999998,
+          "bMs": 53.28369999999995,
+          "differenceMs": -21.50174400000003,
+          "ratio": 0.7124875798022937,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "warmup",
+          "sample": 1,
+          "order": [
+            "B",
+            "A"
+          ],
+          "aMs": 64.042374,
+          "bMs": 62.99028199999998,
+          "differenceMs": -1.052092000000016,
+          "ratio": 0.9835719394162369,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "warmup",
+          "sample": 2,
+          "order": [
+            "A",
+            "B"
+          ],
+          "aMs": 58.00626299999999,
+          "bMs": 61.560309999999845,
+          "differenceMs": 3.554046999999855,
+          "ratio": 1.06127005630409,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "warmup",
+          "sample": 3,
+          "order": [
+            "B",
+            "A"
+          ],
+          "aMs": 62.102769999999964,
+          "bMs": 56.41190099999994,
+          "differenceMs": -5.690869000000021,
+          "ratio": 0.9083636849048758,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 0,
+          "order": [
+            "A",
+            "B"
+          ],
+          "aMs": 78.40583100000003,
+          "bMs": 62.784331000000066,
+          "differenceMs": -15.621499999999969,
+          "ratio": 0.8007609918706179,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 1,
+          "order": [
+            "B",
+            "A"
+          ],
+          "aMs": 60.399192000000085,
+          "bMs": 52.16918400000009,
+          "differenceMs": -8.230007999999998,
+          "ratio": 0.8637397665849572,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 2,
+          "order": [
+            "A",
+            "B"
+          ],
+          "aMs": 57.45225500000015,
+          "bMs": 51.232426999999916,
+          "differenceMs": -6.219828000000234,
+          "ratio": 0.8917391841277559,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 3,
+          "order": [
+            "B",
+            "A"
+          ],
+          "aMs": 52.435737999999674,
+          "bMs": 58.84079500000007,
+          "differenceMs": 6.405057000000397,
+          "ratio": 1.1221506027053616,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 4,
+          "order": [
+            "A",
+            "B"
+          ],
+          "aMs": 77.11491699999988,
+          "bMs": 91.21726899999976,
+          "differenceMs": 14.102351999999883,
+          "ratio": 1.1828745014404918,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 5,
+          "order": [
+            "B",
+            "A"
+          ],
+          "aMs": 67.95609400000012,
+          "bMs": 78.56260800000018,
+          "differenceMs": 10.606514000000061,
+          "ratio": 1.1560789235473135,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 6,
+          "order": [
+            "A",
+            "B"
+          ],
+          "aMs": 53.43739300000016,
+          "bMs": 59.071613999999954,
+          "differenceMs": 5.634220999999798,
+          "ratio": 1.1054359257383641,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 7,
+          "order": [
+            "B",
+            "A"
+          ],
+          "aMs": 53.67943800000012,
+          "bMs": 62.790469999999914,
+          "differenceMs": 9.111031999999796,
+          "ratio": 1.1697303909925394,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 8,
+          "order": [
+            "A",
+            "B"
+          ],
+          "aMs": 59.05606099999977,
+          "bMs": 52.96755200000007,
+          "differenceMs": -6.0885089999997035,
+          "ratio": 0.8969028936758967,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 9,
+          "order": [
+            "B",
+            "A"
+          ],
+          "aMs": 67.64906999999994,
+          "bMs": 58.79718999999977,
+          "differenceMs": -8.851880000000165,
+          "ratio": 0.8691500119661634,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 10,
+          "order": [
+            "A",
+            "B"
+          ],
+          "aMs": 53.49611100000038,
+          "bMs": 58.85700999999972,
+          "differenceMs": 5.3608989999993355,
+          "ratio": 1.1002110041232585,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 11,
+          "order": [
+            "B",
+            "A"
+          ],
+          "aMs": 54.09108000000015,
+          "bMs": 60.35399400000006,
+          "differenceMs": 6.26291399999991,
+          "ratio": 1.115784598865467,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 12,
+          "order": [
+            "A",
+            "B"
+          ],
+          "aMs": 72.99480600000061,
+          "bMs": 56.458732000000055,
+          "differenceMs": -16.536074000000553,
+          "ratio": 0.7734623200450671,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 13,
+          "order": [
+            "B",
+            "A"
+          ],
+          "aMs": 61.998672999999144,
+          "bMs": 61.755739000000176,
+          "differenceMs": -0.24293399999896792,
+          "ratio": 0.9960816258115884,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 14,
+          "order": [
+            "A",
+            "B"
+          ],
+          "aMs": 52.92592799999966,
+          "bMs": 58.82906800000001,
+          "differenceMs": 5.903140000000349,
+          "ratio": 1.1115358808635418,
+          "fullResultEquivalent": true
+        }
+      ],
+      "fullResultEquivalent": true
+    },
+    {
+      "name": "postSearchOnlyDiagnostic",
+      "backend": "sqlite",
+      "baseline": {
+        "samplesMs": [
+          5.911761999999726,
+          5.662455000000591,
+          5.7074329999995825,
+          6.9102929999999105,
+          5.650556999999935,
+          6.065654999999424,
+          5.738190000000031,
+          5.869198000000324,
+          5.656926999999996,
+          6.026656000000003,
+          5.8671949999998105,
+          5.881406000000425,
+          5.870379999999386,
+          7.244639000000461,
+          5.660721999999623
+        ],
+        "minMs": 5.650556999999935,
+        "medianMs": 5.869198000000324,
+        "maxMs": 7.244639000000461
+      },
+      "candidate": {
+        "samplesMs": [
+          5.442583000000013,
+          5.005130999999892,
+          5.115648000000874,
+          7.748972000000322,
+          4.9349550000006275,
+          4.952201000000059,
+          4.968815999999606,
+          5.309451000000081,
+          5.940977000000203,
+          8.747911999999815,
+          4.77630500000032,
+          4.966301999999814,
+          4.829255000000558,
+          4.9796819999992294,
+          4.723114000000351
+        ],
+        "minMs": 4.723114000000351,
+        "medianMs": 4.9796819999992294,
+        "maxMs": 8.747911999999815
+      },
+      "ratio": 0.8484433477962329,
+      "pairedDifferenceMs": {
+        "samplesMs": [
+          -0.4691789999997127,
+          -0.657324000000699,
+          -0.5917849999987084,
+          0.8386790000004112,
+          -0.7156019999993077,
+          -1.113453999999365,
+          -0.7693740000004254,
+          -0.5597470000002431,
+          0.28405000000020664,
+          2.721255999999812,
+          -1.09088999999949,
+          -0.9151040000006105,
+          -1.0411249999988286,
+          -2.264957000001232,
+          -0.9376079999992726
+        ],
+        "minMs": -2.264957000001232,
+        "medianMs": -0.7156019999993077,
+        "maxMs": 2.721255999999812
+      },
+      "pairedRatios": {
+        "samplesMs": [
+          0.9206363517340964,
+          0.8839153688637472,
+          0.8963132812949794,
+          1.1213666338027088,
+          0.8733572637176625,
+          0.8164330150660611,
+          0.8659204383262978,
+          0.9046297296495684,
+          1.0502127745329235,
+          1.4515366398878269,
+          0.8140695852107309,
+          0.8444072726826639,
+          0.8226477672656732,
+          0.6873609575299628,
+          0.8343660049019657
+        ],
+        "minMs": 0.6873609575299628,
+        "medianMs": 0.8733572637176625,
+        "maxMs": 1.4515366398878269
+      },
+      "bSlowerCount": 3,
+      "measuredPairs": 15,
+      "byOrder": {
+        "AB": {
+          "count": 8,
+          "pairedDifferenceMs": {
+            "samplesMs": [
+              -0.4691789999997127,
+              -0.5917849999987084,
+              -0.7156019999993077,
+              -0.7693740000004254,
+              0.28405000000020664,
+              -1.09088999999949,
+              -1.0411249999988286,
+              -0.9376079999992726
+            ],
+            "minMs": -1.09088999999949,
+            "medianMs": -0.7156019999993077,
+            "maxMs": 0.28405000000020664
+          },
+          "pairedRatios": {
+            "samplesMs": [
+              0.9206363517340964,
+              0.8963132812949794,
+              0.8733572637176625,
+              0.8659204383262978,
+              1.0502127745329235,
+              0.8140695852107309,
+              0.8226477672656732,
+              0.8343660049019657
+            ],
+            "minMs": 0.8140695852107309,
+            "medianMs": 0.8733572637176625,
+            "maxMs": 1.0502127745329235
+          }
+        },
+        "BA": {
+          "count": 7,
+          "pairedDifferenceMs": {
+            "samplesMs": [
+              -0.657324000000699,
+              0.8386790000004112,
+              -1.113453999999365,
+              -0.5597470000002431,
+              2.721255999999812,
+              -0.9151040000006105,
+              -2.264957000001232
+            ],
+            "minMs": -2.264957000001232,
+            "medianMs": -0.657324000000699,
+            "maxMs": 2.721255999999812
+          },
+          "pairedRatios": {
+            "samplesMs": [
+              0.8839153688637472,
+              1.1213666338027088,
+              0.8164330150660611,
+              0.9046297296495684,
+              1.4515366398878269,
+              0.8444072726826639,
+              0.6873609575299628
+            ],
+            "minMs": 0.6873609575299628,
+            "medianMs": 0.8839153688637472,
+            "maxMs": 1.4515366398878269
+          }
+        }
+      },
+      "pairs": [
+        {
+          "phase": "warmup",
+          "sample": 0,
+          "order": [
+            "A",
+            "B"
+          ],
+          "aMs": 11.412373000000116,
+          "bMs": 6.550117000000682,
+          "differenceMs": -4.862255999999434,
+          "ratio": 0.5739487309081657,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "warmup",
+          "sample": 1,
+          "order": [
+            "B",
+            "A"
+          ],
+          "aMs": 5.940545999999813,
+          "bMs": 5.153105000000323,
+          "differenceMs": -0.7874409999994896,
+          "ratio": 0.8674463593077952,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "warmup",
+          "sample": 2,
+          "order": [
+            "A",
+            "B"
+          ],
+          "aMs": 8.897297999999864,
+          "bMs": 5.225183999999899,
+          "differenceMs": -3.672113999999965,
+          "ratio": 0.5872776206888854,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "warmup",
+          "sample": 3,
+          "order": [
+            "B",
+            "A"
+          ],
+          "aMs": 5.708274000000529,
+          "bMs": 5.046112999999423,
+          "differenceMs": -0.662161000001106,
+          "ratio": 0.883999786975705,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 0,
+          "order": [
+            "A",
+            "B"
+          ],
+          "aMs": 5.911761999999726,
+          "bMs": 5.442583000000013,
+          "differenceMs": -0.4691789999997127,
+          "ratio": 0.9206363517340964,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 1,
+          "order": [
+            "B",
+            "A"
+          ],
+          "aMs": 5.662455000000591,
+          "bMs": 5.005130999999892,
+          "differenceMs": -0.657324000000699,
+          "ratio": 0.8839153688637472,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 2,
+          "order": [
+            "A",
+            "B"
+          ],
+          "aMs": 5.7074329999995825,
+          "bMs": 5.115648000000874,
+          "differenceMs": -0.5917849999987084,
+          "ratio": 0.8963132812949794,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 3,
+          "order": [
+            "B",
+            "A"
+          ],
+          "aMs": 6.9102929999999105,
+          "bMs": 7.748972000000322,
+          "differenceMs": 0.8386790000004112,
+          "ratio": 1.1213666338027088,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 4,
+          "order": [
+            "A",
+            "B"
+          ],
+          "aMs": 5.650556999999935,
+          "bMs": 4.9349550000006275,
+          "differenceMs": -0.7156019999993077,
+          "ratio": 0.8733572637176625,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 5,
+          "order": [
+            "B",
+            "A"
+          ],
+          "aMs": 6.065654999999424,
+          "bMs": 4.952201000000059,
+          "differenceMs": -1.113453999999365,
+          "ratio": 0.8164330150660611,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 6,
+          "order": [
+            "A",
+            "B"
+          ],
+          "aMs": 5.738190000000031,
+          "bMs": 4.968815999999606,
+          "differenceMs": -0.7693740000004254,
+          "ratio": 0.8659204383262978,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 7,
+          "order": [
+            "B",
+            "A"
+          ],
+          "aMs": 5.869198000000324,
+          "bMs": 5.309451000000081,
+          "differenceMs": -0.5597470000002431,
+          "ratio": 0.9046297296495684,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 8,
+          "order": [
+            "A",
+            "B"
+          ],
+          "aMs": 5.656926999999996,
+          "bMs": 5.940977000000203,
+          "differenceMs": 0.28405000000020664,
+          "ratio": 1.0502127745329235,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 9,
+          "order": [
+            "B",
+            "A"
+          ],
+          "aMs": 6.026656000000003,
+          "bMs": 8.747911999999815,
+          "differenceMs": 2.721255999999812,
+          "ratio": 1.4515366398878269,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 10,
+          "order": [
+            "A",
+            "B"
+          ],
+          "aMs": 5.8671949999998105,
+          "bMs": 4.77630500000032,
+          "differenceMs": -1.09088999999949,
+          "ratio": 0.8140695852107309,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 11,
+          "order": [
+            "B",
+            "A"
+          ],
+          "aMs": 5.881406000000425,
+          "bMs": 4.966301999999814,
+          "differenceMs": -0.9151040000006105,
+          "ratio": 0.8444072726826639,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 12,
+          "order": [
+            "A",
+            "B"
+          ],
+          "aMs": 5.870379999999386,
+          "bMs": 4.829255000000558,
+          "differenceMs": -1.0411249999988286,
+          "ratio": 0.8226477672656732,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 13,
+          "order": [
+            "B",
+            "A"
+          ],
+          "aMs": 7.244639000000461,
+          "bMs": 4.9796819999992294,
+          "differenceMs": -2.264957000001232,
+          "ratio": 0.6873609575299628,
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 14,
+          "order": [
+            "A",
+            "B"
+          ],
+          "aMs": 5.660721999999623,
+          "bMs": 4.723114000000351,
+          "differenceMs": -0.9376079999992726,
+          "ratio": 0.8343660049019657,
+          "fullResultEquivalent": true
+        }
+      ],
+      "fullResultEquivalent": true
+    }
+  ],
+  "recipe": {
+    "schema": "R2_WARM_FOLLOWUP_PREREGISTERED_RECIPE",
+    "registeredAt": "2026-10-05T00:46:11.487717+00:00",
+    "status": "REGISTERED_NOT_RUN",
+    "expectedSourceHead": "de346b90dcbf97c9591ae2786e46e80fd0a4e05c",
+    "probeSha256": "eb45a35b1cf32de76cd4ac7b26041fe715d9eb1cdcde008d62f316daba04bb98",
+    "formalReportRelative": ".ci/agent-next-20261004/frozen-de346b9/r2-performance/report.json",
+    "formalReportSha256": "30a0db48b0b306efa83c60c4d43c5507701f4d68a9575cda28fd9807db6c622e",
+    "sqliteDatabaseRelative": ".ci/agent-next-20261004/frozen-de346b9/r2-performance/fixtures/sqlite/memories.db",
+    "fixtureSha256": "1d6be9ccf0eb0205ad5aefb65be1e203fbd9db481281647ec0d929b9697b2081",
+    "query": "retry",
+    "warmupsPerImplementation": 4,
+    "measuredPairs": 15,
+    "execution": "One process; await every call. Interleave full-retrieval and identical store.search A/A blocks; both block order and within-block A/B order reverse on alternate samples. Separate post-search-only diagnostic runs last, same fixed actual search hits. No builds/full suite/concurrent benchmark permitted.",
+    "formalOriginalObservation": {
+      "baselineMedianMs": 66.17538799999966,
+      "candidateMedianMs": 73.14820099999997,
+      "ratio": 1.1053686757378793,
+      "bSlowerPairs": 4,
+      "pairs": 5
+    },
+    "followupReviewRules": {
+      "reproducedRatioAbove": 1.05,
+      "reproducedPairedMedianAboveMs": 2,
+      "reproducedSlowerAtLeast": 11,
+      "effect": "Flag material reproduced warm overhead as pending independent attribution/completion concern; measurement PASS itself is not permission to dismiss it. All full/search-control/post-search samples must be interpreted together, and original five samples remain visible."
+    },
+    "acceptanceImpact": "Original formal Chinese two-backend >=50% improvement gate is unchanged. This supplemental probe only gates integrity/equivalence/frozen provenance; performance observations are independently reviewed.",
+    "paidCalls": 0,
+    "realModelQuality": "NOT_RUN",
+    "sourceWrites": "Only Git-ignored recipe/script/output; no tracked edits",
+    "output": "Invoke node focused-probe.mjs <repo> <fresh-output-directory>; existing output is refused by tracked common helper."
+  },
+  "recipeSha256": "534527564783bc325b09b8fdfa1e8835f411fca848b3de7c510990fd1f9d0904",
+  "recipeProbeHashPass": true,
+  "expectedHeadPass": true,
+  "fixtureSha256": "1d6be9ccf0eb0205ad5aefb65be1e203fbd9db481281647ec0d929b9697b2081",
+  "fixedFixturePass": true,
+  "environment": {
+    "node": "v24.19.0",
+    "platform": "linux",
+    "pid": 461994,
+    "loadAverageBefore": [
+      0.85,
+      1.13,
+      0.97
+    ],
+    "loadAverageAfter": [
+      0.87,
+      1.12,
+      0.97
+    ]
+  },
+  "formalReport": {
+    "path": "/workspace/harness-agent/.ci/agent-next-20261004/frozen-de346b9/r2-performance/report.json",
+    "sha256": "30a0db48b0b306efa83c60c4d43c5507701f4d68a9575cda28fd9807db6c622e",
+    "unchangedHashPass": true,
+    "sourceHead": "de346b90dcbf97c9591ae2786e46e80fd0a4e05c",
+    "warmCase": {
+      "backend": "sqlite",
+      "name": "warm-fts",
+      "query": "retry",
+      "queryScope": "workspace",
+      "opts": {
+        "now": 1791000000000,
+        "k": 5,
+        "sessionId": "session-fixture-owner"
+      },
+      "expectedMatchCount": 2000,
+      "actualMatchCount": 2000,
+      "actualRowCount": 10000,
+      "rowAndMatchCountPass": true,
+      "fullResultEquivalent": true,
+      "baselineResultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+      "candidateResultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+      "returnedTopK": 1,
+      "suppressedCount": 1999,
+      "baseline": {
+        "samplesMs": [
+          62.62320499999987,
+          69.71972900000037,
+          64.53910299999916,
+          66.17538799999966,
+          73.34007500000007
+        ],
+        "minMs": 62.62320499999987,
+        "medianMs": 66.17538799999966,
+        "maxMs": 73.34007500000007
+      },
+      "candidate": {
+        "samplesMs": [
+          64.98994500000026,
+          69.37600900000052,
+          73.14820099999997,
+          73.35317500000019,
+          78.9479680000004
+        ],
+        "minMs": 64.98994500000026,
+        "medianMs": 73.14820099999997,
+        "maxMs": 78.9479680000004
+      },
+      "ratio": 1.1053686757378793,
+      "elapsedReduction": -0.10536867573787934,
+      "executionOrders": [
+        {
+          "phase": "warmup",
+          "sample": 0,
+          "order": [
+            "baseline",
+            "candidate"
+          ]
+        },
+        {
+          "phase": "warmup",
+          "sample": 1,
+          "order": [
+            "candidate",
+            "baseline"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 0,
+          "order": [
+            "baseline",
+            "candidate"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 1,
+          "order": [
+            "candidate",
+            "baseline"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 2,
+          "order": [
+            "baseline",
+            "candidate"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 3,
+          "order": [
+            "candidate",
+            "baseline"
+          ]
+        },
+        {
+          "phase": "measured",
+          "sample": 4,
+          "order": [
+            "baseline",
+            "candidate"
+          ]
+        }
+      ],
+      "measuredCallsPerImplementation": 5,
+      "totalPairedCalls": 14,
+      "calls": [
+        {
+          "phase": "warmup",
+          "sample": 0,
+          "implementation": "baseline",
+          "elapsedMs": 65.47262499999943,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "warmup",
+          "sample": 0,
+          "implementation": "candidate",
+          "elapsedMs": 63.387901999999485,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "warmup",
+          "sample": 1,
+          "implementation": "candidate",
+          "elapsedMs": 68.41829000000052,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "warmup",
+          "sample": 1,
+          "implementation": "baseline",
+          "elapsedMs": 69.81920900000023,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 0,
+          "implementation": "baseline",
+          "elapsedMs": 62.62320499999987,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 0,
+          "implementation": "candidate",
+          "elapsedMs": 64.98994500000026,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 1,
+          "implementation": "candidate",
+          "elapsedMs": 69.37600900000052,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 1,
+          "implementation": "baseline",
+          "elapsedMs": 69.71972900000037,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 2,
+          "implementation": "baseline",
+          "elapsedMs": 64.53910299999916,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 2,
+          "implementation": "candidate",
+          "elapsedMs": 73.14820099999997,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 3,
+          "implementation": "candidate",
+          "elapsedMs": 73.35317500000019,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 3,
+          "implementation": "baseline",
+          "elapsedMs": 66.17538799999966,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 4,
+          "implementation": "baseline",
+          "elapsedMs": 73.34007500000007,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        },
+        {
+          "phase": "measured",
+          "sample": 4,
+          "implementation": "candidate",
+          "elapsedMs": 78.9479680000004,
+          "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+          "fullResultEquivalent": true
+        }
+      ],
+      "resultFile": "result-sqlite-warm-fts.json",
+      "resultFileSha256": "ed29a75bff5ff27ac5ad0c4de13d8f778c3c832edbffa954656d62d3617b6180"
+    },
+    "sha256After": "30a0db48b0b306efa83c60c4d43c5507701f4d68a9575cda28fd9807db6c622e",
+    "bytesUnchanged": true
+  },
+  "formalProvenancePass": true,
+  "sqlite": {
+    "path": "/workspace/harness-agent/.ci/agent-next-20261004/frozen-de346b9/r2-performance/fixtures/sqlite/memories.db",
+    "readOnlyConnectionRequested": true,
+    "queryOnly": 1,
+    "databaseSha256Before": "02d475d5474678a4a3af3b3c5da515a82815d70f0e9670a9f11ea5ff6af5f54a",
+    "actualRowCount": 10000,
+    "databaseSha256After": "02d475d5474678a4a3af3b3c5da515a82815d70f0e9670a9f11ea5ff6af5f54a",
+    "databaseBytesUnchanged": true
+  },
+  "expectedResult": {
+    "fullResultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a",
+    "rawHitSha256": "c80ef0a8d0d6a426007d0b015e8cc4d3a0d7521d8037bbeb100fb700bab5fb7d",
+    "rawHitCount": 2000,
+    "returnedTopK": 1,
+    "suppressedCount": 1999,
+    "formalResultHashPass": true
+  },
+  "analysis": {
+    "originalObservationRetained": {
+      "ratio": 1.1053686757378793,
+      "baselineMedianMs": 66.17538799999966,
+      "candidateMedianMs": 73.14820099999997,
+      "bSlowerCount": 4,
+      "sampleCount": 5
+    },
+    "warmRegressionReproducedByPreregisteredRule": false,
+    "fullRetrievalMedianRatio": 1.0041543371447104,
+    "fullRetrievalPairedMedianDifferenceMs": -1.1038789999993242,
+    "identicalSearchMedianRatio": 0.9966294568816559,
+    "identicalSearchPairedMedianDifferenceMs": 5.3608989999993355,
+    "postSearchMedianRatio": 0.8484433477962329,
+    "postSearchPairedMedianDifferenceMs": -0.7156019999993077,
+    "attributionStatus": "REQUIRES_INDEPENDENT_REVIEW_OF_FULL_SEARCH_CONTROL_AND_POST_SEARCH_SAMPLES",
+    "note": "A valid follow-up does not erase the original +10.54% observation. Identical-function control diagnoses order/scan variability; post-search-only timing is component evidence, not the formal performance gate."
+  },
+  "calls": [
+    {
+      "kind": "fullRetrieval",
+      "label": "A",
+      "phase": "warmup",
+      "sample": 0,
+      "elapsedMs": 77.30994300000003,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "fullRetrieval",
+      "label": "B",
+      "phase": "warmup",
+      "sample": 0,
+      "elapsedMs": 82.13790599999999,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "sameFunctionSearchControl",
+      "label": "A",
+      "phase": "warmup",
+      "sample": 0,
+      "elapsedMs": 74.78544399999998,
+      "fullResultEquivalent": true,
+      "resultSha256": "c80ef0a8d0d6a426007d0b015e8cc4d3a0d7521d8037bbeb100fb700bab5fb7d"
+    },
+    {
+      "kind": "sameFunctionSearchControl",
+      "label": "B",
+      "phase": "warmup",
+      "sample": 0,
+      "elapsedMs": 53.28369999999995,
+      "fullResultEquivalent": true,
+      "resultSha256": "c80ef0a8d0d6a426007d0b015e8cc4d3a0d7521d8037bbeb100fb700bab5fb7d"
+    },
+    {
+      "kind": "sameFunctionSearchControl",
+      "label": "B",
+      "phase": "warmup",
+      "sample": 1,
+      "elapsedMs": 62.99028199999998,
+      "fullResultEquivalent": true,
+      "resultSha256": "c80ef0a8d0d6a426007d0b015e8cc4d3a0d7521d8037bbeb100fb700bab5fb7d"
+    },
+    {
+      "kind": "sameFunctionSearchControl",
+      "label": "A",
+      "phase": "warmup",
+      "sample": 1,
+      "elapsedMs": 64.042374,
+      "fullResultEquivalent": true,
+      "resultSha256": "c80ef0a8d0d6a426007d0b015e8cc4d3a0d7521d8037bbeb100fb700bab5fb7d"
+    },
+    {
+      "kind": "fullRetrieval",
+      "label": "B",
+      "phase": "warmup",
+      "sample": 1,
+      "elapsedMs": 60.69846499999994,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "fullRetrieval",
+      "label": "A",
+      "phase": "warmup",
+      "sample": 1,
+      "elapsedMs": 69.041786,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "fullRetrieval",
+      "label": "A",
+      "phase": "warmup",
+      "sample": 2,
+      "elapsedMs": 67.05754400000001,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "fullRetrieval",
+      "label": "B",
+      "phase": "warmup",
+      "sample": 2,
+      "elapsedMs": 65.60102099999995,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "sameFunctionSearchControl",
+      "label": "A",
+      "phase": "warmup",
+      "sample": 2,
+      "elapsedMs": 58.00626299999999,
+      "fullResultEquivalent": true,
+      "resultSha256": "c80ef0a8d0d6a426007d0b015e8cc4d3a0d7521d8037bbeb100fb700bab5fb7d"
+    },
+    {
+      "kind": "sameFunctionSearchControl",
+      "label": "B",
+      "phase": "warmup",
+      "sample": 2,
+      "elapsedMs": 61.560309999999845,
+      "fullResultEquivalent": true,
+      "resultSha256": "c80ef0a8d0d6a426007d0b015e8cc4d3a0d7521d8037bbeb100fb700bab5fb7d"
+    },
+    {
+      "kind": "sameFunctionSearchControl",
+      "label": "B",
+      "phase": "warmup",
+      "sample": 3,
+      "elapsedMs": 56.41190099999994,
+      "fullResultEquivalent": true,
+      "resultSha256": "c80ef0a8d0d6a426007d0b015e8cc4d3a0d7521d8037bbeb100fb700bab5fb7d"
+    },
+    {
+      "kind": "sameFunctionSearchControl",
+      "label": "A",
+      "phase": "warmup",
+      "sample": 3,
+      "elapsedMs": 62.102769999999964,
+      "fullResultEquivalent": true,
+      "resultSha256": "c80ef0a8d0d6a426007d0b015e8cc4d3a0d7521d8037bbeb100fb700bab5fb7d"
+    },
+    {
+      "kind": "fullRetrieval",
+      "label": "B",
+      "phase": "warmup",
+      "sample": 3,
+      "elapsedMs": 70.52952600000003,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "fullRetrieval",
+      "label": "A",
+      "phase": "warmup",
+      "sample": 3,
+      "elapsedMs": 60.492794,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "fullRetrieval",
+      "label": "A",
+      "phase": "measured",
+      "sample": 0,
+      "elapsedMs": 72.939752,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "fullRetrieval",
+      "label": "B",
+      "phase": "measured",
+      "sample": 0,
+      "elapsedMs": 58.831290999999965,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "sameFunctionSearchControl",
+      "label": "A",
+      "phase": "measured",
+      "sample": 0,
+      "elapsedMs": 78.40583100000003,
+      "fullResultEquivalent": true,
+      "resultSha256": "c80ef0a8d0d6a426007d0b015e8cc4d3a0d7521d8037bbeb100fb700bab5fb7d"
+    },
+    {
+      "kind": "sameFunctionSearchControl",
+      "label": "B",
+      "phase": "measured",
+      "sample": 0,
+      "elapsedMs": 62.784331000000066,
+      "fullResultEquivalent": true,
+      "resultSha256": "c80ef0a8d0d6a426007d0b015e8cc4d3a0d7521d8037bbeb100fb700bab5fb7d"
+    },
+    {
+      "kind": "sameFunctionSearchControl",
+      "label": "B",
+      "phase": "measured",
+      "sample": 1,
+      "elapsedMs": 52.16918400000009,
+      "fullResultEquivalent": true,
+      "resultSha256": "c80ef0a8d0d6a426007d0b015e8cc4d3a0d7521d8037bbeb100fb700bab5fb7d"
+    },
+    {
+      "kind": "sameFunctionSearchControl",
+      "label": "A",
+      "phase": "measured",
+      "sample": 1,
+      "elapsedMs": 60.399192000000085,
+      "fullResultEquivalent": true,
+      "resultSha256": "c80ef0a8d0d6a426007d0b015e8cc4d3a0d7521d8037bbeb100fb700bab5fb7d"
+    },
+    {
+      "kind": "fullRetrieval",
+      "label": "B",
+      "phase": "measured",
+      "sample": 1,
+      "elapsedMs": 69.25343599999997,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "fullRetrieval",
+      "label": "A",
+      "phase": "measured",
+      "sample": 1,
+      "elapsedMs": 60.268886000000066,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "fullRetrieval",
+      "label": "A",
+      "phase": "measured",
+      "sample": 2,
+      "elapsedMs": 61.91786499999989,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "fullRetrieval",
+      "label": "B",
+      "phase": "measured",
+      "sample": 2,
+      "elapsedMs": 61.96422000000007,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "sameFunctionSearchControl",
+      "label": "A",
+      "phase": "measured",
+      "sample": 2,
+      "elapsedMs": 57.45225500000015,
+      "fullResultEquivalent": true,
+      "resultSha256": "c80ef0a8d0d6a426007d0b015e8cc4d3a0d7521d8037bbeb100fb700bab5fb7d"
+    },
+    {
+      "kind": "sameFunctionSearchControl",
+      "label": "B",
+      "phase": "measured",
+      "sample": 2,
+      "elapsedMs": 51.232426999999916,
+      "fullResultEquivalent": true,
+      "resultSha256": "c80ef0a8d0d6a426007d0b015e8cc4d3a0d7521d8037bbeb100fb700bab5fb7d"
+    },
+    {
+      "kind": "sameFunctionSearchControl",
+      "label": "B",
+      "phase": "measured",
+      "sample": 3,
+      "elapsedMs": 58.84079500000007,
+      "fullResultEquivalent": true,
+      "resultSha256": "c80ef0a8d0d6a426007d0b015e8cc4d3a0d7521d8037bbeb100fb700bab5fb7d"
+    },
+    {
+      "kind": "sameFunctionSearchControl",
+      "label": "A",
+      "phase": "measured",
+      "sample": 3,
+      "elapsedMs": 52.435737999999674,
+      "fullResultEquivalent": true,
+      "resultSha256": "c80ef0a8d0d6a426007d0b015e8cc4d3a0d7521d8037bbeb100fb700bab5fb7d"
+    },
+    {
+      "kind": "fullRetrieval",
+      "label": "B",
+      "phase": "measured",
+      "sample": 3,
+      "elapsedMs": 66.743289,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "fullRetrieval",
+      "label": "A",
+      "phase": "measured",
+      "sample": 3,
+      "elapsedMs": 69.8681160000001,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "fullRetrieval",
+      "label": "A",
+      "phase": "measured",
+      "sample": 4,
+      "elapsedMs": 70.85819399999991,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "fullRetrieval",
+      "label": "B",
+      "phase": "measured",
+      "sample": 4,
+      "elapsedMs": 70.86913099999992,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "sameFunctionSearchControl",
+      "label": "A",
+      "phase": "measured",
+      "sample": 4,
+      "elapsedMs": 77.11491699999988,
+      "fullResultEquivalent": true,
+      "resultSha256": "c80ef0a8d0d6a426007d0b015e8cc4d3a0d7521d8037bbeb100fb700bab5fb7d"
+    },
+    {
+      "kind": "sameFunctionSearchControl",
+      "label": "B",
+      "phase": "measured",
+      "sample": 4,
+      "elapsedMs": 91.21726899999976,
+      "fullResultEquivalent": true,
+      "resultSha256": "c80ef0a8d0d6a426007d0b015e8cc4d3a0d7521d8037bbeb100fb700bab5fb7d"
+    },
+    {
+      "kind": "sameFunctionSearchControl",
+      "label": "B",
+      "phase": "measured",
+      "sample": 5,
+      "elapsedMs": 78.56260800000018,
+      "fullResultEquivalent": true,
+      "resultSha256": "c80ef0a8d0d6a426007d0b015e8cc4d3a0d7521d8037bbeb100fb700bab5fb7d"
+    },
+    {
+      "kind": "sameFunctionSearchControl",
+      "label": "A",
+      "phase": "measured",
+      "sample": 5,
+      "elapsedMs": 67.95609400000012,
+      "fullResultEquivalent": true,
+      "resultSha256": "c80ef0a8d0d6a426007d0b015e8cc4d3a0d7521d8037bbeb100fb700bab5fb7d"
+    },
+    {
+      "kind": "fullRetrieval",
+      "label": "B",
+      "phase": "measured",
+      "sample": 5,
+      "elapsedMs": 75.23799899999995,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "fullRetrieval",
+      "label": "A",
+      "phase": "measured",
+      "sample": 5,
+      "elapsedMs": 65.77277099999992,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "fullRetrieval",
+      "label": "A",
+      "phase": "measured",
+      "sample": 6,
+      "elapsedMs": 70.11917500000027,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "fullRetrieval",
+      "label": "B",
+      "phase": "measured",
+      "sample": 6,
+      "elapsedMs": 94.49385699999993,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "sameFunctionSearchControl",
+      "label": "A",
+      "phase": "measured",
+      "sample": 6,
+      "elapsedMs": 53.43739300000016,
+      "fullResultEquivalent": true,
+      "resultSha256": "c80ef0a8d0d6a426007d0b015e8cc4d3a0d7521d8037bbeb100fb700bab5fb7d"
+    },
+    {
+      "kind": "sameFunctionSearchControl",
+      "label": "B",
+      "phase": "measured",
+      "sample": 6,
+      "elapsedMs": 59.071613999999954,
+      "fullResultEquivalent": true,
+      "resultSha256": "c80ef0a8d0d6a426007d0b015e8cc4d3a0d7521d8037bbeb100fb700bab5fb7d"
+    },
+    {
+      "kind": "sameFunctionSearchControl",
+      "label": "B",
+      "phase": "measured",
+      "sample": 7,
+      "elapsedMs": 62.790469999999914,
+      "fullResultEquivalent": true,
+      "resultSha256": "c80ef0a8d0d6a426007d0b015e8cc4d3a0d7521d8037bbeb100fb700bab5fb7d"
+    },
+    {
+      "kind": "sameFunctionSearchControl",
+      "label": "A",
+      "phase": "measured",
+      "sample": 7,
+      "elapsedMs": 53.67943800000012,
+      "fullResultEquivalent": true,
+      "resultSha256": "c80ef0a8d0d6a426007d0b015e8cc4d3a0d7521d8037bbeb100fb700bab5fb7d"
+    },
+    {
+      "kind": "fullRetrieval",
+      "label": "B",
+      "phase": "measured",
+      "sample": 7,
+      "elapsedMs": 81.47786700000006,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "fullRetrieval",
+      "label": "A",
+      "phase": "measured",
+      "sample": 7,
+      "elapsedMs": 87.16941700000007,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "fullRetrieval",
+      "label": "A",
+      "phase": "measured",
+      "sample": 8,
+      "elapsedMs": 63.903714000000036,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "fullRetrieval",
+      "label": "B",
+      "phase": "measured",
+      "sample": 8,
+      "elapsedMs": 63.53510700000015,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "sameFunctionSearchControl",
+      "label": "A",
+      "phase": "measured",
+      "sample": 8,
+      "elapsedMs": 59.05606099999977,
+      "fullResultEquivalent": true,
+      "resultSha256": "c80ef0a8d0d6a426007d0b015e8cc4d3a0d7521d8037bbeb100fb700bab5fb7d"
+    },
+    {
+      "kind": "sameFunctionSearchControl",
+      "label": "B",
+      "phase": "measured",
+      "sample": 8,
+      "elapsedMs": 52.96755200000007,
+      "fullResultEquivalent": true,
+      "resultSha256": "c80ef0a8d0d6a426007d0b015e8cc4d3a0d7521d8037bbeb100fb700bab5fb7d"
+    },
+    {
+      "kind": "sameFunctionSearchControl",
+      "label": "B",
+      "phase": "measured",
+      "sample": 9,
+      "elapsedMs": 58.79718999999977,
+      "fullResultEquivalent": true,
+      "resultSha256": "c80ef0a8d0d6a426007d0b015e8cc4d3a0d7521d8037bbeb100fb700bab5fb7d"
+    },
+    {
+      "kind": "sameFunctionSearchControl",
+      "label": "A",
+      "phase": "measured",
+      "sample": 9,
+      "elapsedMs": 67.64906999999994,
+      "fullResultEquivalent": true,
+      "resultSha256": "c80ef0a8d0d6a426007d0b015e8cc4d3a0d7521d8037bbeb100fb700bab5fb7d"
+    },
+    {
+      "kind": "fullRetrieval",
+      "label": "B",
+      "phase": "measured",
+      "sample": 9,
+      "elapsedMs": 67.87521100000004,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "fullRetrieval",
+      "label": "A",
+      "phase": "measured",
+      "sample": 9,
+      "elapsedMs": 74.41751699999986,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "fullRetrieval",
+      "label": "A",
+      "phase": "measured",
+      "sample": 10,
+      "elapsedMs": 64.35678999999982,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "fullRetrieval",
+      "label": "B",
+      "phase": "measured",
+      "sample": 10,
+      "elapsedMs": 75.24835399999938,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "sameFunctionSearchControl",
+      "label": "A",
+      "phase": "measured",
+      "sample": 10,
+      "elapsedMs": 53.49611100000038,
+      "fullResultEquivalent": true,
+      "resultSha256": "c80ef0a8d0d6a426007d0b015e8cc4d3a0d7521d8037bbeb100fb700bab5fb7d"
+    },
+    {
+      "kind": "sameFunctionSearchControl",
+      "label": "B",
+      "phase": "measured",
+      "sample": 10,
+      "elapsedMs": 58.85700999999972,
+      "fullResultEquivalent": true,
+      "resultSha256": "c80ef0a8d0d6a426007d0b015e8cc4d3a0d7521d8037bbeb100fb700bab5fb7d"
+    },
+    {
+      "kind": "sameFunctionSearchControl",
+      "label": "B",
+      "phase": "measured",
+      "sample": 11,
+      "elapsedMs": 60.35399400000006,
+      "fullResultEquivalent": true,
+      "resultSha256": "c80ef0a8d0d6a426007d0b015e8cc4d3a0d7521d8037bbeb100fb700bab5fb7d"
+    },
+    {
+      "kind": "sameFunctionSearchControl",
+      "label": "A",
+      "phase": "measured",
+      "sample": 11,
+      "elapsedMs": 54.09108000000015,
+      "fullResultEquivalent": true,
+      "resultSha256": "c80ef0a8d0d6a426007d0b015e8cc4d3a0d7521d8037bbeb100fb700bab5fb7d"
+    },
+    {
+      "kind": "fullRetrieval",
+      "label": "B",
+      "phase": "measured",
+      "sample": 11,
+      "elapsedMs": 64.9274430000005,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "fullRetrieval",
+      "label": "A",
+      "phase": "measured",
+      "sample": 11,
+      "elapsedMs": 66.03132199999982,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "fullRetrieval",
+      "label": "A",
+      "phase": "measured",
+      "sample": 12,
+      "elapsedMs": 66.46716199999992,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "fullRetrieval",
+      "label": "B",
+      "phase": "measured",
+      "sample": 12,
+      "elapsedMs": 59.63435599999957,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "sameFunctionSearchControl",
+      "label": "A",
+      "phase": "measured",
+      "sample": 12,
+      "elapsedMs": 72.99480600000061,
+      "fullResultEquivalent": true,
+      "resultSha256": "c80ef0a8d0d6a426007d0b015e8cc4d3a0d7521d8037bbeb100fb700bab5fb7d"
+    },
+    {
+      "kind": "sameFunctionSearchControl",
+      "label": "B",
+      "phase": "measured",
+      "sample": 12,
+      "elapsedMs": 56.458732000000055,
+      "fullResultEquivalent": true,
+      "resultSha256": "c80ef0a8d0d6a426007d0b015e8cc4d3a0d7521d8037bbeb100fb700bab5fb7d"
+    },
+    {
+      "kind": "sameFunctionSearchControl",
+      "label": "B",
+      "phase": "measured",
+      "sample": 13,
+      "elapsedMs": 61.755739000000176,
+      "fullResultEquivalent": true,
+      "resultSha256": "c80ef0a8d0d6a426007d0b015e8cc4d3a0d7521d8037bbeb100fb700bab5fb7d"
+    },
+    {
+      "kind": "sameFunctionSearchControl",
+      "label": "A",
+      "phase": "measured",
+      "sample": 13,
+      "elapsedMs": 61.998672999999144,
+      "fullResultEquivalent": true,
+      "resultSha256": "c80ef0a8d0d6a426007d0b015e8cc4d3a0d7521d8037bbeb100fb700bab5fb7d"
+    },
+    {
+      "kind": "fullRetrieval",
+      "label": "B",
+      "phase": "measured",
+      "sample": 13,
+      "elapsedMs": 59.259829999999965,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "fullRetrieval",
+      "label": "A",
+      "phase": "measured",
+      "sample": 13,
+      "elapsedMs": 64.81127699999979,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "fullRetrieval",
+      "label": "A",
+      "phase": "measured",
+      "sample": 14,
+      "elapsedMs": 68.69989800000076,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "fullRetrieval",
+      "label": "B",
+      "phase": "measured",
+      "sample": 14,
+      "elapsedMs": 64.69026400000075,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "sameFunctionSearchControl",
+      "label": "A",
+      "phase": "measured",
+      "sample": 14,
+      "elapsedMs": 52.92592799999966,
+      "fullResultEquivalent": true,
+      "resultSha256": "c80ef0a8d0d6a426007d0b015e8cc4d3a0d7521d8037bbeb100fb700bab5fb7d"
+    },
+    {
+      "kind": "sameFunctionSearchControl",
+      "label": "B",
+      "phase": "measured",
+      "sample": 14,
+      "elapsedMs": 58.82906800000001,
+      "fullResultEquivalent": true,
+      "resultSha256": "c80ef0a8d0d6a426007d0b015e8cc4d3a0d7521d8037bbeb100fb700bab5fb7d"
+    },
+    {
+      "kind": "postSearchOnlyDiagnostic",
+      "label": "A",
+      "phase": "warmup",
+      "sample": 0,
+      "elapsedMs": 11.412373000000116,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "postSearchOnlyDiagnostic",
+      "label": "B",
+      "phase": "warmup",
+      "sample": 0,
+      "elapsedMs": 6.550117000000682,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "postSearchOnlyDiagnostic",
+      "label": "B",
+      "phase": "warmup",
+      "sample": 1,
+      "elapsedMs": 5.153105000000323,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "postSearchOnlyDiagnostic",
+      "label": "A",
+      "phase": "warmup",
+      "sample": 1,
+      "elapsedMs": 5.940545999999813,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "postSearchOnlyDiagnostic",
+      "label": "A",
+      "phase": "warmup",
+      "sample": 2,
+      "elapsedMs": 8.897297999999864,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "postSearchOnlyDiagnostic",
+      "label": "B",
+      "phase": "warmup",
+      "sample": 2,
+      "elapsedMs": 5.225183999999899,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "postSearchOnlyDiagnostic",
+      "label": "B",
+      "phase": "warmup",
+      "sample": 3,
+      "elapsedMs": 5.046112999999423,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "postSearchOnlyDiagnostic",
+      "label": "A",
+      "phase": "warmup",
+      "sample": 3,
+      "elapsedMs": 5.708274000000529,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "postSearchOnlyDiagnostic",
+      "label": "A",
+      "phase": "measured",
+      "sample": 0,
+      "elapsedMs": 5.911761999999726,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "postSearchOnlyDiagnostic",
+      "label": "B",
+      "phase": "measured",
+      "sample": 0,
+      "elapsedMs": 5.442583000000013,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "postSearchOnlyDiagnostic",
+      "label": "B",
+      "phase": "measured",
+      "sample": 1,
+      "elapsedMs": 5.005130999999892,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "postSearchOnlyDiagnostic",
+      "label": "A",
+      "phase": "measured",
+      "sample": 1,
+      "elapsedMs": 5.662455000000591,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "postSearchOnlyDiagnostic",
+      "label": "A",
+      "phase": "measured",
+      "sample": 2,
+      "elapsedMs": 5.7074329999995825,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "postSearchOnlyDiagnostic",
+      "label": "B",
+      "phase": "measured",
+      "sample": 2,
+      "elapsedMs": 5.115648000000874,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "postSearchOnlyDiagnostic",
+      "label": "B",
+      "phase": "measured",
+      "sample": 3,
+      "elapsedMs": 7.748972000000322,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "postSearchOnlyDiagnostic",
+      "label": "A",
+      "phase": "measured",
+      "sample": 3,
+      "elapsedMs": 6.9102929999999105,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "postSearchOnlyDiagnostic",
+      "label": "A",
+      "phase": "measured",
+      "sample": 4,
+      "elapsedMs": 5.650556999999935,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "postSearchOnlyDiagnostic",
+      "label": "B",
+      "phase": "measured",
+      "sample": 4,
+      "elapsedMs": 4.9349550000006275,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "postSearchOnlyDiagnostic",
+      "label": "B",
+      "phase": "measured",
+      "sample": 5,
+      "elapsedMs": 4.952201000000059,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "postSearchOnlyDiagnostic",
+      "label": "A",
+      "phase": "measured",
+      "sample": 5,
+      "elapsedMs": 6.065654999999424,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "postSearchOnlyDiagnostic",
+      "label": "A",
+      "phase": "measured",
+      "sample": 6,
+      "elapsedMs": 5.738190000000031,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "postSearchOnlyDiagnostic",
+      "label": "B",
+      "phase": "measured",
+      "sample": 6,
+      "elapsedMs": 4.968815999999606,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "postSearchOnlyDiagnostic",
+      "label": "B",
+      "phase": "measured",
+      "sample": 7,
+      "elapsedMs": 5.309451000000081,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "postSearchOnlyDiagnostic",
+      "label": "A",
+      "phase": "measured",
+      "sample": 7,
+      "elapsedMs": 5.869198000000324,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "postSearchOnlyDiagnostic",
+      "label": "A",
+      "phase": "measured",
+      "sample": 8,
+      "elapsedMs": 5.656926999999996,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "postSearchOnlyDiagnostic",
+      "label": "B",
+      "phase": "measured",
+      "sample": 8,
+      "elapsedMs": 5.940977000000203,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "postSearchOnlyDiagnostic",
+      "label": "B",
+      "phase": "measured",
+      "sample": 9,
+      "elapsedMs": 8.747911999999815,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "postSearchOnlyDiagnostic",
+      "label": "A",
+      "phase": "measured",
+      "sample": 9,
+      "elapsedMs": 6.026656000000003,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "postSearchOnlyDiagnostic",
+      "label": "A",
+      "phase": "measured",
+      "sample": 10,
+      "elapsedMs": 5.8671949999998105,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "postSearchOnlyDiagnostic",
+      "label": "B",
+      "phase": "measured",
+      "sample": 10,
+      "elapsedMs": 4.77630500000032,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "postSearchOnlyDiagnostic",
+      "label": "B",
+      "phase": "measured",
+      "sample": 11,
+      "elapsedMs": 4.966301999999814,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "postSearchOnlyDiagnostic",
+      "label": "A",
+      "phase": "measured",
+      "sample": 11,
+      "elapsedMs": 5.881406000000425,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "postSearchOnlyDiagnostic",
+      "label": "A",
+      "phase": "measured",
+      "sample": 12,
+      "elapsedMs": 5.870379999999386,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "postSearchOnlyDiagnostic",
+      "label": "B",
+      "phase": "measured",
+      "sample": 12,
+      "elapsedMs": 4.829255000000558,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "postSearchOnlyDiagnostic",
+      "label": "B",
+      "phase": "measured",
+      "sample": 13,
+      "elapsedMs": 4.9796819999992294,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "postSearchOnlyDiagnostic",
+      "label": "A",
+      "phase": "measured",
+      "sample": 13,
+      "elapsedMs": 7.244639000000461,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "postSearchOnlyDiagnostic",
+      "label": "A",
+      "phase": "measured",
+      "sample": 14,
+      "elapsedMs": 5.660721999999623,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    },
+    {
+      "kind": "postSearchOnlyDiagnostic",
+      "label": "B",
+      "phase": "measured",
+      "sample": 14,
+      "elapsedMs": 4.723114000000351,
+      "fullResultEquivalent": true,
+      "resultSha256": "23f8ab86a0027e2fccd2bb587fdcfed4a3e9a1eacf0c7245515f66a54d284a6a"
+    }
+  ],
+  "formalChineseAtLeast50PercentGate": "UNCHANGED; original formal evidence remains authoritative",
+  "limitations": [
+    "Additional engineering samples after an observed concern; all original data are retained, and the supplemental recipe was registered before execution.",
+    "No paid or real model calls, no model-quality inference, no expansion of the original Chinese >=50% performance acceptance.",
+    "Read-only SQLite connection to the existing frozen fixture; no seeding, updates, migration, build, or production-source changes.",
+    "Supplemental status gates measurement integrity only. Reproduced material warm regression must remain a completion concern until independently explained or corrected."
+  ],
+  "sourceHeadAfter": "de346b90dcbf97c9591ae2786e46e80fd0a4e05c",
+  "sourceStatusAfter": "",
+  "sourceHashesAfter": {
+    "packages/memory/src/retrieval.ts": "d3a48b1ff665dd2c3f698d7a2c7e4754081a8fb6ba6306556444262135fca8c9",
+    "packages/memory/dist/retrieval.js": "a47651ff6072887a099ae546478a437cf53b75ca4196e163561c7f6e3c73904a",
+    "packages/memory/src/memory-store.ts": "925f718e3f92baf32fb2868bafcdcd0701cb520e441049892848a4cb6d494caf",
+    "packages/memory/dist/memory-store.js": "8722ce368b39c5626668437f3ced379d035ae938e480f693a6971f12e3cf5ed5",
+    "packages/memory/src/sqlite-memory-store.ts": "f278be463dec22f5ed15039e6e727b22a942eb6afbaab19e6961e177ae20cb6f",
+    "packages/memory/dist/sqlite-memory-store.js": "300bf553eb208898c79d7d557b5dfb8b649b5e01f28a5b934ac56eb1d39dceb7",
+    "packages/memory/src/search-text.ts": "e569e7f418e3edf87fba7fd2e9c1a1bdf7511d78ea85abcecd863def5c201fd0",
+    "packages/memory/dist/search-text.js": "077ce28fe2280d104af3d98da7c07d11582f61ea7ad0beec1ccc2f730975b202",
+    "packages/memory/src/security-gate.ts": "35dd1c100d6200a862ac50c3b2f1c0fff1d9feb8b7921e31c8805aed319a5efa",
+    "packages/memory/dist/security-gate.js": "4e5b30994c56a51aead532212406056b0f5e84dd80f74979e4b45ebbf85f72fa",
+    "packages/memory/src/lifecycle.ts": "785201bfbfab78fad4cfe8b5781973e00f5149a5fd2c62559b81890642193fa6",
+    "packages/memory/dist/lifecycle.js": "11a295ece7bdf7bb4130e84ed09304da654e19d5715a8d21ff45be1c7545b183",
+    "packages/harness/src/memory-runtime-bridge.ts": "2d6cf39686f2884d2c390dcd13e7c7f46a3e368094d807b79124a79297a4f4cf",
+    "packages/harness/dist/memory-runtime-bridge.js": "b3b45a131640fad6a294aa8cb30a5c0d0770f1706c3281130a3816037d9eba09",
+    "packages/harness/src/create-harness.ts": "a115aa9c8ec71b86e689e80ab9195c21cd85c8f19a0d9de669e9e19d8becf84e",
+    "packages/harness/dist/create-harness.js": "442874f7297e7e0b7df5e715af249457fbd0bf6cd33f15b75d5e198700ea29e3"
+  },
+  "sourceUnchanged": true,
+  "gates": {
+    "preregisteredRecipe": true,
+    "cleanFrozenSource": true,
+    "fixedFixture": true,
+    "formalOriginalUnchanged": true,
+    "readOnlyDatabase": true,
+    "fullResultEquivalence": true,
+    "measured15PairsEveryCase": true,
+    "sourceUnchanged": true
+  },
+  "status": "PASS"
+}

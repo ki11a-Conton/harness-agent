@@ -1,0 +1,110 @@
+{
+  "status": "PASS",
+  "cases": [
+    {
+      "name": "disjoint-2000",
+      "fullResultEquivalent": true,
+      "work": {
+        "baseline": {
+          "tokenizations": 2001000,
+          "pairComparisons": 1999000
+        },
+        "cache": {
+          "tokenizations": 2000,
+          "pairComparisons": 1999000
+        },
+        "indexed": {
+          "tokenizations": 2000,
+          "pairComparisons": 0
+        }
+      },
+      "baselineMs": 419.1854659999999,
+      "cacheMs": 40.430585000000065,
+      "indexedMs": 7.666165999999976
+    },
+    {
+      "name": "partially-common-2000",
+      "fullResultEquivalent": true,
+      "work": {
+        "baseline": {
+          "tokenizations": 2001000,
+          "pairComparisons": 1999000
+        },
+        "cache": {
+          "tokenizations": 2000,
+          "pairComparisons": 1999000
+        },
+        "indexed": {
+          "tokenizations": 2000,
+          "pairComparisons": 9000
+        }
+      },
+      "baselineMs": 484.57592399999976,
+      "cacheMs": 64.70071500000086,
+      "indexedMs": 7.515567999999803
+    },
+    {
+      "name": "worst-common-2000",
+      "fullResultEquivalent": true,
+      "work": {
+        "baseline": {
+          "tokenizations": 2001000,
+          "pairComparisons": 1999000
+        },
+        "cache": {
+          "tokenizations": 2000,
+          "pairComparisons": 1999000
+        },
+        "indexed": {
+          "tokenizations": 2000,
+          "pairComparisons": 1999000
+        }
+      },
+      "baselineMs": 467.160973,
+      "cacheMs": 67.13885300000038,
+      "indexedMs": 71.7682560000012
+    },
+    {
+      "name": "dense-conflicts-2000",
+      "fullResultEquivalent": true,
+      "work": {
+        "baseline": {
+          "tokenizations": 3999,
+          "pairComparisons": 1999
+        },
+        "cache": {
+          "tokenizations": 2000,
+          "pairComparisons": 1999
+        },
+        "indexed": {
+          "tokenizations": 2000,
+          "pairComparisons": 1999
+        }
+      },
+      "baselineMs": 5.846293000000514,
+      "cacheMs": 5.3430219999991095,
+      "indexedMs": 5.303100999999515
+    },
+    {
+      "name": "nontransitive-and-gates",
+      "fullResultEquivalent": true,
+      "work": {
+        "baseline": {
+          "tokenizations": 17,
+          "pairComparisons": 11
+        },
+        "cache": {
+          "tokenizations": 6,
+          "pairComparisons": 11
+        },
+        "indexed": {
+          "tokenizations": 6,
+          "pairComparisons": 2
+        }
+      },
+      "baselineMs": 0.07200899999952526,
+      "cacheMs": 0.06921500000134984,
+      "indexedMs": 0.07617500000014843
+    }
+  ]
+}

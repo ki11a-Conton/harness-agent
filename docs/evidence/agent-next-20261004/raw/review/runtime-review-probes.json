@@ -1,0 +1,103 @@
+{
+  "schema": "AGENT_NEXT_INDEPENDENT_FROZEN_PROBE_REVIEW_V1",
+  "observedAt": "2026-10-05T00:26:30.869495+00:00",
+  "reviewer": "/root/final_static_review",
+  "sourceSha": "91967f4dd2442b3d1979dee1c2b165d376c8895c",
+  "sourceCleanAtReview": true,
+  "status": "PROBES_PASS_FULL_ACCEPTANCE_PENDING",
+  "fullAcceptance": "PENDING",
+  "observedRunnerStatus": "RUNNING",
+  "manifestSnapshot": "frozen-probes-manifest-snapshot.json",
+  "manifestSnapshotSha256": "b048d94ded4fdc13e0ec6589826e392ba03cb0aa5e8d5a525f7c744e2dfe2288",
+  "observationRunId": "agent-next-linux-91967f4dd244-1791159755911614094",
+  "completedCommandCountVerified": 11,
+  "completedRawLogHashesVerified": [
+    "typecheck",
+    "build",
+    "new-regressions",
+    "provider-production",
+    "memory-differential",
+    "memory-paired-performance",
+    "memory-harness",
+    "navigation-production",
+    "joint-browser",
+    "security",
+    "docs-verify"
+  ],
+  "probeFacts": {
+    "newRegressionsPassed": 63,
+    "newRegressionSkipped": 0,
+    "securityPassed": 2135,
+    "r1Cases": 7,
+    "r1ActualHttpRequests": 10,
+    "r2DifferentialCases": 261,
+    "r2ExactTieTotals": [
+      0.6,
+      0.6
+    ],
+    "r2DisjointTokenizations": {
+      "baseline": 2001000,
+      "candidate": 2000,
+      "pairComparisonsEach": 1999000
+    },
+    "r2PerformanceScenarios": 8,
+    "r2ChinesePerformance": [
+      {
+        "backend": "jsonl",
+        "baselineMedianMs": 565.6190999999999,
+        "candidateMedianMs": 76.07335599999988,
+        "ratio": 0.1344957339665508,
+        "reduction": 0.8655042660334492,
+        "passesAtLeast50Percent": true
+      },
+      {
+        "backend": "sqlite",
+        "baselineMedianMs": 613.5840790000002,
+        "candidateMedianMs": 91.96008000000074,
+        "ratio": 0.1498736410336369,
+        "reduction": 0.8501263589663631,
+        "passesAtLeast50Percent": true
+      }
+    ],
+    "r2HarnessRuns": 72,
+    "r2HarnessComparison": "Per-run full oracle and between-run admitted advisory bodies + memoryRefs; dynamic whole system is not compared.",
+    "r3Checks": 7,
+    "r3ReadCounts": {
+      "depth1": 1,
+      "depth0": 0,
+      "cap1": 1,
+      "grepCap1": 2
+    },
+    "r3FirstGrepHit": [
+      {
+        "file": "a-hit/match.txt",
+        "line": 1,
+        "column": 1,
+        "text": "needle"
+      }
+    ],
+    "browserCases": 27,
+    "browserAssertions": 77,
+    "browserErrors": 0
+  },
+  "checksPerformed": [
+    "Exact clean frozen SHA / before-after receipt provenance.",
+    "Rehashed every completed command raw log and referenced receipt.",
+    "Inspected real R1 HTTP bodies, opt-in/default memory and legal tool groups.",
+    "Verified every R2 result hash, strict exact tie, deterministic work, serial sample count and independently recomputed timing medians/ratios.",
+    "Checked all 72 Harness request artifacts and admitted body/reference equivalence.",
+    "Compared R3 JSON receipt to original stdout and inspected actual outputs/work, including exact first grep hit.",
+    "Checked all browser case receipts and final cleanup source fingerprints."
+  ],
+  "blockingFindings": [],
+  "pendingGates": [
+    "full",
+    "same-run strict usage-audit",
+    "three historical artifact integrity checks",
+    "baseline-to-source diff-check",
+    "final manifest PASS / source and dist hashes"
+  ],
+  "paidCalls": 0,
+  "liveModelQuality": "NOT_RUN",
+  "windowsRuntimeValidation": "NOT_RUN"
+}
