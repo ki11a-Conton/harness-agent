@@ -27,21 +27,35 @@ export const readFileTool: ToolDefinition<ReadFileInput, string | VersionedFileO
       return { status: "cancelled" };
     }
     try {
-      const { readFile } = await import("node:fs/promises");
+      const { open } = await import("node:fs/promises");
+      const { constants } = await import("node:fs");
       const { resolve } = await import("node:path");
       const target = resolve(context.cwd, input.path);
       return await withFileLock(target, context.signal, async (): Promise<ToolResult<string | VersionedFileOutput>> => {
-        const bytes = await readFile(target);
+        // Opening a FIFO must not occupy a worker while waiting for a writer.
+        // Inspect the opened object, not a path stat that can race a replacement.
         throwIfFileCancelled(context.signal);
-        const content = bytes.toString("utf8");
-        return {
-          status: "success",
-          output: input.versioned ? { path: target, content, sha256: fileSha256(bytes), bytes: bytes.length } : content,
-          evidence: [{ type: "file", description: "read_file executed", source: target, timestamp: Date.now() }],
-        };
+        const handle = await open(target, constants.O_RDONLY | (process.platform === "win32" ? 0 : constants.O_NONBLOCK));
+        try {
+          throwIfFileCancelled(context.signal);
+          const stat = await handle.stat();
+          throwIfFileCancelled(context.signal);
+          if (!stat.isFile()) throw new Error("read_file requires a regular file");
+          const bytes = await handle.readFile({ signal: context.signal });
+          throwIfFileCancelled(context.signal);
+          const content = bytes.toString("utf8");
+          return {
+            status: "success",
+            output: input.versioned ? { path: target, content, sha256: fileSha256(bytes), bytes: bytes.length } : content,
+            evidence: [{ type: "file", description: "read_file executed", source: target, timestamp: Date.now() }],
+          };
+        } finally {
+          // Close before withFileLock releases coordination, on every outcome.
+          await handle.close();
+        }
       });
     } catch (err) {
-      if (err instanceof FileOperationCancelled) return { status: "cancelled" };
+      if (err instanceof FileOperationCancelled || context.signal.aborted) return { status: "cancelled" };
       return {
         status: "failed",
         error: {
