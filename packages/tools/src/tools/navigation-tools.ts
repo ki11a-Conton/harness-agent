@@ -131,7 +131,7 @@ export const symbolSearchTool: ToolDefinition<
 > = {
   name: "symbol_search",
   description:
-    "Find symbols (functions/classes/types/consts/imports) by name. Uses the P7-4 light TypeScript/JavaScript index when the workspace has source files (fallback:false), otherwise a grep fallback (fallback:true).",
+    "Find symbols (functions/classes/types/consts/imports) by name within the selected file or directory. Prefers matching TypeScript/JavaScript index hits (fallback:false); otherwise uses a heuristic regex fallback (fallback:true).",
   inputSchema: z.object({
     symbol: z.string().min(1),
     path: z.string().optional(),
@@ -154,15 +154,15 @@ export const symbolSearchTool: ToolDefinition<
     context: ToolExecutionContext,
   ): Promise<ToolResult<{ fallback: boolean; indexer: string; hits: SymbolHit[]; filesIndexed?: number }>> {
     try {
-      // P7-4 (EXPERIMENT): prefer the light TS/JS index when it indexed any
-      // source file; otherwise fall back to the grep search.
+      // P7-4 (EXPERIMENT): prefer matching TS/JS hits. Unrelated indexed files
+      // must not mask other languages' existing heuristic fallback.
       const indexed = await indexedSymbolSearch({
         symbol: input.symbol,
         root: context.cwd,
         relPath: input.path ?? ".",
         maxHits: input.maxResults ?? 200,
       });
-      if (indexed.filesIndexed > 0) {
+      if (indexed.hits.length > 0) {
         return {
           status: "success",
           output: indexed,

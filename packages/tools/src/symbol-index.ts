@@ -1,7 +1,8 @@
 import { readdir, readFile, stat } from "node:fs/promises";
-import { join, relative, resolve, posix } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { isNodeErrorCode } from "@ar/contracts";
 import { normalizePath } from "@ar/security";
+import { resolveSearchScope } from "./navigate.js";
 
 /**
  * P7-4 (EXPERIMENT): lightweight TypeScript/JavaScript symbol index built on
@@ -10,7 +11,7 @@ import { normalizePath } from "@ar/security";
  * interface/type/const/let/var), imports and exports; references are found by
  * grepping the indexed lines. Other languages keep the grep fallback.
  *
- * The index is cached per normalized root. Queries validate the source file
+ * The index is cached per normalized root and selected scope. Queries validate the source file
  * set and file stats, reusing unchanged contents; concurrent queries share
  * that validation. A TTL periodically forces a full content refresh.
  */
@@ -70,7 +71,7 @@ const cache = new Map<string, CacheEntry>();
 const flights = new Map<string, Promise<{ filesIndexed: number } & RootIndex>>();
 
 // P15-5: the module-level symbol-index cache is process-scoped (key = root
-// path), but it must never serve STALE cross-repo state and never grow
+// plus selected scope), but it must never serve STALE cross-repo state and never grow
 // without bound. File-level validation catches edits inside nested directories
 // whose parent root stat did not change. TTL also covers changes preserving
 // both size and mtime. Capacity evicts the least recently used root.
@@ -113,10 +114,19 @@ async function listSourceFiles(dir: string, out: string[]): Promise<void> {
   }
 }
 
-async function buildRootIndex(root: string, previous?: RootIndex, forceRefresh = false): Promise<RootIndex> {
+async function buildRootIndex(
+  scope: NonNullable<Awaited<ReturnType<typeof resolveSearchScope>>>,
+  previous?: RootIndex,
+  forceRefresh = false,
+): Promise<RootIndex> {
+  const { root } = scope;
   const files = new Map<string, IndexedFile>();
   const sourceFiles: string[] = [];
-  await listSourceFiles(root, sourceFiles);
+  if (scope.type === "file") {
+    if (SOURCE_EXTENSIONS.has(scope.path.slice(scope.path.lastIndexOf(".")))) sourceFiles.push(scope.path);
+  } else {
+    await listSourceFiles(scope.path, sourceFiles);
+  }
   for (const file of sourceFiles) {
     try {
       const st = await stat(file);
@@ -140,17 +150,20 @@ async function buildRootIndex(root: string, previous?: RootIndex, forceRefresh =
 }
 
 /** Get a fresh file-level index, sharing both cold builds and warm validation
- *  across callers for the same normalized workspace root. */
-export async function getSymbolIndex(root: string): Promise<{ filesIndexed: number } & RootIndex> {
+ *  across callers for the same normalized workspace root and selected scope. */
+export async function getSymbolIndex(root: string, relPath = "."): Promise<{ filesIndexed: number } & RootIndex> {
   const normalizedRoot = resolve(root);
-  const pending = flights.get(normalizedRoot);
+  const scope = await resolveSearchScope(normalizedRoot, relPath, SKIP_DIRS);
+  if (!scope) return { root: normalizedRoot, files: new Map(), builtAt: Date.now(), filesIndexed: 0 };
+  const key = JSON.stringify([normalizedRoot, scope.relPath]);
+  const pending = flights.get(key);
   if (pending) return pending;
   const load = async () => {
-    const existing = cache.get(normalizedRoot);
+    const existing = cache.get(key);
     const forceRefresh = !existing || Date.now() - existing.lastFullRefreshAt >= CACHE_TTL_MS;
-    const built = await buildRootIndex(normalizedRoot, existing?.index, forceRefresh);
-    cache.delete(normalizedRoot);
-    cache.set(normalizedRoot, {
+    const built = await buildRootIndex(scope, existing?.index, forceRefresh);
+    cache.delete(key);
+    cache.set(key, {
       index: built,
       lastFullRefreshAt: forceRefresh ? built.builtAt : existing!.lastFullRefreshAt,
     });
@@ -158,11 +171,11 @@ export async function getSymbolIndex(root: string): Promise<{ filesIndexed: numb
     return { ...built, filesIndexed: built.files.size };
   };
   const promise = load();
-  flights.set(normalizedRoot, promise);
+  flights.set(key, promise);
   try {
     return await promise;
   } finally {
-    if (flights.get(normalizedRoot) === promise) flights.delete(normalizedRoot);
+    if (flights.get(key) === promise) flights.delete(key);
   }
 }
 
@@ -174,18 +187,11 @@ export async function indexedSymbolSearch(input: {
   maxHits?: number;
 }): Promise<SymbolSearchIndexResult> {
   const { symbol, root } = input;
-  const index = await getSymbolIndex(root);
+  const index = await getSymbolIndex(root, input.relPath);
   const needle = symbol.toLowerCase();
   const maxHits = input.maxHits ?? 200;
   const hits: SymbolHit[] = [];
-  // The tool defaults to ".". Normalize aliases and require a directory
-  // boundary so "src/a" cannot select "src/ab" or "a.ts" select "a.tsx".
-  const scope = posix.normalize(normalizePath(input.relPath ?? ".")).replace(/\/$/, "");
-
   for (const file of index.files.values()) {
-    if (scope !== "." && file.relPath !== scope && !file.relPath.startsWith(`${scope}/`)) {
-      continue;
-    }
     for (let i = 0; i < file.lines.length && hits.length < maxHits; i++) {
       const line = file.lines[i]!;
       const lower = line.toLowerCase();

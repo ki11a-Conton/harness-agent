@@ -19,12 +19,42 @@
  * oversized files. They are read-only.
  */
 import { promises as fs, type Dirent } from "node:fs";
-import { join, relative, resolve, sep } from "node:path";
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { matchGlob } from "@ar/security";
 
 const SKIP_DIRS = new Set([".git", "node_modules", ".DS_Store", "dist", "build", "coverage"]);
 const MAX_READ_BYTES = 512 * 1024; // skip files larger than this for text search
 const MAX_LINE = 2000;
+
+/** Resolve an approved search selection without following user-selected links.
+ * Ancestor lstat calls only validate the path; source enumeration and reads
+ * must start at the returned file or directory, never at its workspace root.
+ * The workspace root itself is trusted and may be an alias/junction. */
+export async function resolveSearchScope(
+  root: string,
+  relPath = ".",
+  ignoredDirectories: ReadonlySet<string> = SKIP_DIRS,
+): Promise<{ root: string; path: string; relPath: string; type: "file" | "directory" } | null> {
+  const base = resolve(root);
+  const path = resolve(base, relPath);
+  const selected = normalizeSlashes(relative(base, path)) || ".";
+  if (isAbsolute(selected) || selected === ".." || selected.startsWith("../")) return null;
+  if (selected === ".") return { root: base, path, relPath: selected, type: "directory" };
+  const parts = selected.split("/");
+  for (let i = 1; i <= parts.length; i += 1) {
+    const current = await fs.lstat(join(base, ...parts.slice(0, i))).catch(() => null);
+    if (!current || current.isSymbolicLink()) return null;
+    if (current.isDirectory()) {
+      if (ignoredDirectories.has(parts[i - 1]!)) return null;
+      if (i === parts.length) return { root: base, path, relPath: selected, type: "directory" };
+    } else if (i === parts.length && current.isFile()) {
+      return { root: base, path, relPath: selected, type: "file" };
+    } else {
+      return null;
+    }
+  }
+  return null;
+}
 
 export interface GrepHit {
   file: string;
@@ -155,15 +185,14 @@ export async function symbolSearch(input: SymbolSearchInput): Promise<{
   hits: SymbolHit[];
 }> {
   const { root, relPath, symbol } = input;
-  const start = resolve(root, relPath ?? ".");
-  const base = resolve(root);
   // Build a per-marker regex. `//g` not needed; we test the whole matched text.
   const want =
     symbol === "" ? null : new RegExp(`\\b${escapeRegExp(symbol)}\\b`, "i");
   const hits: SymbolHit[] = [];
   const cap = input.maxHits ?? 200;
+  const scope = await resolveSearchScope(root, relPath ?? ".");
 
-  await walkFiles(base, relative(base, start), async (abs, relFile) => {
+  const searchFile = async (abs: string, relFile: string): Promise<boolean | void> => {
     if (hits.length >= cap) return false;
     let text: string;
     try {
@@ -191,7 +220,12 @@ export async function symbolSearch(input: SymbolSearchInput): Promise<{
       }
     }
     return true;
-  });
+  };
+  if (scope?.type === "file") {
+    await searchFile(scope.path, scope.relPath);
+  } else if (scope) {
+    await walkFiles(scope.root, scope.relPath, searchFile);
+  }
 
   return {
     fallback: true,

@@ -246,10 +246,6 @@ function streamTerminationError(
   );
 }
 
-function isAbortError(value: unknown): boolean {
-  return value instanceof Error && value.name === "AbortError";
-}
-
 async function summarizeBody(response: Response): Promise<string> {
   try {
     const text = await response.text();
@@ -441,7 +437,7 @@ async function* streamChatCompletion(
         signal: effectiveSignal,
       });
     } catch (err) {
-      if (signal.aborted || isAbortError(err)) {
+      if (signal.aborted) {
         yield { type: "completed", result: { finishReason: "cancelled" }, timestamp: Date.now() };
         return;
       }
@@ -526,14 +522,15 @@ async function* streamChatCompletion(
   const toolCalls = new Map<number, { id: string; name: string; args: string }>();
   let usage: Usage | undefined;
   let aborted = false;
+  let normalReason: "stop" | "tool_calls" | undefined;
 
   let abortResolve: (() => void) | undefined;
-  const onAbort = () => abortResolve?.();
+  const onAbort = () => { aborted = true; abortResolve?.(); };
   effectiveSignal.addEventListener("abort", onAbort);
   const abortSignal = new Promise<"abort">((resolve) => {
     abortResolve = () => resolve("abort");
   });
-  if (signal.aborted) aborted = true;
+  if (effectiveSignal.aborted) aborted = true;
 
   const finishEvents = (reason: FinishReason, error?: ReturnType<typeof errorInfo>): ModelEvent[] => {
     const calls: ToolCall[] = [...toolCalls.values()].map((tc) => ({
@@ -564,8 +561,14 @@ async function* streamChatCompletion(
   const processData = (payload: string): { events: ModelEvent[]; finished: boolean } => {
     if (payload === "[DONE]") {
       // R1: DONE closes the transport; it does not certify model completion.
-      // This also rejects legacy DONE-only text responses consistently.
-      return { events: finishEvents("error", streamTerminationError("done")), finished: true };
+      // A stored normal reason certifies the output; the transport can close
+      // without the optional usage footer on compatible providers.
+      return {
+        events: normalReason === undefined
+          ? finishEvents("error", streamTerminationError("done"))
+          : finishEvents(normalReason),
+        finished: true,
+      };
     }
     let chunk: ChatChunk;
     try {
@@ -582,6 +585,13 @@ async function* streamChatCompletion(
         outputTokens: chunk.usage.completion_tokens ?? 0,
       };
       events.push({ type: "usage", usage, timestamp: Date.now() });
+    }
+    if (normalReason !== undefined) {
+      // The output boundary is immutable. Only a final usage snapshot may
+      // arrive after it; later choices cannot add output or alter tool intent.
+      return chunk.usage
+        ? { events: [...events, ...finishEvents(normalReason)], finished: true }
+        : { events, finished: false };
     }
     const delta = choice?.delta;
     if (delta?.content) {
@@ -604,47 +614,88 @@ async function* streamChatCompletion(
     }
     const reason = choice?.finish_reason;
     if (reason !== undefined && reason !== null) {
-      const completion = reason === "stop" || reason === "tool_calls"
-        ? finishEvents(reason)
-        : finishEvents("error", streamTerminationError("finish_reason", reason));
-      return { events: [...events, ...completion], finished: true };
+      if (reason !== "stop" && reason !== "tool_calls") {
+        return { events: [...events, ...finishEvents("error", streamTerminationError("finish_reason", reason))], finished: true };
+      }
+      normalReason = reason;
+      // An earlier usage snapshot can be partial. Finish immediately only if
+      // this normal finish frame itself carries usage; otherwise read the
+      // requested standalone footer, DONE, or EOF before completing.
+      return chunk.usage
+        ? { events: [...events, ...finishEvents(reason)], finished: true }
+        : { events, finished: false };
     }
     return { events, finished: false };
   };
 
   let finished = false;
+  let streamError: ReturnType<typeof errorInfo> | undefined;
   try {
     while (!finished && !aborted) {
-      if (streamEnded && buffer.length === 0) break;
-      while (buffer.indexOf("\n") < 0 && !streamEnded) {
-        const outcome = await Promise.race([reader.read(), abortSignal]);
-        if (outcome === "abort") {
-          aborted = true;
-          break;
+      let events: ModelEvent[];
+      let finalFrame: boolean;
+      if (streamEnded && buffer.length === 0) {
+        // EOF belongs to the same guarded event path as DONE and usage.
+        // In particular, a caller can abort after a yielded tool delta.
+        events = normalReason === undefined
+          ? finishEvents("error", streamTerminationError("eof"))
+          : finishEvents(normalReason);
+        finalFrame = true;
+      } else {
+        while (buffer.indexOf("\n") < 0 && !streamEnded) {
+          const outcome = await Promise.race([reader.read(), abortSignal]);
+          if (outcome === "abort") {
+            aborted = true;
+            break;
+          }
+          if (outcome.done) {
+            streamEnded = true;
+            buffer += decoder.decode();
+            break;
+          }
+          buffer += decoder.decode(outcome.value, { stream: true });
         }
-        if (outcome.done) {
-          streamEnded = true;
-          buffer += decoder.decode();
-          break;
-        }
-        buffer += decoder.decode(outcome.value, { stream: true });
+        if (aborted) break;
+        if (streamEnded && buffer.length === 0) continue;
+        const nl = buffer.indexOf("\n");
+        const line = nl >= 0 ? buffer.slice(0, nl).replace(/\r$/, "") : buffer;
+        buffer = nl >= 0 ? buffer.slice(nl + 1) : "";
+        if (!line.startsWith("data:")) continue;
+        const payload = line.slice("data:".length).trim();
+        if (!payload) continue;
+        const parsed = processData(payload);
+        events = parsed.events;
+        finalFrame = parsed.finished;
       }
-      if (aborted) break;
-      const nl = buffer.indexOf("\n");
-      const line = nl >= 0 ? buffer.slice(0, nl).replace(/\r$/, "") : buffer;
-      buffer = nl >= 0 ? buffer.slice(nl + 1) : "";
-      if (!line.startsWith("data:")) continue;
-      const payload = line.slice("data:".length).trim();
-      if (!payload) continue;
-      const { events, finished: f } = processData(payload);
-      for (const ev of events) yield ev;
-      if (f) finished = true;
+      for (const ev of events) {
+        if (effectiveSignal.aborted) { aborted = true; break; }
+        // Once completion has actually been delivered, a later caller abort
+        // cannot produce a second terminal event for this call.
+        if (ev.type === "completed") finished = true;
+        yield ev;
+        if (effectiveSignal.aborted && !finished) { aborted = true; break; }
+      }
+      if (finalFrame && !aborted) finished = true;
     }
+  } catch (err) {
+    // Native fetch can reject reader.read() before the abort race resolves.
+    // Classify by the effective signal rather than leaking an AbortError or
+    // treating a timeout as caller cancellation. Streaming errors never retry.
+    if (effectiveSignal.aborted) aborted = true;
+    else streamError = errorInfo("MODEL_ERROR", `OpenAI chat completion stream failed: ${summarize(err)}`, {
+      retryable: false,
+      safeToRetry: false,
+      provider: { kind: "network" },
+    });
   } finally {
     effectiveSignal.removeEventListener("abort", onAbort);
+    // The generator owns the body reader, including when its consumer returns
+    // early. Cleanup must never replace the original result or read error.
+    try { await reader.cancel(); } catch { /* best-effort transport cleanup */ }
+    try { reader.releaseLock(); } catch { /* already released/errored reader */ }
   }
 
-  if (aborted) {
+  if (aborted && !finished) {
     if (timedOut()) {
       // Stream-phase timeout: partial text may already have been yielded, so
       // a retry would duplicate output — report as a non-retryable error.
@@ -662,9 +713,9 @@ async function* streamChatCompletion(
     yield { type: "completed", result: { finishReason: "cancelled", text }, timestamp: Date.now() };
     return;
   }
-  if (!finished) {
-    // Natural EOF cannot authorize execution, even with complete JSON args.
-    for (const ev of finishEvents("error", streamTerminationError("eof"))) yield ev;
+  if (streamError !== undefined) {
+    yield { type: "error", error: streamError, timestamp: Date.now() };
+    return;
   }
 }
 

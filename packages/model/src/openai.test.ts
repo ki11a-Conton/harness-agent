@@ -774,7 +774,7 @@ describe("OpenAICompatibleProvider request timeout (Phase 7 deadline)", () => {
       sig?.addEventListener("abort", () => reject(sig.reason), { once: true });
     });
 
-  it("retries a request that timed out before the stream started", async () => {
+  it("retries a pre-stream timeout but cannot revive an expired whole-call deadline with a resolved transport", async () => {
     stubFetch();
     mockFetch.mockImplementationOnce(never);
     mockFetch.mockResolvedValueOnce(
@@ -789,8 +789,14 @@ describe("OpenAICompatibleProvider request timeout (Phase 7 deadline)", () => {
     for await (const ev of client.generate({ messages: [] }, new AbortController().signal)) events.push(ev);
 
     expect(mockFetch).toHaveBeenCalledTimes(2);
-    expect(events.some((e) => e.type === "retry")).toBe(true);
-    expect(completedEvent(events).result.finishReason).toBe("stop");
+    expect(events.filter((e) => e.type === "retry")).toHaveLength(1);
+    // A mock may resolve despite its already-aborted request signal. The
+    // whole-call deadline still forbids certifying that response as success.
+    expect(events.filter((e) => e.type === "completed" || e.type === "tool_call_delta")).toEqual([]);
+    expect(events.filter((e) => e.type === "error")).toHaveLength(1);
+    expect(errorEvent(events).error).toMatchObject({
+      code: "MODEL_ERROR", retryable: false, safeToRetry: false, provider: { kind: "timeout" },
+    });
   }, 10_000);
 
   it("reports a timeout as MODEL_ERROR once the retry budget is exhausted", async () => {

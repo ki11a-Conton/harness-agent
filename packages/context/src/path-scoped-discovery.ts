@@ -125,11 +125,16 @@ export class PathScopedInstructionDiscovery implements InstructionDiscovery {
     const revision = revisionOf(checked.stat);
     const cached = this.cache.get(path);
     if (cached?.revision === revision && cached.maxBytes === maxBytes) { this.metrics.cacheHits++; return cached; }
+    // Never retain a stale capture when its replacement cannot be verified.
+    this.cache.delete(path);
     let handle: Awaited<ReturnType<typeof open>> | undefined;
     try {
-      handle = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+      // A regular file may become a FIFO between the pathname check and open.
+      // NONBLOCK prevents that race from hanging before we can check its type.
+      handle = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0));
       const opened = await handle.stat();
-      if (revisionOf(opened) !== revision || await this.safeStat(path, canonicalRoot) === undefined) return undefined;
+      const current = await this.safeStat(path, canonicalRoot);
+      if (!opened.isFile() || !current?.stat.isFile() || revisionOf(opened) !== revision || revisionOf(current.stat) !== revision) return undefined;
       // Capture only the declared prefix and at most one UTF-8 code point of
       // lookahead. Large repository files must never allocate their full size.
       const bytes = Buffer.alloc(Math.min(opened.size, maxBytes + 4));
@@ -140,15 +145,23 @@ export class PathScopedInstructionDiscovery implements InstructionDiscovery {
         captured += bytesRead;
       }
       this.metrics.reads++;
-      if (revisionOf(await handle.stat()) !== revision) return undefined;
+      if (captured !== bytes.length) return undefined;
+      const after = await this.safeStat(path, canonicalRoot);
+      const afterOpened = await handle.stat();
+      if (!afterOpened.isFile() || !after?.stat.isFile() || revisionOf(afterOpened) !== revision || revisionOf(after.stat) !== revision) return undefined;
       const truncated = opened.size > maxBytes;
-      const value = { revision, maxBytes, content: boundedText(bytes.subarray(0, captured), maxBytes, truncated), sizeBytes: opened.size, truncated };
+      const value = { revision, maxBytes, content: boundedText(bytes.subarray(0, captured), maxBytes, opened.size, truncated), sizeBytes: opened.size, truncated };
       // Bound cache retention as targets switch; eviction changes cost only.
       if (this.cache.size >= 256) this.cache.delete(this.cache.keys().next().value!);
       this.cache.set(path, value);
       return value;
     } catch { this.cache.delete(path); return undefined; }
-    finally { await handle?.close(); }
+    finally {
+      // Cleanup is best-effort per document, just as in default discovery.
+      try { await handle?.close(); } catch {
+        process.stderr.write("[degraded] path-scoped-discovery.close: instruction handle cleanup failed\n");
+      }
+    }
   }
 }
 
@@ -161,14 +174,18 @@ function finiteBudget(value: number): number {
   return Math.floor(value);
 }
 
-function boundedText(bytes: Buffer, maxBytes: number, truncated: boolean): string {
-  if (!truncated) return bytes.toString("utf8");
+function boundedText(bytes: Buffer, maxBytes: number, sizeBytes: number, truncated: boolean): string {
+  // Only an unfinished trailing code point in a bounded lookahead capture is
+  // permitted. Malformed input cannot expand the byte budget via replacement.
+  const decoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
+  decoder.decode(bytes, { stream: truncated && bytes.length < sizeBytes });
+  if (!truncated) return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
   const marker = "\n# [truncated]";
   const markerBytes = Buffer.byteLength(marker);
   const suffix = maxBytes >= markerBytes ? marker : "";
   let end = Math.max(0, maxBytes - Buffer.byteLength(suffix));
   while (end > 0 && end < bytes.length && (bytes[end]! & 0xc0) === 0x80) end--;
-  let prefix = bytes.subarray(0, end).toString("utf8");
+  let prefix = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes.subarray(0, end));
   const newline = prefix.lastIndexOf("\n");
   if (newline >= 0) prefix = prefix.slice(0, newline);
   return prefix + suffix;
