@@ -1,0 +1,47 @@
+{
+  "blocks": [
+    {
+      "id": "strategy",
+      "source": "system",
+      "trust": "trusted",
+      "priority": 1000,
+      "tokens": 300,
+      "content": "\nTool-call efficiency guidance:\n- A turn allows a limited number of model iterations (typically 30 model\n  calls). This limit counts MODEL CALLS, not tool calls: you may attach\n  several tool calls to one model call, so tool calls can outnumber model\n  calls.\n- Before repeating a tool call that just failed, change something — the\n  arguments, the target, or the approach. Re-issuing an identical call with\n  the same arguments against unchanged state tends to fail the same way and\n  only spends an iteration.\n- Only abandon a tool when it keeps failing the SAME way with unchanged\n  inputs and no change in state. Once you have fixed the underlying cause,\n  calling the same tool again (for example re-running the test command) is\n  expected and correct.\n- Read each file you need in as few calls as possible, and do not re-read a\n  file you have already read unless it changed.\n- Make each edit complete before moving on, so the verification command you\n  run near the end reflects finished work rather than a half-applied change.",
+      "compressible": false,
+      "instructional": true
+    },
+    {
+      "id": "tool-read-file",
+      "source": "tool",
+      "trust": "semi-trusted",
+      "priority": 0,
+      "tokens": 60,
+      "content": "src/example.ts\nconst essential = \"PRIVATE_FIXTURE_SENTINEL_SOURCE_ONLY_82493\";",
+      "compressible": true,
+      "ephemeral": false,
+      "category": "evidence",
+      "instructional": false,
+      "persistable": false
+    }
+  ],
+  "summary": {
+    "goal": "Modify src/example.ts using current source evidence",
+    "constraints": [
+      "keep original verifier"
+    ],
+    "decisions": [],
+    "completed": [
+      "read src/example.ts"
+    ],
+    "filesChanged": [],
+    "commandsRun": [],
+    "tests": [],
+    "failures": [],
+    "openTasks": [
+      "edit and verify src/example.ts"
+    ],
+    "importantFacts": [],
+    "artifactRefs": [],
+    "childAgentRefs": []
+  }
+}

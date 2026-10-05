@@ -1,0 +1,62 @@
+{
+  "status": "PASS",
+  "scope": "Reviewed plan and documentation only",
+  "baselineSha": "65d8711aa4ffa8401d219fc9f0aef2bca93898d2",
+  "specPath": "plan(20261005-232432).md",
+  "specSha256": "1ee495614b13f97982e8b51a594ea618f26fd3740c23d1ade51c367ed34a5cf4",
+  "oldPlanOriginalBytesPreserved": true,
+  "immutableSpecEqualsCurrentEntry": true,
+  "reviewComplete": true,
+  "implementation": "TODO",
+  "realModelEvaluation": "NOT_RUN",
+  "fullTestsForCandidate": "NOT_RUN",
+  "paidProviderCalls": 0,
+  "commands": [
+    {
+      "name": "docs-verify",
+      "argv": [
+        "corepack",
+        "pnpm",
+        "docs:verify"
+      ],
+      "status": "PASS",
+      "exitCode": 0,
+      "logBytes": 1734,
+      "logSha256": "2beff671aabeb8e6bc29524ab04a45c82bcffa134720919c6e0d784f4cb24433",
+      "originalLogBase64": "JCBub2RlIGFwcHMvY2xpL2Rpc3QvbWFpbi5qcyBkb2NzOnZlcmlmeQpbaGFybmVzc10gY29udGV4dCBidWRnZXQ6IG1vZGVsIGNhcGFiaWxpdGllcyB1bmtub3duIGZvciBzdHViL3N0dWItbW9kZWwg4oCUIHVzaW5nIGNvbnNlcnZhdGl2ZSBmYWxsYmFjayAzMjAwMAojIERvY3VtZW50YXRpb24gdHJ1dGggdmVyaWZpY2F0aW9uCgpQQVNTICBiZW5jaG1hcmsgc3VpdGU6IHJlZ3Jlc3Npb24KICAgICAgMzAgY2FzZShzKSBvbiBkaXNrIG1hdGNoZXMgUkVBRE1FIGNsYWltIDMwClBBU1MgIGJlbmNobWFyayBzdWl0ZTogaG9sZG91dAogICAgICAzMiBjYXNlKHMpIG9uIGRpc2sgbWF0Y2hlcyBSRUFETUUgY2xhaW0gMzIKUEFTUyAgYmVuY2htYXJrIHN1aXRlOiBhZHZlcnNhcmlhbAogICAgICAxMyBjYXNlKHMpIG9uIGRpc2sgbWF0Y2hlcyBSRUFETUUgY2xhaW0gMTMKUEFTUyAgYmVuY2htYXJrIHN1aXRlOiBzdHJlc3MKICAgICAgMTEgY2FzZShzKSBvbiBkaXNrIG1hdGNoZXMgUkVBRE1FIGNsYWltIDExClBBU1MgIHBhY2thZ2UgY291bnQKICAgICAgMjQgcGFja2FnZXMvIG9uIGRpc2sgbWF0Y2hlcyB0aGUgSEFORE9WRVIgY2xhaW0gMjQKUEFTUyAgQ0kgZ2F0ZXMKICAgICAgLmdpdGh1Yi93b3JrZmxvd3MvY2kueW1sIHJ1bnMgdGVzdCBhbmQgY292ZXJhZ2UKUEFTUyAgSEFORE9WRVIgc3RhdGljIHRydXRoIChQMzguNC0xMCkKICAgICAgSEFORE9WRVIubWQgY2Fub25pY2FsIHNlY3Rpb24gY29udGFpbnMgbm8gdm9sYXRpbGUgU0hBL3J1bi1pZCDigJQgYSBuZXcgY29tbWl0IGRvZXMgbm90IG1ha2UgaXQgc3RhbGUKUEFTUyAgQ0FQQUJJTElUWV9NQVRSSVgubWQgbWFjaGluZS1nZW5lcmF0ZWQKICAgICAgQ0FQQUJJTElUWV9NQVRSSVgubWQgY2FycmllcyBnZW5lcmF0ZWRBdCArIHRoZSBhdWRpdCByZWNvcmRzIHRhYmxlClBBU1MgIENBUEFCSUxJVFlfTUFUUklYIG1hcmtlZCBpbmZvcm1hdGlvbmFsIChQMzguMi0xMSkKICAgICAgdHJhY2tlZCBtYXRyaXggaXMgZXhwbGljaXRseSBOT1QgUkVMRUFTRSBFVklERU5DRSAoaW5mb3JtYXRpb25hbCBzbmFwc2hvdCkKUEFTUyAgY2FwYWJpbGl0eSBwcm9maWxlcyBwcmVzZW50CiAgICAgIENBUEFCSUxJVFlfTUFUUklYLmpzb24gY2FycmllcyB0aGUgcGVyLXByb2ZpbGUgYnlQcm9maWxlIHZpZXcKUEFTUyAgZXZvbHV0aW9uIGxlZGdlciBjb25zaXN0ZW50IChFMi0xMikKICAgICAgZXZvbHV0aW9uLWxlZGdlci5qc29uIHZlcmlmaWVzOiByZWZzIGV4aXN0LCBkaWdlc3RzIG1hdGNoLCBzdW1tYXJpZXMgcmVjb21wdXRlLCBvbmUgYWN0aXZlIGNoYW1waW9uClBBU1MgIGN1cnJlbnQgcGxhbiBlbnRyeSAoRTQtMDApCiAgICAgIHBsYW4ubWQgaXMgdGhlIGN1cnJlbnQgZW50cnkgYW5kIHJlZmVyZW5jZXMgYW4gZXhpc3Rpbmcgc3BlYyBwbGFuKDIwMjYxMDA1LTIzMjQzMikubWQKUEFTUyAgcmVsZWFzZSBnYXRlIGNvbW1hbmRzIGV4aXN0IGluIHBhY2thZ2UuanNvbiAoRTQtMTApCiAgICAgIGV2ZXJ5IHJlbGVhc2UtZ2F0ZSBjb21tYW5kIG1hcHMgdG8gYSByZWFsIHBhY2thZ2UuanNvbiBzY3JpcHQKUEFTUyAgZG9jdW1lbnRlZCBwbnBtIHNjcmlwdHMgZXhpc3QgaW4gcGFja2FnZS5qc29uIChFNC0xMCAjNikKICAgICAgZXZlcnkgcG5wbSBjb21tYW5kIGRvY3VtZW50ZWQgaW4gMiBSRUFETUUgZmlsZShzKSBtYXBzIHRvIGEgcmVhbCBwYWNrYWdlLmpzb24gc2NyaXB0CgpBTEwgQ0hFQ0tTIFBBU1MK"
+    },
+    {
+      "name": "review-artifact-integrity",
+      "argv": [
+        "node",
+        "scripts/research/agent-trust-20261004/verify-artifacts.mjs",
+        "docs/evidence/agent-next6-plan-20261005/artifact-index.json"
+      ],
+      "status": "PASS",
+      "exitCode": 0,
+      "logBytes": 41,
+      "logSha256": "2f8b87ca9eeab1413b79b150a0fb2ad3522fc75d46139ba49110349e04c45907",
+      "originalLogBase64": "eyJzdGF0dXMiOiJQQVNTIiwiZmlsZXMiOjQsImJ5dGVzIjo5MTc1fQo="
+    },
+    {
+      "name": "diff-check",
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "status": "PASS",
+      "exitCode": 0,
+      "logBytes": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalLogBase64": ""
+    }
+  ],
+  "initialDocsCheck": {
+    "status": "FAIL_THEN_CORRECTED_BEFORE_COMMIT",
+    "reason": "Current plan entry title required marker \u5f53\u524d\u6267\u884c\u8ba1\u5212\u5165\u53e3; both uncommitted entry and spec corrected before final check",
+    "logBytes": 1826,
+    "logSha256": "063c4e0944890154dd63ca642f9fb2672dbf4fe478a0d2edee0c89b26f64ce22",
+    "originalLogBase64": "JCBub2RlIGFwcHMvY2xpL2Rpc3QvbWFpbi5qcyBkb2NzOnZlcmlmeQpbaGFybmVzc10gY29udGV4dCBidWRnZXQ6IG1vZGVsIGNhcGFiaWxpdGllcyB1bmtub3duIGZvciBzdHViL3N0dWItbW9kZWwg4oCUIHVzaW5nIGNvbnNlcnZhdGl2ZSBmYWxsYmFjayAzMjAwMAojIERvY3VtZW50YXRpb24gdHJ1dGggdmVyaWZpY2F0aW9uCgpQQVNTICBiZW5jaG1hcmsgc3VpdGU6IHJlZ3Jlc3Npb24KICAgICAgMzAgY2FzZShzKSBvbiBkaXNrIG1hdGNoZXMgUkVBRE1FIGNsYWltIDMwClBBU1MgIGJlbmNobWFyayBzdWl0ZTogaG9sZG91dAogICAgICAzMiBjYXNlKHMpIG9uIGRpc2sgbWF0Y2hlcyBSRUFETUUgY2xhaW0gMzIKUEFTUyAgYmVuY2htYXJrIHN1aXRlOiBhZHZlcnNhcmlhbAogICAgICAxMyBjYXNlKHMpIG9uIGRpc2sgbWF0Y2hlcyBSRUFETUUgY2xhaW0gMTMKUEFTUyAgYmVuY2htYXJrIHN1aXRlOiBzdHJlc3MKICAgICAgMTEgY2FzZShzKSBvbiBkaXNrIG1hdGNoZXMgUkVBRE1FIGNsYWltIDExClBBU1MgIHBhY2thZ2UgY291bnQKICAgICAgMjQgcGFja2FnZXMvIG9uIGRpc2sgbWF0Y2hlcyB0aGUgSEFORE9WRVIgY2xhaW0gMjQKUEFTUyAgQ0kgZ2F0ZXMKICAgICAgLmdpdGh1Yi93b3JrZmxvd3MvY2kueW1sIHJ1bnMgdGVzdCBhbmQgY292ZXJhZ2UKUEFTUyAgSEFORE9WRVIgc3RhdGljIHRydXRoIChQMzguNC0xMCkKICAgICAgSEFORE9WRVIubWQgY2Fub25pY2FsIHNlY3Rpb24gY29udGFpbnMgbm8gdm9sYXRpbGUgU0hBL3J1bi1pZCDigJQgYSBuZXcgY29tbWl0IGRvZXMgbm90IG1ha2UgaXQgc3RhbGUKUEFTUyAgQ0FQQUJJTElUWV9NQVRSSVgubWQgbWFjaGluZS1nZW5lcmF0ZWQKICAgICAgQ0FQQUJJTElUWV9NQVRSSVgubWQgY2FycmllcyBnZW5lcmF0ZWRBdCArIHRoZSBhdWRpdCByZWNvcmRzIHRhYmxlClBBU1MgIENBUEFCSUxJVFlfTUFUUklYIG1hcmtlZCBpbmZvcm1hdGlvbmFsIChQMzguMi0xMSkKICAgICAgdHJhY2tlZCBtYXRyaXggaXMgZXhwbGljaXRseSBOT1QgUkVMRUFTRSBFVklERU5DRSAoaW5mb3JtYXRpb25hbCBzbmFwc2hvdCkKUEFTUyAgY2FwYWJpbGl0eSBwcm9maWxlcyBwcmVzZW50CiAgICAgIENBUEFCSUxJVFlfTUFUUklYLmpzb24gY2FycmllcyB0aGUgcGVyLXByb2ZpbGUgYnlQcm9maWxlIHZpZXcKUEFTUyAgZXZvbHV0aW9uIGxlZGdlciBjb25zaXN0ZW50IChFMi0xMikKICAgICAgZXZvbHV0aW9uLWxlZGdlci5qc29uIHZlcmlmaWVzOiByZWZzIGV4aXN0LCBkaWdlc3RzIG1hdGNoLCBzdW1tYXJpZXMgcmVjb21wdXRlLCBvbmUgYWN0aXZlIGNoYW1waW9uCkZBSUwgIGN1cnJlbnQgcGxhbiBlbnRyeSAoRTQtMDApCiAgICAgIHBsYW4ubWQgZG9lcyBub3QgZGVjbGFyZSBpdHNlbGYgdGhlIGN1cnJlbnQgcGxhbiBlbnRyeSAobWlzc2luZyBtYXJrZXIg5b2T5YmN5omn6KGM6K6h5YiS5YWl5Y+jKQpQQVNTICByZWxlYXNlIGdhdGUgY29tbWFuZHMgZXhpc3QgaW4gcGFja2FnZS5qc29uIChFNC0xMCkKICAgICAgZXZlcnkgcmVsZWFzZS1nYXRlIGNvbW1hbmQgbWFwcyB0byBhIHJlYWwgcGFja2FnZS5qc29uIHNjcmlwdApQQVNTICBkb2N1bWVudGVkIHBucG0gc2NyaXB0cyBleGlzdCBpbiBwYWNrYWdlLmpzb24gKEU0LTEwICM2KQogICAgICBldmVyeSBwbnBtIGNvbW1hbmQgZG9jdW1lbnRlZCBpbiAyIFJFQURNRSBmaWxlKHMpIG1hcHMgdG8gYSByZWFsIHBhY2thZ2UuanNvbiBzY3JpcHQKCkZBSUxFRDogbWFjaGluZS1kZXJpdmFibGUgZG9jIGZhY3RzIGFyZSB1bnRydXRoZnVsCltFTElGRUNZQ0xFXSBDb21tYW5kIGZhaWxlZCB3aXRoIGV4aXQgY29kZSAxLgo="
+  }
+}

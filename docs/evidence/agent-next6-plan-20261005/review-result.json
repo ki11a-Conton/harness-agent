@@ -1,0 +1,55 @@
+{
+  "status": "BOUNDARY_REPRODUCED",
+  "sourceSha": "65d8711aa4ffa8401d219fc9f0aef2bca93898d2",
+  "trackedDirty": false,
+  "kind": "Actual production compactor, constructed offline fixture; no model call or actual agent quality result",
+  "guidanceVersion": "tool-call-efficiency:v2",
+  "guidanceSha256": "ebddf5eb125cbbe8ed25d7ecb1ea3554809494aea70716adf3a9f62924939619",
+  "sourceAndDistSha256": {
+    "packages/evaluation/src/mechanism-guidance.ts": "32ac724322c6e6bc39e2625ba3d1f864b0f94054063b4ffe40ae14ad64fb5b87",
+    "packages/evaluation/dist/mechanism-guidance.js": "64d3881aef759288b95e45e0a1d46dd78ada7aa250ec1ee0685dfc484fa80fab",
+    "packages/context/src/compaction.ts": "99f85d898514c495be9cd2c2414333c191d4c715cd845f4c32fd0c0446d3c186",
+    "packages/context/dist/compaction.js": "b8139b3a5908ecfe335149997268517917caa87ecd9159edb76ee8701ae937f2",
+    "packages/core/src/runtime/turn-helpers.ts": "cb671480dc102b409fb7dddcdefa418542bee755147bf39c568c17c6a41d7a1a"
+  },
+  "sourceAndDistUnchanged": true,
+  "fileContentUnchanged": true,
+  "sourceBodyPresentBefore": true,
+  "sourceBodyPresentAfter": false,
+  "readHistoryPresentInSummary": true,
+  "guidanceStillForbidsUnchangedReread": true,
+  "stages": [
+    {
+      "stage": "offload",
+      "droppedBlocks": 0,
+      "beforeTokens": 360,
+      "afterTokens": 360,
+      "used": false
+    },
+    {
+      "stage": "ephemeral-drop",
+      "droppedBlocks": 0,
+      "beforeTokens": 360,
+      "afterTokens": 360,
+      "used": false
+    },
+    {
+      "stage": "micro-compact",
+      "droppedBlocks": 0,
+      "beforeTokens": 360,
+      "afterTokens": 360,
+      "used": false
+    },
+    {
+      "stage": "digest",
+      "droppedBlocks": 1,
+      "beforeTokens": 360,
+      "afterTokens": 353,
+      "used": true
+    }
+  ],
+  "paidProviderCalls": 0,
+  "modelQuality": "NOT_RUN",
+  "promotion": "NOT_RUN",
+  "windowsNative": "NOT_RUN"
+}
