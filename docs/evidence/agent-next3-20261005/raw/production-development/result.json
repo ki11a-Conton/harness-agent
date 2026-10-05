@@ -1,0 +1,545 @@
+{
+  "schemaVersion": "agent-next3-read-resource-v1",
+  "sourceSha": "2802f46f81276e41dbcd81bfd2fd095c9102b599",
+  "sourceTrackedDirtyAtStart": true,
+  "sourceFingerprintsBefore": {
+    "packages/tools/src/tools/read-file.ts": "f46f999cc6e95fe157b2679899cb55fb7a9b0172905d944f8e505cc1669c219d",
+    "packages/tools/src/file-coordination.ts": "d081877bfc8dce7c274f5381f0bfd5d1e2276494967dc1cf7ae0bbd4a6dc3a54",
+    "packages/tools/src/orchestrator.ts": "adcd42ba547d15e725b9d0236bd7ca550cf2f363e60f2ed10951f92d1604d3eb",
+    "packages/tools/dist/tools/read-file.js": "bbf2b37b488e8b35e27625e65d2469ecf70d5bd4799f67360a4dd35ee542350f",
+    "packages/tools/dist/file-coordination.js": "d5b477797c1ce797879a0a7ac77e266739c897c60266b920230bbc93c550c083",
+    "packages/tools/dist/orchestrator.js": "edda2f2b44e7352766b40fe6d599fcd2c408432a72f8ed75c60e99e36bb97766",
+    "packages/harness/dist/create-harness.js": "442874f7297e7e0b7df5e715af249457fbd0bf6cd33f15b75d5e198700ea29e3",
+    "scripts/research/agent-next3-20261005/read-resource-probe.mjs": "6abe284bd1363d0e69baf0fd83f0ae9bac6842814152835958e9d0541bda8aee"
+  },
+  "paidProviderCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "windows": "NOT_RUN",
+  "cases": [
+    {
+      "name": "versioned-empty",
+      "status": "PASS",
+      "observed": {
+        "result": {
+          "status": "success",
+          "output": {
+            "path": "/tmp/ar-read-resource-probe-QY3Sj6/empty",
+            "content": "",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "read_file executed",
+              "source": "/tmp/ar-read-resource-probe-QY3Sj6/empty",
+              "timestamp": 1791206144499
+            }
+          ]
+        },
+        "elapsedMs": 3.9012139999999818,
+        "operations": [
+          {
+            "path": "/tmp/ar-read-resource-probe-QY3Sj6/empty",
+            "flags": 2048,
+            "closed": true,
+            "reads": [
+              {
+                "signalPassed": true,
+                "started": 1791206144499,
+                "aborted": false
+              }
+            ],
+            "stats": 1
+          }
+        ],
+        "ownedAtReturn": 0,
+        "pendingReadsAtReturn": 0,
+        "locksAtReturn": 0
+      }
+    },
+    {
+      "name": "versioned-unicode-crlf",
+      "status": "PASS",
+      "observed": {
+        "result": {
+          "status": "success",
+          "output": {
+            "path": "/tmp/ar-read-resource-probe-QY3Sj6/unicode-crlf",
+            "content": "﻿中文\r\nbody\n",
+            "sha256": "5797ba743aa25a307549ac5574c6d791588f20e1b564cfc137de046ea419cf06",
+            "bytes": 16
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "read_file executed",
+              "source": "/tmp/ar-read-resource-probe-QY3Sj6/unicode-crlf",
+              "timestamp": 1791206144501
+            }
+          ]
+        },
+        "elapsedMs": 0.8212600000000236,
+        "operations": [
+          {
+            "path": "/tmp/ar-read-resource-probe-QY3Sj6/unicode-crlf",
+            "flags": 2048,
+            "closed": true,
+            "reads": [
+              {
+                "signalPassed": true,
+                "started": 1791206144501,
+                "aborted": false
+              }
+            ],
+            "stats": 1
+          }
+        ],
+        "ownedAtReturn": 0,
+        "pendingReadsAtReturn": 0,
+        "locksAtReturn": 0
+      }
+    },
+    {
+      "name": "versioned-invalid-utf8",
+      "status": "PASS",
+      "observed": {
+        "result": {
+          "status": "success",
+          "output": {
+            "path": "/tmp/ar-read-resource-probe-QY3Sj6/invalid-utf8",
+            "content": "�\nA",
+            "sha256": "d3c8c06db4587233260a5225c012c144f30ed936ab2c32d0900b4371db9d3249",
+            "bytes": 3
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "read_file executed",
+              "source": "/tmp/ar-read-resource-probe-QY3Sj6/invalid-utf8",
+              "timestamp": 1791206144502
+            }
+          ]
+        },
+        "elapsedMs": 0.755582000000004,
+        "operations": [
+          {
+            "path": "/tmp/ar-read-resource-probe-QY3Sj6/invalid-utf8",
+            "flags": 2048,
+            "closed": true,
+            "reads": [
+              {
+                "signalPassed": true,
+                "started": 1791206144502,
+                "aborted": false
+              }
+            ],
+            "stats": 1
+          }
+        ],
+        "ownedAtReturn": 0,
+        "pendingReadsAtReturn": 0,
+        "locksAtReturn": 0
+      }
+    },
+    {
+      "name": "regular-default-string",
+      "status": "PASS",
+      "observed": {
+        "result": {
+          "status": "success",
+          "output": "﻿中文\r\nbody\n",
+          "evidence": [
+            {
+              "type": "file",
+              "description": "read_file executed",
+              "source": "/tmp/ar-read-resource-probe-QY3Sj6/regular",
+              "timestamp": 1791206144503
+            }
+          ]
+        },
+        "elapsedMs": 0.7533389999999827,
+        "operations": [
+          {
+            "path": "/tmp/ar-read-resource-probe-QY3Sj6/regular",
+            "flags": 2048,
+            "closed": true,
+            "reads": [
+              {
+                "signalPassed": true,
+                "started": 1791206144503,
+                "aborted": false
+              }
+            ],
+            "stats": 1
+          }
+        ],
+        "ownedAtReturn": 0,
+        "pendingReadsAtReturn": 0,
+        "locksAtReturn": 0
+      }
+    },
+    {
+      "name": "fifo-no-writer",
+      "status": "PASS",
+      "observed": {
+        "result": {
+          "status": "failed",
+          "error": {
+            "code": "PROCESS_ERROR",
+            "message": "read_file requires a regular file",
+            "retryable": false,
+            "safeToRetry": false
+          }
+        },
+        "elapsedMs": 0.9386559999999804,
+        "operations": [
+          {
+            "path": "/tmp/ar-read-resource-probe-QY3Sj6/pipe",
+            "flags": 2048,
+            "closed": true,
+            "reads": [],
+            "stats": 1
+          }
+        ],
+        "ownedAtReturn": 0,
+        "pendingReadsAtReturn": 0,
+        "locksAtReturn": 0
+      }
+    },
+    {
+      "name": "fifo-alias-no-writer",
+      "status": "PASS",
+      "observed": {
+        "result": {
+          "status": "failed",
+          "error": {
+            "code": "PROCESS_ERROR",
+            "message": "read_file requires a regular file",
+            "retryable": false,
+            "safeToRetry": false
+          }
+        },
+        "elapsedMs": 0.5545009999999593,
+        "operations": [
+          {
+            "path": "/tmp/ar-read-resource-probe-QY3Sj6/pipe-alias",
+            "flags": 2048,
+            "closed": true,
+            "reads": [],
+            "stats": 1
+          }
+        ],
+        "ownedAtReturn": 0,
+        "pendingReadsAtReturn": 0,
+        "locksAtReturn": 0
+      }
+    },
+    {
+      "name": "fifo-repeat-not-queued",
+      "status": "PASS",
+      "observed": {
+        "result": {
+          "status": "failed",
+          "error": {
+            "code": "PROCESS_ERROR",
+            "message": "read_file requires a regular file",
+            "retryable": false,
+            "safeToRetry": false
+          }
+        },
+        "elapsedMs": 0.5440849999999955,
+        "operations": [
+          {
+            "path": "/tmp/ar-read-resource-probe-QY3Sj6/pipe",
+            "flags": 2048,
+            "closed": true,
+            "reads": [],
+            "stats": 1
+          }
+        ],
+        "ownedAtReturn": 0,
+        "pendingReadsAtReturn": 0,
+        "locksAtReturn": 0
+      }
+    },
+    {
+      "name": "unix-socket-not-readable",
+      "status": "PASS",
+      "observed": {
+        "result": {
+          "status": "failed",
+          "error": {
+            "code": "PROCESS_ERROR",
+            "message": "ENXIO: no such device or address, open '/tmp/ar-read-resource-probe-QY3Sj6/socket'",
+            "retryable": false,
+            "safeToRetry": false
+          }
+        },
+        "elapsedMs": 0.5989769999999908,
+        "operations": [
+          {
+            "path": "/tmp/ar-read-resource-probe-QY3Sj6/socket",
+            "flags": 2048,
+            "closed": false,
+            "reads": [],
+            "stats": 0
+          }
+        ],
+        "ownedAtReturn": 0,
+        "pendingReadsAtReturn": 0,
+        "locksAtReturn": 0
+      }
+    },
+    {
+      "name": "directory-not-readable",
+      "status": "PASS",
+      "observed": {
+        "result": {
+          "status": "failed",
+          "error": {
+            "code": "PROCESS_ERROR",
+            "message": "read_file requires a regular file",
+            "retryable": false,
+            "safeToRetry": false
+          }
+        },
+        "elapsedMs": 0.8491419999999721,
+        "operations": [
+          {
+            "path": "/tmp/ar-read-resource-probe-QY3Sj6",
+            "flags": 2048,
+            "closed": true,
+            "reads": [],
+            "stats": 1
+          }
+        ],
+        "ownedAtReturn": 0,
+        "pendingReadsAtReturn": 0,
+        "locksAtReturn": 0
+      }
+    },
+    {
+      "name": "missing-native-error",
+      "status": "PASS",
+      "observed": {
+        "result": {
+          "status": "failed",
+          "error": {
+            "code": "PROCESS_ERROR",
+            "message": "ENOENT: no such file or directory, open '/tmp/ar-read-resource-probe-QY3Sj6/missing'",
+            "retryable": false,
+            "safeToRetry": false
+          }
+        },
+        "elapsedMs": 0.88027900000003,
+        "operations": [
+          {
+            "path": "/tmp/ar-read-resource-probe-QY3Sj6/missing",
+            "flags": 2048,
+            "closed": false,
+            "reads": [],
+            "stats": 0
+          }
+        ],
+        "ownedAtReturn": 0,
+        "pendingReadsAtReturn": 0,
+        "locksAtReturn": 0
+      }
+    },
+    {
+      "name": "permission-deny-zero-open",
+      "status": "PASS",
+      "observed": {
+        "result": {
+          "status": "denied",
+          "error": {
+            "code": "PERMISSION_DENIED",
+            "message": "permission denied: rule 'anon' (deny) matched",
+            "retryable": false,
+            "safeToRetry": false
+          }
+        },
+        "elapsedMs": 0.16696000000001732,
+        "operations": [],
+        "ownedAtReturn": 0,
+        "pendingReadsAtReturn": 0,
+        "locksAtReturn": 0
+      }
+    },
+    {
+      "name": "sandbox-escape-zero-open",
+      "status": "PASS",
+      "observed": {
+        "result": {
+          "status": "denied",
+          "error": {
+            "code": "SANDBOX_FILESYSTEM_DENIED",
+            "message": "sandbox denied: path outside workspace: /tmp/escape",
+            "retryable": false,
+            "safeToRetry": false
+          }
+        },
+        "elapsedMs": 0.21572299999996858,
+        "operations": [],
+        "ownedAtReturn": 0,
+        "pendingReadsAtReturn": 0,
+        "locksAtReturn": 0
+      }
+    },
+    {
+      "name": "pre-abort-zero-open",
+      "status": "PASS",
+      "observed": {
+        "result": {
+          "status": "cancelled",
+          "error": {
+            "code": "USER_CANCELLED",
+            "message": "tool execution cancelled before dispatch",
+            "retryable": false,
+            "safeToRetry": false
+          }
+        },
+        "elapsedMs": 0.023283999999989646,
+        "operations": [],
+        "ownedAtReturn": 0,
+        "pendingReadsAtReturn": 0,
+        "locksAtReturn": 0
+      }
+    },
+    {
+      "name": "hard-regular-control",
+      "status": "PASS",
+      "observed": {
+        "result": {
+          "status": "success",
+          "output": "﻿中文\r\nbody\n",
+          "evidence": [
+            {
+              "type": "file",
+              "description": "read_file executed",
+              "source": "/tmp/ar-read-resource-probe-QY3Sj6/hard",
+              "timestamp": 1791206144514
+            }
+          ]
+        },
+        "elapsedMs": 0.5853160000000344,
+        "operations": [
+          {
+            "path": "/tmp/ar-read-resource-probe-QY3Sj6/hard",
+            "flags": 2048,
+            "closed": true,
+            "reads": [
+              {
+                "signalPassed": true,
+                "started": 1791206144514,
+                "aborted": false
+              }
+            ],
+            "stats": 1
+          }
+        ],
+        "ownedAtReturn": 0,
+        "pendingReadsAtReturn": 0,
+        "locksAtReturn": 0
+      }
+    },
+    {
+      "name": "alias-regular-control",
+      "status": "PASS",
+      "observed": {
+        "result": {
+          "status": "success",
+          "output": "﻿中文\r\nbody\n",
+          "evidence": [
+            {
+              "type": "file",
+              "description": "read_file executed",
+              "source": "/tmp/ar-read-resource-probe-QY3Sj6/alias",
+              "timestamp": 1791206144515
+            }
+          ]
+        },
+        "elapsedMs": 0.5864190000000349,
+        "operations": [
+          {
+            "path": "/tmp/ar-read-resource-probe-QY3Sj6/alias",
+            "flags": 2048,
+            "closed": true,
+            "reads": [
+              {
+                "signalPassed": true,
+                "started": 1791206144515,
+                "aborted": false
+              }
+            ],
+            "stats": 1
+          }
+        ],
+        "ownedAtReturn": 0,
+        "pendingReadsAtReturn": 0,
+        "locksAtReturn": 0
+      }
+    },
+    {
+      "name": "native-read-caller-abort",
+      "status": "PASS",
+      "observed": {
+        "result": {
+          "status": "cancelled"
+        },
+        "elapsedMs": 0.6428630000000339,
+        "operations": [
+          {
+            "path": "/tmp/ar-read-resource-probe-QY3Sj6/regular",
+            "flags": 2048,
+            "closed": true,
+            "reads": [
+              {
+                "signalPassed": true,
+                "started": 1791206144515,
+                "aborted": true
+              }
+            ],
+            "stats": 1
+          }
+        ],
+        "ownedAtReturn": 0,
+        "pendingReadsAtReturn": 0,
+        "locksAtReturn": 0
+      }
+    },
+    {
+      "name": "queued-reader-cancellation",
+      "status": "PASS",
+      "observed": {
+        "result": {
+          "status": "cancelled"
+        },
+        "elapsedMs": 20.485761999999966,
+        "operations": [],
+        "ownedAtReturn": 0,
+        "pendingReadsAtReturn": 0,
+        "locksAtReturn": 2
+      }
+    },
+    {
+      "name": "actual-harness-search-read-conditional-edit",
+      "status": "FAIL",
+      "error": "TypeError: Cannot read properties of undefined (reading 'id')\n    at AgentRuntime.createSession (file:///workspace/harness-agent/packages/core/dist/runtime/runtime.js:319:41)\n    at file:///workspace/harness-agent/scripts/research/agent-next3-20261005/read-resource-probe.mjs:102:141\n    at async check (file:///workspace/harness-agent/scripts/research/agent-next3-20261005/read-resource-probe.mjs:52:60)\n    at async file:///workspace/harness-agent/scripts/research/agent-next3-20261005/read-resource-probe.mjs:89:3"
+    }
+  ],
+  "sourceShaAtEnd": "2802f46f81276e41dbcd81bfd2fd095c9102b599",
+  "sourceTrackedDirtyAtEnd": true,
+  "sourceFingerprintsAfter": {
+    "packages/tools/src/tools/read-file.ts": "f46f999cc6e95fe157b2679899cb55fb7a9b0172905d944f8e505cc1669c219d",
+    "packages/tools/src/file-coordination.ts": "d081877bfc8dce7c274f5381f0bfd5d1e2276494967dc1cf7ae0bbd4a6dc3a54",
+    "packages/tools/src/orchestrator.ts": "adcd42ba547d15e725b9d0236bd7ca550cf2f363e60f2ed10951f92d1604d3eb",
+    "packages/tools/dist/tools/read-file.js": "bbf2b37b488e8b35e27625e65d2469ecf70d5bd4799f67360a4dd35ee542350f",
+    "packages/tools/dist/file-coordination.js": "d5b477797c1ce797879a0a7ac77e266739c897c60266b920230bbc93c550c083",
+    "packages/tools/dist/orchestrator.js": "edda2f2b44e7352766b40fe6d599fcd2c408432a72f8ed75c60e99e36bb97766",
+    "packages/harness/dist/create-harness.js": "442874f7297e7e0b7df5e715af249457fbd0bf6cd33f15b75d5e198700ea29e3",
+    "scripts/research/agent-next3-20261005/read-resource-probe.mjs": "6abe284bd1363d0e69baf0fd83f0ae9bac6842814152835958e9d0541bda8aee"
+  },
+  "status": "FAIL"
+}

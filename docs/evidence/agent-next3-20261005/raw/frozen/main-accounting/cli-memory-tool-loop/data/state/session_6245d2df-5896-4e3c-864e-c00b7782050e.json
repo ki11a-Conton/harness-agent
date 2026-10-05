@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "snapshot": {
+    "effectiveAgent": {
+      "agentId": "agent_65968e47-b48b-43e6-8d4d-d3adfdca6db6",
+      "model": {
+        "providerId": "openai",
+        "modelId": "gpt-4o-mini"
+      },
+      "systemPrompt": "You are the harness agent running inside a workspace.\n\nCapabilities:\n- read_file / search_files / grep_search / repo_tree / symbol_search / repo_map / discover_commands / env_snapshot: inspect the workspace (allowed automatically)\n- write_file / edit_file: modify workspace files (require approval)\n- exec: run commands in the workspace shell (requires approval)\n\nState-changing actions ask for approval and are denied until approved.\nWhen a tool result reports [denied], do not retry it blindly — report the outcome.",
+      "tools": {
+        "allow": [
+          "read_file",
+          "write_file",
+          "edit_file",
+          "search_files",
+          "grep_search",
+          "repo_tree",
+          "symbol_search",
+          "repo_map",
+          "discover_commands",
+          "env_snapshot",
+          "exec",
+          "update_plan"
+        ]
+      },
+      "permissions": {
+        "rules": [
+          {
+            "action": "read",
+            "resource": "file",
+            "effect": "allow"
+          },
+          {
+            "action": "edit",
+            "resource": "file",
+            "effect": "ask"
+          },
+          {
+            "action": "exec",
+            "resource": "command",
+            "effect": "ask"
+          },
+          {
+            "action": "exec",
+            "resource": "network",
+            "effect": "ask"
+          }
+        ]
+      },
+      "skills": {},
+      "limits": {
+        "maxToolCalls": 50
+      }
+    },
+    "runtimePolicy": {
+      "version": 1,
+      "contextPolicyHash": "935857d3b281213e",
+      "toolSemanticsHash": "1",
+      "createdAt": 1791206345022
+    },
+    "p27.configFingerprint": "8bdef03d",
+    "p27.configValue": "{\"featureFlags\":{\"context\":true,\"checkpoint\":true,\"artifacts\":true,\"memory\":true,\"learning\":true,\"skills\":true,\"delegation\":false,\"mcp\":false,\"plugins\":false,\"observability\":true},\"contextBudget\":{\"maxTokens\":32000,\"reserved\":{\"system\":1500,\"task\":2000,\"output\":2000},\"dynamic\":0},\"sandboxPolicy\":{\"filesystem\":{\"mode\":\"workspace-write\"},\"network\":{\"mode\":\"deny\"},\"process\":{\"timeoutMs\":60000,\"maxOutputBytes\":1048576}},\"cwd\":\"/workspace/harness-agent/.ci/agent-next3-20261005/frozen/main-accounting/cli-memory-tool-loop/workspace\",\"dataDir\":\"/workspace/harness-agent/.ci/agent-next3-20261005/frozen/main-accounting/cli-memory-tool-loop/data\",\"profile\":\"interactive\",\"modelProvider\":{\"id\":\"openai\",\"identity\":{\"apiKey\":\"local-non-secret-placeholder\"}},\"model\":{\"providerId\":\"openai\",\"modelId\":\"gpt-4o-mini\"}}"
+  }
+}

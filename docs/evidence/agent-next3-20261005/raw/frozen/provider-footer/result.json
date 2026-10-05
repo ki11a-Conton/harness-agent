@@ -1,0 +1,1798 @@
+{
+  "schemaVersion": "agent-followup-provider-probe-v1",
+  "status": "PASS",
+  "sourceSha": "5e4d9b8f23e596e887c18a46f8e031d41b8a458e",
+  "sourceTrackedDirtyAtStart": false,
+  "sourceStatusAtStart": "",
+  "sourceFingerprintsBefore": {
+    "packages/model/src/openai.ts": "5f2d341bc6299b689249699dfe2561ba1bc623e1ef836c53e4eb526511e1a481",
+    "packages/model/dist/openai.js": "a5bd50a96d1af60b9878a113fff879c2936500bdaa268c4bf8b9a959970a842b",
+    "packages/model/src/openai-stream-footer.regressions.test.ts": "786909f8060684646949f0c3a0cd32e71a395435f9ca4f4a92d405a3a8839980",
+    "packages/model/src/openai.test.ts": "2785e0311f055495d383d241de1a94123643b63fb6cf0c490839a0902c7618f3",
+    "scripts/research/agent-followup-20261005/provider-probe.mjs": "297f67bd6cfd7b0fcc987c7a4a0560085125dab2ef684f834da6f8e1f8481c96"
+  },
+  "probeSha256": "297f67bd6cfd7b0fcc987c7a4a0560085125dab2ef684f834da6f8e1f8481c96",
+  "runtime": "v24.19.0",
+  "startedAt": "2026-10-05T13:19:03.436Z",
+  "paidProviderCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "cases": [
+    {
+      "name": "stop-separate-footer",
+      "status": "PASS",
+      "startedAt": "2026-10-05T13:19:03.469Z",
+      "transport": "native-loopback-http",
+      "events": [
+        {
+          "type": "started",
+          "timestamp": 1791206343469
+        },
+        {
+          "type": "text_delta",
+          "text": "你好 complete",
+          "timestamp": 1791206343492
+        },
+        {
+          "type": "reasoning_delta",
+          "text": "kept reasoning",
+          "timestamp": 1791206343492
+        },
+        {
+          "type": "usage",
+          "usage": {
+            "inputTokens": 137,
+            "outputTokens": 23
+          },
+          "timestamp": 1791206343492
+        },
+        {
+          "type": "completed",
+          "result": {
+            "finishReason": "stop",
+            "text": "你好 complete",
+            "reasoningContent": "kept reasoning",
+            "usage": {
+              "inputTokens": 137,
+              "outputTokens": 23
+            }
+          },
+          "timestamp": 1791206343492
+        }
+      ],
+      "fetchCalls": 1,
+      "responseLocked": false,
+      "nativeResponseClosed": true,
+      "finishedAt": "2026-10-05T13:19:03.495Z"
+    },
+    {
+      "name": "tool_calls-separate-footer",
+      "status": "PASS",
+      "startedAt": "2026-10-05T13:19:03.496Z",
+      "transport": "native-loopback-http",
+      "events": [
+        {
+          "type": "started",
+          "timestamp": 1791206343496
+        },
+        {
+          "type": "usage",
+          "usage": {
+            "inputTokens": 137,
+            "outputTokens": 23
+          },
+          "timestamp": 1791206343499
+        },
+        {
+          "type": "tool_call_delta",
+          "toolCall": {
+            "id": "call_one",
+            "name": "read_file",
+            "args": {
+              "path": "a.txt"
+            }
+          },
+          "timestamp": 1791206343499
+        },
+        {
+          "type": "completed",
+          "result": {
+            "finishReason": "tool_calls",
+            "text": "",
+            "toolCalls": [
+              {
+                "id": "call_one",
+                "name": "read_file",
+                "args": {
+                  "path": "a.txt"
+                }
+              }
+            ],
+            "usage": {
+              "inputTokens": 137,
+              "outputTokens": 23
+            }
+          },
+          "timestamp": 1791206343499
+        }
+      ],
+      "fetchCalls": 1,
+      "responseLocked": false,
+      "nativeResponseClosed": true,
+      "finishedAt": "2026-10-05T13:19:03.499Z"
+    },
+    {
+      "name": "split-crlf-utf8-footer",
+      "status": "PASS",
+      "startedAt": "2026-10-05T13:19:03.503Z",
+      "transport": "native-loopback-http",
+      "fragmentWriteBytes": 7,
+      "events": [
+        {
+          "type": "started",
+          "timestamp": 1791206343503
+        },
+        {
+          "type": "text_delta",
+          "text": "你好 complete",
+          "timestamp": 1791206343509
+        },
+        {
+          "type": "reasoning_delta",
+          "text": "kept reasoning",
+          "timestamp": 1791206343509
+        },
+        {
+          "type": "usage",
+          "usage": {
+            "inputTokens": 137,
+            "outputTokens": 23
+          },
+          "timestamp": 1791206343512
+        },
+        {
+          "type": "completed",
+          "result": {
+            "finishReason": "stop",
+            "text": "你好 complete",
+            "reasoningContent": "kept reasoning",
+            "usage": {
+              "inputTokens": 137,
+              "outputTokens": 23
+            }
+          },
+          "timestamp": 1791206343512
+        }
+      ],
+      "fetchCalls": 1,
+      "responseLocked": false,
+      "finishedAt": "2026-10-05T13:19:03.514Z"
+    },
+    {
+      "name": "partial-snapshot-final-footer",
+      "status": "PASS",
+      "startedAt": "2026-10-05T13:19:03.517Z",
+      "transport": "native-loopback-http",
+      "events": [
+        {
+          "type": "started",
+          "timestamp": 1791206343517
+        },
+        {
+          "type": "usage",
+          "usage": {
+            "inputTokens": 5,
+            "outputTokens": 2
+          },
+          "timestamp": 1791206343520
+        },
+        {
+          "type": "text_delta",
+          "text": "你好 complete",
+          "timestamp": 1791206343520
+        },
+        {
+          "type": "reasoning_delta",
+          "text": "kept reasoning",
+          "timestamp": 1791206343520
+        },
+        {
+          "type": "usage",
+          "usage": {
+            "inputTokens": 137,
+            "outputTokens": 23
+          },
+          "timestamp": 1791206343520
+        },
+        {
+          "type": "completed",
+          "result": {
+            "finishReason": "stop",
+            "text": "你好 complete",
+            "reasoningContent": "kept reasoning",
+            "usage": {
+              "inputTokens": 137,
+              "outputTokens": 23
+            }
+          },
+          "timestamp": 1791206343520
+        }
+      ],
+      "fetchCalls": 1,
+      "responseLocked": false,
+      "nativeResponseClosed": true,
+      "finishedAt": "2026-10-05T13:19:03.520Z"
+    },
+    {
+      "name": "same-frame-usage-open-transport",
+      "status": "PASS",
+      "startedAt": "2026-10-05T13:19:03.522Z",
+      "transport": "native-loopback-http",
+      "events": [
+        {
+          "type": "started",
+          "timestamp": 1791206343523
+        },
+        {
+          "type": "text_delta",
+          "text": "你好 complete",
+          "timestamp": 1791206343526
+        },
+        {
+          "type": "reasoning_delta",
+          "text": "kept reasoning",
+          "timestamp": 1791206343526
+        },
+        {
+          "type": "usage",
+          "usage": {
+            "inputTokens": 137,
+            "outputTokens": 23
+          },
+          "timestamp": 1791206343526
+        },
+        {
+          "type": "completed",
+          "result": {
+            "finishReason": "stop",
+            "text": "你好 complete",
+            "reasoningContent": "kept reasoning",
+            "usage": {
+              "inputTokens": 137,
+              "outputTokens": 23
+            }
+          },
+          "timestamp": 1791206343526
+        }
+      ],
+      "fetchCalls": 1,
+      "responseLocked": false,
+      "nativeResponseClosed": true,
+      "finishedAt": "2026-10-05T13:19:03.528Z"
+    },
+    {
+      "name": "separate-footer-open-transport",
+      "status": "PASS",
+      "startedAt": "2026-10-05T13:19:03.529Z",
+      "transport": "native-loopback-http",
+      "events": [
+        {
+          "type": "started",
+          "timestamp": 1791206343529
+        },
+        {
+          "type": "usage",
+          "usage": {
+            "inputTokens": 137,
+            "outputTokens": 23
+          },
+          "timestamp": 1791206343532
+        },
+        {
+          "type": "tool_call_delta",
+          "toolCall": {
+            "id": "call_one",
+            "name": "read_file",
+            "args": {
+              "path": "a.txt"
+            }
+          },
+          "timestamp": 1791206343532
+        },
+        {
+          "type": "completed",
+          "result": {
+            "finishReason": "tool_calls",
+            "text": "",
+            "toolCalls": [
+              {
+                "id": "call_one",
+                "name": "read_file",
+                "args": {
+                  "path": "a.txt"
+                }
+              }
+            ],
+            "usage": {
+              "inputTokens": 137,
+              "outputTokens": 23
+            }
+          },
+          "timestamp": 1791206343532
+        }
+      ],
+      "fetchCalls": 1,
+      "responseLocked": false,
+      "nativeResponseClosed": true,
+      "finishedAt": "2026-10-05T13:19:03.533Z"
+    },
+    {
+      "name": "stop-no-usage-done",
+      "status": "PASS",
+      "startedAt": "2026-10-05T13:19:03.534Z",
+      "transport": "native-loopback-http",
+      "events": [
+        {
+          "type": "started",
+          "timestamp": 1791206343534
+        },
+        {
+          "type": "text_delta",
+          "text": "你好 complete",
+          "timestamp": 1791206343537
+        },
+        {
+          "type": "reasoning_delta",
+          "text": "kept reasoning",
+          "timestamp": 1791206343537
+        },
+        {
+          "type": "completed",
+          "result": {
+            "finishReason": "stop",
+            "text": "你好 complete",
+            "reasoningContent": "kept reasoning"
+          },
+          "timestamp": 1791206343537
+        }
+      ],
+      "fetchCalls": 1,
+      "responseLocked": false,
+      "nativeResponseClosed": true,
+      "finishedAt": "2026-10-05T13:19:03.537Z"
+    },
+    {
+      "name": "stop-no-usage-eof",
+      "status": "PASS",
+      "startedAt": "2026-10-05T13:19:03.538Z",
+      "transport": "native-loopback-http",
+      "events": [
+        {
+          "type": "started",
+          "timestamp": 1791206343538
+        },
+        {
+          "type": "text_delta",
+          "text": "你好 complete",
+          "timestamp": 1791206343541
+        },
+        {
+          "type": "reasoning_delta",
+          "text": "kept reasoning",
+          "timestamp": 1791206343541
+        },
+        {
+          "type": "completed",
+          "result": {
+            "finishReason": "stop",
+            "text": "你好 complete",
+            "reasoningContent": "kept reasoning"
+          },
+          "timestamp": 1791206343541
+        }
+      ],
+      "fetchCalls": 1,
+      "responseLocked": false,
+      "nativeResponseClosed": true,
+      "finishedAt": "2026-10-05T13:19:03.541Z"
+    },
+    {
+      "name": "tool_calls-no-usage-done",
+      "status": "PASS",
+      "startedAt": "2026-10-05T13:19:03.542Z",
+      "transport": "native-loopback-http",
+      "events": [
+        {
+          "type": "started",
+          "timestamp": 1791206343542
+        },
+        {
+          "type": "tool_call_delta",
+          "toolCall": {
+            "id": "call_one",
+            "name": "read_file",
+            "args": {
+              "path": "a.txt"
+            }
+          },
+          "timestamp": 1791206343545
+        },
+        {
+          "type": "completed",
+          "result": {
+            "finishReason": "tool_calls",
+            "text": "",
+            "toolCalls": [
+              {
+                "id": "call_one",
+                "name": "read_file",
+                "args": {
+                  "path": "a.txt"
+                }
+              }
+            ]
+          },
+          "timestamp": 1791206343545
+        }
+      ],
+      "fetchCalls": 1,
+      "responseLocked": false,
+      "nativeResponseClosed": true,
+      "finishedAt": "2026-10-05T13:19:03.545Z"
+    },
+    {
+      "name": "tool_calls-no-usage-eof",
+      "status": "PASS",
+      "startedAt": "2026-10-05T13:19:03.547Z",
+      "transport": "native-loopback-http",
+      "events": [
+        {
+          "type": "started",
+          "timestamp": 1791206343547
+        },
+        {
+          "type": "tool_call_delta",
+          "toolCall": {
+            "id": "call_one",
+            "name": "read_file",
+            "args": {
+              "path": "a.txt"
+            }
+          },
+          "timestamp": 1791206343550
+        },
+        {
+          "type": "completed",
+          "result": {
+            "finishReason": "tool_calls",
+            "text": "",
+            "toolCalls": [
+              {
+                "id": "call_one",
+                "name": "read_file",
+                "args": {
+                  "path": "a.txt"
+                }
+              }
+            ]
+          },
+          "timestamp": 1791206343550
+        }
+      ],
+      "fetchCalls": 1,
+      "responseLocked": false,
+      "nativeResponseClosed": true,
+      "finishedAt": "2026-10-05T13:19:03.550Z"
+    },
+    {
+      "name": "missing-normal-done",
+      "status": "PASS",
+      "startedAt": "2026-10-05T13:19:03.552Z",
+      "transport": "native-loopback-http",
+      "events": [
+        {
+          "type": "started",
+          "timestamp": 1791206343552
+        },
+        {
+          "type": "tool_call_delta",
+          "toolCall": {
+            "id": "call_one",
+            "name": "read_file",
+            "args": {
+              "path": "a.txt"
+            }
+          },
+          "timestamp": 1791206343555
+        },
+        {
+          "type": "completed",
+          "result": {
+            "finishReason": "error",
+            "error": {
+              "code": "MODEL_ERROR",
+              "message": "OpenAI chat completion ended without a normal finish_reason (done)",
+              "retryable": false,
+              "safeToRetry": false,
+              "evidence": "{\"boundary\":\"done\",\"finishReason\":null}",
+              "provider": {
+                "kind": "protocol"
+              }
+            },
+            "text": "",
+            "toolCalls": [
+              {
+                "id": "call_one",
+                "name": "read_file",
+                "args": {
+                  "path": "a.txt"
+                }
+              }
+            ]
+          },
+          "timestamp": 1791206343555
+        }
+      ],
+      "fetchCalls": 1,
+      "responseLocked": false,
+      "nativeResponseClosed": true,
+      "finishedAt": "2026-10-05T13:19:03.556Z"
+    },
+    {
+      "name": "missing-normal-eof",
+      "status": "PASS",
+      "startedAt": "2026-10-05T13:19:03.556Z",
+      "transport": "native-loopback-http",
+      "events": [
+        {
+          "type": "started",
+          "timestamp": 1791206343556
+        },
+        {
+          "type": "tool_call_delta",
+          "toolCall": {
+            "id": "call_one",
+            "name": "read_file",
+            "args": {
+              "path": "a.txt"
+            }
+          },
+          "timestamp": 1791206343559
+        },
+        {
+          "type": "completed",
+          "result": {
+            "finishReason": "error",
+            "error": {
+              "code": "MODEL_ERROR",
+              "message": "OpenAI chat completion ended without a normal finish_reason (eof)",
+              "retryable": false,
+              "safeToRetry": false,
+              "evidence": "{\"boundary\":\"eof\",\"finishReason\":null}",
+              "provider": {
+                "kind": "protocol"
+              }
+            },
+            "text": "",
+            "toolCalls": [
+              {
+                "id": "call_one",
+                "name": "read_file",
+                "args": {
+                  "path": "a.txt"
+                }
+              }
+            ]
+          },
+          "timestamp": 1791206343559
+        }
+      ],
+      "fetchCalls": 1,
+      "responseLocked": false,
+      "nativeResponseClosed": true,
+      "finishedAt": "2026-10-05T13:19:03.559Z"
+    },
+    {
+      "name": "footer-cannot-mutate-output",
+      "status": "PASS",
+      "startedAt": "2026-10-05T13:19:03.560Z",
+      "transport": "native-loopback-http",
+      "events": [
+        {
+          "type": "started",
+          "timestamp": 1791206343560
+        },
+        {
+          "type": "text_delta",
+          "text": "你好 complete",
+          "timestamp": 1791206343562
+        },
+        {
+          "type": "reasoning_delta",
+          "text": "kept reasoning",
+          "timestamp": 1791206343562
+        },
+        {
+          "type": "usage",
+          "usage": {
+            "inputTokens": 137,
+            "outputTokens": 23
+          },
+          "timestamp": 1791206343562
+        },
+        {
+          "type": "completed",
+          "result": {
+            "finishReason": "stop",
+            "text": "你好 complete",
+            "reasoningContent": "kept reasoning",
+            "usage": {
+              "inputTokens": 137,
+              "outputTokens": 23
+            }
+          },
+          "timestamp": 1791206343562
+        }
+      ],
+      "fetchCalls": 1,
+      "responseLocked": false,
+      "nativeResponseClosed": true,
+      "finishedAt": "2026-10-05T13:19:03.562Z"
+    },
+    {
+      "name": "footer-cannot-mutate-tool",
+      "status": "PASS",
+      "startedAt": "2026-10-05T13:19:03.563Z",
+      "transport": "native-loopback-http",
+      "events": [
+        {
+          "type": "started",
+          "timestamp": 1791206343563
+        },
+        {
+          "type": "usage",
+          "usage": {
+            "inputTokens": 137,
+            "outputTokens": 23
+          },
+          "timestamp": 1791206343565
+        },
+        {
+          "type": "tool_call_delta",
+          "toolCall": {
+            "id": "call_one",
+            "name": "read_file",
+            "args": {
+              "path": "a.txt"
+            }
+          },
+          "timestamp": 1791206343565
+        },
+        {
+          "type": "completed",
+          "result": {
+            "finishReason": "tool_calls",
+            "text": "",
+            "toolCalls": [
+              {
+                "id": "call_one",
+                "name": "read_file",
+                "args": {
+                  "path": "a.txt"
+                }
+              }
+            ],
+            "usage": {
+              "inputTokens": 137,
+              "outputTokens": 23
+            }
+          },
+          "timestamp": 1791206343565
+        }
+      ],
+      "fetchCalls": 1,
+      "responseLocked": false,
+      "nativeResponseClosed": true,
+      "finishedAt": "2026-10-05T13:19:03.566Z"
+    },
+    {
+      "name": "abnormal-reason-open-transport",
+      "status": "PASS",
+      "startedAt": "2026-10-05T13:19:03.567Z",
+      "transport": "native-loopback-http",
+      "events": [
+        {
+          "type": "started",
+          "timestamp": 1791206343567
+        },
+        {
+          "type": "tool_call_delta",
+          "toolCall": {
+            "id": "call_one",
+            "name": "read_file",
+            "args": {
+              "path": "a.txt"
+            }
+          },
+          "timestamp": 1791206343569
+        },
+        {
+          "type": "completed",
+          "result": {
+            "finishReason": "error",
+            "error": {
+              "code": "MODEL_ERROR",
+              "message": "OpenAI chat completion ended without a normal finish_reason (finish_reason: length)",
+              "retryable": false,
+              "safeToRetry": false,
+              "evidence": "{\"boundary\":\"finish_reason\",\"finishReason\":\"length\"}",
+              "provider": {
+                "kind": "protocol"
+              }
+            },
+            "text": "",
+            "toolCalls": [
+              {
+                "id": "call_one",
+                "name": "read_file",
+                "args": {
+                  "path": "a.txt"
+                }
+              }
+            ]
+          },
+          "timestamp": 1791206343569
+        }
+      ],
+      "fetchCalls": 1,
+      "responseLocked": false,
+      "nativeResponseClosed": true,
+      "finishedAt": "2026-10-05T13:19:03.570Z"
+    },
+    {
+      "name": "native-caller-abort",
+      "status": "PASS",
+      "startedAt": "2026-10-05T13:19:03.574Z",
+      "transport": "native-loopback-http",
+      "events": [
+        {
+          "type": "started",
+          "timestamp": 1791206343574
+        },
+        {
+          "type": "text_delta",
+          "text": "你好 complete",
+          "timestamp": 1791206343576
+        },
+        {
+          "type": "completed",
+          "result": {
+            "finishReason": "cancelled",
+            "text": "你好 complete"
+          },
+          "timestamp": 1791206343577
+        }
+      ],
+      "fetchCalls": 1,
+      "responseLocked": false,
+      "nativeResponseClosed": true,
+      "finishedAt": "2026-10-05T13:19:03.578Z"
+    },
+    {
+      "name": "native-footer-caller-abort",
+      "status": "PASS",
+      "startedAt": "2026-10-05T13:19:03.579Z",
+      "transport": "native-loopback-http",
+      "events": [
+        {
+          "type": "started",
+          "timestamp": 1791206343579
+        },
+        {
+          "type": "text_delta",
+          "text": "你好 complete",
+          "timestamp": 1791206343580
+        },
+        {
+          "type": "reasoning_delta",
+          "text": "kept reasoning",
+          "timestamp": 1791206343580
+        },
+        {
+          "type": "completed",
+          "result": {
+            "finishReason": "cancelled",
+            "text": "你好 complete"
+          },
+          "timestamp": 1791206343606
+        }
+      ],
+      "fetchCalls": 1,
+      "responseLocked": false,
+      "nativeResponseClosed": true,
+      "finishedAt": "2026-10-05T13:19:03.606Z"
+    },
+    {
+      "name": "native-footer-deadline",
+      "status": "PASS",
+      "startedAt": "2026-10-05T13:19:03.608Z",
+      "transport": "native-loopback-http",
+      "events": [
+        {
+          "type": "started",
+          "timestamp": 1791206343608
+        },
+        {
+          "type": "text_delta",
+          "text": "你好 complete",
+          "timestamp": 1791206343610
+        },
+        {
+          "type": "reasoning_delta",
+          "text": "kept reasoning",
+          "timestamp": 1791206343610
+        },
+        {
+          "type": "error",
+          "error": {
+            "code": "MODEL_ERROR",
+            "message": "OpenAI chat completion timed out after 150ms",
+            "retryable": false,
+            "safeToRetry": false,
+            "provider": {
+              "kind": "timeout"
+            }
+          },
+          "timestamp": 1791206343759
+        }
+      ],
+      "fetchCalls": 1,
+      "responseLocked": false,
+      "nativeResponseClosed": true,
+      "finishedAt": "2026-10-05T13:19:03.759Z"
+    },
+    {
+      "name": "native-footer-reader-error",
+      "status": "PASS",
+      "startedAt": "2026-10-05T13:19:03.761Z",
+      "transport": "native-loopback-http",
+      "events": [
+        {
+          "type": "started",
+          "timestamp": 1791206343761
+        },
+        {
+          "type": "text_delta",
+          "text": "你好 complete",
+          "timestamp": 1791206343762
+        },
+        {
+          "type": "reasoning_delta",
+          "text": "kept reasoning",
+          "timestamp": 1791206343762
+        },
+        {
+          "type": "error",
+          "error": {
+            "code": "MODEL_ERROR",
+            "message": "OpenAI chat completion stream failed: terminated",
+            "retryable": false,
+            "safeToRetry": false,
+            "provider": {
+              "kind": "network"
+            }
+          },
+          "timestamp": 1791206343793
+        }
+      ],
+      "fetchCalls": 1,
+      "responseLocked": false,
+      "finishedAt": "2026-10-05T13:19:03.793Z"
+    },
+    {
+      "name": "native-consumer-early-return",
+      "status": "PASS",
+      "startedAt": "2026-10-05T13:19:03.795Z",
+      "transport": "native-loopback-http",
+      "events": [
+        {
+          "type": "started",
+          "timestamp": 1791206343796
+        },
+        {
+          "type": "text_delta",
+          "text": "你好 complete",
+          "timestamp": 1791206343798
+        }
+      ],
+      "fetchCalls": 1,
+      "responseLocked": false,
+      "nativeResponseClosed": true,
+      "finishedAt": "2026-10-05T13:19:03.800Z"
+    },
+    {
+      "name": "abort-between-tool-and-completed-eof",
+      "status": "PASS",
+      "startedAt": "2026-10-05T13:19:03.803Z",
+      "transport": "native-loopback-http",
+      "events": [
+        {
+          "type": "started",
+          "timestamp": 1791206343803
+        },
+        {
+          "type": "tool_call_delta",
+          "toolCall": {
+            "id": "call_one",
+            "name": "read_file",
+            "args": {
+              "path": "a.txt"
+            }
+          },
+          "timestamp": 1791206343804
+        },
+        {
+          "type": "completed",
+          "result": {
+            "finishReason": "cancelled",
+            "text": ""
+          },
+          "timestamp": 1791206343805
+        }
+      ],
+      "fetchCalls": 1,
+      "responseLocked": false,
+      "nativeResponseClosed": true,
+      "finishedAt": "2026-10-05T13:19:03.805Z"
+    },
+    {
+      "name": "abort-after-delivered-completed-eof",
+      "status": "PASS",
+      "startedAt": "2026-10-05T13:19:03.805Z",
+      "transport": "native-loopback-http",
+      "events": [
+        {
+          "type": "started",
+          "timestamp": 1791206343805
+        },
+        {
+          "type": "text_delta",
+          "text": "你好 complete",
+          "timestamp": 1791206343808
+        },
+        {
+          "type": "reasoning_delta",
+          "text": "kept reasoning",
+          "timestamp": 1791206343808
+        },
+        {
+          "type": "completed",
+          "result": {
+            "finishReason": "stop",
+            "text": "你好 complete",
+            "reasoningContent": "kept reasoning"
+          },
+          "timestamp": 1791206343808
+        }
+      ],
+      "fetchCalls": 1,
+      "responseLocked": false,
+      "nativeResponseClosed": true,
+      "finishedAt": "2026-10-05T13:19:03.808Z"
+    },
+    {
+      "name": "abort-between-tool-and-completed-done",
+      "status": "PASS",
+      "startedAt": "2026-10-05T13:19:03.808Z",
+      "transport": "native-loopback-http",
+      "events": [
+        {
+          "type": "started",
+          "timestamp": 1791206343808
+        },
+        {
+          "type": "tool_call_delta",
+          "toolCall": {
+            "id": "call_one",
+            "name": "read_file",
+            "args": {
+              "path": "a.txt"
+            }
+          },
+          "timestamp": 1791206343810
+        },
+        {
+          "type": "completed",
+          "result": {
+            "finishReason": "cancelled",
+            "text": ""
+          },
+          "timestamp": 1791206343810
+        }
+      ],
+      "fetchCalls": 1,
+      "responseLocked": false,
+      "nativeResponseClosed": true,
+      "finishedAt": "2026-10-05T13:19:03.810Z"
+    },
+    {
+      "name": "abort-after-delivered-completed-done",
+      "status": "PASS",
+      "startedAt": "2026-10-05T13:19:03.811Z",
+      "transport": "native-loopback-http",
+      "events": [
+        {
+          "type": "started",
+          "timestamp": 1791206343811
+        },
+        {
+          "type": "text_delta",
+          "text": "你好 complete",
+          "timestamp": 1791206343813
+        },
+        {
+          "type": "reasoning_delta",
+          "text": "kept reasoning",
+          "timestamp": 1791206343813
+        },
+        {
+          "type": "completed",
+          "result": {
+            "finishReason": "stop",
+            "text": "你好 complete",
+            "reasoningContent": "kept reasoning"
+          },
+          "timestamp": 1791206343813
+        }
+      ],
+      "fetchCalls": 1,
+      "responseLocked": false,
+      "nativeResponseClosed": true,
+      "finishedAt": "2026-10-05T13:19:03.813Z"
+    },
+    {
+      "name": "abort-between-tool-and-completed-usage",
+      "status": "PASS",
+      "startedAt": "2026-10-05T13:19:03.813Z",
+      "transport": "native-loopback-http",
+      "events": [
+        {
+          "type": "started",
+          "timestamp": 1791206343813
+        },
+        {
+          "type": "usage",
+          "usage": {
+            "inputTokens": 137,
+            "outputTokens": 23
+          },
+          "timestamp": 1791206343815
+        },
+        {
+          "type": "tool_call_delta",
+          "toolCall": {
+            "id": "call_one",
+            "name": "read_file",
+            "args": {
+              "path": "a.txt"
+            }
+          },
+          "timestamp": 1791206343815
+        },
+        {
+          "type": "completed",
+          "result": {
+            "finishReason": "cancelled",
+            "text": ""
+          },
+          "timestamp": 1791206343815
+        }
+      ],
+      "fetchCalls": 1,
+      "responseLocked": false,
+      "nativeResponseClosed": true,
+      "finishedAt": "2026-10-05T13:19:03.815Z"
+    },
+    {
+      "name": "abort-after-delivered-completed-usage",
+      "status": "PASS",
+      "startedAt": "2026-10-05T13:19:03.816Z",
+      "transport": "native-loopback-http",
+      "events": [
+        {
+          "type": "started",
+          "timestamp": 1791206343816
+        },
+        {
+          "type": "text_delta",
+          "text": "你好 complete",
+          "timestamp": 1791206343818
+        },
+        {
+          "type": "reasoning_delta",
+          "text": "kept reasoning",
+          "timestamp": 1791206343818
+        },
+        {
+          "type": "usage",
+          "usage": {
+            "inputTokens": 137,
+            "outputTokens": 23
+          },
+          "timestamp": 1791206343818
+        },
+        {
+          "type": "completed",
+          "result": {
+            "finishReason": "stop",
+            "text": "你好 complete",
+            "reasoningContent": "kept reasoning",
+            "usage": {
+              "inputTokens": 137,
+              "outputTokens": 23
+            }
+          },
+          "timestamp": 1791206343818
+        }
+      ],
+      "fetchCalls": 1,
+      "responseLocked": false,
+      "nativeResponseClosed": true,
+      "finishedAt": "2026-10-05T13:19:03.818Z"
+    },
+    {
+      "name": "buffered-caller-abort",
+      "status": "PASS",
+      "startedAt": "2026-10-05T13:19:03.819Z",
+      "transport": "native-readable-stream",
+      "events": [
+        {
+          "type": "started",
+          "timestamp": 1791206343819
+        },
+        {
+          "type": "text_delta",
+          "text": "你好 complete",
+          "timestamp": 1791206343820
+        },
+        {
+          "type": "completed",
+          "result": {
+            "finishReason": "cancelled",
+            "text": "你好 complete"
+          },
+          "timestamp": 1791206343820
+        }
+      ],
+      "fetchCalls": 1,
+      "readerLocked": false,
+      "cancelCount": 1,
+      "injectedCancelError": false,
+      "finishedAt": "2026-10-05T13:19:03.820Z"
+    },
+    {
+      "name": "consumer-return-cancel-release",
+      "status": "PASS",
+      "startedAt": "2026-10-05T13:19:03.820Z",
+      "transport": "native-readable-stream",
+      "events": [
+        {
+          "type": "started",
+          "timestamp": 1791206343820
+        },
+        {
+          "type": "text_delta",
+          "text": "你好 complete",
+          "timestamp": 1791206343820
+        }
+      ],
+      "fetchCalls": 1,
+      "readerLocked": false,
+      "cancelCount": 1,
+      "injectedCancelError": false,
+      "finishedAt": "2026-10-05T13:19:03.820Z"
+    },
+    {
+      "name": "cleanup-rejection-preserves-success",
+      "status": "PASS",
+      "startedAt": "2026-10-05T13:19:03.821Z",
+      "transport": "native-readable-stream",
+      "events": [
+        {
+          "type": "started",
+          "timestamp": 1791206343821
+        },
+        {
+          "type": "text_delta",
+          "text": "你好 complete",
+          "timestamp": 1791206343821
+        },
+        {
+          "type": "reasoning_delta",
+          "text": "kept reasoning",
+          "timestamp": 1791206343821
+        },
+        {
+          "type": "usage",
+          "usage": {
+            "inputTokens": 137,
+            "outputTokens": 23
+          },
+          "timestamp": 1791206343821
+        },
+        {
+          "type": "completed",
+          "result": {
+            "finishReason": "stop",
+            "text": "你好 complete",
+            "reasoningContent": "kept reasoning",
+            "usage": {
+              "inputTokens": 137,
+              "outputTokens": 23
+            }
+          },
+          "timestamp": 1791206343821
+        }
+      ],
+      "fetchCalls": 1,
+      "readerLocked": false,
+      "cancelCount": 1,
+      "injectedCancelError": true,
+      "finishedAt": "2026-10-05T13:19:03.821Z"
+    },
+    {
+      "name": "cleanup-rejection-preserves-cancel",
+      "status": "PASS",
+      "startedAt": "2026-10-05T13:19:03.822Z",
+      "transport": "native-readable-stream",
+      "events": [
+        {
+          "type": "started",
+          "timestamp": 1791206343822
+        },
+        {
+          "type": "text_delta",
+          "text": "你好 complete",
+          "timestamp": 1791206343822
+        },
+        {
+          "type": "completed",
+          "result": {
+            "finishReason": "cancelled",
+            "text": "你好 complete"
+          },
+          "timestamp": 1791206343822
+        }
+      ],
+      "fetchCalls": 1,
+      "readerLocked": false,
+      "cancelCount": 1,
+      "injectedCancelError": true,
+      "finishedAt": "2026-10-05T13:19:03.822Z"
+    },
+    {
+      "name": "reader-rejection-releases-lock",
+      "status": "PASS",
+      "startedAt": "2026-10-05T13:19:03.823Z",
+      "transport": "native-readable-stream",
+      "events": [
+        {
+          "type": "started",
+          "timestamp": 1791206343823
+        },
+        {
+          "type": "text_delta",
+          "text": "你好 complete",
+          "timestamp": 1791206343823
+        },
+        {
+          "type": "reasoning_delta",
+          "text": "kept reasoning",
+          "timestamp": 1791206343823
+        },
+        {
+          "type": "error",
+          "error": {
+            "code": "MODEL_ERROR",
+            "message": "OpenAI chat completion stream failed: fixture reader failure",
+            "retryable": false,
+            "safeToRetry": false,
+            "provider": {
+              "kind": "network"
+            }
+          },
+          "timestamp": 1791206343843
+        }
+      ],
+      "fetchCalls": 1,
+      "readerLocked": false,
+      "cancelCount": 0,
+      "injectedCancelError": false,
+      "finishedAt": "2026-10-05T13:19:03.844Z"
+    }
+  ],
+  "requests": [
+    {
+      "name": "stop-separate-footer",
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "stop-separate-footer"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true
+    },
+    {
+      "name": "tool_calls-separate-footer",
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "tool_calls-separate-footer"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true
+    },
+    {
+      "name": "split-crlf-utf8-footer",
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "split-crlf-utf8-footer"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true
+    },
+    {
+      "name": "partial-snapshot-final-footer",
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "partial-snapshot-final-footer"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true
+    },
+    {
+      "name": "same-frame-usage-open-transport",
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "same-frame-usage-open-transport"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true
+    },
+    {
+      "name": "separate-footer-open-transport",
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "separate-footer-open-transport"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true
+    },
+    {
+      "name": "stop-no-usage-done",
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "stop-no-usage-done"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true
+    },
+    {
+      "name": "stop-no-usage-eof",
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "stop-no-usage-eof"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true
+    },
+    {
+      "name": "tool_calls-no-usage-done",
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "tool_calls-no-usage-done"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true
+    },
+    {
+      "name": "tool_calls-no-usage-eof",
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "tool_calls-no-usage-eof"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true
+    },
+    {
+      "name": "missing-normal-done",
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "missing-normal-done"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true
+    },
+    {
+      "name": "missing-normal-eof",
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "missing-normal-eof"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true
+    },
+    {
+      "name": "footer-cannot-mutate-output",
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "footer-cannot-mutate-output"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true
+    },
+    {
+      "name": "footer-cannot-mutate-tool",
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "footer-cannot-mutate-tool"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true
+    },
+    {
+      "name": "abnormal-reason-open-transport",
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "abnormal-reason-open-transport"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true
+    },
+    {
+      "name": "native-caller-abort",
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "native-caller-abort"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true
+    },
+    {
+      "name": "native-footer-caller-abort",
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "native-footer-caller-abort"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true
+    },
+    {
+      "name": "native-footer-deadline",
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "native-footer-deadline"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true
+    },
+    {
+      "name": "native-footer-reader-error",
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "native-footer-reader-error"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true
+    },
+    {
+      "name": "native-consumer-early-return",
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "native-consumer-early-return"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true
+    },
+    {
+      "name": "abort-between-tool-and-completed-eof",
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "abort-between-tool-and-completed-eof"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true
+    },
+    {
+      "name": "abort-after-delivered-completed-eof",
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "abort-after-delivered-completed-eof"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true
+    },
+    {
+      "name": "abort-between-tool-and-completed-done",
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "abort-between-tool-and-completed-done"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true
+    },
+    {
+      "name": "abort-after-delivered-completed-done",
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "abort-after-delivered-completed-done"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true
+    },
+    {
+      "name": "abort-between-tool-and-completed-usage",
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "abort-between-tool-and-completed-usage"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true
+    },
+    {
+      "name": "abort-after-delivered-completed-usage",
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "abort-after-delivered-completed-usage"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true
+    }
+  ],
+  "sourceShaAtEnd": "5e4d9b8f23e596e887c18a46f8e031d41b8a458e",
+  "sourceTrackedDirtyAtEnd": false,
+  "sourceStatusAtEnd": "",
+  "sourceFingerprintsAfter": {
+    "packages/model/src/openai.ts": "5f2d341bc6299b689249699dfe2561ba1bc623e1ef836c53e4eb526511e1a481",
+    "packages/model/dist/openai.js": "a5bd50a96d1af60b9878a113fff879c2936500bdaa268c4bf8b9a959970a842b",
+    "packages/model/src/openai-stream-footer.regressions.test.ts": "786909f8060684646949f0c3a0cd32e71a395435f9ca4f4a92d405a3a8839980",
+    "packages/model/src/openai.test.ts": "2785e0311f055495d383d241de1a94123643b63fb6cf0c490839a0902c7618f3",
+    "scripts/research/agent-followup-20261005/provider-probe.mjs": "297f67bd6cfd7b0fcc987c7a4a0560085125dab2ef684f834da6f8e1f8481c96"
+  },
+  "caseCount": 31,
+  "passed": 31,
+  "failed": 0,
+  "httpRequestCount": 26,
+  "finishedAt": "2026-10-05T13:19:03.880Z"
+}

@@ -1,0 +1,18 @@
+{
+  "status": "STATIC_SELF_REVIEW_PASS_RUNTIME_PENDING",
+  "sourceSha": "5e4d9b8f23e596e887c18a46f8e031d41b8a458e",
+  "baselineSha": "9b0a46787ea6ffb17f8003bdf4953866e606151b",
+  "productionChanged": [
+    "packages/tools/src/tools/read-file.ts"
+  ],
+  "protectedUnchangedGitPaths": 624,
+  "finalTestBytesEqualValidRedV2": true,
+  "specSha256": "51b37811ceac7967efffa1a3314a1c9acfb97f2e704b4ab0cb221a3a68be6195",
+  "limits": [
+    "native Windows not run",
+    "kernel/filesystem open/stat operations are not forcibly cancellable",
+    "other file tools special-file behavior not fixed",
+    "no real model quality or promotion evaluation"
+  ],
+  "fixtureLineage": "See original development-lineage.json; green-v2 discarded as acceptance due concurrent temporary baseline restore. Final green rerun was serial."
+}

@@ -1,0 +1,239 @@
+[
+  {
+    "request": {
+      "system": "TOPLEVEL_SYSTEM_中文marker\n保留空白  和换行\n",
+      "messages": [
+        {
+          "id": "message_fixture",
+          "sessionId": "session_fixture",
+          "role": "user",
+          "content": "USER_MARKER",
+          "createdAt": 0
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "started",
+        "timestamp": 1791206344590
+      },
+      {
+        "type": "text_delta",
+        "text": "LOCAL_CONTEXT_PROBE_DONE",
+        "timestamp": 1791206344624
+      },
+      {
+        "type": "usage",
+        "usage": {
+          "inputTokens": 10,
+          "outputTokens": 6
+        },
+        "timestamp": 1791206344624
+      },
+      {
+        "type": "completed",
+        "result": {
+          "finishReason": "stop",
+          "text": "LOCAL_CONTEXT_PROBE_DONE",
+          "usage": {
+            "inputTokens": 10,
+            "outputTokens": 6
+          }
+        },
+        "timestamp": 1791206344624
+      }
+    ]
+  },
+  {
+    "request": {
+      "system": "TOPLEVEL_SYSTEM_中文marker\n保留空白  和换行\n",
+      "messages": [
+        {
+          "id": "message_fixture",
+          "sessionId": "session_fixture",
+          "role": "system",
+          "content": "HISTORY_SYSTEM_MARKER",
+          "createdAt": 0
+        },
+        {
+          "id": "message_fixture",
+          "sessionId": "session_fixture",
+          "role": "user",
+          "content": "USER_MARKER",
+          "createdAt": 0
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "started",
+        "timestamp": 1791206344628
+      },
+      {
+        "type": "text_delta",
+        "text": "LOCAL_CONTEXT_PROBE_DONE",
+        "timestamp": 1791206344632
+      },
+      {
+        "type": "usage",
+        "usage": {
+          "inputTokens": 10,
+          "outputTokens": 6
+        },
+        "timestamp": 1791206344632
+      },
+      {
+        "type": "completed",
+        "result": {
+          "finishReason": "stop",
+          "text": "LOCAL_CONTEXT_PROBE_DONE",
+          "usage": {
+            "inputTokens": 10,
+            "outputTokens": 6
+          }
+        },
+        "timestamp": 1791206344632
+      }
+    ]
+  },
+  {
+    "request": {
+      "messages": [
+        {
+          "id": "message_fixture",
+          "sessionId": "session_fixture",
+          "role": "system",
+          "content": "HISTORY_SYSTEM_MARKER",
+          "createdAt": 0
+        },
+        {
+          "id": "message_fixture",
+          "sessionId": "session_fixture",
+          "role": "user",
+          "content": "USER_MARKER",
+          "createdAt": 0
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "started",
+        "timestamp": 1791206344633
+      },
+      {
+        "type": "text_delta",
+        "text": "LOCAL_CONTEXT_PROBE_DONE",
+        "timestamp": 1791206344635
+      },
+      {
+        "type": "usage",
+        "usage": {
+          "inputTokens": 10,
+          "outputTokens": 6
+        },
+        "timestamp": 1791206344635
+      },
+      {
+        "type": "completed",
+        "result": {
+          "finishReason": "stop",
+          "text": "LOCAL_CONTEXT_PROBE_DONE",
+          "usage": {
+            "inputTokens": 10,
+            "outputTokens": 6
+          }
+        },
+        "timestamp": 1791206344635
+      }
+    ]
+  },
+  {
+    "request": {
+      "system": "",
+      "messages": [
+        {
+          "id": "message_fixture",
+          "sessionId": "session_fixture",
+          "role": "user",
+          "content": "USER_MARKER",
+          "createdAt": 0
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "started",
+        "timestamp": 1791206344635
+      },
+      {
+        "type": "text_delta",
+        "text": "LOCAL_CONTEXT_PROBE_DONE",
+        "timestamp": 1791206344638
+      },
+      {
+        "type": "usage",
+        "usage": {
+          "inputTokens": 10,
+          "outputTokens": 6
+        },
+        "timestamp": 1791206344638
+      },
+      {
+        "type": "completed",
+        "result": {
+          "finishReason": "stop",
+          "text": "LOCAL_CONTEXT_PROBE_DONE",
+          "usage": {
+            "inputTokens": 10,
+            "outputTokens": 6
+          }
+        },
+        "timestamp": 1791206344638
+      }
+    ]
+  },
+  {
+    "request": {
+      "messages": [
+        {
+          "id": "message_fixture",
+          "sessionId": "session_fixture",
+          "role": "user",
+          "content": "USER_MARKER",
+          "createdAt": 0
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "started",
+        "timestamp": 1791206344639
+      },
+      {
+        "type": "text_delta",
+        "text": "LOCAL_CONTEXT_PROBE_DONE",
+        "timestamp": 1791206344641
+      },
+      {
+        "type": "usage",
+        "usage": {
+          "inputTokens": 10,
+          "outputTokens": 6
+        },
+        "timestamp": 1791206344641
+      },
+      {
+        "type": "completed",
+        "result": {
+          "finishReason": "stop",
+          "text": "LOCAL_CONTEXT_PROBE_DONE",
+          "usage": {
+            "inputTokens": 10,
+            "outputTokens": 6
+          }
+        },
+        "timestamp": 1791206344641
+      }
+    ]
+  }
+]

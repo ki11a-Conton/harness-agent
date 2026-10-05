@@ -1,0 +1,51 @@
+{
+  "checkpointId": "checkpoint_95a4f83e-2e61-4009-85b2-ced852c34c55",
+  "schemaVersion": 1,
+  "sessionId": "session_bf8f66bb-e55f-49c6-a7bd-2778f41adf65",
+  "turnId": "turn_b10a5db2-aec9-4d17-bc0f-fa35819f675b",
+  "agentId": "agent_cce002ea-ad21-41ce-b5fe-1dd8e2cfde2a",
+  "createdAt": 1791206360849,
+  "reason": "verification:passed",
+  "phase": "thinking",
+  "iteration": 1,
+  "state": {
+    "goal": "[sandbox-deny]",
+    "constraints": [],
+    "plan": [],
+    "decisions": [],
+    "completed": [],
+    "pending": [],
+    "filesChanged": [],
+    "commandsRun": [],
+    "testsRun": [],
+    "failures": [
+      "write_file: sandbox denied: path outside workspace: /workspace/harness-agent/.ci/agent-next3-20261005/frozen/joint-browser/fixture/outside.txt"
+    ],
+    "importantFacts": [],
+    "openQuestions": [],
+    "toolRefs": [],
+    "artifactRefs": [],
+    "memoryRefs": [],
+    "childAgentRefs": []
+  },
+  "budgetUsage": {
+    "maxTokens": 89600,
+    "usedTokens": 165
+  },
+  "toolLedger": [
+    {
+      "toolCallId": "browser-call-7",
+      "tool": "write_file",
+      "argsHash": "4bd46a24aa972dc2039c5fa75939c76f527ea2497188b276646fb3cca272330a",
+      "started": 1791206360801,
+      "completed": 1791206360801,
+      "status": "denied",
+      "sideEffect": true
+    }
+  ],
+  "childSessions": [],
+  "lastEventSequence": 99,
+  "effectiveAgentConfigRef": "effectiveAgent",
+  "contextRefs": [],
+  "checksum": "f91e737b0d74e7a2b8ad638873d7c61526eeac1b5edb5a4d177bcc3c69a796dc"
+}

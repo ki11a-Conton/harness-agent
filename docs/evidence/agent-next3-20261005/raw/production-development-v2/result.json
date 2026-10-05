@@ -1,0 +1,591 @@
+{
+  "schemaVersion": "agent-next3-read-resource-v1",
+  "sourceSha": "2802f46f81276e41dbcd81bfd2fd095c9102b599",
+  "sourceTrackedDirtyAtStart": true,
+  "sourceFingerprintsBefore": {
+    "packages/tools/src/tools/read-file.ts": "f46f999cc6e95fe157b2679899cb55fb7a9b0172905d944f8e505cc1669c219d",
+    "packages/tools/src/file-coordination.ts": "d081877bfc8dce7c274f5381f0bfd5d1e2276494967dc1cf7ae0bbd4a6dc3a54",
+    "packages/tools/src/orchestrator.ts": "adcd42ba547d15e725b9d0236bd7ca550cf2f363e60f2ed10951f92d1604d3eb",
+    "packages/tools/dist/tools/read-file.js": "bbf2b37b488e8b35e27625e65d2469ecf70d5bd4799f67360a4dd35ee542350f",
+    "packages/tools/dist/file-coordination.js": "d5b477797c1ce797879a0a7ac77e266739c897c60266b920230bbc93c550c083",
+    "packages/tools/dist/orchestrator.js": "edda2f2b44e7352766b40fe6d599fcd2c408432a72f8ed75c60e99e36bb97766",
+    "packages/harness/dist/create-harness.js": "442874f7297e7e0b7df5e715af249457fbd0bf6cd33f15b75d5e198700ea29e3",
+    "scripts/research/agent-next3-20261005/read-resource-probe.mjs": "1da2c4710e284bdf7c411ee14f1b4962817dd5d883cd0502b62f101d29513fc6"
+  },
+  "paidProviderCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "windows": "NOT_RUN",
+  "cases": [
+    {
+      "name": "versioned-empty",
+      "status": "PASS",
+      "observed": {
+        "result": {
+          "status": "success",
+          "output": {
+            "path": "/tmp/ar-read-resource-probe-Xast5q/empty",
+            "content": "",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "read_file executed",
+              "source": "/tmp/ar-read-resource-probe-Xast5q/empty",
+              "timestamp": 1791206163397
+            }
+          ]
+        },
+        "elapsedMs": 4.278802999999982,
+        "operations": [
+          {
+            "path": "/tmp/ar-read-resource-probe-Xast5q/empty",
+            "flags": 2048,
+            "closed": true,
+            "reads": [
+              {
+                "signalPassed": true,
+                "started": 1791206163396,
+                "aborted": false
+              }
+            ],
+            "stats": 1
+          }
+        ],
+        "ownedAtReturn": 0,
+        "pendingReadsAtReturn": 0,
+        "locksAtReturn": 0
+      }
+    },
+    {
+      "name": "versioned-unicode-crlf",
+      "status": "PASS",
+      "observed": {
+        "result": {
+          "status": "success",
+          "output": {
+            "path": "/tmp/ar-read-resource-probe-Xast5q/unicode-crlf",
+            "content": "﻿中文\r\nbody\n",
+            "sha256": "5797ba743aa25a307549ac5574c6d791588f20e1b564cfc137de046ea419cf06",
+            "bytes": 16
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "read_file executed",
+              "source": "/tmp/ar-read-resource-probe-Xast5q/unicode-crlf",
+              "timestamp": 1791206163399
+            }
+          ]
+        },
+        "elapsedMs": 0.8757449999999949,
+        "operations": [
+          {
+            "path": "/tmp/ar-read-resource-probe-Xast5q/unicode-crlf",
+            "flags": 2048,
+            "closed": true,
+            "reads": [
+              {
+                "signalPassed": true,
+                "started": 1791206163399,
+                "aborted": false
+              }
+            ],
+            "stats": 1
+          }
+        ],
+        "ownedAtReturn": 0,
+        "pendingReadsAtReturn": 0,
+        "locksAtReturn": 0
+      }
+    },
+    {
+      "name": "versioned-invalid-utf8",
+      "status": "PASS",
+      "observed": {
+        "result": {
+          "status": "success",
+          "output": {
+            "path": "/tmp/ar-read-resource-probe-Xast5q/invalid-utf8",
+            "content": "�\nA",
+            "sha256": "d3c8c06db4587233260a5225c012c144f30ed936ab2c32d0900b4371db9d3249",
+            "bytes": 3
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "read_file executed",
+              "source": "/tmp/ar-read-resource-probe-Xast5q/invalid-utf8",
+              "timestamp": 1791206163400
+            }
+          ]
+        },
+        "elapsedMs": 0.7902150000000177,
+        "operations": [
+          {
+            "path": "/tmp/ar-read-resource-probe-Xast5q/invalid-utf8",
+            "flags": 2048,
+            "closed": true,
+            "reads": [
+              {
+                "signalPassed": true,
+                "started": 1791206163400,
+                "aborted": false
+              }
+            ],
+            "stats": 1
+          }
+        ],
+        "ownedAtReturn": 0,
+        "pendingReadsAtReturn": 0,
+        "locksAtReturn": 0
+      }
+    },
+    {
+      "name": "regular-default-string",
+      "status": "PASS",
+      "observed": {
+        "result": {
+          "status": "success",
+          "output": "﻿中文\r\nbody\n",
+          "evidence": [
+            {
+              "type": "file",
+              "description": "read_file executed",
+              "source": "/tmp/ar-read-resource-probe-Xast5q/regular",
+              "timestamp": 1791206163401
+            }
+          ]
+        },
+        "elapsedMs": 0.6849559999999997,
+        "operations": [
+          {
+            "path": "/tmp/ar-read-resource-probe-Xast5q/regular",
+            "flags": 2048,
+            "closed": true,
+            "reads": [
+              {
+                "signalPassed": true,
+                "started": 1791206163401,
+                "aborted": false
+              }
+            ],
+            "stats": 1
+          }
+        ],
+        "ownedAtReturn": 0,
+        "pendingReadsAtReturn": 0,
+        "locksAtReturn": 0
+      }
+    },
+    {
+      "name": "fifo-no-writer",
+      "status": "PASS",
+      "observed": {
+        "result": {
+          "status": "failed",
+          "error": {
+            "code": "PROCESS_ERROR",
+            "message": "read_file requires a regular file",
+            "retryable": false,
+            "safeToRetry": false
+          }
+        },
+        "elapsedMs": 1.0196229999999957,
+        "operations": [
+          {
+            "path": "/tmp/ar-read-resource-probe-Xast5q/pipe",
+            "flags": 2048,
+            "closed": true,
+            "reads": [],
+            "stats": 1
+          }
+        ],
+        "ownedAtReturn": 0,
+        "pendingReadsAtReturn": 0,
+        "locksAtReturn": 0
+      }
+    },
+    {
+      "name": "fifo-alias-no-writer",
+      "status": "PASS",
+      "observed": {
+        "result": {
+          "status": "failed",
+          "error": {
+            "code": "PROCESS_ERROR",
+            "message": "read_file requires a regular file",
+            "retryable": false,
+            "safeToRetry": false
+          }
+        },
+        "elapsedMs": 0.7053470000000175,
+        "operations": [
+          {
+            "path": "/tmp/ar-read-resource-probe-Xast5q/pipe-alias",
+            "flags": 2048,
+            "closed": true,
+            "reads": [],
+            "stats": 1
+          }
+        ],
+        "ownedAtReturn": 0,
+        "pendingReadsAtReturn": 0,
+        "locksAtReturn": 0
+      }
+    },
+    {
+      "name": "fifo-repeat-not-queued",
+      "status": "PASS",
+      "observed": {
+        "result": {
+          "status": "failed",
+          "error": {
+            "code": "PROCESS_ERROR",
+            "message": "read_file requires a regular file",
+            "retryable": false,
+            "safeToRetry": false
+          }
+        },
+        "elapsedMs": 0.49584999999999013,
+        "operations": [
+          {
+            "path": "/tmp/ar-read-resource-probe-Xast5q/pipe",
+            "flags": 2048,
+            "closed": true,
+            "reads": [],
+            "stats": 1
+          }
+        ],
+        "ownedAtReturn": 0,
+        "pendingReadsAtReturn": 0,
+        "locksAtReturn": 0
+      }
+    },
+    {
+      "name": "unix-socket-not-readable",
+      "status": "PASS",
+      "observed": {
+        "result": {
+          "status": "failed",
+          "error": {
+            "code": "PROCESS_ERROR",
+            "message": "ENXIO: no such device or address, open '/tmp/ar-read-resource-probe-Xast5q/socket'",
+            "retryable": false,
+            "safeToRetry": false
+          }
+        },
+        "elapsedMs": 0.4914630000000102,
+        "operations": [
+          {
+            "path": "/tmp/ar-read-resource-probe-Xast5q/socket",
+            "flags": 2048,
+            "closed": false,
+            "reads": [],
+            "stats": 0
+          }
+        ],
+        "ownedAtReturn": 0,
+        "pendingReadsAtReturn": 0,
+        "locksAtReturn": 0
+      }
+    },
+    {
+      "name": "directory-not-readable",
+      "status": "PASS",
+      "observed": {
+        "result": {
+          "status": "failed",
+          "error": {
+            "code": "PROCESS_ERROR",
+            "message": "read_file requires a regular file",
+            "retryable": false,
+            "safeToRetry": false
+          }
+        },
+        "elapsedMs": 0.6650459999999896,
+        "operations": [
+          {
+            "path": "/tmp/ar-read-resource-probe-Xast5q",
+            "flags": 2048,
+            "closed": true,
+            "reads": [],
+            "stats": 1
+          }
+        ],
+        "ownedAtReturn": 0,
+        "pendingReadsAtReturn": 0,
+        "locksAtReturn": 0
+      }
+    },
+    {
+      "name": "missing-native-error",
+      "status": "PASS",
+      "observed": {
+        "result": {
+          "status": "failed",
+          "error": {
+            "code": "PROCESS_ERROR",
+            "message": "ENOENT: no such file or directory, open '/tmp/ar-read-resource-probe-Xast5q/missing'",
+            "retryable": false,
+            "safeToRetry": false
+          }
+        },
+        "elapsedMs": 0.9483149999999796,
+        "operations": [
+          {
+            "path": "/tmp/ar-read-resource-probe-Xast5q/missing",
+            "flags": 2048,
+            "closed": false,
+            "reads": [],
+            "stats": 0
+          }
+        ],
+        "ownedAtReturn": 0,
+        "pendingReadsAtReturn": 0,
+        "locksAtReturn": 0
+      }
+    },
+    {
+      "name": "permission-deny-zero-open",
+      "status": "PASS",
+      "observed": {
+        "result": {
+          "status": "denied",
+          "error": {
+            "code": "PERMISSION_DENIED",
+            "message": "permission denied: rule 'anon' (deny) matched",
+            "retryable": false,
+            "safeToRetry": false
+          }
+        },
+        "elapsedMs": 0.1713890000000049,
+        "operations": [],
+        "ownedAtReturn": 0,
+        "pendingReadsAtReturn": 0,
+        "locksAtReturn": 0
+      }
+    },
+    {
+      "name": "sandbox-escape-zero-open",
+      "status": "PASS",
+      "observed": {
+        "result": {
+          "status": "denied",
+          "error": {
+            "code": "SANDBOX_FILESYSTEM_DENIED",
+            "message": "sandbox denied: path outside workspace: /tmp/escape",
+            "retryable": false,
+            "safeToRetry": false
+          }
+        },
+        "elapsedMs": 0.25586699999999496,
+        "operations": [],
+        "ownedAtReturn": 0,
+        "pendingReadsAtReturn": 0,
+        "locksAtReturn": 0
+      }
+    },
+    {
+      "name": "pre-abort-zero-open",
+      "status": "PASS",
+      "observed": {
+        "result": {
+          "status": "cancelled",
+          "error": {
+            "code": "USER_CANCELLED",
+            "message": "tool execution cancelled before dispatch",
+            "retryable": false,
+            "safeToRetry": false
+          }
+        },
+        "elapsedMs": 0.022755000000017844,
+        "operations": [],
+        "ownedAtReturn": 0,
+        "pendingReadsAtReturn": 0,
+        "locksAtReturn": 0
+      }
+    },
+    {
+      "name": "hard-regular-control",
+      "status": "PASS",
+      "observed": {
+        "result": {
+          "status": "success",
+          "output": "﻿中文\r\nbody\n",
+          "evidence": [
+            {
+              "type": "file",
+              "description": "read_file executed",
+              "source": "/tmp/ar-read-resource-probe-Xast5q/hard",
+              "timestamp": 1791206163412
+            }
+          ]
+        },
+        "elapsedMs": 0.5739379999999983,
+        "operations": [
+          {
+            "path": "/tmp/ar-read-resource-probe-Xast5q/hard",
+            "flags": 2048,
+            "closed": true,
+            "reads": [
+              {
+                "signalPassed": true,
+                "started": 1791206163412,
+                "aborted": false
+              }
+            ],
+            "stats": 1
+          }
+        ],
+        "ownedAtReturn": 0,
+        "pendingReadsAtReturn": 0,
+        "locksAtReturn": 0
+      }
+    },
+    {
+      "name": "alias-regular-control",
+      "status": "PASS",
+      "observed": {
+        "result": {
+          "status": "success",
+          "output": "﻿中文\r\nbody\n",
+          "evidence": [
+            {
+              "type": "file",
+              "description": "read_file executed",
+              "source": "/tmp/ar-read-resource-probe-Xast5q/alias",
+              "timestamp": 1791206163413
+            }
+          ]
+        },
+        "elapsedMs": 0.7623229999999808,
+        "operations": [
+          {
+            "path": "/tmp/ar-read-resource-probe-Xast5q/alias",
+            "flags": 2048,
+            "closed": true,
+            "reads": [
+              {
+                "signalPassed": true,
+                "started": 1791206163413,
+                "aborted": false
+              }
+            ],
+            "stats": 1
+          }
+        ],
+        "ownedAtReturn": 0,
+        "pendingReadsAtReturn": 0,
+        "locksAtReturn": 0
+      }
+    },
+    {
+      "name": "native-read-caller-abort",
+      "status": "PASS",
+      "observed": {
+        "result": {
+          "status": "cancelled"
+        },
+        "elapsedMs": 0.6884119999999996,
+        "operations": [
+          {
+            "path": "/tmp/ar-read-resource-probe-Xast5q/regular",
+            "flags": 2048,
+            "closed": true,
+            "reads": [
+              {
+                "signalPassed": true,
+                "started": 1791206163414,
+                "aborted": true
+              }
+            ],
+            "stats": 1
+          }
+        ],
+        "ownedAtReturn": 0,
+        "pendingReadsAtReturn": 0,
+        "locksAtReturn": 0
+      }
+    },
+    {
+      "name": "queued-reader-cancellation",
+      "status": "PASS",
+      "observed": {
+        "result": {
+          "status": "cancelled"
+        },
+        "elapsedMs": 19.965294999999998,
+        "operations": [],
+        "ownedAtReturn": 0,
+        "pendingReadsAtReturn": 0,
+        "locksAtReturn": 2
+      }
+    },
+    {
+      "name": "actual-harness-search-read-conditional-edit",
+      "status": "PASS",
+      "observed": {
+        "actualHarnessTurns": 1,
+        "actualScriptedModelRequests": 4,
+        "successfulTools": 3,
+        "raw": "harness-search-read-edit.json",
+        "outcome": {
+          "status": "completed",
+          "statusDetail": "completed",
+          "turn": {
+            "id": "turn_9115748d-7c6f-487b-8513-7d6ceb1f226a",
+            "sessionId": "session_00e19396-36a4-4e26-8be2-8978d4cc7266",
+            "input": {
+              "sessionId": "session_00e19396-36a4-4e26-8be2-8978d4cc7266",
+              "text": "Find, read and edit the target"
+            },
+            "status": "completed",
+            "startedAt": 1791206163446,
+            "completedAt": 1791206163509
+          },
+          "toolCalls": 3,
+          "iterations": 3,
+          "state": {
+            "goal": "Find, read and edit the target",
+            "constraints": [],
+            "plan": [],
+            "decisions": [],
+            "completed": [
+              "modified src/target.txt"
+            ],
+            "pending": [],
+            "filesChanged": [
+              "src/target.txt"
+            ],
+            "commandsRun": [],
+            "testsRun": [],
+            "failures": [],
+            "importantFacts": [],
+            "openQuestions": [],
+            "toolRefs": [],
+            "artifactRefs": [],
+            "memoryRefs": [],
+            "childAgentRefs": []
+          },
+          "terminationReason": "model_stopped",
+          "grade": "unverified_complete"
+        }
+      }
+    }
+  ],
+  "sourceShaAtEnd": "2802f46f81276e41dbcd81bfd2fd095c9102b599",
+  "sourceTrackedDirtyAtEnd": true,
+  "sourceFingerprintsAfter": {
+    "packages/tools/src/tools/read-file.ts": "f46f999cc6e95fe157b2679899cb55fb7a9b0172905d944f8e505cc1669c219d",
+    "packages/tools/src/file-coordination.ts": "d081877bfc8dce7c274f5381f0bfd5d1e2276494967dc1cf7ae0bbd4a6dc3a54",
+    "packages/tools/src/orchestrator.ts": "adcd42ba547d15e725b9d0236bd7ca550cf2f363e60f2ed10951f92d1604d3eb",
+    "packages/tools/dist/tools/read-file.js": "bbf2b37b488e8b35e27625e65d2469ecf70d5bd4799f67360a4dd35ee542350f",
+    "packages/tools/dist/file-coordination.js": "d5b477797c1ce797879a0a7ac77e266739c897c60266b920230bbc93c550c083",
+    "packages/tools/dist/orchestrator.js": "edda2f2b44e7352766b40fe6d599fcd2c408432a72f8ed75c60e99e36bb97766",
+    "packages/harness/dist/create-harness.js": "442874f7297e7e0b7df5e715af249457fbd0bf6cd33f15b75d5e198700ea29e3",
+    "scripts/research/agent-next3-20261005/read-resource-probe.mjs": "1da2c4710e284bdf7c411ee14f1b4962817dd5d883cd0502b62f101d29513fc6"
+  },
+  "status": "PASS"
+}

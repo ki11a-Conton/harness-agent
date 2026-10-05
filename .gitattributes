@@ -122,3 +122,9 @@ docs/evidence/agent-next2-20261005/raw/**/*.log -whitespace
 docs/evidence/agent-next2-20261005/raw/**/*.diff -whitespace
 docs/evidence/agent-next2-20261005/raw/**/*.ts whitespace=cr-at-eol
 scripts/research/agent-next2-20261005/* text eol=lf
+
+# Preserve read resource maintenance originals and reporter bytes.
+docs/evidence/agent-next3-20261005/raw/** -text
+docs/evidence/agent-next3-20261005/raw/**/*.log -whitespace
+docs/evidence/agent-next3-20261005/raw/**/*.ts whitespace=cr-at-eol
+scripts/research/agent-next3-20261005/* text eol=lf

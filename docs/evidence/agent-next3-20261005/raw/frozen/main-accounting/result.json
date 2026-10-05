@@ -1,0 +1,130 @@
+{
+  "sourceSha": "5e4d9b8f23e596e887c18a46f8e031d41b8a458e",
+  "sourceTrackedDirtyAtStart": false,
+  "paidCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "modelEndpoint": "loopback-only",
+  "credentialPolicy": "minimal child environment; synthetic key; no inherited credential values read",
+  "cases": [
+    {
+      "name": "direct-system-and-usage-0",
+      "status": "PASS",
+      "usage": {
+        "inputTokens": 10,
+        "outputTokens": 6
+      },
+      "requestSystem": "nonempty",
+      "historicalSystemPreserved": false
+    },
+    {
+      "name": "direct-system-and-usage-1",
+      "status": "PASS",
+      "usage": {
+        "inputTokens": 10,
+        "outputTokens": 6
+      },
+      "requestSystem": "nonempty",
+      "historicalSystemPreserved": true
+    },
+    {
+      "name": "direct-system-and-usage-2",
+      "status": "PASS",
+      "usage": {
+        "inputTokens": 10,
+        "outputTokens": 6
+      },
+      "requestSystem": "absent",
+      "historicalSystemPreserved": true
+    },
+    {
+      "name": "direct-system-and-usage-3",
+      "status": "PASS",
+      "usage": {
+        "inputTokens": 10,
+        "outputTokens": 6
+      },
+      "requestSystem": "empty",
+      "historicalSystemPreserved": false
+    },
+    {
+      "name": "direct-system-and-usage-4",
+      "status": "PASS",
+      "usage": {
+        "inputTokens": 10,
+        "outputTokens": 6
+      },
+      "requestSystem": "absent",
+      "historicalSystemPreserved": false
+    },
+    {
+      "name": "actual-cli-usage-memory-and-AGENTS-tool-loop",
+      "status": "PASS",
+      "modelRequests": 2,
+      "accounting": {
+        "modelCalls": 2,
+        "inputTokens": 20,
+        "outputTokens": 12,
+        "source": "measured"
+      },
+      "memoryFeedback": {
+        "retrievedCount": 1,
+        "injectedCount": 1,
+        "usedCount": 1,
+        "taskSuccessCount": 1,
+        "verificationPassedCount": 0,
+        "score": 0.8425
+      },
+      "durableEvents": 29,
+      "processExit": 0
+    },
+    {
+      "name": "actual-web-usage-default-system-normal-and-tool-loop",
+      "status": "PASS",
+      "modelRequests": 3,
+      "accounting": {
+        "modelCalls": 3,
+        "inputTokens": 30,
+        "outputTokens": 18,
+        "source": "measured"
+      },
+      "completedTurns": 2,
+      "durableEvents": 36,
+      "memoryDefaultDisabled": true,
+      "processExit": 0
+    }
+  ],
+  "status": "PASS",
+  "sourceShaAtEnd": "5e4d9b8f23e596e887c18a46f8e031d41b8a458e",
+  "sourceFingerprintsBefore": {
+    "packages/model/src/openai.ts": "5f2d341bc6299b689249699dfe2561ba1bc623e1ef836c53e4eb526511e1a481",
+    "packages/model/dist/openai.js": "a5bd50a96d1af60b9878a113fff879c2936500bdaa268c4bf8b9a959970a842b",
+    "apps/cli/src/main.ts": "883fc942de4dcc4adac47d5a54fbe2d42a20322dd98e6d4e2ec56171440d8cc9",
+    "apps/cli/dist/main.js": "eeeea352f78ffb3647befb3cc856974765d110c896682dd7df5f5e7d33ea3a50",
+    "apps/cli/src/champion-application.ts": "b999ab04721366fa4d17e603ecbc1bff6ece1f6b2d4f246ed3926594f0f71080",
+    "apps/cli/dist/champion-application.js": "173318830d3bf233c278f14642952e27dcdfdd554ad3fc8572c6a162944181e8",
+    "apps/web/src/main.ts": "8635759dd6e63f6296ad16a7756285ed23145192d20ded04609fbab4efd78402",
+    "apps/web/dist/main.js": "672cd366b19ef2ab8c7d2d938588c9ab3bb0eab6f46848b05a872b21fcef25c4",
+    "packages/harness/src/create-harness.ts": "a115aa9c8ec71b86e689e80ab9195c21cd85c8f19a0d9de669e9e19d8becf84e",
+    "packages/harness/dist/create-harness.js": "442874f7297e7e0b7df5e715af249457fbd0bf6cd33f15b75d5e198700ea29e3",
+    "packages/context/src/discovery.ts": "1bdec0d2aa562b210870cf577adb56ad872b6c860b66979ae87903d1b83c3a67",
+    "packages/context/dist/discovery.js": "1ce3ddb756a5414cb02f9de2eefb6a1099576c45bce17635cd2690b984afe9d5"
+  },
+  "sourceFingerprintsAfter": {
+    "packages/model/src/openai.ts": "5f2d341bc6299b689249699dfe2561ba1bc623e1ef836c53e4eb526511e1a481",
+    "packages/model/dist/openai.js": "a5bd50a96d1af60b9878a113fff879c2936500bdaa268c4bf8b9a959970a842b",
+    "apps/cli/src/main.ts": "883fc942de4dcc4adac47d5a54fbe2d42a20322dd98e6d4e2ec56171440d8cc9",
+    "apps/cli/dist/main.js": "eeeea352f78ffb3647befb3cc856974765d110c896682dd7df5f5e7d33ea3a50",
+    "apps/cli/src/champion-application.ts": "b999ab04721366fa4d17e603ecbc1bff6ece1f6b2d4f246ed3926594f0f71080",
+    "apps/cli/dist/champion-application.js": "173318830d3bf233c278f14642952e27dcdfdd554ad3fc8572c6a162944181e8",
+    "apps/web/src/main.ts": "8635759dd6e63f6296ad16a7756285ed23145192d20ded04609fbab4efd78402",
+    "apps/web/dist/main.js": "672cd366b19ef2ab8c7d2d938588c9ab3bb0eab6f46848b05a872b21fcef25c4",
+    "packages/harness/src/create-harness.ts": "a115aa9c8ec71b86e689e80ab9195c21cd85c8f19a0d9de669e9e19d8becf84e",
+    "packages/harness/dist/create-harness.js": "442874f7297e7e0b7df5e715af249457fbd0bf6cd33f15b75d5e198700ea29e3",
+    "packages/context/src/discovery.ts": "1bdec0d2aa562b210870cf577adb56ad872b6c860b66979ae87903d1b83c3a67",
+    "packages/context/dist/discovery.js": "1ce3ddb756a5414cb02f9de2eefb6a1099576c45bce17635cd2690b984afe9d5"
+  },
+  "sourceTrackedDirtyAtEnd": false,
+  "modelRequests": 10,
+  "probeSha256": "a6e1e25e8b59856734fd04cca8a5a1336383391ef9583f6d987663a4e11c5039",
+  "workerSha256": "67d08d340e834748a9cf078968fd9756d8e2856800253a1a645c147ace035b57"
+}

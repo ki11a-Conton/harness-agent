@@ -1,0 +1,121 @@
+{
+  "sourceSha": "9b0a46787ea6ffb17f8003bdf4953866e606151b",
+  "trackedDirtyAtStart": false,
+  "before": {
+    "packages/tools/src/tools/read-file.ts": "becc6263cca637b70bd73c3fe52348a18506e413ec9dc477b723436c7dbc7515",
+    "packages/tools/src/file-coordination.ts": "d081877bfc8dce7c274f5381f0bfd5d1e2276494967dc1cf7ae0bbd4a6dc3a54",
+    "packages/tools/src/orchestrator.ts": "adcd42ba547d15e725b9d0236bd7ca550cf2f363e60f2ed10951f92d1604d3eb",
+    "packages/tools/dist/tools/read-file.js": "fde9c62fdf03b294394fdf524b171eec760fee2c28cbd9648eb8e594e0a2565e",
+    "packages/tools/dist/file-coordination.js": "d5b477797c1ce797879a0a7ac77e266739c897c60266b920230bbc93c550c083"
+  },
+  "profile": "production registry/orchestrator/permission/sandbox on native FIFO with bounded rescue writers",
+  "paidCalls": 0,
+  "cases": [
+    {
+      "id": "FIFO_TIMEOUT_RETAINS_BACKGROUND_READ_AND_FILE_LOCK",
+      "first": {
+        "startedAt": 1791205599182,
+        "elapsedMs": 62,
+        "result": {
+          "status": "timeout",
+          "error": {
+            "code": "PROCESS_TIMEOUT",
+            "message": "tool execution timed out",
+            "retryable": true,
+            "safeToRetry": false
+          }
+        },
+        "liveLockEntriesAtReturn": 1
+      },
+      "queued": {
+        "startedAt": 1791205599244,
+        "elapsedMs": 42,
+        "result": {
+          "status": "timeout",
+          "error": {
+            "code": "PROCESS_TIMEOUT",
+            "message": "tool execution timed out",
+            "retryable": true,
+            "safeToRetry": false
+          }
+        },
+        "liveLockEntriesAtReturn": 1
+      },
+      "beforeRescue": {
+        "liveLockEntries": 1,
+        "nativeReadPending": 1
+      },
+      "afterRescue": {
+        "liveLockEntries": 0,
+        "nativeReadPending": 0
+      },
+      "status": "REPRODUCED_DEFECT"
+    },
+    {
+      "id": "FIFO_CALLER_CANCEL_WAITS_UNTIL_EXTERNAL_WRITER",
+      "abortAtMs": 20,
+      "writerScheduledAtMs": 180,
+      "observed": {
+        "startedAt": 1791205599556,
+        "elapsedMs": 182,
+        "result": {
+          "status": "cancelled"
+        },
+        "liveLockEntriesAtReturn": 0
+      },
+      "status": "REPRODUCED_DEFECT"
+    },
+    {
+      "id": "REGULAR_FILE_CONTROL",
+      "observed": {
+        "startedAt": 1791205599739,
+        "elapsedMs": 1,
+        "result": {
+          "status": "success",
+          "output": "REGULAR_CONTROL",
+          "evidence": [
+            {
+              "type": "file",
+              "description": "read_file executed",
+              "source": "/tmp/ar-read-fifo-audit-744bRE/regular.txt",
+              "timestamp": 1791205599740
+            }
+          ]
+        },
+        "liveLockEntriesAtReturn": 0
+      },
+      "status": "PASS"
+    }
+  ],
+  "nativeReads": [
+    {
+      "path": "/tmp/ar-read-fifo-audit-744bRE/blocked.pipe",
+      "signalPassed": false,
+      "startedAt": 1791205599185,
+      "settledAt": 1791205599534
+    },
+    {
+      "path": "/tmp/ar-read-fifo-audit-744bRE/cancelled.pipe",
+      "signalPassed": false,
+      "startedAt": 1791205599557,
+      "settledAt": 1791205599738
+    },
+    {
+      "path": "/tmp/ar-read-fifo-audit-744bRE/regular.txt",
+      "signalPassed": false,
+      "startedAt": 1791205599739,
+      "settledAt": 1791205599740
+    }
+  ],
+  "sourceShaAtEnd": "9b0a46787ea6ffb17f8003bdf4953866e606151b",
+  "trackedDirtyAtEnd": false,
+  "after": {
+    "packages/tools/src/tools/read-file.ts": "becc6263cca637b70bd73c3fe52348a18506e413ec9dc477b723436c7dbc7515",
+    "packages/tools/src/file-coordination.ts": "d081877bfc8dce7c274f5381f0bfd5d1e2276494967dc1cf7ae0bbd4a6dc3a54",
+    "packages/tools/src/orchestrator.ts": "adcd42ba547d15e725b9d0236bd7ca550cf2f363e60f2ed10951f92d1604d3eb",
+    "packages/tools/dist/tools/read-file.js": "fde9c62fdf03b294394fdf524b171eec760fee2c28cbd9648eb8e594e0a2565e",
+    "packages/tools/dist/file-coordination.js": "d5b477797c1ce797879a0a7ac77e266739c897c60266b920230bbc93c550c083"
+  },
+  "sourceUnchanged": true,
+  "status": "REPRODUCED_DEFECT"
+}

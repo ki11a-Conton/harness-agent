@@ -1,0 +1,22 @@
+{
+  "status": "EXPECTED_RED",
+  "sourceSha": "2802f46f81276e41dbcd81bfd2fd095c9102b599",
+  "productionBaselineSha": "9b0a46787ea6ffb17f8003bdf4953866e606151b",
+  "tests": {
+    "passed": 10,
+    "failed": 13,
+    "total": 23
+  },
+  "files": [
+    {
+      "sourcePath": "packages/tools/src/tools/read-file.ts",
+      "snapshot": "read-file.ts",
+      "sha256": "becc6263cca637b70bd73c3fe52348a18506e413ec9dc477b723436c7dbc7515"
+    },
+    {
+      "sourcePath": "packages/tools/src/read-file-resource.regressions.test.ts",
+      "snapshot": "read-file-resource.regressions.test.ts",
+      "sha256": "628f218d0088070dbdde0ee354c01e58c172090230a19ab40a5ab75829c1d5e0"
+    }
+  ]
+}

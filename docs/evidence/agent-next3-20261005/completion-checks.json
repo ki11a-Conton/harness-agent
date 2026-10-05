@@ -1,0 +1,69 @@
+{
+  "status": "PASS",
+  "testedSourceSha": "5e4d9b8f23e596e887c18a46f8e031d41b8a458e",
+  "scope": "Completion documents and preserved artifact bytes; no repeat of frozen full suite",
+  "commands": [
+    {
+      "name": "docs-verify",
+      "argv": [
+        "corepack",
+        "pnpm",
+        "docs:verify"
+      ],
+      "exitCode": 0,
+      "status": "PASS",
+      "logBytes": 1734,
+      "logSha256": "52ed0e63d02c9bc2621bd38ee3d18ce2464f7e4049664992081008c12da5c4c7",
+      "originalLogBase64": "JCBub2RlIGFwcHMvY2xpL2Rpc3QvbWFpbi5qcyBkb2NzOnZlcmlmeQpbaGFybmVzc10gY29udGV4dCBidWRnZXQ6IG1vZGVsIGNhcGFiaWxpdGllcyB1bmtub3duIGZvciBzdHViL3N0dWItbW9kZWwg4oCUIHVzaW5nIGNvbnNlcnZhdGl2ZSBmYWxsYmFjayAzMjAwMAojIERvY3VtZW50YXRpb24gdHJ1dGggdmVyaWZpY2F0aW9uCgpQQVNTICBiZW5jaG1hcmsgc3VpdGU6IHJlZ3Jlc3Npb24KICAgICAgMzAgY2FzZShzKSBvbiBkaXNrIG1hdGNoZXMgUkVBRE1FIGNsYWltIDMwClBBU1MgIGJlbmNobWFyayBzdWl0ZTogaG9sZG91dAogICAgICAzMiBjYXNlKHMpIG9uIGRpc2sgbWF0Y2hlcyBSRUFETUUgY2xhaW0gMzIKUEFTUyAgYmVuY2htYXJrIHN1aXRlOiBhZHZlcnNhcmlhbAogICAgICAxMyBjYXNlKHMpIG9uIGRpc2sgbWF0Y2hlcyBSRUFETUUgY2xhaW0gMTMKUEFTUyAgYmVuY2htYXJrIHN1aXRlOiBzdHJlc3MKICAgICAgMTEgY2FzZShzKSBvbiBkaXNrIG1hdGNoZXMgUkVBRE1FIGNsYWltIDExClBBU1MgIHBhY2thZ2UgY291bnQKICAgICAgMjQgcGFja2FnZXMvIG9uIGRpc2sgbWF0Y2hlcyB0aGUgSEFORE9WRVIgY2xhaW0gMjQKUEFTUyAgQ0kgZ2F0ZXMKICAgICAgLmdpdGh1Yi93b3JrZmxvd3MvY2kueW1sIHJ1bnMgdGVzdCBhbmQgY292ZXJhZ2UKUEFTUyAgSEFORE9WRVIgc3RhdGljIHRydXRoIChQMzguNC0xMCkKICAgICAgSEFORE9WRVIubWQgY2Fub25pY2FsIHNlY3Rpb24gY29udGFpbnMgbm8gdm9sYXRpbGUgU0hBL3J1bi1pZCDigJQgYSBuZXcgY29tbWl0IGRvZXMgbm90IG1ha2UgaXQgc3RhbGUKUEFTUyAgQ0FQQUJJTElUWV9NQVRSSVgubWQgbWFjaGluZS1nZW5lcmF0ZWQKICAgICAgQ0FQQUJJTElUWV9NQVRSSVgubWQgY2FycmllcyBnZW5lcmF0ZWRBdCArIHRoZSBhdWRpdCByZWNvcmRzIHRhYmxlClBBU1MgIENBUEFCSUxJVFlfTUFUUklYIG1hcmtlZCBpbmZvcm1hdGlvbmFsIChQMzguMi0xMSkKICAgICAgdHJhY2tlZCBtYXRyaXggaXMgZXhwbGljaXRseSBOT1QgUkVMRUFTRSBFVklERU5DRSAoaW5mb3JtYXRpb25hbCBzbmFwc2hvdCkKUEFTUyAgY2FwYWJpbGl0eSBwcm9maWxlcyBwcmVzZW50CiAgICAgIENBUEFCSUxJVFlfTUFUUklYLmpzb24gY2FycmllcyB0aGUgcGVyLXByb2ZpbGUgYnlQcm9maWxlIHZpZXcKUEFTUyAgZXZvbHV0aW9uIGxlZGdlciBjb25zaXN0ZW50IChFMi0xMikKICAgICAgZXZvbHV0aW9uLWxlZGdlci5qc29uIHZlcmlmaWVzOiByZWZzIGV4aXN0LCBkaWdlc3RzIG1hdGNoLCBzdW1tYXJpZXMgcmVjb21wdXRlLCBvbmUgYWN0aXZlIGNoYW1waW9uClBBU1MgIGN1cnJlbnQgcGxhbiBlbnRyeSAoRTQtMDApCiAgICAgIHBsYW4ubWQgaXMgdGhlIGN1cnJlbnQgZW50cnkgYW5kIHJlZmVyZW5jZXMgYW4gZXhpc3Rpbmcgc3BlYyBwbGFuKDIwMjYxMDA1LTIxMDgxOSkubWQKUEFTUyAgcmVsZWFzZSBnYXRlIGNvbW1hbmRzIGV4aXN0IGluIHBhY2thZ2UuanNvbiAoRTQtMTApCiAgICAgIGV2ZXJ5IHJlbGVhc2UtZ2F0ZSBjb21tYW5kIG1hcHMgdG8gYSByZWFsIHBhY2thZ2UuanNvbiBzY3JpcHQKUEFTUyAgZG9jdW1lbnRlZCBwbnBtIHNjcmlwdHMgZXhpc3QgaW4gcGFja2FnZS5qc29uIChFNC0xMCAjNikKICAgICAgZXZlcnkgcG5wbSBjb21tYW5kIGRvY3VtZW50ZWQgaW4gMiBSRUFETUUgZmlsZShzKSBtYXBzIHRvIGEgcmVhbCBwYWNrYWdlLmpzb24gc2NyaXB0CgpBTEwgQ0hFQ0tTIFBBU1MK"
+    },
+    {
+      "name": "artifact-integrity",
+      "argv": [
+        "node",
+        "scripts/research/agent-trust-20261004/verify-artifacts.mjs",
+        "docs/evidence/agent-next3-20261005/artifact-index.json"
+      ],
+      "exitCode": 0,
+      "status": "PASS",
+      "logBytes": 46,
+      "logSha256": "6a18cf0a1e66ad9c47db3122dc3622730cba22d848a2c8e562b1f8eadd02c42d",
+      "originalLogBase64": "eyJzdGF0dXMiOiJQQVNTIiwiZmlsZXMiOjEyNywiYnl0ZXMiOjMwODc2MTN9Cg=="
+    },
+    {
+      "name": "staged-diff-check",
+      "argv": [
+        "git",
+        "diff",
+        "--cached",
+        "--check"
+      ],
+      "exitCode": 0,
+      "status": "PASS",
+      "logBytes": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalLogBase64": ""
+    },
+    {
+      "name": "staged-byte-check",
+      "argv": [
+        "python3",
+        ".ci/agent-next3-20261005/check-staged.py"
+      ],
+      "exitCode": 0,
+      "status": "PASS",
+      "logBytes": 287,
+      "logSha256": "e0812d134eb23b29017bc4fb1683ae5d858f034ff754361a10b186d9ebfbb27b",
+      "originalLogBase64": "eyJzdGF0dXMiOiAiUEFTUyIsICJ0ZXN0ZWRTb3VyY2VTaGEiOiAiNWU0ZDliOGYyM2U1OTZlODg3YzE4YTQ2ZjhlMDMxZDQxYjhhNDU4ZSIsICJyYXdGaWxlcyI6IDEyNywgInJhd0J5dGVzIjogMzA4NzYxMywgIm9yaWdpbmFsV29ya2luZ0luZGV4QW5kU3RhZ2VkQmxvYkV4YWN0IjogdHJ1ZSwgImNvbXBsZXRpb25DaGFuZ2VzT25seURvY3NQbGFuVGFza0F0dHJpYnV0ZXMiOiB0cnVlLCAicHJlcmVnaXN0ZXJlZFNwZWNpZmljYXRpb25VbmNoYW5nZWQiOiB0cnVlLCAiY2hhbmdlZEZpbGVzIjogMTMzfQo="
+    }
+  ],
+  "stagedByteCheck": {
+    "status": "PASS",
+    "testedSourceSha": "5e4d9b8f23e596e887c18a46f8e031d41b8a458e",
+    "rawFiles": 127,
+    "rawBytes": 3087613,
+    "originalWorkingIndexAndStagedBlobExact": true,
+    "completionChangesOnlyDocsPlanTaskAttributes": true,
+    "preregisteredSpecificationUnchanged": true,
+    "changedFiles": 133
+  }
+}

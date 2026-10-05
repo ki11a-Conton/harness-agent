@@ -1,0 +1,153 @@
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+ ❯ packages/tools/src/read-file-resource.regressions.test.ts (23 tests | 13 failed) 642ms
+     × closes a successful read, versioned=false 22ms
+     × closes a successful read, versioned=true 3ms
+     × cancels at the open boundary and closes the handle 5ms
+     × cancels at the stat boundary and closes the handle 3ms
+     × cancels at the read boundary and closes the handle 2ms
+     × closes on a native stat failure 3ms
+     × closes on a native read failure 3ms
+     × reports a close failure and still releases coordination 2ms
+     × passes an effective timeout signal and cleans up after the race settles 2ms
+     ✓ cancels a queued reader without opening it 2ms
+     ✓ does zero opens on deny 1ms
+     ✓ does zero opens on pre-abort 1ms
+     ✓ does zero opens on escape 2ms
+     ✓ preserves the native missing-file error without a descriptor leak 3ms
+     × rejects a directory before reading it 3ms
+     × rejects native fifo without waiting for a writer 296ms
+     × rejects native alias without waiting for a writer 269ms
+     × rejects native replacement without waiting for a writer 7ms
+     ✓ preserves exact content and raw-byte version for {"type":"Buffer","data":[]} 3ms
+     ✓ preserves exact content and raw-byte version for {"type":"Buffer","data":[239,187,191,228,184,173,230,150,135,13,10,98,111,100,121,10]} 1ms
+     ✓ preserves exact content and raw-byte version for {"type":"Buffer","data":[255,10,65]} 3ms
+     ✓ reads an authorized hard alias 2ms
+     ✓ reads an authorized symlink alias 2ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 13 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/tools/src/read-file-resource.regressions.test.ts > read_file owned descriptors and cancellation > closes a successful read, versioned=false
+ FAIL  packages/tools/src/read-file-resource.regressions.test.ts > read_file owned descriptors and cancellation > closes a successful read, versioned=true
+AssertionError: expected "open" to be called 1 times, but got 0 times
+ ❯ packages/tools/src/read-file-resource.regressions.test.ts:47:59
+     45|     await fs.writeFile(join(root, "ok"), "ok"); const opened = observe…
+     46|     const result = await setup().invoke("ok", versioned);
+     47|     expect(result.status).toBe("success"); expect(opened).toHaveBeenCa…
+       |                                                           ^
+     48|     expect(opened.mock.calls[0]![1]).toBe(constants.O_RDONLY | (proces…
+     49|     expect(handles[0]!.close).toHaveBeenCalledTimes(1); expect(handles…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/13]⎯
+
+ FAIL  packages/tools/src/read-file-resource.regressions.test.ts > read_file owned descriptors and cancellation > cancels at the open boundary and closes the handle
+ FAIL  packages/tools/src/read-file-resource.regressions.test.ts > read_file owned descriptors and cancellation > cancels at the stat boundary and closes the handle
+ FAIL  packages/tools/src/read-file-resource.regressions.test.ts > read_file owned descriptors and cancellation > cancels at the read boundary and closes the handle
+AssertionError: expected 'success' to be 'cancelled' // Object.is equality
+
+Expected: "cancelled"
+Received: "success"
+
+ ❯ packages/tools/src/read-file-resource.regressions.test.ts:58:79
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/13]⎯
+
+ FAIL  packages/tools/src/read-file-resource.regressions.test.ts > read_file owned descriptors and cancellation > closes on a native stat failure
+ FAIL  packages/tools/src/read-file-resource.regressions.test.ts > read_file owned descriptors and cancellation > closes on a native read failure
+AssertionError: expected 'success' to be 'failed' // Object.is equality
+
+Expected: "failed"
+Received: "success"
+
+ ❯ packages/tools/src/read-file-resource.regressions.test.ts:64:70
+     62|     await fs.writeFile(join(root, "ok"), "ok");
+     63|     observe(h => { if (stage === "stat") vi.spyOn(h, "stat").mockRejec…
+     64|     const result = await setup().invoke("ok"); expect(result.status).t…
+       |                                                                      ^
+     65|     expect(handles[0]!.close).toHaveBeenCalledTimes(1); expect(handles…
+     66|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/13]⎯
+
+ FAIL  packages/tools/src/read-file-resource.regressions.test.ts > read_file owned descriptors and cancellation > reports a close failure and still releases coordination
+AssertionError: expected 'success' to be 'failed' // Object.is equality
+
+Expected: "failed"
+Received: "success"
+
+ ❯ packages/tools/src/read-file-resource.regressions.test.ts:69:70
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/13]⎯
+
+ FAIL  packages/tools/src/read-file-resource.regressions.test.ts > read_file owned descriptors and cancellation > passes an effective timeout signal and cleans up after the race settles
+AssertionError: expected 'success' to be 'timeout' // Object.is equality
+
+Expected: "timeout"
+Received: "success"
+
+ ❯ packages/tools/src/read-file-resource.regressions.test.ts:77:83
+     75|       received?.addEventListener("abort", () => reject(Object.assign(n…
+     76|     })); });
+     77|     const result = await setup(undefined, 25).invoke("ok"); expect(res…
+       |                                                                                   ^
+     78|     await vi.waitFor(() => { expect(handles[0]!.fd).toBe(-1); expect(f…
+     79|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/13]⎯
+
+ FAIL  packages/tools/src/read-file-resource.regressions.test.ts > read_file owned descriptors and cancellation > rejects a directory before reading it
+AssertionError: expected 'EISDIR: illegal operation on a direct…' to match /regular file/
+
+- Expected:
+/regular file/
+
++ Received:
+"EISDIR: illegal operation on a directory, read"
+
+ ❯ packages/tools/src/read-file-resource.regressions.test.ts:98:73
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/13]⎯
+
+ FAIL  packages/tools/src/read-file-resource.regressions.test.ts > read_file owned descriptors and cancellation > rejects native fifo without waiting for a writer
+ FAIL  packages/tools/src/read-file-resource.regressions.test.ts > read_file owned descriptors and cancellation > rejects native alias without waiting for a writer
+AssertionError: expected 'timeout' to be 'failed' // Object.is equality
+
+Expected: "failed"
+Received: "timeout"
+
+ ❯ packages/tools/src/read-file-resource.regressions.test.ts:111:27
+    109|     const start = performance.now(); const result = await setup(undefi…
+    110|     if (live) { await new Promise(r => setTimeout(r, 200)); await resc…
+    111|     expect(result.status).toBe("failed"); expect(result.error?.message…
+       |                           ^
+    112|   });
+    113|   it.each([Buffer.alloc(0), Buffer.from("\ufeff中文\r\nbody\n"), Buffer.…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/13]⎯
+
+ FAIL  packages/tools/src/read-file-resource.regressions.test.ts > read_file owned descriptors and cancellation > rejects native replacement without waiting for a writer
+AssertionError: expected 'success' to be 'failed' // Object.is equality
+
+Expected: "failed"
+Received: "success"
+
+ ❯ packages/tools/src/read-file-resource.regressions.test.ts:111:27
+    109|     const start = performance.now(); const result = await setup(undefi…
+    110|     if (live) { await new Promise(r => setTimeout(r, 200)); await resc…
+    111|     expect(result.status).toBe("failed"); expect(result.error?.message…
+       |                           ^
+    112|   });
+    113|   it.each([Buffer.alloc(0), Buffer.from("\ufeff中文\r\nbody\n"), Buffer.…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/13]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  13 failed | 10 passed (23)
+   Start at  13:12:35
+   Duration  1.40s (transform 436ms, setup 0ms, import 560ms, tests 642ms, environment 0ms)
+

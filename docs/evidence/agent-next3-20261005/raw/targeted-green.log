@@ -1,0 +1,65 @@
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+Exception in PromiseRejectCallback:
+/workspace/harness-agent/packages/tools/src/read-file-resource.regressions.test.ts:166
+				throw new Error("close-failure");
+				^
+
+RangeError: Maximum call stack size exceeded
+
+Exception in PromiseRejectCallback:
+file:///workspace/harness-agent/node_modules/.pnpm/@vitest+spy@4.1.10/node_modules/@vitest/spy/dist/index.js:361
+					returnValue.then((settledValue) => {
+					            ^
+
+RangeError: Maximum call stack size exceeded
+
+ ❯ packages/tools/src/read-file-resource.regressions.test.ts (23 tests | 1 failed) 110ms
+     ✓ closes a successful read, versioned=false 11ms
+     ✓ closes a successful read, versioned=true 3ms
+     ✓ cancels at the open boundary and closes the handle 2ms
+     ✓ cancels at the stat boundary and closes the handle 2ms
+     ✓ cancels at the read boundary and closes the handle 2ms
+     ✓ closes on a native stat failure 2ms
+     ✓ closes on a native read failure 1ms
+     × reports a close failure and still releases coordination 15ms
+     ✓ passes an effective timeout signal and cleans up after the race settles 34ms
+     ✓ cancels a queued reader without opening it 2ms
+     ✓ does zero opens on deny 4ms
+     ✓ does zero opens on pre-abort 1ms
+     ✓ does zero opens on escape 1ms
+     ✓ preserves the native missing-file error without a descriptor leak 4ms
+     ✓ rejects a directory before reading it 1ms
+     ✓ rejects native fifo without waiting for a writer 5ms
+     ✓ rejects native alias without waiting for a writer 3ms
+     ✓ rejects native replacement without waiting for a writer 9ms
+     ✓ preserves exact content and raw-byte version for {"type":"Buffer","data":[]} 2ms
+     ✓ preserves exact content and raw-byte version for {"type":"Buffer","data":[239,187,191,228,184,173,230,150,135,13,10,98,111,100,121,10]} 1ms
+     ✓ preserves exact content and raw-byte version for {"type":"Buffer","data":[255,10,65]} 1ms
+     ✓ reads an authorized hard alias 1ms
+     ✓ reads an authorized symlink alias 1ms
+ ✓ packages/tools/src/r4-file-regressions.test.ts (41 tests) 522ms
+ ✓ packages/tools/src/vs001.test.ts (13 tests) 357ms
+ ✓ packages/tools/src/scoped-search-paths.regressions.test.ts (24 tests) 75ms
+ ✓ packages/tools/src/review-regressions.test.ts (42 tests) 37ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/tools/src/read-file-resource.regressions.test.ts > read_file owned descriptors and cancellation > reports a close failure and still releases coordination
+AssertionError: expected 'Maximum call stack size exceeded' to contain 'close-failure'
+
+Expected: "close-failure"
+Received: "Maximum call stack size exceeded"
+
+ ❯ packages/tools/src/read-file-resource.regressions.test.ts:68:116
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 4 passed (5)
+      Tests  1 failed | 142 passed (143)
+   Start at  13:11:30
+   Duration  2.69s (transform 499ms, setup 0ms, import 1.01s, tests 1.10s, environment 0ms)
+
