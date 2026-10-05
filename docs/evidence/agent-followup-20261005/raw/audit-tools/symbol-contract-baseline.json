@@ -1,0 +1,305 @@
+{
+  "schema": "HARNESS_SYMBOL_CONTRACT_REPRO_V1",
+  "head": "f71b444eec6b4024039716a1a0a01bade22c90b0",
+  "profile": "production ToolRegistry + ToolOrchestrator + PermissionEngine + SandboxManager + actual real filesystem; no source mutation",
+  "paidCalls": 0,
+  "observedAt": "2026-10-05T03:35:19.556Z",
+  "hashes": {
+    "packages/tools/src/navigate.ts": "b0b42636455fe67d3a53c818452a04b1dd68e915cd978781b5da398720b2f866",
+    "packages/tools/src/symbol-index.ts": "d5db871a0d931abbd866bab5f2d9d8ba01c7083f89587bfdaf2f342c08958824",
+    "packages/tools/src/tools/navigation-tools.ts": "9ad61abf09717afe045103fc53dcf60a2a92442589a59b035c2241b4f4cf708d",
+    "packages/tools/src/orchestrator.ts": "adcd42ba547d15e725b9d0236bd7ca550cf2f363e60f2ed10951f92d1604d3eb",
+    "packages/tools/dist/navigate.js": "cb54641c91805789209ab1e73521542cceb022dbea41654c1b27663ca61273db",
+    "packages/tools/dist/symbol-index.js": "d94836d9cf77db6c055661dfa3281662cffdaea0ccf90eaa24e8c420f7daf6b4",
+    "packages/tools/dist/tools/navigation-tools.js": "0ae512939b4e425b902c5d9259c0e0a23cd2372cfed4f50126444677c2672f7b"
+  },
+  "checks": [
+    {
+      "id": "PYTHON_ONLY_CONTROL",
+      "expected": "Find only_python definition when no TS/JS exists",
+      "actual": {
+        "args": {
+          "symbol": "only_python"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": true,
+            "indexer": "regex-symbol-fallback (no semantic symbol index; connect a language server/LSP index to upgrade)",
+            "hits": [
+              {
+                "file": "python/logic.py",
+                "line": 4,
+                "kind": "def",
+                "name": "only_python",
+                "text": "def only_python("
+              }
+            ]
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 1 symbol(s) for only_python",
+              "source": "only_python",
+              "timestamp": 1791171319547
+            }
+          ]
+        },
+        "readFiles": [
+          "python/logic.py"
+        ]
+      },
+      "verdict": "PASS"
+    },
+    {
+      "id": "FALLBACK_FILTERS_DECLARED_NAME",
+      "expected": "No unrelated definition whose parameter happens to match the requested symbol",
+      "actual": {
+        "args": {
+          "symbol": "only_python"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": true,
+            "indexer": "regex-symbol-fallback (no semantic symbol index; connect a language server/LSP index to upgrade)",
+            "hits": [
+              {
+                "file": "python/logic.py",
+                "line": 4,
+                "kind": "def",
+                "name": "only_python",
+                "text": "def only_python("
+              }
+            ]
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 1 symbol(s) for only_python",
+              "source": "only_python",
+              "timestamp": 1791171319547
+            }
+          ]
+        },
+        "readFiles": [
+          "python/logic.py"
+        ]
+      },
+      "verdict": "PASS"
+    },
+    {
+      "id": "MIXED_REPO_RETURNS_NON_INDEXED_LANGUAGE",
+      "expected": "The same Python definition remains searchable after unrelated TS is added",
+      "actual": {
+        "args": {
+          "symbol": "only_python"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": false,
+            "indexer": "ts-regex-index",
+            "hits": [],
+            "filesIndexed": 1,
+            "indexFresh": true
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 0 symbol(s) for only_python (1 files indexed)",
+              "source": "only_python",
+              "timestamp": 1791171319548
+            }
+          ]
+        },
+        "readFiles": [
+          "ts/logic.ts"
+        ]
+      },
+      "verdict": "FAIL"
+    },
+    {
+      "id": "PYTHON_DIRECTORY_SCOPE_FALLBACK",
+      "expected": "A Python-only selected subtree uses the documented fallback despite TS elsewhere",
+      "actual": {
+        "args": {
+          "symbol": "only_python",
+          "path": "python"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": false,
+            "indexer": "ts-regex-index",
+            "hits": [],
+            "filesIndexed": 1,
+            "indexFresh": true
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 0 symbol(s) for only_python (1 files indexed)",
+              "source": "only_python",
+              "timestamp": 1791171319548
+            }
+          ]
+        },
+        "readFiles": []
+      },
+      "verdict": "FAIL"
+    },
+    {
+      "id": "RELATIVE_TS_SCOPE_CONTROL",
+      "expected": "Find the TS definition through the index",
+      "actual": {
+        "args": {
+          "symbol": "TsOnly",
+          "path": "ts"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": false,
+            "indexer": "ts-regex-index",
+            "hits": [
+              {
+                "file": "ts/logic.ts",
+                "line": 1,
+                "kind": "function",
+                "name": "TsOnly",
+                "text": "export function TsOnly() {}",
+                "role": "definition"
+              }
+            ],
+            "filesIndexed": 1,
+            "indexFresh": true
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 1 symbol(s) for TsOnly (1 files indexed)",
+              "source": "TsOnly",
+              "timestamp": 1791171319549
+            }
+          ]
+        },
+        "readFiles": []
+      },
+      "verdict": "PASS"
+    },
+    {
+      "id": "ABSOLUTE_IN_WORKSPACE_SCOPE_EQUIVALENT",
+      "expected": "A sandbox-admitted absolute path selects the same files as its relative alias",
+      "actual": {
+        "args": {
+          "symbol": "TsOnly",
+          "path": "/tmp/agent-symbol-contract-oIiawR/ts"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": false,
+            "indexer": "ts-regex-index",
+            "hits": [],
+            "filesIndexed": 1,
+            "indexFresh": true
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 0 symbol(s) for TsOnly (1 files indexed)",
+              "source": "TsOnly",
+              "timestamp": 1791171319550
+            }
+          ]
+        },
+        "readFiles": []
+      },
+      "verdict": "FAIL"
+    },
+    {
+      "id": "REQUESTED_SCOPE_LIMITS_SOURCE_READS",
+      "expected": "The selected ts subtree should not read private/secret.ts or python/logic.py",
+      "actual": {
+        "args": {
+          "symbol": "TsOnly",
+          "path": "ts"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": false,
+            "indexer": "ts-regex-index",
+            "hits": [
+              {
+                "file": "ts/logic.ts",
+                "line": 1,
+                "kind": "function",
+                "name": "TsOnly",
+                "text": "export function TsOnly() {}",
+                "role": "definition"
+              }
+            ],
+            "filesIndexed": 2,
+            "indexFresh": true
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 1 symbol(s) for TsOnly (2 files indexed)",
+              "source": "TsOnly",
+              "timestamp": 1791171319551
+            }
+          ]
+        },
+        "readFiles": [
+          "private/secret.ts"
+        ]
+      },
+      "verdict": "FAIL"
+    },
+    {
+      "id": "PERMISSION_DENY_CONTROL",
+      "expected": "Denied before filesystem source reads",
+      "actual": {
+        "args": {
+          "symbol": "TsOnly",
+          "path": "ts"
+        },
+        "result": {
+          "status": "denied",
+          "error": {
+            "code": "PERMISSION_DENIED",
+            "message": "permission denied: no rule matched read:file; fallback 'deny'",
+            "retryable": false,
+            "safeToRetry": false
+          }
+        },
+        "readFiles": []
+      },
+      "verdict": "PASS"
+    },
+    {
+      "id": "SANDBOX_DENY_CONTROL",
+      "expected": "Outside path denied before filesystem source reads",
+      "actual": {
+        "args": {
+          "symbol": "ExternalOnly",
+          "path": "/tmp/agent-symbol-outside-jrgzCU"
+        },
+        "result": {
+          "status": "denied",
+          "error": {
+            "code": "SANDBOX_FILESYSTEM_DENIED",
+            "message": "sandbox denied: path outside workspace: /tmp/agent-symbol-outside-jrgzCU",
+            "retryable": false,
+            "safeToRetry": false
+          }
+        },
+        "readFiles": []
+      },
+      "verdict": "PASS"
+    }
+  ]
+}

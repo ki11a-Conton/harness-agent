@@ -1,0 +1,15 @@
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+ ✓ packages/model/src/openai-stream-footer.regressions.test.ts (31 tests) 159ms
+[degraded] path-scoped-discovery.close: instruction handle cleanup failed
+ ✓ packages/context/src/scoped-instruction-read.regressions.test.ts (34 tests) 132ms
+ ✓ packages/tools/src/symbol-scope.regressions.test.ts (23 tests) 100ms
+[degraded] path-scoped-discovery.close: instruction handle cleanup failed
+ ✓ packages/harness/src/scoped-instruction-read.integration.test.ts (5 tests) 75ms
+
+ Test Files  4 passed (4)
+      Tests  93 passed (93)
+   Start at  05:42:28
+   Duration  2.97s (transform 1.47s, setup 0ms, import 2.06s, tests 467ms, environment 0ms)
+

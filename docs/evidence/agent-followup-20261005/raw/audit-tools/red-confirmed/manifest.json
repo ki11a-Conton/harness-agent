@@ -1,0 +1,24 @@
+{
+  "phase": "RED",
+  "sourceSHA": "b00299e5d0da03656c00e2041fc261aa01af6c96",
+  "dirt": " M packages/model/src/openai.ts\n?? packages/context/src/scoped-instruction-read.regressions.test.ts\n?? packages/model/src/openai-stream-footer.regressions.test.ts\n?? packages/tools/src/symbol-scope.regressions.test.ts\n?? scripts/research/agent-followup-20261005/\n",
+  "argv": [
+    "corepack",
+    "pnpm",
+    "exec",
+    "vitest",
+    "run",
+    "packages/tools/src/symbol-scope.regressions.test.ts",
+    "--reporter=verbose",
+    "--reporter=json",
+    "--outputFile=/workspace/harness-agent/.ci/agent-followup-20261005/audit-tools/red-confirmed/result.json"
+  ],
+  "exitCode": 1,
+  "sourceHashes": {
+    "packages/tools/src/navigate.ts": "b0b42636455fe67d3a53c818452a04b1dd68e915cd978781b5da398720b2f866",
+    "packages/tools/src/symbol-index.ts": "d5db871a0d931abbd866bab5f2d9d8ba01c7083f89587bfdaf2f342c08958824",
+    "packages/tools/src/tools/navigation-tools.ts": "9ad61abf09717afe045103fc53dcf60a2a92442589a59b035c2241b4f4cf708d",
+    "packages/tools/src/symbol-scope.regressions.test.ts": "e1be7c4174ed6c253a8e4b612f5de378621729e3bbb54360363b1c28e653b7b2"
+  },
+  "logSha256": "21dd7f58fb54ec61cc51af42e9c09ca236296760c796f1605aea3a59eb1245e8"
+}

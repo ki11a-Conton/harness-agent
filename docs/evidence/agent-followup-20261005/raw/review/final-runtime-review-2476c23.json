@@ -1,0 +1,220 @@
+{
+  "schemaVersion": "agent-followup-independent-final-runtime-review-v1",
+  "status": "FINAL_RUNTIME_REVIEW_PASS",
+  "reviewedAt": "2026-10-05T06:08:23.896355+00:00",
+  "testedSourceSha": "2476c23444079a2cba29480b35d65157cf30c0fd",
+  "baselineSha": "f71b444eec6b4024039716a1a0a01bade22c90b0",
+  "manifest": ".ci/agent-followup-20261005/frozen-2476c23/manifest.json",
+  "manifestSha256": "5766460040eec960a51935a352967dc4f60a02e9477d67f4c1d9232d41bb1944",
+  "cleanAtIndependentReview": true,
+  "mandatoryGates": 15,
+  "verifiedSourceFiles": 1081,
+  "allSourceBytesMatchExactSourceGitBlobs": true,
+  "verifiedBuiltDistFiles": 3488,
+  "sourceAndDistBeforeAfterUnchanged": true,
+  "verifiedGateLogs": {
+    "typecheck": {
+      "path": "typecheck.log",
+      "sha256": "faeaa94bcf7012d86f91ca647580449f56a263fb7eaf572c54789764f60a9b8f",
+      "bytes": 9,
+      "exitCode": 0
+    },
+    "build": {
+      "path": "build.log",
+      "sha256": "faeaa94bcf7012d86f91ca647580449f56a263fb7eaf572c54789764f60a9b8f",
+      "bytes": 9,
+      "exitCode": 0
+    },
+    "new-regressions": {
+      "path": "new-regressions.log",
+      "sha256": "107e28f2ab53220f815d047ba65edabe4c9c26e8646b28293c5da889155a1e61",
+      "bytes": 744,
+      "exitCode": 0
+    },
+    "related-integration": {
+      "path": "related-integration.log",
+      "sha256": "595fd662c62a707856feaea110c4335d5afbbedde266501f02f9e0d20e258d08",
+      "bytes": 6281,
+      "exitCode": 0
+    },
+    "provider-production": {
+      "path": "provider-production.log",
+      "sha256": "7d652a9deb7f0bc94e71b8a347ab5c2a71aa53264402ae5185a654fd49c92e8c",
+      "bytes": 890,
+      "exitCode": 0
+    },
+    "main-accounting": {
+      "path": "main-accounting.log",
+      "sha256": "ba0465e4139cc5f9e20c09f57ceec36803958dbc921dde531366ab047c51626f",
+      "bytes": 2100,
+      "exitCode": 0
+    },
+    "symbol-production": {
+      "path": "symbol-production.log",
+      "sha256": "ee1ba08e6f4d92047248fa3b6d4e7af11a19be958d44ee2fc8b98553e266ec08",
+      "bytes": 142,
+      "exitCode": 0
+    },
+    "instruction-production": {
+      "path": "instruction-production.log",
+      "sha256": "1674ca6ae4edf90a5cfa3c1d64b4100c57d144a3c36de184b2359d2d74ae6488",
+      "bytes": 298,
+      "exitCode": 0
+    },
+    "joint-browser": {
+      "path": "joint-browser.log",
+      "sha256": "6526595d64eb51165fa5ca94268ccdeed2e33a0c3800d5950b4fc4f41de5140a",
+      "bytes": 3188,
+      "exitCode": 0
+    },
+    "security": {
+      "path": "security.log",
+      "sha256": "a7b1bf07110906f958486ada08486703d5f0bdf3f088faac054959a9a31b2452",
+      "bytes": 1569,
+      "exitCode": 0
+    },
+    "docs-verify": {
+      "path": "docs-verify.log",
+      "sha256": "b1f9bc4d5c8647240915161b243366e4ad38eda3f0e3802e0e6f4f0c09cc778e",
+      "bytes": 1734,
+      "exitCode": 0
+    },
+    "full": {
+      "path": "full.log",
+      "sha256": "8ebeff96b2e6a452d8946e292a2874e0cc3cc8292d22c1745c51de4af204b971",
+      "bytes": 91912,
+      "exitCode": 0
+    },
+    "usage-audit": {
+      "path": "usage-audit.log",
+      "sha256": "f2cf7a87fa38978ce86d8717f2c58808bb41b78ea4b0f95a8c1d383987323dba",
+      "bytes": 763,
+      "exitCode": 0
+    },
+    "prior-artifact-integrity": {
+      "path": "prior-artifact-integrity.log",
+      "sha256": "8dd82035b86d05baedaee53cb9545ac0eed1d6f94d2ac2cf2030f92558bdae0c",
+      "bytes": 47,
+      "exitCode": 0
+    },
+    "diff-check": {
+      "path": "diff-check.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "exitCode": 0
+    }
+  },
+  "verifiedGateReceipts": {
+    "provider-production": {
+      "path": "r1-provider/result.json",
+      "sha256": "125c9341d2e1ec3c760d1368f4270a588599ee6b3a3e73dc9e7ff15658dc6cf5"
+    },
+    "main-accounting": {
+      "path": "r1-main/result.json",
+      "sha256": "fcb76d828d08cfa90c7e5b10410fc204a0e3abd66f4a87814c59e8ef3be9d7ba"
+    },
+    "symbol-production": {
+      "path": "r2-symbol/result.json",
+      "sha256": "33e04b72f551dd5fd3b9d6b5cdb4dffde04bfda4ad4db93dbd44d8d955c95e28"
+    },
+    "instruction-production": {
+      "path": "r3-instructions/result.json",
+      "sha256": "167fc836608aa46921d049bfafdba648572dae9bae6827c733a3ccf437cb0257"
+    },
+    "joint-browser": {
+      "path": "joint-browser/browser-result.json",
+      "sha256": "36087d36310a73457437fb5e3200f68f4c9304f8e7f1d338be8a25cd295c6c13"
+    }
+  },
+  "newRegressions": {
+    "files": {
+      "passed": 4,
+      "total": 4
+    },
+    "tests": {
+      "passed": 95,
+      "total": 95
+    }
+  },
+  "fullSuite": {
+    "filesPassed": 463,
+    "filesSkipped": 1,
+    "testsPassed": 8579,
+    "testsSkipped": 12,
+    "testsFailed": 0,
+    "testsTodo": 0,
+    "exitCode": 0,
+    "supervisorReapedOrphanDescendants": 70
+  },
+  "existingSkipLineage": {
+    "packages/tools/src/process/executor.test.ts": {
+      "actualSkippedCount": 7,
+      "sourceBytesIdenticalToBaseline": true,
+      "sourceSha256": "5cea7f0b3734b20f6a952429ba160a41ebdc336abe7f513248f4d362017044e9",
+      "reason": "Windows-only .cmd execution"
+    },
+    "packages/tools/src/process/r96-windows-execution-boundary.test.ts": {
+      "actualSkippedCount": 3,
+      "sourceBytesIdenticalToBaseline": true,
+      "sourceSha256": "e095ef76c58e021e784fc43cd08761bd0afa2655acbb9944190d81cafd30577f",
+      "reason": "Windows-only real processes"
+    },
+    "apps/cli/src/n5-pair-setup.test.ts": {
+      "actualSkippedCount": 1,
+      "sourceBytesIdenticalToBaseline": true,
+      "sourceSha256": "702a2ba481ee0b45fdfc0049de390a8b3f04213909758ea5d4f4f6139fe972ac",
+      "reason": "Historical objects exist; the mutually exclusive absence branch is skipped"
+    },
+    "apps/cli/src/n2-release-cli-forward.test.ts": {
+      "actualSkippedCount": 1,
+      "sourceBytesIdenticalToBaseline": true,
+      "sourceSha256": "6c6ebf33b1ae8f716329d3b61c33ecdc8bedc10d8180157651f700e36d3e1349",
+      "reason": "Explicit opt-in N2_RUN_RELEASE_E2E=1 not enabled"
+    }
+  },
+  "sameRunUsageAudit": {
+    "status": "PASS",
+    "strict": true,
+    "runId": "agent-followup-linux-2476c2344407-1791179412795188385",
+    "actualObservedRows": 7,
+    "candidateRows": 7,
+    "allSevenCapabilitiesObserved": true,
+    "allRowsBindExactTestedSourceAndPassedFrameworkResult": true,
+    "resultAndEvidenceDigestsRecomputedIndependently": true,
+    "observationSha256": "9d0579fb9680ebf662a0d77659e6b6050c67274b9fb23dadf280cd95618c4306",
+    "candidateSha256": "7ec12dff45e512b2fc8f72025b55e2f78edbdcb740c5fff5103dae3b3e7be334"
+  },
+  "browser": {
+    "status": "PASS",
+    "cases": 27,
+    "assertions": 77,
+    "caseScopedAssertions": 73,
+    "setupAssertionsOutsideCaseReceipts": 4,
+    "failed": 0,
+    "pageErrors": 0,
+    "sourceSha": "2476c23444079a2cba29480b35d65157cf30c0fd",
+    "sourceAndStaticAssetsFingerprintsVerified": true
+  },
+  "priorReviewReceipts": {
+    "static": {
+      "path": ".ci/agent-followup-20261005/review/static-review-2476c23.json",
+      "sha256": "c65a350b2790942e6429c37d8bf4bdf0802a89c69fc851324a9948d5fd848d7b"
+    },
+    "production": {
+      "path": ".ci/agent-followup-20261005/review/probe-review-2476c23.json",
+      "sha256": "3feb2d717f0b11d9d6c77f5e721a18bf929d802391fa497099969f6db57b3550"
+    }
+  },
+  "actualFailedAttemptsPreserved": [
+    "frozen-be53708: actual new silent-cleanup security defect",
+    "frozen-670561b: actual missing current-plan documentation marker",
+    "frozen-80a415d: wrong supplied expected SHA precondition, zero commands executed"
+  ],
+  "limits": [
+    "No paid model calls; real model task quality/champion promotion NOT_RUN.",
+    "Windows native execution NOT_RUN; ten actual skipped platform-specific cases retained.",
+    "R3 validates the complete bounded capture prefix, not unread bytes beyond cap+4.",
+    "Independent review does not rerun suites or mutate tracked files.",
+    "Archive/publication completion is pending separate byte review and native SHA equality."
+  ]
+}

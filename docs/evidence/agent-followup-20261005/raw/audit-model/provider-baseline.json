@@ -1,0 +1,58 @@
+{
+  "usageFooter": {
+    "expected": {
+      "inputTokens": 137,
+      "outputTokens": 23
+    },
+    "actual": null,
+    "usageEventCount": 0,
+    "events": [
+      {
+        "type": "started",
+        "timestamp": 1791171264061
+      },
+      {
+        "type": "text_delta",
+        "text": "complete",
+        "timestamp": 1791171264084
+      },
+      {
+        "type": "completed",
+        "result": {
+          "finishReason": "stop",
+          "text": "complete"
+        },
+        "timestamp": 1791171264085
+      }
+    ],
+    "requests": [
+      {
+        "path": "/v1/chat/completions",
+        "body": {
+          "model": "gpt-4o-mini",
+          "messages": [],
+          "stream": true,
+          "stream_options": {
+            "include_usage": true
+          }
+        }
+      }
+    ]
+  },
+  "earlyReturnCleanup": {
+    "expectedCancellationCount": 1,
+    "actualCancellationCount": 0,
+    "readerRemainsLocked": true,
+    "events": [
+      {
+        "type": "started",
+        "timestamp": 1791171264085
+      },
+      {
+        "type": "text_delta",
+        "text": "first",
+        "timestamp": 1791171264086
+      }
+    ]
+  }
+}

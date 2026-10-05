@@ -1,0 +1,721 @@
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+ × packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > only lists, stats and reads the selected TS directory on a cold query 17ms
+   → /tmp/ar-symbol-scope-9V3fOx/private/secret.ts
+/tmp/ar-symbol-scope-9V3fOx/ts/a.ts
+/tmp/ar-symbol-scope-9V3fOx/ts/b.ts
+/tmp/ar-symbol-scope-9V3fOx/tsx/a.ts
+/tmp/ar-symbol-scope-9V3fOx
+/tmp/ar-symbol-scope-9V3fOx/private
+/tmp/ar-symbol-scope-9V3fOx/py
+/tmp/ar-symbol-scope-9V3fOx/ts
+/tmp/ar-symbol-scope-9V3fOx/tsx
+/tmp/ar-symbol-scope-9V3fOx/private/secret.ts
+/tmp/ar-symbol-scope-9V3fOx/ts/a.ts
+/tmp/ar-symbol-scope-9V3fOx/ts/b.ts
+/tmp/ar-symbol-scope-9V3fOx/tsx/a.ts: expected false to be true // Object.is equality
+ × packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > only stats and reads the selected TS file rather than its siblings 5ms
+   → /tmp/ar-symbol-scope-1Fv5Nm/private/secret.ts
+/tmp/ar-symbol-scope-1Fv5Nm/ts/a.ts
+/tmp/ar-symbol-scope-1Fv5Nm/ts/b.ts
+/tmp/ar-symbol-scope-1Fv5Nm/tsx/a.ts
+/tmp/ar-symbol-scope-1Fv5Nm
+/tmp/ar-symbol-scope-1Fv5Nm/private
+/tmp/ar-symbol-scope-1Fv5Nm/py
+/tmp/ar-symbol-scope-1Fv5Nm/ts
+/tmp/ar-symbol-scope-1Fv5Nm/tsx
+/tmp/ar-symbol-scope-1Fv5Nm/private/secret.ts
+/tmp/ar-symbol-scope-1Fv5Nm/ts/a.ts
+/tmp/ar-symbol-scope-1Fv5Nm/ts/b.ts
+/tmp/ar-symbol-scope-1Fv5Nm/tsx/a.ts: expected false to be true // Object.is equality
+ × packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > uses the existing fallback for a Python-only directory in a mixed repository 7ms
+   → expected { fallback: false, …(4) } to match object { fallback: true, hits: [ { …(3) } ] }
+(3 matching properties omitted from actual)
+ × packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > uses the existing fallback for a selected Python file 7ms
+   → expected { fallback: false, …(4) } to match object { fallback: true, hits: [ { …(3) } ] }
+(3 matching properties omitted from actual)
+ × packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > recovers Python when the root's TS/JS index has no query hit 4ms
+   → expected { fallback: false, …(4) } to match object { fallback: true, hits: [ { …(3) } ] }
+(3 matching properties omitted from actual)
+ ✓ packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > retains indexed hits as the priority without merging Python definitions 3ms
+ × packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > gives identical root-relative hits for absolute and relative TS scope ts 5ms
+   → expected [] to deeply equal [ { file: 'ts/a.ts', line: 1, …(4) } ]
+ × packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > gives identical root-relative hits for absolute and relative TS scope ts/a.ts 5ms
+   → expected [] to deeply equal [ { file: 'ts/a.ts', line: 1, …(4) } ]
+ × packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > gives identical root-relative hits for absolute and relative Python scope py 3ms
+   → expected [] to not have a length of +0
+ × packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > gives identical root-relative hits for absolute and relative Python scope py/logic.py 3ms
+   → expected [] to not have a length of +0
+ × packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > normalizes aliases and retains directory boundaries 3ms
+   → /tmp/ar-symbol-scope-JP0Ip0/private/secret.ts
+/tmp/ar-symbol-scope-JP0Ip0/ts/a.ts
+/tmp/ar-symbol-scope-JP0Ip0/ts/b.ts
+/tmp/ar-symbol-scope-JP0Ip0/tsx/a.ts
+/tmp/ar-symbol-scope-JP0Ip0
+/tmp/ar-symbol-scope-JP0Ip0/private
+/tmp/ar-symbol-scope-JP0Ip0/py
+/tmp/ar-symbol-scope-JP0Ip0/ts
+/tmp/ar-symbol-scope-JP0Ip0/tsx
+/tmp/ar-symbol-scope-JP0Ip0/private/secret.ts
+/tmp/ar-symbol-scope-JP0Ip0/ts/a.ts
+/tmp/ar-symbol-scope-JP0Ip0/ts/b.ts
+/tmp/ar-symbol-scope-JP0Ip0/tsx/a.ts: expected false to be true // Object.is equality
+ × packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > reuses unchanged scoped contents on warm validation without accessing other scopes 4ms
+   → /tmp/ar-symbol-scope-MGjMih
+/tmp/ar-symbol-scope-MGjMih/private
+/tmp/ar-symbol-scope-MGjMih/py
+/tmp/ar-symbol-scope-MGjMih/ts
+/tmp/ar-symbol-scope-MGjMih/tsx
+/tmp/ar-symbol-scope-MGjMih/private/secret.ts
+/tmp/ar-symbol-scope-MGjMih/ts/a.ts
+/tmp/ar-symbol-scope-MGjMih/ts/b.ts
+/tmp/ar-symbol-scope-MGjMih/tsx/a.ts: expected false to be true // Object.is equality
+ × packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > keeps root and selected-scope caches isolated across root -> file -> directory queries 3ms
+   → /tmp/ar-symbol-scope-goLenf
+/tmp/ar-symbol-scope-goLenf/private
+/tmp/ar-symbol-scope-goLenf/py
+/tmp/ar-symbol-scope-goLenf/ts
+/tmp/ar-symbol-scope-goLenf/tsx
+/tmp/ar-symbol-scope-goLenf/private/secret.ts
+/tmp/ar-symbol-scope-goLenf/ts/a.ts
+/tmp/ar-symbol-scope-goLenf/ts/b.ts
+/tmp/ar-symbol-scope-goLenf/tsx/a.ts: expected false to be true // Object.is equality
+ × packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > coalesces concurrent queries of the same normalized scope 4ms
+   → expected false to be true // Object.is equality
+ × packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > does not share a flight or cached file set between concurrent different scopes 3ms
+   → expected false to be true // Object.is equality
+ × packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > updates scoped edits, additions and removals before the next query 7ms
+   → /tmp/ar-symbol-scope-WRv4OH/ts/a.ts
+/tmp/ar-symbol-scope-WRv4OH/ts/new.ts
+/tmp/ar-symbol-scope-WRv4OH
+/tmp/ar-symbol-scope-WRv4OH/private
+/tmp/ar-symbol-scope-WRv4OH/py
+/tmp/ar-symbol-scope-WRv4OH/ts
+/tmp/ar-symbol-scope-WRv4OH/tsx
+/tmp/ar-symbol-scope-WRv4OH
+/tmp/ar-symbol-scope-WRv4OH/private
+/tmp/ar-symbol-scope-WRv4OH/py
+/tmp/ar-symbol-scope-WRv4OH/ts
+/tmp/ar-symbol-scope-WRv4OH/tsx
+/tmp/ar-symbol-scope-WRv4OH
+/tmp/ar-symbol-scope-WRv4OH/private
+/tmp/ar-symbol-scope-WRv4OH/py
+/tmp/ar-symbol-scope-WRv4OH/ts
+/tmp/ar-symbol-scope-WRv4OH/tsx
+/tmp/ar-symbol-scope-WRv4OH
+/tmp/ar-symbol-scope-WRv4OH/private
+/tmp/ar-symbol-scope-WRv4OH/py
+/tmp/ar-symbol-scope-WRv4OH/ts
+/tmp/ar-symbol-scope-WRv4OH/tsx
+/tmp/ar-symbol-scope-WRv4OH/private/secret.ts
+/tmp/ar-symbol-scope-WRv4OH/ts/a.ts
+/tmp/ar-symbol-scope-WRv4OH/ts/new.ts
+/tmp/ar-symbol-scope-WRv4OH/tsx/a.ts
+/tmp/ar-symbol-scope-WRv4OH/private/secret.ts
+/tmp/ar-symbol-scope-WRv4OH/ts/a.ts
+/tmp/ar-symbol-scope-WRv4OH/ts/new.ts
+/tmp/ar-symbol-scope-WRv4OH/tsx/a.ts
+/tmp/ar-symbol-scope-WRv4OH/private/secret.ts
+/tmp/ar-symbol-scope-WRv4OH/ts/a.ts
+/tmp/ar-symbol-scope-WRv4OH/ts/new.ts
+/tmp/ar-symbol-scope-WRv4OH/tsx/a.ts
+/tmp/ar-symbol-scope-WRv4OH/private/secret.ts
+/tmp/ar-symbol-scope-WRv4OH/ts/a.ts
+/tmp/ar-symbol-scope-WRv4OH/ts/new.ts
+/tmp/ar-symbol-scope-WRv4OH/tsx/a.ts: expected false to be true // Object.is equality
+ × packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > preserves maxResults for indexed and fallback queries 3ms
+   → expected [] to have a length of 1 but got +0
+ × packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > skips discovered symlinks and VCS/dependency/generated paths 5ms
+   → /tmp/ar-symbol-scope-oqgVtC
+/tmp/ar-symbol-scope-oqgVtC/private
+/tmp/ar-symbol-scope-oqgVtC/py
+/tmp/ar-symbol-scope-oqgVtC/ts
+/tmp/ar-symbol-scope-oqgVtC/tsx
+/tmp/ar-symbol-scope-oqgVtC/private/secret.ts
+/tmp/ar-symbol-scope-oqgVtC/ts/a.ts
+/tmp/ar-symbol-scope-oqgVtC/ts/b.ts
+/tmp/ar-symbol-scope-oqgVtC/tsx/a.ts: expected false to be true // Object.is equality
+ × packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > retains a trusted root alias while refusing selected directory symlinks 14ms
+   → expected [ …(13) ] to deeply equal []
+ × packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > refuses a selected file reached through a directory symlink 9ms
+   → expected [ …(13) ] to deeply equal []
+ × packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > never reads other paths when permission only allows the requested directory 5ms
+   → /tmp/ar-symbol-scope-2rEADS/private/secret.ts
+/tmp/ar-symbol-scope-2rEADS/ts/a.ts
+/tmp/ar-symbol-scope-2rEADS/ts/b.ts
+/tmp/ar-symbol-scope-2rEADS/tsx/a.ts
+/tmp/ar-symbol-scope-2rEADS
+/tmp/ar-symbol-scope-2rEADS/private
+/tmp/ar-symbol-scope-2rEADS/py
+/tmp/ar-symbol-scope-2rEADS/ts
+/tmp/ar-symbol-scope-2rEADS/tsx
+/tmp/ar-symbol-scope-2rEADS/private/secret.ts
+/tmp/ar-symbol-scope-2rEADS/ts/a.ts
+/tmp/ar-symbol-scope-2rEADS/ts/b.ts
+/tmp/ar-symbol-scope-2rEADS/tsx/a.ts: expected false to be true // Object.is equality
+ ✓ packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > keeps permission denial and outside-sandbox rejection before all source IO 3ms
+ × packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > returns no stale scoped contents after the selected file vanishes 7ms
+   → expected [ '/tmp/ar-symbol-scope-UXAjjv', …(7) ] to deeply equal []
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 21 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > only lists, stats and reads the selected TS directory on a cold query
+AssertionError: /tmp/ar-symbol-scope-9V3fOx/private/secret.ts
+/tmp/ar-symbol-scope-9V3fOx/ts/a.ts
+/tmp/ar-symbol-scope-9V3fOx/ts/b.ts
+/tmp/ar-symbol-scope-9V3fOx/tsx/a.ts
+/tmp/ar-symbol-scope-9V3fOx
+/tmp/ar-symbol-scope-9V3fOx/private
+/tmp/ar-symbol-scope-9V3fOx/py
+/tmp/ar-symbol-scope-9V3fOx/ts
+/tmp/ar-symbol-scope-9V3fOx/tsx
+/tmp/ar-symbol-scope-9V3fOx/private/secret.ts
+/tmp/ar-symbol-scope-9V3fOx/ts/a.ts
+/tmp/ar-symbol-scope-9V3fOx/ts/b.ts
+/tmp/ar-symbol-scope-9V3fOx/tsx/a.ts: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ expectScope packages/tools/src/symbol-scope.regressions.test.ts:67:145
+     65| function expectScope(scope: string): void {
+     66|   const selected = join(root, scope);
+     67|   expect(paths().every((path) => path === selected || path.startsWith(…
+       |                                                                                                                                                 ^
+     68| }
+     69| function clearIO(): void {
+ ❯ packages/tools/src/symbol-scope.regressions.test.ts:82:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/21]⎯
+
+ FAIL  packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > only stats and reads the selected TS file rather than its siblings
+AssertionError: /tmp/ar-symbol-scope-1Fv5Nm/private/secret.ts
+/tmp/ar-symbol-scope-1Fv5Nm/ts/a.ts
+/tmp/ar-symbol-scope-1Fv5Nm/ts/b.ts
+/tmp/ar-symbol-scope-1Fv5Nm/tsx/a.ts
+/tmp/ar-symbol-scope-1Fv5Nm
+/tmp/ar-symbol-scope-1Fv5Nm/private
+/tmp/ar-symbol-scope-1Fv5Nm/py
+/tmp/ar-symbol-scope-1Fv5Nm/ts
+/tmp/ar-symbol-scope-1Fv5Nm/tsx
+/tmp/ar-symbol-scope-1Fv5Nm/private/secret.ts
+/tmp/ar-symbol-scope-1Fv5Nm/ts/a.ts
+/tmp/ar-symbol-scope-1Fv5Nm/ts/b.ts
+/tmp/ar-symbol-scope-1Fv5Nm/tsx/a.ts: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ expectScope packages/tools/src/symbol-scope.regressions.test.ts:67:145
+     65| function expectScope(scope: string): void {
+     66|   const selected = join(root, scope);
+     67|   expect(paths().every((path) => path === selected || path.startsWith(…
+       |                                                                                                                                                 ^
+     68| }
+     69| function clearIO(): void {
+ ❯ packages/tools/src/symbol-scope.regressions.test.ts:87:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/21]⎯
+
+ FAIL  packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > uses the existing fallback for a Python-only directory in a mixed repository
+AssertionError: expected { fallback: false, …(4) } to match object { fallback: true, hits: [ { …(3) } ] }
+(3 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "fallback": true,
+-   "hits": [
+-     {
+-       "file": "py/logic.py",
+-       "kind": "def",
+-       "name": "PyOnly",
+-     },
+-   ],
++   "fallback": false,
++   "hits": [],
+  }
+
+ ❯ packages/tools/src/symbol-scope.regressions.test.ts:91:65
+     89|   it("uses the existing fallback for a Python-only directory in a mixe…
+     90|     await fixture();
+     91|     expect(output(await run({ symbol: "PyOnly", path: "py" }))).toMatc…
+       |                                                                 ^
+     92|     expectScope("py");
+     93|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/21]⎯
+
+ FAIL  packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > uses the existing fallback for a selected Python file
+AssertionError: expected { fallback: false, …(4) } to match object { fallback: true, hits: [ { …(3) } ] }
+(3 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "fallback": true,
+-   "hits": [
+-     {
+-       "file": "py/logic.py",
+-       "kind": "def",
+-       "name": "PyOnly",
+-     },
+-   ],
++   "fallback": false,
++   "hits": [],
+  }
+
+ ❯ packages/tools/src/symbol-scope.regressions.test.ts:96:74
+     94|   it("uses the existing fallback for a selected Python file", async ()…
+     95|     await fixture();
+     96|     expect(output(await run({ symbol: "PyOnly", path: "py/logic.py" })…
+       |                                                                          ^
+     97|     expectScope("py/logic.py");
+     98|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/21]⎯
+
+ FAIL  packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > recovers Python when the root's TS/JS index has no query hit
+AssertionError: expected { fallback: false, …(4) } to match object { fallback: true, hits: [ { …(3) } ] }
+(3 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "fallback": true,
+-   "hits": [
+-     {
+-       "file": "py/logic.py",
+-       "kind": "def",
+-       "name": "PyOnly",
+-     },
+-   ],
++   "fallback": false,
++   "hits": [],
+  }
+
+ ❯ packages/tools/src/symbol-scope.regressions.test.ts:101:53
+     99|   it("recovers Python when the root's TS/JS index has no query hit", a…
+    100|     await fixture();
+    101|     expect(output(await run({ symbol: "PyOnly" }))).toMatchObject({ fa…
+       |                                                     ^
+    102|   });
+    103|   it("retains indexed hits as the priority without merging Python defi…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/21]⎯
+
+ FAIL  packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > gives identical root-relative hits for absolute and relative TS scope ts
+ FAIL  packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > gives identical root-relative hits for absolute and relative TS scope ts/a.ts
+AssertionError: expected [] to deeply equal [ { file: 'ts/a.ts', line: 1, …(4) } ]
+
+- Expected
++ Received
+
+- [
+-   {
+-     "file": "ts/a.ts",
+-     "kind": "function",
+-     "line": 1,
+-     "name": "TsOnly",
+-     "role": "definition",
+-     "text": "export function TsOnly() {}",
+-   },
+- ]
++ []
+
+ ❯ packages/tools/src/symbol-scope.regressions.test.ts:111:83
+    109|     const relative = output(await run({ symbol: "TsOnly", path: scope …
+    110|     clearIO();
+    111|     expect(output(await run({ symbol: "TsOnly", path: join(root, scope…
+       |                                                                                   ^
+    112|     expectScope(scope);
+    113|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/21]⎯
+
+ FAIL  packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > gives identical root-relative hits for absolute and relative Python scope py
+ FAIL  packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > gives identical root-relative hits for absolute and relative Python scope py/logic.py
+AssertionError: expected [] to not have a length of +0
+ ❯ packages/tools/src/symbol-scope.regressions.test.ts:117:31
+    115|     await fixture();
+    116|     const relative = output(await run({ symbol: "PyOnly", path: scope …
+    117|     expect(relative.hits).not.toHaveLength(0);
+       |                               ^
+    118|     clearIO();
+    119|     expect(output(await run({ symbol: "PyOnly", path: join(root, scope…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/21]⎯
+
+ FAIL  packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > normalizes aliases and retains directory boundaries
+AssertionError: /tmp/ar-symbol-scope-JP0Ip0/private/secret.ts
+/tmp/ar-symbol-scope-JP0Ip0/ts/a.ts
+/tmp/ar-symbol-scope-JP0Ip0/ts/b.ts
+/tmp/ar-symbol-scope-JP0Ip0/tsx/a.ts
+/tmp/ar-symbol-scope-JP0Ip0
+/tmp/ar-symbol-scope-JP0Ip0/private
+/tmp/ar-symbol-scope-JP0Ip0/py
+/tmp/ar-symbol-scope-JP0Ip0/ts
+/tmp/ar-symbol-scope-JP0Ip0/tsx
+/tmp/ar-symbol-scope-JP0Ip0/private/secret.ts
+/tmp/ar-symbol-scope-JP0Ip0/ts/a.ts
+/tmp/ar-symbol-scope-JP0Ip0/ts/b.ts
+/tmp/ar-symbol-scope-JP0Ip0/tsx/a.ts: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ expectScope packages/tools/src/symbol-scope.regressions.test.ts:67:145
+     65| function expectScope(scope: string): void {
+     66|   const selected = join(root, scope);
+     67|   expect(paths().every((path) => path === selected || path.startsWith(…
+       |                                                                                                                                                 ^
+     68| }
+     69| function clearIO(): void {
+ ❯ packages/tools/src/symbol-scope.regressions.test.ts:125:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/21]⎯
+
+ FAIL  packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > reuses unchanged scoped contents on warm validation without accessing other scopes
+AssertionError: /tmp/ar-symbol-scope-MGjMih
+/tmp/ar-symbol-scope-MGjMih/private
+/tmp/ar-symbol-scope-MGjMih/py
+/tmp/ar-symbol-scope-MGjMih/ts
+/tmp/ar-symbol-scope-MGjMih/tsx
+/tmp/ar-symbol-scope-MGjMih/private/secret.ts
+/tmp/ar-symbol-scope-MGjMih/ts/a.ts
+/tmp/ar-symbol-scope-MGjMih/ts/b.ts
+/tmp/ar-symbol-scope-MGjMih/tsx/a.ts: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ expectScope packages/tools/src/symbol-scope.regressions.test.ts:67:145
+     65| function expectScope(scope: string): void {
+     66|   const selected = join(root, scope);
+     67|   expect(paths().every((path) => path === selected || path.startsWith(…
+       |                                                                                                                                                 ^
+     68| }
+     69| function clearIO(): void {
+ ❯ packages/tools/src/symbol-scope.regressions.test.ts:136:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/21]⎯
+
+ FAIL  packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > keeps root and selected-scope caches isolated across root -> file -> directory queries
+AssertionError: /tmp/ar-symbol-scope-goLenf
+/tmp/ar-symbol-scope-goLenf/private
+/tmp/ar-symbol-scope-goLenf/py
+/tmp/ar-symbol-scope-goLenf/ts
+/tmp/ar-symbol-scope-goLenf/tsx
+/tmp/ar-symbol-scope-goLenf/private/secret.ts
+/tmp/ar-symbol-scope-goLenf/ts/a.ts
+/tmp/ar-symbol-scope-goLenf/ts/b.ts
+/tmp/ar-symbol-scope-goLenf/tsx/a.ts: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ expectScope packages/tools/src/symbol-scope.regressions.test.ts:67:145
+     65| function expectScope(scope: string): void {
+     66|   const selected = join(root, scope);
+     67|   expect(paths().every((path) => path === selected || path.startsWith(…
+       |                                                                                                                                                 ^
+     68| }
+     69| function clearIO(): void {
+ ❯ packages/tools/src/symbol-scope.regressions.test.ts:143:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/21]⎯
+
+ FAIL  packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > coalesces concurrent queries of the same normalized scope
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ packages/tools/src/symbol-scope.regressions.test.ts:151:63
+    149|     await fixture();
+    150|     const results = await Promise.all(Array.from({ length: 16 }, (_, i…
+    151|     expect(results.every((r) => output(r).hits.length === 1)).toBe(tru…
+       |                                                               ^
+    152|     expect(readFile).toHaveBeenCalledTimes(2);
+    153|     expectScope("ts");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/21]⎯
+
+ FAIL  packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > does not share a flight or cached file set between concurrent different scopes
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ packages/tools/src/symbol-scope.regressions.test.ts:160:166
+    158|     expect(output(a).hits.map((h) => h.file)).toEqual(["ts/a.ts"]);
+    159|     expect(output(b).hits.map((h) => h.file)).toEqual(["tsx/a.ts"]);
+    160|     expect(paths().every((p) => p === join(root, "ts") || p.startsWith…
+       |                                                                                                                                                                      ^
+    161|     expect(readFile).toHaveBeenCalledTimes(3);
+    162|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/21]⎯
+
+ FAIL  packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > updates scoped edits, additions and removals before the next query
+AssertionError: /tmp/ar-symbol-scope-WRv4OH/ts/a.ts
+/tmp/ar-symbol-scope-WRv4OH/ts/new.ts
+/tmp/ar-symbol-scope-WRv4OH
+/tmp/ar-symbol-scope-WRv4OH/private
+/tmp/ar-symbol-scope-WRv4OH/py
+/tmp/ar-symbol-scope-WRv4OH/ts
+/tmp/ar-symbol-scope-WRv4OH/tsx
+/tmp/ar-symbol-scope-WRv4OH
+/tmp/ar-symbol-scope-WRv4OH/private
+/tmp/ar-symbol-scope-WRv4OH/py
+/tmp/ar-symbol-scope-WRv4OH/ts
+/tmp/ar-symbol-scope-WRv4OH/tsx
+/tmp/ar-symbol-scope-WRv4OH
+/tmp/ar-symbol-scope-WRv4OH/private
+/tmp/ar-symbol-scope-WRv4OH/py
+/tmp/ar-symbol-scope-WRv4OH/ts
+/tmp/ar-symbol-scope-WRv4OH/tsx
+/tmp/ar-symbol-scope-WRv4OH
+/tmp/ar-symbol-scope-WRv4OH/private
+/tmp/ar-symbol-scope-WRv4OH/py
+/tmp/ar-symbol-scope-WRv4OH/ts
+/tmp/ar-symbol-scope-WRv4OH/tsx
+/tmp/ar-symbol-scope-WRv4OH/private/secret.ts
+/tmp/ar-symbol-scope-WRv4OH/ts/a.ts
+/tmp/ar-symbol-scope-WRv4OH/ts/new.ts
+/tmp/ar-symbol-scope-WRv4OH/tsx/a.ts
+/tmp/ar-symbol-scope-WRv4OH/private/secret.ts
+/tmp/ar-symbol-scope-WRv4OH/ts/a.ts
+/tmp/ar-symbol-scope-WRv4OH/ts/new.ts
+/tmp/ar-symbol-scope-WRv4OH/tsx/a.ts
+/tmp/ar-symbol-scope-WRv4OH/private/secret.ts
+/tmp/ar-symbol-scope-WRv4OH/ts/a.ts
+/tmp/ar-symbol-scope-WRv4OH/ts/new.ts
+/tmp/ar-symbol-scope-WRv4OH/tsx/a.ts
+/tmp/ar-symbol-scope-WRv4OH/private/secret.ts
+/tmp/ar-symbol-scope-WRv4OH/ts/a.ts
+/tmp/ar-symbol-scope-WRv4OH/ts/new.ts
+/tmp/ar-symbol-scope-WRv4OH/tsx/a.ts: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ expectScope packages/tools/src/symbol-scope.regressions.test.ts:67:145
+     65| function expectScope(scope: string): void {
+     66|   const selected = join(root, scope);
+     67|   expect(paths().every((path) => path === selected || path.startsWith(…
+       |                                                                                                                                                 ^
+     68| }
+     69| function clearIO(): void {
+ ❯ packages/tools/src/symbol-scope.regressions.test.ts:174:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/21]⎯
+
+ FAIL  packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > preserves maxResults for indexed and fallback queries
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ packages/tools/src/symbol-scope.regressions.test.ts:178:85
+    176|   it("preserves maxResults for indexed and fallback queries", async ()…
+    177|     await fixture(); await write("py/other.py", "def PyOnly():\n    re…
+    178|     expect(output(await run({ symbol: "PyOnly", path: "py", maxResults…
+       |                                                                                     ^
+    179|     expect(output(await run({ symbol: "export", path: "ts", maxResults…
+    180|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/21]⎯
+
+ FAIL  packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > skips discovered symlinks and VCS/dependency/generated paths
+AssertionError: /tmp/ar-symbol-scope-oqgVtC
+/tmp/ar-symbol-scope-oqgVtC/private
+/tmp/ar-symbol-scope-oqgVtC/py
+/tmp/ar-symbol-scope-oqgVtC/ts
+/tmp/ar-symbol-scope-oqgVtC/tsx
+/tmp/ar-symbol-scope-oqgVtC/private/secret.ts
+/tmp/ar-symbol-scope-oqgVtC/ts/a.ts
+/tmp/ar-symbol-scope-oqgVtC/ts/b.ts
+/tmp/ar-symbol-scope-oqgVtC/tsx/a.ts: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ expectScope packages/tools/src/symbol-scope.regressions.test.ts:67:145
+     65| function expectScope(scope: string): void {
+     66|   const selected = join(root, scope);
+     67|   expect(paths().every((path) => path === selected || path.startsWith(…
+       |                                                                                                                                                 ^
+     68| }
+     69| function clearIO(): void {
+ ❯ packages/tools/src/symbol-scope.regressions.test.ts:186:96
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/21]⎯
+
+ FAIL  packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > retains a trusted root alias while refusing selected directory symlinks
+AssertionError: expected [ …(13) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "/tmp/ar-symbol-scope-TlQ4wJ/private/secret.ts",
++   "/tmp/ar-symbol-scope-TlQ4wJ/ts/a.ts",
++   "/tmp/ar-symbol-scope-TlQ4wJ/ts/b.ts",
++   "/tmp/ar-symbol-scope-TlQ4wJ/tsx/a.ts",
++   "/tmp/ar-symbol-scope-TlQ4wJ",
++   "/tmp/ar-symbol-scope-TlQ4wJ/private",
++   "/tmp/ar-symbol-scope-TlQ4wJ/py",
++   "/tmp/ar-symbol-scope-TlQ4wJ/ts",
++   "/tmp/ar-symbol-scope-TlQ4wJ/tsx",
++   "/tmp/ar-symbol-scope-TlQ4wJ/private/secret.ts",
++   "/tmp/ar-symbol-scope-TlQ4wJ/ts/a.ts",
++   "/tmp/ar-symbol-scope-TlQ4wJ/ts/b.ts",
++   "/tmp/ar-symbol-scope-TlQ4wJ/tsx/a.ts",
++ ]
+
+ ❯ packages/tools/src/symbol-scope.regressions.test.ts:197:23
+    195|       clearIO();
+    196|       expect(output(await run({ symbol: "OffScope", path: "selected-li…
+    197|       expect(paths()).toEqual([]);
+       |                       ^
+    198|     } finally { await fs.rm(alias, { force: true }); }
+    199|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/21]⎯
+
+ FAIL  packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > refuses a selected file reached through a directory symlink
+AssertionError: expected [ …(13) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "/tmp/ar-symbol-scope-G36O7u/private/secret.ts",
++   "/tmp/ar-symbol-scope-G36O7u/ts/a.ts",
++   "/tmp/ar-symbol-scope-G36O7u/ts/b.ts",
++   "/tmp/ar-symbol-scope-G36O7u/tsx/a.ts",
++   "/tmp/ar-symbol-scope-G36O7u",
++   "/tmp/ar-symbol-scope-G36O7u/private",
++   "/tmp/ar-symbol-scope-G36O7u/py",
++   "/tmp/ar-symbol-scope-G36O7u/ts",
++   "/tmp/ar-symbol-scope-G36O7u/tsx",
++   "/tmp/ar-symbol-scope-G36O7u/private/secret.ts",
++   "/tmp/ar-symbol-scope-G36O7u/ts/a.ts",
++   "/tmp/ar-symbol-scope-G36O7u/ts/b.ts",
++   "/tmp/ar-symbol-scope-G36O7u/tsx/a.ts",
++ ]
+
+ ❯ packages/tools/src/symbol-scope.regressions.test.ts:204:21
+    202|     await fs.symlink(join(root, "private"), join(root, "selected-link"…
+    203|     expect(output(await run({ symbol: "OffScope", path: "selected-link…
+    204|     expect(paths()).toEqual([]);
+       |                     ^
+    205|   });
+    206|   it("never reads other paths when permission only allows the requeste…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/21]⎯
+
+ FAIL  packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > never reads other paths when permission only allows the requested directory
+AssertionError: /tmp/ar-symbol-scope-2rEADS/private/secret.ts
+/tmp/ar-symbol-scope-2rEADS/ts/a.ts
+/tmp/ar-symbol-scope-2rEADS/ts/b.ts
+/tmp/ar-symbol-scope-2rEADS/tsx/a.ts
+/tmp/ar-symbol-scope-2rEADS
+/tmp/ar-symbol-scope-2rEADS/private
+/tmp/ar-symbol-scope-2rEADS/py
+/tmp/ar-symbol-scope-2rEADS/ts
+/tmp/ar-symbol-scope-2rEADS/tsx
+/tmp/ar-symbol-scope-2rEADS/private/secret.ts
+/tmp/ar-symbol-scope-2rEADS/ts/a.ts
+/tmp/ar-symbol-scope-2rEADS/ts/b.ts
+/tmp/ar-symbol-scope-2rEADS/tsx/a.ts: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ expectScope packages/tools/src/symbol-scope.regressions.test.ts:67:145
+     65| function expectScope(scope: string): void {
+     66|   const selected = join(root, scope);
+     67|   expect(paths().every((path) => path === selected || path.startsWith(…
+       |                                                                                                                                                 ^
+     68| }
+     69| function clearIO(): void {
+ ❯ packages/tools/src/symbol-scope.regressions.test.ts:210:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/21]⎯
+
+ FAIL  packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > returns no stale scoped contents after the selected file vanishes
+AssertionError: expected [ '/tmp/ar-symbol-scope-UXAjjv', …(7) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "/tmp/ar-symbol-scope-UXAjjv",
++   "/tmp/ar-symbol-scope-UXAjjv/private",
++   "/tmp/ar-symbol-scope-UXAjjv/py",
++   "/tmp/ar-symbol-scope-UXAjjv/ts",
++   "/tmp/ar-symbol-scope-UXAjjv/tsx",
++   "/tmp/ar-symbol-scope-UXAjjv/private/secret.ts",
++   "/tmp/ar-symbol-scope-UXAjjv/ts/b.ts",
++   "/tmp/ar-symbol-scope-UXAjjv/tsx/a.ts",
++ ]
+
+ ❯ packages/tools/src/symbol-scope.regressions.test.ts:223:21
+    221|     await fs.rm(join(root, "ts/a.ts")); clearIO();
+    222|     expect(output(await run({ symbol: "TsOnly", path: "ts/a.ts" })).hi…
+    223|     expect(paths()).toEqual([]);
+       |                     ^
+    224|   });
+    225| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[19/21]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  21 failed | 2 passed (23)
+   Start at  05:32:55
+   Duration  683ms (transform 331ms, setup 0ms, import 429ms, tests 134ms, environment 0ms)
+
+JSON report written to /workspace/harness-agent/.ci/agent-followup-20261005/audit-tools/red-confirmed/result.json

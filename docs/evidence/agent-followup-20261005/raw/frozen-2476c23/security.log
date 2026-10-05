@@ -1,0 +1,30 @@
+$ vitest run packages/security packages/harness/src/security-regression-matrix.test.ts
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+ ✓ packages/security/src/approval.test.ts (15 tests) 1025ms
+     ✓ expire  1001ms
+ ✓ packages/security/src/parser-fuzz.test.ts (1812 tests) 196ms
+ ✓ packages/security/src/no-silent-catch.test.ts (4 tests) 110ms
+ ✓ packages/security/src/boundary-guard.test.ts (49 tests) 22ms
+ ✓ packages/security/src/sandbox.test.ts (52 tests) 21ms
+ ✓ packages/harness/src/security-regression-matrix.test.ts (12 tests) 14ms
+ ✓ packages/security/src/process-gate.test.ts (33 tests) 12ms
+ ✓ packages/security/src/canonical-path.test.ts (26 tests) 11ms
+ ✓ packages/security/src/injection-gate.test.ts (13 tests) 10ms
+ ✓ packages/security/src/capability-guard.test.ts (17 tests) 10ms
+ ✓ packages/security/src/network-gate.test.ts (20 tests) 11ms
+ ✓ packages/security/src/secret-gate.test.ts (16 tests) 7ms
+ ✓ packages/security/src/approval-capability.test.ts (23 tests) 7ms
+ ✓ packages/security/src/supply-chain.test.ts (8 tests) 5ms
+ ✓ packages/security/src/path-parity.test.ts (11 tests) 5ms
+ ✓ packages/security/src/permission-grant.test.ts (7 tests) 5ms
+ ✓ packages/security/src/permission.test.ts (11 tests) 6ms
+ ✓ packages/security/src/denial.test.ts (4 tests) 5ms
+ ✓ packages/security/src/workflow-paid-authorization.test.ts (2 tests) 4ms
+
+ Test Files  19 passed (19)
+      Tests  2135 passed (2135)
+   Start at  05:51:07
+   Duration  4.79s (transform 443ms, setup 0ms, import 1.09s, tests 1.49s, environment 2ms)
+

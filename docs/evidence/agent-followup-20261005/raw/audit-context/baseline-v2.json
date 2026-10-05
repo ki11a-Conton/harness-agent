@@ -1,0 +1,463 @@
+{
+  "sourceSha": "f71b444eec6b4024039716a1a0a01bade22c90b0",
+  "sourceFileSha256": "fb5ec00963093f7d28fd9b002ca7983f0df247e5d98b1b1981b05d08caa0c768",
+  "node": "v24.19.0",
+  "productionRoute": "HarnessConfig.instructionDiscovery -> composeContext -> PathScopedContextPipeline -> PathScopedInstructionDiscovery; absent by default",
+  "results": [
+    {
+      "id": "single-invalid-byte-cap1",
+      "inputHex": "ff",
+      "cap": 1,
+      "modes": {
+        "default": {
+          "status": "resolved",
+          "docs": [
+            {
+              "path": "<root>/nested/AGENTS.md",
+              "content": "n",
+              "contentBytes": 1,
+              "sourceBytes": 22,
+              "truncated": true
+            }
+          ],
+          "flags": [
+            133120
+          ],
+          "nonblocking": true,
+          "closes": 0,
+          "reads": 0,
+          "guardedBlockingOpen": false,
+          "nativeFifoOpened": false
+        },
+        "path-scoped": {
+          "status": "resolved",
+          "docs": [
+            {
+              "path": "<root>/AGENTS.md",
+              "content": "�",
+              "contentBytes": 3,
+              "sourceBytes": 1,
+              "truncated": false
+            },
+            {
+              "path": "<root>/nested/AGENTS.md",
+              "content": "n",
+              "contentBytes": 1,
+              "sourceBytes": 22,
+              "truncated": true
+            }
+          ],
+          "flags": [
+            131072
+          ],
+          "nonblocking": false,
+          "closes": 0,
+          "reads": 0,
+          "guardedBlockingOpen": false,
+          "nativeFifoOpened": false
+        }
+      }
+    },
+    {
+      "id": "invalid-three-byte-cap3",
+      "inputHex": "e228a1",
+      "cap": 3,
+      "modes": {
+        "default": {
+          "status": "resolved",
+          "docs": [
+            {
+              "path": "<root>/nested/AGENTS.md",
+              "content": "nes",
+              "contentBytes": 3,
+              "sourceBytes": 22,
+              "truncated": true
+            }
+          ],
+          "flags": [
+            133120
+          ],
+          "nonblocking": true,
+          "closes": 0,
+          "reads": 0,
+          "guardedBlockingOpen": false,
+          "nativeFifoOpened": false
+        },
+        "path-scoped": {
+          "status": "resolved",
+          "docs": [
+            {
+              "path": "<root>/AGENTS.md",
+              "content": "�(�",
+              "contentBytes": 7,
+              "sourceBytes": 3,
+              "truncated": false
+            },
+            {
+              "path": "<root>/nested/AGENTS.md",
+              "content": "nes",
+              "contentBytes": 3,
+              "sourceBytes": 22,
+              "truncated": true
+            }
+          ],
+          "flags": [
+            131072
+          ],
+          "nonblocking": false,
+          "closes": 0,
+          "reads": 0,
+          "guardedBlockingOpen": false,
+          "nativeFifoOpened": false
+        }
+      }
+    },
+    {
+      "id": "truncated-invalid-prefix-cap1",
+      "inputHex": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "cap": 1,
+      "modes": {
+        "default": {
+          "status": "resolved",
+          "docs": [
+            {
+              "path": "<root>/nested/AGENTS.md",
+              "content": "n",
+              "contentBytes": 1,
+              "sourceBytes": 22,
+              "truncated": true
+            }
+          ],
+          "flags": [
+            133120
+          ],
+          "nonblocking": true,
+          "closes": 0,
+          "reads": 0,
+          "guardedBlockingOpen": false,
+          "nativeFifoOpened": false
+        },
+        "path-scoped": {
+          "status": "resolved",
+          "docs": [
+            {
+              "path": "<root>/AGENTS.md",
+              "content": "�",
+              "contentBytes": 3,
+              "sourceBytes": 100,
+              "truncated": true
+            },
+            {
+              "path": "<root>/nested/AGENTS.md",
+              "content": "n",
+              "contentBytes": 1,
+              "sourceBytes": 22,
+              "truncated": true
+            }
+          ],
+          "flags": [
+            131072
+          ],
+          "nonblocking": false,
+          "closes": 0,
+          "reads": 0,
+          "guardedBlockingOpen": false,
+          "nativeFifoOpened": false
+        }
+      }
+    },
+    {
+      "id": "invalid-root-control-cap100",
+      "inputHex": "ff",
+      "cap": 100,
+      "modes": {
+        "default": {
+          "status": "resolved",
+          "docs": [
+            {
+              "path": "<root>/nested/AGENTS.md",
+              "content": "nested regular control",
+              "contentBytes": 22,
+              "sourceBytes": 22,
+              "truncated": false
+            }
+          ],
+          "flags": [
+            133120
+          ],
+          "nonblocking": true,
+          "closes": 0,
+          "reads": 0,
+          "guardedBlockingOpen": false,
+          "nativeFifoOpened": false
+        },
+        "path-scoped": {
+          "status": "resolved",
+          "docs": [
+            {
+              "path": "<root>/AGENTS.md",
+              "content": "�",
+              "contentBytes": 3,
+              "sourceBytes": 1,
+              "truncated": false
+            },
+            {
+              "path": "<root>/nested/AGENTS.md",
+              "content": "nested regular control",
+              "contentBytes": 22,
+              "sourceBytes": 22,
+              "truncated": false
+            }
+          ],
+          "flags": [
+            131072
+          ],
+          "nonblocking": false,
+          "closes": 0,
+          "reads": 0,
+          "guardedBlockingOpen": false,
+          "nativeFifoOpened": false
+        }
+      }
+    },
+    {
+      "id": "close-error-isolation",
+      "inputHex": "726f6f7420726567756c617220636f6e74726f6c",
+      "cap": 100,
+      "decorate": "close-error",
+      "modes": {
+        "default": {
+          "status": "resolved",
+          "docs": [
+            {
+              "path": "<root>/AGENTS.md",
+              "content": "root regular control",
+              "contentBytes": 20,
+              "sourceBytes": 20,
+              "truncated": false
+            },
+            {
+              "path": "<root>/nested/AGENTS.md",
+              "content": "nested regular control",
+              "contentBytes": 22,
+              "sourceBytes": 22,
+              "truncated": false
+            }
+          ],
+          "flags": [
+            133120
+          ],
+          "nonblocking": true,
+          "closes": 1,
+          "reads": 0,
+          "guardedBlockingOpen": false,
+          "nativeFifoOpened": false
+        },
+        "path-scoped": {
+          "status": "rejected",
+          "error": "Error: injected cleanup EIO after actual close",
+          "code": "EIO",
+          "flags": [
+            131072
+          ],
+          "closes": 1,
+          "reads": 0
+        }
+      }
+    },
+    {
+      "id": "zero-read-incomplete-capture",
+      "inputHex": "726f6f7420726567756c617220636f6e74726f6c",
+      "cap": 100,
+      "decorate": "zero-read",
+      "modes": {
+        "default": {
+          "status": "resolved",
+          "docs": [
+            {
+              "path": "<root>/nested/AGENTS.md",
+              "content": "nested regular control",
+              "contentBytes": 22,
+              "sourceBytes": 22,
+              "truncated": false
+            }
+          ],
+          "flags": [
+            133120,
+            133120
+          ],
+          "nonblocking": true,
+          "closes": 0,
+          "reads": 2,
+          "guardedBlockingOpen": false,
+          "nativeFifoOpened": false,
+          "repeatedDocs": [
+            {
+              "path": "<root>/nested/AGENTS.md",
+              "content": "nested regular control"
+            }
+          ]
+        },
+        "path-scoped": {
+          "status": "resolved",
+          "docs": [
+            {
+              "path": "<root>/AGENTS.md",
+              "content": "",
+              "contentBytes": 0,
+              "sourceBytes": 20,
+              "truncated": false
+            },
+            {
+              "path": "<root>/nested/AGENTS.md",
+              "content": "nested regular control",
+              "contentBytes": 22,
+              "sourceBytes": 22,
+              "truncated": false
+            }
+          ],
+          "flags": [
+            131072
+          ],
+          "nonblocking": false,
+          "closes": 0,
+          "reads": 1,
+          "guardedBlockingOpen": false,
+          "nativeFifoOpened": false,
+          "repeatedDocs": [
+            {
+              "path": "<root>/AGENTS.md",
+              "content": ""
+            },
+            {
+              "path": "<root>/nested/AGENTS.md",
+              "content": "nested regular control"
+            }
+          ],
+          "cacheHits": 2
+        }
+      }
+    },
+    {
+      "id": "regular-positive-control",
+      "inputHex": "726f6f7420726567756c617220636f6e74726f6c",
+      "cap": 100,
+      "modes": {
+        "default": {
+          "status": "resolved",
+          "docs": [
+            {
+              "path": "<root>/AGENTS.md",
+              "content": "root regular control",
+              "contentBytes": 20,
+              "sourceBytes": 20,
+              "truncated": false
+            },
+            {
+              "path": "<root>/nested/AGENTS.md",
+              "content": "nested regular control",
+              "contentBytes": 22,
+              "sourceBytes": 22,
+              "truncated": false
+            }
+          ],
+          "flags": [
+            133120
+          ],
+          "nonblocking": true,
+          "closes": 0,
+          "reads": 0,
+          "guardedBlockingOpen": false,
+          "nativeFifoOpened": false
+        },
+        "path-scoped": {
+          "status": "resolved",
+          "docs": [
+            {
+              "path": "<root>/AGENTS.md",
+              "content": "root regular control",
+              "contentBytes": 20,
+              "sourceBytes": 20,
+              "truncated": false
+            },
+            {
+              "path": "<root>/nested/AGENTS.md",
+              "content": "nested regular control",
+              "contentBytes": 22,
+              "sourceBytes": 22,
+              "truncated": false
+            }
+          ],
+          "flags": [
+            131072
+          ],
+          "nonblocking": false,
+          "closes": 0,
+          "reads": 0,
+          "guardedBlockingOpen": false,
+          "nativeFifoOpened": false
+        }
+      }
+    },
+    {
+      "id": "regular-to-fifo-race-with-native-open-guard",
+      "inputHex": "726f6f7420726567756c617220636f6e74726f6c",
+      "cap": 100,
+      "decorate": "fifo-race",
+      "modes": {
+        "default": {
+          "status": "resolved",
+          "docs": [
+            {
+              "path": "<root>/nested/AGENTS.md",
+              "content": "nested regular control",
+              "contentBytes": 22,
+              "sourceBytes": 22,
+              "truncated": false
+            }
+          ],
+          "flags": [
+            133120
+          ],
+          "nonblocking": true,
+          "closes": 0,
+          "reads": 0,
+          "guardedBlockingOpen": false,
+          "nativeFifoOpened": true
+        },
+        "path-scoped": {
+          "status": "resolved",
+          "docs": [
+            {
+              "path": "<root>/nested/AGENTS.md",
+              "content": "nested regular control",
+              "contentBytes": 22,
+              "sourceBytes": 22,
+              "truncated": false
+            }
+          ],
+          "flags": [
+            131072
+          ],
+          "nonblocking": false,
+          "closes": 0,
+          "reads": 0,
+          "guardedBlockingOpen": true,
+          "nativeFifoOpened": false
+        }
+      }
+    }
+  ],
+  "expected": {
+    "malformed": "Malformed UTF-8 must never expand content beyond maxBytesPerFile; fail-closed omit malformed document and keep readable controls.",
+    "cleanup": "A real descriptor cleanup failure must not suppress unrelated readable instruction documents.",
+    "incompleteCapture": "A zero-byte incomplete capture must be omitted rather than admitted under original source metadata."
+  },
+  "summary": {
+    "pathScopedCap1Expansion": 3,
+    "pathScopedCloseRejects": true,
+    "pathScopedAdmitsIncompleteCapture": true,
+    "defaultControlsPass": true
+  },
+  "limits": "FIFO control uses a real regular-to-FIFO replacement, but native open is guarded before invocation whenever O_NONBLOCK is missing. Default safely performs a native nonblocking FIFO open and rejects the type. No baseline process allowed to hang; no runtime or tracked files modified."
+}

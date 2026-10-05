@@ -1,0 +1,70 @@
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+ ✓ packages/model/src/openai-stream-footer.regressions.test.ts (23 tests) 114ms
+ ❯ packages/model/src/openai.test.ts (40 tests | 1 failed) 1127ms
+     ✓ streams text deltas from multiple data lines and completes with stop 11ms
+     ✓ concatenates incremental tool_call name/arguments and parses args 1ms
+     ✓ streams a mixed text + tool_calls response ending in tool_calls 1ms
+     ✓ keeps the raw string when tool-call arguments are malformed JSON 1ms
+     ✓ emits a usage event from the chunk usage field 1ms
+     ✓ R1: rejects legacy DONE-only text without a normal finish_reason 1ms
+     ✓ emits an error event with the status code on HTTP 401 without leaking the key 2ms
+     ✓ redacts provider secrets from error summaries (P0-7) 0ms
+     ✓ emits a MODEL_ERROR error event when the network request throws (retries disabled) 1ms
+     ✓ throws when no API key is configured and the message never echoes secrets 1ms
+     ✓ maps user/assistant/tool messages with tool_call_id and assistant tool_calls 1ms
+     ✓ maps ToolSpec inputSchema to the OpenAI tools function.parameters 1ms
+     ✓ omits tools from the request when none are provided 0ms
+     ✓ P2-43: fails closed on an illegal function name instead of sending it to the provider 4ms
+     ✓ sends a POST with Bearer auth, JSON body and the configured model 0ms
+     ✓ aborts a blocked stream and completes with cancelled 1ms
+     ✓ completes with cancelled without calling fetch when the signal is already aborted 0ms
+     ✓ normalizes the baseUrl trailing slash and prefers config.baseUrl over the env 0ms
+     ✓ falls back to OPENAI_BASE_URL for the baseUrl 0ms
+     ✓ falls back to the OpenAI default baseUrl when nothing is configured 0ms
+     ✓ resolves the model from OPENAI_MODEL, config.modelId, then the default 1ms
+     ✓ resolves the API key from the env and prefers config.apiKey 1ms
+     ✓ exposes no static model list until the /models endpoint is wired 0ms
+     ✓ includes timestamps on every event 0ms
+     ✓ retries a transient HTTP 500 and emits retry events before completing 2ms
+     ✓ retries a 429 rate-limit response 2ms
+     ✓ never retries a 401 (auth) error 0ms
+     ✓ retries a network failure (fetch throw) but not after abort 2ms
+     ✓ kill during provider backoff: an abort inside the backoff window cancels the pending retry (no duplicate request) 1ms
+     ✓ does not retry when the caller aborted (cancelled, single attempt) 0ms
+     ✓ exhausts maxProviderRetries then reports the final failure 4ms
+     ✓ respects maxProviderRetries: 0 (no internal retries) 0ms
+     ✓ P1-18: honors Retry-After on 429 and classifies it rate_limit with retryAfterMs  1003ms
+     ✓ P1-18: server_error taxonomy with status on an exhausted 503 0ms
+     ✓ P1-18: nextBackoffDelayMs is jittered and retry-after-bounded 0ms
+     ✓ P1-18: parseRetryAfter handles seconds, HTTP-date and garbage 1ms
+     × retries a request that timed out before the stream started 28ms
+     ✓ reports a timeout as MODEL_ERROR once the retry budget is exhausted 27ms
+     ✓ distinguishes a timeout from a caller abort (timeout never yields cancelled) 26ms
+     ✓ uses the constructor identity when the runtime passes an empty config (E4-R83) 0ms
+ ✓ packages/model/src/openai.wire-stub.test.ts (22 tests) 74ms
+ ✓ packages/model/src/openai-termination-regressions.test.ts (19 tests) 40ms
+ ✓ packages/model/src/openai-system-context.regressions.test.ts (13 tests) 40ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/model/src/openai.test.ts > OpenAICompatibleProvider request timeout (Phase 7 deadline) > retries a request that timed out before the stream started
+Error: expected a completed event
+ ❯ completedEvent packages/model/src/openai.test.ts:66:21
+     64| function completedEvent(events: ModelEvent[]): Extract<ModelEvent, { t…
+     65|   const found = events.find((e): e is Extract<ModelEvent, { type: "com…
+     66|   if (!found) throw new Error("expected a completed event");
+       |                     ^
+     67|   return found;
+     68| }
+ ❯ packages/model/src/openai.test.ts:793:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 4 passed (5)
+      Tests  1 failed | 116 passed (117)
+   Start at  03:43:32
+   Duration  2.56s (transform 296ms, setup 0ms, import 612ms, tests 1.39s, environment 0ms)
+

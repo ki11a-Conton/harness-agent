@@ -1,0 +1,21 @@
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+ ✓ packages/security/src/no-silent-catch.test.ts (4 tests) 119ms
+ ✓ packages/model/src/openai.test.ts (40 tests) 1128ms
+     ✓ P1-18: honors Retry-After on 429 and classifies it rate_limit with retryAfterMs  1003ms
+[degraded] openai.reader.cancel: response cleanup failed
+ ✓ packages/model/src/openai-stream-footer.regressions.test.ts (33 tests) 157ms
+ ✓ packages/model/src/openai-request-policy.test.ts (7 tests) 130ms
+ ✓ packages/model/src/openai.wire-stub.test.ts (22 tests) 68ms
+ ✓ packages/model/src/model.test.ts (9 tests) 49ms
+ ✓ packages/model/src/openai-termination-regressions.test.ts (19 tests) 44ms
+ ✓ packages/model/src/openai-system-context.regressions.test.ts (13 tests) 40ms
+ ✓ packages/model/src/provider-diagnostics.test.ts (8 tests) 7ms
+ ✓ packages/model/src/capability-resolver.test.ts (6 tests) 4ms
+
+ Test Files  10 passed (10)
+      Tests  161 passed (161)
+   Start at  05:45:48
+   Duration  3.80s (transform 396ms, setup 0ms, import 931ms, tests 1.75s, environment 1ms)
+

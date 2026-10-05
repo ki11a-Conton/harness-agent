@@ -1,0 +1,55 @@
+{
+  "status": "PASS",
+  "sourceSha": "2476c23444079a2cba29480b35d65157cf30c0fd",
+  "baselineSha": "f71b444eec6b4024039716a1a0a01bade22c90b0",
+  "files": [
+    {
+      "path": "packages/tools/src/process/executor.test.ts",
+      "baselineAndCurrentSha256": "5cea7f0b3734b20f6a952429ba160a41ebdc336abe7f513248f4d362017044e9",
+      "expectedSkipped": 7,
+      "sourceUnchangedFromBaseline": true,
+      "actualSkipped": 7,
+      "actualLogLine": " ✓ packages/tools/src/process/executor.test.ts (30 tests | 7 skipped) 1352ms"
+    },
+    {
+      "path": "packages/tools/src/process/r96-windows-execution-boundary.test.ts",
+      "baselineAndCurrentSha256": "e095ef76c58e021e784fc43cd08761bd0afa2655acbb9944190d81cafd30577f",
+      "expectedSkipped": 3,
+      "sourceUnchangedFromBaseline": true,
+      "actualSkipped": 3,
+      "actualLogLine": " ✓ packages/tools/src/process/r96-windows-execution-boundary.test.ts (25 tests | 3 skipped) 13ms"
+    },
+    {
+      "path": "apps/cli/src/n5-pair-setup.test.ts",
+      "baselineAndCurrentSha256": "702a2ba481ee0b45fdfc0049de390a8b3f04213909758ea5d4f4f6139fe972ac",
+      "expectedSkipped": 1,
+      "sourceUnchangedFromBaseline": true,
+      "actualSkipped": 1,
+      "actualLogLine": " ✓ apps/cli/src/n5-pair-setup.test.ts (8 tests | 1 skipped) 502ms"
+    },
+    {
+      "path": "apps/cli/src/n2-release-cli-forward.test.ts",
+      "baselineAndCurrentSha256": "6c6ebf33b1ae8f716329d3b61c33ecdc8bedc10d8180157651f700e36d3e1349",
+      "expectedSkipped": 1,
+      "sourceUnchangedFromBaseline": true,
+      "actualSkipped": 1,
+      "actualLogLine": " ↓ apps/cli/src/n2-release-cli-forward.test.ts (1 test | 1 skipped)"
+    }
+  ],
+  "notes": "All twelve actual full-run skips are the four baseline-identical files; seven plus three Windows-only, one historical alternate setup proof, one opt-in release E2E. New95 regression tests have no skips/todos.",
+  "fullRunId": "agent-followup-linux-2476c2344407-1791179412795188385",
+  "fullCounts": {
+    "files": {
+      "passed": 463,
+      "skipped": 1,
+      "total": 464
+    },
+    "tests": {
+      "passed": 8579,
+      "skipped": 12,
+      "total": 8591
+    }
+  },
+  "fullLogSha256": "8ebeff96b2e6a452d8946e292a2874e0cc3cc8292d22c1745c51de4af204b971",
+  "observedAt": "2026-10-05T06:04:08Z"
+}

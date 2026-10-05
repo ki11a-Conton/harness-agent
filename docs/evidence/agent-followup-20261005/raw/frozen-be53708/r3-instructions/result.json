@@ -1,0 +1,1990 @@
+{
+  "status": "PASS",
+  "sourceSha": "be537085551fc8f14d976f05865d6c0f4bd57e7a",
+  "sourceShaAtEnd": "be537085551fc8f14d976f05865d6c0f4bd57e7a",
+  "sourceTrackedDirtyAtStart": false,
+  "sourceTrackedDirtyAtEnd": false,
+  "sourceFingerprintsBefore": {
+    "packages/context/src/path-scoped-discovery.ts": "3d04fb274e7a1365e1c5d821c86fa491af6c666779e8d8ba53072937d60ca169",
+    "packages/context/dist/path-scoped-discovery.js": "9f69669ab5cb26023fd14be6fb4909f857366599580f2a46c6f7392baf96ead3",
+    "packages/context/src/discovery.ts": "1bdec0d2aa562b210870cf577adb56ad872b6c860b66979ae87903d1b83c3a67",
+    "packages/context/dist/discovery.js": "1ce3ddb756a5414cb02f9de2eefb6a1099576c45bce17635cd2690b984afe9d5",
+    "packages/harness/src/create-harness.ts": "a115aa9c8ec71b86e689e80ab9195c21cd85c8f19a0d9de669e9e19d8becf84e",
+    "packages/harness/dist/create-harness.js": "442874f7297e7e0b7df5e715af249457fbd0bf6cd33f15b75d5e198700ea29e3",
+    "packages/harness/src/path-scoped-instructions.ts": "39bbb653b024c94121a12463bf4e6fe5b01a76f8fb8b3af00656eebf57b3305e",
+    "packages/harness/dist/path-scoped-instructions.js": "f154354bd7a818d4f9e327be0298d758570eddd971ef37eccf5a1e2b9bbbf835",
+    "scripts/research/agent-followup-20261005/scoped-instruction-probe.mjs": "d3b8a1295a056bfef3b3c75b08061fe6515ee41b293b4cdb87eb355f66575dc9"
+  },
+  "sourceFingerprintsAfter": {
+    "packages/context/src/path-scoped-discovery.ts": "3d04fb274e7a1365e1c5d821c86fa491af6c666779e8d8ba53072937d60ca169",
+    "packages/context/dist/path-scoped-discovery.js": "9f69669ab5cb26023fd14be6fb4909f857366599580f2a46c6f7392baf96ead3",
+    "packages/context/src/discovery.ts": "1bdec0d2aa562b210870cf577adb56ad872b6c860b66979ae87903d1b83c3a67",
+    "packages/context/dist/discovery.js": "1ce3ddb756a5414cb02f9de2eefb6a1099576c45bce17635cd2690b984afe9d5",
+    "packages/harness/src/create-harness.ts": "a115aa9c8ec71b86e689e80ab9195c21cd85c8f19a0d9de669e9e19d8becf84e",
+    "packages/harness/dist/create-harness.js": "442874f7297e7e0b7df5e715af249457fbd0bf6cd33f15b75d5e198700ea29e3",
+    "packages/harness/src/path-scoped-instructions.ts": "39bbb653b024c94121a12463bf4e6fe5b01a76f8fb8b3af00656eebf57b3305e",
+    "packages/harness/dist/path-scoped-instructions.js": "f154354bd7a818d4f9e327be0298d758570eddd971ef37eccf5a1e2b9bbbf835",
+    "scripts/research/agent-followup-20261005/scoped-instruction-probe.mjs": "d3b8a1295a056bfef3b3c75b08061fe6515ee41b293b4cdb87eb355f66575dc9"
+  },
+  "cases": [
+    {
+      "id": "invalid-ff-cap1",
+      "status": "PASS",
+      "route": "path-scoped",
+      "inputSha256": "a8100ae6aa1940d0b663bb31cd466142ebbdbd5187131b92d93818987832eb89",
+      "cap": 1,
+      "docs": [
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "N",
+          "truncated": true,
+          "detectedAt": 1791178979881,
+          "contentBytes": 1
+        }
+      ],
+      "observation": {
+        "flags": [],
+        "readCalls": 0,
+        "actualCloses": 0,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      },
+      "metrics": {
+        "probes": 22,
+        "reads": 2,
+        "cacheHits": 0,
+        "rejectedTargets": 0,
+        "truncatedDocuments": 1
+      }
+    },
+    {
+      "id": "default-invalid-ff-cap1",
+      "status": "PASS",
+      "route": "default",
+      "inputSha256": "a8100ae6aa1940d0b663bb31cd466142ebbdbd5187131b92d93818987832eb89",
+      "cap": 1,
+      "docs": [
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "N",
+          "truncated": true,
+          "detectedAt": 1791178979887,
+          "contentBytes": 1
+        },
+        {
+          "path": "<root>/unselected/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 26,
+          "content": "U",
+          "truncated": true,
+          "detectedAt": 1791178979888,
+          "contentBytes": 1
+        }
+      ],
+      "observation": {
+        "flags": [],
+        "readCalls": 0,
+        "actualCloses": 0,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      }
+    },
+    {
+      "id": "invalid-ff-cap3",
+      "status": "PASS",
+      "route": "path-scoped",
+      "inputSha256": "a8100ae6aa1940d0b663bb31cd466142ebbdbd5187131b92d93818987832eb89",
+      "cap": 3,
+      "docs": [
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "NES",
+          "truncated": true,
+          "detectedAt": 1791178979891,
+          "contentBytes": 3
+        }
+      ],
+      "observation": {
+        "flags": [],
+        "readCalls": 0,
+        "actualCloses": 0,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      },
+      "metrics": {
+        "probes": 22,
+        "reads": 2,
+        "cacheHits": 0,
+        "rejectedTargets": 0,
+        "truncatedDocuments": 1
+      }
+    },
+    {
+      "id": "default-invalid-ff-cap3",
+      "status": "PASS",
+      "route": "default",
+      "inputSha256": "a8100ae6aa1940d0b663bb31cd466142ebbdbd5187131b92d93818987832eb89",
+      "cap": 3,
+      "docs": [
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "NES",
+          "truncated": true,
+          "detectedAt": 1791178979894,
+          "contentBytes": 3
+        },
+        {
+          "path": "<root>/unselected/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 26,
+          "content": "UNS",
+          "truncated": true,
+          "detectedAt": 1791178979895,
+          "contentBytes": 3
+        }
+      ],
+      "observation": {
+        "flags": [],
+        "readCalls": 0,
+        "actualCloses": 0,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      }
+    },
+    {
+      "id": "invalid-ff-cap100",
+      "status": "PASS",
+      "route": "path-scoped",
+      "inputSha256": "a8100ae6aa1940d0b663bb31cd466142ebbdbd5187131b92d93818987832eb89",
+      "cap": 100,
+      "docs": [
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "NESTED_REGULAR_CONTROL",
+          "truncated": false,
+          "detectedAt": 1791178979899,
+          "contentBytes": 22
+        }
+      ],
+      "observation": {
+        "flags": [],
+        "readCalls": 0,
+        "actualCloses": 0,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      },
+      "metrics": {
+        "probes": 22,
+        "reads": 2,
+        "cacheHits": 0,
+        "rejectedTargets": 0,
+        "truncatedDocuments": 0
+      }
+    },
+    {
+      "id": "default-invalid-ff-cap100",
+      "status": "PASS",
+      "route": "default",
+      "inputSha256": "a8100ae6aa1940d0b663bb31cd466142ebbdbd5187131b92d93818987832eb89",
+      "cap": 100,
+      "docs": [
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "NESTED_REGULAR_CONTROL",
+          "truncated": false,
+          "detectedAt": 1791178979901,
+          "contentBytes": 22
+        },
+        {
+          "path": "<root>/unselected/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 26,
+          "content": "UNSELECTED_SUBTREE_CONTROL",
+          "truncated": false,
+          "detectedAt": 1791178979901,
+          "contentBytes": 26
+        }
+      ],
+      "observation": {
+        "flags": [],
+        "readCalls": 0,
+        "actualCloses": 0,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      }
+    },
+    {
+      "id": "invalid-e228a1-cap1",
+      "status": "PASS",
+      "route": "path-scoped",
+      "inputSha256": "c86ded0f8260d2f24517e33b0198bcff9e350951af1aee5ef3dbcc71b1785401",
+      "cap": 1,
+      "docs": [
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "N",
+          "truncated": true,
+          "detectedAt": 1791178979904,
+          "contentBytes": 1
+        }
+      ],
+      "observation": {
+        "flags": [],
+        "readCalls": 0,
+        "actualCloses": 0,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      },
+      "metrics": {
+        "probes": 22,
+        "reads": 2,
+        "cacheHits": 0,
+        "rejectedTargets": 0,
+        "truncatedDocuments": 1
+      }
+    },
+    {
+      "id": "default-invalid-e228a1-cap1",
+      "status": "PASS",
+      "route": "default",
+      "inputSha256": "c86ded0f8260d2f24517e33b0198bcff9e350951af1aee5ef3dbcc71b1785401",
+      "cap": 1,
+      "docs": [
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "N",
+          "truncated": true,
+          "detectedAt": 1791178979906,
+          "contentBytes": 1
+        },
+        {
+          "path": "<root>/unselected/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 26,
+          "content": "U",
+          "truncated": true,
+          "detectedAt": 1791178979906,
+          "contentBytes": 1
+        }
+      ],
+      "observation": {
+        "flags": [],
+        "readCalls": 0,
+        "actualCloses": 0,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      }
+    },
+    {
+      "id": "invalid-e228a1-cap3",
+      "status": "PASS",
+      "route": "path-scoped",
+      "inputSha256": "c86ded0f8260d2f24517e33b0198bcff9e350951af1aee5ef3dbcc71b1785401",
+      "cap": 3,
+      "docs": [
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "NES",
+          "truncated": true,
+          "detectedAt": 1791178979908,
+          "contentBytes": 3
+        }
+      ],
+      "observation": {
+        "flags": [],
+        "readCalls": 0,
+        "actualCloses": 0,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      },
+      "metrics": {
+        "probes": 22,
+        "reads": 2,
+        "cacheHits": 0,
+        "rejectedTargets": 0,
+        "truncatedDocuments": 1
+      }
+    },
+    {
+      "id": "default-invalid-e228a1-cap3",
+      "status": "PASS",
+      "route": "default",
+      "inputSha256": "c86ded0f8260d2f24517e33b0198bcff9e350951af1aee5ef3dbcc71b1785401",
+      "cap": 3,
+      "docs": [
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "NES",
+          "truncated": true,
+          "detectedAt": 1791178979910,
+          "contentBytes": 3
+        },
+        {
+          "path": "<root>/unselected/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 26,
+          "content": "UNS",
+          "truncated": true,
+          "detectedAt": 1791178979910,
+          "contentBytes": 3
+        }
+      ],
+      "observation": {
+        "flags": [],
+        "readCalls": 0,
+        "actualCloses": 0,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      }
+    },
+    {
+      "id": "invalid-e228a1-cap100",
+      "status": "PASS",
+      "route": "path-scoped",
+      "inputSha256": "c86ded0f8260d2f24517e33b0198bcff9e350951af1aee5ef3dbcc71b1785401",
+      "cap": 100,
+      "docs": [
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "NESTED_REGULAR_CONTROL",
+          "truncated": false,
+          "detectedAt": 1791178979913,
+          "contentBytes": 22
+        }
+      ],
+      "observation": {
+        "flags": [],
+        "readCalls": 0,
+        "actualCloses": 0,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      },
+      "metrics": {
+        "probes": 22,
+        "reads": 2,
+        "cacheHits": 0,
+        "rejectedTargets": 0,
+        "truncatedDocuments": 0
+      }
+    },
+    {
+      "id": "default-invalid-e228a1-cap100",
+      "status": "PASS",
+      "route": "default",
+      "inputSha256": "c86ded0f8260d2f24517e33b0198bcff9e350951af1aee5ef3dbcc71b1785401",
+      "cap": 100,
+      "docs": [
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "NESTED_REGULAR_CONTROL",
+          "truncated": false,
+          "detectedAt": 1791178979914,
+          "contentBytes": 22
+        },
+        {
+          "path": "<root>/unselected/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 26,
+          "content": "UNSELECTED_SUBTREE_CONTROL",
+          "truncated": false,
+          "detectedAt": 1791178979914,
+          "contentBytes": 26
+        }
+      ],
+      "observation": {
+        "flags": [],
+        "readCalls": 0,
+        "actualCloses": 0,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      }
+    },
+    {
+      "id": "invalid-e282-cap1",
+      "status": "PASS",
+      "route": "path-scoped",
+      "inputSha256": "eed0eb1f664e53388c1f00a4a9ba9b8da60fe792af9eb5f6f4b5ee852a91f03f",
+      "cap": 1,
+      "docs": [
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "N",
+          "truncated": true,
+          "detectedAt": 1791178979917,
+          "contentBytes": 1
+        }
+      ],
+      "observation": {
+        "flags": [],
+        "readCalls": 0,
+        "actualCloses": 0,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      },
+      "metrics": {
+        "probes": 22,
+        "reads": 2,
+        "cacheHits": 0,
+        "rejectedTargets": 0,
+        "truncatedDocuments": 1
+      }
+    },
+    {
+      "id": "default-invalid-e282-cap1",
+      "status": "PASS",
+      "route": "default",
+      "inputSha256": "eed0eb1f664e53388c1f00a4a9ba9b8da60fe792af9eb5f6f4b5ee852a91f03f",
+      "cap": 1,
+      "docs": [
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "N",
+          "truncated": true,
+          "detectedAt": 1791178979919,
+          "contentBytes": 1
+        },
+        {
+          "path": "<root>/unselected/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 26,
+          "content": "U",
+          "truncated": true,
+          "detectedAt": 1791178979919,
+          "contentBytes": 1
+        }
+      ],
+      "observation": {
+        "flags": [],
+        "readCalls": 0,
+        "actualCloses": 0,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      }
+    },
+    {
+      "id": "invalid-e282-cap3",
+      "status": "PASS",
+      "route": "path-scoped",
+      "inputSha256": "eed0eb1f664e53388c1f00a4a9ba9b8da60fe792af9eb5f6f4b5ee852a91f03f",
+      "cap": 3,
+      "docs": [
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "NES",
+          "truncated": true,
+          "detectedAt": 1791178979921,
+          "contentBytes": 3
+        }
+      ],
+      "observation": {
+        "flags": [],
+        "readCalls": 0,
+        "actualCloses": 0,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      },
+      "metrics": {
+        "probes": 22,
+        "reads": 2,
+        "cacheHits": 0,
+        "rejectedTargets": 0,
+        "truncatedDocuments": 1
+      }
+    },
+    {
+      "id": "default-invalid-e282-cap3",
+      "status": "PASS",
+      "route": "default",
+      "inputSha256": "eed0eb1f664e53388c1f00a4a9ba9b8da60fe792af9eb5f6f4b5ee852a91f03f",
+      "cap": 3,
+      "docs": [
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "NES",
+          "truncated": true,
+          "detectedAt": 1791178979923,
+          "contentBytes": 3
+        },
+        {
+          "path": "<root>/unselected/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 26,
+          "content": "UNS",
+          "truncated": true,
+          "detectedAt": 1791178979923,
+          "contentBytes": 3
+        }
+      ],
+      "observation": {
+        "flags": [],
+        "readCalls": 0,
+        "actualCloses": 0,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      }
+    },
+    {
+      "id": "invalid-e282-cap100",
+      "status": "PASS",
+      "route": "path-scoped",
+      "inputSha256": "eed0eb1f664e53388c1f00a4a9ba9b8da60fe792af9eb5f6f4b5ee852a91f03f",
+      "cap": 100,
+      "docs": [
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "NESTED_REGULAR_CONTROL",
+          "truncated": false,
+          "detectedAt": 1791178979925,
+          "contentBytes": 22
+        }
+      ],
+      "observation": {
+        "flags": [],
+        "readCalls": 0,
+        "actualCloses": 0,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      },
+      "metrics": {
+        "probes": 22,
+        "reads": 2,
+        "cacheHits": 0,
+        "rejectedTargets": 0,
+        "truncatedDocuments": 0
+      }
+    },
+    {
+      "id": "default-invalid-e282-cap100",
+      "status": "PASS",
+      "route": "default",
+      "inputSha256": "eed0eb1f664e53388c1f00a4a9ba9b8da60fe792af9eb5f6f4b5ee852a91f03f",
+      "cap": 100,
+      "docs": [
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "NESTED_REGULAR_CONTROL",
+          "truncated": false,
+          "detectedAt": 1791178979928,
+          "contentBytes": 22
+        },
+        {
+          "path": "<root>/unselected/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 26,
+          "content": "UNSELECTED_SUBTREE_CONTROL",
+          "truncated": false,
+          "detectedAt": 1791178979928,
+          "contentBytes": 26
+        }
+      ],
+      "observation": {
+        "flags": [],
+        "readCalls": 0,
+        "actualCloses": 0,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      }
+    },
+    {
+      "id": "invalid-eda080-cap1",
+      "status": "PASS",
+      "route": "path-scoped",
+      "inputSha256": "91a681b998555fb475479817b126c94e57e52011fa1842c5d188795a4a05226b",
+      "cap": 1,
+      "docs": [
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "N",
+          "truncated": true,
+          "detectedAt": 1791178979934,
+          "contentBytes": 1
+        }
+      ],
+      "observation": {
+        "flags": [],
+        "readCalls": 0,
+        "actualCloses": 0,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      },
+      "metrics": {
+        "probes": 22,
+        "reads": 2,
+        "cacheHits": 0,
+        "rejectedTargets": 0,
+        "truncatedDocuments": 1
+      }
+    },
+    {
+      "id": "default-invalid-eda080-cap1",
+      "status": "PASS",
+      "route": "default",
+      "inputSha256": "91a681b998555fb475479817b126c94e57e52011fa1842c5d188795a4a05226b",
+      "cap": 1,
+      "docs": [
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "N",
+          "truncated": true,
+          "detectedAt": 1791178979936,
+          "contentBytes": 1
+        },
+        {
+          "path": "<root>/unselected/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 26,
+          "content": "U",
+          "truncated": true,
+          "detectedAt": 1791178979936,
+          "contentBytes": 1
+        }
+      ],
+      "observation": {
+        "flags": [],
+        "readCalls": 0,
+        "actualCloses": 0,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      }
+    },
+    {
+      "id": "invalid-eda080-cap3",
+      "status": "PASS",
+      "route": "path-scoped",
+      "inputSha256": "91a681b998555fb475479817b126c94e57e52011fa1842c5d188795a4a05226b",
+      "cap": 3,
+      "docs": [
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "NES",
+          "truncated": true,
+          "detectedAt": 1791178979938,
+          "contentBytes": 3
+        }
+      ],
+      "observation": {
+        "flags": [],
+        "readCalls": 0,
+        "actualCloses": 0,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      },
+      "metrics": {
+        "probes": 22,
+        "reads": 2,
+        "cacheHits": 0,
+        "rejectedTargets": 0,
+        "truncatedDocuments": 1
+      }
+    },
+    {
+      "id": "default-invalid-eda080-cap3",
+      "status": "PASS",
+      "route": "default",
+      "inputSha256": "91a681b998555fb475479817b126c94e57e52011fa1842c5d188795a4a05226b",
+      "cap": 3,
+      "docs": [
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "NES",
+          "truncated": true,
+          "detectedAt": 1791178979940,
+          "contentBytes": 3
+        },
+        {
+          "path": "<root>/unselected/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 26,
+          "content": "UNS",
+          "truncated": true,
+          "detectedAt": 1791178979940,
+          "contentBytes": 3
+        }
+      ],
+      "observation": {
+        "flags": [],
+        "readCalls": 0,
+        "actualCloses": 0,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      }
+    },
+    {
+      "id": "invalid-eda080-cap100",
+      "status": "PASS",
+      "route": "path-scoped",
+      "inputSha256": "91a681b998555fb475479817b126c94e57e52011fa1842c5d188795a4a05226b",
+      "cap": 100,
+      "docs": [
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "NESTED_REGULAR_CONTROL",
+          "truncated": false,
+          "detectedAt": 1791178979942,
+          "contentBytes": 22
+        }
+      ],
+      "observation": {
+        "flags": [],
+        "readCalls": 0,
+        "actualCloses": 0,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      },
+      "metrics": {
+        "probes": 22,
+        "reads": 2,
+        "cacheHits": 0,
+        "rejectedTargets": 0,
+        "truncatedDocuments": 0
+      }
+    },
+    {
+      "id": "default-invalid-eda080-cap100",
+      "status": "PASS",
+      "route": "default",
+      "inputSha256": "91a681b998555fb475479817b126c94e57e52011fa1842c5d188795a4a05226b",
+      "cap": 100,
+      "docs": [
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "NESTED_REGULAR_CONTROL",
+          "truncated": false,
+          "detectedAt": 1791178979944,
+          "contentBytes": 22
+        },
+        {
+          "path": "<root>/unselected/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 26,
+          "content": "UNSELECTED_SUBTREE_CONTROL",
+          "truncated": false,
+          "detectedAt": 1791178979945,
+          "contentBytes": 26
+        }
+      ],
+      "observation": {
+        "flags": [],
+        "readCalls": 0,
+        "actualCloses": 0,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      }
+    },
+    {
+      "id": "valid-truncated-cap0",
+      "status": "PASS",
+      "route": "path-scoped",
+      "inputSha256": "6d7af67fcd1719878774f73f0c0b54aa34cc8309faa345cc48cd37dae9630df6",
+      "cap": 0,
+      "docs": [
+        {
+          "path": "<root>/AGENTS.md",
+          "scope": "root",
+          "sizeBytes": 1300,
+          "content": "",
+          "truncated": true,
+          "detectedAt": 1791178979946,
+          "contentBytes": 0
+        },
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "",
+          "truncated": true,
+          "detectedAt": 1791178979947,
+          "contentBytes": 0
+        }
+      ],
+      "observation": {
+        "flags": [],
+        "readCalls": 0,
+        "actualCloses": 0,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      },
+      "metrics": {
+        "probes": 22,
+        "reads": 2,
+        "cacheHits": 0,
+        "rejectedTargets": 0,
+        "truncatedDocuments": 2
+      }
+    },
+    {
+      "id": "valid-truncated-cap1",
+      "status": "PASS",
+      "route": "path-scoped",
+      "inputSha256": "6d7af67fcd1719878774f73f0c0b54aa34cc8309faa345cc48cd37dae9630df6",
+      "cap": 1,
+      "docs": [
+        {
+          "path": "<root>/AGENTS.md",
+          "scope": "root",
+          "sizeBytes": 1300,
+          "content": "",
+          "truncated": true,
+          "detectedAt": 1791178979949,
+          "contentBytes": 0
+        },
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "N",
+          "truncated": true,
+          "detectedAt": 1791178979950,
+          "contentBytes": 1
+        }
+      ],
+      "observation": {
+        "flags": [],
+        "readCalls": 0,
+        "actualCloses": 0,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      },
+      "metrics": {
+        "probes": 22,
+        "reads": 2,
+        "cacheHits": 0,
+        "rejectedTargets": 0,
+        "truncatedDocuments": 2
+      }
+    },
+    {
+      "id": "valid-truncated-cap2",
+      "status": "PASS",
+      "route": "path-scoped",
+      "inputSha256": "6d7af67fcd1719878774f73f0c0b54aa34cc8309faa345cc48cd37dae9630df6",
+      "cap": 2,
+      "docs": [
+        {
+          "path": "<root>/AGENTS.md",
+          "scope": "root",
+          "sizeBytes": 1300,
+          "content": "",
+          "truncated": true,
+          "detectedAt": 1791178979951,
+          "contentBytes": 0
+        },
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "NE",
+          "truncated": true,
+          "detectedAt": 1791178979952,
+          "contentBytes": 2
+        }
+      ],
+      "observation": {
+        "flags": [],
+        "readCalls": 0,
+        "actualCloses": 0,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      },
+      "metrics": {
+        "probes": 22,
+        "reads": 2,
+        "cacheHits": 0,
+        "rejectedTargets": 0,
+        "truncatedDocuments": 2
+      }
+    },
+    {
+      "id": "valid-truncated-cap3",
+      "status": "PASS",
+      "route": "path-scoped",
+      "inputSha256": "6d7af67fcd1719878774f73f0c0b54aa34cc8309faa345cc48cd37dae9630df6",
+      "cap": 3,
+      "docs": [
+        {
+          "path": "<root>/AGENTS.md",
+          "scope": "root",
+          "sizeBytes": 1300,
+          "content": "中",
+          "truncated": true,
+          "detectedAt": 1791178979953,
+          "contentBytes": 3
+        },
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "NES",
+          "truncated": true,
+          "detectedAt": 1791178979954,
+          "contentBytes": 3
+        }
+      ],
+      "observation": {
+        "flags": [],
+        "readCalls": 0,
+        "actualCloses": 0,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      },
+      "metrics": {
+        "probes": 22,
+        "reads": 2,
+        "cacheHits": 0,
+        "rejectedTargets": 0,
+        "truncatedDocuments": 2
+      }
+    },
+    {
+      "id": "valid-truncated-cap4",
+      "status": "PASS",
+      "route": "path-scoped",
+      "inputSha256": "6d7af67fcd1719878774f73f0c0b54aa34cc8309faa345cc48cd37dae9630df6",
+      "cap": 4,
+      "docs": [
+        {
+          "path": "<root>/AGENTS.md",
+          "scope": "root",
+          "sizeBytes": 1300,
+          "content": "中",
+          "truncated": true,
+          "detectedAt": 1791178979955,
+          "contentBytes": 3
+        },
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "NEST",
+          "truncated": true,
+          "detectedAt": 1791178979956,
+          "contentBytes": 4
+        }
+      ],
+      "observation": {
+        "flags": [],
+        "readCalls": 0,
+        "actualCloses": 0,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      },
+      "metrics": {
+        "probes": 22,
+        "reads": 2,
+        "cacheHits": 0,
+        "rejectedTargets": 0,
+        "truncatedDocuments": 2
+      }
+    },
+    {
+      "id": "valid-truncated-cap8",
+      "status": "PASS",
+      "route": "path-scoped",
+      "inputSha256": "6d7af67fcd1719878774f73f0c0b54aa34cc8309faa345cc48cd37dae9630df6",
+      "cap": 8,
+      "docs": [
+        {
+          "path": "<root>/AGENTS.md",
+          "scope": "root",
+          "sizeBytes": 1300,
+          "content": "中文",
+          "truncated": true,
+          "detectedAt": 1791178979957,
+          "contentBytes": 6
+        },
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "NESTED_R",
+          "truncated": true,
+          "detectedAt": 1791178979958,
+          "contentBytes": 8
+        }
+      ],
+      "observation": {
+        "flags": [],
+        "readCalls": 0,
+        "actualCloses": 0,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      },
+      "metrics": {
+        "probes": 22,
+        "reads": 2,
+        "cacheHits": 0,
+        "rejectedTargets": 0,
+        "truncatedDocuments": 2
+      }
+    },
+    {
+      "id": "valid-truncated-cap17",
+      "status": "PASS",
+      "route": "path-scoped",
+      "inputSha256": "6d7af67fcd1719878774f73f0c0b54aa34cc8309faa345cc48cd37dae9630df6",
+      "cap": 17,
+      "docs": [
+        {
+          "path": "<root>/AGENTS.md",
+          "scope": "root",
+          "sizeBytes": 1300,
+          "content": "中\n# [truncated]",
+          "truncated": true,
+          "detectedAt": 1791178979960,
+          "contentBytes": 17
+        },
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "NES\n# [truncated]",
+          "truncated": true,
+          "detectedAt": 1791178979960,
+          "contentBytes": 17
+        }
+      ],
+      "observation": {
+        "flags": [],
+        "readCalls": 0,
+        "actualCloses": 0,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      },
+      "metrics": {
+        "probes": 22,
+        "reads": 2,
+        "cacheHits": 0,
+        "rejectedTargets": 0,
+        "truncatedDocuments": 2
+      }
+    },
+    {
+      "id": "valid-truncated-cap24",
+      "status": "PASS",
+      "route": "path-scoped",
+      "inputSha256": "6d7af67fcd1719878774f73f0c0b54aa34cc8309faa345cc48cd37dae9630df6",
+      "cap": 24,
+      "docs": [
+        {
+          "path": "<root>/AGENTS.md",
+          "scope": "root",
+          "sizeBytes": 1300,
+          "content": "中文😀\n# [truncated]",
+          "truncated": true,
+          "detectedAt": 1791178979962,
+          "contentBytes": 24
+        },
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "NESTED_REGULAR_CONTROL",
+          "truncated": false,
+          "detectedAt": 1791178979962,
+          "contentBytes": 22
+        }
+      ],
+      "observation": {
+        "flags": [],
+        "readCalls": 0,
+        "actualCloses": 0,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      },
+      "metrics": {
+        "probes": 22,
+        "reads": 2,
+        "cacheHits": 0,
+        "rejectedTargets": 0,
+        "truncatedDocuments": 1
+      }
+    },
+    {
+      "id": "valid-truncated-cap64",
+      "status": "PASS",
+      "route": "path-scoped",
+      "inputSha256": "6d7af67fcd1719878774f73f0c0b54aa34cc8309faa345cc48cd37dae9630df6",
+      "cap": 64,
+      "docs": [
+        {
+          "path": "<root>/AGENTS.md",
+          "scope": "root",
+          "sizeBytes": 1300,
+          "content": "中文😀é\n中文😀é\n中文😀é\n# [truncated]",
+          "truncated": true,
+          "detectedAt": 1791178979964,
+          "contentBytes": 52
+        },
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "NESTED_REGULAR_CONTROL",
+          "truncated": false,
+          "detectedAt": 1791178979964,
+          "contentBytes": 22
+        }
+      ],
+      "observation": {
+        "flags": [],
+        "readCalls": 0,
+        "actualCloses": 0,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      },
+      "metrics": {
+        "probes": 22,
+        "reads": 2,
+        "cacheHits": 0,
+        "rejectedTargets": 0,
+        "truncatedDocuments": 1
+      }
+    },
+    {
+      "id": "invalid-truncated-prefix",
+      "status": "PASS",
+      "route": "path-scoped",
+      "inputSha256": "da6f14970ce356ce01a5b340291e9d8b2652eb63fbf8f328ca6a87a727fde4d9",
+      "cap": 1,
+      "docs": [
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "N",
+          "truncated": true,
+          "detectedAt": 1791178979966,
+          "contentBytes": 1
+        }
+      ],
+      "observation": {
+        "flags": [],
+        "readCalls": 0,
+        "actualCloses": 0,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      },
+      "metrics": {
+        "probes": 22,
+        "reads": 2,
+        "cacheHits": 0,
+        "rejectedTargets": 0,
+        "truncatedDocuments": 1
+      }
+    },
+    {
+      "id": "empty-regular-file",
+      "status": "PASS",
+      "route": "path-scoped",
+      "inputSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "cap": 100,
+      "docs": [
+        {
+          "path": "<root>/AGENTS.md",
+          "scope": "root",
+          "sizeBytes": 0,
+          "content": "",
+          "truncated": false,
+          "detectedAt": 1791178979968,
+          "contentBytes": 0
+        },
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "NESTED_REGULAR_CONTROL",
+          "truncated": false,
+          "detectedAt": 1791178979968,
+          "contentBytes": 22
+        }
+      ],
+      "observation": {
+        "flags": [],
+        "readCalls": 0,
+        "actualCloses": 0,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      },
+      "metrics": {
+        "probes": 22,
+        "reads": 2,
+        "cacheHits": 0,
+        "rejectedTargets": 0,
+        "truncatedDocuments": 0
+      }
+    },
+    {
+      "id": "short-read-bounded-capture",
+      "status": "PASS",
+      "route": "path-scoped",
+      "inputSha256": "253d2d250195e910e8316db39121bcba0d4bad27134a8940ae37239e6f1a7ed3",
+      "cap": 100,
+      "decoration": "short",
+      "docs": [
+        {
+          "path": "<root>/AGENTS.md",
+          "scope": "root",
+          "sizeBytes": 2000,
+          "content": "valid regular lines\nvalid regular lines\nvalid regular lines\nvalid regular lines\n# [truncated]",
+          "truncated": true,
+          "detectedAt": 1791178979972,
+          "contentBytes": 93
+        },
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "NESTED_REGULAR_CONTROL",
+          "truncated": false,
+          "detectedAt": 1791178979973,
+          "contentBytes": 22
+        }
+      ],
+      "observation": {
+        "flags": [
+          133120
+        ],
+        "readCalls": 52,
+        "actualCloses": 1,
+        "allocations": [
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104,
+          104
+        ],
+        "capturedBytes": 104,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      },
+      "metrics": {
+        "probes": 22,
+        "reads": 2,
+        "cacheHits": 0,
+        "rejectedTargets": 0,
+        "truncatedDocuments": 1
+      }
+    },
+    {
+      "id": "zero",
+      "status": "PASS",
+      "route": "path-scoped",
+      "inputSha256": "6995aeb1eeb5c685698db776c9b9857d1ef719d76f92fdf5aadac8a04e2f1742",
+      "cap": 100,
+      "decoration": "zero",
+      "docs": [
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "NESTED_REGULAR_CONTROL",
+          "truncated": false,
+          "detectedAt": 1791178979975,
+          "contentBytes": 22
+        }
+      ],
+      "repeatedDocs": [
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "NESTED_REGULAR_CONTROL",
+          "truncated": false,
+          "detectedAt": 1791178979976,
+          "contentBytes": 22
+        }
+      ],
+      "observation": {
+        "flags": [
+          133120,
+          133120
+        ],
+        "readCalls": 2,
+        "actualCloses": 2,
+        "allocations": [
+          20,
+          20
+        ],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      },
+      "metrics": {
+        "probes": 34,
+        "reads": 3,
+        "cacheHits": 1,
+        "rejectedTargets": 0,
+        "truncatedDocuments": 0
+      }
+    },
+    {
+      "id": "partial",
+      "status": "PASS",
+      "route": "path-scoped",
+      "inputSha256": "6995aeb1eeb5c685698db776c9b9857d1ef719d76f92fdf5aadac8a04e2f1742",
+      "cap": 100,
+      "decoration": "partial",
+      "docs": [
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "NESTED_REGULAR_CONTROL",
+          "truncated": false,
+          "detectedAt": 1791178979979,
+          "contentBytes": 22
+        }
+      ],
+      "repeatedDocs": [
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "NESTED_REGULAR_CONTROL",
+          "truncated": false,
+          "detectedAt": 1791178979979,
+          "contentBytes": 22
+        }
+      ],
+      "observation": {
+        "flags": [
+          133120,
+          133120
+        ],
+        "readCalls": 4,
+        "actualCloses": 2,
+        "allocations": [
+          20,
+          20,
+          20,
+          20
+        ],
+        "capturedBytes": 6,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      },
+      "metrics": {
+        "probes": 34,
+        "reads": 3,
+        "cacheHits": 1,
+        "rejectedTargets": 0,
+        "truncatedDocuments": 0
+      }
+    },
+    {
+      "id": "read-error",
+      "status": "PASS",
+      "route": "path-scoped",
+      "inputSha256": "6995aeb1eeb5c685698db776c9b9857d1ef719d76f92fdf5aadac8a04e2f1742",
+      "cap": 100,
+      "decoration": "read-error",
+      "docs": [
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "NESTED_REGULAR_CONTROL",
+          "truncated": false,
+          "detectedAt": 1791178979982,
+          "contentBytes": 22
+        }
+      ],
+      "observation": {
+        "flags": [
+          133120
+        ],
+        "readCalls": 1,
+        "actualCloses": 1,
+        "allocations": [
+          20
+        ],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      },
+      "metrics": {
+        "probes": 20,
+        "reads": 1,
+        "cacheHits": 0,
+        "rejectedTargets": 0,
+        "truncatedDocuments": 0
+      }
+    },
+    {
+      "id": "nonregular",
+      "status": "PASS",
+      "route": "path-scoped",
+      "inputSha256": "6995aeb1eeb5c685698db776c9b9857d1ef719d76f92fdf5aadac8a04e2f1742",
+      "cap": 100,
+      "decoration": "nonregular",
+      "docs": [
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "NESTED_REGULAR_CONTROL",
+          "truncated": false,
+          "detectedAt": 1791178979985,
+          "contentBytes": 22
+        }
+      ],
+      "observation": {
+        "flags": [
+          133120
+        ],
+        "readCalls": 0,
+        "actualCloses": 1,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      },
+      "metrics": {
+        "probes": 20,
+        "reads": 1,
+        "cacheHits": 0,
+        "rejectedTargets": 0,
+        "truncatedDocuments": 0
+      }
+    },
+    {
+      "id": "pathname-revision",
+      "status": "PASS",
+      "route": "path-scoped",
+      "inputSha256": "6995aeb1eeb5c685698db776c9b9857d1ef719d76f92fdf5aadac8a04e2f1742",
+      "cap": 100,
+      "decoration": "pathname-revision",
+      "docs": [
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "NESTED_REGULAR_CONTROL",
+          "truncated": false,
+          "detectedAt": 1791178979988,
+          "contentBytes": 22
+        }
+      ],
+      "observation": {
+        "flags": [
+          133120
+        ],
+        "readCalls": 0,
+        "actualCloses": 1,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      },
+      "metrics": {
+        "probes": 20,
+        "reads": 1,
+        "cacheHits": 0,
+        "rejectedTargets": 0,
+        "truncatedDocuments": 0
+      }
+    },
+    {
+      "id": "descriptor-revision",
+      "status": "PASS",
+      "route": "path-scoped",
+      "inputSha256": "6995aeb1eeb5c685698db776c9b9857d1ef719d76f92fdf5aadac8a04e2f1742",
+      "cap": 100,
+      "decoration": "descriptor-revision",
+      "docs": [
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "NESTED_REGULAR_CONTROL",
+          "truncated": false,
+          "detectedAt": 1791178979991,
+          "contentBytes": 22
+        }
+      ],
+      "observation": {
+        "flags": [
+          133120
+        ],
+        "readCalls": 1,
+        "actualCloses": 1,
+        "allocations": [
+          20
+        ],
+        "capturedBytes": 20,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      },
+      "metrics": {
+        "probes": 22,
+        "reads": 2,
+        "cacheHits": 0,
+        "rejectedTargets": 0,
+        "truncatedDocuments": 0
+      }
+    },
+    {
+      "id": "cleanup-after-actual-close",
+      "status": "PASS",
+      "route": "path-scoped",
+      "inputSha256": "6995aeb1eeb5c685698db776c9b9857d1ef719d76f92fdf5aadac8a04e2f1742",
+      "cap": 100,
+      "decoration": "close-error",
+      "docs": [
+        {
+          "path": "<root>/AGENTS.md",
+          "scope": "root",
+          "sizeBytes": 20,
+          "content": "ROOT_REGULAR_CONTROL",
+          "truncated": false,
+          "detectedAt": 1791178979993,
+          "contentBytes": 20
+        },
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "NESTED_REGULAR_CONTROL",
+          "truncated": false,
+          "detectedAt": 1791178979994,
+          "contentBytes": 22
+        }
+      ],
+      "observation": {
+        "flags": [
+          133120
+        ],
+        "readCalls": 1,
+        "actualCloses": 1,
+        "allocations": [
+          20
+        ],
+        "capturedBytes": 20,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      },
+      "metrics": {
+        "probes": 22,
+        "reads": 2,
+        "cacheHits": 0,
+        "rejectedTargets": 0,
+        "truncatedDocuments": 0
+      }
+    },
+    {
+      "id": "parent-replacement-after-read",
+      "status": "PASS",
+      "route": "path-scoped",
+      "inputSha256": "6995aeb1eeb5c685698db776c9b9857d1ef719d76f92fdf5aadac8a04e2f1742",
+      "cap": 100,
+      "decoration": "parent-replacement",
+      "docs": [
+        {
+          "path": "<root>/AGENTS.md",
+          "scope": "root",
+          "sizeBytes": 20,
+          "content": "ROOT_REGULAR_CONTROL",
+          "truncated": false,
+          "detectedAt": 1791178979996,
+          "contentBytes": 20
+        }
+      ],
+      "observation": {
+        "flags": [
+          133120
+        ],
+        "readCalls": 1,
+        "actualCloses": 1,
+        "allocations": [
+          22
+        ],
+        "capturedBytes": 22,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false,
+        "parentReplaced": true
+      },
+      "metrics": {
+        "probes": 22,
+        "reads": 2,
+        "cacheHits": 0,
+        "rejectedTargets": 0,
+        "truncatedDocuments": 0
+      }
+    },
+    {
+      "id": "real-fifo-race-with-blocking-open-guard",
+      "status": "PASS",
+      "route": "path-scoped",
+      "inputSha256": "6995aeb1eeb5c685698db776c9b9857d1ef719d76f92fdf5aadac8a04e2f1742",
+      "cap": 100,
+      "decoration": "fifo",
+      "docs": [
+        {
+          "path": "<root>/nested/AGENTS.md",
+          "scope": "nested",
+          "sizeBytes": 22,
+          "content": "NESTED_REGULAR_CONTROL",
+          "truncated": false,
+          "detectedAt": 1791178980002,
+          "contentBytes": 22
+        }
+      ],
+      "observation": {
+        "flags": [
+          133120
+        ],
+        "readCalls": 0,
+        "actualCloses": 1,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": true
+      },
+      "metrics": {
+        "probes": 20,
+        "reads": 1,
+        "cacheHits": 0,
+        "rejectedTargets": 0,
+        "truncatedDocuments": 0
+      }
+    },
+    {
+      "id": "harness-malformed",
+      "status": "PASS",
+      "route": "actual Harness -> scoped/default pipeline -> runtime model request/pinned identity/durable events",
+      "requests": 1,
+      "outcomes": [
+        "completed"
+      ],
+      "projects": [
+        [
+          "<root>/nested/AGENTS.md"
+        ]
+      ],
+      "observation": {
+        "flags": [],
+        "readCalls": 0,
+        "actualCloses": 0,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      },
+      "rawFile": "harness-malformed.json",
+      "rawSha256": "4093e92c36dca0344bfbf61b713552c98d1a2f2d00cadfa07ae0dbeebff72328"
+    },
+    {
+      "id": "harness-incomplete-retry",
+      "status": "PASS",
+      "route": "actual Harness -> scoped/default pipeline -> runtime model request/pinned identity/durable events",
+      "requests": 2,
+      "outcomes": [
+        "completed",
+        "completed"
+      ],
+      "projects": [
+        [
+          "<root>/nested/AGENTS.md"
+        ],
+        [
+          "<root>/AGENTS.md",
+          "<root>/nested/AGENTS.md"
+        ]
+      ],
+      "observation": {
+        "flags": [
+          133120
+        ],
+        "readCalls": 1,
+        "actualCloses": 1,
+        "allocations": [
+          20
+        ],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      },
+      "rawFile": "harness-incomplete-retry.json",
+      "rawSha256": "266f837d20acbb82013637e80f23b162e18e0904824a988e306ee4ca734619fc"
+    },
+    {
+      "id": "harness-cleanup",
+      "status": "PASS",
+      "route": "actual Harness -> scoped/default pipeline -> runtime model request/pinned identity/durable events",
+      "requests": 1,
+      "outcomes": [
+        "completed"
+      ],
+      "projects": [
+        [
+          "<root>/AGENTS.md",
+          "<root>/nested/AGENTS.md"
+        ]
+      ],
+      "observation": {
+        "flags": [
+          133120
+        ],
+        "readCalls": 1,
+        "actualCloses": 1,
+        "allocations": [
+          20
+        ],
+        "capturedBytes": 20,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      },
+      "rawFile": "harness-cleanup.json",
+      "rawSha256": "c2d6966689b3582365408e3bc268da4ed73698e4220225aaea12381cfde35249"
+    },
+    {
+      "id": "harness-bom-marker",
+      "status": "PASS",
+      "route": "actual Harness -> scoped/default pipeline -> runtime model request/pinned identity/durable events",
+      "requests": 1,
+      "outcomes": [
+        "completed"
+      ],
+      "projects": [
+        [
+          "<root>/AGENTS.md",
+          "<root>/nested/AGENTS.md"
+        ]
+      ],
+      "observation": {
+        "flags": [],
+        "readCalls": 0,
+        "actualCloses": 0,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      },
+      "rawFile": "harness-bom-marker.json",
+      "rawSha256": "a28afe9d14d22acd89dd8c6e3c628073a710e7d93b101fa561764341d0bbd583"
+    },
+    {
+      "id": "harness-injection-control",
+      "status": "PASS",
+      "route": "actual Harness -> scoped/default pipeline -> runtime model request/pinned identity/durable events",
+      "requests": 1,
+      "outcomes": [
+        "completed"
+      ],
+      "projects": [
+        [
+          "<root>/nested/AGENTS.md"
+        ]
+      ],
+      "observation": {
+        "flags": [],
+        "readCalls": 0,
+        "actualCloses": 0,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      },
+      "rawFile": "harness-injection-control.json",
+      "rawSha256": "19bb6567ecb1cfeed7f2c529248714f2879adf044bd43632a0f9371a40ddb1b6"
+    },
+    {
+      "id": "harness-default-policy",
+      "status": "PASS",
+      "route": "actual Harness -> scoped/default pipeline -> runtime model request/pinned identity/durable events",
+      "requests": 1,
+      "outcomes": [
+        "completed"
+      ],
+      "projects": [
+        [
+          "<root>/AGENTS.md",
+          "<root>/nested/AGENTS.md",
+          "<root>/unselected/AGENTS.md"
+        ]
+      ],
+      "observation": {
+        "flags": [],
+        "readCalls": 0,
+        "actualCloses": 0,
+        "allocations": [],
+        "capturedBytes": 0,
+        "guardedBlockingOpen": false,
+        "nativeFifoOpened": false
+      },
+      "rawFile": "harness-default-policy.json",
+      "rawSha256": "59fc5ead0df4bea578e2e705e0d0ba711654db80079e359073aa6e43dfac679e"
+    }
+  ],
+  "node": "v24.19.0",
+  "platform": "linux",
+  "paidCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "windowsRuntime": "NOT_RUN",
+  "limits": "Scripted provider verifies actual Harness context admission and durable identity, not real model quality. POSIX FIFO really opens only with NONBLOCK; an unsafe baseline open is guarded before invocation. Default discovery source is unchanged. Context defaults, marker, targets, injection rules and permission/sandbox contracts are unchanged."
+}

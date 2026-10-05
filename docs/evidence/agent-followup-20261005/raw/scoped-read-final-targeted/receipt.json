@@ -1,0 +1,34 @@
+{
+  "status": "PASS",
+  "stage": "FINAL_TARGETED_GREEN",
+  "head": "b00299e5d0da03656c00e2041fc261aa01af6c96",
+  "argv": [
+    "corepack",
+    "pnpm",
+    "exec",
+    "vitest",
+    "run",
+    "packages/context/src/scoped-instruction-read.regressions.test.ts",
+    "packages/harness/src/scoped-instruction-read.integration.test.ts",
+    "packages/context/src/path-scoped-discovery.test.ts",
+    "packages/context/src/default-discovery-read-failures.test.ts",
+    "packages/context/src/default-discovery-budget-regressions.test.ts",
+    "packages/harness/src/path-scoped-instructions.regressions.test.ts"
+  ],
+  "startedAt": "2026-10-05T05:40:58.052192+00:00",
+  "endedAt": "2026-10-05T05:41:02.737074+00:00",
+  "exitCode": 0,
+  "filesBefore": {
+    "packages/context/src/path-scoped-discovery.ts": "3d04fb274e7a1365e1c5d821c86fa491af6c666779e8d8ba53072937d60ca169",
+    "packages/context/src/scoped-instruction-read.regressions.test.ts": "030fe9547a217dd65f4d194f9828c8ee3f85a8d6fae785178b3d3cdd03d936cb",
+    "packages/harness/src/scoped-instruction-read.integration.test.ts": "cf386e0c87bf024739a60f441b5a9b72d7b70eba2bfade78920930b0a37e8127",
+    "scripts/research/agent-followup-20261005/scoped-instruction-probe.mjs": "d3b8a1295a056bfef3b3c75b08061fe6515ee41b293b4cdb87eb355f66575dc9"
+  },
+  "filesAfter": {
+    "packages/context/src/path-scoped-discovery.ts": "3d04fb274e7a1365e1c5d821c86fa491af6c666779e8d8ba53072937d60ca169",
+    "packages/context/src/scoped-instruction-read.regressions.test.ts": "030fe9547a217dd65f4d194f9828c8ee3f85a8d6fae785178b3d3cdd03d936cb",
+    "packages/harness/src/scoped-instruction-read.integration.test.ts": "cf386e0c87bf024739a60f441b5a9b72d7b70eba2bfade78920930b0a37e8127",
+    "scripts/research/agent-followup-20261005/scoped-instruction-probe.mjs": "d3b8a1295a056bfef3b3c75b08061fe6515ee41b293b4cdb87eb355f66575dc9"
+  },
+  "rawLogSha256": "46732e370c8e9a7cc4bca77454f4f2fe9624a146f9b1f0641527c915299ea98b"
+}

@@ -1,0 +1,50 @@
+{
+  "buffered": {
+    "expectedReason": "cancelled",
+    "actualReason": "stop",
+    "events": [
+      {
+        "type": "started",
+        "timestamp": 1791171387516
+      },
+      {
+        "type": "text_delta",
+        "text": "first",
+        "timestamp": 1791171387520
+      },
+      {
+        "type": "completed",
+        "result": {
+          "finishReason": "stop",
+          "text": "first"
+        },
+        "timestamp": 1791171387520
+      }
+    ],
+    "actualFailure": true
+  },
+  "native": {
+    "events": [
+      {
+        "type": "started",
+        "timestamp": 1791171387526
+      },
+      {
+        "type": "text_delta",
+        "text": "first",
+        "timestamp": 1791171387544
+      }
+    ],
+    "error": {
+      "name": "AbortError",
+      "message": "This operation was aborted"
+    },
+    "expectedReason": "cancelled",
+    "actualReason": null,
+    "actualFailure": true
+  },
+  "sourceSha": "f71b444eec6b4024039716a1a0a01bade22c90b0",
+  "sourceFileSha256": "2c909c6c7c0ed377b52e5b26665e991a104c84cd1cad733287576a115d0bd780",
+  "distFileSha256": "1aa9acd6f9e49f5a417009ad10047bddfbbd9ff6e47c2ffcd337f606b9d476aa",
+  "runtime": "v24.19.0"
+}

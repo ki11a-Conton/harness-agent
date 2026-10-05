@@ -1,0 +1,42 @@
+{
+  "buffered": {
+    "expectedReason": "cancelled",
+    "actualReason": "stop",
+    "events": [
+      {
+        "type": "started",
+        "timestamp": 1791171335565
+      },
+      {
+        "type": "text_delta",
+        "text": "first",
+        "timestamp": 1791171335567
+      },
+      {
+        "type": "completed",
+        "result": {
+          "finishReason": "stop",
+          "text": "first"
+        },
+        "timestamp": 1791171335567
+      }
+    ]
+  },
+  "native": {
+    "events": [
+      {
+        "type": "started",
+        "timestamp": 1791171335573
+      },
+      {
+        "type": "text_delta",
+        "text": "first",
+        "timestamp": 1791171335590
+      }
+    ],
+    "error": {
+      "name": "AbortError",
+      "message": "This operation was aborted"
+    }
+  }
+}

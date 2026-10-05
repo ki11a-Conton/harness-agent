@@ -1,0 +1,33 @@
+{
+  "commands": [
+    {
+      "name": "model-build",
+      "command": [
+        "corepack",
+        "pnpm",
+        "exec",
+        "tsc",
+        "-b",
+        "packages/model"
+      ],
+      "exitCode": 0,
+      "durationSeconds": 0.4892145350459032,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "model-tests",
+      "command": [
+        "corepack",
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "packages/model"
+      ],
+      "exitCode": 0,
+      "durationSeconds": 4.333485165960155,
+      "logSha256": "bab77f9303ea132f45975d0eb5304518dc0974727b9d720dbda508e672b816e8"
+    }
+  ],
+  "status": "PASS"
+}

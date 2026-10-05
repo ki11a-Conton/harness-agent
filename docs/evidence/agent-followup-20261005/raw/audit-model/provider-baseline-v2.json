@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "sourceSha": "f71b444eec6b4024039716a1a0a01bade22c90b0",
+  "sourceFileSha256": "2c909c6c7c0ed377b52e5b26665e991a104c84cd1cad733287576a115d0bd780",
+  "distFileSha256": "1aa9acd6f9e49f5a417009ad10047bddfbbd9ff6e47c2ffcd337f606b9d476aa",
+  "runtime": "v24.19.0",
+  "usageFooter": {
+    "expected": {
+      "inputTokens": 137,
+      "outputTokens": 23
+    },
+    "actual": null,
+    "usageEventCount": 0,
+    "events": [
+      {
+        "type": "started",
+        "timestamp": 1791171386976
+      },
+      {
+        "type": "text_delta",
+        "text": "complete",
+        "timestamp": 1791171386997
+      },
+      {
+        "type": "completed",
+        "result": {
+          "finishReason": "stop",
+          "text": "complete"
+        },
+        "timestamp": 1791171386997
+      }
+    ],
+    "requests": [
+      {
+        "path": "/v1/chat/completions",
+        "body": {
+          "model": "gpt-4o-mini",
+          "messages": [],
+          "stream": true,
+          "stream_options": {
+            "include_usage": true
+          }
+        }
+      }
+    ],
+    "actualFailure": true
+  },
+  "earlyReturnCleanup": {
+    "expectedCancellationCount": 1,
+    "actualCancellationCount": 0,
+    "readerRemainsLocked": true,
+    "events": [
+      {
+        "type": "started",
+        "timestamp": 1791171386997
+      },
+      {
+        "type": "text_delta",
+        "text": "first",
+        "timestamp": 1791171386998
+      }
+    ],
+    "actualFailure": true
+  }
+}

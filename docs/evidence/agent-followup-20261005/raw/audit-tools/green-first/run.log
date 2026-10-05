@@ -1,0 +1,96 @@
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+ ✓ packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > only lists, stats and reads the selected TS directory on a cold query 12ms
+ ✓ packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > only stats and reads the selected TS file rather than its siblings 4ms
+ ✓ packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > uses the existing fallback for a Python-only directory in a mixed repository 5ms
+ ✓ packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > uses the existing fallback for a selected Python file 3ms
+ ✓ packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > recovers Python when the root's TS/JS index has no query hit 5ms
+ ✓ packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > retains indexed hits as the priority without merging Python definitions 3ms
+ ✓ packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > gives identical root-relative hits for absolute and relative TS scope ts 3ms
+ ✓ packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > gives identical root-relative hits for absolute and relative TS scope ts/a.ts 3ms
+ ✓ packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > gives identical root-relative hits for absolute and relative Python scope py 4ms
+ ✓ packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > gives identical root-relative hits for absolute and relative Python scope py/logic.py 3ms
+ ✓ packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > normalizes aliases and retains directory boundaries 4ms
+ ✓ packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > reuses unchanged scoped contents on warm validation without accessing other scopes 3ms
+ ✓ packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > keeps root and selected-scope caches isolated across root -> file -> directory queries 4ms
+ ✓ packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > coalesces concurrent queries of the same normalized scope 5ms
+ ✓ packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > does not share a flight or cached file set between concurrent different scopes 6ms
+ ✓ packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > updates scoped edits, additions and removals before the next query 6ms
+ ✓ packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > preserves maxResults for indexed and fallback queries 3ms
+ ✓ packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > skips discovered symlinks and VCS/dependency/generated paths 7ms
+ ✓ packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > retains a trusted root alias while refusing selected directory symlinks 3ms
+ ✓ packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > refuses a selected file reached through a directory symlink 3ms
+ ✓ packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > never reads other paths when permission only allows the requested directory 3ms
+ ✓ packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > keeps permission denial and outside-sandbox rejection before all source IO 3ms
+ ✓ packages/tools/src/symbol-scope.regressions.test.ts > symbol search: actual approved scope, mixed languages and isolated caches > returns no stale scoped contents after the selected file vanishes 3ms
+ ✓ packages/tools/src/workspace-knowledge-regressions.test.ts > workspace knowledge: bounded, shared repository scans > shares a warm validation scan across 16 callers 9ms
+ ✓ packages/tools/src/workspace-knowledge-regressions.test.ts > workspace knowledge: bounded, shared repository scans > reuses the changed validation scan to build the map 4ms
+ ✓ packages/tools/src/workspace-knowledge-regressions.test.ts > workspace knowledge: bounded, shared repository scans > stops traversal across sibling directories at the scan limit 5ms
+ ✓ packages/tools/src/workspace-knowledge-regressions.test.ts > workspace knowledge: bounded, shared repository scans > marks an exact cap complete and detects a new file beyond the cap 2ms
+ ✓ packages/tools/src/workspace-knowledge-regressions.test.ts > workspace knowledge: bounded, shared repository scans > reports dirty freshness immediately 4ms
+ ✓ packages/tools/src/workspace-knowledge-regressions.test.ts > workspace knowledge: bounded, shared repository scans > preserves noteChange while a warm scan is pending 4ms
+ ✓ packages/tools/src/workspace-knowledge-regressions.test.ts > workspace knowledge: bounded, shared repository scans > preserves invalidate while a warm scan is pending 3ms
+ ✓ packages/tools/src/workspace-knowledge-regressions.test.ts > workspace knowledge: bounded, shared repository scans > does not publish an old build after noteChange 3ms
+ ✓ packages/tools/src/workspace-knowledge-regressions.test.ts > workspace knowledge: bounded, shared repository scans > does not publish an old build after invalidate 3ms
+ ✓ packages/tools/src/workspace-knowledge-regressions.test.ts > workspace knowledge: repository resolver isolation > uses separate workspace caches and reuses A after A → B → A 3ms
+ ✓ packages/tools/src/workspace-knowledge-regressions.test.ts > workspace knowledge: repository resolver isolation > honors maxFiles for each call without replacing a different budget 3ms
+ ✓ packages/tools/src/workspace-knowledge-regressions.test.ts > workspace knowledge: repository resolver isolation > normalizes cwd aliases and limits refresh to that workspace 2ms
+ ✓ packages/tools/src/workspace-knowledge-regressions.test.ts > workspace knowledge: repository resolver isolation > retains recently used entries while evicting the oldest of eight 6ms
+ ✓ packages/tools/src/workspace-knowledge-regressions.test.ts > workspace knowledge: repository resolver isolation > serves the correct root through two orchestrators sharing one tool 6ms
+ ✓ packages/tools/src/workspace-knowledge-regressions.test.ts > workspace knowledge: fresh and shared symbol indexes > searches the root for scope undefined 3ms
+ ✓ packages/tools/src/workspace-knowledge-regressions.test.ts > workspace knowledge: fresh and shared symbol indexes > searches the root for scope . 2ms
+ ✓ packages/tools/src/workspace-knowledge-regressions.test.ts > workspace knowledge: fresh and shared symbol indexes > searches the root for scope ./ 2ms
+ ✓ packages/tools/src/workspace-knowledge-regressions.test.ts > workspace knowledge: fresh and shared symbol indexes > searches the root for scope  2ms
+ ✓ packages/tools/src/workspace-knowledge-regressions.test.ts > workspace knowledge: fresh and shared symbol indexes > matches directory boundaries and exact file paths 3ms
+ ✓ packages/tools/src/workspace-knowledge-regressions.test.ts > workspace knowledge: fresh and shared symbol indexes > finds the default symbol through the permission and sandbox pipeline 3ms
+ ✓ packages/tools/src/workspace-knowledge-regressions.test.ts > workspace knowledge: fresh and shared symbol indexes > coalesces 16 cold queries and normalized root aliases 2ms
+ ✓ packages/tools/src/workspace-knowledge-regressions.test.ts > workspace knowledge: fresh and shared symbol indexes > does not index files when the orchestrator denies permissions 2ms
+ ✓ packages/tools/src/workspace-knowledge-regressions.test.ts > workspace knowledge: fresh and shared symbol indexes > rejects a path outside the workspace before indexing 2ms
+ ✓ packages/tools/src/workspace-knowledge-regressions.test.ts > workspace knowledge: fresh and shared symbol indexes > validates concurrent warm queries once without rereading contents 2ms
+ ✓ packages/tools/src/workspace-knowledge-regressions.test.ts > workspace knowledge: fresh and shared symbol indexes > updates a nested edit immediately and reuses the unchanged file 3ms
+ ✓ packages/tools/src/workspace-knowledge-regressions.test.ts > workspace knowledge: fresh and shared symbol indexes > detects same-size nested edits through the file mtime 2ms
+ ✓ packages/tools/src/workspace-knowledge-regressions.test.ts > workspace knowledge: fresh and shared symbol indexes > detects nested additions and removals without a root-directory change 3ms
+ ✓ packages/tools/src/workspace-knowledge-regressions.test.ts > workspace knowledge: fresh and shared symbol indexes > forces content rereads after the TTL even for matching file stats 4ms
+ ✓ packages/tools/src/workspace-knowledge-regressions.test.ts > workspace knowledge: fresh and shared symbol indexes > keeps the 64 most recently used roots 35ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: global traversal stop > propagates a nested callback stop across all ancestor/sibling directories 13ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: global traversal stop > keeps directory callbacks and their entry-name contract while stopping 2ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: global traversal stop > stops grep immediately when the first file fills the hit cap 5ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: global traversal stop > stops at a cap inside a multi-line file without entering later siblings 7ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: global traversal stop > also stops the unchanged regex symbol fallback globally 4ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: real directory entries and work bounds > returns all 66 immediate directories including empty ones with one read 23ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: real directory entries and work bounds > performs no listing at absolute depth zero 6ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: real directory entries and work bounds > counts real directories toward the entry cap and stops before descent 6ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: real directory entries and work bounds > shares one cap for mixed files and directories and preserves path sort 2ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: real directory entries and work bounds > prunes recursion exactly at the root-relative depth boundary 2ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: real directory entries and work bounds > keeps verified ancestors for a nonempty subpath and root-relative depth 2ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: real directory entries and work bounds > counts subpath ancestors toward the same cap 2ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: real directory entries and work bounds > keeps missing and empty directories as empty output 2ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: real directory entries and work bounds > does not invent ancestor directories for a file path 1ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: real directory entries and work bounds > treats an unreadable directory as empty rather than fabricating entries 1ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: production security controls > accepts a trusted root directory alias while keeping repository-relative output 2ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: production security controls > skips generated, VCS, dependency and directory symlink entries before descent 3ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: production security controls > does not follow a directory symlink supplied as the subtree 1ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: production security controls > does not follow a symlink ancestor of the selected subtree 1ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: production security controls > rejects a denied permission before any directory read 4ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: production security controls > rejects an outside path through the real sandbox before any directory read 2ms
+ ✓ packages/tools/src/symbol-index.test.ts > P7-4: light TS/JS symbol index (EXPERIMENT) > finds function/class/interface definitions with roles and positions 7ms
+ ✓ packages/tools/src/symbol-index.test.ts > P7-4: light TS/JS symbol index (EXPERIMENT) > classifies imports and references 3ms
+ ✓ packages/tools/src/symbol-index.test.ts > P7-4: light TS/JS symbol index (EXPERIMENT) > skips node_modules and honours maxHits 2ms
+ ✓ packages/tools/src/symbol-index.test.ts > P7-4: light TS/JS symbol index (EXPERIMENT) > caches the index per root (second search does not re-scan) 2ms
+ ✓ packages/tools/src/symbol-index.test.ts > P15-5: cross-repo cache isolation + freshness > two repos never share index state through the module cache 3ms
+ ✓ packages/tools/src/symbol-index.test.ts > P15-5: cross-repo cache isolation + freshness > a root whose directory fingerprint changed rebuilds the index (no stale state) 8ms
+ ✓ packages/tools/src/navigate.test.ts > P2-29 walkFiles skips VCS/dependency dirs > does not surface .git / node_modules files 2ms
+ ✓ packages/tools/src/navigate.test.ts > P2-29 grepFiles > finds case-insensitive text matches with line/column 2ms
+ ✓ packages/tools/src/navigate.test.ts > P2-29 grepFiles > restricts to fileGlob and respects caseSensitive 3ms
+ ✓ packages/tools/src/navigate.test.ts > P2-29 grepFiles > skips binary / oversized files 1ms
+ ✓ packages/tools/src/navigate.test.ts > P2-29 symbolSearch fallback > returns fallback:true with an explicit indexer note 2ms
+ ✓ packages/tools/src/navigate.test.ts > P2-29 symbolSearch fallback > finds class and const symbols 1ms
+ ✓ packages/tools/src/navigate.test.ts > P2-29 repoTree > lists files and synthesized dirs, skipping VCS/dep dirs 1ms
+
+ Test Files  5 passed (5)
+      Tests  86 passed (86)
+   Start at  05:35:17
+   Duration  1.75s (transform 368ms, setup 0ms, import 781ms, tests 363ms, environment 0ms)
+
+JSON report written to /workspace/harness-agent/.ci/agent-followup-20261005/audit-tools/green-first/result.json

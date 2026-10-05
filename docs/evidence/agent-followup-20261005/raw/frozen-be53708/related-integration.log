@@ -1,0 +1,90 @@
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:37669
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:44417
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:46335
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:40797
+[harness] context budget: model capabilities unknown for web-cancellation-probe/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:37039
+[harness] context budget: model capabilities unknown for web-queued-followup-stop-probe/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:46243
+ ✓ apps/web/src/harness.integration.test.ts (6 tests) 1228ms
+     ✓ U4 stops the active queued follow-up through HTTP without cancelling another sender's session  454ms
+ ✓ packages/tools/src/production-tools.test.ts (9 tests) 1469ms
+     ✓ env_snapshot tool is wired to the host network mode + tool list  487ms
+     ✓ createProductionTools forwards harness profile + workspace root to env_snapshot  472ms
+     ✓ createEnvSnapshotTool rejects nothing and reports the live injected policy + harness facts  499ms
+ ✓ packages/tools/src/process/executor.test.ts (30 tests | 7 skipped) 1373ms
+     ✓ kills the process tree on timeout (no orphan)  302ms
+     ✓ honors timeout, cancellation, output cap and env on the argv path  411ms
+ ✓ packages/model/src/openai.test.ts (40 tests) 1127ms
+     ✓ P1-18: honors Retry-After on 429 and classifies it rate_limit with retryAfterMs  1002ms
+ ✓ packages/tools/src/r4-file-regressions.test.ts (41 tests) 507ms
+ ✓ packages/harness/src/context-wiring.integration.test.ts (3 tests) 558ms
+     ✓ env_snapshot reports the live harness wiring (profile, workspace root, tool list)  530ms
+ ✓ packages/tools/src/vs001.test.ts (13 tests) 361ms
+ ✓ packages/tools/src/orchestrator.test.ts (32 tests) 192ms
+ ✓ packages/model/src/openai-stream-footer.regressions.test.ts (31 tests) 147ms
+ ✓ packages/tools/src/process/sandbox-executor.test.ts (33 tests) 140ms
+ ✓ packages/model/src/openai-request-policy.test.ts (7 tests) 133ms
+ ✓ packages/harness/src/path-scoped-instructions.regressions.test.ts (9 tests) 165ms
+ ✓ packages/context/src/default-discovery-budget-regressions.test.ts (49 tests) 126ms
+[degraded] path-scoped-discovery.close: instruction handle cleanup failed
+ ✓ packages/context/src/scoped-instruction-read.regressions.test.ts (34 tests) 131ms
+ ✓ packages/tools/src/workspace-knowledge-regressions.test.ts (29 tests) 127ms
+ ✓ packages/tools/src/verification/task-verifier.test.ts (20 tests) 115ms
+ ✓ packages/core/src/runtime/wire-protocol-e2e.test.ts (8 tests) 102ms
+ ✓ packages/tools/src/symbol-scope.regressions.test.ts (23 tests) 103ms
+ ✓ packages/context/src/path-scoped-discovery.test.ts (24 tests) 82ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts (21 tests) 89ms
+ ✓ packages/tools/src/process/utf8-output.regressions.test.ts (34 tests) 87ms
+ ✓ packages/model/src/openai.wire-stub.test.ts (22 tests) 77ms
+ ✓ packages/context/src/circuit-breaker.test.ts (6 tests) 71ms
+ ✓ packages/context/src/pipeline.test.ts (38 tests) 65ms
+ ✓ packages/tools/src/tools/exec-workspace-policy.test.ts (12 tests) 45ms
+ ✓ packages/model/src/model.test.ts (9 tests) 49ms
+ ✓ packages/model/src/openai-termination-regressions.test.ts (19 tests) 46ms
+ ✓ packages/tools/src/repo-map.test.ts (12 tests) 43ms
+ ✓ packages/tools/src/command-discovery.test.ts (15 tests) 31ms
+ ✓ packages/model/src/openai-system-context.regressions.test.ts (13 tests) 41ms
+ ✓ packages/tools/src/verification-plan.test.ts (9 tests) 37ms
+ ✓ packages/tools/src/review-regressions.test.ts (42 tests) 37ms
+ ✓ packages/context/src/discovery.test.ts (11 tests) 38ms
+ ✓ packages/tools/src/symbol-index.test.ts (6 tests) 28ms
+ ✓ packages/tools/src/env-snapshot.test.ts (6 tests) 24ms
+ ✓ packages/tools/src/process/windows-fixture-guard.test.ts (15 tests) 19ms
+ ✓ packages/context/src/context-optimization-regressions.test.ts (39 tests) 21ms
+ ✓ packages/tools/src/transaction.test.ts (9 tests) 22ms
+[degraded] discovery.close: instruction handle cleanup failed
+ ✓ packages/context/src/default-discovery-read-failures.test.ts (3 tests) 18ms
+ ✓ packages/context/src/taxonomy.test.ts (18 tests) 18ms
+ ✓ packages/tools/src/source-matrix.test.ts (22 tests) 17ms
+ ✓ packages/tools/src/navigate.test.ts (7 tests) 25ms
+ ✓ packages/tools/src/tool-dispatch-budget.test.ts (6 tests) 15ms
+ ✓ packages/tools/src/write-file-safety.test.ts (4 tests) 14ms
+ ✓ packages/tools/src/process/r96-windows-execution-boundary.test.ts (25 tests | 3 skipped) 14ms
+ ✓ packages/tools/src/workspace.test.ts (8 tests) 19ms
+ ✓ packages/tools/src/edit.test.ts (14 tests) 7ms
+ ✓ packages/context/src/compaction.test.ts (10 tests) 10ms
+ ✓ packages/model/src/provider-diagnostics.test.ts (8 tests) 8ms
+ ✓ packages/tools/src/tools/exec-workspace-root-alias.test.ts (7 tests) 9ms
+ ✓ packages/model/src/capability-resolver.test.ts (6 tests) 5ms
+ ✓ packages/context/src/prompt-versioning.test.ts (9 tests) 9ms
+ ✓ packages/context/src/policy-versioning.test.ts (10 tests) 9ms
+ ✓ packages/context/src/message-budget-regressions.test.ts (14 tests) 9ms
+ ✓ packages/tools/src/write-safety.test.ts (11 tests) 6ms
+ ✓ packages/tools/src/semantics.test.ts (4 tests) 5ms
+ ✓ packages/tools/src/schema-advert.test.ts (7 tests) 6ms
+ ✓ packages/tools/src/tool-lookup.test.ts (2 tests) 6ms
+ ✓ packages/context/src/budget.test.ts (8 tests) 5ms
+
+ Test Files  59 passed (59)
+      Tests  972 passed | 10 skipped (982)
+   Start at  05:42:32
+   Duration  22.19s (transform 2.15s, setup 0ms, import 6.22s, tests 9.29s, environment 5ms)
+

@@ -1,0 +1,16 @@
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+[degraded] openai.reader.cancel: response cleanup failed
+ ✓ packages/model/src/openai-stream-footer.regressions.test.ts (33 tests) 157ms
+[degraded] path-scoped-discovery.close: instruction handle cleanup failed
+ ✓ packages/context/src/scoped-instruction-read.regressions.test.ts (34 tests) 144ms
+ ✓ packages/tools/src/symbol-scope.regressions.test.ts (23 tests) 106ms
+[degraded] path-scoped-discovery.close: instruction handle cleanup failed
+ ✓ packages/harness/src/scoped-instruction-read.integration.test.ts (5 tests) 74ms
+
+ Test Files  4 passed (4)
+      Tests  95 passed (95)
+   Start at  05:50:15
+   Duration  3.20s (transform 1.69s, setup 0ms, import 2.30s, tests 481ms, environment 0ms)
+

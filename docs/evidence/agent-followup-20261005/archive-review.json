@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "agent-followup-independent-archive-completion-review-v1",
+  "status": "ARCHIVE_AND_COMPLETION_REVIEW_PASS",
+  "reviewedAt": "2026-10-05T06:16:15.614730+00:00",
+  "testedSourceSha": "2476c23444079a2cba29480b35d65157cf30c0fd",
+  "artifactIndexSha256": "b7f64472a3f5f9ce0559b4229038bbfddec76f32d3e962396ca4a42b0d267154",
+  "rawFilesVerified": 406,
+  "rawBytesVerified": 9524514,
+  "originalIgnoredBytesEqualIndexedWorkingAndStagedGitBlobs": true,
+  "allStagedFilesWorkingBytesEqualGitBlobs": 412,
+  "rawSubtreeTextUnsetCachedAttributes": 406,
+  "completionPathsAllowedOnly": true,
+  "productionTestsResearchScriptsRemainEqualExactTestedSource": true,
+  "attributesChangesOnlyRawBytePreservationAndExistingNewScriptLFRule": true,
+  "immutablePreregisteredBytesPreserved": true,
+  "completionPlanSnapshotEqualsCurrentPlan": true,
+  "currentPlanR1ThroughR4Done": true,
+  "documentationClaimsCheckedAgainstFinalManifestProductionAndFailedReceipts": true,
+  "documentationLinkCount": 43,
+  "allDocumentationLinksExistExceptThisReceiptAwaitingCopy": [
+    "docs/evidence/agent-followup-20261005/archive-review.json"
+  ],
+  "nativeSourcePublication": {
+    "status": "PASS",
+    "sourceSha": "2476c23444079a2cba29480b35d65157cf30c0fd",
+    "nativeGitPushExit": 0,
+    "nativeGitLsRemoteAndCurlRefApiMatch": true,
+    "receiptHashesMatch": true
+  },
+  "originalReviewAndFailReceiptBytesPreserved": true,
+  "credentialTokenPatternsFound": 0,
+  "scope": "Read-only staged archive and documentation review. No additional tests or source mutation. Final docs commit publication remains a separate native verification after commit creation. This receipt may be copied verbatim into the top-level metadata without adding itself to the immutable raw index.",
+  "limits": [
+    "No claim of a full test rerun on the later documentation commit.",
+    "Explicit source limitation retained: audit-context baseline.json initial JSON bytes were overwritten before archival; v1 stdout/stderr remain and formal baseline cites v2.",
+    "Paid=0; real model quality/champion promotion/Windows native execution NOT_RUN."
+  ]
+}

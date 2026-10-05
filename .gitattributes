@@ -109,3 +109,9 @@ docs/evidence/agent-next-20261004/raw/audit-tools/navigate-pre-implementation.ts
 scripts/research/agent-next-20261004/* text eol=lf
 scripts/research/agent-next-20261004/memory-reference-18f162b.mjs -text
 scripts/research/agent-next-20261004/memory-reference-18f162b.source.txt -text whitespace=cr-at-eol
+
+# Preserve original follow-up baseline, failures, probes and acceptance bytes.
+docs/evidence/agent-followup-20261005/raw/** -text
+docs/evidence/agent-followup-20261005/raw/**/*.log -whitespace
+docs/evidence/agent-followup-20261005/raw/**/*.diff -whitespace
+scripts/research/agent-followup-20261005/* text eol=lf

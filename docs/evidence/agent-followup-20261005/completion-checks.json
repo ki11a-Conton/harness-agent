@@ -1,0 +1,56 @@
+{
+  "status": "PASS",
+  "testedSourceSha": "2476c23444079a2cba29480b35d65157cf30c0fd",
+  "commands": [
+    {
+      "name": "artifact-integrity",
+      "argv": [
+        "node",
+        "scripts/research/agent-trust-20261004/verify-artifacts.mjs",
+        "docs/evidence/agent-followup-20261005/artifact-index.json"
+      ],
+      "exitCode": 0,
+      "log": "artifact-integrity.log",
+      "logSha256": "d58475986f62d73a27ae5c51ce3ba3478aa712ee17a2142cc0317e8d38cf846c",
+      "logBytes": 46,
+      "rawLogBase64": "eyJzdGF0dXMiOiJQQVNTIiwiZmlsZXMiOjQwNiwiYnl0ZXMiOjk1MjQ1MTR9Cg==",
+      "rawLogEncoding": "base64: exact original subprocess stdout/stderr bytes"
+    },
+    {
+      "name": "completion-docs",
+      "argv": [
+        "corepack",
+        "pnpm",
+        "docs:verify"
+      ],
+      "exitCode": 0,
+      "log": "completion-docs.log",
+      "logSha256": "b1f9bc4d5c8647240915161b243366e4ad38eda3f0e3802e0e6f4f0c09cc778e",
+      "logBytes": 1734,
+      "rawLogBase64": "JCBub2RlIGFwcHMvY2xpL2Rpc3QvbWFpbi5qcyBkb2NzOnZlcmlmeQpbaGFybmVzc10gY29udGV4dCBidWRnZXQ6IG1vZGVsIGNhcGFiaWxpdGllcyB1bmtub3duIGZvciBzdHViL3N0dWItbW9kZWwg4oCUIHVzaW5nIGNvbnNlcnZhdGl2ZSBmYWxsYmFjayAzMjAwMAojIERvY3VtZW50YXRpb24gdHJ1dGggdmVyaWZpY2F0aW9uCgpQQVNTICBiZW5jaG1hcmsgc3VpdGU6IHJlZ3Jlc3Npb24KICAgICAgMzAgY2FzZShzKSBvbiBkaXNrIG1hdGNoZXMgUkVBRE1FIGNsYWltIDMwClBBU1MgIGJlbmNobWFyayBzdWl0ZTogaG9sZG91dAogICAgICAzMiBjYXNlKHMpIG9uIGRpc2sgbWF0Y2hlcyBSRUFETUUgY2xhaW0gMzIKUEFTUyAgYmVuY2htYXJrIHN1aXRlOiBhZHZlcnNhcmlhbAogICAgICAxMyBjYXNlKHMpIG9uIGRpc2sgbWF0Y2hlcyBSRUFETUUgY2xhaW0gMTMKUEFTUyAgYmVuY2htYXJrIHN1aXRlOiBzdHJlc3MKICAgICAgMTEgY2FzZShzKSBvbiBkaXNrIG1hdGNoZXMgUkVBRE1FIGNsYWltIDExClBBU1MgIHBhY2thZ2UgY291bnQKICAgICAgMjQgcGFja2FnZXMvIG9uIGRpc2sgbWF0Y2hlcyB0aGUgSEFORE9WRVIgY2xhaW0gMjQKUEFTUyAgQ0kgZ2F0ZXMKICAgICAgLmdpdGh1Yi93b3JrZmxvd3MvY2kueW1sIHJ1bnMgdGVzdCBhbmQgY292ZXJhZ2UKUEFTUyAgSEFORE9WRVIgc3RhdGljIHRydXRoIChQMzguNC0xMCkKICAgICAgSEFORE9WRVIubWQgY2Fub25pY2FsIHNlY3Rpb24gY29udGFpbnMgbm8gdm9sYXRpbGUgU0hBL3J1bi1pZCDigJQgYSBuZXcgY29tbWl0IGRvZXMgbm90IG1ha2UgaXQgc3RhbGUKUEFTUyAgQ0FQQUJJTElUWV9NQVRSSVgubWQgbWFjaGluZS1nZW5lcmF0ZWQKICAgICAgQ0FQQUJJTElUWV9NQVRSSVgubWQgY2FycmllcyBnZW5lcmF0ZWRBdCArIHRoZSBhdWRpdCByZWNvcmRzIHRhYmxlClBBU1MgIENBUEFCSUxJVFlfTUFUUklYIG1hcmtlZCBpbmZvcm1hdGlvbmFsIChQMzguMi0xMSkKICAgICAgdHJhY2tlZCBtYXRyaXggaXMgZXhwbGljaXRseSBOT1QgUkVMRUFTRSBFVklERU5DRSAoaW5mb3JtYXRpb25hbCBzbmFwc2hvdCkKUEFTUyAgY2FwYWJpbGl0eSBwcm9maWxlcyBwcmVzZW50CiAgICAgIENBUEFCSUxJVFlfTUFUUklYLmpzb24gY2FycmllcyB0aGUgcGVyLXByb2ZpbGUgYnlQcm9maWxlIHZpZXcKUEFTUyAgZXZvbHV0aW9uIGxlZGdlciBjb25zaXN0ZW50IChFMi0xMikKICAgICAgZXZvbHV0aW9uLWxlZGdlci5qc29uIHZlcmlmaWVzOiByZWZzIGV4aXN0LCBkaWdlc3RzIG1hdGNoLCBzdW1tYXJpZXMgcmVjb21wdXRlLCBvbmUgYWN0aXZlIGNoYW1waW9uClBBU1MgIGN1cnJlbnQgcGxhbiBlbnRyeSAoRTQtMDApCiAgICAgIHBsYW4ubWQgaXMgdGhlIGN1cnJlbnQgZW50cnkgYW5kIHJlZmVyZW5jZXMgYW4gZXhpc3Rpbmcgc3BlYyBwbGFuKDIwMjYxMDA1LTAzMzg0OCkubWQKUEFTUyAgcmVsZWFzZSBnYXRlIGNvbW1hbmRzIGV4aXN0IGluIHBhY2thZ2UuanNvbiAoRTQtMTApCiAgICAgIGV2ZXJ5IHJlbGVhc2UtZ2F0ZSBjb21tYW5kIG1hcHMgdG8gYSByZWFsIHBhY2thZ2UuanNvbiBzY3JpcHQKUEFTUyAgZG9jdW1lbnRlZCBwbnBtIHNjcmlwdHMgZXhpc3QgaW4gcGFja2FnZS5qc29uIChFNC0xMCAjNikKICAgICAgZXZlcnkgcG5wbSBjb21tYW5kIGRvY3VtZW50ZWQgaW4gMiBSRUFETUUgZmlsZShzKSBtYXBzIHRvIGEgcmVhbCBwYWNrYWdlLmpzb24gc2NyaXB0CgpBTEwgQ0hFQ0tTIFBBU1MK",
+      "rawLogEncoding": "base64: exact original subprocess stdout/stderr bytes"
+    },
+    {
+      "name": "authored-diff",
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exitCode": 0,
+      "log": "authored-diff.log",
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "logBytes": 0,
+      "rawLogBase64": "",
+      "rawLogEncoding": "base64: exact original subprocess stdout/stderr bytes"
+    }
+  ],
+  "timestamp": "2026-10-05T06:12:15Z",
+  "rawOriginalWorkingStagedMatch": {
+    "files": 406,
+    "bytes": 9524514,
+    "credentialPatterns": 0,
+    "baselineSpecificationUnchanged": true,
+    "testedImplementationTestsScriptsUnchanged": true
+  }
+}

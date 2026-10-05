@@ -1,0 +1,940 @@
+{
+  "schema": "HARNESS_SYMBOL_SCOPE_ACCEPTANCE_V1",
+  "head": "f71b444eec6b4024039716a1a0a01bade22c90b0",
+  "probeSha256": "c26051c1ed9cfb751a0e3e061fca48bba735f62c2482b76b8d15ef9da40e2f7a",
+  "profile": "full production tool profile through ToolRegistry/ToolOrchestrator/PermissionEngine/SandboxManager + actual filesystem reads observed",
+  "paidCalls": 0,
+  "hashes": {
+    "packages/tools/src/navigate.ts": "b0b42636455fe67d3a53c818452a04b1dd68e915cd978781b5da398720b2f866",
+    "packages/tools/src/symbol-index.ts": "d5db871a0d931abbd866bab5f2d9d8ba01c7083f89587bfdaf2f342c08958824",
+    "packages/tools/src/tools/navigation-tools.ts": "9ad61abf09717afe045103fc53dcf60a2a92442589a59b035c2241b4f4cf708d",
+    "packages/tools/src/orchestrator.ts": "adcd42ba547d15e725b9d0236bd7ca550cf2f363e60f2ed10951f92d1604d3eb",
+    "packages/tools/dist/navigate.js": "cb54641c91805789209ab1e73521542cceb022dbea41654c1b27663ca61273db",
+    "packages/tools/dist/symbol-index.js": "d94836d9cf77db6c055661dfa3281662cffdaea0ccf90eaa24e8c420f7daf6b4",
+    "packages/tools/dist/tools/navigation-tools.js": "0ae512939b4e425b902c5d9259c0e0a23cd2372cfed4f50126444677c2672f7b"
+  },
+  "observedAt": "2026-10-05T03:38:47.088Z",
+  "status": "FAIL",
+  "checks": [
+    {
+      "id": "COLD_DIRECTORY_SCOPE_INDEX",
+      "expected": {
+        "hit": "public-ts/a.ts",
+        "sourceReadsWithin": "public-ts"
+      },
+      "actual": {
+        "args": {
+          "symbol": "TsOnly",
+          "path": "public-ts"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": false,
+            "indexer": "ts-regex-index",
+            "hits": [
+              {
+                "file": "public-ts/a.ts",
+                "line": 1,
+                "kind": "function",
+                "name": "TsOnly",
+                "text": "export function TsOnly() {}",
+                "role": "definition"
+              }
+            ],
+            "filesIndexed": 4,
+            "indexFresh": true
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 1 symbol(s) for TsOnly (4 files indexed)",
+              "source": "TsOnly",
+              "timestamp": 1791171527071
+            }
+          ]
+        },
+        "readFiles": [
+          "private/secret.ts",
+          "public-ts/a.ts",
+          "public-ts/b.ts",
+          "public-tsx/a.ts"
+        ],
+        "readDirectories": [
+          ".",
+          "private",
+          "public-py",
+          "public-ts",
+          "public-tsx"
+        ]
+      },
+      "verdict": "FAIL"
+    },
+    {
+      "id": "WARM_DIRECTORY_SCOPE_REUSES_UNCHANGED_CONTENT",
+      "expected": {
+        "sameHits": true,
+        "readFileCount": 0,
+        "sourceReadsWithin": "public-ts"
+      },
+      "actual": {
+        "args": {
+          "symbol": "TsOnly",
+          "path": "public-ts"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": false,
+            "indexer": "ts-regex-index",
+            "hits": [
+              {
+                "file": "public-ts/a.ts",
+                "line": 1,
+                "kind": "function",
+                "name": "TsOnly",
+                "text": "export function TsOnly() {}",
+                "role": "definition"
+              }
+            ],
+            "filesIndexed": 4,
+            "indexFresh": true
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 1 symbol(s) for TsOnly (4 files indexed)",
+              "source": "TsOnly",
+              "timestamp": 1791171527072
+            }
+          ]
+        },
+        "readFiles": [],
+        "readDirectories": [
+          ".",
+          "private",
+          "public-py",
+          "public-ts",
+          "public-tsx"
+        ]
+      },
+      "verdict": "FAIL"
+    },
+    {
+      "id": "RELATIVE_DIRECTORY_ALIAS_EQUIVALENT",
+      "expected": {
+        "sameHits": true
+      },
+      "actual": {
+        "args": {
+          "symbol": "TsOnly",
+          "path": "./public-ts/../public-ts/"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": false,
+            "indexer": "ts-regex-index",
+            "hits": [
+              {
+                "file": "public-ts/a.ts",
+                "line": 1,
+                "kind": "function",
+                "name": "TsOnly",
+                "text": "export function TsOnly() {}",
+                "role": "definition"
+              }
+            ],
+            "filesIndexed": 4,
+            "indexFresh": true
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 1 symbol(s) for TsOnly (4 files indexed)",
+              "source": "TsOnly",
+              "timestamp": 1791171527073
+            }
+          ]
+        },
+        "readFiles": [],
+        "readDirectories": [
+          ".",
+          "private",
+          "public-py",
+          "public-ts",
+          "public-tsx"
+        ]
+      },
+      "verdict": "FAIL"
+    },
+    {
+      "id": "ABSOLUTE_DIRECTORY_ALIAS_EQUIVALENT",
+      "expected": {
+        "sameHits": true
+      },
+      "actual": {
+        "args": {
+          "symbol": "TsOnly",
+          "path": "/tmp/agent-symbol-scope-cNSngN/public-ts"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": false,
+            "indexer": "ts-regex-index",
+            "hits": [],
+            "filesIndexed": 4,
+            "indexFresh": true
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 0 symbol(s) for TsOnly (4 files indexed)",
+              "source": "TsOnly",
+              "timestamp": 1791171527074
+            }
+          ]
+        },
+        "readFiles": [],
+        "readDirectories": [
+          ".",
+          "private",
+          "public-py",
+          "public-ts",
+          "public-tsx"
+        ]
+      },
+      "verdict": "FAIL"
+    },
+    {
+      "id": "PYTHON_SCOPE_NOT_MASKED_BY_TS_ELSEWHERE",
+      "expected": {
+        "hit": "public-py/logic.py",
+        "fallback": true,
+        "sourceReadsWithin": "public-py"
+      },
+      "actual": {
+        "args": {
+          "symbol": "PyOnly",
+          "path": "public-py"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": false,
+            "indexer": "ts-regex-index",
+            "hits": [],
+            "filesIndexed": 4,
+            "indexFresh": true
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 0 symbol(s) for PyOnly (4 files indexed)",
+              "source": "PyOnly",
+              "timestamp": 1791171527074
+            }
+          ]
+        },
+        "readFiles": [],
+        "readDirectories": [
+          ".",
+          "private",
+          "public-py",
+          "public-ts",
+          "public-tsx"
+        ]
+      },
+      "verdict": "FAIL"
+    },
+    {
+      "id": "PYTHON_FILE_SCOPE_FALLBACK",
+      "expected": {
+        "hit": "public-py/logic.py",
+        "readsOnlyFile": true
+      },
+      "actual": {
+        "args": {
+          "symbol": "PyOnly",
+          "path": "public-py/logic.py"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": false,
+            "indexer": "ts-regex-index",
+            "hits": [],
+            "filesIndexed": 4,
+            "indexFresh": true
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 0 symbol(s) for PyOnly (4 files indexed)",
+              "source": "PyOnly",
+              "timestamp": 1791171527075
+            }
+          ]
+        },
+        "readFiles": [],
+        "readDirectories": [
+          ".",
+          "private",
+          "public-py",
+          "public-ts",
+          "public-tsx"
+        ]
+      },
+      "verdict": "FAIL"
+    },
+    {
+      "id": "PYTHON_ABSOLUTE_FILE_ALIAS",
+      "expected": {
+        "sameHitsAsRelativeFile": true
+      },
+      "actual": {
+        "args": {
+          "symbol": "PyOnly",
+          "path": "/tmp/agent-symbol-scope-cNSngN/public-py/logic.py"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": false,
+            "indexer": "ts-regex-index",
+            "hits": [],
+            "filesIndexed": 4,
+            "indexFresh": true
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 0 symbol(s) for PyOnly (4 files indexed)",
+              "source": "PyOnly",
+              "timestamp": 1791171527075
+            }
+          ]
+        },
+        "readFiles": [],
+        "readDirectories": [
+          ".",
+          "private",
+          "public-py",
+          "public-ts",
+          "public-tsx"
+        ]
+      },
+      "verdict": "FAIL"
+    },
+    {
+      "id": "TS_SINGLE_FILE_SCOPE_INDEX",
+      "expected": {
+        "hit": "public-ts/a.ts",
+        "readsOnlyFile": true
+      },
+      "actual": {
+        "args": {
+          "symbol": "TsOnly",
+          "path": "public-ts/a.ts"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": false,
+            "indexer": "ts-regex-index",
+            "hits": [
+              {
+                "file": "public-ts/a.ts",
+                "line": 1,
+                "kind": "function",
+                "name": "TsOnly",
+                "text": "export function TsOnly() {}",
+                "role": "definition"
+              }
+            ],
+            "filesIndexed": 4,
+            "indexFresh": true
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 1 symbol(s) for TsOnly (4 files indexed)",
+              "source": "TsOnly",
+              "timestamp": 1791171527076
+            }
+          ]
+        },
+        "readFiles": [],
+        "readDirectories": [
+          ".",
+          "private",
+          "public-py",
+          "public-ts",
+          "public-tsx"
+        ]
+      },
+      "verdict": "FAIL"
+    },
+    {
+      "id": "TS_ABSOLUTE_SINGLE_FILE_ALIAS",
+      "expected": {
+        "sameHitsAsRelativeFile": true
+      },
+      "actual": {
+        "args": {
+          "symbol": "TsOnly",
+          "path": "/tmp/agent-symbol-scope-cNSngN/public-ts/a.ts"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": false,
+            "indexer": "ts-regex-index",
+            "hits": [],
+            "filesIndexed": 4,
+            "indexFresh": true
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 0 symbol(s) for TsOnly (4 files indexed)",
+              "source": "TsOnly",
+              "timestamp": 1791171527076
+            }
+          ]
+        },
+        "readFiles": [],
+        "readDirectories": [
+          ".",
+          "private",
+          "public-py",
+          "public-ts",
+          "public-tsx"
+        ]
+      },
+      "verdict": "FAIL"
+    },
+    {
+      "id": "OFFSCOPE_SYMBOL_NOT_RETURNED_OR_READ",
+      "expected": {
+        "hits": [],
+        "sourceReadsWithin": "public-ts"
+      },
+      "actual": {
+        "args": {
+          "symbol": "OffScopeMarker",
+          "path": "public-ts"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": false,
+            "indexer": "ts-regex-index",
+            "hits": [],
+            "filesIndexed": 4,
+            "indexFresh": true
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 0 symbol(s) for OffScopeMarker (4 files indexed)",
+              "source": "OffScopeMarker",
+              "timestamp": 1791171527077
+            }
+          ]
+        },
+        "readFiles": [],
+        "readDirectories": [
+          ".",
+          "private",
+          "public-py",
+          "public-ts",
+          "public-tsx"
+        ]
+      },
+      "verdict": "FAIL"
+    },
+    {
+      "id": "DIRECTORY_BOUNDARY_EXCLUDES_PREFIX_SIBLING",
+      "expected": {
+        "hits": [],
+        "sourceReadsWithin": "public-ts"
+      },
+      "actual": {
+        "args": {
+          "symbol": "PrefixOnly",
+          "path": "public-ts"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": false,
+            "indexer": "ts-regex-index",
+            "hits": [],
+            "filesIndexed": 4,
+            "indexFresh": true
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 0 symbol(s) for PrefixOnly (4 files indexed)",
+              "source": "PrefixOnly",
+              "timestamp": 1791171527078
+            }
+          ]
+        },
+        "readFiles": [],
+        "readDirectories": [
+          ".",
+          "private",
+          "public-py",
+          "public-ts",
+          "public-tsx"
+        ]
+      },
+      "verdict": "FAIL"
+    },
+    {
+      "id": "SCOPED_FILE_CACHE_FRESH_AFTER_EDIT",
+      "expected": {
+        "hit": "public-ts/a.ts",
+        "readsOnlyFile": true
+      },
+      "actual": {
+        "args": {
+          "symbol": "ChangedTsOnly",
+          "path": "public-ts/a.ts"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": false,
+            "indexer": "ts-regex-index",
+            "hits": [
+              {
+                "file": "public-ts/a.ts",
+                "line": 1,
+                "kind": "function",
+                "name": "ChangedTsOnly",
+                "text": "export function ChangedTsOnly() {}",
+                "role": "definition"
+              }
+            ],
+            "filesIndexed": 4,
+            "indexFresh": true
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 1 symbol(s) for ChangedTsOnly (4 files indexed)",
+              "source": "ChangedTsOnly",
+              "timestamp": 1791171527078
+            }
+          ]
+        },
+        "readFiles": [
+          "public-ts/a.ts"
+        ],
+        "readDirectories": [
+          ".",
+          "private",
+          "public-py",
+          "public-ts",
+          "public-tsx"
+        ]
+      },
+      "verdict": "FAIL"
+    },
+    {
+      "id": "SCOPED_CACHE_HAS_NO_STALE_DEFINITION",
+      "expected": {
+        "noOldDefinition": true
+      },
+      "actual": {
+        "args": {
+          "symbol": "TsOnly",
+          "path": "public-ts/a.ts"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": false,
+            "indexer": "ts-regex-index",
+            "hits": [
+              {
+                "file": "public-ts/a.ts",
+                "line": 1,
+                "kind": "export",
+                "name": "TsOnly",
+                "text": "export function ChangedTsOnly() {}",
+                "role": "export"
+              }
+            ],
+            "filesIndexed": 4,
+            "indexFresh": true
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 1 symbol(s) for TsOnly (4 files indexed)",
+              "source": "TsOnly",
+              "timestamp": 1791171527080
+            }
+          ]
+        },
+        "readFiles": [],
+        "readDirectories": [
+          ".",
+          "private",
+          "public-py",
+          "public-ts",
+          "public-tsx"
+        ]
+      },
+      "verdict": "PASS"
+    },
+    {
+      "id": "SCOPED_DIRECTORY_CACHE_DETECTS_NEW_FILE",
+      "expected": {
+        "hit": "public-ts/new.ts",
+        "sourceReadsWithin": "public-ts"
+      },
+      "actual": {
+        "args": {
+          "symbol": "AddedTsOnly",
+          "path": "public-ts"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": false,
+            "indexer": "ts-regex-index",
+            "hits": [
+              {
+                "file": "public-ts/new.ts",
+                "line": 1,
+                "kind": "const",
+                "name": "AddedTsOnly",
+                "text": "export const AddedTsOnly = 1;",
+                "role": "definition"
+              }
+            ],
+            "filesIndexed": 5,
+            "indexFresh": true
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 1 symbol(s) for AddedTsOnly (5 files indexed)",
+              "source": "AddedTsOnly",
+              "timestamp": 1791171527081
+            }
+          ]
+        },
+        "readFiles": [
+          "public-ts/new.ts"
+        ],
+        "readDirectories": [
+          ".",
+          "private",
+          "public-py",
+          "public-ts",
+          "public-tsx"
+        ]
+      },
+      "verdict": "FAIL"
+    },
+    {
+      "id": "CONCURRENT_SCOPES_DO_NOT_SHARE_WRONG_INDEX",
+      "expected": {
+        "resultFiles": [
+          "public-ts/a.ts",
+          "public-py/logic.py"
+        ],
+        "noPrivateReads": true
+      },
+      "actual": {
+        "args": [
+          {
+            "symbol": "ChangedTsOnly",
+            "path": "public-ts"
+          },
+          {
+            "symbol": "PyOnly",
+            "path": "public-py"
+          }
+        ],
+        "results": [
+          {
+            "status": "success",
+            "output": {
+              "fallback": false,
+              "indexer": "ts-regex-index",
+              "hits": [
+                {
+                  "file": "public-ts/a.ts",
+                  "line": 1,
+                  "kind": "function",
+                  "name": "ChangedTsOnly",
+                  "text": "export function ChangedTsOnly() {}",
+                  "role": "definition"
+                }
+              ],
+              "filesIndexed": 5,
+              "indexFresh": true
+            },
+            "evidence": [
+              {
+                "type": "file",
+                "description": "symbol_search: 1 symbol(s) for ChangedTsOnly (5 files indexed)",
+                "source": "ChangedTsOnly",
+                "timestamp": 1791171527081
+              }
+            ]
+          },
+          {
+            "status": "success",
+            "output": {
+              "fallback": false,
+              "indexer": "ts-regex-index",
+              "hits": [],
+              "filesIndexed": 5,
+              "indexFresh": true
+            },
+            "evidence": [
+              {
+                "type": "file",
+                "description": "symbol_search: 0 symbol(s) for PyOnly (5 files indexed)",
+                "source": "PyOnly",
+                "timestamp": 1791171527081
+              }
+            ]
+          }
+        ],
+        "readFiles": [],
+        "readDirectories": [
+          ".",
+          "private",
+          "public-py",
+          "public-ts",
+          "public-tsx"
+        ]
+      },
+      "verdict": "FAIL"
+    },
+    {
+      "id": "MAX_RESULTS_PRESERVED",
+      "expected": {
+        "hitsAtMost": 1
+      },
+      "actual": {
+        "args": {
+          "symbol": "function",
+          "path": "public-ts",
+          "maxResults": 1
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": false,
+            "indexer": "ts-regex-index",
+            "hits": [
+              {
+                "file": "public-ts/a.ts",
+                "line": 1,
+                "kind": "export",
+                "name": "function",
+                "text": "export function ChangedTsOnly() {}",
+                "role": "export"
+              }
+            ],
+            "filesIndexed": 5,
+            "indexFresh": true
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 1 symbol(s) for function (5 files indexed)",
+              "source": "function",
+              "timestamp": 1791171527082
+            }
+          ]
+        },
+        "readFiles": [],
+        "readDirectories": [
+          ".",
+          "private",
+          "public-py",
+          "public-ts",
+          "public-tsx"
+        ]
+      },
+      "verdict": "PASS"
+    },
+    {
+      "id": "SCHEMA_DENIAL_ZERO_IO",
+      "expected": {
+        "status": "failed",
+        "sourceIO": 0
+      },
+      "actual": {
+        "args": {
+          "symbol": "TsOnly",
+          "path": "public-ts",
+          "maxResults": 0
+        },
+        "result": {
+          "status": "failed",
+          "error": {
+            "code": "TOOL_SCHEMA_ERROR",
+            "message": "schema validation failed for symbol_search: maxResults: Number must be greater than 0",
+            "retryable": false,
+            "safeToRetry": false
+          }
+        },
+        "readFiles": [],
+        "readDirectories": []
+      },
+      "verdict": "PASS"
+    },
+    {
+      "id": "ALLOW_SELECTED_PATH_DOES_NOT_READ_OTHER_PATHS",
+      "expected": {
+        "status": "success",
+        "sourceReadsWithin": "public-ts"
+      },
+      "actual": {
+        "args": {
+          "symbol": "ChangedTsOnly",
+          "path": "public-ts"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": false,
+            "indexer": "ts-regex-index",
+            "hits": [
+              {
+                "file": "public-ts/a.ts",
+                "line": 1,
+                "kind": "function",
+                "name": "ChangedTsOnly",
+                "text": "export function ChangedTsOnly() {}",
+                "role": "definition"
+              }
+            ],
+            "filesIndexed": 5,
+            "indexFresh": true
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 1 symbol(s) for ChangedTsOnly (5 files indexed)",
+              "source": "ChangedTsOnly",
+              "timestamp": 1791171527083
+            }
+          ]
+        },
+        "readFiles": [],
+        "readDirectories": [
+          ".",
+          "private",
+          "public-py",
+          "public-ts",
+          "public-tsx"
+        ]
+      },
+      "verdict": "FAIL"
+    },
+    {
+      "id": "PERMISSION_DENIAL_ZERO_IO",
+      "expected": {
+        "status": "denied",
+        "sourceIO": 0
+      },
+      "actual": {
+        "args": {
+          "symbol": "ChangedTsOnly",
+          "path": "public-ts"
+        },
+        "result": {
+          "status": "denied",
+          "error": {
+            "code": "PERMISSION_DENIED",
+            "message": "permission denied: no rule matched read:file; fallback 'deny'",
+            "retryable": false,
+            "safeToRetry": false
+          }
+        },
+        "readFiles": [],
+        "readDirectories": []
+      },
+      "verdict": "PASS"
+    },
+    {
+      "id": "SANDBOX_DENIAL_ZERO_IO",
+      "expected": {
+        "status": "denied",
+        "sourceIO": 0
+      },
+      "actual": {
+        "args": {
+          "symbol": "ExternalOnly",
+          "path": "/tmp/agent-symbol-scope-outside-JQc8VN"
+        },
+        "result": {
+          "status": "denied",
+          "error": {
+            "code": "SANDBOX_FILESYSTEM_DENIED",
+            "message": "sandbox denied: path outside workspace: /tmp/agent-symbol-scope-outside-JQc8VN",
+            "retryable": false,
+            "safeToRetry": false
+          }
+        },
+        "readFiles": [],
+        "readDirectories": []
+      },
+      "verdict": "PASS"
+    },
+    {
+      "id": "GENERATED_DEPENDENCY_VCS_SKIP_PRESERVED",
+      "expected": {
+        "hits": [],
+        "ignoredFileReads": []
+      },
+      "actual": {
+        "args": {
+          "symbol": "IgnoredOnly"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": false,
+            "indexer": "ts-regex-index",
+            "hits": [],
+            "filesIndexed": 5,
+            "indexFresh": true
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 0 symbol(s) for IgnoredOnly (5 files indexed)",
+              "source": "IgnoredOnly",
+              "timestamp": 1791171527084
+            }
+          ]
+        },
+        "readFiles": [],
+        "readDirectories": [
+          ".",
+          "private",
+          "public-py",
+          "public-ts",
+          "public-tsx"
+        ]
+      },
+      "verdict": "PASS"
+    }
+  ]
+}

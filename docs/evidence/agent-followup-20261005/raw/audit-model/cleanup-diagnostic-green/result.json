@@ -1,0 +1,34 @@
+{
+  "commands": [
+    {
+      "name": "model-build",
+      "command": [
+        "corepack",
+        "pnpm",
+        "exec",
+        "tsc",
+        "-b",
+        "packages/model"
+      ],
+      "exitCode": 0,
+      "durationSeconds": 0.6808506969828159,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "model-security-tests",
+      "command": [
+        "corepack",
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "packages/model",
+        "packages/security/src/no-silent-catch.test.ts"
+      ],
+      "exitCode": 0,
+      "durationSeconds": 4.505436605017167,
+      "logSha256": "235e053cd0ef0124c7dc0706c64d6b392243a7dddc14874324eec65b2bb69b8f"
+    }
+  ],
+  "status": "PASS"
+}

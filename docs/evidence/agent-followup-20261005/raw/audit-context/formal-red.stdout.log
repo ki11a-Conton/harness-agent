@@ -1,0 +1,44 @@
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+ ❯ packages/context/src/scoped-instruction-read.regressions.test.ts (34 tests | 20 failed) 148ms
+     × omits malformed UTF-8 ff at cap 1, retaining a regular control 32ms
+     × omits malformed UTF-8 ff at cap 3, retaining a regular control 4ms
+     × omits malformed UTF-8 ff at cap 100, retaining a regular control 4ms
+     × omits malformed UTF-8 e228a1 at cap 1, retaining a regular control 5ms
+     × omits malformed UTF-8 e228a1 at cap 3, retaining a regular control 4ms
+     × omits malformed UTF-8 e228a1 at cap 100, retaining a regular control 4ms
+     × omits malformed UTF-8 e282 at cap 1, retaining a regular control 3ms
+     × omits malformed UTF-8 e282 at cap 3, retaining a regular control 3ms
+     × omits malformed UTF-8 e282 at cap 100, retaining a regular control 5ms
+     × omits malformed UTF-8 eda080 at cap 1, retaining a regular control 3ms
+     × omits malformed UTF-8 eda080 at cap 3, retaining a regular control 3ms
+     × omits malformed UTF-8 eda080 at cap 100, retaining a regular control 3ms
+     × omits a malformed truncated prefix rather than expanding replacement bytes 3ms
+     ✓ preserves valid UTF-8 truncation and its existing marker within cap 0 3ms
+     ✓ preserves valid UTF-8 truncation and its existing marker within cap 1 3ms
+     ✓ preserves valid UTF-8 truncation and its existing marker within cap 2 3ms
+     ✓ preserves valid UTF-8 truncation and its existing marker within cap 3 3ms
+     ✓ preserves valid UTF-8 truncation and its existing marker within cap 4 3ms
+     ✓ preserves valid UTF-8 truncation and its existing marker within cap 8 3ms
+     ✓ preserves valid UTF-8 truncation and its existing marker within cap 17 2ms
+     ✓ preserves valid UTF-8 truncation and its existing marker within cap 24 2ms
+     ✓ preserves valid UTF-8 truncation and its existing marker within cap 64 3ms
+     ✓ preserves the literal BOM in valid capture with cap 100 13ms
+     ✓ preserves the literal BOM in valid capture with cap 18 3ms
+     ✓ accepts a genuinely empty regular file 2ms
+     ✓ accumulates short reads with allocation and actual capture bounded by cap plus four 4ms
+     × omits a zero premature EOF capture and does not cache it 4ms
+     × omits a partial premature EOF capture and does not cache it 2ms
+     × continues to other documents after an actual descriptor closes and reports EIO 3ms
+     ✓ isolates read failure and retries a failed capture instead of caching it 4ms
+     × rejects a nonregular opened descriptor even when its numeric revision matches 3ms
+     × rejects a pathname revision changed after open but before capture 3ms
+     × rejects a real parent-directory replacement after reading despite an unchanged descriptor revision 3ms
+     × handles a real regular-to-FIFO race with a guarded nonblocking native open 3ms
+
+ Test Files  1 failed (1)
+      Tests  20 failed | 14 passed (34)
+   Start at  03:41:39
+   Duration  490ms (transform 164ms, setup 0ms, import 213ms, tests 148ms, environment 0ms)
+

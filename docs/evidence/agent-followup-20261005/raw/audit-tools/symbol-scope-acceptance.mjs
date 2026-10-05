@@ -1,0 +1,95 @@
+import fs from 'node:fs/promises';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
+import { syncBuiltinESMExports } from 'node:module';
+import { tmpdir } from 'node:os';
+import { resolve, join, relative } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+const workspace=resolve(process.argv[2] ?? process.cwd());
+const root=mkdtempSync(join(tmpdir(),'agent-symbol-scope-'));
+const outside=mkdtempSync(join(tmpdir(),'agent-symbol-scope-outside-'));
+const readFiles=[],readDirectories=[];
+const originals={readFile:fs.readFile,readdir:fs.readdir};
+const rel=(p)=>relative(root,String(p)).split('\\').join('/');
+fs.readFile=async function(path,...rest){if(String(path).startsWith(root))readFiles.push(rel(path));return originals.readFile.call(this,path,...rest);};
+fs.readdir=async function(path,...rest){if(String(path).startsWith(root))readDirectories.push(rel(path)||'.');return originals.readdir.call(this,path,...rest);};
+syncBuiltinESMExports();
+const {ToolRegistry,ToolOrchestrator,createProductionTools}=await import(pathToFileURL(join(workspace,'packages/tools/dist/index.js')).href);
+const {newAgentId,newSessionId,newTurnId,newToolCallId}=await import(pathToFileURL(join(workspace,'packages/contracts/dist/index.js')).href);
+const registry=new ToolRegistry();
+for(const tool of createProductionTools({networkMode:'deny',availableTools:()=>registry.names()}))registry.register(tool);
+const orch=new ToolOrchestrator({registry,workspaceRoot:root});
+const sessionId=newSessionId(),agentId=newAgentId(),turnId=newTurnId();
+const context=()=>({sessionId,agentId,turnId,cwd:root,signal:new AbortController().signal,permissions:{rules:[{action:'read',resource:'file',pattern:'**/*',effect:'allow'}]},sandboxPolicy:{filesystem:{mode:'workspace-write',allowedPaths:[root]},network:{mode:'deny'},process:{timeoutMs:5000,maxOutputBytes:65536}}});
+function request(args){return {id:newToolCallId(),sessionId,agentId,turnId,call:{id:newToolCallId(),name:'symbol_search',args}};}
+async function run(args,ctx=context()){readFiles.length=0;readDirectories.length=0;const result=await orch.execute(request(args),ctx);return {args,result,readFiles:[...readFiles],readDirectories:[...readDirectories]};}
+const checks=[];
+function check(id,expected,actual,pass){checks.push({id,expected,actual,verdict:pass?'PASS':'FAIL'});}
+const hits=(a)=>a.result.output?.hits??[];
+const named=(a,path,name)=>a.result.status==='success'&&hits(a).some(h=>h.file===path&&h.name===name);
+function within(a,scope){return a.readFiles.every(p=>p===scope||p.startsWith(scope+'/'))&&a.readDirectories.every(p=>p===scope||p.startsWith(scope+'/'));}
+try{
+  for(const p of ['public-ts','public-tsx','public-py','private','.git','dist','node_modules'])mkdirSync(join(root,p));
+  writeFileSync(join(root,'public-ts','a.ts'),'export function TsOnly() {}\nexport function SharedSymbol() {}\n');
+  writeFileSync(join(root,'public-ts','b.ts'),'export const SiblingOnly = 1;\n');
+  writeFileSync(join(root,'public-tsx','a.ts'),'export function PrefixOnly() {}\n');
+  writeFileSync(join(root,'public-py','logic.py'),'def PyOnly():\n    return 1\n\ndef SharedSymbol():\n    return 2\n');
+  writeFileSync(join(root,'private','secret.ts'),'export const OffScopeMarker = 1;\n');
+  for(const p of ['.git','dist','node_modules'])writeFileSync(join(root,p,'secret.ts'),'export const IgnoredOnly = 1;\n');
+  const cold=await run({symbol:'TsOnly',path:'public-ts'});
+  check('COLD_DIRECTORY_SCOPE_INDEX',{hit:'public-ts/a.ts',sourceReadsWithin:'public-ts'},cold,named(cold,'public-ts/a.ts','TsOnly')&&within(cold,'public-ts'));
+  const warm=await run({symbol:'TsOnly',path:'public-ts'});
+  check('WARM_DIRECTORY_SCOPE_REUSES_UNCHANGED_CONTENT',{sameHits:true,readFileCount:0,sourceReadsWithin:'public-ts'},warm,named(warm,'public-ts/a.ts','TsOnly')&&JSON.stringify(hits(warm))===JSON.stringify(hits(cold))&&warm.readFiles.length===0&&within(warm,'public-ts'));
+  const alias=await run({symbol:'TsOnly',path:'./public-ts/../public-ts/'});
+  check('RELATIVE_DIRECTORY_ALIAS_EQUIVALENT',{sameHits:true},alias,JSON.stringify(hits(alias))===JSON.stringify(hits(cold))&&within(alias,'public-ts'));
+  const absolute=await run({symbol:'TsOnly',path:join(root,'public-ts')});
+  check('ABSOLUTE_DIRECTORY_ALIAS_EQUIVALENT',{sameHits:true},absolute,JSON.stringify(hits(absolute))===JSON.stringify(hits(cold))&&within(absolute,'public-ts'));
+  const python=await run({symbol:'PyOnly',path:'public-py'});
+  check('PYTHON_SCOPE_NOT_MASKED_BY_TS_ELSEWHERE',{hit:'public-py/logic.py',fallback:true,sourceReadsWithin:'public-py'},python,named(python,'public-py/logic.py','PyOnly')&&python.result.output.fallback===true&&within(python,'public-py'));
+  const pyFile=await run({symbol:'PyOnly',path:'public-py/logic.py'});
+  check('PYTHON_FILE_SCOPE_FALLBACK',{hit:'public-py/logic.py',readsOnlyFile:true},pyFile,named(pyFile,'public-py/logic.py','PyOnly')&&within(pyFile,'public-py/logic.py'));
+  const pyAbsFile=await run({symbol:'PyOnly',path:join(root,'public-py','logic.py')});
+  check('PYTHON_ABSOLUTE_FILE_ALIAS',{sameHitsAsRelativeFile:true},pyAbsFile,named(pyAbsFile,'public-py/logic.py','PyOnly')&&JSON.stringify(hits(pyAbsFile))===JSON.stringify(hits(pyFile))&&within(pyAbsFile,'public-py/logic.py'));
+  const tsFile=await run({symbol:'TsOnly',path:'public-ts/a.ts'});
+  check('TS_SINGLE_FILE_SCOPE_INDEX',{hit:'public-ts/a.ts',readsOnlyFile:true},tsFile,named(tsFile,'public-ts/a.ts','TsOnly')&&within(tsFile,'public-ts/a.ts'));
+  const tsAbsFile=await run({symbol:'TsOnly',path:join(root,'public-ts','a.ts')});
+  check('TS_ABSOLUTE_SINGLE_FILE_ALIAS',{sameHitsAsRelativeFile:true},tsAbsFile,named(tsAbsFile,'public-ts/a.ts','TsOnly')&&JSON.stringify(hits(tsAbsFile))===JSON.stringify(hits(tsFile))&&within(tsAbsFile,'public-ts/a.ts'));
+  const offScope=await run({symbol:'OffScopeMarker',path:'public-ts'});
+  check('OFFSCOPE_SYMBOL_NOT_RETURNED_OR_READ',{hits:[],sourceReadsWithin:'public-ts'},offScope,offScope.result.status==='success'&&hits(offScope).length===0&&within(offScope,'public-ts'));
+  const prefix=await run({symbol:'PrefixOnly',path:'public-ts'});
+  check('DIRECTORY_BOUNDARY_EXCLUDES_PREFIX_SIBLING',{hits:[],sourceReadsWithin:'public-ts'},prefix,prefix.result.status==='success'&&hits(prefix).length===0&&within(prefix,'public-ts'));
+  writeFileSync(join(root,'public-ts','a.ts'),'export function ChangedTsOnly() {}\n');
+  const changed=await run({symbol:'ChangedTsOnly',path:'public-ts/a.ts'});
+  check('SCOPED_FILE_CACHE_FRESH_AFTER_EDIT',{hit:'public-ts/a.ts',readsOnlyFile:true},changed,named(changed,'public-ts/a.ts','ChangedTsOnly')&&within(changed,'public-ts/a.ts'));
+  const old=await run({symbol:'TsOnly',path:'public-ts/a.ts'});
+  // Existing index performs substring matching, so exact name check is insufficient
+  // for removing a symbol whose name is a suffix of the newly introduced one.
+  check('SCOPED_CACHE_HAS_NO_STALE_DEFINITION',{noOldDefinition:true},old,old.result.status==='success'&&!hits(old).some(h=>h.kind==='function'&&h.name==='TsOnly'));
+  writeFileSync(join(root,'public-ts','new.ts'),'export const AddedTsOnly = 1;\n');
+  const added=await run({symbol:'AddedTsOnly',path:'public-ts'});
+  check('SCOPED_DIRECTORY_CACHE_DETECTS_NEW_FILE',{hit:'public-ts/new.ts',sourceReadsWithin:'public-ts'},added,named(added,'public-ts/new.ts','AddedTsOnly')&&within(added,'public-ts'));
+  readFiles.length=0;readDirectories.length=0;
+  const concurrentArgs=[{symbol:'ChangedTsOnly',path:'public-ts'},{symbol:'PyOnly',path:'public-py'}];
+  const concurrentResults=await Promise.all(concurrentArgs.map(args=>orch.execute(request(args),context())));
+  const concurrency={args:concurrentArgs,results:concurrentResults,readFiles:[...readFiles],readDirectories:[...readDirectories]};
+  check('CONCURRENT_SCOPES_DO_NOT_SHARE_WRONG_INDEX',{resultFiles:['public-ts/a.ts','public-py/logic.py'],noPrivateReads:true},concurrency,concurrentResults.every((r,i)=>r.status==='success'&&r.output.hits.some(h=>h.file===(i===0?'public-ts/a.ts':'public-py/logic.py')))&&readFiles.every(p=>p.startsWith('public-ts/')||p.startsWith('public-py/'))&&readDirectories.every(p=>['public-ts','public-py'].some(s=>p===s||p.startsWith(s+'/'))));
+  const cap=await run({symbol:'function',path:'public-ts',maxResults:1});
+  check('MAX_RESULTS_PRESERVED',{hitsAtMost:1},cap,cap.result.status==='success'&&hits(cap).length<=1);
+  const invalid=await run({symbol:'TsOnly',path:'public-ts',maxResults:0});
+  check('SCHEMA_DENIAL_ZERO_IO',{status:'failed',sourceIO:0},invalid,invalid.result.status==='failed'&&invalid.result.error?.code==='TOOL_SCHEMA_ERROR'&&invalid.readFiles.length===0&&invalid.readDirectories.length===0);
+  const restricted=context();restricted.permissions={rules:[{action:'read',resource:'file',pattern:'public-ts',effect:'allow'}],defaultEffect:'deny'};
+  const allowed=await run({symbol:'ChangedTsOnly',path:'public-ts'},restricted);
+  check('ALLOW_SELECTED_PATH_DOES_NOT_READ_OTHER_PATHS',{status:'success',sourceReadsWithin:'public-ts'},allowed,named(allowed,'public-ts/a.ts','ChangedTsOnly')&&within(allowed,'public-ts'));
+  const denied=context();denied.permissions={rules:[],defaultEffect:'deny'};
+  const permissionDenied=await run({symbol:'ChangedTsOnly',path:'public-ts'},denied);
+  check('PERMISSION_DENIAL_ZERO_IO',{status:'denied',sourceIO:0},permissionDenied,permissionDenied.result.status==='denied'&&permissionDenied.readFiles.length===0&&permissionDenied.readDirectories.length===0);
+  writeFileSync(join(outside,'external.ts'),'export const ExternalOnly = 1;\n');
+  const sandboxDenied=await run({symbol:'ExternalOnly',path:outside});
+  check('SANDBOX_DENIAL_ZERO_IO',{status:'denied',sourceIO:0},sandboxDenied,sandboxDenied.result.status==='denied'&&sandboxDenied.readFiles.length===0&&sandboxDenied.readDirectories.length===0);
+  const ignored=await run({symbol:'IgnoredOnly'});
+  check('GENERATED_DEPENDENCY_VCS_SKIP_PRESERVED',{hits:[],ignoredFileReads:[]},ignored,ignored.result.status==='success'&&hits(ignored).length===0&&!ignored.readFiles.some(p=>['.git','dist','node_modules'].some(s=>p.startsWith(s+'/'))));
+  const paths=['packages/tools/src/navigate.ts','packages/tools/src/symbol-index.ts','packages/tools/src/tools/navigation-tools.ts','packages/tools/src/orchestrator.ts','packages/tools/dist/navigate.js','packages/tools/dist/symbol-index.js','packages/tools/dist/tools/navigation-tools.js'];
+  const report={schema:'HARNESS_SYMBOL_SCOPE_ACCEPTANCE_V1',head:execFileSync('git',['rev-parse','HEAD'],{cwd:workspace,encoding:'utf8'}).trim(),probeSha256:createHash('sha256').update(readFileSync(new URL(import.meta.url))).digest('hex'),profile:'full production tool profile through ToolRegistry/ToolOrchestrator/PermissionEngine/SandboxManager + actual filesystem reads observed',paidCalls:0,hashes:Object.fromEntries(paths.map(p=>[p,createHash('sha256').update(readFileSync(join(workspace,p))).digest('hex')])),observedAt:new Date().toISOString(),status:checks.every(c=>c.verdict==='PASS')?'PASS':'FAIL',checks};
+  process.stdout.write(JSON.stringify(report,null,2)+'\n');process.exitCode=report.status==='PASS'?0:1;
+}finally{fs.readFile=originals.readFile;fs.readdir=originals.readdir;syncBuiltinESMExports();await fs.rm(root,{recursive:true,force:true});await fs.rm(outside,{recursive:true,force:true});}

@@ -1,0 +1,41 @@
+{
+  "schemaVersion": "agent-followup-independent-security-followup-v1",
+  "status": "BLOCKED_SECURITY_CONTRACT",
+  "sourceSha": "be537085551fc8f14d976f05865d6c0f4bd57e7a",
+  "reviewedAt": "2026-10-05T05:44:40.037501+00:00",
+  "priorStaticReview": "static-review-be53708.json",
+  "priorStaticReviewInterpretation": "R1-R3 correctness and source scope passed. Final acceptance remained pending; subsequent mandatory security gate found an additional existing contract violation.",
+  "finding": {
+    "path": "packages/model/src/openai.ts",
+    "reason": "Two newly added comments-only best-effort reader cancel/release catches violate existing P14-6 no-silent-catch static security gate.",
+    "requiredFix": "Report fixed generic degraded cleanup diagnostics through existing allowed observable channel, preserving original result/error and avoiding captured secrets/content. Do not relax security scan."
+  },
+  "evidenceSha256": {
+    "manifest.json": "1c4ebb0bb1b8b24de5c494a1e352810e9ce49000f3aec7ae6c6923804a27c6b1",
+    "security.log": "b227aec6fd86975620195902e4d2415bc306bda4f75193eb16b2aa4aa1f1f686"
+  },
+  "successfulProbeVerification": {
+    "rawLogsAndReceiptSha256": "PASS",
+    "sourceDistFingerprintsMatchActualBytes": "PASS",
+    "source": "clean be53708 before and after",
+    "providerCases": 31,
+    "providerNativeHttpRequests": 26,
+    "mainCases": 7,
+    "mainActualModelRequests": 10,
+    "cliDurableUsage": {
+      "modelCalls": 2,
+      "inputTokens": 20,
+      "outputTokens": 12,
+      "source": "measured"
+    },
+    "webDurableUsage": {
+      "modelCalls": 3,
+      "inputTokens": 30,
+      "outputTokens": 18,
+      "source": "measured"
+    },
+    "symbolCases": 32,
+    "instructionCases": 51
+  },
+  "finalAcceptance": "BLOCKED_PENDING_SECURITY_CORRECTION_NEW_CLEAN_SHA_AND_FRESH_COMPLETE_RUN"
+}

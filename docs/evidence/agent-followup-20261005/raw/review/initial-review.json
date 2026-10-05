@@ -1,0 +1,34 @@
+{
+  "status": "INITIAL_READ_ONLY_REVIEW",
+  "reviewedAt": "2026-10-05T05:36:49.030231+00:00",
+  "head": "b00299e5d0da03656c00e2041fc261aa01af6c96",
+  "dirtyTree": true,
+  "finalAcceptance": "PENDING_EXACT_CLEAN_SOURCE_AND_RECEIPTS",
+  "reviewFileSha256": {
+    "AGENTS.md": "ca24b5a24e947195f2c18bfcd24d177ab4bbf14d3933d687800f000cd76d6f15",
+    "plan.md": "670466d824a03c6cb60113ff0f1756c110fdb7aa690ad10beb34264ab196b32a",
+    "tasks/AGENT-FOLLOWUP-20261005.md": "aa256cda73d86fbad16e57f4dc3c68077370c19a629174b78c51d230533be3f5",
+    "packages/model/src/openai.ts": "60941b729d2cecf1fdde79211f6931eedba8d618cadf781266db470f510ce7cb",
+    "packages/model/src/openai.test.ts": "2785e0311f055495d383d241de1a94123643b63fb6cf0c490839a0902c7618f3",
+    "packages/tools/src/symbol-index.ts": "32ad0414fd1c077bf109d12c2dfc3136ac762a4d6a1e051e2d2926b9614f0241",
+    "packages/tools/src/tools/navigation-tools.ts": "057226f7d1130664eb13391695863a7ca1a340f08d86daed405f6202e2366232",
+    "packages/tools/src/navigate.ts": "24ae59b90a4529227f2b564039817c051b124329e89d87e2fb86f6379a83137c",
+    "packages/context/src/path-scoped-discovery.ts": "3d04fb274e7a1365e1c5d821c86fa491af6c666779e8d8ba53072937d60ca169",
+    "scripts/research/agent-followup-20261005/frozen-acceptance.py": "ac43066b287c9caf4274d060f22b34035d5bbf04e2b2716d10e9c99d6b006437",
+    "scripts/research/agent-followup-20261005/main-accounting.py": "a6e1e25e8b59856734fd04cca8a5a1336383391ef9583f6d987663a4e11c5039"
+  },
+  "findings": [
+    {
+      "id": "R1-EOF-YIELD",
+      "severity": "blocking-before-correction",
+      "description": "Original partial EOF completion yielded after cleanup without abort guard; actual tool_call_delta consumer abort could still emit successful completed(tool_calls).",
+      "currentDisposition": "Current partial diff moves EOF events into shared signal-checked yield loop; permanent regression and frozen receipt still pending."
+    }
+  ],
+  "nonblockingAssessments": [
+    "R1 existing timeout oracle maintenance is justified: whole-call timeout signal predates retry loop; resolved mock ignores expired signal. Keep two fetches, one retry, unique timeout error and zero completed/tool delta.",
+    "R2 normalized root+scope keys isolate cache/flights; scoped source enumeration is selected file/directory; relative and absolute aliases retain root-relative output; index hit priority and no-hit fallback match scope.",
+    "R3 opened/current/final descriptor/path revisions and type checks, complete cap+4 capture, fatal UTF-8/BOM and close isolation match default policy; cache failures are not admitted.",
+    "Runner creates fresh output, rejects dirty/wrong SHA each gate, hashes all source/dist, runs named full and same-run strict usage. Main-accounting verifies actual durable model.completed usage source=measured with exact 10/6 per request for CLI/Web."
+  ]
+}

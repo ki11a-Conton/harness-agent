@@ -1,0 +1,2652 @@
+{
+  "schema": "HARNESS_SYMBOL_SCOPE_PRODUCTION_V2",
+  "sourceSha": "b00299e5d0da03656c00e2041fc261aa01af6c96",
+  "sourceTrackedDirtyAtStart": true,
+  "sourceDirtAtStart": "M packages/context/src/path-scoped-discovery.ts\n M packages/model/src/openai.test.ts\n M packages/model/src/openai.ts\n M packages/tools/src/navigate.ts\n M packages/tools/src/symbol-index.ts\n M packages/tools/src/tools/navigation-tools.ts\n?? packages/context/src/scoped-instruction-read.regressions.test.ts\n?? packages/harness/src/scoped-instruction-read.integration.test.ts\n?? packages/model/src/openai-stream-footer.regressions.test.ts\n?? packages/tools/src/symbol-scope.regressions.test.ts\n?? scripts/research/agent-followup-20261005/",
+  "sourceFingerprintsBefore": {
+    "packages/tools/src/navigate.ts": "24ae59b90a4529227f2b564039817c051b124329e89d87e2fb86f6379a83137c",
+    "packages/tools/src/symbol-index.ts": "32ad0414fd1c077bf109d12c2dfc3136ac762a4d6a1e051e2d2926b9614f0241",
+    "packages/tools/src/tools/navigation-tools.ts": "057226f7d1130664eb13391695863a7ca1a340f08d86daed405f6202e2366232",
+    "packages/tools/src/orchestrator.ts": "adcd42ba547d15e725b9d0236bd7ca550cf2f363e60f2ed10951f92d1604d3eb",
+    "packages/tools/src/registry.ts": "99e062807209aacec1dcb741750ad5ac7383acf5eabc58dfe793292815915369",
+    "packages/tools/src/symbol-scope.regressions.test.ts": "e1be7c4174ed6c253a8e4b612f5de378621729e3bbb54360363b1c28e653b7b2",
+    "packages/security/src/permission.ts": "a4bc2eea7947b0fdc11decabcbb80222057c6e7c3ee0f7e3b90b611e08b6fe13",
+    "packages/security/src/sandbox.ts": "76a312520e76e3a84eee6dd59cb07ac261fbbc438e41b05c40bd506ddaa0e08d",
+    "packages/tools/dist/navigate.js": "7b824152cd8bfa7a5c6567c1b51f737f17a226e028ed7724b1277d172eec23da",
+    "packages/tools/dist/symbol-index.js": "0fae2aa8d84995a8fe4696623921a6e8e2d0af8c0ee033ad5735f8cfb2af1f94",
+    "packages/tools/dist/tools/navigation-tools.js": "2086e08838804f69fb83ad2fd328b4b3d55a89344f8ce18cbdd53da68adffff5",
+    "packages/tools/dist/orchestrator.js": "edda2f2b44e7352766b40fe6d599fcd2c408432a72f8ed75c60e99e36bb97766",
+    "packages/tools/dist/registry.js": "89b0b2a04d79a242fef60c7f2475fab98dbfab10fc25b95c5cdcdbd7fbd058c8",
+    "scripts/research/agent-followup-20261005/symbol-production-probe.mjs": "ec0b47218b67d6a1c832100afd5a0d2c4c4dce94df60d181c74918c1b6495dd9"
+  },
+  "probeSha256": "ec0b47218b67d6a1c832100afd5a0d2c4c4dce94df60d181c74918c1b6495dd9",
+  "profile": "built production tools through ToolRegistry/ToolOrchestrator/PermissionEngine/SandboxManager with actual source read/list/stat observations",
+  "observedAt": "2026-10-05T05:39:13.692Z",
+  "paidCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "windowsRuntime": "NOT_RUN",
+  "cases": [
+    {
+      "id": "COLD_DIRECTORY_SCOPE",
+      "expected": {
+        "hit": "public-ts/a.ts",
+        "sourceIOWithin": "public-ts"
+      },
+      "actual": {
+        "args": {
+          "symbol": "TsOnly",
+          "path": "public-ts"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": false,
+            "indexer": "ts-regex-index",
+            "hits": [
+              {
+                "file": "public-ts/a.ts",
+                "line": 1,
+                "kind": "function",
+                "name": "TsOnly",
+                "text": "export function TsOnly() {}",
+                "role": "definition"
+              }
+            ],
+            "filesIndexed": 2,
+            "indexFresh": true
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 1 symbol(s) for TsOnly (2 files indexed)",
+              "source": "TsOnly",
+              "timestamp": 1791178753755
+            }
+          ]
+        },
+        "operations": [
+          {
+            "operation": "lstat",
+            "path": "public-ts"
+          },
+          {
+            "operation": "readdir",
+            "path": "public-ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "readFile",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/b.ts"
+          },
+          {
+            "operation": "readFile",
+            "path": "public-ts/b.ts"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "WARM_SCOPED_REUSE",
+      "expected": {
+        "sameHits": true,
+        "fileReads": 0,
+        "sourceIOWithin": "public-ts"
+      },
+      "actual": {
+        "args": {
+          "symbol": "TsOnly",
+          "path": "public-ts"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": false,
+            "indexer": "ts-regex-index",
+            "hits": [
+              {
+                "file": "public-ts/a.ts",
+                "line": 1,
+                "kind": "function",
+                "name": "TsOnly",
+                "text": "export function TsOnly() {}",
+                "role": "definition"
+              }
+            ],
+            "filesIndexed": 2,
+            "indexFresh": true
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 1 symbol(s) for TsOnly (2 files indexed)",
+              "source": "TsOnly",
+              "timestamp": 1791178753756
+            }
+          ]
+        },
+        "operations": [
+          {
+            "operation": "lstat",
+            "path": "public-ts"
+          },
+          {
+            "operation": "readdir",
+            "path": "public-ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/b.ts"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "RELATIVE_ALIAS",
+      "expected": {
+        "sameHits": true,
+        "sourceIOWithin": "public-ts"
+      },
+      "actual": {
+        "args": {
+          "symbol": "TsOnly",
+          "path": "./public-ts/../public-ts/"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": false,
+            "indexer": "ts-regex-index",
+            "hits": [
+              {
+                "file": "public-ts/a.ts",
+                "line": 1,
+                "kind": "function",
+                "name": "TsOnly",
+                "text": "export function TsOnly() {}",
+                "role": "definition"
+              }
+            ],
+            "filesIndexed": 2,
+            "indexFresh": true
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 1 symbol(s) for TsOnly (2 files indexed)",
+              "source": "TsOnly",
+              "timestamp": 1791178753757
+            }
+          ]
+        },
+        "operations": [
+          {
+            "operation": "lstat",
+            "path": "public-ts"
+          },
+          {
+            "operation": "readdir",
+            "path": "public-ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/b.ts"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "ABSOLUTE_DIRECTORY_ALIAS",
+      "expected": {
+        "sameHits": true,
+        "sourceIOWithin": "public-ts"
+      },
+      "actual": {
+        "args": {
+          "symbol": "TsOnly",
+          "path": "/tmp/ar-symbol-production-ZNIKqD/public-ts"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": false,
+            "indexer": "ts-regex-index",
+            "hits": [
+              {
+                "file": "public-ts/a.ts",
+                "line": 1,
+                "kind": "function",
+                "name": "TsOnly",
+                "text": "export function TsOnly() {}",
+                "role": "definition"
+              }
+            ],
+            "filesIndexed": 2,
+            "indexFresh": true
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 1 symbol(s) for TsOnly (2 files indexed)",
+              "source": "TsOnly",
+              "timestamp": 1791178753757
+            }
+          ]
+        },
+        "operations": [
+          {
+            "operation": "lstat",
+            "path": "public-ts"
+          },
+          {
+            "operation": "readdir",
+            "path": "public-ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/b.ts"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "PYTHON_DIRECTORY_FALLBACK",
+      "expected": {
+        "hit": "public-py/logic.py",
+        "fallback": true,
+        "sourceIOWithin": "public-py"
+      },
+      "actual": {
+        "args": {
+          "symbol": "PyOnly",
+          "path": "public-py"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": true,
+            "indexer": "regex-symbol-fallback (no semantic symbol index; connect a language server/LSP index to upgrade)",
+            "hits": [
+              {
+                "file": "public-py/logic.py",
+                "line": 1,
+                "kind": "def",
+                "name": "PyOnly",
+                "text": "def PyOnly("
+              }
+            ]
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 1 symbol(s) for PyOnly",
+              "source": "PyOnly",
+              "timestamp": 1791178753759
+            }
+          ]
+        },
+        "operations": [
+          {
+            "operation": "lstat",
+            "path": "public-py"
+          },
+          {
+            "operation": "readdir",
+            "path": "public-py"
+          },
+          {
+            "operation": "lstat",
+            "path": "public-py"
+          },
+          {
+            "operation": "readdir",
+            "path": "public-py"
+          },
+          {
+            "operation": "stat",
+            "path": "public-py/logic.py"
+          },
+          {
+            "operation": "readFile",
+            "path": "public-py/logic.py"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "MIXED_ROOT_INDEX_MISS_FALLS_BACK",
+      "expected": {
+        "hit": "public-py/logic.py",
+        "fallback": true
+      },
+      "actual": {
+        "args": {
+          "symbol": "PyOnly"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": true,
+            "indexer": "regex-symbol-fallback (no semantic symbol index; connect a language server/LSP index to upgrade)",
+            "hits": [
+              {
+                "file": "public-py/logic.py",
+                "line": 1,
+                "kind": "def",
+                "name": "PyOnly",
+                "text": "def PyOnly("
+              }
+            ]
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 1 symbol(s) for PyOnly",
+              "source": "PyOnly",
+              "timestamp": 1791178753761
+            }
+          ]
+        },
+        "operations": [
+          {
+            "operation": "readdir",
+            "path": "."
+          },
+          {
+            "operation": "readdir",
+            "path": "private"
+          },
+          {
+            "operation": "readdir",
+            "path": "public-py"
+          },
+          {
+            "operation": "readdir",
+            "path": "public-ts"
+          },
+          {
+            "operation": "readdir",
+            "path": "public-tsx"
+          },
+          {
+            "operation": "stat",
+            "path": "private/secret.ts"
+          },
+          {
+            "operation": "readFile",
+            "path": "private/secret.ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "readFile",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/b.ts"
+          },
+          {
+            "operation": "readFile",
+            "path": "public-ts/b.ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-tsx/a.ts"
+          },
+          {
+            "operation": "readFile",
+            "path": "public-tsx/a.ts"
+          },
+          {
+            "operation": "readdir",
+            "path": "."
+          },
+          {
+            "operation": "readdir",
+            "path": "private"
+          },
+          {
+            "operation": "stat",
+            "path": "private/secret.ts"
+          },
+          {
+            "operation": "readFile",
+            "path": "private/secret.ts"
+          },
+          {
+            "operation": "readdir",
+            "path": "public-py"
+          },
+          {
+            "operation": "stat",
+            "path": "public-py/logic.py"
+          },
+          {
+            "operation": "readFile",
+            "path": "public-py/logic.py"
+          },
+          {
+            "operation": "readdir",
+            "path": "public-ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "readFile",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/b.ts"
+          },
+          {
+            "operation": "readFile",
+            "path": "public-ts/b.ts"
+          },
+          {
+            "operation": "readdir",
+            "path": "public-tsx"
+          },
+          {
+            "operation": "stat",
+            "path": "public-tsx/a.ts"
+          },
+          {
+            "operation": "readFile",
+            "path": "public-tsx/a.ts"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "TS_HITS_RETAIN_PRIORITY",
+      "expected": {
+        "fallback": false,
+        "files": [
+          "public-ts/a.ts"
+        ]
+      },
+      "actual": {
+        "args": {
+          "symbol": "SharedSymbol"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": false,
+            "indexer": "ts-regex-index",
+            "hits": [
+              {
+                "file": "public-ts/a.ts",
+                "line": 2,
+                "kind": "const",
+                "name": "SharedSymbol",
+                "text": "export const SharedSymbol = 1;",
+                "role": "definition"
+              }
+            ],
+            "filesIndexed": 4,
+            "indexFresh": true
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 1 symbol(s) for SharedSymbol (4 files indexed)",
+              "source": "SharedSymbol",
+              "timestamp": 1791178753762
+            }
+          ]
+        },
+        "operations": [
+          {
+            "operation": "readdir",
+            "path": "."
+          },
+          {
+            "operation": "readdir",
+            "path": "private"
+          },
+          {
+            "operation": "readdir",
+            "path": "public-py"
+          },
+          {
+            "operation": "readdir",
+            "path": "public-ts"
+          },
+          {
+            "operation": "readdir",
+            "path": "public-tsx"
+          },
+          {
+            "operation": "stat",
+            "path": "private/secret.ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/b.ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-tsx/a.ts"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "PYTHON_SINGLE_FILE_SCOPE",
+      "expected": {
+        "hit": "public-py/logic.py",
+        "sourceIOWithin": "public-py/logic.py"
+      },
+      "actual": {
+        "args": {
+          "symbol": "PyOnly",
+          "path": "public-py/logic.py"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": true,
+            "indexer": "regex-symbol-fallback (no semantic symbol index; connect a language server/LSP index to upgrade)",
+            "hits": [
+              {
+                "file": "public-py/logic.py",
+                "line": 1,
+                "kind": "def",
+                "name": "PyOnly",
+                "text": "def PyOnly("
+              }
+            ]
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 1 symbol(s) for PyOnly",
+              "source": "PyOnly",
+              "timestamp": 1791178753763
+            }
+          ]
+        },
+        "operations": [
+          {
+            "operation": "lstat",
+            "path": "public-py"
+          },
+          {
+            "operation": "lstat",
+            "path": "public-py/logic.py"
+          },
+          {
+            "operation": "lstat",
+            "path": "public-py"
+          },
+          {
+            "operation": "lstat",
+            "path": "public-py/logic.py"
+          },
+          {
+            "operation": "stat",
+            "path": "public-py/logic.py"
+          },
+          {
+            "operation": "readFile",
+            "path": "public-py/logic.py"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "PYTHON_ABSOLUTE_FILE_ALIAS",
+      "expected": {
+        "sameHits": true,
+        "sourceIOWithin": "public-py/logic.py"
+      },
+      "actual": {
+        "args": {
+          "symbol": "PyOnly",
+          "path": "/tmp/ar-symbol-production-ZNIKqD/public-py/logic.py"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": true,
+            "indexer": "regex-symbol-fallback (no semantic symbol index; connect a language server/LSP index to upgrade)",
+            "hits": [
+              {
+                "file": "public-py/logic.py",
+                "line": 1,
+                "kind": "def",
+                "name": "PyOnly",
+                "text": "def PyOnly("
+              }
+            ]
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 1 symbol(s) for PyOnly",
+              "source": "PyOnly",
+              "timestamp": 1791178753764
+            }
+          ]
+        },
+        "operations": [
+          {
+            "operation": "lstat",
+            "path": "public-py"
+          },
+          {
+            "operation": "lstat",
+            "path": "public-py/logic.py"
+          },
+          {
+            "operation": "lstat",
+            "path": "public-py"
+          },
+          {
+            "operation": "lstat",
+            "path": "public-py/logic.py"
+          },
+          {
+            "operation": "stat",
+            "path": "public-py/logic.py"
+          },
+          {
+            "operation": "readFile",
+            "path": "public-py/logic.py"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "TS_SINGLE_FILE_SCOPE",
+      "expected": {
+        "hit": "public-ts/a.ts",
+        "sourceIOWithin": "public-ts/a.ts"
+      },
+      "actual": {
+        "args": {
+          "symbol": "TsOnly",
+          "path": "public-ts/a.ts"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": false,
+            "indexer": "ts-regex-index",
+            "hits": [
+              {
+                "file": "public-ts/a.ts",
+                "line": 1,
+                "kind": "function",
+                "name": "TsOnly",
+                "text": "export function TsOnly() {}",
+                "role": "definition"
+              }
+            ],
+            "filesIndexed": 1,
+            "indexFresh": true
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 1 symbol(s) for TsOnly (1 files indexed)",
+              "source": "TsOnly",
+              "timestamp": 1791178753765
+            }
+          ]
+        },
+        "operations": [
+          {
+            "operation": "lstat",
+            "path": "public-ts"
+          },
+          {
+            "operation": "lstat",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "readFile",
+            "path": "public-ts/a.ts"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "TS_ABSOLUTE_FILE_ALIAS",
+      "expected": {
+        "sameHits": true,
+        "sourceIOWithin": "public-ts/a.ts"
+      },
+      "actual": {
+        "args": {
+          "symbol": "TsOnly",
+          "path": "/tmp/ar-symbol-production-ZNIKqD/public-ts/a.ts"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": false,
+            "indexer": "ts-regex-index",
+            "hits": [
+              {
+                "file": "public-ts/a.ts",
+                "line": 1,
+                "kind": "function",
+                "name": "TsOnly",
+                "text": "export function TsOnly() {}",
+                "role": "definition"
+              }
+            ],
+            "filesIndexed": 1,
+            "indexFresh": true
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 1 symbol(s) for TsOnly (1 files indexed)",
+              "source": "TsOnly",
+              "timestamp": 1791178753765
+            }
+          ]
+        },
+        "operations": [
+          {
+            "operation": "lstat",
+            "path": "public-ts"
+          },
+          {
+            "operation": "lstat",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/a.ts"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "ROOT_FILE_DIRECTORY_CACHES_ISOLATED",
+      "expected": {
+        "hit": "public-ts/a.ts",
+        "sourceIOWithin": "public-ts"
+      },
+      "actual": {
+        "args": {
+          "symbol": "TsOnly",
+          "path": "public-ts"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": false,
+            "indexer": "ts-regex-index",
+            "hits": [
+              {
+                "file": "public-ts/a.ts",
+                "line": 1,
+                "kind": "function",
+                "name": "TsOnly",
+                "text": "export function TsOnly() {}",
+                "role": "definition"
+              }
+            ],
+            "filesIndexed": 2,
+            "indexFresh": true
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 1 symbol(s) for TsOnly (2 files indexed)",
+              "source": "TsOnly",
+              "timestamp": 1791178753766
+            }
+          ]
+        },
+        "operations": [
+          {
+            "operation": "lstat",
+            "path": "public-ts"
+          },
+          {
+            "operation": "readdir",
+            "path": "public-ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/b.ts"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "OFF_SCOPE_NOT_READ",
+      "expected": {
+        "hits": [],
+        "sourceIOWithin": "public-ts"
+      },
+      "actual": {
+        "args": {
+          "symbol": "OffScopeMarker",
+          "path": "public-ts"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": true,
+            "indexer": "regex-symbol-fallback (no semantic symbol index; connect a language server/LSP index to upgrade)",
+            "hits": []
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 0 symbol(s) for OffScopeMarker",
+              "source": "OffScopeMarker",
+              "timestamp": 1791178753767
+            }
+          ]
+        },
+        "operations": [
+          {
+            "operation": "lstat",
+            "path": "public-ts"
+          },
+          {
+            "operation": "readdir",
+            "path": "public-ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/b.ts"
+          },
+          {
+            "operation": "lstat",
+            "path": "public-ts"
+          },
+          {
+            "operation": "readdir",
+            "path": "public-ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "readFile",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/b.ts"
+          },
+          {
+            "operation": "readFile",
+            "path": "public-ts/b.ts"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "PREFIX_SIBLING_EXCLUDED",
+      "expected": {
+        "hits": [],
+        "sourceIOWithin": "public-ts"
+      },
+      "actual": {
+        "args": {
+          "symbol": "PrefixOnly",
+          "path": "public-ts"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": true,
+            "indexer": "regex-symbol-fallback (no semantic symbol index; connect a language server/LSP index to upgrade)",
+            "hits": []
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 0 symbol(s) for PrefixOnly",
+              "source": "PrefixOnly",
+              "timestamp": 1791178753768
+            }
+          ]
+        },
+        "operations": [
+          {
+            "operation": "lstat",
+            "path": "public-ts"
+          },
+          {
+            "operation": "readdir",
+            "path": "public-ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/b.ts"
+          },
+          {
+            "operation": "lstat",
+            "path": "public-ts"
+          },
+          {
+            "operation": "readdir",
+            "path": "public-ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "readFile",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/b.ts"
+          },
+          {
+            "operation": "readFile",
+            "path": "public-ts/b.ts"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "SCOPED_FILE_EDIT_REFRESH",
+      "expected": {
+        "hit": "public-ts/a.ts",
+        "sourceIOWithin": "public-ts/a.ts"
+      },
+      "actual": {
+        "args": {
+          "symbol": "ChangedOnly",
+          "path": "public-ts/a.ts"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": false,
+            "indexer": "ts-regex-index",
+            "hits": [
+              {
+                "file": "public-ts/a.ts",
+                "line": 1,
+                "kind": "function",
+                "name": "ChangedOnly",
+                "text": "export function ChangedOnly() {}",
+                "role": "definition"
+              }
+            ],
+            "filesIndexed": 1,
+            "indexFresh": true
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 1 symbol(s) for ChangedOnly (1 files indexed)",
+              "source": "ChangedOnly",
+              "timestamp": 1791178753768
+            }
+          ]
+        },
+        "operations": [
+          {
+            "operation": "lstat",
+            "path": "public-ts"
+          },
+          {
+            "operation": "lstat",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "readFile",
+            "path": "public-ts/a.ts"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "NO_STALE_SCOPED_DEFINITION",
+      "expected": {
+        "hits": [],
+        "sourceIOWithin": "public-ts/a.ts"
+      },
+      "actual": {
+        "args": {
+          "symbol": "TsOnly",
+          "path": "public-ts/a.ts"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": true,
+            "indexer": "regex-symbol-fallback (no semantic symbol index; connect a language server/LSP index to upgrade)",
+            "hits": []
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 0 symbol(s) for TsOnly",
+              "source": "TsOnly",
+              "timestamp": 1791178753769
+            }
+          ]
+        },
+        "operations": [
+          {
+            "operation": "lstat",
+            "path": "public-ts"
+          },
+          {
+            "operation": "lstat",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "lstat",
+            "path": "public-ts"
+          },
+          {
+            "operation": "lstat",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "readFile",
+            "path": "public-ts/a.ts"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "SCOPED_DIRECTORY_ADD_REFRESH",
+      "expected": {
+        "hit": "public-ts/new.ts",
+        "sourceIOWithin": "public-ts"
+      },
+      "actual": {
+        "args": {
+          "symbol": "AddedOnly",
+          "path": "public-ts"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": false,
+            "indexer": "ts-regex-index",
+            "hits": [
+              {
+                "file": "public-ts/new.ts",
+                "line": 1,
+                "kind": "const",
+                "name": "AddedOnly",
+                "text": "export const AddedOnly = 1;",
+                "role": "definition"
+              }
+            ],
+            "filesIndexed": 3,
+            "indexFresh": true
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 1 symbol(s) for AddedOnly (3 files indexed)",
+              "source": "AddedOnly",
+              "timestamp": 1791178753770
+            }
+          ]
+        },
+        "operations": [
+          {
+            "operation": "lstat",
+            "path": "public-ts"
+          },
+          {
+            "operation": "readdir",
+            "path": "public-ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "readFile",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/b.ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/new.ts"
+          },
+          {
+            "operation": "readFile",
+            "path": "public-ts/new.ts"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "VANISHED_SCOPE_RETURNS_NO_STALE_CONTENT",
+      "expected": {
+        "hits": [],
+        "sourceIO": 0
+      },
+      "actual": {
+        "args": {
+          "symbol": "AddedOnly",
+          "path": "public-ts/new.ts"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": true,
+            "indexer": "regex-symbol-fallback (no semantic symbol index; connect a language server/LSP index to upgrade)",
+            "hits": []
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 0 symbol(s) for AddedOnly",
+              "source": "AddedOnly",
+              "timestamp": 1791178753771
+            }
+          ]
+        },
+        "operations": [
+          {
+            "operation": "lstat",
+            "path": "public-ts"
+          },
+          {
+            "operation": "lstat",
+            "path": "public-ts/new.ts"
+          },
+          {
+            "operation": "lstat",
+            "path": "public-ts"
+          },
+          {
+            "operation": "lstat",
+            "path": "public-ts/new.ts"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "CONCURRENT_SCOPES_ISOLATED",
+      "expected": {
+        "files": [
+          "public-ts/a.ts",
+          "public-py/logic.py"
+        ],
+        "sourceIOWithinSelectedScopes": true
+      },
+      "actual": {
+        "args": [
+          {
+            "symbol": "ChangedOnly",
+            "path": "public-ts"
+          },
+          {
+            "symbol": "PyOnly",
+            "path": "public-py"
+          }
+        ],
+        "results": [
+          {
+            "status": "success",
+            "output": {
+              "fallback": false,
+              "indexer": "ts-regex-index",
+              "hits": [
+                {
+                  "file": "public-ts/a.ts",
+                  "line": 1,
+                  "kind": "function",
+                  "name": "ChangedOnly",
+                  "text": "export function ChangedOnly() {}",
+                  "role": "definition"
+                }
+              ],
+              "filesIndexed": 2,
+              "indexFresh": true
+            },
+            "evidence": [
+              {
+                "type": "file",
+                "description": "symbol_search: 1 symbol(s) for ChangedOnly (2 files indexed)",
+                "source": "ChangedOnly",
+                "timestamp": 1791178753771
+              }
+            ]
+          },
+          {
+            "status": "success",
+            "output": {
+              "fallback": true,
+              "indexer": "regex-symbol-fallback (no semantic symbol index; connect a language server/LSP index to upgrade)",
+              "hits": [
+                {
+                  "file": "public-py/logic.py",
+                  "line": 1,
+                  "kind": "def",
+                  "name": "PyOnly",
+                  "text": "def PyOnly("
+                }
+              ]
+            },
+            "evidence": [
+              {
+                "type": "file",
+                "description": "symbol_search: 1 symbol(s) for PyOnly",
+                "source": "PyOnly",
+                "timestamp": 1791178753772
+              }
+            ]
+          }
+        ],
+        "operations": [
+          {
+            "operation": "lstat",
+            "path": "public-ts"
+          },
+          {
+            "operation": "lstat",
+            "path": "public-py"
+          },
+          {
+            "operation": "readdir",
+            "path": "public-ts"
+          },
+          {
+            "operation": "readdir",
+            "path": "public-py"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "lstat",
+            "path": "public-py"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/b.ts"
+          },
+          {
+            "operation": "readdir",
+            "path": "public-py"
+          },
+          {
+            "operation": "stat",
+            "path": "public-py/logic.py"
+          },
+          {
+            "operation": "readFile",
+            "path": "public-py/logic.py"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "CONCURRENT_NORMALIZED_SCOPE_ONE_READ",
+      "expected": {
+        "allHit": true,
+        "fileReads": 1,
+        "sourceIOWithin": "concurrent"
+      },
+      "actual": {
+        "args": [
+          {
+            "symbol": "ConcurrentOnly",
+            "path": "./concurrent/"
+          },
+          {
+            "symbol": "ConcurrentOnly",
+            "path": "/tmp/ar-symbol-production-ZNIKqD/concurrent"
+          },
+          {
+            "symbol": "ConcurrentOnly",
+            "path": "./concurrent/"
+          },
+          {
+            "symbol": "ConcurrentOnly",
+            "path": "/tmp/ar-symbol-production-ZNIKqD/concurrent"
+          },
+          {
+            "symbol": "ConcurrentOnly",
+            "path": "./concurrent/"
+          },
+          {
+            "symbol": "ConcurrentOnly",
+            "path": "/tmp/ar-symbol-production-ZNIKqD/concurrent"
+          },
+          {
+            "symbol": "ConcurrentOnly",
+            "path": "./concurrent/"
+          },
+          {
+            "symbol": "ConcurrentOnly",
+            "path": "/tmp/ar-symbol-production-ZNIKqD/concurrent"
+          },
+          {
+            "symbol": "ConcurrentOnly",
+            "path": "./concurrent/"
+          },
+          {
+            "symbol": "ConcurrentOnly",
+            "path": "/tmp/ar-symbol-production-ZNIKqD/concurrent"
+          },
+          {
+            "symbol": "ConcurrentOnly",
+            "path": "./concurrent/"
+          },
+          {
+            "symbol": "ConcurrentOnly",
+            "path": "/tmp/ar-symbol-production-ZNIKqD/concurrent"
+          },
+          {
+            "symbol": "ConcurrentOnly",
+            "path": "./concurrent/"
+          },
+          {
+            "symbol": "ConcurrentOnly",
+            "path": "/tmp/ar-symbol-production-ZNIKqD/concurrent"
+          },
+          {
+            "symbol": "ConcurrentOnly",
+            "path": "./concurrent/"
+          },
+          {
+            "symbol": "ConcurrentOnly",
+            "path": "/tmp/ar-symbol-production-ZNIKqD/concurrent"
+          }
+        ],
+        "results": [
+          {
+            "status": "success",
+            "output": {
+              "fallback": false,
+              "indexer": "ts-regex-index",
+              "hits": [
+                {
+                  "file": "concurrent/new.ts",
+                  "line": 1,
+                  "kind": "const",
+                  "name": "ConcurrentOnly",
+                  "text": "export const ConcurrentOnly = 1;",
+                  "role": "definition"
+                }
+              ],
+              "filesIndexed": 1,
+              "indexFresh": true
+            },
+            "evidence": [
+              {
+                "type": "file",
+                "description": "symbol_search: 1 symbol(s) for ConcurrentOnly (1 files indexed)",
+                "source": "ConcurrentOnly",
+                "timestamp": 1791178753773
+              }
+            ]
+          },
+          {
+            "status": "success",
+            "output": {
+              "fallback": false,
+              "indexer": "ts-regex-index",
+              "hits": [
+                {
+                  "file": "concurrent/new.ts",
+                  "line": 1,
+                  "kind": "const",
+                  "name": "ConcurrentOnly",
+                  "text": "export const ConcurrentOnly = 1;",
+                  "role": "definition"
+                }
+              ],
+              "filesIndexed": 1,
+              "indexFresh": true
+            },
+            "evidence": [
+              {
+                "type": "file",
+                "description": "symbol_search: 1 symbol(s) for ConcurrentOnly (1 files indexed)",
+                "source": "ConcurrentOnly",
+                "timestamp": 1791178753773
+              }
+            ]
+          },
+          {
+            "status": "success",
+            "output": {
+              "fallback": false,
+              "indexer": "ts-regex-index",
+              "hits": [
+                {
+                  "file": "concurrent/new.ts",
+                  "line": 1,
+                  "kind": "const",
+                  "name": "ConcurrentOnly",
+                  "text": "export const ConcurrentOnly = 1;",
+                  "role": "definition"
+                }
+              ],
+              "filesIndexed": 1,
+              "indexFresh": true
+            },
+            "evidence": [
+              {
+                "type": "file",
+                "description": "symbol_search: 1 symbol(s) for ConcurrentOnly (1 files indexed)",
+                "source": "ConcurrentOnly",
+                "timestamp": 1791178753773
+              }
+            ]
+          },
+          {
+            "status": "success",
+            "output": {
+              "fallback": false,
+              "indexer": "ts-regex-index",
+              "hits": [
+                {
+                  "file": "concurrent/new.ts",
+                  "line": 1,
+                  "kind": "const",
+                  "name": "ConcurrentOnly",
+                  "text": "export const ConcurrentOnly = 1;",
+                  "role": "definition"
+                }
+              ],
+              "filesIndexed": 1,
+              "indexFresh": true
+            },
+            "evidence": [
+              {
+                "type": "file",
+                "description": "symbol_search: 1 symbol(s) for ConcurrentOnly (1 files indexed)",
+                "source": "ConcurrentOnly",
+                "timestamp": 1791178753773
+              }
+            ]
+          },
+          {
+            "status": "success",
+            "output": {
+              "fallback": false,
+              "indexer": "ts-regex-index",
+              "hits": [
+                {
+                  "file": "concurrent/new.ts",
+                  "line": 1,
+                  "kind": "const",
+                  "name": "ConcurrentOnly",
+                  "text": "export const ConcurrentOnly = 1;",
+                  "role": "definition"
+                }
+              ],
+              "filesIndexed": 1,
+              "indexFresh": true
+            },
+            "evidence": [
+              {
+                "type": "file",
+                "description": "symbol_search: 1 symbol(s) for ConcurrentOnly (1 files indexed)",
+                "source": "ConcurrentOnly",
+                "timestamp": 1791178753773
+              }
+            ]
+          },
+          {
+            "status": "success",
+            "output": {
+              "fallback": false,
+              "indexer": "ts-regex-index",
+              "hits": [
+                {
+                  "file": "concurrent/new.ts",
+                  "line": 1,
+                  "kind": "const",
+                  "name": "ConcurrentOnly",
+                  "text": "export const ConcurrentOnly = 1;",
+                  "role": "definition"
+                }
+              ],
+              "filesIndexed": 1,
+              "indexFresh": true
+            },
+            "evidence": [
+              {
+                "type": "file",
+                "description": "symbol_search: 1 symbol(s) for ConcurrentOnly (1 files indexed)",
+                "source": "ConcurrentOnly",
+                "timestamp": 1791178753773
+              }
+            ]
+          },
+          {
+            "status": "success",
+            "output": {
+              "fallback": false,
+              "indexer": "ts-regex-index",
+              "hits": [
+                {
+                  "file": "concurrent/new.ts",
+                  "line": 1,
+                  "kind": "const",
+                  "name": "ConcurrentOnly",
+                  "text": "export const ConcurrentOnly = 1;",
+                  "role": "definition"
+                }
+              ],
+              "filesIndexed": 1,
+              "indexFresh": true
+            },
+            "evidence": [
+              {
+                "type": "file",
+                "description": "symbol_search: 1 symbol(s) for ConcurrentOnly (1 files indexed)",
+                "source": "ConcurrentOnly",
+                "timestamp": 1791178753773
+              }
+            ]
+          },
+          {
+            "status": "success",
+            "output": {
+              "fallback": false,
+              "indexer": "ts-regex-index",
+              "hits": [
+                {
+                  "file": "concurrent/new.ts",
+                  "line": 1,
+                  "kind": "const",
+                  "name": "ConcurrentOnly",
+                  "text": "export const ConcurrentOnly = 1;",
+                  "role": "definition"
+                }
+              ],
+              "filesIndexed": 1,
+              "indexFresh": true
+            },
+            "evidence": [
+              {
+                "type": "file",
+                "description": "symbol_search: 1 symbol(s) for ConcurrentOnly (1 files indexed)",
+                "source": "ConcurrentOnly",
+                "timestamp": 1791178753773
+              }
+            ]
+          },
+          {
+            "status": "success",
+            "output": {
+              "fallback": false,
+              "indexer": "ts-regex-index",
+              "hits": [
+                {
+                  "file": "concurrent/new.ts",
+                  "line": 1,
+                  "kind": "const",
+                  "name": "ConcurrentOnly",
+                  "text": "export const ConcurrentOnly = 1;",
+                  "role": "definition"
+                }
+              ],
+              "filesIndexed": 1,
+              "indexFresh": true
+            },
+            "evidence": [
+              {
+                "type": "file",
+                "description": "symbol_search: 1 symbol(s) for ConcurrentOnly (1 files indexed)",
+                "source": "ConcurrentOnly",
+                "timestamp": 1791178753773
+              }
+            ]
+          },
+          {
+            "status": "success",
+            "output": {
+              "fallback": false,
+              "indexer": "ts-regex-index",
+              "hits": [
+                {
+                  "file": "concurrent/new.ts",
+                  "line": 1,
+                  "kind": "const",
+                  "name": "ConcurrentOnly",
+                  "text": "export const ConcurrentOnly = 1;",
+                  "role": "definition"
+                }
+              ],
+              "filesIndexed": 1,
+              "indexFresh": true
+            },
+            "evidence": [
+              {
+                "type": "file",
+                "description": "symbol_search: 1 symbol(s) for ConcurrentOnly (1 files indexed)",
+                "source": "ConcurrentOnly",
+                "timestamp": 1791178753773
+              }
+            ]
+          },
+          {
+            "status": "success",
+            "output": {
+              "fallback": false,
+              "indexer": "ts-regex-index",
+              "hits": [
+                {
+                  "file": "concurrent/new.ts",
+                  "line": 1,
+                  "kind": "const",
+                  "name": "ConcurrentOnly",
+                  "text": "export const ConcurrentOnly = 1;",
+                  "role": "definition"
+                }
+              ],
+              "filesIndexed": 1,
+              "indexFresh": true
+            },
+            "evidence": [
+              {
+                "type": "file",
+                "description": "symbol_search: 1 symbol(s) for ConcurrentOnly (1 files indexed)",
+                "source": "ConcurrentOnly",
+                "timestamp": 1791178753773
+              }
+            ]
+          },
+          {
+            "status": "success",
+            "output": {
+              "fallback": false,
+              "indexer": "ts-regex-index",
+              "hits": [
+                {
+                  "file": "concurrent/new.ts",
+                  "line": 1,
+                  "kind": "const",
+                  "name": "ConcurrentOnly",
+                  "text": "export const ConcurrentOnly = 1;",
+                  "role": "definition"
+                }
+              ],
+              "filesIndexed": 1,
+              "indexFresh": true
+            },
+            "evidence": [
+              {
+                "type": "file",
+                "description": "symbol_search: 1 symbol(s) for ConcurrentOnly (1 files indexed)",
+                "source": "ConcurrentOnly",
+                "timestamp": 1791178753773
+              }
+            ]
+          },
+          {
+            "status": "success",
+            "output": {
+              "fallback": false,
+              "indexer": "ts-regex-index",
+              "hits": [
+                {
+                  "file": "concurrent/new.ts",
+                  "line": 1,
+                  "kind": "const",
+                  "name": "ConcurrentOnly",
+                  "text": "export const ConcurrentOnly = 1;",
+                  "role": "definition"
+                }
+              ],
+              "filesIndexed": 1,
+              "indexFresh": true
+            },
+            "evidence": [
+              {
+                "type": "file",
+                "description": "symbol_search: 1 symbol(s) for ConcurrentOnly (1 files indexed)",
+                "source": "ConcurrentOnly",
+                "timestamp": 1791178753773
+              }
+            ]
+          },
+          {
+            "status": "success",
+            "output": {
+              "fallback": false,
+              "indexer": "ts-regex-index",
+              "hits": [
+                {
+                  "file": "concurrent/new.ts",
+                  "line": 1,
+                  "kind": "const",
+                  "name": "ConcurrentOnly",
+                  "text": "export const ConcurrentOnly = 1;",
+                  "role": "definition"
+                }
+              ],
+              "filesIndexed": 1,
+              "indexFresh": true
+            },
+            "evidence": [
+              {
+                "type": "file",
+                "description": "symbol_search: 1 symbol(s) for ConcurrentOnly (1 files indexed)",
+                "source": "ConcurrentOnly",
+                "timestamp": 1791178753773
+              }
+            ]
+          },
+          {
+            "status": "success",
+            "output": {
+              "fallback": false,
+              "indexer": "ts-regex-index",
+              "hits": [
+                {
+                  "file": "concurrent/new.ts",
+                  "line": 1,
+                  "kind": "const",
+                  "name": "ConcurrentOnly",
+                  "text": "export const ConcurrentOnly = 1;",
+                  "role": "definition"
+                }
+              ],
+              "filesIndexed": 1,
+              "indexFresh": true
+            },
+            "evidence": [
+              {
+                "type": "file",
+                "description": "symbol_search: 1 symbol(s) for ConcurrentOnly (1 files indexed)",
+                "source": "ConcurrentOnly",
+                "timestamp": 1791178753773
+              }
+            ]
+          },
+          {
+            "status": "success",
+            "output": {
+              "fallback": false,
+              "indexer": "ts-regex-index",
+              "hits": [
+                {
+                  "file": "concurrent/new.ts",
+                  "line": 1,
+                  "kind": "const",
+                  "name": "ConcurrentOnly",
+                  "text": "export const ConcurrentOnly = 1;",
+                  "role": "definition"
+                }
+              ],
+              "filesIndexed": 1,
+              "indexFresh": true
+            },
+            "evidence": [
+              {
+                "type": "file",
+                "description": "symbol_search: 1 symbol(s) for ConcurrentOnly (1 files indexed)",
+                "source": "ConcurrentOnly",
+                "timestamp": 1791178753773
+              }
+            ]
+          }
+        ],
+        "operations": [
+          {
+            "operation": "lstat",
+            "path": "concurrent"
+          },
+          {
+            "operation": "lstat",
+            "path": "concurrent"
+          },
+          {
+            "operation": "lstat",
+            "path": "concurrent"
+          },
+          {
+            "operation": "lstat",
+            "path": "concurrent"
+          },
+          {
+            "operation": "lstat",
+            "path": "concurrent"
+          },
+          {
+            "operation": "lstat",
+            "path": "concurrent"
+          },
+          {
+            "operation": "lstat",
+            "path": "concurrent"
+          },
+          {
+            "operation": "lstat",
+            "path": "concurrent"
+          },
+          {
+            "operation": "lstat",
+            "path": "concurrent"
+          },
+          {
+            "operation": "lstat",
+            "path": "concurrent"
+          },
+          {
+            "operation": "lstat",
+            "path": "concurrent"
+          },
+          {
+            "operation": "lstat",
+            "path": "concurrent"
+          },
+          {
+            "operation": "lstat",
+            "path": "concurrent"
+          },
+          {
+            "operation": "lstat",
+            "path": "concurrent"
+          },
+          {
+            "operation": "lstat",
+            "path": "concurrent"
+          },
+          {
+            "operation": "lstat",
+            "path": "concurrent"
+          },
+          {
+            "operation": "readdir",
+            "path": "concurrent"
+          },
+          {
+            "operation": "stat",
+            "path": "concurrent/new.ts"
+          },
+          {
+            "operation": "readFile",
+            "path": "concurrent/new.ts"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "FALLBACK_RESULT_CAP",
+      "expected": {
+        "hits": 1
+      },
+      "actual": {
+        "args": {
+          "symbol": "PyOnly",
+          "path": "public-py",
+          "maxResults": 1
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": true,
+            "indexer": "regex-symbol-fallback (no semantic symbol index; connect a language server/LSP index to upgrade)",
+            "hits": [
+              {
+                "file": "public-py/logic.py",
+                "line": 1,
+                "kind": "def",
+                "name": "PyOnly",
+                "text": "def PyOnly("
+              }
+            ]
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 1 symbol(s) for PyOnly",
+              "source": "PyOnly",
+              "timestamp": 1791178753774
+            }
+          ]
+        },
+        "operations": [
+          {
+            "operation": "lstat",
+            "path": "public-py"
+          },
+          {
+            "operation": "readdir",
+            "path": "public-py"
+          },
+          {
+            "operation": "lstat",
+            "path": "public-py"
+          },
+          {
+            "operation": "readdir",
+            "path": "public-py"
+          },
+          {
+            "operation": "stat",
+            "path": "public-py/logic.py"
+          },
+          {
+            "operation": "readFile",
+            "path": "public-py/logic.py"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "INDEX_RESULT_CAP",
+      "expected": {
+        "hits": 1
+      },
+      "actual": {
+        "args": {
+          "symbol": "export",
+          "path": "public-ts",
+          "maxResults": 1
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": false,
+            "indexer": "ts-regex-index",
+            "hits": [
+              {
+                "file": "public-ts/a.ts",
+                "line": 1,
+                "kind": "export",
+                "name": "export",
+                "text": "export function ChangedOnly() {}",
+                "role": "export"
+              }
+            ],
+            "filesIndexed": 2,
+            "indexFresh": true
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 1 symbol(s) for export (2 files indexed)",
+              "source": "export",
+              "timestamp": 1791178753774
+            }
+          ]
+        },
+        "operations": [
+          {
+            "operation": "lstat",
+            "path": "public-ts"
+          },
+          {
+            "operation": "readdir",
+            "path": "public-ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/b.ts"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "SCHEMA_REJECTION_ZERO_SOURCE_IO",
+      "expected": {
+        "status": "failed",
+        "code": "TOOL_SCHEMA_ERROR",
+        "sourceIO": 0
+      },
+      "actual": {
+        "args": {
+          "symbol": "ChangedOnly",
+          "path": "public-ts",
+          "maxResults": 0
+        },
+        "result": {
+          "status": "failed",
+          "error": {
+            "code": "TOOL_SCHEMA_ERROR",
+            "message": "schema validation failed for symbol_search: maxResults: Number must be greater than 0",
+            "retryable": false,
+            "safeToRetry": false
+          }
+        },
+        "operations": []
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "PERMISSION_ALLOW_SELECTED_SCOPE_ONLY",
+      "expected": {
+        "hit": "public-ts/a.ts",
+        "sourceIOWithin": "public-ts"
+      },
+      "actual": {
+        "args": {
+          "symbol": "ChangedOnly",
+          "path": "public-ts"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": false,
+            "indexer": "ts-regex-index",
+            "hits": [
+              {
+                "file": "public-ts/a.ts",
+                "line": 1,
+                "kind": "function",
+                "name": "ChangedOnly",
+                "text": "export function ChangedOnly() {}",
+                "role": "definition"
+              }
+            ],
+            "filesIndexed": 2,
+            "indexFresh": true
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 1 symbol(s) for ChangedOnly (2 files indexed)",
+              "source": "ChangedOnly",
+              "timestamp": 1791178753775
+            }
+          ]
+        },
+        "operations": [
+          {
+            "operation": "lstat",
+            "path": "public-ts"
+          },
+          {
+            "operation": "readdir",
+            "path": "public-ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/b.ts"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "PERMISSION_DENIAL_ZERO_SOURCE_IO",
+      "expected": {
+        "status": "denied",
+        "sourceIO": 0
+      },
+      "actual": {
+        "args": {
+          "symbol": "ChangedOnly",
+          "path": "public-ts"
+        },
+        "result": {
+          "status": "denied",
+          "error": {
+            "code": "PERMISSION_DENIED",
+            "message": "permission denied: no rule matched read:file; fallback 'deny'",
+            "retryable": false,
+            "safeToRetry": false
+          }
+        },
+        "operations": []
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "SANDBOX_OUTSIDE_DENIAL_ZERO_SOURCE_IO",
+      "expected": {
+        "status": "denied",
+        "sourceIO": 0
+      },
+      "actual": {
+        "args": {
+          "symbol": "ExternalOnly",
+          "path": "/tmp/ar-symbol-production-outside-0KDxiW"
+        },
+        "result": {
+          "status": "denied",
+          "error": {
+            "code": "SANDBOX_FILESYSTEM_DENIED",
+            "message": "sandbox denied: path outside workspace: /tmp/ar-symbol-production-outside-0KDxiW",
+            "retryable": false,
+            "safeToRetry": false
+          }
+        },
+        "operations": []
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "VCS_DEPENDENCY_GENERATED_IGNORES",
+      "expected": {
+        "hits": [],
+        "ignoredSourceIO": 0
+      },
+      "actual": {
+        "args": {
+          "symbol": "IgnoredOnly"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": true,
+            "indexer": "regex-symbol-fallback (no semantic symbol index; connect a language server/LSP index to upgrade)",
+            "hits": []
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 0 symbol(s) for IgnoredOnly",
+              "source": "IgnoredOnly",
+              "timestamp": 1791178753778
+            }
+          ]
+        },
+        "operations": [
+          {
+            "operation": "readdir",
+            "path": "."
+          },
+          {
+            "operation": "readdir",
+            "path": "concurrent"
+          },
+          {
+            "operation": "readdir",
+            "path": "private"
+          },
+          {
+            "operation": "readdir",
+            "path": "public-py"
+          },
+          {
+            "operation": "readdir",
+            "path": "public-ts"
+          },
+          {
+            "operation": "readdir",
+            "path": "public-tsx"
+          },
+          {
+            "operation": "stat",
+            "path": "concurrent/new.ts"
+          },
+          {
+            "operation": "readFile",
+            "path": "concurrent/new.ts"
+          },
+          {
+            "operation": "stat",
+            "path": "private/secret.ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "readFile",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/b.ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-tsx/a.ts"
+          },
+          {
+            "operation": "readdir",
+            "path": "."
+          },
+          {
+            "operation": "readdir",
+            "path": "concurrent"
+          },
+          {
+            "operation": "stat",
+            "path": "concurrent/new.ts"
+          },
+          {
+            "operation": "readFile",
+            "path": "concurrent/new.ts"
+          },
+          {
+            "operation": "readdir",
+            "path": "private"
+          },
+          {
+            "operation": "stat",
+            "path": "private/secret.ts"
+          },
+          {
+            "operation": "readFile",
+            "path": "private/secret.ts"
+          },
+          {
+            "operation": "readdir",
+            "path": "public-py"
+          },
+          {
+            "operation": "stat",
+            "path": "public-py/logic.py"
+          },
+          {
+            "operation": "readFile",
+            "path": "public-py/logic.py"
+          },
+          {
+            "operation": "stat",
+            "path": "public-py/other.py"
+          },
+          {
+            "operation": "readFile",
+            "path": "public-py/other.py"
+          },
+          {
+            "operation": "readdir",
+            "path": "public-ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "readFile",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/b.ts"
+          },
+          {
+            "operation": "readFile",
+            "path": "public-ts/b.ts"
+          },
+          {
+            "operation": "readdir",
+            "path": "public-tsx"
+          },
+          {
+            "operation": "stat",
+            "path": "public-tsx/a.ts"
+          },
+          {
+            "operation": "readFile",
+            "path": "public-tsx/a.ts"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "DISCOVERED_DIRECTORY_SYMLINK_SKIPPED",
+      "expected": {
+        "hits": [],
+        "sourceIOWithin": "public-ts",
+        "linkSourceIO": 0
+      },
+      "actual": {
+        "args": {
+          "symbol": "OffScopeMarker",
+          "path": "public-ts"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": true,
+            "indexer": "regex-symbol-fallback (no semantic symbol index; connect a language server/LSP index to upgrade)",
+            "hits": []
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 0 symbol(s) for OffScopeMarker",
+              "source": "OffScopeMarker",
+              "timestamp": 1791178753779
+            }
+          ]
+        },
+        "operations": [
+          {
+            "operation": "lstat",
+            "path": "public-ts"
+          },
+          {
+            "operation": "readdir",
+            "path": "public-ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/b.ts"
+          },
+          {
+            "operation": "lstat",
+            "path": "public-ts"
+          },
+          {
+            "operation": "readdir",
+            "path": "public-ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "readFile",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/b.ts"
+          },
+          {
+            "operation": "readFile",
+            "path": "public-ts/b.ts"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "SELECTED_DIRECTORY_SYMLINK_REFUSED",
+      "expected": {
+        "hits": [],
+        "sourceIO": 0
+      },
+      "actual": {
+        "args": {
+          "symbol": "OffScopeMarker",
+          "path": "selected-link"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": true,
+            "indexer": "regex-symbol-fallback (no semantic symbol index; connect a language server/LSP index to upgrade)",
+            "hits": []
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 0 symbol(s) for OffScopeMarker",
+              "source": "OffScopeMarker",
+              "timestamp": 1791178753779
+            }
+          ]
+        },
+        "operations": [
+          {
+            "operation": "lstat",
+            "path": "selected-link"
+          },
+          {
+            "operation": "lstat",
+            "path": "selected-link"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "ANCESTRY_DIRECTORY_SYMLINK_REFUSED",
+      "expected": {
+        "hits": [],
+        "sourceIO": 0
+      },
+      "actual": {
+        "args": {
+          "symbol": "OffScopeMarker",
+          "path": "selected-link/secret.ts"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": true,
+            "indexer": "regex-symbol-fallback (no semantic symbol index; connect a language server/LSP index to upgrade)",
+            "hits": []
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 0 symbol(s) for OffScopeMarker",
+              "source": "OffScopeMarker",
+              "timestamp": 1791178753780
+            }
+          ]
+        },
+        "operations": [
+          {
+            "operation": "lstat",
+            "path": "selected-link"
+          },
+          {
+            "operation": "lstat",
+            "path": "selected-link"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "SELECTED_FILE_SYMLINK_REFUSED",
+      "expected": {
+        "hits": [],
+        "sourceIO": 0
+      },
+      "actual": {
+        "args": {
+          "symbol": "OffScopeMarker",
+          "path": "selected-file-link.ts"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": true,
+            "indexer": "regex-symbol-fallback (no semantic symbol index; connect a language server/LSP index to upgrade)",
+            "hits": []
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 0 symbol(s) for OffScopeMarker",
+              "source": "OffScopeMarker",
+              "timestamp": 1791178753780
+            }
+          ]
+        },
+        "operations": [
+          {
+            "operation": "lstat",
+            "path": "selected-file-link.ts"
+          },
+          {
+            "operation": "lstat",
+            "path": "selected-file-link.ts"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "TRUSTED_ROOT_ALIAS_RETAINED",
+      "expected": {
+        "hit": "public-ts/a.ts",
+        "sourceIOWithin": "public-ts/a.ts"
+      },
+      "actual": {
+        "args": {
+          "symbol": "ChangedOnly",
+          "path": "public-ts/a.ts"
+        },
+        "result": {
+          "status": "success",
+          "output": {
+            "fallback": false,
+            "indexer": "ts-regex-index",
+            "hits": [
+              {
+                "file": "public-ts/a.ts",
+                "line": 1,
+                "kind": "function",
+                "name": "ChangedOnly",
+                "text": "export function ChangedOnly() {}",
+                "role": "definition"
+              }
+            ],
+            "filesIndexed": 1,
+            "indexFresh": true
+          },
+          "evidence": [
+            {
+              "type": "file",
+              "description": "symbol_search: 1 symbol(s) for ChangedOnly (1 files indexed)",
+              "source": "ChangedOnly",
+              "timestamp": 1791178753781
+            }
+          ]
+        },
+        "operations": [
+          {
+            "operation": "lstat",
+            "path": "public-ts"
+          },
+          {
+            "operation": "lstat",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "stat",
+            "path": "public-ts/a.ts"
+          },
+          {
+            "operation": "readFile",
+            "path": "public-ts/a.ts"
+          }
+        ]
+      },
+      "status": "PASS"
+    }
+  ],
+  "sourceShaAtEnd": "b00299e5d0da03656c00e2041fc261aa01af6c96",
+  "sourceTrackedDirtyAtEnd": true,
+  "sourceDirtAtEnd": "M packages/context/src/path-scoped-discovery.ts\n M packages/model/src/openai.test.ts\n M packages/model/src/openai.ts\n M packages/tools/src/navigate.ts\n M packages/tools/src/symbol-index.ts\n M packages/tools/src/tools/navigation-tools.ts\n?? packages/context/src/scoped-instruction-read.regressions.test.ts\n?? packages/harness/src/scoped-instruction-read.integration.test.ts\n?? packages/model/src/openai-stream-footer.regressions.test.ts\n?? packages/tools/src/symbol-scope.regressions.test.ts\n?? scripts/research/agent-followup-20261005/",
+  "sourceFingerprintsAfter": {
+    "packages/tools/src/navigate.ts": "24ae59b90a4529227f2b564039817c051b124329e89d87e2fb86f6379a83137c",
+    "packages/tools/src/symbol-index.ts": "32ad0414fd1c077bf109d12c2dfc3136ac762a4d6a1e051e2d2926b9614f0241",
+    "packages/tools/src/tools/navigation-tools.ts": "057226f7d1130664eb13391695863a7ca1a340f08d86daed405f6202e2366232",
+    "packages/tools/src/orchestrator.ts": "adcd42ba547d15e725b9d0236bd7ca550cf2f363e60f2ed10951f92d1604d3eb",
+    "packages/tools/src/registry.ts": "99e062807209aacec1dcb741750ad5ac7383acf5eabc58dfe793292815915369",
+    "packages/tools/src/symbol-scope.regressions.test.ts": "e1be7c4174ed6c253a8e4b612f5de378621729e3bbb54360363b1c28e653b7b2",
+    "packages/security/src/permission.ts": "a4bc2eea7947b0fdc11decabcbb80222057c6e7c3ee0f7e3b90b611e08b6fe13",
+    "packages/security/src/sandbox.ts": "76a312520e76e3a84eee6dd59cb07ac261fbbc438e41b05c40bd506ddaa0e08d",
+    "packages/tools/dist/navigate.js": "7b824152cd8bfa7a5c6567c1b51f737f17a226e028ed7724b1277d172eec23da",
+    "packages/tools/dist/symbol-index.js": "0fae2aa8d84995a8fe4696623921a6e8e2d0af8c0ee033ad5735f8cfb2af1f94",
+    "packages/tools/dist/tools/navigation-tools.js": "2086e08838804f69fb83ad2fd328b4b3d55a89344f8ce18cbdd53da68adffff5",
+    "packages/tools/dist/orchestrator.js": "edda2f2b44e7352766b40fe6d599fcd2c408432a72f8ed75c60e99e36bb97766",
+    "packages/tools/dist/registry.js": "89b0b2a04d79a242fef60c7f2475fab98dbfab10fc25b95c5cdcdbd7fbd058c8",
+    "scripts/research/agent-followup-20261005/symbol-production-probe.mjs": "ec0b47218b67d6a1c832100afd5a0d2c4c4dce94df60d181c74918c1b6495dd9"
+  },
+  "status": "PASS"
+}

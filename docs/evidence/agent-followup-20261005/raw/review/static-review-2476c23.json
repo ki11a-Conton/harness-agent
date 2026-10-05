@@ -1,0 +1,119 @@
+{
+  "schemaVersion": "agent-followup-independent-static-review-v1",
+  "status": "STATIC_SOURCE_REVIEW_PASS",
+  "reviewedAt": "2026-10-05T05:51:29.278394+00:00",
+  "testedSourceSha": "2476c23444079a2cba29480b35d65157cf30c0fd",
+  "baselineSha": "f71b444eec6b4024039716a1a0a01bade22c90b0",
+  "planCommit": "b00299e5d0da03656c00e2041fc261aa01af6c96",
+  "cleanAtReview": true,
+  "gitBlobBytesEqualWorkingSource": true,
+  "reviewFileSha256": {
+    "AGENTS.md": "ca24b5a24e947195f2c18bfcd24d177ab4bbf14d3933d687800f000cd76d6f15",
+    "packages/context/src/path-scoped-discovery.ts": "3d04fb274e7a1365e1c5d821c86fa491af6c666779e8d8ba53072937d60ca169",
+    "packages/context/src/scoped-instruction-read.regressions.test.ts": "030fe9547a217dd65f4d194f9828c8ee3f85a8d6fae785178b3d3cdd03d936cb",
+    "packages/harness/src/scoped-instruction-read.integration.test.ts": "cf386e0c87bf024739a60f441b5a9b72d7b70eba2bfade78920930b0a37e8127",
+    "packages/model/src/openai-stream-footer.regressions.test.ts": "786909f8060684646949f0c3a0cd32e71a395435f9ca4f4a92d405a3a8839980",
+    "packages/model/src/openai.test.ts": "2785e0311f055495d383d241de1a94123643b63fb6cf0c490839a0902c7618f3",
+    "packages/model/src/openai.ts": "e299fa1a965719b56ce25867c707298de6a6d2e9c5a1ce9478b9a20844f4522d",
+    "packages/tools/src/navigate.ts": "24ae59b90a4529227f2b564039817c051b124329e89d87e2fb86f6379a83137c",
+    "packages/tools/src/symbol-index.ts": "32ad0414fd1c077bf109d12c2dfc3136ac762a4d6a1e051e2d2926b9614f0241",
+    "packages/tools/src/symbol-scope.regressions.test.ts": "e1be7c4174ed6c253a8e4b612f5de378621729e3bbb54360363b1c28e653b7b2",
+    "packages/tools/src/tools/navigation-tools.ts": "057226f7d1130664eb13391695863a7ca1a340f08d86daed405f6202e2366232",
+    "plan(20261005-033848).md": "670466d824a03c6cb60113ff0f1756c110fdb7aa690ad10beb34264ab196b32a",
+    "plan(20261005-agent-followup-preregistered).md": "670466d824a03c6cb60113ff0f1756c110fdb7aa690ad10beb34264ab196b32a",
+    "plan.md": "84e51740f20abd19b015b212de4c4521ce89040f69d4e8199d37c4dd567ddf42",
+    "scripts/research/agent-followup-20261005/README.md": "5d0f01a96d1f760f082531c80da8ba67655ca9f3a168c4a22a406ed494ddace8",
+    "scripts/research/agent-followup-20261005/frozen-acceptance.py": "e58c825d6bd8666c2d56de28aae828da1f6407f745905bb70cfd796f693ee816",
+    "scripts/research/agent-followup-20261005/main-accounting.py": "a6e1e25e8b59856734fd04cca8a5a1336383391ef9583f6d987663a4e11c5039",
+    "scripts/research/agent-followup-20261005/provider-probe.mjs": "297f67bd6cfd7b0fcc987c7a4a0560085125dab2ef684f834da6f8e1f8481c96",
+    "scripts/research/agent-followup-20261005/scoped-instruction-probe.mjs": "d3b8a1295a056bfef3b3c75b08061fe6515ee41b293b4cdb87eb355f66575dc9",
+    "scripts/research/agent-followup-20261005/symbol-production-probe.mjs": "ec0b47218b67d6a1c832100afd5a0d2c4c4dce94df60d181c74918c1b6495dd9",
+    "tasks/AGENT-FOLLOWUP-20261005.md": "e3d23e951fee6d431a84d7582b110cc20a40faaa782359edb4ca6935cb05a709"
+  },
+  "productionChangedFiles": [
+    "packages/context/src/path-scoped-discovery.ts",
+    "packages/model/src/openai.ts",
+    "packages/tools/src/navigate.ts",
+    "packages/tools/src/symbol-index.ts",
+    "packages/tools/src/tools/navigation-tools.ts"
+  ],
+  "outOfScopeProductionChangedFiles": [],
+  "blockingFindings": [],
+  "correctedReviewFinding": {
+    "id": "R1-EOF-YIELD",
+    "status": "RESOLVED",
+    "fix": "EOF final events now flow through the same pre/post-yield effective-signal guard as DONE and usage; added EOF/DONE/footer cancellation-between-tool-and-completion plus delivered-completion uniqueness regressions."
+  },
+  "existingTestOracleMaintenance": {
+    "path": "packages/model/src/openai.test.ts",
+    "justified": true,
+    "reason": "Whole-call timeout was already established outside retries. Old test second resolved fetch ignored expired signal. New oracle retains 2 fetch/1 retry, requires exactly one nonretryable timeout, forbids completed/tool delta; no deadline/reset/retry policy changed."
+  },
+  "findings": [
+    "R1 preserves first normal boundary, reads separate final usage, ignores late output/reasoning/tool changes, supports same-frame and no-usage boundaries, classifies caller abort/deadline/read failure separately, releases owned reader in finally, and never retries stream phase.",
+    "R2 scopes actual enumeration/read/stat to selected file or directory; normalized [root,scope] cache/flights isolate scope changes/concurrency and absolute/relative aliases; root-relative output, prior TS-hit priority and heuristic fallback are preserved.",
+    "R3 fully captures bounded cap+4 prefix, validates regular type/opened/current/final descriptor and path revisions, fatal-decodes UTF-8 with BOM preserved, rejects failed/incomplete capture without cache, and isolates actual close failures. Default policy remains byte-identical.",
+    "Acceptance runner refuses wrong/dirty SHA on every command, fingerprints tracked source and built dist before/after, retains failure logs, uses fresh output, names full test run and applies strict usage audit to that same run.",
+    "Main accounting starts actual CLI and Web main, sends loopback model footer, records real requests and durable events, and verifies model.completed token source=measured with exact 10 input/6 output per physical model call plus existing system/tool controls.",
+    "New cleanup observability correction exactly follows existing P14-6 contract: fixed degraded diagnostics without secret/error interpolation, original result/error precedence retained, scanner byte-identical baseline; new tests exercise actual cleanup before error injection."
+  ],
+  "runtimeAcceptance": "PENDING_COMPLETE_FROZEN_RUN_2476c23",
+  "limits": [
+    "Read-only independent review; no repeated test suite run.",
+    "Protocol/accounting/context/search engineering correctness does not establish real model task quality.",
+    "R2 retains TS hits priority and regex fallback; does not claim semantic all-language completeness or new filesystem race hardening.",
+    "Windows native execution remains NOT_RUN."
+  ],
+  "priorSecurityBlocker": {
+    "sourceSha": "be537085551fc8f14d976f05865d6c0f4bd57e7a",
+    "receipt": "security-followup-be53708.json",
+    "status": "RESOLVED_IN_670561b",
+    "correction": "Both reader cleanup failures report fixed generic degraded stderr messages; caught error/body/secrets are never included. New meaningful actual-release/cleanup hooks preserve success/cancel results and unlocked readers and verify exact diagnostics. Security scanner remains unchanged.",
+    "changedSourceIndependentlyScannedAgainstNoSilentCatchPatterns": true
+  },
+  "documentationCorrection": {
+    "status": "RESOLVED_IN_2476c23",
+    "sourceRuntimeTestsAndProbesByteIdenticalTo": "670561b03220404cf8ded402a0c5713c883bb1d0",
+    "changedPathsSince670561b": [
+      "plan(20261005-033848).md",
+      "plan.md"
+    ],
+    "scope": "Restore current plan marker and standard timestamp specification link without modifying doc validator or immutable preregistered bytes.",
+    "originalPreregisterAndStandardTimestampSnapshotIdentical": true
+  },
+  "preservedActualFailures": {
+    "originalSecurityFailure": {
+      "manifest": ".ci/agent-followup-20261005/frozen-be53708/manifest.json",
+      "sha256": "1c4ebb0bb1b8b24de5c494a1e352810e9ce49000f3aec7ae6c6923804a27c6b1",
+      "status": "FAIL",
+      "commandsExecuted": 10,
+      "finalGate": "security",
+      "exception": {
+        "type": "RuntimeError",
+        "message": "security exited 1"
+      }
+    },
+    "documentationFailure": {
+      "manifest": ".ci/agent-followup-20261005/frozen-670561b/manifest.json",
+      "sha256": "cd85c29c7e51ca247e6f17bdd9feabba4f7f2b1b1387fa35a7b0371c01892a02",
+      "status": "FAIL",
+      "commandsExecuted": 11,
+      "finalGate": "docs-verify",
+      "exception": {
+        "type": "RuntimeError",
+        "message": "docs-verify exited 1"
+      }
+    },
+    "wrongShaGuardFailure": {
+      "manifest": ".ci/agent-followup-20261005/frozen-80a415d/manifest.json",
+      "sha256": "eaffa888dca1eddfae6a12ea4b3e0abb526a9d5ec8922f311fae42ac708b24e6",
+      "status": "FAIL",
+      "commandsExecuted": 0,
+      "finalGate": null,
+      "exception": {
+        "type": "RuntimeError",
+        "message": "frozen source changed: {\"head\": \"670561b03220404cf8ded402a0c5713c883bb1d0\", \"clean\": true, \"porcelain\": \"\"}"
+      }
+    }
+  }
+}

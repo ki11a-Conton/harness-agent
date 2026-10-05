@@ -1,0 +1,410 @@
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 20 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/context/src/scoped-instruction-read.regressions.test.ts > opt-in scoped instruction hard read boundaries > omits malformed UTF-8 ff at cap 1, retaining a regular control
+AssertionError: expected [ …(2) ] to deeply equal [ Array(1) ]
+
+- Expected
++ Received
+
+  [
++   "/tmp/ar-scoped-read-boundary-t0cM6z/AGENTS.md",
+    "/tmp/ar-scoped-read-boundary-t0cM6z/nested/AGENTS.md",
+  ]
+
+ ❯ packages/context/src/scoped-instruction-read.regressions.test.ts:41:41
+     39|       const root = await fixture(bytes);
+     40|       const docs = await scoped(root).discover(root, { maxBytesPerFile…
+     41|       expect(docs.map(doc => doc.path)).toEqual([join(root, "nested/AG…
+       |                                         ^
+     42|       expect(docs.every(doc => Buffer.byteLength(doc.content) <= cap &…
+     43|       const control = await new HierarchicalInstructionDiscovery().dis…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/20]⎯
+
+ FAIL  packages/context/src/scoped-instruction-read.regressions.test.ts > opt-in scoped instruction hard read boundaries > omits malformed UTF-8 ff at cap 3, retaining a regular control
+AssertionError: expected [ …(2) ] to deeply equal [ Array(1) ]
+
+- Expected
++ Received
+
+  [
++   "/tmp/ar-scoped-read-boundary-SnutTe/AGENTS.md",
+    "/tmp/ar-scoped-read-boundary-SnutTe/nested/AGENTS.md",
+  ]
+
+ ❯ packages/context/src/scoped-instruction-read.regressions.test.ts:41:41
+     39|       const root = await fixture(bytes);
+     40|       const docs = await scoped(root).discover(root, { maxBytesPerFile…
+     41|       expect(docs.map(doc => doc.path)).toEqual([join(root, "nested/AG…
+       |                                         ^
+     42|       expect(docs.every(doc => Buffer.byteLength(doc.content) <= cap &…
+     43|       const control = await new HierarchicalInstructionDiscovery().dis…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/20]⎯
+
+ FAIL  packages/context/src/scoped-instruction-read.regressions.test.ts > opt-in scoped instruction hard read boundaries > omits malformed UTF-8 ff at cap 100, retaining a regular control
+AssertionError: expected [ …(2) ] to deeply equal [ Array(1) ]
+
+- Expected
++ Received
+
+  [
++   "/tmp/ar-scoped-read-boundary-ykLHpi/AGENTS.md",
+    "/tmp/ar-scoped-read-boundary-ykLHpi/nested/AGENTS.md",
+  ]
+
+ ❯ packages/context/src/scoped-instruction-read.regressions.test.ts:41:41
+     39|       const root = await fixture(bytes);
+     40|       const docs = await scoped(root).discover(root, { maxBytesPerFile…
+     41|       expect(docs.map(doc => doc.path)).toEqual([join(root, "nested/AG…
+       |                                         ^
+     42|       expect(docs.every(doc => Buffer.byteLength(doc.content) <= cap &…
+     43|       const control = await new HierarchicalInstructionDiscovery().dis…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/20]⎯
+
+ FAIL  packages/context/src/scoped-instruction-read.regressions.test.ts > opt-in scoped instruction hard read boundaries > omits malformed UTF-8 e228a1 at cap 1, retaining a regular control
+AssertionError: expected [ …(2) ] to deeply equal [ Array(1) ]
+
+- Expected
++ Received
+
+  [
++   "/tmp/ar-scoped-read-boundary-hMt8J6/AGENTS.md",
+    "/tmp/ar-scoped-read-boundary-hMt8J6/nested/AGENTS.md",
+  ]
+
+ ❯ packages/context/src/scoped-instruction-read.regressions.test.ts:41:41
+     39|       const root = await fixture(bytes);
+     40|       const docs = await scoped(root).discover(root, { maxBytesPerFile…
+     41|       expect(docs.map(doc => doc.path)).toEqual([join(root, "nested/AG…
+       |                                         ^
+     42|       expect(docs.every(doc => Buffer.byteLength(doc.content) <= cap &…
+     43|       const control = await new HierarchicalInstructionDiscovery().dis…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/20]⎯
+
+ FAIL  packages/context/src/scoped-instruction-read.regressions.test.ts > opt-in scoped instruction hard read boundaries > omits malformed UTF-8 e228a1 at cap 3, retaining a regular control
+AssertionError: expected [ …(2) ] to deeply equal [ Array(1) ]
+
+- Expected
++ Received
+
+  [
++   "/tmp/ar-scoped-read-boundary-cVXekN/AGENTS.md",
+    "/tmp/ar-scoped-read-boundary-cVXekN/nested/AGENTS.md",
+  ]
+
+ ❯ packages/context/src/scoped-instruction-read.regressions.test.ts:41:41
+     39|       const root = await fixture(bytes);
+     40|       const docs = await scoped(root).discover(root, { maxBytesPerFile…
+     41|       expect(docs.map(doc => doc.path)).toEqual([join(root, "nested/AG…
+       |                                         ^
+     42|       expect(docs.every(doc => Buffer.byteLength(doc.content) <= cap &…
+     43|       const control = await new HierarchicalInstructionDiscovery().dis…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/20]⎯
+
+ FAIL  packages/context/src/scoped-instruction-read.regressions.test.ts > opt-in scoped instruction hard read boundaries > omits malformed UTF-8 e228a1 at cap 100, retaining a regular control
+AssertionError: expected [ …(2) ] to deeply equal [ Array(1) ]
+
+- Expected
++ Received
+
+  [
++   "/tmp/ar-scoped-read-boundary-g5kqVO/AGENTS.md",
+    "/tmp/ar-scoped-read-boundary-g5kqVO/nested/AGENTS.md",
+  ]
+
+ ❯ packages/context/src/scoped-instruction-read.regressions.test.ts:41:41
+     39|       const root = await fixture(bytes);
+     40|       const docs = await scoped(root).discover(root, { maxBytesPerFile…
+     41|       expect(docs.map(doc => doc.path)).toEqual([join(root, "nested/AG…
+       |                                         ^
+     42|       expect(docs.every(doc => Buffer.byteLength(doc.content) <= cap &…
+     43|       const control = await new HierarchicalInstructionDiscovery().dis…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/20]⎯
+
+ FAIL  packages/context/src/scoped-instruction-read.regressions.test.ts > opt-in scoped instruction hard read boundaries > omits malformed UTF-8 e282 at cap 1, retaining a regular control
+AssertionError: expected [ …(2) ] to deeply equal [ Array(1) ]
+
+- Expected
++ Received
+
+  [
++   "/tmp/ar-scoped-read-boundary-EzMI65/AGENTS.md",
+    "/tmp/ar-scoped-read-boundary-EzMI65/nested/AGENTS.md",
+  ]
+
+ ❯ packages/context/src/scoped-instruction-read.regressions.test.ts:41:41
+     39|       const root = await fixture(bytes);
+     40|       const docs = await scoped(root).discover(root, { maxBytesPerFile…
+     41|       expect(docs.map(doc => doc.path)).toEqual([join(root, "nested/AG…
+       |                                         ^
+     42|       expect(docs.every(doc => Buffer.byteLength(doc.content) <= cap &…
+     43|       const control = await new HierarchicalInstructionDiscovery().dis…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/20]⎯
+
+ FAIL  packages/context/src/scoped-instruction-read.regressions.test.ts > opt-in scoped instruction hard read boundaries > omits malformed UTF-8 e282 at cap 3, retaining a regular control
+AssertionError: expected [ …(2) ] to deeply equal [ Array(1) ]
+
+- Expected
++ Received
+
+  [
++   "/tmp/ar-scoped-read-boundary-7I89aF/AGENTS.md",
+    "/tmp/ar-scoped-read-boundary-7I89aF/nested/AGENTS.md",
+  ]
+
+ ❯ packages/context/src/scoped-instruction-read.regressions.test.ts:41:41
+     39|       const root = await fixture(bytes);
+     40|       const docs = await scoped(root).discover(root, { maxBytesPerFile…
+     41|       expect(docs.map(doc => doc.path)).toEqual([join(root, "nested/AG…
+       |                                         ^
+     42|       expect(docs.every(doc => Buffer.byteLength(doc.content) <= cap &…
+     43|       const control = await new HierarchicalInstructionDiscovery().dis…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/20]⎯
+
+ FAIL  packages/context/src/scoped-instruction-read.regressions.test.ts > opt-in scoped instruction hard read boundaries > omits malformed UTF-8 e282 at cap 100, retaining a regular control
+AssertionError: expected [ …(2) ] to deeply equal [ Array(1) ]
+
+- Expected
++ Received
+
+  [
++   "/tmp/ar-scoped-read-boundary-MTGuWn/AGENTS.md",
+    "/tmp/ar-scoped-read-boundary-MTGuWn/nested/AGENTS.md",
+  ]
+
+ ❯ packages/context/src/scoped-instruction-read.regressions.test.ts:41:41
+     39|       const root = await fixture(bytes);
+     40|       const docs = await scoped(root).discover(root, { maxBytesPerFile…
+     41|       expect(docs.map(doc => doc.path)).toEqual([join(root, "nested/AG…
+       |                                         ^
+     42|       expect(docs.every(doc => Buffer.byteLength(doc.content) <= cap &…
+     43|       const control = await new HierarchicalInstructionDiscovery().dis…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/20]⎯
+
+ FAIL  packages/context/src/scoped-instruction-read.regressions.test.ts > opt-in scoped instruction hard read boundaries > omits malformed UTF-8 eda080 at cap 1, retaining a regular control
+AssertionError: expected [ …(2) ] to deeply equal [ Array(1) ]
+
+- Expected
++ Received
+
+  [
++   "/tmp/ar-scoped-read-boundary-sHUJzD/AGENTS.md",
+    "/tmp/ar-scoped-read-boundary-sHUJzD/nested/AGENTS.md",
+  ]
+
+ ❯ packages/context/src/scoped-instruction-read.regressions.test.ts:41:41
+     39|       const root = await fixture(bytes);
+     40|       const docs = await scoped(root).discover(root, { maxBytesPerFile…
+     41|       expect(docs.map(doc => doc.path)).toEqual([join(root, "nested/AG…
+       |                                         ^
+     42|       expect(docs.every(doc => Buffer.byteLength(doc.content) <= cap &…
+     43|       const control = await new HierarchicalInstructionDiscovery().dis…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/20]⎯
+
+ FAIL  packages/context/src/scoped-instruction-read.regressions.test.ts > opt-in scoped instruction hard read boundaries > omits malformed UTF-8 eda080 at cap 3, retaining a regular control
+AssertionError: expected [ …(2) ] to deeply equal [ Array(1) ]
+
+- Expected
++ Received
+
+  [
++   "/tmp/ar-scoped-read-boundary-vzNjXs/AGENTS.md",
+    "/tmp/ar-scoped-read-boundary-vzNjXs/nested/AGENTS.md",
+  ]
+
+ ❯ packages/context/src/scoped-instruction-read.regressions.test.ts:41:41
+     39|       const root = await fixture(bytes);
+     40|       const docs = await scoped(root).discover(root, { maxBytesPerFile…
+     41|       expect(docs.map(doc => doc.path)).toEqual([join(root, "nested/AG…
+       |                                         ^
+     42|       expect(docs.every(doc => Buffer.byteLength(doc.content) <= cap &…
+     43|       const control = await new HierarchicalInstructionDiscovery().dis…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/20]⎯
+
+ FAIL  packages/context/src/scoped-instruction-read.regressions.test.ts > opt-in scoped instruction hard read boundaries > omits malformed UTF-8 eda080 at cap 100, retaining a regular control
+AssertionError: expected [ …(2) ] to deeply equal [ Array(1) ]
+
+- Expected
++ Received
+
+  [
++   "/tmp/ar-scoped-read-boundary-8ZZYVO/AGENTS.md",
+    "/tmp/ar-scoped-read-boundary-8ZZYVO/nested/AGENTS.md",
+  ]
+
+ ❯ packages/context/src/scoped-instruction-read.regressions.test.ts:41:41
+     39|       const root = await fixture(bytes);
+     40|       const docs = await scoped(root).discover(root, { maxBytesPerFile…
+     41|       expect(docs.map(doc => doc.path)).toEqual([join(root, "nested/AG…
+       |                                         ^
+     42|       expect(docs.every(doc => Buffer.byteLength(doc.content) <= cap &…
+     43|       const control = await new HierarchicalInstructionDiscovery().dis…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/20]⎯
+
+ FAIL  packages/context/src/scoped-instruction-read.regressions.test.ts > opt-in scoped instruction hard read boundaries > omits a malformed truncated prefix rather than expanding replacement bytes
+AssertionError: expected [ …(2) ] to deeply equal [ Array(1) ]
+
+- Expected
++ Received
+
+  [
++   "/tmp/ar-scoped-read-boundary-2NT5sc/AGENTS.md",
+    "/tmp/ar-scoped-read-boundary-2NT5sc/nested/AGENTS.md",
+  ]
+
+ ❯ packages/context/src/scoped-instruction-read.regressions.test.ts:50:39
+     48|     const root = await fixture(Buffer.alloc(100, 0xff));
+     49|     const docs = await scoped(root).discover(root, { maxBytesPerFile: …
+     50|     expect(docs.map(doc => doc.path)).toEqual([join(root, "nested/AGEN…
+       |                                       ^
+     51|     expect(docs.every(doc => Buffer.byteLength(doc.content) <= 1)).toB…
+     52|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/20]⎯
+
+ FAIL  packages/context/src/scoped-instruction-read.regressions.test.ts > opt-in scoped instruction hard read boundaries > omits a zero premature EOF capture and does not cache it
+AssertionError: expected [ …(2) ] to deeply equal [ Array(1) ]
+
+- Expected
++ Received
+
+  [
++   "/tmp/ar-scoped-read-boundary-OIiXVf/AGENTS.md",
+    "/tmp/ar-scoped-read-boundary-OIiXVf/nested/AGENTS.md",
+  ]
+
+ ❯ packages/context/src/scoped-instruction-read.regressions.test.ts:101:65
+     99|       }) as typeof handle.read;
+    100|     });
+    101|     expect((await adapter.discover(root)).map(doc => doc.path)).toEqua…
+       |                                                                 ^
+    102|     const firstCalls = calls;
+    103|     expect((await adapter.discover(root)).map(doc => doc.path)).toEqua…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/20]⎯
+
+ FAIL  packages/context/src/scoped-instruction-read.regressions.test.ts > opt-in scoped instruction hard read boundaries > omits a partial premature EOF capture and does not cache it
+AssertionError: expected [ …(2) ] to deeply equal [ Array(1) ]
+
+- Expected
++ Received
+
+  [
++   "/tmp/ar-scoped-read-boundary-gpG6un/AGENTS.md",
+    "/tmp/ar-scoped-read-boundary-gpG6un/nested/AGENTS.md",
+  ]
+
+ ❯ packages/context/src/scoped-instruction-read.regressions.test.ts:101:65
+     99|       }) as typeof handle.read;
+    100|     });
+    101|     expect((await adapter.discover(root)).map(doc => doc.path)).toEqua…
+       |                                                                 ^
+    102|     const firstCalls = calls;
+    103|     expect((await adapter.discover(root)).map(doc => doc.path)).toEqua…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/20]⎯
+
+ FAIL  packages/context/src/scoped-instruction-read.regressions.test.ts > opt-in scoped instruction hard read boundaries > continues to other documents after an actual descriptor closes and reports EIO
+Error: cleanup EIO
+ ❯ FileHandle.handle.close packages/context/src/scoped-instruction-read.regressions.test.ts:110:147
+    108|   it("continues to other documents after an actual descriptor closes a…
+    109|     const root = await fixture(); let closes = 0;
+    110|     decorate(root, handle => { const close = handle.close.bind(handle)…
+       |                                                                                                                                                   ^
+    111|     const docs = await scoped(root).discover(root);
+    112|     expect(closes).toBe(1);
+ ❯ PathScopedInstructionDiscovery.readDoc packages/context/src/path-scoped-discovery.ts:151:15
+ ❯ PathScopedInstructionDiscovery.discover packages/context/src/path-scoped-discovery.ts:71:22
+ ❯ packages/context/src/scoped-instruction-read.regressions.test.ts:111:18
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/20]⎯
+
+ FAIL  packages/context/src/scoped-instruction-read.regressions.test.ts > opt-in scoped instruction hard read boundaries > rejects a nonregular opened descriptor even when its numeric revision matches
+AssertionError: expected [ 'root regular control', …(1) ] to deeply equal [ 'nested regular control' ]
+
+- Expected
++ Received
+
+  [
++   "root regular control",
+    "nested regular control",
+  ]
+
+ ❯ packages/context/src/scoped-instruction-read.regressions.test.ts:129:73
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/20]⎯
+
+ FAIL  packages/context/src/scoped-instruction-read.regressions.test.ts > opt-in scoped instruction hard read boundaries > rejects a pathname revision changed after open but before capture
+AssertionError: expected [ 'root regular control', …(1) ] to deeply equal [ 'nested regular control' ]
+
+- Expected
++ Received
+
+  [
++   "root regular control",
+    "nested regular control",
+  ]
+
+ ❯ packages/context/src/scoped-instruction-read.regressions.test.ts:139:73
+    137|       return value;
+    138|     }) as typeof fs.lstat); syncBuiltinESMExports();
+    139|     expect((await scoped(root).discover(root)).map(doc => doc.content)…
+       |                                                                         ^
+    140|   });
+    141|   it("rejects a real parent-directory replacement after reading despit…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/20]⎯
+
+ FAIL  packages/context/src/scoped-instruction-read.regressions.test.ts > opt-in scoped instruction hard read boundaries > rejects a real parent-directory replacement after reading despite an unchanged descriptor revision
+AssertionError: expected [ 'root regular control', …(1) ] to deeply equal [ 'root regular control' ]
+
+- Expected
++ Received
+
+  [
+    "root regular control",
++   "nested regular control",
+  ]
+
+ ❯ packages/context/src/scoped-instruction-read.regressions.test.ts:156:68
+    154|     }, "nested/AGENTS.md");
+    155|     const adapter = scoped(root);
+    156|     expect((await adapter.discover(root)).map(doc => doc.content)).toE…
+       |                                                                    ^
+    157|     expect(replaced).toBe(true);
+    158|     vi.restoreAllMocks(); syncBuiltinESMExports();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[19/20]⎯
+
+ FAIL  packages/context/src/scoped-instruction-read.regressions.test.ts > opt-in scoped instruction hard read boundaries > handles a real regular-to-FIFO race with a guarded nonblocking native open
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ packages/context/src/scoped-instruction-read.regressions.test.ts:179:21
+    177|     }) as typeof fs.open); syncBuiltinESMExports();
+    178|     expect((await scoped(root).discover(root)).map(doc => doc.content)…
+    179|     expect(guarded).toBe(false); expect(nonregular).toBe(true);
+       |                     ^
+    180|   });
+    181| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[20/20]⎯
+

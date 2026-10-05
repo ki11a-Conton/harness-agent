@@ -1,0 +1,26 @@
+{
+  "stage": "FORMAL_RED",
+  "head": "b00299e5d0da03656c00e2041fc261aa01af6c96",
+  "gitStatusBefore": " M packages/model/src/openai.ts\n?? packages/context/src/scoped-instruction-read.regressions.test.ts\n?? packages/model/src/openai-stream-footer.regressions.test.ts\n?? packages/tools/src/symbol-scope.regressions.test.ts\n?? scripts/research/agent-followup-20261005/\n",
+  "argv": [
+    "corepack",
+    "pnpm",
+    "exec",
+    "vitest",
+    "run",
+    "packages/context/src/scoped-instruction-read.regressions.test.ts"
+  ],
+  "startedAt": "2026-10-05T05:33:20.576183+00:00",
+  "endedAt": "2026-10-05T05:33:21.790823+00:00",
+  "exitCode": 1,
+  "productionEqualsBaseline": true,
+  "filesBefore": {
+    "packages/context/src/path-scoped-discovery.ts": "fb5ec00963093f7d28fd9b002ca7983f0df247e5d98b1b1981b05d08caa0c768",
+    "packages/context/src/scoped-instruction-read.regressions.test.ts": "bf688f0521ea1cb3f62d6ea470e1e246c9c3068217f6ae3849283c65af369f6f"
+  },
+  "filesAfter": {
+    "packages/context/src/path-scoped-discovery.ts": "fb5ec00963093f7d28fd9b002ca7983f0df247e5d98b1b1981b05d08caa0c768",
+    "packages/context/src/scoped-instruction-read.regressions.test.ts": "bf688f0521ea1cb3f62d6ea470e1e246c9c3068217f6ae3849283c65af369f6f"
+  },
+  "rawLogSha256": "6a149680c40de1ae6e7a020363e6c290229ec6bcfd2e0ee335bd193d3bcde381"
+}

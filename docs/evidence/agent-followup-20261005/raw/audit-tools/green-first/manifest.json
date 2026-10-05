@@ -1,0 +1,28 @@
+{
+  "phase": "GREEN",
+  "sourceSHA": "b00299e5d0da03656c00e2041fc261aa01af6c96",
+  "dirt": " M packages/context/src/path-scoped-discovery.ts\n M packages/model/src/openai.ts\n M packages/tools/src/navigate.ts\n M packages/tools/src/symbol-index.ts\n M packages/tools/src/tools/navigation-tools.ts\n?? packages/context/src/scoped-instruction-read.regressions.test.ts\n?? packages/model/src/openai-stream-footer.regressions.test.ts\n?? packages/tools/src/symbol-scope.regressions.test.ts\n?? scripts/research/agent-followup-20261005/\n",
+  "argv": [
+    "corepack",
+    "pnpm",
+    "exec",
+    "vitest",
+    "run",
+    "packages/tools/src/symbol-scope.regressions.test.ts",
+    "packages/tools/src/symbol-index.test.ts",
+    "packages/tools/src/workspace-knowledge-regressions.test.ts",
+    "packages/tools/src/navigate.test.ts",
+    "packages/tools/src/navigation-work.regressions.test.ts",
+    "--reporter=verbose",
+    "--reporter=json",
+    "--outputFile=/workspace/harness-agent/.ci/agent-followup-20261005/audit-tools/green-first/result.json"
+  ],
+  "exitCode": 0,
+  "sourceHashes": {
+    "packages/tools/src/navigate.ts": "24ae59b90a4529227f2b564039817c051b124329e89d87e2fb86f6379a83137c",
+    "packages/tools/src/symbol-index.ts": "32ad0414fd1c077bf109d12c2dfc3136ac762a4d6a1e051e2d2926b9614f0241",
+    "packages/tools/src/tools/navigation-tools.ts": "057226f7d1130664eb13391695863a7ca1a340f08d86daed405f6202e2366232",
+    "packages/tools/src/symbol-scope.regressions.test.ts": "e1be7c4174ed6c253a8e4b612f5de378621729e3bbb54360363b1c28e653b7b2"
+  },
+  "logSha256": "c3e4c6776e5b1ceaaccb41d14f55d7107bb49e2fa504fcaa13a00772589b3267"
+}

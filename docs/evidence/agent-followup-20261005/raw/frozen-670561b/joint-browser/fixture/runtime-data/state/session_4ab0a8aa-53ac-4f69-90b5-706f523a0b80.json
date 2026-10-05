@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "snapshot": {
+    "effectiveAgent": {
+      "agentId": "agent_b1b2dea3-16e8-4824-9936-5cae79405839",
+      "model": {
+        "providerId": "offline-web-browser-script",
+        "modelId": "scripted-web"
+      },
+      "systemPrompt": "You are the harness agent running inside a workspace.\n\nCapabilities:\n- read_file / search_files / grep_search / repo_tree / symbol_search / repo_map / discover_commands / env_snapshot: inspect the workspace (allowed automatically)\n- write_file / edit_file: modify workspace files (require approval)\n- exec: run commands in the workspace shell (requires approval)\n\nState-changing actions ask for approval and are denied until approved.\nWhen a tool result reports [denied], do not retry it blindly — report the outcome.",
+      "tools": {
+        "allow": [
+          "read_file",
+          "write_file",
+          "edit_file",
+          "search_files",
+          "grep_search",
+          "repo_tree",
+          "symbol_search",
+          "repo_map",
+          "discover_commands",
+          "env_snapshot",
+          "exec",
+          "update_plan"
+        ]
+      },
+      "permissions": {
+        "rules": [
+          {
+            "action": "read",
+            "resource": "file",
+            "effect": "allow"
+          },
+          {
+            "action": "edit",
+            "resource": "file",
+            "effect": "ask"
+          },
+          {
+            "action": "exec",
+            "resource": "command",
+            "effect": "ask"
+          },
+          {
+            "action": "exec",
+            "resource": "network",
+            "effect": "ask"
+          }
+        ]
+      },
+      "skills": {},
+      "limits": {
+        "maxToolCalls": 50
+      }
+    },
+    "runtimePolicy": {
+      "version": 1,
+      "contextPolicyHash": "935857d3b281213e",
+      "toolSemanticsHash": "1",
+      "createdAt": 1791179286653
+    },
+    "p27.configFingerprint": "d432f43d",
+    "p27.configValue": "{\"featureFlags\":{\"context\":true,\"checkpoint\":true,\"artifacts\":true,\"memory\":false,\"learning\":false,\"skills\":true,\"delegation\":false,\"mcp\":false,\"plugins\":false,\"observability\":true},\"contextBudget\":{\"maxTokens\":32000,\"reserved\":{\"system\":1500,\"task\":2000,\"output\":2000},\"dynamic\":0},\"sandboxPolicy\":{\"filesystem\":{\"mode\":\"workspace-write\"},\"network\":{\"mode\":\"deny\"},\"process\":{\"timeoutMs\":60000,\"maxOutputBytes\":1048576}},\"cwd\":\"/workspace/harness-agent/.ci/agent-followup-20261005/frozen-670561b/joint-browser/fixture/workspace\",\"dataDir\":\"/workspace/harness-agent/.ci/agent-followup-20261005/frozen-670561b/joint-browser/fixture/runtime-data\",\"profile\":\"interactive\",\"modelProvider\":{\"id\":\"offline-web-browser-script\",\"listModels\":\"[[function]]\",\"createClient\":\"[[function]]\"},\"model\":{\"providerId\":\"offline-web-browser-script\",\"modelId\":\"scripted-web\"},\"task\":{\"id\":\"WEB-DSH-20261004-browser\",\"goal\":\"Exercise production Web paths\",\"completionPolicy\":{\"requiresVerification\":true},\"verification\":[{\"kind\":\"command\",\"command\":\"/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node\",\"args\":[\"-e\",\"console.log('WEB_VERIFICATION_EXECUTED');process.exit(require('node:fs').existsSync('fail-verification.flag')?7:0)\"],\"description\":\"Actual offline child-process acceptance gate; real marker created only by approved write_file makes it fail\"}]}}"
+  }
+}

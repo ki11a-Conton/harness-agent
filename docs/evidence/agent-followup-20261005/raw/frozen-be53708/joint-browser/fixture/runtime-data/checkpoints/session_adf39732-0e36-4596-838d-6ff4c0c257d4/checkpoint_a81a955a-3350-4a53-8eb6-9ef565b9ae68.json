@@ -1,0 +1,51 @@
+{
+  "checkpointId": "checkpoint_a81a955a-3350-4a53-8eb6-9ef565b9ae68",
+  "schemaVersion": 1,
+  "sessionId": "session_adf39732-0e36-4596-838d-6ff4c0c257d4",
+  "turnId": "turn_9a899ecd-d483-4761-b1fc-b932513ad2e1",
+  "agentId": "agent_f6646575-9ffe-4a1e-abe8-316e70f94a72",
+  "createdAt": 1791178992615,
+  "reason": "verification:passed",
+  "phase": "thinking",
+  "iteration": 1,
+  "state": {
+    "goal": "[deny-write]",
+    "constraints": [],
+    "plan": [],
+    "decisions": [],
+    "completed": [],
+    "pending": [],
+    "filesChanged": [],
+    "commandsRun": [],
+    "testsRun": [],
+    "failures": [
+      "write_file: approval denied by web:7c07fde0-d8e5-4441-831b-ab1b11f4e9a3"
+    ],
+    "importantFacts": [],
+    "openQuestions": [],
+    "toolRefs": [],
+    "artifactRefs": [],
+    "memoryRefs": [],
+    "childAgentRefs": []
+  },
+  "budgetUsage": {
+    "maxTokens": 89600,
+    "usedTokens": 147
+  },
+  "toolLedger": [
+    {
+      "toolCallId": "browser-call-5",
+      "tool": "write_file",
+      "argsHash": "1db56a0f9879bf9b06c390f6cfc08b41e23e1e43119a30f0705c11c337a454e6",
+      "started": 1791178992566,
+      "completed": 1791178992566,
+      "status": "denied",
+      "sideEffect": true
+    }
+  ],
+  "childSessions": [],
+  "lastEventSequence": 73,
+  "effectiveAgentConfigRef": "effectiveAgent",
+  "contextRefs": [],
+  "checksum": "acd75c0fd08b296d0476ae1e3696da8b1e215b7bcfef37cb3f75a4a765e32c53"
+}

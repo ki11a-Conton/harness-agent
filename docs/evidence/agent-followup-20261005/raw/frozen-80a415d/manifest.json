@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "agent-followup-frozen-acceptance-v1",
+  "testedSourceSha": "80a415d6aa173847461d7d9646a87972179406f9",
+  "baselineSha": "f71b444eec6b4024039716a1a0a01bade22c90b0",
+  "workspace": "/workspace/harness-agent",
+  "startedAt": "2026-10-05T05:46:43Z",
+  "platform": "Linux-6.18.44-x86_64-with-glibc2.41",
+  "paidProviderCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "promotion": "NOT_RUN",
+  "windows": "NOT_RUN",
+  "commands": [],
+  "status": "FAIL",
+  "finishedAt": "2026-10-05T05:46:43Z",
+  "exception": {
+    "type": "RuntimeError",
+    "message": "frozen source changed: {\"head\": \"670561b03220404cf8ded402a0c5713c883bb1d0\", \"clean\": true, \"porcelain\": \"\"}"
+  }
+}

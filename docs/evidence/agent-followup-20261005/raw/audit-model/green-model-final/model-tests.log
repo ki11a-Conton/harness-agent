@@ -1,0 +1,19 @@
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+ ✓ packages/model/src/openai.test.ts (40 tests) 1132ms
+     ✓ P1-18: honors Retry-After on 429 and classifies it rate_limit with retryAfterMs  1002ms
+ ✓ packages/model/src/openai-request-policy.test.ts (7 tests) 137ms
+ ✓ packages/model/src/openai-stream-footer.regressions.test.ts (31 tests) 160ms
+ ✓ packages/model/src/openai.wire-stub.test.ts (22 tests) 81ms
+ ✓ packages/model/src/openai-system-context.regressions.test.ts (13 tests) 41ms
+ ✓ packages/model/src/model.test.ts (9 tests) 49ms
+ ✓ packages/model/src/openai-termination-regressions.test.ts (19 tests) 47ms
+ ✓ packages/model/src/provider-diagnostics.test.ts (8 tests) 9ms
+ ✓ packages/model/src/capability-resolver.test.ts (6 tests) 8ms
+
+ Test Files  9 passed (9)
+      Tests  155 passed (155)
+   Start at  05:39:07
+   Duration  3.59s (transform 398ms, setup 0ms, import 907ms, tests 1.67s, environment 1ms)
+

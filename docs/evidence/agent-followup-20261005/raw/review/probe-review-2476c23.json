@@ -1,0 +1,88 @@
+{
+  "schemaVersion": "agent-followup-independent-production-evidence-v1",
+  "status": "PRODUCTION_PROBES_REVIEW_PASS",
+  "reviewedAt": "2026-10-05T05:53:24.284742+00:00",
+  "testedSourceSha": "2476c23444079a2cba29480b35d65157cf30c0fd",
+  "productionChecks": {
+    "r1-provider": {
+      "status": "PASS",
+      "cases": 31,
+      "sourceSha": "2476c23444079a2cba29480b35d65157cf30c0fd",
+      "cleanAtStartAndEnd": true,
+      "sourceAndDistBytesVerifiedAgainstActualFiles": 5,
+      "actualLoopbackHttpRequests": 26,
+      "readerLocksReleasedCases": 31,
+      "terminalUniquenessAndBoundaryCancellation": "PASS"
+    },
+    "r1-main": {
+      "status": "PASS",
+      "cases": 7,
+      "sourceSha": "2476c23444079a2cba29480b35d65157cf30c0fd",
+      "cleanAtStartAndEnd": true,
+      "sourceAndDistBytesVerifiedAgainstActualFiles": 12,
+      "actualDirectCliWebModelRequests": 10,
+      "independentDurableAccounting": {
+        "cli-memory-tool-loop": {
+          "modelCalls": 2,
+          "inputTokens": 20,
+          "outputTokens": 12,
+          "source": "measured"
+        },
+        "web-default-system": {
+          "modelCalls": 3,
+          "inputTokens": 30,
+          "outputTokens": 18,
+          "source": "measured"
+        }
+      }
+    },
+    "r2-symbol": {
+      "status": "PASS",
+      "cases": 32,
+      "sourceSha": "2476c23444079a2cba29480b35d65157cf30c0fd",
+      "cleanAtStartAndEnd": true,
+      "sourceAndDistBytesVerifiedAgainstActualFiles": 14,
+      "actualScopedSourceIOAndZeroIODenial": "PASS",
+      "concurrentScopedFlightsAndRootRelativeAliases": "PASS"
+    },
+    "r3-instructions": {
+      "status": "PASS",
+      "cases": 51,
+      "sourceSha": "2476c23444079a2cba29480b35d65157cf30c0fd",
+      "cleanAtStartAndEnd": true,
+      "sourceAndDistBytesVerifiedAgainstActualFiles": 9,
+      "actualBoundedCompleteCapturesAndIndependentDefaultControls": "PASS",
+      "actualHarnessContextsPinnedSourcesAndDurableEvents": "PASS"
+    }
+  },
+  "verifiedRawSha256": {
+    "typecheck.log": "faeaa94bcf7012d86f91ca647580449f56a263fb7eaf572c54789764f60a9b8f",
+    "build.log": "faeaa94bcf7012d86f91ca647580449f56a263fb7eaf572c54789764f60a9b8f",
+    "new-regressions.log": "107e28f2ab53220f815d047ba65edabe4c9c26e8646b28293c5da889155a1e61",
+    "related-integration.log": "595fd662c62a707856feaea110c4335d5afbbedde266501f02f9e0d20e258d08",
+    "provider-production.log": "7d652a9deb7f0bc94e71b8a347ab5c2a71aa53264402ae5185a654fd49c92e8c",
+    "r1-provider/result.json": "125c9341d2e1ec3c760d1368f4270a588599ee6b3a3e73dc9e7ff15658dc6cf5",
+    "main-accounting.log": "ba0465e4139cc5f9e20c09f57ceec36803958dbc921dde531366ab047c51626f",
+    "r1-main/result.json": "fcb76d828d08cfa90c7e5b10410fc204a0e3abd66f4a87814c59e8ef3be9d7ba",
+    "symbol-production.log": "ee1ba08e6f4d92047248fa3b6d4e7af11a19be958d44ee2fc8b98553e266ec08",
+    "r2-symbol/result.json": "33e04b72f551dd5fd3b9d6b5cdb4dffde04bfda4ad4db93dbd44d8d955c95e28",
+    "instruction-production.log": "1674ca6ae4edf90a5cfa3c1d64b4100c57d144a3c36de184b2359d2d74ae6488",
+    "r3-instructions/result.json": "167fc836608aa46921d049bfafdba648572dae9bae6827c733a3ccf437cb0257",
+    "joint-browser.log": "6526595d64eb51165fa5ca94268ccdeed2e33a0c3800d5950b4fc4f41de5140a",
+    "joint-browser/browser-result.json": "36087d36310a73457437fb5e3200f68f4c9304f8e7f1d338be8a25cd295c6c13",
+    "security.log": "a7b1bf07110906f958486ada08486703d5f0bdf3f088faac054959a9a31b2452",
+    "docs-verify.log": "b1f9bc4d5c8647240915161b243366e4ad38eda3f0e3802e0e6f4f0c09cc778e",
+    "r1-main/cli-memory-tool-loop/durable-events.json": "21c7af31e3009bf5542a6adf8fd87e7a9ec0c3b0ef4737423e691427d6bd6f8e",
+    "r1-main/cli-memory-tool-loop/model-requests.json": "380356c59ede7a2afa576fd4fe1361a5bbecfd29f93c24ff5d7a8380494195fb",
+    "r1-main/web-default-system/durable-events.json": "a9718e8136adc7e773088260a71985ccf9e5fbdfced8cc92cef8df7f1394c05c",
+    "r1-main/web-default-system/model-requests.json": "41cc9732d4a779d52af1918d3092c51fb35b2a8a0a58c35f165434bd080f166a",
+    "r3-instructions/harness-malformed.json": "4d840413d9cd5113ece45ee711c7b5e1476acc0eb43463bc5cfd3ccbac7a0eb3",
+    "r3-instructions/harness-incomplete-retry.json": "13b4dc678d1bccd08bcbd6966f52392bcea77ee170a7ac48c5945dcb19a5074e",
+    "r3-instructions/harness-cleanup.json": "bea622923a95cae4d4d9ccbe9cd951d9535cb3a4ae0c5f6208fc2bacceec2b9f",
+    "r3-instructions/harness-bom-marker.json": "6c7b4bb0754d22d7136fa0cc130e62268ea1483cfb26cb8bea76448ed8700eda",
+    "r3-instructions/harness-injection-control.json": "7e724970250fbf6ebf807ce91e7ebb8b25ecc71746bca8121ea942164420ca71",
+    "r3-instructions/harness-default-policy.json": "7d7abadc877b54468f2dd5c89683619e55320bb8f6f9ce4dbbfb1e27d9656e6d"
+  },
+  "fullAndSameRunUsageAudit": "PENDING",
+  "overallAcceptance": "PENDING_COMPLETE_FROZEN_RUN"
+}

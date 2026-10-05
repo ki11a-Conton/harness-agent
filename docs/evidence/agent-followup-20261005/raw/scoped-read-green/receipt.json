@@ -1,0 +1,26 @@
+{
+  "stage": "TARGETED_GREEN",
+  "head": "b00299e5d0da03656c00e2041fc261aa01af6c96",
+  "argv": [
+    "corepack",
+    "pnpm",
+    "exec",
+    "vitest",
+    "run",
+    "packages/context/src/scoped-instruction-read.regressions.test.ts",
+    "packages/context/src/path-scoped-discovery.test.ts",
+    "packages/context/src/default-discovery-read-failures.test.ts",
+    "packages/context/src/default-discovery-budget-regressions.test.ts",
+    "packages/harness/src/path-scoped-instructions.regressions.test.ts"
+  ],
+  "exitCode": 0,
+  "filesBefore": {
+    "packages/context/src/path-scoped-discovery.ts": "57c0b00242fc69b9c6fc1ffc232b3dfcc37fd525cad30cc4ccb1e70545182075",
+    "packages/context/src/scoped-instruction-read.regressions.test.ts": "bf688f0521ea1cb3f62d6ea470e1e246c9c3068217f6ae3849283c65af369f6f"
+  },
+  "filesAfter": {
+    "packages/context/src/path-scoped-discovery.ts": "57c0b00242fc69b9c6fc1ffc232b3dfcc37fd525cad30cc4ccb1e70545182075",
+    "packages/context/src/scoped-instruction-read.regressions.test.ts": "bf688f0521ea1cb3f62d6ea470e1e246c9c3068217f6ae3849283c65af369f6f"
+  },
+  "rawLogSha256": "45010e2442f458aaf229c4d19f6651c7b4a83f1714e8ecdeecf0e53dc999a818"
+}

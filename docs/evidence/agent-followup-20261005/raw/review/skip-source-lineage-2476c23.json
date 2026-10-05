@@ -1,0 +1,32 @@
+{
+  "status": "SOURCE_LINEAGE_PASS_FULL_PENDING",
+  "sourceSha": "2476c23444079a2cba29480b35d65157cf30c0fd",
+  "baselineSha": "f71b444eec6b4024039716a1a0a01bade22c90b0",
+  "files": [
+    {
+      "path": "packages/tools/src/process/executor.test.ts",
+      "baselineAndCurrentSha256": "5cea7f0b3734b20f6a952429ba160a41ebdc336abe7f513248f4d362017044e9",
+      "expectedSkipped": 7,
+      "sourceUnchangedFromBaseline": true
+    },
+    {
+      "path": "packages/tools/src/process/r96-windows-execution-boundary.test.ts",
+      "baselineAndCurrentSha256": "e095ef76c58e021e784fc43cd08761bd0afa2655acbb9944190d81cafd30577f",
+      "expectedSkipped": 3,
+      "sourceUnchangedFromBaseline": true
+    },
+    {
+      "path": "apps/cli/src/n5-pair-setup.test.ts",
+      "baselineAndCurrentSha256": "702a2ba481ee0b45fdfc0049de390a8b3f04213909758ea5d4f4f6139fe972ac",
+      "expectedSkipped": 1,
+      "sourceUnchangedFromBaseline": true
+    },
+    {
+      "path": "apps/cli/src/n2-release-cli-forward.test.ts",
+      "baselineAndCurrentSha256": "6c6ebf33b1ae8f716329d3b61c33ecdc8bedc10d8180157651f700e36d3e1349",
+      "expectedSkipped": 1,
+      "sourceUnchangedFromBaseline": true
+    }
+  ],
+  "notes": "Full raw summary is still pending; source lineage does not replace execution."
+}

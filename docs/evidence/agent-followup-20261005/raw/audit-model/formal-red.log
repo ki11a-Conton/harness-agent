@@ -1,0 +1,387 @@
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+ ❯ packages/model/src/openai-stream-footer.regressions.test.ts (23 tests | 18 failed) 57ms
+     × reads independent final usage after stop 26ms
+     × reads independent final usage after tool_calls 2ms
+     × reads a final footer split across bytes, UTF-8 and CRLF lines 4ms
+     × replaces an earlier partial snapshot instead of treating it as the final footer 2ms
+     × finishes immediately when usage is on the normal finish frame, then cancels and releases the reader 3ms
+     × finishes on a valid footer without waiting for DONE or network close 2ms
+     ✓ retains a normal completion without usage at transport boundary "data: [DONE]\n\n" 1ms
+     ✓ retains a normal completion without usage at transport boundary "" 1ms
+     ✓ still rejects transport boundary "data: [DONE]\n\n" without normal evidence 1ms
+     ✓ still rejects transport boundary "" without normal evidence 1ms
+     × ignores output, reasoning, tool and finish mutations after the first normal boundary 1ms
+     ✓ ignores late mutations to an already certified tool call 1ms
+     × fails abnormal length immediately and releases an open stream 1ms
+     × fails abnormal content_filter immediately and releases an open stream 1ms
+     × fails abnormal unexpected immediately and releases an open stream 1ms
+     × honors caller abort before a buffered normal finish 1ms
+     × honors caller abort between events emitted from the same finish frame 1ms
+     × cancels while waiting for a footer after normal tool intent 1ms
+     × reports a footer deadline without authorizing tools or retrying 1ms
+     × reports a reader rejection after normal intent without certifying success 1ms
+     × cancels and releases the response when a consumer returns early 0ms
+     × cleanup rejection does not replace a normal completion or retain the lock 1ms
+     × cleanup rejection does not replace caller cancellation 1ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 18 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/model/src/openai-stream-footer.regressions.test.ts > OpenAI stream footer, cancellation and reader ownership > reads independent final usage after stop
+ FAIL  packages/model/src/openai-stream-footer.regressions.test.ts > OpenAI stream footer, cancellation and reader ownership > reads independent final usage after tool_calls
+AssertionError: expected [] to deeply equal [ ObjectContaining{…} ]
+
+- Expected
++ Received
+
+- [
+-   ObjectContaining {
+-     "usage": {
+-       "inputTokens": 137,
+-       "outputTokens": 23,
+-     },
+-   },
+- ]
++ []
+
+ ❯ packages/model/src/openai-stream-footer.regressions.test.ts:62:62
+     60|   it.each(["stop", "tool_calls"])("reads independent final usage after…
+     61|     const events = await collect(new Response((reason === "tool_calls"…
+     62|     expect(events.filter((event) => event.type === "usage")).toEqual([
+       |                                                              ^
+     63|       expect.objectContaining({ usage: { inputTokens: 137, outputToken…
+     64|     ]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/18]⎯
+
+ FAIL  packages/model/src/openai-stream-footer.regressions.test.ts > OpenAI stream footer, cancellation and reader ownership > reads a final footer split across bytes, UTF-8 and CRLF lines
+AssertionError: expected { finishReason: 'stop', …(2) } to match object { finishReason: 'stop', …(2) }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "finishReason": "stop",
+    "text": "你好 complete",
+-   "usage": {
+-     "inputTokens": 137,
+-     "outputTokens": 23,
+-   },
+  }
+
+ ❯ packages/model/src/openai-stream-footer.regressions.test.ts:76:28
+     74|     });
+     75|     const events = await collect(new Response(stream));
+     76|     expect(result(events)).toMatchObject({ finishReason: "stop", text:…
+       |                            ^
+     77|     expect(stream.locked).toBe(false);
+     78|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/18]⎯
+
+ FAIL  packages/model/src/openai-stream-footer.regressions.test.ts > OpenAI stream footer, cancellation and reader ownership > replaces an earlier partial snapshot instead of treating it as the final footer
+AssertionError: expected [ { inputTokens: 5, outputTokens: 2 } ] to deeply equal [ { inputTokens: 5, …(1) }, …(1) ]
+
+- Expected
++ Received
+
+  [
+    {
+      "inputTokens": 5,
+      "outputTokens": 2,
+    },
+-   {
+-     "inputTokens": 137,
+-     "outputTokens": 23,
+-   },
+  ]
+
+ ❯ packages/model/src/openai-stream-footer.regressions.test.ts:82:116
+     80|   it("replaces an earlier partial snapshot instead of treating it as t…
+     81|     const events = await collect(new Response(sse({ choices: [], usage…
+     82|     expect(events.filter((event) => event.type === "usage").map((event…
+       |                                                                                                                    ^
+     83|       { inputTokens: 5, outputTokens: 2 }, { inputTokens: 137, outputT…
+     84|     ]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/18]⎯
+
+ FAIL  packages/model/src/openai-stream-footer.regressions.test.ts > OpenAI stream footer, cancellation and reader ownership > finishes immediately when usage is on the normal finish frame, then cancels and releases the reader
+AssertionError: expected "vi.fn()" to be called 1 times, but got 0 times
+ ❯ packages/model/src/openai-stream-footer.regressions.test.ts:92:25
+     90|     const events = await collect(body.response);
+     91|     expect(result(events)).toMatchObject({ finishReason: "stop", usage…
+     92|     expect(body.cancel).toHaveBeenCalledTimes(1);
+       |                         ^
+     93|     expect(body.stream.locked).toBe(false);
+     94|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/18]⎯
+
+ FAIL  packages/model/src/openai-stream-footer.regressions.test.ts > OpenAI stream footer, cancellation and reader ownership > finishes on a valid footer without waiting for DONE or network close
+AssertionError: expected { finishReason: 'stop', …(2) } to match object { finishReason: 'stop', …(1) }
+(2 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "finishReason": "stop",
+-   "usage": {
+-     "inputTokens": 137,
+-     "outputTokens": 23,
+-   },
+  }
+
+ ❯ packages/model/src/openai-stream-footer.regressions.test.ts:99:28
+     97|     const body = hangingResponse(text + terminal("stop") + footer);
+     98|     const events = await collect(body.response);
+     99|     expect(result(events)).toMatchObject({ finishReason: "stop", usage…
+       |                            ^
+    100|     expect(body.cancel).toHaveBeenCalledTimes(1);
+    101|     expect(body.stream.locked).toBe(false);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/18]⎯
+
+ FAIL  packages/model/src/openai-stream-footer.regressions.test.ts > OpenAI stream footer, cancellation and reader ownership > ignores output, reasoning, tool and finish mutations after the first normal boundary
+AssertionError: expected { finishReason: 'stop', …(2) } to deeply equal { finishReason: 'stop', …(3) }
+
+- Expected
++ Received
+
+  {
+    "finishReason": "stop",
+    "reasoningContent": "kept reasoning",
+    "text": "你好 complete",
+-   "usage": {
+-     "inputTokens": 137,
+-     "outputTokens": 23,
+-   },
+  }
+
+ ❯ packages/model/src/openai-stream-footer.regressions.test.ts:120:28
+    118|     }] }, finish_reason: "tool_calls" }], usage });
+    119|     const events = await collect(new Response(text + terminal("stop") …
+    120|     expect(result(events)).toEqual({ finishReason: "stop", text: "你好 c…
+       |                            ^
+    121|     expect(events.filter((event) => event.type === "tool_call_delta"))…
+    122|     expect(events.filter((event) => event.type === "text_delta").map((…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/18]⎯
+
+ FAIL  packages/model/src/openai-stream-footer.regressions.test.ts > OpenAI stream footer, cancellation and reader ownership > fails abnormal length immediately and releases an open stream
+ FAIL  packages/model/src/openai-stream-footer.regressions.test.ts > OpenAI stream footer, cancellation and reader ownership > fails abnormal content_filter immediately and releases an open stream
+ FAIL  packages/model/src/openai-stream-footer.regressions.test.ts > OpenAI stream footer, cancellation and reader ownership > fails abnormal unexpected immediately and releases an open stream
+AssertionError: expected "vi.fn()" to be called 1 times, but got 0 times
+ ❯ packages/model/src/openai-stream-footer.regressions.test.ts:136:25
+    134|     const events = await collect(body.response);
+    135|     expect(result(events)).toMatchObject({ finishReason: "error", erro…
+    136|     expect(body.cancel).toHaveBeenCalledTimes(1);
+       |                         ^
+    137|     expect(body.stream.locked).toBe(false);
+    138|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/18]⎯
+
+ FAIL  packages/model/src/openai-stream-footer.regressions.test.ts > OpenAI stream footer, cancellation and reader ownership > honors caller abort before a buffered normal finish
+AssertionError: expected { finishReason: 'stop', …(2) } to match object { finishReason: 'cancelled', …(1) }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "finishReason": "cancelled",
++   "finishReason": "stop",
+    "text": "你好 complete",
+  }
+
+ ❯ packages/model/src/openai-stream-footer.regressions.test.ts:142:28
+    140|   it("honors caller abort before a buffered normal finish", async () =…
+    141|     const events = await collect(new Response(text + terminal("stop") …
+    142|     expect(result(events)).toMatchObject({ finishReason: "cancelled", …
+       |                            ^
+    143|     expect(events.filter((event) => event.type === "usage" || event.ty…
+    144|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/18]⎯
+
+ FAIL  packages/model/src/openai-stream-footer.regressions.test.ts > OpenAI stream footer, cancellation and reader ownership > honors caller abort between events emitted from the same finish frame
+AssertionError: expected 'stop' to be 'cancelled' // Object.is equality
+
+Expected: "cancelled"
+Received: "stop"
+
+ ❯ packages/model/src/openai-stream-footer.regressions.test.ts:150:41
+    148|       abortAt: (event) => event.type === "text_delta",
+    149|     });
+    150|     expect(result(events).finishReason).toBe("cancelled");
+       |                                         ^
+    151|     expect(events.filter((event) => event.type === "usage")).toEqual([…
+    152|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/18]⎯
+
+ FAIL  packages/model/src/openai-stream-footer.regressions.test.ts > OpenAI stream footer, cancellation and reader ownership > cancels while waiting for a footer after normal tool intent
+AssertionError: expected 'tool_calls' to be 'cancelled' // Object.is equality
+
+Expected: "cancelled"
+Received: "tool_calls"
+
+ ❯ packages/model/src/openai-stream-footer.regressions.test.ts:163:41
+    161|     try { for await (const event of client().generate({ messages: [] }…
+    162|     finally { clearTimeout(timer); }
+    163|     expect(result(events).finishReason).toBe("cancelled");
+       |                                         ^
+    164|     expect(events.filter((event) => event.type === "tool_call_delta"))…
+    165|     expect(fetch).toHaveBeenCalledTimes(1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/18]⎯
+
+ FAIL  packages/model/src/openai-stream-footer.regressions.test.ts > OpenAI stream footer, cancellation and reader ownership > reports a footer deadline without authorizing tools or retrying
+AssertionError: expected [ …(2) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   {
++     "timestamp": 1791171681748,
++     "toolCall": {
++       "args": {
++         "path": "a.txt",
++       },
++       "id": "call_one",
++       "name": "read_file",
++     },
++     "type": "tool_call_delta",
++   },
++   {
++     "result": {
++       "finishReason": "tool_calls",
++       "text": "",
++       "toolCalls": [
++         {
++           "args": {
++             "path": "a.txt",
++           },
++           "id": "call_one",
++           "name": "read_file",
++         },
++       ],
++     },
++     "timestamp": 1791171681748,
++     "type": "completed",
++   },
++ ]
+
+ ❯ packages/model/src/openai-stream-footer.regressions.test.ts:173:102
+    171|     const body = hangingResponse(tool + terminal("tool_calls"));
+    172|     const events = await collect(body.response, { timeoutMs: 25 });
+    173|     expect(events.filter((event) => event.type === "completed" || even…
+       |                                                                                                      ^
+    174|     expect(events.find((event) => event.type === "error")).toMatchObje…
+    175|     expect(body.cancel).toHaveBeenCalledTimes(1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/18]⎯
+
+ FAIL  packages/model/src/openai-stream-footer.regressions.test.ts > OpenAI stream footer, cancellation and reader ownership > reports a reader rejection after normal intent without certifying success
+AssertionError: expected [ …(2) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   {
++     "timestamp": 1791171681749,
++     "toolCall": {
++       "args": {
++         "path": "a.txt",
++       },
++       "id": "call_one",
++       "name": "read_file",
++     },
++     "type": "tool_call_delta",
++   },
++   {
++     "result": {
++       "finishReason": "tool_calls",
++       "text": "",
++       "toolCalls": [
++         {
++           "args": {
++             "path": "a.txt",
++           },
++           "id": "call_one",
++           "name": "read_file",
++         },
++       ],
++     },
++     "timestamp": 1791171681749,
++     "type": "completed",
++   },
++ ]
+
+ ❯ packages/model/src/openai-stream-footer.regressions.test.ts:185:102
+    183|     let events: ModelEvent[];
+    184|     try { events = await collect(new Response(stream)); } finally { cl…
+    185|     expect(events.filter((event) => event.type === "completed" || even…
+       |                                                                                                      ^
+    186|     expect(events.find((event) => event.type === "error")).toMatchObje…
+    187|     expect(stream.locked).toBe(false);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/18]⎯
+
+ FAIL  packages/model/src/openai-stream-footer.regressions.test.ts > OpenAI stream footer, cancellation and reader ownership > cancels and releases the response when a consumer returns early
+AssertionError: expected "vi.fn()" to be called 1 times, but got 0 times
+ ❯ packages/model/src/openai-stream-footer.regressions.test.ts:194:25
+    192|     vi.stubGlobal("fetch", vi.fn(async () => body.response));
+    193|     for await (const event of client().generate({ messages: [] }, new …
+    194|     expect(body.cancel).toHaveBeenCalledTimes(1);
+       |                         ^
+    195|     expect(body.stream.locked).toBe(false);
+    196|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/18]⎯
+
+ FAIL  packages/model/src/openai-stream-footer.regressions.test.ts > OpenAI stream footer, cancellation and reader ownership > cleanup rejection does not replace a normal completion or retain the lock
+AssertionError: expected "vi.fn()" to be called 1 times, but got 0 times
+ ❯ packages/model/src/openai-stream-footer.regressions.test.ts:202:25
+    200|     const events = await collect(body.response);
+    201|     expect(result(events).finishReason).toBe("stop");
+    202|     expect(body.cancel).toHaveBeenCalledTimes(1);
+       |                         ^
+    203|     expect(body.stream.locked).toBe(false);
+    204|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/18]⎯
+
+ FAIL  packages/model/src/openai-stream-footer.regressions.test.ts > OpenAI stream footer, cancellation and reader ownership > cleanup rejection does not replace caller cancellation
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ packages/model/src/openai-stream-footer.regressions.test.ts:210:32
+    208|     const events = await collect(body.response, { abortAt: (event) => …
+    209|     expect(result(events).finishReason).toBe("cancelled");
+    210|     expect(body.stream.locked).toBe(false);
+       |                                ^
+    211|   });
+    212| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/18]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  18 failed | 5 passed (23)
+   Start at  03:41:21
+   Duration  579ms (transform 328ms, setup 0ms, import 392ms, tests 57ms, environment 0ms)
+
