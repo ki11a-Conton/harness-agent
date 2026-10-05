@@ -1,0 +1,36 @@
+# Harness Agent：当前执行计划入口 — 重试时限、记忆反馈、搜索路径与压缩预算
+
+2026-10-05。基线 `320cf3e0bd87d714d17d95709e10c0ddf56d9c5d`。本计划在生产修改前提交；[上一轮完成入口](plan(20261005-agent-followup-entry-before-next2).md) 保留原字节。实施前不可变规格：[plan(20261005-085851).md](plan(20261005-085851).md)。任务合同：[AGENT-NEXT2-20261005.md](tasks/AGENT-NEXT2-20261005.md)。
+
+## 审查与实测依据
+
+- OpenAI provider真实loopback HTTP：429/Retry-After=1秒时，requestTimeout=50ms却约1007ms才timeout；retry事件中立即caller abort却约1005ms才cancelled。正常429/socket断开重试成功后，native getEventListeners各发现1个已到期backoff listener。原因是等待只使用caller signal、没有注册前abort检查和timer到期清理。原始7场景在ignored audit-provider保留；正常恢复、401和等待途中abort作为控制。
+- 两个built memory backend（JSONL/SQLite）：无hook的8次并发recordInjected最终count=1。受控调度在bridge的真实get/update间remove，会被旧行覆盖成deleted=false且再次召回；并发editor的content/state同样被覆盖。JSONL实际4个Harness turn均完成但持久计数丢失；SQLite这一Harness调度是通过控制，不能混成失败。原始direct10场景和Harness请求/事件保留。
+- 实际ToolRegistry→Orchestrator→Permission→Sandbox：search_files(path=src,pattern=root.ts)返回root.ts，后续read_file(root.ts)成功读到根目录同名错误内容。15场景中5契约失败、10既有控制通过；VS-001要求返回workspace-relative。绝对/相对scope和nested cwd均复现。
+- 实际默认Harness、JSONL opt-in记忆：配置max165/reserved0，但Core正确将有效pipeline reserved.task调整为10（当前user成本）。compact后system130+digest17=147本可容纳，额外pointer11却使最终158+user10=168，turn在provider前RESOURCE_LIMIT失败。邻近预算170可完成。修复读取实际opts.budget，不重复扣messagesTokens，不改Core。
+
+## 做什么、怎么做、怎么验收
+
+| 项目 | 做什么 | 怎么做 | 怎么验收 | 状态 |
+| --- | --- | --- | --- | --- |
+| R1 重试等待时限与资源 | deadline/caller abort在重试等待中及时生效，正常结束不留下等待listener | 仅OpenAI provider：两处backoff使用现有effectiveSignal；注册前和注册后检查abort；timer/abort走一次完成并清理listener/timer。保留同一whole-call deadline、原Retry-After与指数jitter、重试预算、流阶段不重试 | 正式RED→GREEN；真实HTTP 50ms deadline/1s Retry-After和retry-yield callerabort分别在250ms内结束（旧约1s），无成功/工具执行；native listener/timer所有权0残留。正常429/network恢复、401不重试、等待中abort、无timeout及已有deadline/footer/协议控制通过 | DONE |
+| R2 原子记忆反馈 | 并发计数不丢失，反馈不能撤销删除或覆盖用户编辑/生命周期 | 两个具体store增加recordUsefulnessFeedback能力：JSONL在既有共享lock内读取最新行/安全门/原子rewrite；SQLite BEGIN IMMEDIATE内读取最新行，只UPDATE usefulness列，commit/rollback。bridge按能力调用，不做不安全get→整行update。能力缺失的自定义store只跳过持久反馈、一次固定degraded诊断，仍保留检索/turn/进程ROI | 正式RED→GREEN；两backend、多bridge、多store实例并发计数/score与串行纯函数同等；missing/deleted不写不复活；真实delete/editor交错保护content/state/scope/provenance/evidence/metadata/updatedAt，SQLite FTS不变化；安全拒绝/rollback/reopen控制。实际Harness并发turn持久retrieved/injected/used/success精确，default-off/拒绝不写。unsupported store零get/update、turn仍成功且诊断不泄密 | DONE |
+| R3 搜索到正确文件 | scoped search返回可直接用于后续工具的workspace-relative路径 | 只改search_files输出：glob匹配仍相对选定root，返回值相对context.cwd，统一/分隔。枚举scope、cap、ignore、schema、权限/Sandbox不改 | 正式RED→GREEN；15基线场景含5错误闭环修正；实际search→read_file回到scope内正确sentinel。相对/绝对alias、nested cwd、Unicode、basename/glob、cap、ignored、symlink、missing和deny/outside0I/O控制。真实Harness scripted工具闭环确认后续read_file使用返回值 | DONE |
+| R4 压缩后剩余预算 | 可选rehydration引用不能使本已容纳的digest再次溢出 | 仅ContextPipeline：compact后求剩余spendable=max(0,maxTokens-reserved.sum-compactedBlocks.tokens)，以min(既有600,headroom)调用现有buildRehydrationBlocks。保持digest/protected blocks、顺序/优先级、默认cap、message ownership/裁剪与report真实计量 | 正式RED→GREEN；exact-fit/零/负headroom/600cap/custom estimator等控制，summary与trusted blocks不丢，used/available/breaker最终footprint真实；不compact不加rehydration。实际Harness原max165失败变完成1provider请求、有效taskreserve10不重复计量，max170/充裕/不可避免protected overflow均正确；准入和memory default-off保持 | DONE |
+| R5 联合验收与发布 | 同一clean源码完成全部门、保留可复核证据并发布main | 实现/测试/探针先提交并冻结；typecheck/build、新增及相关集成、安全、实际HTTP/Harness/CLI/Web、既有浏览器27场景、docs；一次具名全仓和相同run strict usage；独立复核，原字节归档/hash/staged blob校验，再原生Git/curl发布 | 各门exit0；新增tests零skip/todo；全仓至少既有8579 PASS+全部新增，463既有PASS文件+新增，恰好12既有skip且来源字节不变；同run7能力observed。原baseline/RED/失败/dirty不改写PASS。源码/dist前后hash一致；本地与native远端main SHA一致。完成docs提交与tested source分开 | DONE |
+
+## 修改边界与限制
+
+本轮是有生产反例的deterministic correctness/resource维护，满足AGENTS.md Runtime Freeze例外。允许生产修改仅：packages/model/src/openai.ts、packages/memory/src/memory-store.ts、packages/memory/src/sqlite-memory-store.ts、packages/harness/src/memory-runtime-bridge.ts、packages/tools/src/tools/search-files.ts、packages/context/src/pipeline.ts。相关正式回归、研究脚本和文档可新增；Core/Orchestrator/Permission/Sandbox/Verification、contracts MemoryStore、依赖、默认策略/模型指引/排名不改。
+
+JSONL的锁仍是既有进程内协作锁，不宣称跨进程atomic CAS；SQLite反馈只更新usefulness且保持已有schema。自定义store没有atomic能力时无法安全推导其外部writer一致性，明确降级跳过持久反馈，不能沿用可能复活数据的fallback。能力是可选结构能力，检索合同保留。
+
+工具审查还证明read_file FIFO读可能超时后继续占用锁，原始发现保留；本轮不扩大到descriptor/type/IO策略重写，不把搜索路径修复称为解决该问题。
+
+本机无真实模型凭据；HTTP使用本地兼容服务，Harness使用确定性scripted provider。paid=0，真实模型任务质量、champion promotion、Windows实机均NOT_RUN；不以这些工程门推断模型成功率。网络/凭据只按实际可用性判断；GitHub只使用用户授权token的原生Git/curl，凭据不写入仓库/日志。
+
+## 完成记录
+
+受测源码：`f8373b0fa4ec6491a55a9a3ba198235b689cc140`。17 个冻结验收门全部 PASS：新增 111 项无跳过，全仓 8690 PASS / 12 既有 skip，同 run strict usage 的 7 项关键能力均 observed；四组实际生产探针 19/44/20/31 场景通过，浏览器 27 场景、77 assertions、0 errors。独立运行复核与受测源码原生 main 发布已完成。
+
+实施、RED/失败演变、实际计量与限制详见 [验收记录](docs/evidence/agent-next2-20261005.md)。原始规格保留不改；完成入口快照为 [plan(20261005-agent-next2-completed).md](plan(20261005-agent-next2-completed).md)。完成文档单独提交，生产源码与全部测试/脚本字节保持受测提交；最终归档检查、文档检查和 native main SHA 核对在收尾发布执行。
