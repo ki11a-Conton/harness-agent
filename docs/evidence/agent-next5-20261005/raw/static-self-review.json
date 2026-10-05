@@ -1,0 +1,21 @@
+{
+  "status": "STATIC_SELF_REVIEW_PASS",
+  "reviewKind": "Root self-review; no independent delegation",
+  "baselineSha": "e1472c2e2f04c9c9ca85407b5c6645c978d81fca",
+  "preregisteredPlanSha": "692ade170e934660a53ecbc1c8a4012d8c63159b",
+  "productionScope": [
+    "packages/memory/src/retrieval.ts"
+  ],
+  "gatesScoringSortingAndOutputBytesUnchanged": true,
+  "existingTestsUntouched": true,
+  "positiveThresholdUnchanged": true,
+  "noCrossCallCache": true,
+  "onlySurvivorsIndexed": true,
+  "candidateDedupAndRetainedOrderVerified": true,
+  "topKOutsideSurvivorsRetained": true,
+  "redFailures": 2,
+  "redPassing": 40,
+  "newRegressionTests": 42,
+  "productionDevelopmentCases": 18,
+  "frozenAcceptance": "PENDING"
+}

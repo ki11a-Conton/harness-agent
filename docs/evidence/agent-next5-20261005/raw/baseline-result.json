@@ -1,0 +1,25 @@
+{
+  "sourceSha": "e1472c2e2f04c9c9ca85407b5c6645c978d81fca",
+  "trackedDirty": false,
+  "rows": 256,
+  "cases": [
+    {
+      "backend": "jsonl",
+      "items": 5,
+      "suppressed": 0,
+      "tokenMembershipChecks": 32640,
+      "elapsedMs": 13.595897000000008,
+      "expectedSparseConflictChecks": 0,
+      "status": "REPRODUCED_REDUNDANT_DISJOINT_COMPARISONS"
+    },
+    {
+      "backend": "sqlite",
+      "items": 5,
+      "suppressed": 0,
+      "tokenMembershipChecks": 32640,
+      "elapsedMs": 10.239350000000002,
+      "expectedSparseConflictChecks": 0,
+      "status": "REPRODUCED_REDUNDANT_DISJOINT_COMPARISONS"
+    }
+  ]
+}

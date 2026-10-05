@@ -1,0 +1,1337 @@
+{
+  "schemaVersion": "agent-next5-artifact-index-v1",
+  "baselineSha": "e1472c2e2f04c9c9ca85407b5c6645c978d81fca",
+  "testedSourceSha": "4b4bbd7ab56af2cd778f45df7c08dc94cfea6950",
+  "preregisteredPlanSha": "692ade170e934660a53ecbc1c8a4012d8c63159b",
+  "specPath": "plan(20261005-223826).md",
+  "specSha256": "1a6256c0e8e8177f7f8e1dee17f3e8f15ff0b517e69c710204fe38b36caa87ea",
+  "files": [
+    {
+      "path": "raw/baseline-conflict.mjs",
+      "bytes": 2161,
+      "sha256": "24c0ce06506d5aec91c2c42b2a443e60083cd13d67b763a6cd783222db4a9dc0"
+    },
+    {
+      "path": "raw/baseline-result.json",
+      "bytes": 636,
+      "sha256": "0ef259a8c102f4c2f3141e60f0b8f261525990292efc67eecfda086ba04b2426"
+    },
+    {
+      "path": "raw/baseline-source/retrieval.ts",
+      "bytes": 9189,
+      "sha256": "d3a48b1ff665dd2c3f698d7a2c7e4754081a8fb6ba6306556444262135fca8c9"
+    },
+    {
+      "path": "raw/build-development.log",
+      "bytes": 9,
+      "sha256": "faeaa94bcf7012d86f91ca647580449f56a263fb7eaf572c54789764f60a9b8f"
+    },
+    {
+      "path": "raw/final-self-review.json",
+      "bytes": 2074,
+      "sha256": "8e6b1175e22677bc5b6519d0edc060758f6aef1b8a42b6b2f5c6593783f3952e"
+    },
+    {
+      "path": "raw/formal-red-verification.json",
+      "bytes": 604,
+      "sha256": "bcfbc5ffebc07ea1a236f56fbe7e43ee56651781083eae69a0982cde034e548e"
+    },
+    {
+      "path": "raw/formal-red.json",
+      "bytes": 274,
+      "sha256": "a524fd8e4cd4589f711c535d81a235b60c200d1faf9f3d269491a1da3f7ba52d"
+    },
+    {
+      "path": "raw/formal-red.log",
+      "bytes": 5126,
+      "sha256": "e4bbf3273ddb9cdb01c0c51eb54900599c9f0514fbb6af6dfb35b27ee483a4d4"
+    },
+    {
+      "path": "raw/frozen/build.log",
+      "bytes": 9,
+      "sha256": "faeaa94bcf7012d86f91ca647580449f56a263fb7eaf572c54789764f60a9b8f"
+    },
+    {
+      "path": "raw/frozen/conflict-work/result.json",
+      "bytes": 10894,
+      "sha256": "65cb6d441354db66f07613c4d51b14155ab151afb79b62e3373280be9308cfb7"
+    },
+    {
+      "path": "raw/frozen/conflict-work-production.log",
+      "bytes": 43,
+      "sha256": "de23f51febf19f365c8398be12b85f795854d75b83964b08ad91588bb9e1f1a3"
+    },
+    {
+      "path": "raw/frozen/diff-check.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "raw/frozen/docs-verify.log",
+      "bytes": 1734,
+      "sha256": "3b570b75d61dcc542f7afd9ef04d589f4eb502e5266ec20dca79c25dde379470"
+    },
+    {
+      "path": "raw/frozen/full.log",
+      "bytes": 95638,
+      "sha256": "4cf40cf9a160d0133dba53887af6e4f6e3b0635ab869dd307a8a6d89aa93d6e4"
+    },
+    {
+      "path": "raw/frozen/joint-browser/artifact-index.json",
+      "bytes": 2239,
+      "sha256": "7007aa40ff06dc87a5f01912287f25dd94ab09a570a4c45e987b1c5c33f8c060"
+    },
+    {
+      "path": "raw/frozen/joint-browser/browser-errors.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "raw/frozen/joint-browser/browser-requests.json",
+      "bytes": 21735,
+      "sha256": "5f3e26430c8d13b5c2431157b64516252696777fb92fb8c14e26284a258291fd"
+    },
+    {
+      "path": "raw/frozen/joint-browser/browser-responses.json",
+      "bytes": 21343,
+      "sha256": "80fb69524e0269136fbfb0259e6a0e4af0fb559ac01fe56772b9be1f7db86724"
+    },
+    {
+      "path": "raw/frozen/joint-browser/browser-result.json",
+      "bytes": 18412,
+      "sha256": "e87740d83d12f7321ee344d84892e7ec1c817509f55e3e6cfa1fe3b39874ee32"
+    },
+    {
+      "path": "raw/frozen/joint-browser/desktop-chat.png",
+      "bytes": 51254,
+      "sha256": "3e360faa5c8433b5694bf3ac79440d166821a9573bdd6c3f43fe9145b063763f"
+    },
+    {
+      "path": "raw/frozen/joint-browser/desktop-dark.png",
+      "bytes": 49498,
+      "sha256": "88606ff9d1e050eba7fe8d890858ddcaab17611e73ec2bf70ffe6e8a5ee5f587"
+    },
+    {
+      "path": "raw/frozen/joint-browser/desktop-light.png",
+      "bytes": 48657,
+      "sha256": "04e4ebbe49ffcada97160555981b20f70bc3c65d30ba1439f976ed9b346d5130"
+    },
+    {
+      "path": "raw/frozen/joint-browser/fixture/ready.json",
+      "bytes": 2853,
+      "sha256": "38fa1a10a21aef7573d1e6cecef4a0b6f48ea8d7d4844790e3312b6c26f5e4be"
+    },
+    {
+      "path": "raw/frozen/joint-browser/fixture/runtime-data/approval-store.json",
+      "bytes": 1624,
+      "sha256": "ed8d35bf59d05bbc26c7cb23c157f9789a3c0ef582bb52bf1903cd44c14b530d"
+    },
+    {
+      "path": "raw/frozen/joint-browser/fixture/runtime-data/checkpoints/session_4debeca7-c684-4e93-a937-b8d7d924ce8b/checkpoint_04d542a2-0fa0-4bc8-8383-ba72f83ec484.json",
+      "bytes": 1045,
+      "sha256": "b3a7b3cc7152fae64f7c28a61fd75e8203e10a6bb367439e7c9964e8c1a06b23"
+    },
+    {
+      "path": "raw/frozen/joint-browser/fixture/runtime-data/checkpoints/session_4debeca7-c684-4e93-a937-b8d7d924ce8b/checkpoint_06469877-4bd8-4ec3-ab17-81aaadd3b188.json",
+      "bytes": 1476,
+      "sha256": "e9f272a399e79136b283053b8336cfa2041b6c650c1d4b1ebda2de8f688171e6"
+    },
+    {
+      "path": "raw/frozen/joint-browser/fixture/runtime-data/checkpoints/session_4debeca7-c684-4e93-a937-b8d7d924ce8b/checkpoint_0e2ff845-1609-408e-9cd6-6e6a1b414dce.json",
+      "bytes": 1485,
+      "sha256": "e460ef17f269e31dbeb7b0d762f3b43d917beb21c8544d8fa1ff85d35ae59abb"
+    },
+    {
+      "path": "raw/frozen/joint-browser/fixture/runtime-data/checkpoints/session_4debeca7-c684-4e93-a937-b8d7d924ce8b/checkpoint_55dcb2f6-440d-4b72-ab4a-495b8d966fba.json",
+      "bytes": 1412,
+      "sha256": "0dcad69ef57d2ef44aa1f692f70f064575881b96be3f05a767b3383e202ca2e3"
+    },
+    {
+      "path": "raw/frozen/joint-browser/fixture/runtime-data/checkpoints/session_4debeca7-c684-4e93-a937-b8d7d924ce8b/checkpoint_9c0514f4-f9f6-4130-85c4-9e5b829bd2a7.json",
+      "bytes": 1053,
+      "sha256": "11365d3eadd7dd1927648994b8a9c2d1dec3afbe9d37e895ed1021ba81fae00d"
+    },
+    {
+      "path": "raw/frozen/joint-browser/fixture/runtime-data/checkpoints/session_4debeca7-c684-4e93-a937-b8d7d924ce8b/checkpoint_a3c5ab31-b3a8-4d32-8956-946e21ef6da7.json",
+      "bytes": 1907,
+      "sha256": "80d4c3be0cb41c525f0b09732b76869de973e19b7ecd176ee1ee1659868ceaf1"
+    },
+    {
+      "path": "raw/frozen/joint-browser/fixture/runtime-data/checkpoints/session_4debeca7-c684-4e93-a937-b8d7d924ce8b/checkpoint_bacbdd5b-5129-4a95-9147-dc25e2ee1756.json",
+      "bytes": 1043,
+      "sha256": "8c1f09ddc8e25462be2c75bb326dcfb49881ce50c7788d41fa1317ae84b87527"
+    },
+    {
+      "path": "raw/frozen/joint-browser/fixture/runtime-data/checkpoints/session_4debeca7-c684-4e93-a937-b8d7d924ce8b/latest.json",
+      "bytes": 1053,
+      "sha256": "11365d3eadd7dd1927648994b8a9c2d1dec3afbe9d37e895ed1021ba81fae00d"
+    },
+    {
+      "path": "raw/frozen/joint-browser/fixture/runtime-data/checkpoints/session_c319c98f-755c-4bc2-87e1-f66614e566ab/checkpoint_3763a187-db18-40b6-b79c-494018f12539.json",
+      "bytes": 1041,
+      "sha256": "df445f4c6cbf61cf184aa7c6f94b0f2c03d00ec9ff8fdd903fea90597cfcc449"
+    },
+    {
+      "path": "raw/frozen/joint-browser/fixture/runtime-data/checkpoints/session_c319c98f-755c-4bc2-87e1-f66614e566ab/checkpoint_4fa82ab5-a28b-470f-b45e-8445cccd6912.json",
+      "bytes": 1505,
+      "sha256": "6ab15f0a4c4c641bfa0c6a26563be827dd3a36336f7204d6298d9e4210421269"
+    },
+    {
+      "path": "raw/frozen/joint-browser/fixture/runtime-data/checkpoints/session_c319c98f-755c-4bc2-87e1-f66614e566ab/checkpoint_7643bd87-95de-4cc6-9d3a-ca58cd04b500.json",
+      "bytes": 1505,
+      "sha256": "21e739021769075e81b2ecc1df82e8d0e8db6ea275ea27fb111602d73510ea67"
+    },
+    {
+      "path": "raw/frozen/joint-browser/fixture/runtime-data/checkpoints/session_c319c98f-755c-4bc2-87e1-f66614e566ab/checkpoint_d6d64034-c32a-4ea3-8074-0ee87cee4fbc.json",
+      "bytes": 1936,
+      "sha256": "8b570d3aab3547441371da8d4d8fb6f4c8999be2d68c026747fd09a7dc6834cb"
+    },
+    {
+      "path": "raw/frozen/joint-browser/fixture/runtime-data/checkpoints/session_c319c98f-755c-4bc2-87e1-f66614e566ab/checkpoint_fc3c0f8f-2567-46a8-b38a-ae6fd42010a2.json",
+      "bytes": 1505,
+      "sha256": "bc70b95cd22cb36dee0b792c711426de13dd664feaea358bcded1090b7d5c752"
+    },
+    {
+      "path": "raw/frozen/joint-browser/fixture/runtime-data/checkpoints/session_c319c98f-755c-4bc2-87e1-f66614e566ab/latest.json",
+      "bytes": 1505,
+      "sha256": "6ab15f0a4c4c641bfa0c6a26563be827dd3a36336f7204d6298d9e4210421269"
+    },
+    {
+      "path": "raw/frozen/joint-browser/fixture/runtime-data/messages/session_4debeca7-c684-4e93-a937-b8d7d924ce8b.jsonl",
+      "bytes": 5837,
+      "sha256": "9a04d62b449f3c13dc023bd66c176a13d27397f04d435d27a43ffa5c98dd4023"
+    },
+    {
+      "path": "raw/frozen/joint-browser/fixture/runtime-data/messages/session_c319c98f-755c-4bc2-87e1-f66614e566ab.jsonl",
+      "bytes": 3590,
+      "sha256": "8f8b7d83fffbb053281f44f76bd4009c73e38a9c8e5c20b2d21594db9abdb89f"
+    },
+    {
+      "path": "raw/frozen/joint-browser/fixture/runtime-data/session_4debeca7-c684-4e93-a937-b8d7d924ce8b.jsonl",
+      "bytes": 62334,
+      "sha256": "1362726399106c9b6df6409061e30722ed9bc762cbf9e804739b18484a24b1a5"
+    },
+    {
+      "path": "raw/frozen/joint-browser/fixture/runtime-data/session_c319c98f-755c-4bc2-87e1-f66614e566ab.jsonl",
+      "bytes": 31488,
+      "sha256": "bf4e9c8fce31d3781088d5cd46fac10f3062772fa01320c90cde57a56caee43c"
+    },
+    {
+      "path": "raw/frozen/joint-browser/fixture/runtime-data/sessions/session_4debeca7-c684-4e93-a937-b8d7d924ce8b.json",
+      "bytes": 457,
+      "sha256": "a2920be003eea2cf6ed48f234fb7f3e6ed9a67b1903117e4a47d8c879b63889d"
+    },
+    {
+      "path": "raw/frozen/joint-browser/fixture/runtime-data/sessions/session_c319c98f-755c-4bc2-87e1-f66614e566ab.json",
+      "bytes": 457,
+      "sha256": "00778a929aeccf6c88ec7e0bf2e324135fa6f8d88b38945f93514653390552ac"
+    },
+    {
+      "path": "raw/frozen/joint-browser/fixture/runtime-data/state/session_4debeca7-c684-4e93-a937-b8d7d924ce8b.json",
+      "bytes": 3442,
+      "sha256": "089c8b2150d3816753b5e46fd28d4252b024c7f3cd3d90c9cc003f29f7868fa1"
+    },
+    {
+      "path": "raw/frozen/joint-browser/fixture/runtime-data/state/session_c319c98f-755c-4bc2-87e1-f66614e566ab.json",
+      "bytes": 3442,
+      "sha256": "953a0f368d02984d43891cbf05d2220895e92c37a50af8de406c8659fa909676"
+    },
+    {
+      "path": "raw/frozen/joint-browser/fixture/runtime-data/turns/turn_1329f2c3-8d36-4c9d-a57f-8b6b4e84473c.json",
+      "bytes": 371,
+      "sha256": "d62199bc41a6528cd91379ad388153c4fd4dc334bbd38d75fc83f58298a22fcd"
+    },
+    {
+      "path": "raw/frozen/joint-browser/fixture/runtime-data/turns/turn_2762e3f7-4cfd-432a-a8f4-1bce915a4eab.json",
+      "bytes": 372,
+      "sha256": "f210725fa8e5fbe36299b54338fd58923cc8fff1558ecb570723092204a0b89d"
+    },
+    {
+      "path": "raw/frozen/joint-browser/fixture/runtime-data/turns/turn_6ecf9e57-ed5a-473f-9739-e80b0e2f300d.json",
+      "bytes": 373,
+      "sha256": "2dbbae594649bb543c386274617213118df30a4726ad96ab83742413c74d235c"
+    },
+    {
+      "path": "raw/frozen/joint-browser/fixture/runtime-data/turns/turn_881fcc7f-688d-4d67-a956-92bb3951302c.json",
+      "bytes": 373,
+      "sha256": "90e45e125a8d1a357b43f88a9974b93a45a45d9edd6d9f017dfd79453ab207ff"
+    },
+    {
+      "path": "raw/frozen/joint-browser/fixture/runtime-data/turns/turn_8e4fc040-a09e-47f0-bbd8-cd144a7df57c.json",
+      "bytes": 366,
+      "sha256": "d2b425b0206377dae4cce379637d20f38f3ab940ea28553c4bcd3ec3b99f630b"
+    },
+    {
+      "path": "raw/frozen/joint-browser/fixture/runtime-data/turns/turn_91e652da-2060-4ff8-bda7-b38c6d62d529.json",
+      "bytes": 372,
+      "sha256": "9c18ce7282cd48183d50b9e0a94a97764bb2e125f0c10eae9497a9d54cebeafe"
+    },
+    {
+      "path": "raw/frozen/joint-browser/fixture/runtime-data/turns/turn_988060da-e7a8-4747-ab01-b041df1a4e1e.json",
+      "bytes": 375,
+      "sha256": "de916230b00c5506a74ae5bfba6167dbff54b3d2fb25c9aeebb2c6ca134c3c45"
+    },
+    {
+      "path": "raw/frozen/joint-browser/fixture/runtime-data/turns/turn_b70be589-5399-4c76-96c5-8a46ddd06ba2.json",
+      "bytes": 370,
+      "sha256": "9a67438e47721cff801a7b56096f6ff30cdb716e9403cd29d42989112eedb84a"
+    },
+    {
+      "path": "raw/frozen/joint-browser/fixture/runtime-data/turns/turn_feb9f4d3-5779-44b0-a65a-f4eff0879b7e.json",
+      "bytes": 380,
+      "sha256": "d66f60d4f8a95e1b222b2d52dbcf94beeb3c9129df8e8cea75ba71e86ee86334"
+    },
+    {
+      "path": "raw/frozen/joint-browser/fixture/runtime-snapshot.json",
+      "bytes": 146225,
+      "sha256": "7c5bff77b745df673995b53fedf88ce25ff3d618071a9a94dd85f88c948bcdac"
+    },
+    {
+      "path": "raw/frozen/joint-browser/fixture/workspace/allowed.txt",
+      "bytes": 21,
+      "sha256": "54009ba53732b321a3a7178dc99d9759b015976053c59d24d6991e4109c21d9e"
+    },
+    {
+      "path": "raw/frozen/joint-browser/fixture/workspace/fail-verification.flag",
+      "bytes": 21,
+      "sha256": "54009ba53732b321a3a7178dc99d9759b015976053c59d24d6991e4109c21d9e"
+    },
+    {
+      "path": "raw/frozen/joint-browser/fixture.log",
+      "bytes": 2722,
+      "sha256": "ff20ccc65589a605218809fd509951acca15821d3898a989444c11f99b42be56"
+    },
+    {
+      "path": "raw/frozen/joint-browser/mobile-chat.png",
+      "bytes": 29629,
+      "sha256": "4024bfb22390603ee1a25225b30303ff0010da16ccbf37b9ce71c97247ec0d6a"
+    },
+    {
+      "path": "raw/frozen/joint-browser/mobile-sidebar.png",
+      "bytes": 19708,
+      "sha256": "51964f8b193c2f3c609c7f8602f9df8eaae4f2ef2bd28e9832e82d0c8d57fd4b"
+    },
+    {
+      "path": "raw/frozen/joint-browser/network-errors.json",
+      "bytes": 339,
+      "sha256": "e4d6ea08318ce63edb7f1915cc315e9d686fb29abaad09d2bda9ceaf172356a9"
+    },
+    {
+      "path": "raw/frozen/joint-browser/production-observed-snapshot.json",
+      "bytes": 146225,
+      "sha256": "7c5bff77b745df673995b53fedf88ce25ff3d618071a9a94dd85f88c948bcdac"
+    },
+    {
+      "path": "raw/frozen/joint-browser.log",
+      "bytes": 3177,
+      "sha256": "184ed343d2c30a7434c2dbe95bfe890d92431704676cbab0da9e61576dc3afa5"
+    },
+    {
+      "path": "raw/frozen/main-accounting/all-model-requests.json",
+      "bytes": 98743,
+      "sha256": "a9288eb8c4b132278b28ab194cdb3f05ad12e431349f5d13f11e2728865d5996"
+    },
+    {
+      "path": "raw/frozen/main-accounting/cli-memory-tool-loop/data/memories.jsonl",
+      "bytes": 494,
+      "sha256": "0353e14869b1ca85d51ea7efe323d72d6545f01857c8d2135658c54022030a29"
+    },
+    {
+      "path": "raw/frozen/main-accounting/cli-memory-tool-loop/data/messages/session_6bd30f92-77cb-44ce-97c6-d01589433648.jsonl",
+      "bytes": 1180,
+      "sha256": "08671489e2086950517e017f6ab9376cde1a60bfe22f4c0d8f785913d69623c4"
+    },
+    {
+      "path": "raw/frozen/main-accounting/cli-memory-tool-loop/data/session_6bd30f92-77cb-44ce-97c6-d01589433648.jsonl",
+      "bytes": 13740,
+      "sha256": "b770989b970888f0eb4a6aff5cf30a0a238f6ffa79bd75935cf12e35e54a47fd"
+    },
+    {
+      "path": "raw/frozen/main-accounting/cli-memory-tool-loop/data/sessions/session_6bd30f92-77cb-44ce-97c6-d01589433648.json",
+      "bytes": 451,
+      "sha256": "11f817a60b9d5a14b3773ae733792e88ae85f808341de54b2a879f05030a5878"
+    },
+    {
+      "path": "raw/frozen/main-accounting/cli-memory-tool-loop/data/state/session_6bd30f92-77cb-44ce-97c6-d01589433648.json",
+      "bytes": 2858,
+      "sha256": "348b9a7c2fd18980a79ce2a310dceb65eb8244855a6f59ed28f449ebb0c45aa1"
+    },
+    {
+      "path": "raw/frozen/main-accounting/cli-memory-tool-loop/data/turns/turn_a83448f2-b3cf-452a-9c79-5ece18671544.json",
+      "bytes": 370,
+      "sha256": "cd0388687addec258a23a91e7adfab61d5323aa4ef8994767f0c092789a524ed"
+    },
+    {
+      "path": "raw/frozen/main-accounting/cli-memory-tool-loop/durable-events.json",
+      "bytes": 16029,
+      "sha256": "bf6a36dfedaba1bbe4862587df7fbfa37767e7a09c37df65a269023473ba1ae5"
+    },
+    {
+      "path": "raw/frozen/main-accounting/cli-memory-tool-loop/model-requests.json",
+      "bytes": 38917,
+      "sha256": "32aa82d4c6b4dd68008a14f6d01668002f25f669e41da98000cb8e707c085573"
+    },
+    {
+      "path": "raw/frozen/main-accounting/cli-memory-tool-loop/startup.log",
+      "bytes": 317,
+      "sha256": "795b82e700d6188bacf0c576e54e5c130ca3bbcc5b1fd6c0bac292efcf23fde0"
+    },
+    {
+      "path": "raw/frozen/main-accounting/cli-memory-tool-loop/workspace/AGENTS.md",
+      "bytes": 59,
+      "sha256": "cd692f71ce7b7b26eafb6db73d63b0fecb1c5dd0070a84628056d93f47b3b959"
+    },
+    {
+      "path": "raw/frozen/main-accounting/cli-memory-tool-loop/workspace/blocked/AGENTS.md",
+      "bytes": 88,
+      "sha256": "7e761d7227d4907c47f9d0c711a97b4ed3f46491a3a57e53bf8e77c50e4fbafb"
+    },
+    {
+      "path": "raw/frozen/main-accounting/cli-memory-tool-loop/workspace/probe.txt",
+      "bytes": 23,
+      "sha256": "5feb7d382faa8d595438fa6634d8777c705268813f4ad8accb9478d61be3d4fe"
+    },
+    {
+      "path": "raw/frozen/main-accounting/direct-input-events.json",
+      "bytes": 5172,
+      "sha256": "b09e8b3acee6f0db4abd1c534066581abda238a33ba9d039093abf51e0d3f45f"
+    },
+    {
+      "path": "raw/frozen/main-accounting/direct-wire.json",
+      "bytes": 1947,
+      "sha256": "a4008140940cfadbc8c20b68d2753b5caf0aa34d1ccc22aee5c7b19d2ca78c71"
+    },
+    {
+      "path": "raw/frozen/main-accounting/result.json",
+      "bytes": 5305,
+      "sha256": "e021c11a17514493ffb567ddcf568709a7becb1aa5a48a36fb764097d0d7c58c"
+    },
+    {
+      "path": "raw/frozen/main-accounting/web-default-system/data/messages/session_c5acef33-7eef-4c4e-bec3-4aefefa1a432.jsonl",
+      "bytes": 1719,
+      "sha256": "44869705662f7acfa8a67de6311f95ae8de14a0749b37880d70547b1c6dfcf13"
+    },
+    {
+      "path": "raw/frozen/main-accounting/web-default-system/data/session_c5acef33-7eef-4c4e-bec3-4aefefa1a432.jsonl",
+      "bytes": 17738,
+      "sha256": "82158b4bda844dd18536c093d264fc25bd9012ea50eb478efb3820bf93e099b7"
+    },
+    {
+      "path": "raw/frozen/main-accounting/web-default-system/data/sessions/session_c5acef33-7eef-4c4e-bec3-4aefefa1a432.json",
+      "bytes": 449,
+      "sha256": "f036368771dfcda3770884ec62032a1b24d0459b4211bf83ec47fee2a9bb836f"
+    },
+    {
+      "path": "raw/frozen/main-accounting/web-default-system/data/state/session_c5acef33-7eef-4c4e-bec3-4aefefa1a432.json",
+      "bytes": 2856,
+      "sha256": "646e880e182d7eb0cb9d5b75089ea0065ca03316af34d5157d88819ac0c2f0d9"
+    },
+    {
+      "path": "raw/frozen/main-accounting/web-default-system/data/turns/turn_5602c05f-5495-4916-8b19-9ad1a9d1078e.json",
+      "bytes": 372,
+      "sha256": "57c2f1de51559172f4eb3eeed36bbd46dcc4d333579f09b4edddc776911ed667"
+    },
+    {
+      "path": "raw/frozen/main-accounting/web-default-system/data/turns/turn_b556754f-cce9-46c6-940f-145a0cee3da3.json",
+      "bytes": 369,
+      "sha256": "072c19a520925a938a491f9763319825eabc8f9a3d2d1a1e1867295d27a080b6"
+    },
+    {
+      "path": "raw/frozen/main-accounting/web-default-system/durable-events.json",
+      "bytes": 20642,
+      "sha256": "87400aa3008ebdf9d22bc0d41e0e657f496a32648963c69b15b5f5144ed0263f"
+    },
+    {
+      "path": "raw/frozen/main-accounting/web-default-system/model-requests.json",
+      "bytes": 57885,
+      "sha256": "afae2e310328b1bf11595896883adeda6c417876a2f13e3ca35d33152b2547a2"
+    },
+    {
+      "path": "raw/frozen/main-accounting/web-default-system/startup.log",
+      "bytes": 74,
+      "sha256": "e00a28af4bbb5dbe4516efca00abae1f31848cad578db38b66d59b7111c080ef"
+    },
+    {
+      "path": "raw/frozen/main-accounting/web-default-system/workspace/AGENTS.md",
+      "bytes": 59,
+      "sha256": "cd692f71ce7b7b26eafb6db73d63b0fecb1c5dd0070a84628056d93f47b3b959"
+    },
+    {
+      "path": "raw/frozen/main-accounting/web-default-system/workspace/blocked/AGENTS.md",
+      "bytes": 88,
+      "sha256": "7e761d7227d4907c47f9d0c711a97b4ed3f46491a3a57e53bf8e77c50e4fbafb"
+    },
+    {
+      "path": "raw/frozen/main-accounting/web-default-system/workspace/probe.txt",
+      "bytes": 23,
+      "sha256": "5feb7d382faa8d595438fa6634d8777c705268813f4ad8accb9478d61be3d4fe"
+    },
+    {
+      "path": "raw/frozen/main-accounting.log",
+      "bytes": 2100,
+      "sha256": "5821f6e343f02c42e6a2c68fa87cc4b41233bd73315ae5dfc648e787fba0e4f3"
+    },
+    {
+      "path": "raw/frozen/manifest.json",
+      "bytes": 1579797,
+      "sha256": "b63124f7b8548a269c15b9861f27b08440612ba09e19703a5ec3f4ec75a7f252"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-cancel-unadmitted/AGENTS.md",
+      "bytes": 46,
+      "sha256": "db292d4e715bee01348f1b7fc055436e778790066bc55401569beb040730c3b5"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-cancel-unadmitted/data/memories.jsonl",
+      "bytes": 324,
+      "sha256": "50371065e0ce573dfc690be027ee5a74f392056cd69d3d1ce86b145388ca6c44"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-cancel-unadmitted/data/messages/session_cfa78497-d94c-4f65-8ce4-75caba9bebdd.jsonl",
+      "bytes": 260,
+      "sha256": "eef1b9a1322bd02b09cf898dcee71878c0a70538ce487889ea957b1803d78d07"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-cancel-unadmitted/data/session_cfa78497-d94c-4f65-8ce4-75caba9bebdd.jsonl",
+      "bytes": 1162,
+      "sha256": "d7e930f14205ebbfa714f616574ec66d7c3af88c41983ea59f238599e0560e28"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-cancel-unadmitted/data/sessions/session_cfa78497-d94c-4f65-8ce4-75caba9bebdd.json",
+      "bytes": 473,
+      "sha256": "130c5a682b1935a2f7098663f7fe27655bbf7136ddc68bcf0ad0632c10bd5b86"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-cancel-unadmitted/data/state/session_cfa78497-d94c-4f65-8ce4-75caba9bebdd.json",
+      "bytes": 1910,
+      "sha256": "6f36c53f3398b2a9956b33a414ec3359430f0097676ddd1a7ce1221f46040f03"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-cancel-unadmitted/data/turns/turn_147275c2-6e01-421a-bf52-852aa578d9f6.json",
+      "bytes": 370,
+      "sha256": "3dc6fa88cfa3b4a7950dde10aea6da20be8f40b6cd009d3112fed751671223f7"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-cancel-unadmitted/probe.txt",
+      "bytes": 20,
+      "sha256": "11eb222f2678c4ea699aa39c641e8aed0e453269a5d75d19e3a62365c5407ae3"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-concurrent/AGENTS.md",
+      "bytes": 46,
+      "sha256": "db292d4e715bee01348f1b7fc055436e778790066bc55401569beb040730c3b5"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-concurrent/data/memories.jsonl",
+      "bytes": 463,
+      "sha256": "03350fe4da6b2313272ff201f274099d0670a0579531312853aa5d6426bb4aea"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-concurrent/data/messages/session_b08ceb6c-50f9-4f5d-bc21-0f4293525ed6.jsonl",
+      "bytes": 539,
+      "sha256": "795af01af88cd462213a066e72a3765f8ceba0b76711ff475bec4fa669d7053c"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-concurrent/data/messages/session_de35cf5a-7abe-4f7d-a413-0178f398710d.jsonl",
+      "bytes": 539,
+      "sha256": "920d7d1f5047ac3a85a21a0121350149fc4ff0d5677fbcaf2e54fe3937d87e8f"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-concurrent/data/messages/session_ecd0977f-8ece-4c9a-8990-ee71686a38f4.jsonl",
+      "bytes": 539,
+      "sha256": "468caeed4bdf8b1af6a409e2595cbeda974a7432648f0a58a265c4008d40afd8"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-concurrent/data/messages/session_f76ae12d-0895-4e04-9aa8-5284e776d605.jsonl",
+      "bytes": 539,
+      "sha256": "d97735e98e117b30d7f4e1a421b79fc8e06f4f6699b33c14577c029bbb4dbd5c"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-concurrent/data/session_b08ceb6c-50f9-4f5d-bc21-0f4293525ed6.jsonl",
+      "bytes": 5300,
+      "sha256": "303adc207448c5fc60932f43b5d5250a4749f2ccd135778a47164c9310374d4b"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-concurrent/data/session_de35cf5a-7abe-4f7d-a413-0178f398710d.jsonl",
+      "bytes": 5299,
+      "sha256": "dfc26dc2835429e8abfe9ea8aab3c86500958a5b0dc3c158f5e99cb9cc8cd337"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-concurrent/data/session_ecd0977f-8ece-4c9a-8990-ee71686a38f4.jsonl",
+      "bytes": 5300,
+      "sha256": "15ae0daea3c24e23a34078ec14d142ed293c2a9f19fb3f828d1676ea5af578c0"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-concurrent/data/session_f76ae12d-0895-4e04-9aa8-5284e776d605.jsonl",
+      "bytes": 5300,
+      "sha256": "6d7b55abd4747d935d113efd3bac096bcaee95f74228c7d88baa04a9c014fdf8"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-concurrent/data/sessions/session_b08ceb6c-50f9-4f5d-bc21-0f4293525ed6.json",
+      "bytes": 466,
+      "sha256": "1cbd2887d8db20d94ee57a80e044ed236ff56c8838634d60180165e5f7004feb"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-concurrent/data/sessions/session_de35cf5a-7abe-4f7d-a413-0178f398710d.json",
+      "bytes": 466,
+      "sha256": "0c4b6366a7c8836ed1cec22b73f9953865f72c7f37876469518327dfc74fe133"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-concurrent/data/sessions/session_ecd0977f-8ece-4c9a-8990-ee71686a38f4.json",
+      "bytes": 466,
+      "sha256": "45e37ead45238d7bb7763aac55bc4af097ca1a8f0f9430d54c0826d4bb60952e"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-concurrent/data/sessions/session_f76ae12d-0895-4e04-9aa8-5284e776d605.json",
+      "bytes": 466,
+      "sha256": "2eb109848ca391e219fd169b0a9b2191109dd9539227ef701357c9d141d7db92"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-concurrent/data/state/session_b08ceb6c-50f9-4f5d-bc21-0f4293525ed6.json",
+      "bytes": 1910,
+      "sha256": "21072958f2b31db121f75fe534df02bfc68fabb0e451647ccfcf10585d097443"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-concurrent/data/state/session_de35cf5a-7abe-4f7d-a413-0178f398710d.json",
+      "bytes": 1910,
+      "sha256": "21072958f2b31db121f75fe534df02bfc68fabb0e451647ccfcf10585d097443"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-concurrent/data/state/session_ecd0977f-8ece-4c9a-8990-ee71686a38f4.json",
+      "bytes": 1910,
+      "sha256": "7d798378dd622df8a6a6f9164d312b0af2a69165c52b19184ef58a9f0782f973"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-concurrent/data/state/session_f76ae12d-0895-4e04-9aa8-5284e776d605.json",
+      "bytes": 1910,
+      "sha256": "21072958f2b31db121f75fe534df02bfc68fabb0e451647ccfcf10585d097443"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-concurrent/data/turns/turn_315f9908-ca51-4dcb-84d1-8ed228e16e7a.json",
+      "bytes": 370,
+      "sha256": "66b30c61ab2c3f398b18fac2f3fe9c1cb69173fa44d26a17dcdd5f2358e4a2e6"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-concurrent/data/turns/turn_8a1a2324-3319-43cf-9ab4-c7db055b975c.json",
+      "bytes": 370,
+      "sha256": "a61fa14946d83a561295f303d94bb984263993a1adad523da3e0b251246bbecb"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-concurrent/data/turns/turn_abd21410-7c0f-4c76-a236-dff3867cddbd.json",
+      "bytes": 370,
+      "sha256": "38b9b26cb84b604faf3b1743fdd43621cc3cc56b155afcb8ceb5a4d97b0681d4"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-concurrent/data/turns/turn_bdd5af96-a174-407b-9287-6ff05e0ea854.json",
+      "bytes": 370,
+      "sha256": "ab1dad090c7426e92642b0b9e598ad85ee500cb145288d6a2960a8059990e4d0"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-concurrent/probe.txt",
+      "bytes": 20,
+      "sha256": "11eb222f2678c4ea699aa39c641e8aed0e453269a5d75d19e3a62365c5407ae3"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-default-off/AGENTS.md",
+      "bytes": 46,
+      "sha256": "db292d4e715bee01348f1b7fc055436e778790066bc55401569beb040730c3b5"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-default-off/data/messages/session_e01eabcd-e696-4899-829a-7a8ccea0d760.jsonl",
+      "bytes": 539,
+      "sha256": "f90751aa879dbf5a5ef7c78816e415450f852f8e4a9839a96e168dcbf1a0f4ed"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-default-off/data/session_e01eabcd-e696-4899-829a-7a8ccea0d760.jsonl",
+      "bytes": 4601,
+      "sha256": "88a649e6c38bb34c8f2c2646d0cd2b1c2bfb3c5ac67e17e09728cedb0bc19c1e"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-default-off/data/sessions/session_e01eabcd-e696-4899-829a-7a8ccea0d760.json",
+      "bytes": 467,
+      "sha256": "b4b4f715f8d304138f39bf0c68b509c36b5ba178ad57db56a4ba3107ddf7cdd5"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-default-off/data/state/session_e01eabcd-e696-4899-829a-7a8ccea0d760.json",
+      "bytes": 1910,
+      "sha256": "ccebabda2346dc4be25dc1270be6e215248ff1f1a0c0cc3630d5af42626fb985"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-default-off/data/turns/turn_2cdc491a-54d0-4607-ade7-b6492f5bca92.json",
+      "bytes": 370,
+      "sha256": "6a29dd94229e8b4b85ed90acd7659fb34cebe0a7c97e8c0ac365aa019f05e756"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-default-off/probe.txt",
+      "bytes": 20,
+      "sha256": "11eb222f2678c4ea699aa39c641e8aed0e453269a5d75d19e3a62365c5407ae3"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-tool-loop/AGENTS.md",
+      "bytes": 46,
+      "sha256": "db292d4e715bee01348f1b7fc055436e778790066bc55401569beb040730c3b5"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-tool-loop/data/memories.jsonl",
+      "bytes": 454,
+      "sha256": "bfbd3d5e7b0dafa7bf7182e9df36237cffd60fe43fd0dff7644d53e8179a5d1d"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-tool-loop/data/messages/session_a677d2dc-11ef-4071-8883-c94f5829386c.jsonl",
+      "bytes": 1183,
+      "sha256": "c661505380addd8f9f54221c750b0e33d2b17f2f3249c7290ab3707664a8f068"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-tool-loop/data/session_a677d2dc-11ef-4071-8883-c94f5829386c.jsonl",
+      "bytes": 11837,
+      "sha256": "d41314e1bcfedfabdd16437d4e8d5256a422083f3da17db1b5ae0d0c696ae314"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-tool-loop/data/sessions/session_a677d2dc-11ef-4071-8883-c94f5829386c.json",
+      "bytes": 465,
+      "sha256": "809674a38e0cb0596174226f7a049c79a93ce649405c1d85850b5e8ce7dec2d7"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-tool-loop/data/state/session_a677d2dc-11ef-4071-8883-c94f5829386c.json",
+      "bytes": 1910,
+      "sha256": "bb09cb35fa72139746d28dbedb0fc149627ac1ce8f041dc91469c584c54a365a"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-tool-loop/data/turns/turn_05c0fdcb-737b-472a-86a8-cb77361ea39a.json",
+      "bytes": 370,
+      "sha256": "6c7f5b10c385e928f1d65b2368a8323da1ce06d7a8638b8e884a772b53f1b0d7"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-tool-loop/probe.txt",
+      "bytes": 20,
+      "sha256": "11eb222f2678c4ea699aa39c641e8aed0e453269a5d75d19e3a62365c5407ae3"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-unsupported/AGENTS.md",
+      "bytes": 46,
+      "sha256": "db292d4e715bee01348f1b7fc055436e778790066bc55401569beb040730c3b5"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-unsupported/data/memories.jsonl",
+      "bytes": 324,
+      "sha256": "4178de3f4d155330901a9d2cf835bddbdf6046e546aa2050ba780aa1a53f230b"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-unsupported/data/messages/session_46ba1425-a973-4e58-a18f-682e36847025.jsonl",
+      "bytes": 539,
+      "sha256": "0eccac7d6cb9767201c16211ab2500d5ce4fb4bee9480b855c11f0772be28321"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-unsupported/data/session_46ba1425-a973-4e58-a18f-682e36847025.jsonl",
+      "bytes": 5301,
+      "sha256": "186f271ec609d402a5e3f2749eec01eed8d957a33f1cb76f63c2492e59989442"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-unsupported/data/sessions/session_46ba1425-a973-4e58-a18f-682e36847025.json",
+      "bytes": 467,
+      "sha256": "209a3b373f4a04bb515b9e49a9e39bf75a1847b2219d29eb15e69d446d3d110c"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-unsupported/data/state/session_46ba1425-a973-4e58-a18f-682e36847025.json",
+      "bytes": 1910,
+      "sha256": "e09943593055f532a9118cb3da7214fccb69d76d3c873fc877b59a4758e75a41"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-unsupported/data/turns/turn_3686bc23-637c-41a1-88c7-7f3ebe3d9366.json",
+      "bytes": 370,
+      "sha256": "5ce1884ffe801ccd986a2bc71f4ad9181990a35df1c924cdf2a8199991a1801c"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-jsonl-unsupported/probe.txt",
+      "bytes": 20,
+      "sha256": "11eb222f2678c4ea699aa39c641e8aed0e453269a5d75d19e3a62365c5407ae3"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-cancel-unadmitted/AGENTS.md",
+      "bytes": 46,
+      "sha256": "db292d4e715bee01348f1b7fc055436e778790066bc55401569beb040730c3b5"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-cancel-unadmitted/data/messages/session_9b85b598-f0c0-466b-875b-6e2d76efa68c.jsonl",
+      "bytes": 260,
+      "sha256": "92a85d213736a37a3751a5af86cdd7975fc0e1a07907c613372a76dabd8b5635"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-cancel-unadmitted/data/session_9b85b598-f0c0-466b-875b-6e2d76efa68c.jsonl",
+      "bytes": 1162,
+      "sha256": "65fee8fbcf900eb3dd9f4f27a841f79dcff453d9dd3b2dd7f58809fedfd8b6fc"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-cancel-unadmitted/data/sessions/session_9b85b598-f0c0-466b-875b-6e2d76efa68c.json",
+      "bytes": 474,
+      "sha256": "4cd65cdcbf6fdb571d6f26ff2d20f75c91a7b728664c158baa28db4b5d7e4392"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-cancel-unadmitted/data/state/session_9b85b598-f0c0-466b-875b-6e2d76efa68c.json",
+      "bytes": 1910,
+      "sha256": "2258c562aedfd3d065a001c08140f86b53d0786ec5345fcb8aad1ec0056b02d0"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-cancel-unadmitted/data/turns/turn_59ee7b5e-a08f-4994-8cba-d570431fdf3a.json",
+      "bytes": 370,
+      "sha256": "ed894372c0f64f66084db9a3ac25b5295038cd92b42c5d95f01f23ed8e4d613a"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-cancel-unadmitted/memory-db/memories.db",
+      "bytes": 49152,
+      "sha256": "b5a2749e1ddf583060aafb3eaa5fcce1f65b68f363c73fbda9c1fe399d333675"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-cancel-unadmitted/probe.txt",
+      "bytes": 20,
+      "sha256": "11eb222f2678c4ea699aa39c641e8aed0e453269a5d75d19e3a62365c5407ae3"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-concurrent/AGENTS.md",
+      "bytes": 46,
+      "sha256": "db292d4e715bee01348f1b7fc055436e778790066bc55401569beb040730c3b5"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-concurrent/data/messages/session_3b0e91fe-a293-4957-a2f4-10859835dce9.jsonl",
+      "bytes": 539,
+      "sha256": "a1d15e4b3f867323f0fa04a180a0498d0f449bccae08a178ffa876a9c4bc10b8"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-concurrent/data/messages/session_55f45b34-8b70-4be8-b1ce-876e5a0897df.jsonl",
+      "bytes": 539,
+      "sha256": "404d685781d61fed630218fb8c0ea1cbbe81f58cb898aaa3c6170f5d2a2884e6"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-concurrent/data/messages/session_d52e6e2a-8542-4af0-b6cc-0d197a44fade.jsonl",
+      "bytes": 539,
+      "sha256": "0efeee17dbfb16f6e5fc231791c69f67d63fd91581b2b5f573c0d4f366ff92ca"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-concurrent/data/messages/session_fb30b2b6-0af8-42b1-9a05-3fe38f1ffc6a.jsonl",
+      "bytes": 539,
+      "sha256": "ce605a9b3e7888ac5dd35b6a16eb5fdd09c8a1f81fa2ef2250239e986b39f0d7"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-concurrent/data/session_3b0e91fe-a293-4957-a2f4-10859835dce9.jsonl",
+      "bytes": 5302,
+      "sha256": "576313cf5589060403a3472a4d4489a5836b18264b2e0317830ef076ccb9b563"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-concurrent/data/session_55f45b34-8b70-4be8-b1ce-876e5a0897df.jsonl",
+      "bytes": 5301,
+      "sha256": "eb7f8efeaf6fc3b1d21593602880bc62429fb02f2294a294fdde1723d8ced624"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-concurrent/data/session_d52e6e2a-8542-4af0-b6cc-0d197a44fade.jsonl",
+      "bytes": 5302,
+      "sha256": "e561cee1b8f11ece462035b6202b594cb06dafdad038f80c94857a84ee7964d7"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-concurrent/data/session_fb30b2b6-0af8-42b1-9a05-3fe38f1ffc6a.jsonl",
+      "bytes": 5302,
+      "sha256": "508ca809b97231cb8f6ae2cd34076e219887f9b5daf075f4219162ed9fa2743b"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-concurrent/data/sessions/session_3b0e91fe-a293-4957-a2f4-10859835dce9.json",
+      "bytes": 467,
+      "sha256": "9f5c912cc2a5d13690f3ec86e72bdd8f014a6e9d09e181e2aae8aba8dc190d7b"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-concurrent/data/sessions/session_55f45b34-8b70-4be8-b1ce-876e5a0897df.json",
+      "bytes": 467,
+      "sha256": "d2917324862016e7c2117acd9f288b343f4c67b4ce6c876b3809390d50d7edf2"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-concurrent/data/sessions/session_d52e6e2a-8542-4af0-b6cc-0d197a44fade.json",
+      "bytes": 467,
+      "sha256": "d4b319a203704a9a6572bb0e8599a0358e9b6fed1f4444505283193e1eb1d019"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-concurrent/data/sessions/session_fb30b2b6-0af8-42b1-9a05-3fe38f1ffc6a.json",
+      "bytes": 467,
+      "sha256": "1a41e61a902f3098c2eac37ef8e934ec1196ba1113964547fd6f21f8da8fa574"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-concurrent/data/state/session_3b0e91fe-a293-4957-a2f4-10859835dce9.json",
+      "bytes": 1910,
+      "sha256": "369067cdff2d68b483b8cc2012f58867985e23aa511c5534eb48d1b99f13c567"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-concurrent/data/state/session_55f45b34-8b70-4be8-b1ce-876e5a0897df.json",
+      "bytes": 1910,
+      "sha256": "a06ffbff3f1baba97570cca353bc55c118ec66942d7724ab40d8763042e70bc2"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-concurrent/data/state/session_d52e6e2a-8542-4af0-b6cc-0d197a44fade.json",
+      "bytes": 1910,
+      "sha256": "369067cdff2d68b483b8cc2012f58867985e23aa511c5534eb48d1b99f13c567"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-concurrent/data/state/session_fb30b2b6-0af8-42b1-9a05-3fe38f1ffc6a.json",
+      "bytes": 1910,
+      "sha256": "a06ffbff3f1baba97570cca353bc55c118ec66942d7724ab40d8763042e70bc2"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-concurrent/data/turns/turn_470704bb-b15e-4cb5-91c3-50ddd980e9f2.json",
+      "bytes": 370,
+      "sha256": "a54fc53f802e37a1b032a49b1b24dca025011a85b560417859863cde1ec46177"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-concurrent/data/turns/turn_c9ea9792-0d07-4578-a28f-49a29a294155.json",
+      "bytes": 370,
+      "sha256": "e66d032aed87097e13f22143184673de1927e14bd994bc55cf253de588fc95f8"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-concurrent/data/turns/turn_ee011c60-42b8-495f-8038-8b55b8cf22ab.json",
+      "bytes": 370,
+      "sha256": "1eb28ddb3e10660a194941f07585ac0074744985db4f8679fea2fdbfba92dddc"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-concurrent/data/turns/turn_fcc5c924-b699-4fd0-8054-a6c85a7506bc.json",
+      "bytes": 370,
+      "sha256": "3b75ce6eb072299e370beda1791cbc0370d4228c80bbd3784c05afd189e2f361"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-concurrent/memory-db/memories.db",
+      "bytes": 49152,
+      "sha256": "980eb24531a183648ade9de2d6ed263b9ddbe1869fa7ce35637a681350ff2853"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-concurrent/probe.txt",
+      "bytes": 20,
+      "sha256": "11eb222f2678c4ea699aa39c641e8aed0e453269a5d75d19e3a62365c5407ae3"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-default-off/AGENTS.md",
+      "bytes": 46,
+      "sha256": "db292d4e715bee01348f1b7fc055436e778790066bc55401569beb040730c3b5"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-default-off/data/messages/session_46b1020c-f311-4aa0-ac58-94a128894f56.jsonl",
+      "bytes": 539,
+      "sha256": "ba1428e3e7a080d2850988af221f56243f6e92be315c633022916abf0a6fcc65"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-default-off/data/session_46b1020c-f311-4aa0-ac58-94a128894f56.jsonl",
+      "bytes": 4602,
+      "sha256": "0b3e7eb3ac586501c2c691feb21099569081dab23609a782177d45cc27161010"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-default-off/data/sessions/session_46b1020c-f311-4aa0-ac58-94a128894f56.json",
+      "bytes": 468,
+      "sha256": "25a2a45462bfc9696b0b0037581aea64c10c9702afb67214767265c1bb3ae1bd"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-default-off/data/state/session_46b1020c-f311-4aa0-ac58-94a128894f56.json",
+      "bytes": 1910,
+      "sha256": "d9fdb7f762707dc1ea1bed1dba0bf9c347cb9df49f9a070b5f20220edabbaba1"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-default-off/data/turns/turn_00257f50-e934-4cfc-a94d-3738658154b8.json",
+      "bytes": 370,
+      "sha256": "a735bd319f8c3556a3150dc83c004b98a5cd9a6d107f9f6d02306a3e255a1bd7"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-default-off/probe.txt",
+      "bytes": 20,
+      "sha256": "11eb222f2678c4ea699aa39c641e8aed0e453269a5d75d19e3a62365c5407ae3"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-tool-loop/AGENTS.md",
+      "bytes": 46,
+      "sha256": "db292d4e715bee01348f1b7fc055436e778790066bc55401569beb040730c3b5"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-tool-loop/data/messages/session_885850be-a268-47b8-9c74-3975f25e5361.jsonl",
+      "bytes": 1183,
+      "sha256": "fee3b9193dca7457f05db0888ef9d27f3d49dda3b5526276a2efbc89da0389f8"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-tool-loop/data/session_885850be-a268-47b8-9c74-3975f25e5361.jsonl",
+      "bytes": 11841,
+      "sha256": "24fe7a10e4c9699176dc240ed930d901cd39721ac9896a1502157899db772f92"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-tool-loop/data/sessions/session_885850be-a268-47b8-9c74-3975f25e5361.json",
+      "bytes": 466,
+      "sha256": "8a6f7783245744522d8adc5ffa3582e3121741cf37c3110fa2e7add688919038"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-tool-loop/data/state/session_885850be-a268-47b8-9c74-3975f25e5361.json",
+      "bytes": 1910,
+      "sha256": "34d33654e224327c669c731253d96d0c6e9757fcc04b9e498255d7b7c51b1610"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-tool-loop/data/turns/turn_e9a1d53c-aa0c-4060-b202-e0ca94d7f3d4.json",
+      "bytes": 370,
+      "sha256": "458285be30c6f4b1faee68c86af6ff4d8ec6165ca8abaa0db8877de4ba3b6d0f"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-tool-loop/memory-db/memories.db",
+      "bytes": 49152,
+      "sha256": "06f5cab36bfe8ceff6ee6c2b92899f40f04671aab3acb76996a1b23fdee4b4de"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-tool-loop/probe.txt",
+      "bytes": 20,
+      "sha256": "11eb222f2678c4ea699aa39c641e8aed0e453269a5d75d19e3a62365c5407ae3"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-unsupported/AGENTS.md",
+      "bytes": 46,
+      "sha256": "db292d4e715bee01348f1b7fc055436e778790066bc55401569beb040730c3b5"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-unsupported/data/messages/session_bf4f7ec2-560a-44c2-aa60-d6a0c64c8d2e.jsonl",
+      "bytes": 539,
+      "sha256": "ac85aa343227f0f0cbdc2688ce4d455e5feb3c68db0febf68c6ad4e43483a1f5"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-unsupported/data/session_bf4f7ec2-560a-44c2-aa60-d6a0c64c8d2e.jsonl",
+      "bytes": 5303,
+      "sha256": "d320839042e555c928036b0ab3d2a4ce2e807f56cb60b111ffd3f68507036b46"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-unsupported/data/sessions/session_bf4f7ec2-560a-44c2-aa60-d6a0c64c8d2e.json",
+      "bytes": 468,
+      "sha256": "437f4e3e945ca24e2518f2fd2956cd69c24c40cf71ad41adb86943a368b8bed1"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-unsupported/data/state/session_bf4f7ec2-560a-44c2-aa60-d6a0c64c8d2e.json",
+      "bytes": 1910,
+      "sha256": "5e4731161323aa49a6a114a414fbcab64d05b2c6af780b2199ca70523e5b2439"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-unsupported/data/turns/turn_fb5b618c-dfd9-4ab9-aeb8-c5dacbb9d4cb.json",
+      "bytes": 370,
+      "sha256": "cf132260592cbfac3a248d26a4788e14049c1de549e1d15979e9b2abbbc74793"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-unsupported/memory-db/memories.db",
+      "bytes": 49152,
+      "sha256": "1f3b985e70311965f62d463cca764d8addd918bdf9102521ae69af8fb54dd26c"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/harness-sqlite-unsupported/probe.txt",
+      "bytes": 20,
+      "sha256": "11eb222f2678c4ea699aa39c641e8aed0e453269a5d75d19e3a62365c5407ae3"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/jsonl-concurrent-delete/memories.jsonl",
+      "bytes": 416,
+      "sha256": "a72a564e76b8cf8e96587cc59cda348e3424df8604d9e31a034955bad460c018"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/jsonl-counter-injected/memories.jsonl",
+      "bytes": 419,
+      "sha256": "166b0cc5afbeb1e61050514549a0914a290d0c3cd21d9cd458e05120ca991167"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/jsonl-counter-retrieved/memories.jsonl",
+      "bytes": 405,
+      "sha256": "8a9c2c26e6eec284fc1219a4ce5e924c4ca85a193f79f3e6ded1f8ce85f33712"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/jsonl-counter-taskSucceeded/memories.jsonl",
+      "bytes": 420,
+      "sha256": "c3ffec4f40aecf2a66d0b6b0b8ec90da9eed51de4fcf7d52e0a5ff82ffcc941d"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/jsonl-counter-used/memories.jsonl",
+      "bytes": 420,
+      "sha256": "d87f6c2debb854c191bf0c0be1585e79763a13e1fb9272d27891fbaac1aa8861"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/jsonl-counter-verificationPassed/memories.jsonl",
+      "bytes": 420,
+      "sha256": "d1c38d2734b8969a3928cd1246a96bcafbb0fcb75cf4ceec59d6cac3d2d988d8"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/jsonl-independent-entries/memories.jsonl",
+      "bytes": 794,
+      "sha256": "d7d74c0a0d048c81cce46cc2c308c6b18689fddac26fe9b8b76606d282f65ce1"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/jsonl-metadata-reopen/memories.jsonl",
+      "bytes": 984,
+      "sha256": "e50e832dd4a4857a04a62a7d5856a132a1832dce4ffe2030f7c1f233f6733e28"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/jsonl-missing-deleted/memories.jsonl",
+      "bytes": 288,
+      "sha256": "aadcc785244ee6757ed62bedbf4e9bd2bd7cfee447239460a4dc1e793ee696eb"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/jsonl-multiple-bridges/memories.jsonl",
+      "bytes": 419,
+      "sha256": "4ea7e4448c58b991fec3cd1de1cffa51050b5b9120d51bb2e501c3e21ffd8d8a"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/jsonl-scheduled-edit/memories.jsonl",
+      "bytes": 447,
+      "sha256": "ffc721dec392214927df7bf3ebce68f5504040005c18b358bd2e084ac0710d27"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/jsonl-scheduled-remove/memories.jsonl",
+      "bytes": 288,
+      "sha256": "645d8762bbedb50fdd0fa088abba668b49350e5b0aaa40b9832d9e4d2566f836"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/jsonl-two-stores/memories.jsonl",
+      "bytes": 419,
+      "sha256": "8a20abbdfa17e8f76e18e378bff594503c5a037d1a7e93adde126990de554a98"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/jsonl-unsafe-content/memories.jsonl",
+      "bytes": 406,
+      "sha256": "a9eb3d3b002e98309d5e232cfa4c734a41c76d399d848fbfeff62dc5a98f5c00"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/jsonl-unsafe-strategy/memories.jsonl",
+      "bytes": 406,
+      "sha256": "54ba8570e9e8effada30642331c9936994d2af06ce6c3c96007c723fb75262b8"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/jsonl-write-failure/memories.jsonl",
+      "bytes": 406,
+      "sha256": "8885aaeb9b902fa044a15814136b834c58b3c4588e02508cdb2348ec185ffe1b"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/sqlite-concurrent-delete/memories.db",
+      "bytes": 49152,
+      "sha256": "6b9007d6f5c1bb4fd01cdd5683cb292f87e0cb83518a8e18944603a252be7454"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/sqlite-counter-injected/memories.db",
+      "bytes": 49152,
+      "sha256": "f10fb38c09db0583d0bf5a84a8ccf14e14dcb18e1bbbf7a85dda35a32e3a88f2"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/sqlite-counter-retrieved/memories.db",
+      "bytes": 49152,
+      "sha256": "8c1814cf62013ccf6069ae39de255091de6cee302e3738c6d77d9853bef53356"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/sqlite-counter-taskSucceeded/memories.db",
+      "bytes": 49152,
+      "sha256": "f6a5391241a5ddf1d594e4acb6fb3e1369250072708ffbdf638ebb0767f29a3d"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/sqlite-counter-used/memories.db",
+      "bytes": 49152,
+      "sha256": "67b6a3f2623e2e7f6f7491a12a39fa2a6a7acd0459355ceb953ebd0dd5dbd40c"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/sqlite-counter-verificationPassed/memories.db",
+      "bytes": 49152,
+      "sha256": "74c80d14ceba83785c488ab45cfbd45c01ee8873e276bfd35cf08ed24631427f"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/sqlite-independent-entries/memories.db",
+      "bytes": 49152,
+      "sha256": "bcb2bd81a9c37c5bf513619b55da4d07dc56194661d1c3980072a8e75a4ea48d"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/sqlite-metadata-reopen/memories.db",
+      "bytes": 49152,
+      "sha256": "1a6ccc1392e284592bb92cbdd21ced8f364d1d064af7d07bf3c14d1eb0d0b946"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/sqlite-missing-deleted/memories.db",
+      "bytes": 49152,
+      "sha256": "3cd3a12072a0f98152c065fdd9cc9f888636503f22f4155a0b1ae939682000d3"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/sqlite-multiple-bridges/memories.db",
+      "bytes": 49152,
+      "sha256": "cc9acfb442cd06d5664ccb2676e862d9cd1f9d69c2214f4e81ae3e0afc40f956"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/sqlite-scheduled-edit/memories.db",
+      "bytes": 49152,
+      "sha256": "5370cf299b1963df4d8d59a209bf1771a702ac6d2105a71e797a8182034c5dcf"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/sqlite-scheduled-remove/memories.db",
+      "bytes": 49152,
+      "sha256": "94b4f642b49a7132240259828b7b56aa605171f9d0a0446713c7abf0b05b8e8b"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/sqlite-two-stores/memories.db",
+      "bytes": 49152,
+      "sha256": "27f25c91519c7a199c0671a0b7ec7342631e24ce987cd24d412bd1f13d8996fc"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/sqlite-unsafe-content/memories.db",
+      "bytes": 49152,
+      "sha256": "b580f5ada0921c7cfbe904b2562300add1d0b94dbf68580ee15fb74394a1923f"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/sqlite-unsafe-strategy/memories.db",
+      "bytes": 49152,
+      "sha256": "a7ee9b967a5a8ec2d9bcb982121dacdec77fad2419bf8781a0ca031bb59ffc4f"
+    },
+    {
+      "path": "raw/frozen/memory-harness/fixtures/sqlite-write-failure/memories.db",
+      "bytes": 49152,
+      "sha256": "63b876bd94d638a3c7faf215280dc3fc0326c1d63b3ca693cfc5489c5a920edc"
+    },
+    {
+      "path": "raw/frozen/memory-harness/harness-jsonl-cancel-unadmitted.json",
+      "bytes": 3213,
+      "sha256": "a0f20981848b854f3bf12d0968157257cbb61a3858ed7c54b8cb3f2ea65183c9"
+    },
+    {
+      "path": "raw/frozen/memory-harness/harness-jsonl-concurrent.json",
+      "bytes": 101713,
+      "sha256": "c3f1bebc67687bfad4a9811f903f6db5017d978d4132802483605199d31dab8f"
+    },
+    {
+      "path": "raw/frozen/memory-harness/harness-jsonl-default-off.json",
+      "bytes": 24212,
+      "sha256": "0c730d08061c18a6a9e18d185db9daeb6df02f12d849822ea3d71c95b8f86b01"
+    },
+    {
+      "path": "raw/frozen/memory-harness/harness-jsonl-tool-loop.json",
+      "bytes": 52686,
+      "sha256": "ba44833ce8c18f7c6d7329829fff27234c84dab39915c3289b109919c8289904"
+    },
+    {
+      "path": "raw/frozen/memory-harness/harness-jsonl-unsupported.json",
+      "bytes": 26071,
+      "sha256": "1cade9f511b2dd2e706e71dcedad52ecb78f306ddb304124a7fe99916f35acc0"
+    },
+    {
+      "path": "raw/frozen/memory-harness/harness-sqlite-cancel-unadmitted.json",
+      "bytes": 3214,
+      "sha256": "8e5f1002cfd0b970b1b1ff50d5943717581328b0fe9728dcdace70ecfcb1759a"
+    },
+    {
+      "path": "raw/frozen/memory-harness/harness-sqlite-concurrent.json",
+      "bytes": 101726,
+      "sha256": "0435acf828e49297383eba413a4cc9e5c8183716f7de0bc00069502c73dc4fa8"
+    },
+    {
+      "path": "raw/frozen/memory-harness/harness-sqlite-default-off.json",
+      "bytes": 24215,
+      "sha256": "43c86a12511fd86f841d7060066b844c20751d62806db549f6bd56f403edefc2"
+    },
+    {
+      "path": "raw/frozen/memory-harness/harness-sqlite-tool-loop.json",
+      "bytes": 52693,
+      "sha256": "6637d48707108ca79a15510c7c793897444fe675d2c8053d64ba5bbe2527e80d"
+    },
+    {
+      "path": "raw/frozen/memory-harness/harness-sqlite-unsupported.json",
+      "bytes": 26075,
+      "sha256": "f7e9a0341b48783b41131f7e7ecf8ce0842ad9eea65e0d491dcd33b80835bd84"
+    },
+    {
+      "path": "raw/frozen/memory-harness/result.json",
+      "bytes": 23346,
+      "sha256": "a7f398cb88b1164a5ea501bb71b24dbe8cb518233ab81097a733e14f614d5a6a"
+    },
+    {
+      "path": "raw/frozen/memory-harness-production.log",
+      "bytes": 110,
+      "sha256": "6f026527f33034b27f1b2dc32da18bc66970754764bdc74746b8264edce75b8a"
+    },
+    {
+      "path": "raw/frozen/new-regressions.log",
+      "bytes": 286,
+      "sha256": "84eadf592e0c85125e1629da992becea6a5d5a3b04792fb2729374d64761c3a3"
+    },
+    {
+      "path": "raw/frozen/observations/agent-next5-linux-4b4bbd7ab56a-1791211404524726528.candidates.jsonl",
+      "bytes": 3480,
+      "sha256": "0ecd771eaf82afba8bcd9d24c274fe0a871b01f3540bee4857c03c8a27b17997"
+    },
+    {
+      "path": "raw/frozen/observations/agent-next5-linux-4b4bbd7ab56a-1791211404524726528.jsonl",
+      "bytes": 4915,
+      "sha256": "1b001d0305ae292366fdabed78f65db10e3d945d414aa4b03b2d19f58d5c47aa"
+    },
+    {
+      "path": "raw/frozen/prior-artifact-integrity.log",
+      "bytes": 46,
+      "sha256": "8a3da4d3a2160829a7232c8753aaf2ca6c8c407d05b94ebf930330695497131b"
+    },
+    {
+      "path": "raw/frozen/provider-footer/result.json",
+      "bytes": 45981,
+      "sha256": "638284fcab8c18762e38982f901f22c24218b4e1a0791ca586a5cc96d849eb55"
+    },
+    {
+      "path": "raw/frozen/provider-footer-control.log",
+      "bytes": 883,
+      "sha256": "6d753cf9fb6160b7e876ffb3eb584865cb0d196d64d76dd3a95309a1fefa1898"
+    },
+    {
+      "path": "raw/frozen/related-integration.log",
+      "bytes": 21220,
+      "sha256": "82edb109b41bf25fb0bb0a8598e48bbae1a9ec6fbd9046e51eb13250b5203e11"
+    },
+    {
+      "path": "raw/frozen/security.log",
+      "bytes": 1569,
+      "sha256": "c2abfd1f14d4328ad9df3f5768453cc3ad4dae165468eedb2763ff5c4f052c05"
+    },
+    {
+      "path": "raw/frozen/typecheck.log",
+      "bytes": 9,
+      "sha256": "faeaa94bcf7012d86f91ca647580449f56a263fb7eaf572c54789764f60a9b8f"
+    },
+    {
+      "path": "raw/frozen/usage-audit.log",
+      "bytes": 763,
+      "sha256": "f2cf7a87fa38978ce86d8717f2c58808bb41b78ea4b0f95a8c1d383987323dba"
+    },
+    {
+      "path": "raw/production-development/result.json",
+      "bytes": 10904,
+      "sha256": "17de73ec41b770fe2167100d5e48d52cf8b2e632ae1d5d513aef16191fec329e"
+    },
+    {
+      "path": "raw/publication/source-api-ref.json",
+      "bytes": 389,
+      "sha256": "8ece1d2011985ee8742188a2d57df8d2a935694e66f45c56798a61b0de1925e8"
+    },
+    {
+      "path": "raw/publication/source-lsremote.json",
+      "bytes": 249,
+      "sha256": "012a6f32a4a7db3f8db9de688677c0a4048131038dac4e1b234824f94d70e59e"
+    },
+    {
+      "path": "raw/publication/source-push.json",
+      "bytes": 382,
+      "sha256": "e32b90c7443ceca1dce22c93a52c3235f1c61dd94b6debb983e167fe2e8d06d0"
+    },
+    {
+      "path": "raw/publication/source-verified.json",
+      "bytes": 667,
+      "sha256": "2371fe16198e5f57b4503361b1be48db75215217431971cdffacf0a6d83a7541"
+    },
+    {
+      "path": "raw/state.json",
+      "bytes": 396,
+      "sha256": "733121d04c4535615ce7d80a50d557847a8f7513238cab8f0d6300760cb7dcb6"
+    },
+    {
+      "path": "raw/static-self-review.json",
+      "bytes": 716,
+      "sha256": "1495226bad72a28a1d5ebc3a49558759e1e491d36b4a54f457ca0688ee78123f"
+    },
+    {
+      "path": "raw/targeted-green.log",
+      "bytes": 1755,
+      "sha256": "461ee405c839edadcc9a02c353360d66ed10ac03f57a9b2f327ea0c3eceb9736"
+    },
+    {
+      "path": "raw/typecheck-development.log",
+      "bytes": 9,
+      "sha256": "faeaa94bcf7012d86f91ca647580449f56a263fb7eaf572c54789764f60a9b8f"
+    }
+  ],
+  "fileCount": 265,
+  "totalBytes": 4365854
+}

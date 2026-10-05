@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "snapshot": {
+    "effectiveAgent": {
+      "agentId": "agent_13d3ff13-6be8-4e6b-91f1-8c9e536a69ca",
+      "model": {
+        "providerId": "memory-feedback-offline",
+        "modelId": "offline"
+      },
+      "systemPrompt": "You are the harness agent running inside a workspace.\n\nCapabilities:\n- read_file / search_files / grep_search / repo_tree / symbol_search / repo_map / discover_commands / env_snapshot: inspect the workspace (allowed automatically)\n- write_file / edit_file: modify workspace files (require approval)\n- exec: run commands in the workspace shell (requires approval)\n\nState-changing actions ask for approval and are denied until approved.\nWhen a tool result reports [denied], do not retry it blindly — report the outcome.",
+      "tools": {
+        "allow": [
+          "read_file",
+          "write_file",
+          "edit_file",
+          "search_files",
+          "grep_search",
+          "repo_tree",
+          "symbol_search",
+          "repo_map",
+          "discover_commands",
+          "env_snapshot",
+          "exec",
+          "update_plan"
+        ]
+      },
+      "permissions": {
+        "rules": [
+          {
+            "action": "read",
+            "resource": "file",
+            "effect": "allow"
+          },
+          {
+            "action": "edit",
+            "resource": "file",
+            "effect": "allow"
+          },
+          {
+            "action": "exec",
+            "resource": "command",
+            "effect": "allow"
+          },
+          {
+            "action": "exec",
+            "resource": "network",
+            "effect": "deny"
+          }
+        ]
+      },
+      "skills": {},
+      "limits": {
+        "maxToolCalls": 50
+      }
+    },
+    "runtimePolicy": {
+      "version": 1,
+      "contextPolicyHash": "935857d3b281213e",
+      "toolSemanticsHash": "1",
+      "createdAt": 1791211466537
+    }
+  }
+}

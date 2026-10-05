@@ -1,0 +1,401 @@
+{
+  "schemaVersion": "memory-conflict-work-v1",
+  "sourceSha": "692ade170e934660a53ecbc1c8a4012d8c63159b",
+  "sourceTrackedDirtyAtStart": true,
+  "sourceFingerprintsBefore": {
+    "packages/memory/src/retrieval.ts": "fb1a15b6eab12ee44d0d4e89fce49f6d84b4568c52c85eed32dd2a7f6d77c3c4",
+    "packages/memory/dist/retrieval.js": "36d92c82c3c82c9f625be79cfde5a387f269eac595ec80f2e991ba9361dbf8e4",
+    "scripts/research/agent-next5-20261005/conflict-work-probe.mjs": "b40076573990acf4b6bb3ca66cac4fc2e64b582b321262e017c13993f0dbcf2c"
+  },
+  "paidProviderCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "windows": "NOT_RUN",
+  "cases": [
+    {
+      "name": "jsonl-256-disjoint-work",
+      "status": "PASS",
+      "observed": {
+        "rows": 256,
+        "oldTokenMembershipChecks": 32640,
+        "tokenMembershipChecks": 0,
+        "oldElapsedMs": 11.630376999999996,
+        "elapsedMs": 7.163779000000005,
+        "completeObjectsScoresOrderEqual": true,
+        "items": [
+          "conflict-0",
+          "conflict-1",
+          "conflict-2",
+          "conflict-3",
+          "conflict-4"
+        ],
+        "suppressed": [],
+        "freshUpdateDelete": false
+      }
+    },
+    {
+      "name": "jsonl-256-sparse-cluster-work",
+      "status": "PASS",
+      "observed": {
+        "rows": 256,
+        "oldTokenMembershipChecks": 32640,
+        "tokenMembershipChecks": 384,
+        "oldElapsedMs": 8.709617000000009,
+        "elapsedMs": 2.232408000000021,
+        "completeObjectsScoresOrderEqual": true,
+        "items": [
+          "conflict-0",
+          "conflict-1",
+          "conflict-2",
+          "conflict-3",
+          "conflict-4"
+        ],
+        "suppressed": [],
+        "freshUpdateDelete": false
+      }
+    },
+    {
+      "name": "jsonl-dense-shared-control",
+      "status": "PASS",
+      "observed": {
+        "rows": 32,
+        "oldTokenMembershipChecks": 992,
+        "tokenMembershipChecks": 992,
+        "oldElapsedMs": 0.47650100000001316,
+        "elapsedMs": 0.7708969999999908,
+        "completeObjectsScoresOrderEqual": true,
+        "items": [
+          "conflict-0",
+          "conflict-1",
+          "conflict-2",
+          "conflict-3",
+          "conflict-4"
+        ],
+        "suppressed": [],
+        "freshUpdateDelete": false
+      }
+    },
+    {
+      "name": "jsonl-unicode-empty-tokens",
+      "status": "PASS",
+      "observed": {
+        "rows": 3,
+        "oldTokenMembershipChecks": 0,
+        "tokenMembershipChecks": 0,
+        "oldElapsedMs": 0.23431499999998096,
+        "elapsedMs": 0.16979699999998843,
+        "completeObjectsScoresOrderEqual": true,
+        "items": [
+          "conflict-0",
+          "conflict-1",
+          "conflict-2"
+        ],
+        "suppressed": [],
+        "freshUpdateDelete": false
+      }
+    },
+    {
+      "name": "jsonl-nontransitive-chain",
+      "status": "PASS",
+      "observed": {
+        "rows": 3,
+        "oldTokenMembershipChecks": 0,
+        "tokenMembershipChecks": 0,
+        "oldElapsedMs": 0.19215099999999552,
+        "elapsedMs": 0.2013849999999877,
+        "completeObjectsScoresOrderEqual": true,
+        "items": [
+          "conflict-0",
+          "conflict-2"
+        ],
+        "suppressed": [
+          {
+            "id": "conflict-1",
+            "reason": "conflict"
+          }
+        ],
+        "freshUpdateDelete": false
+      }
+    },
+    {
+      "name": "jsonl-topk-outside-conflict",
+      "status": "PASS",
+      "observed": {
+        "rows": 3,
+        "oldTokenMembershipChecks": 0,
+        "tokenMembershipChecks": 0,
+        "oldElapsedMs": 0.15797900000001164,
+        "elapsedMs": 0.15617700000001378,
+        "completeObjectsScoresOrderEqual": true,
+        "items": [
+          "conflict-0"
+        ],
+        "suppressed": [
+          {
+            "id": "conflict-2",
+            "reason": "conflict"
+          }
+        ],
+        "freshUpdateDelete": false
+      }
+    },
+    {
+      "name": "jsonl-type-score-scope",
+      "status": "PASS",
+      "observed": {
+        "rows": 4,
+        "oldTokenMembershipChecks": 0,
+        "tokenMembershipChecks": 0,
+        "oldElapsedMs": 0.21918099999999185,
+        "elapsedMs": 0.1708579999999813,
+        "completeObjectsScoresOrderEqual": true,
+        "items": [
+          "conflict-0"
+        ],
+        "suppressed": [],
+        "freshUpdateDelete": false
+      }
+    },
+    {
+      "name": "jsonl-session-identity",
+      "status": "PASS",
+      "observed": {
+        "rows": 4,
+        "oldTokenMembershipChecks": 0,
+        "tokenMembershipChecks": 0,
+        "oldElapsedMs": 0.201075000000003,
+        "elapsedMs": 0.20206600000000208,
+        "completeObjectsScoresOrderEqual": true,
+        "items": [
+          "conflict-0",
+          "conflict-1"
+        ],
+        "suppressed": [
+          {
+            "id": "conflict-2",
+            "reason": "session-mismatch"
+          },
+          {
+            "id": "conflict-3",
+            "reason": "inactive"
+          }
+        ],
+        "freshUpdateDelete": false
+      }
+    },
+    {
+      "name": "jsonl-fresh-call-after-update",
+      "status": "PASS",
+      "observed": {
+        "rows": 2,
+        "oldTokenMembershipChecks": 0,
+        "tokenMembershipChecks": 0,
+        "oldElapsedMs": 0.18354800000000182,
+        "elapsedMs": 0.2797029999999836,
+        "completeObjectsScoresOrderEqual": true,
+        "items": [
+          "conflict-0",
+          "conflict-1"
+        ],
+        "suppressed": [],
+        "freshUpdateDelete": true
+      }
+    },
+    {
+      "name": "sqlite-256-disjoint-work",
+      "status": "PASS",
+      "observed": {
+        "rows": 256,
+        "oldTokenMembershipChecks": 32640,
+        "tokenMembershipChecks": 0,
+        "oldElapsedMs": 7.812805999999995,
+        "elapsedMs": 3.025796999999983,
+        "completeObjectsScoresOrderEqual": true,
+        "items": [
+          "conflict-0",
+          "conflict-1",
+          "conflict-2",
+          "conflict-3",
+          "conflict-4"
+        ],
+        "suppressed": [],
+        "freshUpdateDelete": false
+      }
+    },
+    {
+      "name": "sqlite-256-sparse-cluster-work",
+      "status": "PASS",
+      "observed": {
+        "rows": 256,
+        "oldTokenMembershipChecks": 32640,
+        "tokenMembershipChecks": 384,
+        "oldElapsedMs": 7.245061000000021,
+        "elapsedMs": 3.7708849999999927,
+        "completeObjectsScoresOrderEqual": true,
+        "items": [
+          "conflict-0",
+          "conflict-1",
+          "conflict-2",
+          "conflict-3",
+          "conflict-4"
+        ],
+        "suppressed": [],
+        "freshUpdateDelete": false
+      }
+    },
+    {
+      "name": "sqlite-dense-shared-control",
+      "status": "PASS",
+      "observed": {
+        "rows": 32,
+        "oldTokenMembershipChecks": 992,
+        "tokenMembershipChecks": 992,
+        "oldElapsedMs": 0.6197080000000028,
+        "elapsedMs": 0.7575060000000065,
+        "completeObjectsScoresOrderEqual": true,
+        "items": [
+          "conflict-0",
+          "conflict-1",
+          "conflict-2",
+          "conflict-3",
+          "conflict-4"
+        ],
+        "suppressed": [],
+        "freshUpdateDelete": false
+      }
+    },
+    {
+      "name": "sqlite-unicode-empty-tokens",
+      "status": "PASS",
+      "observed": {
+        "rows": 3,
+        "oldTokenMembershipChecks": 0,
+        "tokenMembershipChecks": 0,
+        "oldElapsedMs": 0.2167880000000082,
+        "elapsedMs": 2.3613519999999824,
+        "completeObjectsScoresOrderEqual": true,
+        "items": [
+          "conflict-0",
+          "conflict-1",
+          "conflict-2"
+        ],
+        "suppressed": [],
+        "freshUpdateDelete": false
+      }
+    },
+    {
+      "name": "sqlite-nontransitive-chain",
+      "status": "PASS",
+      "observed": {
+        "rows": 3,
+        "oldTokenMembershipChecks": 0,
+        "tokenMembershipChecks": 0,
+        "oldElapsedMs": 0.18165400000000886,
+        "elapsedMs": 0.13051799999999503,
+        "completeObjectsScoresOrderEqual": true,
+        "items": [
+          "conflict-0",
+          "conflict-2"
+        ],
+        "suppressed": [
+          {
+            "id": "conflict-1",
+            "reason": "conflict"
+          }
+        ],
+        "freshUpdateDelete": false
+      }
+    },
+    {
+      "name": "sqlite-topk-outside-conflict",
+      "status": "PASS",
+      "observed": {
+        "rows": 3,
+        "oldTokenMembershipChecks": 0,
+        "tokenMembershipChecks": 0,
+        "oldElapsedMs": 0.4032400000000109,
+        "elapsedMs": 0.1674030000000073,
+        "completeObjectsScoresOrderEqual": true,
+        "items": [
+          "conflict-0"
+        ],
+        "suppressed": [
+          {
+            "id": "conflict-2",
+            "reason": "conflict"
+          }
+        ],
+        "freshUpdateDelete": false
+      }
+    },
+    {
+      "name": "sqlite-type-score-scope",
+      "status": "PASS",
+      "observed": {
+        "rows": 4,
+        "oldTokenMembershipChecks": 0,
+        "tokenMembershipChecks": 0,
+        "oldElapsedMs": 0.2607849999999985,
+        "elapsedMs": 0.19969199999999887,
+        "completeObjectsScoresOrderEqual": true,
+        "items": [
+          "conflict-0"
+        ],
+        "suppressed": [],
+        "freshUpdateDelete": false
+      }
+    },
+    {
+      "name": "sqlite-session-identity",
+      "status": "PASS",
+      "observed": {
+        "rows": 4,
+        "oldTokenMembershipChecks": 0,
+        "tokenMembershipChecks": 0,
+        "oldElapsedMs": 0.38955899999999133,
+        "elapsedMs": 0.21715800000001195,
+        "completeObjectsScoresOrderEqual": true,
+        "items": [
+          "conflict-0",
+          "conflict-1"
+        ],
+        "suppressed": [
+          {
+            "id": "conflict-2",
+            "reason": "session-mismatch"
+          },
+          {
+            "id": "conflict-3",
+            "reason": "inactive"
+          }
+        ],
+        "freshUpdateDelete": false
+      }
+    },
+    {
+      "name": "sqlite-fresh-call-after-update",
+      "status": "PASS",
+      "observed": {
+        "rows": 2,
+        "oldTokenMembershipChecks": 0,
+        "tokenMembershipChecks": 0,
+        "oldElapsedMs": 0.16357700000000364,
+        "elapsedMs": 0.1659310000000005,
+        "completeObjectsScoresOrderEqual": true,
+        "items": [
+          "conflict-0",
+          "conflict-1"
+        ],
+        "suppressed": [],
+        "freshUpdateDelete": true
+      }
+    }
+  ],
+  "sourceShaAtEnd": "692ade170e934660a53ecbc1c8a4012d8c63159b",
+  "sourceTrackedDirtyAtEnd": true,
+  "sourceFingerprintsAfter": {
+    "packages/memory/src/retrieval.ts": "fb1a15b6eab12ee44d0d4e89fce49f6d84b4568c52c85eed32dd2a7f6d77c3c4",
+    "packages/memory/dist/retrieval.js": "36d92c82c3c82c9f625be79cfde5a387f269eac595ec80f2e991ba9361dbf8e4",
+    "scripts/research/agent-next5-20261005/conflict-work-probe.mjs": "b40076573990acf4b6bb3ca66cac4fc2e64b582b321262e017c13993f0dbcf2c"
+  },
+  "status": "PASS"
+}

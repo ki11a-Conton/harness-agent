@@ -1,0 +1,93 @@
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+ ❯ packages/memory/src/conflict-index.regressions.test.ts (42 tests | 2 failed) 56ms
+     × performs zero impossible intersections for 32 disjoint candidates 18ms
+     × performs zero impossible intersections for 64 disjoint candidates 6ms
+     ✓ considers retained candidates after the TopK boundary when reporting conflicts 2ms
+     ✓ keeps the first retained conflict rather than merging a nontransitive similarity chain 1ms
+     ✓ preserves empty-token Unicode items, shared-token conflicts, full scores and gate reasons 2ms
+     ✓ does not retain tokens across calls when a returned memory changes 1ms
+     ✓ preserves the threshold boundary for a b c d e 1ms
+     ✓ preserves the threshold boundary for a b c d e f 0ms
+     ✓ checks each shared candidate once and in retained order rather than token order 1ms
+     ✓ preserves dense shared-token survivor and suppression decisions 2ms
+     ✓ matches the old full result for deterministic varied fixture 1 1ms
+     ✓ matches the old full result for deterministic varied fixture 2 1ms
+     ✓ matches the old full result for deterministic varied fixture 3 1ms
+     ✓ matches the old full result for deterministic varied fixture 4 0ms
+     ✓ matches the old full result for deterministic varied fixture 5 1ms
+     ✓ matches the old full result for deterministic varied fixture 6 0ms
+     ✓ matches the old full result for deterministic varied fixture 7 0ms
+     ✓ matches the old full result for deterministic varied fixture 8 0ms
+     ✓ matches the old full result for deterministic varied fixture 9 1ms
+     ✓ matches the old full result for deterministic varied fixture 10 0ms
+     ✓ matches the old full result for deterministic varied fixture 11 1ms
+     ✓ matches the old full result for deterministic varied fixture 12 0ms
+     ✓ matches the old full result for deterministic varied fixture 13 0ms
+     ✓ matches the old full result for deterministic varied fixture 14 0ms
+     ✓ matches the old full result for deterministic varied fixture 15 1ms
+     ✓ matches the old full result for deterministic varied fixture 16 1ms
+     ✓ matches the old full result for deterministic varied fixture 17 1ms
+     ✓ matches the old full result for deterministic varied fixture 18 0ms
+     ✓ matches the old full result for deterministic varied fixture 19 0ms
+     ✓ matches the old full result for deterministic varied fixture 20 0ms
+     ✓ matches the old full result for deterministic varied fixture 21 1ms
+     ✓ matches the old full result for deterministic varied fixture 22 1ms
+     ✓ matches the old full result for deterministic varied fixture 23 1ms
+     ✓ matches the old full result for deterministic varied fixture 24 0ms
+     ✓ matches the old full result for deterministic varied fixture 25 0ms
+     ✓ matches the old full result for deterministic varied fixture 26 1ms
+     ✓ matches the old full result for deterministic varied fixture 27 5ms
+     ✓ matches the old full result for deterministic varied fixture 28 0ms
+     ✓ matches the old full result for deterministic varied fixture 29 0ms
+     ✓ matches the old full result for deterministic varied fixture 30 0ms
+     ✓ matches the old full result for deterministic varied fixture 31 0ms
+     ✓ matches the old full result for deterministic varied fixture 32 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/memory/src/conflict-index.regressions.test.ts > sparse conflict candidate work and full-result equivalence > performs zero impossible intersections for 32 disjoint candidates
+AssertionError: expected 496 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 496
+
+ ❯ packages/memory/src/conflict-index.regressions.test.ts:77:20
+     75|     finally { Set.prototype.has = original; }
+     76|     expect(result).toEqual(await referenceRetrieve(store(hits), "works…
+     77|     expect(checks).toBe(0);
+       |                    ^
+     78|   });
+     79|   it("considers retained candidates after the TopK boundary when repor…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  packages/memory/src/conflict-index.regressions.test.ts > sparse conflict candidate work and full-result equivalence > performs zero impossible intersections for 64 disjoint candidates
+AssertionError: expected 2016 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 2016
+
+ ❯ packages/memory/src/conflict-index.regressions.test.ts:77:20
+     75|     finally { Set.prototype.has = original; }
+     76|     expect(result).toEqual(await referenceRetrieve(store(hits), "works…
+     77|     expect(checks).toBe(0);
+       |                    ^
+     78|   });
+     79|   it("considers retained candidates after the TopK boundary when repor…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 40 passed (42)
+   Start at  14:39:41
+   Duration  481ms (transform 230ms, setup 0ms, import 304ms, tests 56ms, environment 0ms)
+
