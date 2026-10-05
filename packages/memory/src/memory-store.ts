@@ -11,6 +11,7 @@ import { AgentError, errorInfo } from "@ar/contracts";
 import { atomicWriteFile, backupTree, withLock } from "@ar/store-integrity";
 import { checkUnsafeMemoryEntry, scanMemoryEntries } from "./security-gate.js";
 import { matchesMemoryQuery, memorySearchText } from "./search-text.js";
+import { recordUsefulness, type UsefulnessFeedback } from "./usefulness.js";
 
 /** Single JSONL file holding every memory entry (MEMORY-001). */
 export const MEMORY_FILE_NAME = "memories.jsonl";
@@ -192,6 +193,27 @@ export class JsonlMemoryStore implements MemoryStore {
         (opts.deleted === true ? e.deleted : !e.deleted) &&
         (opts.scope === undefined || e.scope === opts.scope),
     );
+  }
+
+  /** Apply feedback to the latest live row under the same lock as edits and
+   * deletion. Only usefulness changes; a missing/deleted row is a quiet no-op.
+   * This capability is optional on external MemoryStore implementations. */
+  async recordUsefulnessFeedback(id: MemoryId, feedback: UsefulnessFeedback): Promise<boolean> {
+    return withLock(this.lockKey(), async () => {
+      const all = await this.readAll();
+      const index = all.findIndex((entry) => entry.id === id);
+      const current = index >= 0 ? all[index] : undefined;
+      if (current === undefined || current.deleted) return false;
+      const next = recordUsefulness(current, feedback);
+      const reason = checkUnsafeMemoryEntry(next, "memory-store");
+      if (reason !== null) {
+        this.onSecurityDenied?.(reason.event);
+        throw new AgentError(errorInfo("SECURITY_DENIED", `memory update blocked: ${reason.message}`));
+      }
+      all[index] = next;
+      await this.rewrite(all);
+      return true;
+    });
   }
 
   /** Replaces an existing entry; unknown id fails explicitly.

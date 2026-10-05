@@ -16,7 +16,7 @@ import type {
 } from "@ar/contracts";
 import {
   retrieveMemories,
-  recordUsefulness,
+  type UsefulnessFeedback,
   type RankedMemoryItem,
   type SuppressedMemory,
 } from "@ar/memory";
@@ -123,6 +123,7 @@ export class MemoryRuntimeBridge {
   private readonly scope: MemoryScope;
   private readonly topK: number;
   private readonly now: () => number;
+  private warnedUnsupportedFeedback = false;
   // P6-4: token ROI bookkeeping — injection cost per memory entry vs task
   // success, so the retrieval self-optimization loop has real numbers.
   private readonly roi = new Map<MemoryId, { tokens: number; injected: number; succeeded: number }>();
@@ -222,12 +223,22 @@ export class MemoryRuntimeBridge {
   /** Apply one immutable usefulness update and persist it. */
   private async applyFeedback(
     id: MemoryId,
-    feedback: Parameters<typeof recordUsefulness>[1],
+    feedback: UsefulnessFeedback,
   ): Promise<void> {
     try {
-      const entry = await this.store.get(id);
-      if (entry === undefined || entry.deleted) return;
-      await this.store.update(recordUsefulness(entry, feedback));
+      const store = this.store as MemoryStore & {
+        recordUsefulnessFeedback?: (id: MemoryId, feedback: UsefulnessFeedback) => Promise<boolean>;
+      };
+      if (typeof store.recordUsefulnessFeedback !== "function") {
+        // A generic get/update cycle cannot protect against an independent
+        // editor or deletion. Keep retrieval/ROI, skip unsafe persistence.
+        if (!this.warnedUnsupportedFeedback) {
+          this.warnedUnsupportedFeedback = true;
+          process.stderr.write("[degraded] memory.usefulness.update: atomic feedback unavailable\n");
+        }
+        return;
+      }
+      await store.recordUsefulnessFeedback(id, feedback);
     } catch (err) {
       // P14-6: feedback must never break the turn (missing/race-deleted
       // entry) — reported, never silent.

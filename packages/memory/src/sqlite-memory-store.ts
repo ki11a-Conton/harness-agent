@@ -15,6 +15,7 @@ import type {
 import { AgentError, errorInfo } from "@ar/contracts";
 import { checkUnsafeMemoryEntry, scanMemoryEntries } from "./security-gate.js";
 import { matchesMemoryQuery, memorySearchText } from "./search-text.js";
+import { recordUsefulness, type UsefulnessFeedback } from "./usefulness.js";
 
 /**
  * P0-3: SQLite + WAL backend for the contracts MemoryStore (memories.db in
@@ -302,6 +303,27 @@ export class SqliteMemoryStore implements MemoryStore {
       `SELECT * FROM memories${where.length > 0 ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY updated_at DESC`,
     ).all(...params) as unknown as SqliteRow[];
     return rows.map(rowToEntry);
+  }
+
+  /** Atomically apply feedback to the latest live row. Updating only the
+   * usefulness column preserves edits, lifecycle and the full-text index. */
+  async recordUsefulnessFeedback(id: MemoryId, feedback: UsefulnessFeedback): Promise<boolean> {
+    this.db.exec("BEGIN IMMEDIATE;");
+    try {
+      const row = this.db.prepare("SELECT * FROM memories WHERE id = ?").get(id) as SqliteRow | undefined;
+      if (row === undefined || row.deleted === 1) {
+        this.db.exec("COMMIT;");
+        return false;
+      }
+      const next = recordUsefulness(rowToEntry(row), feedback);
+      this.rejectUnsafe(next);
+      this.db.prepare("UPDATE memories SET usefulness = ? WHERE id = ?").run(JSON.stringify(next.usefulness), id);
+      this.db.exec("COMMIT;");
+      return true;
+    } catch (cause) {
+      this.db.exec("ROLLBACK;");
+      throw cause;
+    }
   }
 
   /** Replaces an existing entry; unknown id fails explicitly. */

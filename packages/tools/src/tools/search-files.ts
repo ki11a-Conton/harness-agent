@@ -61,7 +61,7 @@ export const searchFilesTool: ToolDefinition<SearchFilesInput, string[]> = {
             if (!ok) return false;
           } else if (entry.isFile() || entry.isSymbolicLink()) {
             const candidate = wantBasename ? base : rel;
-            if (matchGlob(input.pattern, candidate)) hits.push(rel);
+            if (matchGlob(input.pattern, candidate)) hits.push(relative(context.cwd, abs).split(sep).join("/"));
           }
         }
         return true;

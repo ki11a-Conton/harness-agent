@@ -291,8 +291,8 @@ export function parseRetryAfter(header: string | null, now: number = Date.now())
   return undefined;
 }
 
-/** Exponential backoff between provider-internal retries. An abort during
- *  the wait resolves early; the next fetch then fails as cancelled. */
+/** Retry waits share the whole-call signal. Every settlement releases the
+ *  wait's timer and listener; an already-aborted signal never waits. */
 async function backoff(
   baseMs: number,
   attempt: number,
@@ -300,13 +300,24 @@ async function backoff(
   signal: AbortSignal,
   rng: () => number = Math.random,
 ): Promise<void> {
+  if (signal.aborted) return;
   const delay = nextBackoffDelayMs(baseMs, attempt, retryAfterMs, rng);
   await new Promise<void>((resolve) => {
-    const timer = setTimeout(resolve, delay);
-    signal.addEventListener("abort", () => {
-      clearTimeout(timer);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      if (timer !== undefined) clearTimeout(timer);
+      signal.removeEventListener("abort", finish);
       resolve();
-    }, { once: true });
+    };
+    signal.addEventListener("abort", finish, { once: true });
+    if (signal.aborted) {
+      finish();
+      return;
+    }
+    timer = setTimeout(finish, delay);
   });
 }
 
@@ -448,7 +459,7 @@ async function* streamChatCompletion(
       );
       if (attempt < opts.maxProviderRetries) {
         yield { type: "retry", attempt: attempt + 1, error: info, timestamp: Date.now() };
-        await backoff(opts.retryDelayMs, attempt, undefined, signal);
+        await backoff(opts.retryDelayMs, attempt, undefined, effectiveSignal);
         continue;
       }
       yield { type: "error", error: info, timestamp: Date.now() };
@@ -493,7 +504,7 @@ async function* streamChatCompletion(
       const retryable = response.status === 429 || response.status >= 500;
       if (retryable && attempt < opts.maxProviderRetries) {
         yield { type: "retry", attempt: attempt + 1, error: info, timestamp: Date.now() };
-        await backoff(opts.retryDelayMs, attempt, retryAfterMs, signal);
+        await backoff(opts.retryDelayMs, attempt, retryAfterMs, effectiveSignal);
         continue;
       }
       yield { type: "error", error: info, timestamp: Date.now() };

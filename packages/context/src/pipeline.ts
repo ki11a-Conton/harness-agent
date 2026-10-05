@@ -14,7 +14,7 @@ import { performance } from "node:perf_hooks";
 import { BudgetPlannerImpl } from "./budget.js";
 import { MultiStageCompactor } from "./compaction.js";
 import type { CompactionCircuitBreaker } from "./circuit-breaker.js";
-import { buildRehydrationBlocks } from "./rehydration.js";
+import { buildRehydrationBlocks, DEFAULT_REHYDRATION_OPTIONS } from "./rehydration.js";
 import { HierarchicalInstructionDiscovery } from "./discovery.js";
 import { detectPromptInjection } from "@ar/security";
 import { DEFAULT_TOKEN_ESTIMATOR, type TokenEstimator } from "./tokenizer.js";
@@ -536,7 +536,16 @@ export class ContextPipeline {
     // pointers), never the full history. The rehydrated blocks keep the
     // digest's working-set visible without re-pasting the transcript.
     if (blocks.some((b) => b.id === "compaction-summary")) {
-      blocks = [...blocks, ...buildRehydrationBlocks(summary, {}, this.tokenEstimator)];
+      // Optional references must fit after the digest and the caller's
+      // effective reservations. The Runtime already reserves active users;
+      // full message-history accounting remains owned by its trimming path.
+      const compactedTokens = blocks.reduce((sum, block) => sum + block.tokens, 0);
+      const reserved = opts.budget.reserved;
+      const headroom = Math.max(0, opts.budget.maxTokens
+        - reserved.system - reserved.task - reserved.output - compactedTokens);
+      blocks = [...blocks, ...buildRehydrationBlocks(summary, {
+        maxTokens: Math.min(DEFAULT_REHYDRATION_OPTIONS.maxTokens, headroom),
+      }, this.tokenEstimator)];
     }
 
     // Report after compaction: `used` is recomputed over the final blocks and
