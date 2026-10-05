@@ -98,3 +98,13 @@ plan(20261004-022759).md whitespace=-blank-at-eof
 # Preserve original Web recheck receipts, including failed probes and logs.
 docs/evidence/web-recheck-20261004/raw/** -text
 docs/evidence/web-recheck-20261004/raw/**/*.log -whitespace
+
+# Keep original navigation CRLF and immutable efficiency-audit receipt bytes.
+packages/memory/src/retrieval.ts whitespace=cr-at-eol
+packages/tools/src/navigate.ts whitespace=cr-at-eol
+docs/evidence/agent-next-20261004/raw/** -text
+docs/evidence/agent-next-20261004/raw/**/*.log -whitespace
+docs/evidence/agent-next-20261004/raw/**/*.diff -whitespace
+scripts/research/agent-next-20261004/* text eol=lf
+scripts/research/agent-next-20261004/memory-reference-18f162b.mjs -text
+scripts/research/agent-next-20261004/memory-reference-18f162b.source.txt -text whitespace=cr-at-eol

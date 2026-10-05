@@ -354,7 +354,15 @@ async function* streamChatCompletion(
   // shape. `toOpenAiMessage` is 1:1, but the check does not rely on that: a
   // `tool` message without a `tool_call_id` becomes `{role:"tool"}` with no
   // correlation id on the wire, and the serialized check sees exactly that.
-  const wireMessages = request.messages.map(toOpenAiMessage);
+  // ModelRequest.system is assembled by the context pipeline separately from
+  // durable history. Preserve its exact bytes on every send, including retries,
+  // without rewriting history or splitting assistant/tool groups.
+  const wireMessages: OpenAiMessage[] = [
+    ...(request.system !== undefined && request.system.length > 0
+      ? [{ role: "system", content: request.system }]
+      : []),
+    ...request.messages.map(toOpenAiMessage),
+  ];
   const body: Record<string, unknown> = {
     model: opts.modelId,
     messages: wireMessages,

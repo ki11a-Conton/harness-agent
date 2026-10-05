@@ -226,21 +226,19 @@ export async function retrieveMemories(
 
   // Dedup/conflict: group by token similarity, keep the best item per topic.
   scored.sort((a, b) => b.score.total - a.score.total);
-  // Cache only within this retrieval. Keep every topic survivor even beyond
-  // TopK so later conflicts and their suppression order stay unchanged.
-  const kept: Array<{ item: RankedMemoryItem; tokens: Set<string> }> = [];
+  const kept: RankedMemoryItem[] = [];
   for (const item of scored) {
     const tokens = contentTokens(item.memory.content);
     const conflict = kept.find(
       (other) =>
-        tokenSimilarity(tokens, other.tokens) >= CONFLICT_SIMILARITY_THRESHOLD,
+        tokenSimilarity(tokens, contentTokens(other.memory.content)) >= CONFLICT_SIMILARITY_THRESHOLD,
     );
     if (conflict !== undefined) {
       suppressed.push({ memory: item.memory, reason: "conflict" });
       continue;
     }
-    kept.push({ item, tokens });
+    kept.push(item);
   }
 
-  return { items: kept.slice(0, k).map((keptItem) => keptItem.item), suppressed };
+  return { items: kept.slice(0, k), suppressed };
 }

@@ -50,26 +50,28 @@ export async function walkFiles(
   onFile: (abs: string, rel: string) => Promise<boolean | void>,
   onDir?: (dirs: string[], abs: string, rel: string) => void,
 ): Promise<void> {
-  if (rel === "") rel = "."; // path.relative returns "" for identical paths
-  let entries: Dirent[];
-  try {
-    entries = await fs.readdir(join(root, rel), { withFileTypes: true });
-  } catch {
-    return;
-  }
-  const dirs = entries.filter((e) => e.isDirectory());
-  if (onDir) onDir(entries.map((e) => e.name), join(root, rel), rel);
-  for (const e of entries) {
-    if (e.isDirectory()) {
-      if (SKIP_DIRS.has(e.name)) continue;
-      await walkFiles(root, rel === "." ? e.name : `${rel}/${e.name}`, onFile, onDir);
-    } else if (e.isFile()) {
-      const relFile = rel === "." ? e.name : `${rel}/${e.name}`;
-      const keep = await onFile(join(root, relFile), relFile);
-      if (keep === false) return;
+  // Keep the public void result; the private recursive result propagates a
+  // callback's stop through every ancestor, including later sibling subtrees.
+  async function visit(relDir: string): Promise<boolean> {
+    let entries: Dirent[];
+    try {
+      entries = await fs.readdir(join(root, relDir), { withFileTypes: true });
+    } catch {
+      return true; // an unreadable subtree does not stop its readable siblings
     }
+    if (onDir) onDir(entries.map((e) => e.name), join(root, relDir), relDir);
+    for (const e of entries) {
+      if (e.isDirectory()) {
+        if (SKIP_DIRS.has(e.name)) continue;
+        if (!(await visit(relDir === "." ? e.name : `${relDir}/${e.name}`))) return false;
+      } else if (e.isFile()) {
+        const relFile = relDir === "." ? e.name : `${relDir}/${e.name}`;
+        if ((await onFile(join(root, relFile), relFile)) === false) return false;
+      }
+    }
+    return true;
   }
-  void dirs;
+  await visit(rel === "" ? "." : rel);
 }
 
 export function grepFiles(input: GrepFilesInput): Promise<GrepHit[]> {
@@ -114,7 +116,8 @@ export function grepFiles(input: GrepFilesInput): Promise<GrepHit[]> {
           hits.push({ file: relFile, line: i + 1, column: m + 1, text: line.slice(0, MAX_LINE) });
         }
       }
-      return;
+      // Stop at the matching file itself, before reading another directory.
+      return hits.length < (input.maxHits ?? 200);
     });
     return hits;
   })();
@@ -219,36 +222,63 @@ export async function repoTree(input: RepoTreeInput): Promise<RepoTreeEntry[]> {
   const { root, relPath } = input;
   const start = resolve(root, relPath ?? ".");
   const base = resolve(root);
+  const startRel = normalizeSlashes(relative(base, start)) || ".";
   const maxDepth = input.depth ?? 6;
   const cap = input.maxEntries ?? 500;
   const out: RepoTreeEntry[] = [];
-  let count = 0;
+  if (cap <= 0 || depthOf(startRel) >= maxDepth) return out;
 
-  await walkFiles(
-    base,
-    relative(base, start),
-    async (abs, relFile) => {
-      if (count >= cap) return false;
-      const depth = depthOf(relFile);
-      if (depth > maxDepth) return true;
-      const stat = await fs.stat(abs).catch(() => null);
-      out.push({ path: relFile, type: stat?.isDirectory() ? "dir" : "file", depth });
-      count++;
-    },
-    () => {},
-  );
-  // walkFiles only reports files; add directories by scanning rel paths.
-  const dirSet = new Set<string>();
-  for (const e of out) {
-    const parts = e.path.split("/");
-    for (let i = 1; i < parts.length; i++) dirSet.add(parts.slice(0, i).join("/"));
+  // Preserve the old subpath output's ancestors, but verify real directories
+  // instead of synthesizing them from a filename. The trusted root itself may
+  // be a symlink; only user-selected descendants must not follow symlinks.
+  const ancestors: RepoTreeEntry[] = [];
+  if (startRel !== ".") {
+    const parts = startRel.split("/");
+    for (let i = 1; i <= parts.length; i += 1) {
+      const path = parts.slice(0, i).join("/");
+      const stat = await fs.lstat(join(base, path)).catch(() => null);
+      if (!stat?.isDirectory()) return out;
+      ancestors.push({ path, type: "dir", depth: depthOf(path) });
+    }
   }
-  for (const d of [...dirSet]) {
-    const depth = depthOf(d);
-    if (depth <= maxDepth) out.push({ path: d, type: "dir", depth });
+
+  function append(entry: RepoTreeEntry): boolean {
+    // An empty subtree still returns [] as before. Ancestors count toward the
+    // same cap as files and directories and are emitted only for real entries.
+    if (out.length === 0) {
+      for (const ancestor of ancestors) {
+        if (out.length >= cap) return false;
+        out.push(ancestor);
+      }
+    }
+    if (out.length >= cap) return false;
+    out.push(entry);
+    return out.length < cap;
   }
+
+  async function visit(relDir: string): Promise<boolean> {
+    let entries: Dirent[];
+    try {
+      entries = await fs.readdir(join(base, relDir), { withFileTypes: true });
+    } catch {
+      return true;
+    }
+    for (const entry of entries) {
+      if (!entry.isDirectory() && !entry.isFile()) continue;
+      if (entry.isDirectory() && SKIP_DIRS.has(entry.name)) continue;
+      const path = relDir === "." ? entry.name : `${relDir}/${entry.name}`;
+      const depth = depthOf(path);
+      if (depth > maxDepth) continue;
+      if (!append({ path, type: entry.isDirectory() ? "dir" : "file", depth })) return false;
+      // At the boundary the directory itself is visible, but its children
+      // cannot qualify, so never list them. A filled cap also stops globally.
+      if (entry.isDirectory() && depth < maxDepth && !(await visit(path))) return false;
+    }
+    return true;
+  }
+  await visit(startRel);
   out.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
-  return out.slice(0, cap);
+  return out;
 }
 
 function depthOf(rel: string): number {
