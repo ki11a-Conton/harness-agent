@@ -1,0 +1,560 @@
+import { mkdirSync } from "node:fs";
+import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
+import type { SQLInputValue } from "node:sqlite";
+import type {
+  MemoryEntry,
+  MemoryEvidence,
+  MemoryId,
+  MemoryScope,
+  MemoryState,
+  MemoryStore,
+  MemoryType,
+  MemoryUsefulness,
+} from "@ar/contracts";
+import { AgentError, errorInfo } from "@ar/contracts";
+import { checkUnsafeMemoryEntry, scanMemoryEntries } from "./security-gate.js";
+import { matchesMemoryQuery, memorySearchText } from "./search-text.js";
+import { recordUsefulness, type UsefulnessFeedback } from "./usefulness.js";
+
+/**
+ * P0-3: SQLite + WAL backend for the contracts MemoryStore (memories.db in
+ * dataDir, schema versioned via schema_migrations).
+ *
+ * - Single DatabaseSync connection (node:sqlite, synchronous API); every
+ *   mutation runs inside an explicit transaction, so concurrent callers
+ *   (even interleaved through Promise.all) serialize correctly and never
+ *   lose updates.
+ * - WAL journaling (PRAGMA journal_mode=WAL): readers never block writers
+ *   and a crash cannot leave a torn write; the store file survives.
+ * - remove() is a soft delete: the row stays, `deleted` flips to true and
+ *   updatedAt bumps, so memory stays reviewable and recoverable (§67) —
+ *   the same semantics as JsonlMemoryStore.
+ * - The security gate (injection/secret rejection) is shared with the
+ *   JSONL backend: identical behavior on every persistence path (§67).
+ * - FTS5 full-text ranking over content, supplemented by literal lexical
+ *   matches over content and persisted When/Do/Avoid strategy fields.
+ */
+export interface SqliteMemoryStoreOptions {
+  /** Directory holding memories.db; created on first open. */
+  dataDir: string;
+  /** Optional callback fired when a write/update is denied (injection or secret). */
+  onSecurityDenied?: (event: { detection: "injection" | "secret"; reasons: string[]; content: string; source: string }) => void;
+  /** Optional pre-opened database (used by tests); otherwise dataDir/memories.db. */
+  db?: DatabaseSync;
+}
+
+/** SQLite store file name (sibling to memories.jsonl). */
+export const MEMORY_DB_FILE_NAME = "memories.db";
+
+const SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS memories (
+  id TEXT PRIMARY KEY,
+  content TEXT NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('explicit','episodic','procedural')),
+  source_session TEXT NOT NULL,
+  scope TEXT NOT NULL DEFAULT 'session' CHECK (scope IN ('global','workspace','repository','agent','task-family','session')),
+  importance REAL NOT NULL DEFAULT 0,
+  confidence REAL NOT NULL DEFAULT 0,
+  novelty REAL NOT NULL DEFAULT 0,
+  stability REAL NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  deleted INTEGER NOT NULL DEFAULT 0,
+  evidence TEXT NOT NULL DEFAULT '{}',
+  usefulness TEXT NOT NULL DEFAULT '{}',
+  state TEXT,
+  metadata TEXT NOT NULL DEFAULT '{}'
+);
+CREATE INDEX IF NOT EXISTS idx_memories_deleted ON memories (deleted);
+CREATE INDEX IF NOT EXISTS idx_memories_type ON memories (type);
+CREATE INDEX IF NOT EXISTS idx_memories_scope ON memories (scope);
+CREATE VIRTUAL TABLE IF NOT EXISTS memories_fts USING fts5(
+  content, id UNINDEXED
+);
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  version INTEGER PRIMARY KEY,
+  applied_at INTEGER NOT NULL
+);
+`;
+
+/** Schema version 6: candidate provenance and structured lesson metadata. */
+export const MEMORY_SCHEMA_VERSION = 6;
+
+/** Migration for databases created before v2: add the scope column. */
+function ensureScopeColumn(db: DatabaseSync): void {
+  const cols = db.prepare("PRAGMA table_info(memories)").all() as Array<{ name: string }>;
+  if (!cols.some((c) => c.name === "scope")) {
+    db.exec("ALTER TABLE memories ADD COLUMN scope TEXT NOT NULL DEFAULT 'session' CHECK (scope IN ('global','workspace','repository','agent','task-family','session'));");
+  }
+}
+
+/** Migration for databases created before v3: add the evidence column (P2-2). */
+function ensureEvidenceColumn(db: DatabaseSync): void {
+  const cols = db.prepare("PRAGMA table_info(memories)").all() as Array<{ name: string }>;
+  if (!cols.some((c) => c.name === "evidence")) {
+    db.exec("ALTER TABLE memories ADD COLUMN evidence TEXT NOT NULL DEFAULT '{}';");
+  }
+}
+
+/** Migration for databases created before v4: add the usefulness column (P2-3). */
+function ensureUsefulnessColumn(db: DatabaseSync): void {
+  const cols = db.prepare("PRAGMA table_info(memories)").all() as Array<{ name: string }>;
+  if (!cols.some((c) => c.name === "usefulness")) {
+    db.exec("ALTER TABLE memories ADD COLUMN usefulness TEXT NOT NULL DEFAULT '{}';");
+  }
+}
+
+/** Migration for databases created before v5: add the state column (P2-4). */
+function ensureStateColumn(db: DatabaseSync): void {
+  const cols = db.prepare("PRAGMA table_info(memories)").all() as Array<{ name: string }>;
+  if (!cols.some((c) => c.name === "state")) {
+    db.exec("ALTER TABLE memories ADD COLUMN state TEXT;");
+  }
+}
+
+/** Migration for databases created before v6: preserve candidate metadata. */
+function ensureMetadataColumn(db: DatabaseSync): void {
+  const cols = db.prepare("PRAGMA table_info(memories)").all() as Array<{ name: string }>;
+  if (!cols.some((c) => c.name === "metadata")) {
+    db.exec("ALTER TABLE memories ADD COLUMN metadata TEXT NOT NULL DEFAULT '{}';");
+  }
+}
+
+const PERSISTED_COLUMNS = "id, content, type, source_session, scope, importance, confidence, novelty, stability, created_at, updated_at, deleted, evidence, usefulness, state, metadata";
+const INSERT_SQL = `INSERT INTO memories (${PERSISTED_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+const MIGRATION_INSERT_SQL = `INSERT OR IGNORE INTO memories (${PERSISTED_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+const METADATA_KEYS = ["sourceTurn", "structured", "derivability", "promotionState", "securityScan", "pollutionSources"] as const;
+type CandidateMetadata = Pick<MemoryEntry, typeof METADATA_KEYS[number]>;
+
+/** The same serialization is used by writes, updates, and JSONL migration. */
+function persistenceValues(entry: MemoryEntry): SQLInputValue[] {
+  const metadata: CandidateMetadata = {};
+  for (const key of METADATA_KEYS) {
+    if (entry[key] !== undefined) Object.assign(metadata, { [key]: entry[key] });
+  }
+  return [entry.id, entry.content, entry.type, entry.sourceSession, entry.scope,
+    entry.importance, entry.confidence, entry.novelty, entry.stability,
+    entry.createdAt, entry.updatedAt, entry.deleted ? 1 : 0,
+    entry.evidence !== undefined ? JSON.stringify(entry.evidence) : "{}",
+    entry.usefulness !== undefined ? JSON.stringify(entry.usefulness) : "{}",
+    entry.state !== undefined ? JSON.stringify(entry.state) : null,
+    JSON.stringify(metadata)];
+}
+
+function ensureSchemaVersion(db: DatabaseSync): void {
+  const row = db.prepare("SELECT MAX(version) AS v FROM schema_migrations").get() as { v: number | null };
+  const applied = (row.v ?? 0);
+  if (applied < 1) {
+    db.prepare("INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (?, ?)").run(1, Date.now());
+  }
+  if (applied < MEMORY_SCHEMA_VERSION) {
+    db.prepare("INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (?, ?)").run(MEMORY_SCHEMA_VERSION, Date.now());
+  }
+}
+
+export class SqliteMemoryStore implements MemoryStore {
+  private readonly db: DatabaseSync;
+  private readonly onSecurityDenied?: SqliteMemoryStoreOptions["onSecurityDenied"];
+  private closed = false;
+
+  constructor(opts: SqliteMemoryStoreOptions) {
+    this.onSecurityDenied = opts.onSecurityDenied;
+    if (opts.db !== undefined) {
+      this.db = opts.db;
+    } else {
+      mkdirSync(opts.dataDir, { recursive: true });
+      this.db = new DatabaseSync(join(opts.dataDir, MEMORY_DB_FILE_NAME));
+    }
+    this.db.exec("PRAGMA journal_mode = WAL;");
+    this.db.exec("PRAGMA foreign_keys = ON;");
+    this.db.exec(SCHEMA_SQL);
+    ensureScopeColumn(this.db);
+    ensureEvidenceColumn(this.db);
+    ensureUsefulnessColumn(this.db);
+    ensureStateColumn(this.db);
+    ensureMetadataColumn(this.db);
+    ensureSchemaVersion(this.db);
+  }
+
+  get database(): DatabaseSync {
+    return this.db;
+  }
+
+  close(): void {
+    if (this.closed) return;
+    this.closed = true;
+    this.db.close();
+  }
+
+  /** Task B: scan all persisted entries for injection and secrets. */
+  async scanForSecrets(): Promise<Array<{ entry: MemoryEntry; issues: { detection: "injection" | "secret"; reasons: string[] }[] }>> {
+    return scanMemoryEntries(await this.list({ deleted: true }));
+  }
+
+  private static unknownMemory(id: MemoryId, op: string): AgentError {
+    return new AgentError(
+      errorInfo("INTERNAL_ERROR", `cannot ${op} unknown memory ${id}`),
+    );
+  }
+
+  private rejectUnsafe(entry: MemoryEntry): void {
+    const reason = checkUnsafeMemoryEntry(entry, "sqlite-memory-store");
+    if (reason !== null) {
+      this.onSecurityDenied?.(reason.event);
+      throw new AgentError(errorInfo("SECURITY_DENIED", `memory write blocked: ${reason.message}`));
+    }
+  }
+
+  /** Upsert: replaces the row with the same id, otherwise inserts. */
+  async write(entry: MemoryEntry): Promise<void> {
+    this.rejectUnsafe(entry);
+    this.db.exec("BEGIN IMMEDIATE;");
+    try {
+      const existing = this.db.prepare("SELECT id FROM memories WHERE id = ?").get(entry.id);
+      const values = persistenceValues(entry);
+      if (existing !== undefined) {
+        this.db.prepare(
+          "UPDATE memories SET content = ?, type = ?, source_session = ?, scope = ?, importance = ?, confidence = ?, novelty = ?, stability = ?, updated_at = ?, deleted = ?, evidence = ?, usefulness = ?, state = ?, metadata = ? WHERE id = ?",
+        ).run(...values.slice(1, 9), ...values.slice(10), entry.id);
+        this.db.prepare("DELETE FROM memories_fts WHERE id = ?").run(entry.id);
+      } else {
+        this.db.prepare(INSERT_SQL).run(...values);
+      }
+      this.db.prepare("INSERT INTO memories_fts (content, id) VALUES (?, ?)").run(entry.content, entry.id);
+      this.db.exec("COMMIT;");
+    } catch (cause) {
+      this.db.exec("ROLLBACK;");
+      throw new AgentError(
+        errorInfo("INTERNAL_ERROR", `memory write failed: ${entry.id}`, { cause }),
+      );
+    }
+  }
+
+  async get(id: MemoryId): Promise<MemoryEntry | undefined> {
+    const row = this.db.prepare("SELECT * FROM memories WHERE id = ?").get(id) as SqliteRow | undefined;
+    return row === undefined ? undefined : rowToEntry(row);
+  }
+
+  /**
+   * Preserve FTS5-ranked content hits, then add literal content/strategy
+   * matches the tokenizer omits (including Chinese and mixed substrings).
+   * The supplement scans only live rows passing the requested filters.
+   * `opts.scope` filters by exact scope (hierarchy expansion is done by the
+   * retrieval layer, P0-4).
+   */
+  async search(query: string, opts?: { type?: MemoryType; scope?: MemoryScope }): Promise<MemoryEntry[]> {
+    const q = query.trim();
+    if (q === "") return [];
+    const params: SQLInputValue[] = [];
+    let where = "m.deleted = 0";
+    if (opts?.type !== undefined) {
+      where += " AND m.type = ?";
+      params.push(opts.type);
+    }
+    if (opts?.scope !== undefined) {
+      where += " AND m.scope = ?";
+      params.push(opts.scope);
+    }
+    let rows: SqliteRow[] = [];
+    try {
+      const ftsQuery = q.split(/\s+/).filter((t) => t !== "").map((t) => `"${t.replace(/"/g, "")}"`).join(" OR ");
+      if (ftsQuery === "") throw new Error("empty fts query");
+      rows = this.db.prepare(
+        `SELECT m.*, bm25(memories_fts) AS score FROM memories_fts f JOIN memories m ON m.id = f.id WHERE memories_fts MATCH ? AND ${where} ORDER BY score`,
+      ).all(ftsQuery, ...params) as unknown as SqliteRow[];
+    } catch {
+      process.stderr.write("[degraded] memory.search: FTS unavailable or query rejected; using literal search\n");
+    }
+    const hits: MemoryEntry[] = [];
+    const seen = new Set<string>();
+    for (const row of rows) {
+      if (seen.has(row.id)) continue;
+      seen.add(row.id);
+      hits.push(rowToEntry(row));
+    }
+    // Run even when FTS found hits: one exact Chinese token does not imply
+    // that longer Chinese words containing the same substring were indexed.
+    const supplementalRows = this.db.prepare(
+      `SELECT m.* FROM memories m WHERE ${where} ORDER BY m.rowid`,
+    ).all(...params) as unknown as SqliteRow[];
+    for (const row of supplementalRows) {
+      if (seen.has(row.id)) continue;
+      const memory = rowToEntry(row);
+      if (!matchesMemoryQuery(q, memorySearchText(memory))) continue;
+      seen.add(row.id);
+      hits.push(memory);
+    }
+    return hits;
+  }
+
+  /** List all rows; soft-deleted rows are hidden unless opts.deleted is true. */
+  async list(opts?: { deleted?: boolean; scope?: MemoryScope }): Promise<MemoryEntry[]> {
+    const where: string[] = [];
+    const params: SQLInputValue[] = [];
+    if (opts?.deleted === undefined || opts.deleted === false) {
+      where.push("deleted = 0");
+    }
+    if (opts?.scope !== undefined) {
+      where.push("scope = ?");
+      params.push(opts.scope);
+    }
+    const rows = this.db.prepare(
+      `SELECT * FROM memories${where.length > 0 ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY updated_at DESC`,
+    ).all(...params) as unknown as SqliteRow[];
+    return rows.map(rowToEntry);
+  }
+
+  /** Atomically apply feedback to the latest live row. Updating only the
+   * usefulness column preserves edits, lifecycle and the full-text index. */
+  async recordUsefulnessFeedback(id: MemoryId, feedback: UsefulnessFeedback): Promise<boolean> {
+    this.db.exec("BEGIN IMMEDIATE;");
+    try {
+      const row = this.db.prepare("SELECT * FROM memories WHERE id = ?").get(id) as SqliteRow | undefined;
+      if (row === undefined || row.deleted === 1) {
+        this.db.exec("COMMIT;");
+        return false;
+      }
+      const next = recordUsefulness(rowToEntry(row), feedback);
+      this.rejectUnsafe(next);
+      this.db.prepare("UPDATE memories SET usefulness = ? WHERE id = ?").run(JSON.stringify(next.usefulness), id);
+      this.db.exec("COMMIT;");
+      return true;
+    } catch (cause) {
+      this.db.exec("ROLLBACK;");
+      throw cause;
+    }
+  }
+
+  /** Replaces an existing entry; unknown id fails explicitly. */
+  async update(entry: MemoryEntry): Promise<void> {
+    const existing = this.db.prepare("SELECT id FROM memories WHERE id = ?").get(entry.id);
+    if (existing === undefined) {
+      throw SqliteMemoryStore.unknownMemory(entry.id, "update");
+    }
+    await this.write(entry);
+  }
+
+  /** Soft delete: row stays, `deleted` flips to true, updatedAt bumps. */
+  async remove(id: MemoryId): Promise<void> {
+    const existing = this.db.prepare("SELECT id FROM memories WHERE id = ?").get(id);
+    if (existing === undefined) {
+      throw SqliteMemoryStore.unknownMemory(id, "remove");
+    }
+    this.db.prepare("UPDATE memories SET deleted = 1, updated_at = ? WHERE id = ?").run(Date.now(), id);
+  }
+}
+
+interface SqliteRow {
+  id: string;
+  content: string;
+  type: MemoryType;
+  source_session: string;
+  scope: MemoryScope;
+  importance: number;
+  confidence: number;
+  novelty: number;
+  stability: number;
+  created_at: number;
+  updated_at: number;
+  deleted: number;
+  evidence?: string;
+  usefulness?: string;
+  state?: string | null;
+  metadata?: string;
+  score?: number;
+}
+
+/** Parse the evidence JSON column; corrupt/legacy/empty rows degrade to undefined. */
+function evidenceOf(row: SqliteRow): MemoryEvidence | undefined {
+  if (row.evidence === undefined || row.evidence === "" || row.evidence === "{}") {
+    return undefined;
+  }
+  try {
+    const parsed = JSON.parse(row.evidence) as unknown;
+    if (parsed !== null && typeof parsed === "object") return parsed as MemoryEvidence;
+    return undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Parse the usefulness JSON column; corrupt/legacy/empty rows degrade to undefined. */
+function usefulnessOf(row: SqliteRow): MemoryUsefulness | undefined {
+  if (row.usefulness === undefined || row.usefulness === "" || row.usefulness === "{}") {
+    return undefined;
+  }
+  try {
+    const parsed = JSON.parse(row.usefulness) as unknown;
+    if (parsed !== null && typeof parsed === "object") return parsed as MemoryUsefulness;
+    return undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function isState(value: unknown): value is MemoryState {
+  if (!isRecord(value)) return false;
+  if (value.kind === "active") return true;
+  if (!isFiniteNumber(value.at)) return false;
+  switch (value.kind) {
+    case "superseded": return typeof value.byId === "string" && (value.reason === undefined || typeof value.reason === "string");
+    case "deprecated": return value.reason === undefined || typeof value.reason === "string";
+    case "conflicting": return typeof value.withId === "string";
+    case "stale": return true;
+    default: return false;
+  }
+}
+
+function staleState(row: SqliteRow): MemoryState {
+  return { kind: "stale", at: isFiniteNumber(row.updated_at) ? row.updated_at : 0 };
+}
+
+/** Legacy absence means active; malformed state must never revive a row. */
+function stateOf(row: SqliteRow): MemoryState | undefined {
+  if (row.state === undefined || row.state === null || row.state === "" || row.state === "null") return undefined;
+  try {
+    const parsed: unknown = JSON.parse(row.state);
+    return isState(parsed) ? parsed : staleState(row);
+  } catch {
+    return staleState(row);
+  }
+}
+
+function isMetadataValue(key: typeof METADATA_KEYS[number], value: unknown): boolean {
+  switch (key) {
+    case "sourceTurn": return typeof value === "string";
+    case "pollutionSources": return isStringArray(value);
+    case "promotionState": return value === "pending" || value === "quarantined" || value === "rejected" || value === "promoted";
+    case "derivability": return isRecord(value) && (value.verdict === "derivable" || value.verdict === "non-derivable") && typeof value.reason === "string";
+    case "securityScan": return isRecord(value) && typeof value.checked === "boolean" && typeof value.passed === "boolean" && isFiniteNumber(value.at);
+    case "structured": return isRecord(value) && ["when", "do", "avoid", "rootCause", "outcome"].every((field) => typeof value[field] === "string")
+      && (value.failedStrategy === undefined || typeof value.failedStrategy === "string") && isStringArray(value.evidenceRefs);
+  }
+}
+
+/** Only the six candidate fields are read; metadata cannot replace core columns. */
+function metadataOf(row: SqliteRow): { value: CandidateMetadata; corrupt: boolean } {
+  if (row.metadata === undefined) return { value: {}, corrupt: false };
+  try {
+    const parsed: unknown = JSON.parse(row.metadata);
+    if (!isRecord(parsed)) return { value: {}, corrupt: true };
+    const value: CandidateMetadata = {};
+    for (const key of METADATA_KEYS) {
+      if (!Object.hasOwn(parsed, key)) continue;
+      if (!isMetadataValue(key, parsed[key])) return { value: {}, corrupt: true };
+      Object.assign(value, { [key]: parsed[key] });
+    }
+    return { value, corrupt: false };
+  } catch {
+    return { value: {}, corrupt: true };
+  }
+}
+
+function rowToEntry(row: SqliteRow): MemoryEntry {
+  const evidence = evidenceOf(row);
+  const usefulness = usefulnessOf(row);
+  const metadata = metadataOf(row);
+  const originalState = stateOf(row);
+  // Keep valid retirement history. Corrupt metadata with otherwise active state
+  // remains reviewable, but retrieval observes the conservative stale marker.
+  const state = metadata.corrupt && (originalState === undefined || originalState.kind === "active") ? staleState(row) : originalState;
+  return {
+    id: row.id,
+    content: row.content,
+    type: row.type,
+    sourceSession: row.source_session,
+    scope: row.scope,
+    importance: row.importance,
+    confidence: row.confidence,
+    novelty: row.novelty,
+    stability: row.stability,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    deleted: row.deleted === 1,
+    ...(evidence !== undefined ? { evidence } : {}),
+    ...(usefulness !== undefined ? { usefulness } : {}),
+    ...(state !== undefined ? { state } : {}),
+    ...metadata.value,
+  } as MemoryEntry;
+}
+
+/**
+ * Migrate an existing memories.jsonl into the SQLite store.
+ *
+ * - Idempotent: entries already present in the DB are skipped (same id),
+ *   so a retry after an interrupted run does not duplicate or lose data.
+ * - Crash-safe: all inserts run inside a single transaction.
+ * - Non-destructive: the JSONL file is never deleted or modified; the
+ *   caller decides when to remove it (and when a backup is safe).
+ * - Dry-run: with dryRun=true no transaction is opened and nothing is
+ *   written; the returned count is what would be inserted.
+ * - Entries that fail the security gate (injection/secret) are reported
+ *   and skipped, never silently written.
+ */
+export interface MigrateResult {
+  /** Entries read from the JSONL file. */
+  total: number;
+  /** Entries inserted into SQLite (skipped ones were already present). */
+  inserted: number;
+  /** Entries skipped because they were already in the DB (idempotency). */
+  skipped: number;
+  /** Entries rejected by the security gate. */
+  denied: Array<{ id: string; detection: "injection" | "secret"; reasons: string[] }>;
+}
+
+export async function migrateJsonlToSqlite(
+  store: SqliteMemoryStore,
+  entries: MemoryEntry[],
+  opts?: { dryRun?: boolean },
+): Promise<MigrateResult> {
+  const result: MigrateResult = { total: entries.length, inserted: 0, skipped: 0, denied: [] };
+  if (entries.length === 0) return result;
+
+  const insert = store.database.prepare(MIGRATION_INSERT_SQL);
+  const index = store.database.prepare("INSERT OR IGNORE INTO memories_fts (content, id) VALUES (?, ?)");
+  const dryRun = opts?.dryRun === true;
+
+  if (!dryRun) store.database.exec("BEGIN IMMEDIATE;");
+  try {
+    for (const entry of entries) {
+      const reason = checkUnsafeMemoryEntry(entry, "sqlite-memory-store");
+      if (reason !== null) {
+        result.denied.push({ id: entry.id, detection: reason.event.detection, reasons: reason.event.reasons });
+        continue;
+      }
+      if (!dryRun) {
+        const r = insert.run(...persistenceValues(entry));
+        if (r.changes === 1) {
+          index.run(entry.content, entry.id);
+          result.inserted += 1;
+        } else {
+          result.skipped += 1;
+        }
+      } else {
+        const existing = store.database.prepare("SELECT id FROM memories WHERE id = ?").get(entry.id);
+        if (existing === undefined) result.inserted += 1;
+        else result.skipped += 1;
+      }
+    }
+    if (!dryRun) store.database.exec("COMMIT;");
+  } catch (cause) {
+    if (!dryRun) store.database.exec("ROLLBACK;");
+    throw new AgentError(
+      errorInfo("INTERNAL_ERROR", "memory migration failed", { cause }),
+    );
+  }
+  return result;
+}

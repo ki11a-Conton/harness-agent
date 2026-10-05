@@ -1,0 +1,46 @@
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+ ✓ packages/memory/src/query-preparation.regressions.test.ts (45 tests) 209ms
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+ ✓ packages/harness/src/memory-feedback-atomic.regressions.test.ts (14 tests) 245ms
+ ✓ packages/memory/src/usefulness-atomic.regressions.test.ts (27 tests) 172ms
+[degraded] memory-store.corrupt-line: Expected property name or '}' in JSON at position 1 (line 1 column 2)
+[degraded] memory-store.corrupt-line: Expected property name or '}' in JSON at position 1 (line 1 column 2)
+ ✓ packages/memory/src/memory-store.test.ts (25 tests) 147ms
+[degraded] memory.search: FTS unavailable or query rejected; using literal search
+ ✓ packages/memory/src/memory-search-contract.regressions.test.ts (43 tests) 107ms
+[degraded] memory.search: FTS unavailable or query rejected; using literal search
+ ✓ packages/memory/src/sqlite-memory-store.test.ts (31 tests) 89ms
+ ✓ packages/memory/src/sqlite-memory-metadata.regressions.test.ts (29 tests) 82ms
+ ✓ packages/memory/src/memory-visibility.regressions.test.ts (28 tests) 62ms
+ ✓ packages/memory/src/retrieval.test.ts (19 tests) 57ms
+ ✓ packages/memory/src/migration.test.ts (7 tests) 40ms
+ ✓ packages/memory/src/retrieval-work.regressions.test.ts (29 tests) 26ms
+ ✓ packages/memory/src/write-gate.test.ts (15 tests) 11ms
+ ✓ packages/memory/src/reflection.test.ts (19 tests) 13ms
+ ✓ packages/memory/src/lifecycle.test.ts (8 tests) 6ms
+ ✓ packages/memory/src/derivability.test.ts (4 tests) 5ms
+ ✓ packages/memory/src/evidence.test.ts (6 tests) 4ms
+ ✓ packages/memory/src/usefulness.test.ts (5 tests) 7ms
+
+ Test Files  17 passed (17)
+      Tests  354 passed (354)
+   Start at  14:08:24
+   Duration  6.23s (transform 1.76s, setup 0ms, import 2.98s, tests 1.28s, environment 1ms)
+

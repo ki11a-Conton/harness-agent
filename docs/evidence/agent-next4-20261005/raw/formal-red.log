@@ -1,0 +1,66 @@
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+ ❯ packages/memory/src/query-preparation.regressions.test.ts (45 tests | 2 failed) 213ms
+   ✓ preserves the public single-match wrapper for all frozen lexical combinations 7ms
+     × lowers and tokenizes an invariant miss query at most once per search 36ms
+     ✓ preserves complete objects and order for query "" 7ms
+     ✓ preserves complete objects and order for query " \t\n " 5ms
+     ✓ preserves complete objects and order for query "ALPHA" 6ms
+     ✓ preserves complete objects and order for query "alpha beta" 5ms
+     ✓ preserves complete objects and order for query "beta alpha" 8ms
+     ✓ preserves complete objects and order for query "alpha alpha" 6ms
+     ✓ preserves complete objects and order for query "端口" 7ms
+     ✓ preserves complete objects and order for query "端口 alpha" 5ms
+     ✓ preserves complete objects and order for query "%" 7ms
+     ✓ preserves complete objects and order for query "_" 7ms
+     ✓ preserves complete objects and order for query "\"" 5ms
+     ✓ preserves complete objects and order for query "ÉTÉ" 5ms
+     ✓ preserves complete objects and order for query " absent " 5ms
+     ✓ preserves complete objects and order for query "  alpha beta  " 5ms
+     ✓ preserves complete objects and order for query "Do:" 5ms
+     ✓ preserves deleted/type/scope filters {"type":"procedural"} 3ms
+     ✓ preserves deleted/type/scope filters {"scope":"workspace"} 3ms
+     ✓ preserves deleted/type/scope filters {"type":"explicit","scope":"session"} 3ms
+     ✓ does not cache queries or content across subsequent searches and edits 5ms
+     ✓ keeps provenance metadata out of searchable strategy text 2ms
+     ✓ preserves literal fallback when FTS is unavailable 1ms
+     × lowers and tokenizes an invariant miss query at most once per search 9ms
+     ✓ preserves complete objects and order for query "" 3ms
+     ✓ preserves complete objects and order for query " \t\n " 2ms
+     ✓ preserves complete objects and order for query "ALPHA" 3ms
+     ✓ preserves complete objects and order for query "alpha beta" 3ms
+     ✓ preserves complete objects and order for query "beta alpha" 3ms
+     ✓ preserves complete objects and order for query "alpha alpha" 3ms
+     ✓ preserves complete objects and order for query "端口" 3ms
+     ✓ preserves complete objects and order for query "端口 alpha" 3ms
+     ✓ preserves complete objects and order for query "%" 2ms
+     ✓ preserves complete objects and order for query "_" 2ms
+     ✓ preserves complete objects and order for query "\"" 2ms
+     ✓ preserves complete objects and order for query "ÉTÉ" 3ms
+     ✓ preserves complete objects and order for query " absent " 3ms
+     ✓ preserves complete objects and order for query "  alpha beta  " 3ms
+     ✓ preserves complete objects and order for query "Do:" 2ms
+     ✓ preserves deleted/type/scope filters {"type":"procedural"} 2ms
+     ✓ preserves deleted/type/scope filters {"scope":"workspace"} 2ms
+     ✓ preserves deleted/type/scope filters {"type":"explicit","scope":"session"} 2ms
+     ✓ does not cache queries or content across subsequent searches and edits 2ms
+     ✓ keeps provenance metadata out of searchable strategy text 2ms
+     ✓ preserves literal fallback when FTS is unavailable 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/memory/src/query-preparation.regressions.test.ts > jsonl request-local query preparation > lowers and tokenizes an invariant miss query at most once per search
+ FAIL  packages/memory/src/query-preparation.regressions.test.ts > sqlite request-local query preparation > lowers and tokenizes an invariant miss query at most once per search
+AssertionError: expected 32 to be less than or equal to 1
+ ❯ packages/memory/src/query-preparation.regressions.test.ts:52:50
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 43 passed (45)
+   Start at  14:07:23
+   Duration  674ms (transform 261ms, setup 0ms, import 333ms, tests 213ms, environment 0ms)
+

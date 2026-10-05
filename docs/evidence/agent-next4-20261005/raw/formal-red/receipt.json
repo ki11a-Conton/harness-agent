@@ -1,0 +1,25 @@
+{
+  "status": "EXPECTED_RED",
+  "sourceSha": "0ea66697b4dd224a7d057c4aca7aa021fbd87740",
+  "passed": 43,
+  "failed": 2,
+  "total": 45,
+  "snapshots": [
+    {
+      "path": "packages/memory/src/search-text.ts",
+      "sha256": "e569e7f418e3edf87fba7fd2e9c1a1bdf7511d78ea85abcecd863def5c201fd0"
+    },
+    {
+      "path": "packages/memory/src/memory-store.ts",
+      "sha256": "04e14e9568f3ccda75b8e51863381bddc738017ff1e02fc4017c8c74ff534e91"
+    },
+    {
+      "path": "packages/memory/src/sqlite-memory-store.ts",
+      "sha256": "64837373f1ca4e85abf938f1851eb25c4c709890cc61e61efa511d95a1fb0d9c"
+    },
+    {
+      "path": "packages/memory/src/query-preparation.regressions.test.ts",
+      "sha256": "57ee576663d32b92dd006a58d93bb587886d1ad1185f58b03c4e71ada1e1d267"
+    }
+  ]
+}

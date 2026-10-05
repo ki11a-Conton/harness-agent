@@ -1,0 +1,10 @@
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+production usage audit (exported < tested < wired < observed):
+  PASS  createActivationRecorderV2   [tested,wired,observed]  level=observed
+  PASS  classifySecurityOutcomeV2    [tested,wired,observed]  level=observed
+  PASS  canonical V3 writer          [tested,wired,observed]  level=observed
+  PASS  strict promotion loader      [tested,wired,observed]  level=observed
+  PASS  resolveChampionHarness       [tested,wired,observed]  level=observed
+  PASS  durable RecoveryStore        [tested,wired,observed]  level=observed
+  PASS  GateEvidenceV2 generator     [tested,wired,observed]  level=observed
+usage audit: PASS (all key capabilities observed)

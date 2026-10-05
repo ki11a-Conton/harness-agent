@@ -1,0 +1,15 @@
+{
+  "status": "STATIC_SELF_REVIEW_PASS_RUNTIME_PENDING",
+  "baselineSha": "7dce382bf4e8a670d5995c4be879769f991cca44",
+  "testedSourceSha": "e40895c21ae6770e729ac6745a7c59fe291f382c",
+  "productionPaths": [
+    "packages/memory/src/memory-store.ts",
+    "packages/memory/src/search-text.ts",
+    "packages/memory/src/sqlite-memory-store.ts"
+  ],
+  "protectedUnchangedGitPaths": 627,
+  "ftsConstructionSqlAndDegradedFallbackExact": true,
+  "newRegressionBytesEqualFormalRed": true,
+  "queryMatcherIsRequestLocalNotGlobalCache": true,
+  "benchmarkBoundary": "Only redundant invariant query analysis is optimized; row I/O, hydration/content analysis remain linear. No model quality claim."
+}

@@ -1,0 +1,213 @@
+{
+  "schemaVersion": "memory-query-work-v1",
+  "sourceSha": "0ea66697b4dd224a7d057c4aca7aa021fbd87740",
+  "sourceTrackedDirtyAtStart": true,
+  "sourceFingerprintsBefore": {
+    "packages/memory/src/search-text.ts": "4037a35f0b7a4f10b0c6efa3350d65b2297750dce16f9a36a4f74daadc240bdb",
+    "packages/memory/src/memory-store.ts": "0c5f159e34ce597cd2d63bfd59d8e1075bcd86d36ab31663e082a6db7e0053fd",
+    "packages/memory/src/sqlite-memory-store.ts": "452aa81f84a3d2ce452cca059dd92b97da8a83471c9e69afc3215073904ff9f9",
+    "packages/memory/dist/search-text.js": "8fd3cb1ea8c4876be90d54d1b6ab8c359014674e0e0d49b8147594e9592a08f4",
+    "packages/memory/dist/memory-store.js": "dc9255b955a4768e7eaced1677064c6283cfa5cbb7efdbbf8f695a1e5a6e3614",
+    "packages/memory/dist/sqlite-memory-store.js": "6547993c03aded2a2f02197685ab7f5be31393fd4dfe7c1b2f1118fd7b31d38f",
+    "scripts/research/agent-next4-20261005/query-work-probe.mjs": "59c6b6259c48848a3420821adc3586c62e892ad885dd9f17ffb2813ab2974e8b"
+  },
+  "paidProviderCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "windows": "NOT_RUN",
+  "cases": [
+    {
+      "name": "jsonl-1500-row-query-work",
+      "status": "PASS",
+      "observed": {
+        "rows": 1500,
+        "queryCharacters": 2577,
+        "hits": 0,
+        "queryLowerCalls": 1,
+        "lexicalTokenizationCalls": 1,
+        "ftsTokenizationCalls": 0,
+        "elapsedMs": 4.98098499999999
+      }
+    },
+    {
+      "name": "jsonl-multiword-full-old-result",
+      "status": "PASS",
+      "observed": {
+        "query": "beta alpha",
+        "ids": [
+          "jsonl-sample-a",
+          "jsonl-sample-b"
+        ],
+        "completeObjectsAndOrderEqual": true
+      }
+    },
+    {
+      "name": "jsonl-unicode-full-old-result",
+      "status": "PASS",
+      "observed": {
+        "query": "端口",
+        "ids": [
+          "jsonl-sample-a",
+          "jsonl-sample-c"
+        ],
+        "completeObjectsAndOrderEqual": true
+      }
+    },
+    {
+      "name": "jsonl-strategy-full-old-result",
+      "status": "PASS",
+      "observed": {
+        "query": "portlint",
+        "ids": [
+          "jsonl-sample-c"
+        ],
+        "completeObjectsAndOrderEqual": true
+      }
+    },
+    {
+      "name": "jsonl-punctuation-full-old-result",
+      "status": "PASS",
+      "observed": {
+        "query": "%",
+        "ids": [],
+        "completeObjectsAndOrderEqual": true
+      }
+    },
+    {
+      "name": "jsonl-outer-space-full-old-result",
+      "status": "PASS",
+      "observed": {
+        "query": "  ALPHA beta  ",
+        "ids": [
+          "jsonl-sample-a",
+          "jsonl-sample-b"
+        ],
+        "completeObjectsAndOrderEqual": true
+      }
+    },
+    {
+      "name": "jsonl-metadata-full-old-result",
+      "status": "PASS",
+      "observed": {
+        "query": "metadata-only",
+        "ids": [],
+        "completeObjectsAndOrderEqual": true
+      }
+    },
+    {
+      "name": "jsonl-fresh-call-after-update-delete",
+      "status": "PASS",
+      "observed": {
+        "updatedAndDeleted": true,
+        "noCrossCallCache": true
+      }
+    },
+    {
+      "name": "sqlite-1500-row-query-work",
+      "status": "PASS",
+      "observed": {
+        "rows": 1500,
+        "queryCharacters": 2577,
+        "hits": 0,
+        "queryLowerCalls": 1,
+        "lexicalTokenizationCalls": 1,
+        "ftsTokenizationCalls": 1,
+        "elapsedMs": 14.86716100000001
+      }
+    },
+    {
+      "name": "sqlite-multiword-full-old-result",
+      "status": "PASS",
+      "observed": {
+        "query": "beta alpha",
+        "ids": [
+          "sqlite-sample-a",
+          "sqlite-sample-b"
+        ],
+        "completeObjectsAndOrderEqual": true
+      }
+    },
+    {
+      "name": "sqlite-unicode-full-old-result",
+      "status": "PASS",
+      "observed": {
+        "query": "端口",
+        "ids": [
+          "sqlite-sample-a",
+          "sqlite-sample-c"
+        ],
+        "completeObjectsAndOrderEqual": true
+      }
+    },
+    {
+      "name": "sqlite-strategy-full-old-result",
+      "status": "PASS",
+      "observed": {
+        "query": "portlint",
+        "ids": [
+          "sqlite-sample-c"
+        ],
+        "completeObjectsAndOrderEqual": true
+      }
+    },
+    {
+      "name": "sqlite-punctuation-full-old-result",
+      "status": "PASS",
+      "observed": {
+        "query": "%",
+        "ids": [],
+        "completeObjectsAndOrderEqual": true
+      }
+    },
+    {
+      "name": "sqlite-outer-space-full-old-result",
+      "status": "PASS",
+      "observed": {
+        "query": "  ALPHA beta  ",
+        "ids": [
+          "sqlite-sample-a",
+          "sqlite-sample-b"
+        ],
+        "completeObjectsAndOrderEqual": true
+      }
+    },
+    {
+      "name": "sqlite-metadata-full-old-result",
+      "status": "PASS",
+      "observed": {
+        "query": "metadata-only",
+        "ids": [],
+        "completeObjectsAndOrderEqual": true
+      }
+    },
+    {
+      "name": "sqlite-fresh-call-after-update-delete",
+      "status": "PASS",
+      "observed": {
+        "updatedAndDeleted": true,
+        "noCrossCallCache": true
+      }
+    },
+    {
+      "name": "sqlite-fts-fallback-full-old-result",
+      "status": "PASS",
+      "observed": {
+        "ids": [
+          "sqlite-sample-c"
+        ],
+        "completeObjectsAndOrderEqual": true
+      }
+    }
+  ],
+  "sourceShaAtEnd": "0ea66697b4dd224a7d057c4aca7aa021fbd87740",
+  "sourceTrackedDirtyAtEnd": true,
+  "sourceFingerprintsAfter": {
+    "packages/memory/src/search-text.ts": "4037a35f0b7a4f10b0c6efa3350d65b2297750dce16f9a36a4f74daadc240bdb",
+    "packages/memory/src/memory-store.ts": "0c5f159e34ce597cd2d63bfd59d8e1075bcd86d36ab31663e082a6db7e0053fd",
+    "packages/memory/src/sqlite-memory-store.ts": "452aa81f84a3d2ce452cca059dd92b97da8a83471c9e69afc3215073904ff9f9",
+    "packages/memory/dist/search-text.js": "8fd3cb1ea8c4876be90d54d1b6ab8c359014674e0e0d49b8147594e9592a08f4",
+    "packages/memory/dist/memory-store.js": "dc9255b955a4768e7eaced1677064c6283cfa5cbb7efdbbf8f695a1e5a6e3614",
+    "packages/memory/dist/sqlite-memory-store.js": "6547993c03aded2a2f02197685ab7f5be31393fd4dfe7c1b2f1118fd7b31d38f",
+    "scripts/research/agent-next4-20261005/query-work-probe.mjs": "59c6b6259c48848a3420821adc3586c62e892ad885dd9f17ffb2813ab2974e8b"
+  },
+  "status": "PASS"
+}
