@@ -691,8 +691,12 @@ async function* streamChatCompletion(
     effectiveSignal.removeEventListener("abort", onAbort);
     // The generator owns the body reader, including when its consumer returns
     // early. Cleanup must never replace the original result or read error.
-    try { await reader.cancel(); } catch { /* best-effort transport cleanup */ }
-    try { reader.releaseLock(); } catch { /* already released/errored reader */ }
+    try { await reader.cancel(); } catch {
+      process.stderr.write("[degraded] openai.reader.cancel: response cleanup failed\n");
+    }
+    try { reader.releaseLock(); } catch {
+      process.stderr.write("[degraded] openai.reader.releaseLock: response cleanup failed\n");
+    }
   }
 
   if (aborted && !finished) {

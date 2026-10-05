@@ -54,7 +54,10 @@ function hangingResponse(firstFrames: string, cancelError?: Error): {
   return { response: new Response(stream), stream, cancel };
 }
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 
 describe("OpenAI stream footer, cancellation and reader ownership", () => {
   it.each(["stop", "tool_calls"])("reads independent final usage after %s", async (reason) => {
@@ -240,17 +243,41 @@ describe("OpenAI stream footer, cancellation and reader ownership", () => {
   });
 
   it("cleanup rejection does not replace a normal completion or retain the lock", async () => {
-    const body = hangingResponse(text + terminal("stop", { usage }), new Error("offline cancel failure"));
+    const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+    const body = hangingResponse(text + terminal("stop", { usage }), new Error("sk-offline-cleanup-secret"));
     const events = await collect(body.response);
     expect(result(events).finishReason).toBe("stop");
     expect(body.cancel).toHaveBeenCalledTimes(1);
     expect(body.stream.locked).toBe(false);
+    expect(stderr.mock.calls).toEqual([["[degraded] openai.reader.cancel: response cleanup failed\n"]]);
   });
 
   it("cleanup rejection does not replace caller cancellation", async () => {
-    const body = hangingResponse(text, new Error("offline cancel failure"));
+    const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+    const body = hangingResponse(text, new Error("sk-offline-cleanup-secret"));
     const events = await collect(body.response, { abortAt: (event) => event.type === "text_delta" });
     expect(result(events).finishReason).toBe("cancelled");
     expect(body.stream.locked).toBe(false);
+    expect(stderr.mock.calls).toEqual([["[degraded] openai.reader.cancel: response cleanup failed\n"]]);
+  });
+
+  it.each([false, true])("releaseLock rejection reports only a fixed diagnostic and preserves caller cancellation=%s", async (abort) => {
+    const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+    const body = hangingResponse(text + terminal("stop", { usage }));
+    const originalGetReader = body.stream.getReader.bind(body.stream);
+    vi.spyOn(body.stream, "getReader").mockImplementation(() => {
+      const reader = originalGetReader();
+      const release = reader.releaseLock.bind(reader);
+      reader.releaseLock = () => {
+        release(); // Exercise real cleanup before the transport hook fails.
+        throw new Error("sk-offline-release-secret");
+      };
+      return reader;
+    });
+    const events = await collect(body.response, { abortAt: (event) => abort && event.type === "text_delta" });
+    expect(result(events).finishReason).toBe(abort ? "cancelled" : "stop");
+    expect(body.cancel).toHaveBeenCalledTimes(1);
+    expect(body.stream.locked).toBe(false);
+    expect(stderr.mock.calls).toEqual([["[degraded] openai.reader.releaseLock: response cleanup failed\n"]]);
   });
 });
