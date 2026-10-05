@@ -157,6 +157,8 @@ try:
         ("typecheck", ["corepack", "pnpm", "typecheck"], env),
         ("build", ["corepack", "pnpm", "build"], env),
         ("new-regressions", ["corepack", "pnpm", "exec", "vitest", "run", *REGRESSIONS], env),
+        ("wire-e2e-regressions", ["corepack", "pnpm", "exec", "vitest", "run",
+                                 "packages/core/src/runtime/wire-protocol-e2e.test.ts"], env),
         ("provider-production", ["python3", script + "provider-production.py", "--root", str(workspace),
                                  "--out", str(output / "r1-http"), "--expect-sha", expected], env),
         # All R2 invocations are serial. The performance probe itself alternates
@@ -212,13 +214,17 @@ try:
         if counts:
             active_row["vitestCounts"] = counts
         require(exit_code == 0, name + " exited " + str(exit_code))
-        if name in ("new-regressions", "full", "security"):
+        if name in ("new-regressions", "wire-e2e-regressions", "full", "security"):
             require(counts.get("tests", {}).get("passed", 0) > 0, "missing passed test summary: " + name)
             require(not counts["tests"].get("failed", 0), "failed tests in " + name)
         if name == "new-regressions":
             require(counts["files"].get("passed") == len(REGRESSIONS), "not all new regression files ran")
             require(not counts["tests"].get("skipped", 0) and not counts["tests"].get("todo", 0),
                     "new regressions must have no skipped/todo cases")
+        elif name == "wire-e2e-regressions":
+            require(counts["files"].get("passed") == 1 and counts["tests"].get("passed") == 8
+                    and not counts["tests"].get("skipped", 0) and not counts["tests"].get("todo", 0),
+                    "all eight existing wire E2E contracts must run and pass")
         elif name == "build":
             expected_dist = dist_hashes()
             require(expected_dist, "build produced no dist files")
