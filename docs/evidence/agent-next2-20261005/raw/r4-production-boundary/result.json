@@ -1,0 +1,237 @@
+{
+  "status": "PASS",
+  "sourceSha": "0c70309de478797be8d0f6b8a3c2dbbe282f7844",
+  "sourceShaAtEnd": "0c70309de478797be8d0f6b8a3c2dbbe282f7844",
+  "sourceTrackedDirtyAtStart": true,
+  "sourceTrackedDirtyAtEnd": true,
+  "sourceFingerprintsBefore": {
+    "packages/context/src/pipeline.ts": "ba80475151326f65eb23d507c9c997e738daa972d570c8c5c5aa69448879bc0f",
+    "packages/context/dist/pipeline.js": "0a6ea1170d2b378e8e861c8eb842651275fc0b8f5b16343cfb0af145c59121aa",
+    "packages/context/src/rehydration.ts": "0d6c7077a9f6e207b51db023bcc0f2f4d9dde90cc94a3f0361090ce119fe8bc1",
+    "packages/context/dist/rehydration.js": "c81c70dd959274f4655ee32b51851a66ea68f6c241c1eaeed553d4c2cc4b4e49",
+    "packages/context/src/budget.ts": "5697332e832d5571599e41456caec44f71e4f9335e2c5c7672b7a2a9738eaf16",
+    "packages/context/dist/budget.js": "c23c3196e6dc6f2a19859618be874faec59df08b6199fee876ee3130143cd6f8",
+    "packages/context/src/compaction.ts": "99f85d898514c495be9cd2c2414333c191d4c715cd845f4c32fd0c0446d3c186",
+    "packages/context/dist/compaction.js": "b8139b3a5908ecfe335149997268517917caa87ecd9159edb76ee8701ae937f2",
+    "packages/core/src/runtime/context-controller.ts": "22fe6661072b6674e0ab75a9535a6530de8700cec1a596d6ba858a3d0bda9bfd",
+    "packages/core/dist/runtime/context-controller.js": "601b8ad652675e360a408dd06a08b4a4f6e29e27b98117bd580ea2816a110c57",
+    "packages/harness/src/create-harness.ts": "a115aa9c8ec71b86e689e80ab9195c21cd85c8f19a0d9de669e9e19d8becf84e",
+    "packages/harness/dist/create-harness.js": "442874f7297e7e0b7df5e715af249457fbd0bf6cd33f15b75d5e198700ea29e3",
+    "packages/harness/src/memory-runtime-bridge.ts": "b7e3900693198379a9e27a6cd82fa39ac4f4614ab11ead8af878fde58ed15406",
+    "packages/harness/dist/memory-runtime-bridge.js": "536009673b747fa4fa4091d54d24c212dacb097531b2da6e14c9a4f4ba66eede",
+    "scripts/research/agent-next2-20261005/rehydration-budget-probe.mjs": "127285f1bd2820db0ed8c52d41b9ba4cb834fcdd8ea732ea3eba7ad9990c9130"
+  },
+  "sourceFingerprintsAfter": {
+    "packages/context/src/pipeline.ts": "ba80475151326f65eb23d507c9c997e738daa972d570c8c5c5aa69448879bc0f",
+    "packages/context/dist/pipeline.js": "0a6ea1170d2b378e8e861c8eb842651275fc0b8f5b16343cfb0af145c59121aa",
+    "packages/context/src/rehydration.ts": "0d6c7077a9f6e207b51db023bcc0f2f4d9dde90cc94a3f0361090ce119fe8bc1",
+    "packages/context/dist/rehydration.js": "c81c70dd959274f4655ee32b51851a66ea68f6c241c1eaeed553d4c2cc4b4e49",
+    "packages/context/src/budget.ts": "5697332e832d5571599e41456caec44f71e4f9335e2c5c7672b7a2a9738eaf16",
+    "packages/context/dist/budget.js": "c23c3196e6dc6f2a19859618be874faec59df08b6199fee876ee3130143cd6f8",
+    "packages/context/src/compaction.ts": "99f85d898514c495be9cd2c2414333c191d4c715cd845f4c32fd0c0446d3c186",
+    "packages/context/dist/compaction.js": "b8139b3a5908ecfe335149997268517917caa87ecd9159edb76ee8701ae937f2",
+    "packages/core/src/runtime/context-controller.ts": "22fe6661072b6674e0ab75a9535a6530de8700cec1a596d6ba858a3d0bda9bfd",
+    "packages/core/dist/runtime/context-controller.js": "601b8ad652675e360a408dd06a08b4a4f6e29e27b98117bd580ea2816a110c57",
+    "packages/harness/src/create-harness.ts": "a115aa9c8ec71b86e689e80ab9195c21cd85c8f19a0d9de669e9e19d8becf84e",
+    "packages/harness/dist/create-harness.js": "442874f7297e7e0b7df5e715af249457fbd0bf6cd33f15b75d5e198700ea29e3",
+    "packages/harness/src/memory-runtime-bridge.ts": "b7e3900693198379a9e27a6cd82fa39ac4f4614ab11ead8af878fde58ed15406",
+    "packages/harness/dist/memory-runtime-bridge.js": "536009673b747fa4fa4091d54d24c212dacb097531b2da6e14c9a4f4ba66eede",
+    "scripts/research/agent-next2-20261005/rehydration-budget-probe.mjs": "127285f1bd2820db0ed8c52d41b9ba4cb834fcdd8ea732ea3eba7ad9990c9130"
+  },
+  "cases": [
+    {
+      "name": "context-boundary-51",
+      "status": "PASS",
+      "rawFile": "context-boundary-51.json",
+      "rawSha256": "1a6bd773a4c7f7114e6fadb102223d200bd1a9ad00af7e12b5fef560864efe8e"
+    },
+    {
+      "name": "context-boundary-52",
+      "status": "PASS",
+      "rawFile": "context-boundary-52.json",
+      "rawSha256": "70c465fa8d04a5cee38f4a5fde1136984d71e14ffa9a12e8dd6e3b1eeed41d97"
+    },
+    {
+      "name": "context-boundary-60",
+      "status": "PASS",
+      "rawFile": "context-boundary-60.json",
+      "rawSha256": "ec0ccc3c0cd34e4a3bc3fff314e415143b40fa6731fbdaddb9a4fc94466549c4"
+    },
+    {
+      "name": "context-boundary-61",
+      "status": "PASS",
+      "rawFile": "context-boundary-61.json",
+      "rawSha256": "8d88d905e0157c6a043c5f36dbfdca3a083ae0b61fbc324d3508e9fe8381fde1"
+    },
+    {
+      "name": "context-boundary-62",
+      "status": "PASS",
+      "rawFile": "context-boundary-62.json",
+      "rawSha256": "c336c4ff248d5a228933361b7594baa250f8614ad6e3277822ae88362e352d4c"
+    },
+    {
+      "name": "context-boundary-89",
+      "status": "PASS",
+      "rawFile": "context-boundary-89.json",
+      "rawSha256": "38ed72fbc51b05b94c0bb2fe7de735ca909cf7595614df9b28ca3b7f42998c56"
+    },
+    {
+      "name": "context-boundary-90",
+      "status": "PASS",
+      "rawFile": "context-boundary-90.json",
+      "rawSha256": "a9c34976db32ecb990b8d157f6bde368b19830cf95a206742ebfacf013a3a5d5"
+    },
+    {
+      "name": "context-boundary-100",
+      "status": "PASS",
+      "rawFile": "context-boundary-100.json",
+      "rawSha256": "5d7e16cc7805c8eb12eb9f759123cf5dccc964c75252b705442d67091c8eead9"
+    },
+    {
+      "name": "context-boundary-101",
+      "status": "PASS",
+      "rawFile": "context-boundary-101.json",
+      "rawSha256": "bf3ddcbbfc4d5b11b999073b7c9216887f4dc36a155ddc02bf72265380972973"
+    },
+    {
+      "name": "context-boundary-150",
+      "status": "PASS",
+      "rawFile": "context-boundary-150.json",
+      "rawSha256": "3c3d976de7c16b52b28ece7f62be9b421839ca7c99bbea760e4fae85e14b8e7d"
+    },
+    {
+      "name": "context-reserved-system",
+      "status": "PASS",
+      "rawFile": "context-reserved-system.json",
+      "rawSha256": "ee2193cd4436eed4f7f82772f6732fd1f922137c8a2e668ac0a1e60fc7d2c20f"
+    },
+    {
+      "name": "context-reserved-task",
+      "status": "PASS",
+      "rawFile": "context-reserved-task.json",
+      "rawSha256": "c0670285382f249606f61a2eb567fecafdd46e4ae681f864a3c4e61accd048cd"
+    },
+    {
+      "name": "context-reserved-output",
+      "status": "PASS",
+      "rawFile": "context-reserved-output.json",
+      "rawSha256": "26d0b651026b247143faf2f29c2f2c3b29b647741d3a477ede55ce2f236ec752"
+    },
+    {
+      "name": "context-reserved-combined",
+      "status": "PASS",
+      "rawFile": "context-reserved-combined.json",
+      "rawSha256": "8d461f241f0d89ffd2f0645d2f961e716ca1ccf73cd500c327dacccee61b650c"
+    },
+    {
+      "name": "context-history-not-deducted-twice",
+      "status": "PASS",
+      "rawFile": "context-history-not-deducted-twice.json",
+      "rawSha256": "f31b01f4627123ed9c1b2ebe5b12aa0378d8ab7046b6de8f5a9cef99c16ddf0b"
+    },
+    {
+      "name": "context-unicode-byte-estimator-exact-pointer",
+      "status": "PASS",
+      "rawFile": "context-unicode-byte-estimator-exact-pointer.json",
+      "rawSha256": "c2c4640daa35d73d4ed87c3c61e6b8834418f62a653d0a72c237338755c2d892"
+    },
+    {
+      "name": "context-unicode-byte-estimator-reject-pointer-at-42",
+      "status": "PASS",
+      "rawFile": "context-unicode-byte-estimator-reject-pointer-at-42.json",
+      "rawSha256": "54a59f154536c186c7fc3ec3bff856c3fe337eb85701c0f0c13e31a7566ab074"
+    },
+    {
+      "name": "context-existing-600-cap",
+      "status": "PASS",
+      "rawFile": "context-existing-600-cap.json",
+      "rawSha256": "0ff92aac390f892c572ab6b1b08de6b04d32a15d10f5477762989e92f7875278"
+    },
+    {
+      "name": "context-protected-overflow-not-evicted",
+      "status": "PASS",
+      "rawFile": "context-protected-overflow-not-evicted.json",
+      "rawSha256": "877aa60076f045e68ca9ba0bdcc689a80cca5c813f99f94d7d70190a2178dfae"
+    },
+    {
+      "name": "context-irreducible-digest-no-extra-refs",
+      "status": "PASS",
+      "rawFile": "context-irreducible-digest-no-extra-refs.json",
+      "rawSha256": "50662e64e3537df4a424a1ef65dcfc69fee986a85b930abd53b52ecd2fc34e20"
+    },
+    {
+      "name": "context-no-compaction-no-refs",
+      "status": "PASS",
+      "rawFile": "context-no-compaction-no-refs.json",
+      "rawSha256": "174eb069de9942a3bef9342682b32dc1f82154a2b20e1cd1013fc639bdae3071"
+    },
+    {
+      "name": "context-breaker-and-telemetry-final-footprint",
+      "status": "PASS",
+      "rawFile": "context-breaker-and-telemetry-final-footprint.json",
+      "rawSha256": "b7a189a7c528fd37fa3155a8f3cb9ae3a7d3532b6a4bc915ae72efb00adb8afe"
+    },
+    {
+      "name": "context-frozen-inputs-not-mutated",
+      "status": "PASS",
+      "rawFile": "context-frozen-inputs-not-mutated.json",
+      "rawSha256": "4ed035a3948e1cd604305ff19fe989ef7c5f2f88f29232b3501b15759d1a8799"
+    },
+    {
+      "name": "context-summary-missing-still-failclosed",
+      "status": "PASS",
+      "rawFile": "context-summary-missing-still-failclosed.json",
+      "rawSha256": "e19bd8a2c7ab05169bdc3f7513892ae55c9e67095e85ab2d801c4e4ee22334d4"
+    },
+    {
+      "name": "context-open-breaker-no-rehydration",
+      "status": "PASS",
+      "rawFile": "context-open-breaker-no-rehydration.json",
+      "rawSha256": "64370fa38c15ad42137960a89359e0b53ffff59cea4b3b5a40b3961870e3ddbf"
+    },
+    {
+      "name": "harness-165-original-avoidable-failure",
+      "status": "PASS",
+      "rawFile": "harness-165-original-avoidable-failure.json",
+      "rawSha256": "8a434b27c0073e7f6ca78281f60fc36c6e132caed5551bc1235f92aa8574a5df"
+    },
+    {
+      "name": "harness-170-pointer-still-admitted",
+      "status": "PASS",
+      "rawFile": "harness-170-pointer-still-admitted.json",
+      "rawSha256": "8d0373ab5606af67a03d59c8dfb81323a90e58c48d047bd73edf4763ba09c3cd"
+    },
+    {
+      "name": "harness-output-reservation",
+      "status": "PASS",
+      "rawFile": "harness-output-reservation.json",
+      "rawSha256": "d0e1113583e6b39e4056afe18e8fca7d6e2ddb03a6dbbb4b3f40238f8f7c214b"
+    },
+    {
+      "name": "harness-unicode-user-reservation",
+      "status": "PASS",
+      "rawFile": "harness-unicode-user-reservation.json",
+      "rawSha256": "70ff1b0fdebf9d7cc7f2bcf5e7780d7dcb664b698ff6965b0a9406f38007a16c"
+    },
+    {
+      "name": "harness-default-memory-off",
+      "status": "PASS",
+      "rawFile": "harness-default-memory-off.json",
+      "rawSha256": "0b50dd5dfff0824b8f85dee444f8b5a62ece95cf2f689376878bf468b7aa797d"
+    },
+    {
+      "name": "harness-protected-overflow-still-fails",
+      "status": "PASS",
+      "rawFile": "harness-protected-overflow-still-fails.json",
+      "rawSha256": "f4f9afaf613f2b2aff5d5162627d060ea4777ebb3c5283db28eade532c20c1d9"
+    }
+  ],
+  "paidProviderCalls": 0,
+  "actualHarnessTurns": 6,
+  "actualHarnessRequests": 5,
+  "node": "v24.19.0",
+  "platform": "linux",
+  "realModelQuality": "NOT_RUN",
+  "windowsRuntime": "NOT_RUN",
+  "limits": "Production compiled pipeline and actual Harness/JSONL retrieval with scripted provider. Estimates verify the existing context accounting contract, not a real tokenizer hard limit or model quality. Host configured reserved0 differs from effective active-user reserved.task10; complete message history is not charged twice. Protected/digest overflow remains visible. Memory remains opt-in; no promotion or paid calls."
+}

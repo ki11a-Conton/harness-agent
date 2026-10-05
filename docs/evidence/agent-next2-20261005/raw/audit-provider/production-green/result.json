@@ -1,0 +1,3810 @@
+{
+  "schemaVersion": "agent-next2-provider-retry-v1",
+  "status": "PASS",
+  "sourceSha": "0c70309de478797be8d0f6b8a3c2dbbe282f7844",
+  "sourceTrackedDirtyAtStart": true,
+  "sourceStatusAtStart": "M packages/context/src/pipeline.ts\n M packages/harness/src/memory-runtime-bridge.ts\n M packages/memory/src/memory-store.ts\n M packages/memory/src/sqlite-memory-store.ts\n M packages/model/src/openai.ts\n M packages/tools/src/tools/search-files.ts\n?? packages/context/src/rehydration-headroom.regressions.test.ts\n?? packages/harness/src/memory-feedback-atomic.regressions.test.ts\n?? packages/harness/src/rehydration-headroom.integration.test.ts\n?? packages/memory/src/usefulness-atomic.regressions.test.ts\n?? packages/model/src/openai-retry-wait.regressions.test.ts\n?? packages/tools/src/scoped-search-paths.regressions.test.ts\n?? scripts/research/agent-next2-20261005/",
+  "sourceFingerprintsBefore": {
+    "packages/model/src/openai.ts": "5f2d341bc6299b689249699dfe2561ba1bc623e1ef836c53e4eb526511e1a481",
+    "packages/model/dist/openai.js": "a5bd50a96d1af60b9878a113fff879c2936500bdaa268c4bf8b9a959970a842b",
+    "packages/model/src/openai-retry-wait.regressions.test.ts": "d07212c3f1a0a3416e1981aa79552b2f738f50b9fd2f3f3e8921174e7e00f3ea",
+    "scripts/research/agent-next2-20261005/provider-retry-probe.mjs": "bbbfbe163322797b6b4bad2c58a9fa6b34358cbdf47f357a0143c5a9cfcd42a1"
+  },
+  "probeSha256": "bbbfbe163322797b6b4bad2c58a9fa6b34358cbdf47f357a0143c5a9cfcd42a1",
+  "node": "v24.19.0",
+  "startedAt": "2026-10-05T12:05:46.625Z",
+  "paidProviderCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "cases": [
+    {
+      "name": "direct-success",
+      "status": "PASS",
+      "result": {
+        "name": "direct-success",
+        "config": {
+          "kind": "direct",
+          "timeout": 0,
+          "delay": 0,
+          "retries": 1,
+          "abortAtRetry": false,
+          "delayResumeMs": 0,
+          "abortBeforeResume": false,
+          "preAborted": false
+        },
+        "elapsedMs": 31.121431,
+        "fetchAttempts": 1,
+        "httpRequests": 1,
+        "callerAborted": false,
+        "events": [
+          {
+            "elapsedMs": 0.696123,
+            "event": {
+              "type": "started",
+              "timestamp": 1791201946668
+            }
+          },
+          {
+            "elapsedMs": 28.790244,
+            "event": {
+              "type": "usage",
+              "usage": {
+                "inputTokens": 7,
+                "outputTokens": 2
+              },
+              "timestamp": 1791201946696
+            }
+          },
+          {
+            "elapsedMs": 28.796092999999985,
+            "event": {
+              "type": "text_delta",
+              "text": "ok",
+              "timestamp": 1791201946696
+            }
+          },
+          {
+            "elapsedMs": 28.801231,
+            "event": {
+              "type": "completed",
+              "result": {
+                "finishReason": "stop",
+                "text": "ok",
+                "usage": {
+                  "inputTokens": 7,
+                  "outputTokens": 2
+                }
+              },
+              "timestamp": 1791201946696
+            }
+          }
+        ],
+        "ownership": {
+          "waitListenersRegistered": 0,
+          "waitListenersExplicitlyRemoved": 0,
+          "waitListenersRetained": 0,
+          "waitTimersAllocated": 0,
+          "waitTimersPending": 0,
+          "waitTimersFired": 0,
+          "waitTimersCleared": 0,
+          "registrations": [],
+          "timers": []
+        }
+      }
+    },
+    {
+      "name": "normal-429-recovery",
+      "status": "PASS",
+      "result": {
+        "name": "normal-429-recovery",
+        "config": {
+          "kind": "429",
+          "timeout": 0,
+          "delay": 10,
+          "retries": 1,
+          "abortAtRetry": false,
+          "delayResumeMs": 0,
+          "abortBeforeResume": false,
+          "preAborted": false
+        },
+        "elapsedMs": 20.56001900000001,
+        "fetchAttempts": 2,
+        "httpRequests": 2,
+        "callerAborted": false,
+        "events": [
+          {
+            "elapsedMs": 0.13996099999999956,
+            "event": {
+              "type": "started",
+              "timestamp": 1791201946701
+            }
+          },
+          {
+            "elapsedMs": 5.900214000000005,
+            "event": {
+              "type": "retry",
+              "attempt": 1,
+              "error": {
+                "code": "MODEL_ERROR",
+                "message": "OpenAI chat completion failed: HTTP 429: offline fixture",
+                "retryable": false,
+                "safeToRetry": false,
+                "evidence": "{\"schema\":\"ar.provider-diagnostics.v1\",\"reason\":\"http_status\",\"status\":429,\"endpointDigest\":\"273fdbffb1751b3b\",\"modelDigest\":\"8a43428062692d36\",\"request\":{\"messageCount\":1,\"roles\":[\"user\"],\"toolCallCount\":0,\"toolResultCount\":0,\"toolNames\":[],\"contentBytes\":19,\"toolArgumentBytes\":0,\"toolOutputBytes\":0,\"advertisedToolNames\":[],\"advertisedToolCount\":0},\"toolCallIdCorrelation\":[],\"unansweredToolCallIds\":[],\"orphanToolResultIndexes\":[],\"correlationTruncated\":false,\"redacted\":true,\"contentRetained\":false}",
+                "cause": 429,
+                "provider": {
+                  "kind": "rate_limit",
+                  "status": 429
+                }
+              },
+              "timestamp": 1791201946707
+            }
+          },
+          {
+            "elapsedMs": 20.480940000000004,
+            "event": {
+              "type": "usage",
+              "usage": {
+                "inputTokens": 7,
+                "outputTokens": 2
+              },
+              "timestamp": 1791201946721
+            }
+          },
+          {
+            "elapsedMs": 20.486017000000004,
+            "event": {
+              "type": "text_delta",
+              "text": "ok",
+              "timestamp": 1791201946721
+            }
+          },
+          {
+            "elapsedMs": 20.489182,
+            "event": {
+              "type": "completed",
+              "result": {
+                "finishReason": "stop",
+                "text": "ok",
+                "usage": {
+                  "inputTokens": 7,
+                  "outputTokens": 2
+                }
+              },
+              "timestamp": 1791201946721
+            }
+          }
+        ],
+        "ownership": {
+          "waitListenersRegistered": 1,
+          "waitListenersExplicitlyRemoved": 1,
+          "waitListenersRetained": 0,
+          "waitTimersAllocated": 1,
+          "waitTimersPending": 0,
+          "waitTimersFired": 1,
+          "waitTimersCleared": 1,
+          "registrations": [
+            {
+              "stack": "Error\n    at AbortSignal.addEventListener (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:57:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:188:16\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async test (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:91:19)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:99:2",
+              "once": true,
+              "source": "() => {\n            if (settled)\n                return;\n            settled = true;\n            if (timer !== undefined)\n                clearTimeout(timer);\n            signal.removeEventListener(\"abort\", finish);\n            resolve();\n        }",
+              "effectiveSignalIsCaller": true
+            }
+          ],
+          "timers": [
+            {
+              "delay": 10.80576469412141,
+              "stack": "Error\n    at globalThis.setTimeout (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:61:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:193:17\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async test (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:91:19)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:99:2",
+              "fired": true,
+              "cleared": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "normal-network-recovery",
+      "status": "PASS",
+      "result": {
+        "name": "normal-network-recovery",
+        "config": {
+          "kind": "network",
+          "timeout": 0,
+          "delay": 10,
+          "retries": 1,
+          "abortAtRetry": false,
+          "delayResumeMs": 0,
+          "abortBeforeResume": false,
+          "preAborted": false
+        },
+        "elapsedMs": 18.188308000000006,
+        "fetchAttempts": 2,
+        "httpRequests": 2,
+        "callerAborted": false,
+        "events": [
+          {
+            "elapsedMs": 0.06829400000000874,
+            "event": {
+              "type": "started",
+              "timestamp": 1791201946723
+            }
+          },
+          {
+            "elapsedMs": 5.921307000000013,
+            "event": {
+              "type": "retry",
+              "attempt": 1,
+              "error": {
+                "code": "MODEL_ERROR",
+                "message": "OpenAI chat completion failed: fetch failed",
+                "retryable": true,
+                "safeToRetry": true,
+                "cause": {},
+                "provider": {
+                  "kind": "network"
+                }
+              },
+              "timestamp": 1791201946729
+            }
+          },
+          {
+            "elapsedMs": 18.142157999999995,
+            "event": {
+              "type": "usage",
+              "usage": {
+                "inputTokens": 7,
+                "outputTokens": 2
+              },
+              "timestamp": 1791201946741
+            }
+          },
+          {
+            "elapsedMs": 18.145262000000002,
+            "event": {
+              "type": "text_delta",
+              "text": "ok",
+              "timestamp": 1791201946741
+            }
+          },
+          {
+            "elapsedMs": 18.147305000000017,
+            "event": {
+              "type": "completed",
+              "result": {
+                "finishReason": "stop",
+                "text": "ok",
+                "usage": {
+                  "inputTokens": 7,
+                  "outputTokens": 2
+                }
+              },
+              "timestamp": 1791201946741
+            }
+          }
+        ],
+        "ownership": {
+          "waitListenersRegistered": 1,
+          "waitListenersExplicitlyRemoved": 1,
+          "waitListenersRetained": 0,
+          "waitTimersAllocated": 1,
+          "waitTimersPending": 0,
+          "waitTimersFired": 1,
+          "waitTimersCleared": 1,
+          "registrations": [
+            {
+              "stack": "Error\n    at AbortSignal.addEventListener (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:57:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:188:16\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:307:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at async test (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:91:19)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:100:2",
+              "once": true,
+              "source": "() => {\n            if (settled)\n                return;\n            settled = true;\n            if (timer !== undefined)\n                clearTimeout(timer);\n            signal.removeEventListener(\"abort\", finish);\n            resolve();\n        }",
+              "effectiveSignalIsCaller": true
+            }
+          ],
+          "timers": [
+            {
+              "delay": 9.758415687956303,
+              "stack": "Error\n    at globalThis.setTimeout (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:61:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:193:17\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:307:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at async test (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:91:19)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:100:2",
+              "fired": true,
+              "cleared": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "non-transient-401",
+      "status": "PASS",
+      "result": {
+        "name": "non-transient-401",
+        "config": {
+          "kind": "401",
+          "timeout": 0,
+          "delay": 0,
+          "retries": 1,
+          "abortAtRetry": false,
+          "delayResumeMs": 0,
+          "abortBeforeResume": false,
+          "preAborted": false
+        },
+        "elapsedMs": 3.216885999999988,
+        "fetchAttempts": 1,
+        "httpRequests": 1,
+        "callerAborted": false,
+        "events": [
+          {
+            "elapsedMs": 0.10877499999998008,
+            "event": {
+              "type": "started",
+              "timestamp": 1791201946747
+            }
+          },
+          {
+            "elapsedMs": 3.210606999999982,
+            "event": {
+              "type": "error",
+              "error": {
+                "code": "MODEL_ERROR",
+                "message": "OpenAI chat completion failed: HTTP 401: offline fixture",
+                "retryable": false,
+                "safeToRetry": false,
+                "evidence": "{\"schema\":\"ar.provider-diagnostics.v1\",\"reason\":\"http_status\",\"status\":401,\"endpointDigest\":\"273fdbffb1751b3b\",\"modelDigest\":\"8a43428062692d36\",\"request\":{\"messageCount\":1,\"roles\":[\"user\"],\"toolCallCount\":0,\"toolResultCount\":0,\"toolNames\":[],\"contentBytes\":17,\"toolArgumentBytes\":0,\"toolOutputBytes\":0,\"advertisedToolNames\":[],\"advertisedToolCount\":0},\"toolCallIdCorrelation\":[],\"unansweredToolCallIds\":[],\"orphanToolResultIndexes\":[],\"correlationTruncated\":false,\"redacted\":true,\"contentRetained\":false}",
+                "cause": 401,
+                "provider": {
+                  "kind": "http",
+                  "status": 401
+                }
+              },
+              "timestamp": 1791201946751
+            }
+          }
+        ],
+        "ownership": {
+          "waitListenersRegistered": 0,
+          "waitListenersExplicitlyRemoved": 0,
+          "waitListenersRetained": 0,
+          "waitTimersAllocated": 0,
+          "waitTimersPending": 0,
+          "waitTimersFired": 0,
+          "waitTimersCleared": 0,
+          "registrations": [],
+          "timers": []
+        }
+      }
+    },
+    {
+      "name": "retry-after-deadline",
+      "status": "PASS",
+      "result": {
+        "name": "retry-after-deadline",
+        "config": {
+          "kind": "429",
+          "retryAfter": "1",
+          "timeout": 50,
+          "delay": 0,
+          "retries": 1,
+          "abortAtRetry": false,
+          "delayResumeMs": 0,
+          "abortBeforeResume": false,
+          "preAborted": false
+        },
+        "elapsedMs": 51.67380399999996,
+        "fetchAttempts": 2,
+        "httpRequests": 1,
+        "callerAborted": false,
+        "events": [
+          {
+            "elapsedMs": 0.04645099999999047,
+            "event": {
+              "type": "started",
+              "timestamp": 1791201946752
+            }
+          },
+          {
+            "elapsedMs": 3.7465079999999773,
+            "event": {
+              "type": "retry",
+              "attempt": 1,
+              "error": {
+                "code": "MODEL_ERROR",
+                "message": "OpenAI chat completion failed: HTTP 429: offline fixture",
+                "retryable": false,
+                "safeToRetry": false,
+                "evidence": "{\"schema\":\"ar.provider-diagnostics.v1\",\"reason\":\"http_status\",\"status\":429,\"endpointDigest\":\"273fdbffb1751b3b\",\"modelDigest\":\"8a43428062692d36\",\"request\":{\"messageCount\":1,\"roles\":[\"user\"],\"toolCallCount\":0,\"toolResultCount\":0,\"toolNames\":[],\"contentBytes\":20,\"toolArgumentBytes\":0,\"toolOutputBytes\":0,\"advertisedToolNames\":[],\"advertisedToolCount\":0},\"toolCallIdCorrelation\":[],\"unansweredToolCallIds\":[],\"orphanToolResultIndexes\":[],\"correlationTruncated\":false,\"redacted\":true,\"contentRetained\":false}",
+                "cause": 429,
+                "provider": {
+                  "kind": "rate_limit",
+                  "status": 429,
+                  "retryAfterMs": 1000
+                }
+              },
+              "timestamp": 1791201946756
+            }
+          },
+          {
+            "elapsedMs": 51.66914700000001,
+            "event": {
+              "type": "error",
+              "error": {
+                "code": "MODEL_ERROR",
+                "message": "OpenAI chat completion timed out after 50ms",
+                "retryable": true,
+                "safeToRetry": true,
+                "cause": {},
+                "provider": {
+                  "kind": "timeout"
+                }
+              },
+              "timestamp": 1791201946804
+            }
+          }
+        ],
+        "ownership": {
+          "waitListenersRegistered": 1,
+          "waitListenersExplicitlyRemoved": 1,
+          "waitListenersRetained": 0,
+          "waitTimersAllocated": 1,
+          "waitTimersPending": 0,
+          "waitTimersFired": 0,
+          "waitTimersCleared": 1,
+          "registrations": [
+            {
+              "stack": "Error\n    at AbortSignal.addEventListener (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:57:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:188:16\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async test (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:91:19)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:102:2",
+              "once": true,
+              "source": "() => {\n            if (settled)\n                return;\n            settled = true;\n            if (timer !== undefined)\n                clearTimeout(timer);\n            signal.removeEventListener(\"abort\", finish);\n            resolve();\n        }",
+              "effectiveSignalIsCaller": false
+            }
+          ],
+          "timers": [
+            {
+              "delay": 1000,
+              "stack": "Error\n    at globalThis.setTimeout (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:61:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:193:17\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async test (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:91:19)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:102:2",
+              "fired": false,
+              "cleared": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "network-backoff-deadline",
+      "status": "PASS",
+      "result": {
+        "name": "network-backoff-deadline",
+        "config": {
+          "kind": "network",
+          "timeout": 50,
+          "delay": 1000,
+          "retries": 1,
+          "abortAtRetry": false,
+          "delayResumeMs": 0,
+          "abortBeforeResume": false,
+          "preAborted": false
+        },
+        "elapsedMs": 50.89842100000004,
+        "fetchAttempts": 2,
+        "httpRequests": 1,
+        "callerAborted": false,
+        "events": [
+          {
+            "elapsedMs": 0.10910499999999956,
+            "event": {
+              "type": "started",
+              "timestamp": 1791201946805
+            }
+          },
+          {
+            "elapsedMs": 3.8010700000000384,
+            "event": {
+              "type": "retry",
+              "attempt": 1,
+              "error": {
+                "code": "MODEL_ERROR",
+                "message": "OpenAI chat completion failed: fetch failed",
+                "retryable": true,
+                "safeToRetry": true,
+                "cause": {},
+                "provider": {
+                  "kind": "network"
+                }
+              },
+              "timestamp": 1791201946809
+            }
+          },
+          {
+            "elapsedMs": 50.867354000000034,
+            "event": {
+              "type": "error",
+              "error": {
+                "code": "MODEL_ERROR",
+                "message": "OpenAI chat completion timed out after 50ms",
+                "retryable": true,
+                "safeToRetry": true,
+                "cause": {},
+                "provider": {
+                  "kind": "timeout"
+                }
+              },
+              "timestamp": 1791201946856
+            }
+          }
+        ],
+        "ownership": {
+          "waitListenersRegistered": 1,
+          "waitListenersExplicitlyRemoved": 1,
+          "waitListenersRetained": 0,
+          "waitTimersAllocated": 1,
+          "waitTimersPending": 0,
+          "waitTimersFired": 0,
+          "waitTimersCleared": 1,
+          "registrations": [
+            {
+              "stack": "Error\n    at AbortSignal.addEventListener (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:57:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:188:16\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:307:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at async test (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:91:19)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:103:2",
+              "once": true,
+              "source": "() => {\n            if (settled)\n                return;\n            settled = true;\n            if (timer !== undefined)\n                clearTimeout(timer);\n            signal.removeEventListener(\"abort\", finish);\n            resolve();\n        }",
+              "effectiveSignalIsCaller": false
+            }
+          ],
+          "timers": [
+            {
+              "delay": 1108.734760467252,
+              "stack": "Error\n    at globalThis.setTimeout (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:61:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:193:17\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:307:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at async test (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:91:19)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:103:2",
+              "fired": false,
+              "cleared": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "caller-abort-at-retry",
+      "status": "PASS",
+      "result": {
+        "name": "caller-abort-at-retry",
+        "config": {
+          "kind": "429",
+          "retryAfter": "1",
+          "timeout": 0,
+          "delay": 0,
+          "retries": 1,
+          "abortAtRetry": true,
+          "delayResumeMs": 0,
+          "abortBeforeResume": false,
+          "preAborted": false
+        },
+        "elapsedMs": 3.443218999999999,
+        "fetchAttempts": 2,
+        "httpRequests": 1,
+        "callerAborted": true,
+        "events": [
+          {
+            "elapsedMs": 0.055284000000028755,
+            "event": {
+              "type": "started",
+              "timestamp": 1791201946859
+            }
+          },
+          {
+            "elapsedMs": 3.0839349999999968,
+            "event": {
+              "type": "retry",
+              "attempt": 1,
+              "error": {
+                "code": "MODEL_ERROR",
+                "message": "OpenAI chat completion failed: HTTP 429: offline fixture",
+                "retryable": false,
+                "safeToRetry": false,
+                "evidence": "{\"schema\":\"ar.provider-diagnostics.v1\",\"reason\":\"http_status\",\"status\":429,\"endpointDigest\":\"273fdbffb1751b3b\",\"modelDigest\":\"8a43428062692d36\",\"request\":{\"messageCount\":1,\"roles\":[\"user\"],\"toolCallCount\":0,\"toolResultCount\":0,\"toolNames\":[],\"contentBytes\":21,\"toolArgumentBytes\":0,\"toolOutputBytes\":0,\"advertisedToolNames\":[],\"advertisedToolCount\":0},\"toolCallIdCorrelation\":[],\"unansweredToolCallIds\":[],\"orphanToolResultIndexes\":[],\"correlationTruncated\":false,\"redacted\":true,\"contentRetained\":false}",
+                "cause": 429,
+                "provider": {
+                  "kind": "rate_limit",
+                  "status": 429,
+                  "retryAfterMs": 1000
+                }
+              },
+              "timestamp": 1791201946862
+            }
+          },
+          {
+            "elapsedMs": 3.440174000000013,
+            "event": {
+              "type": "completed",
+              "result": {
+                "finishReason": "cancelled"
+              },
+              "timestamp": 1791201946862
+            }
+          }
+        ],
+        "ownership": {
+          "waitListenersRegistered": 0,
+          "waitListenersExplicitlyRemoved": 0,
+          "waitListenersRetained": 0,
+          "waitTimersAllocated": 0,
+          "waitTimersPending": 0,
+          "waitTimersFired": 0,
+          "waitTimersCleared": 0,
+          "registrations": [],
+          "timers": []
+        }
+      }
+    },
+    {
+      "name": "caller-abort-at-network-retry",
+      "status": "PASS",
+      "result": {
+        "name": "caller-abort-at-network-retry",
+        "config": {
+          "kind": "network",
+          "timeout": 0,
+          "delay": 1000,
+          "retries": 1,
+          "abortAtRetry": true,
+          "delayResumeMs": 0,
+          "abortBeforeResume": false,
+          "preAborted": false
+        },
+        "elapsedMs": 4.058158999999989,
+        "fetchAttempts": 2,
+        "httpRequests": 1,
+        "callerAborted": true,
+        "events": [
+          {
+            "elapsedMs": 0.06947500000001128,
+            "event": {
+              "type": "started",
+              "timestamp": 1791201946875
+            }
+          },
+          {
+            "elapsedMs": 3.6636219999999753,
+            "event": {
+              "type": "retry",
+              "attempt": 1,
+              "error": {
+                "code": "MODEL_ERROR",
+                "message": "OpenAI chat completion failed: fetch failed",
+                "retryable": true,
+                "safeToRetry": true,
+                "cause": {},
+                "provider": {
+                  "kind": "network"
+                }
+              },
+              "timestamp": 1791201946878
+            }
+          },
+          {
+            "elapsedMs": 4.054934000000003,
+            "event": {
+              "type": "completed",
+              "result": {
+                "finishReason": "cancelled"
+              },
+              "timestamp": 1791201946879
+            }
+          }
+        ],
+        "ownership": {
+          "waitListenersRegistered": 0,
+          "waitListenersExplicitlyRemoved": 0,
+          "waitListenersRetained": 0,
+          "waitTimersAllocated": 0,
+          "waitTimersPending": 0,
+          "waitTimersFired": 0,
+          "waitTimersCleared": 0,
+          "registrations": [],
+          "timers": []
+        }
+      }
+    },
+    {
+      "name": "caller-abort-during-wait",
+      "status": "PASS",
+      "result": {
+        "name": "caller-abort-during-wait",
+        "config": {
+          "kind": "429",
+          "retryAfter": "1",
+          "timeout": 0,
+          "delay": 0,
+          "retries": 1,
+          "abortAtRetry": false,
+          "abortAfterRetryMs": 40,
+          "delayResumeMs": 0,
+          "abortBeforeResume": false,
+          "preAborted": false
+        },
+        "elapsedMs": 48.87958699999996,
+        "fetchAttempts": 2,
+        "httpRequests": 1,
+        "callerAborted": true,
+        "events": [
+          {
+            "elapsedMs": 0.05909900000000334,
+            "event": {
+              "type": "started",
+              "timestamp": 1791201946881
+            }
+          },
+          {
+            "elapsedMs": 2.476695999999947,
+            "event": {
+              "type": "retry",
+              "attempt": 1,
+              "error": {
+                "code": "MODEL_ERROR",
+                "message": "OpenAI chat completion failed: HTTP 429: offline fixture",
+                "retryable": false,
+                "safeToRetry": false,
+                "evidence": "{\"schema\":\"ar.provider-diagnostics.v1\",\"reason\":\"http_status\",\"status\":429,\"endpointDigest\":\"273fdbffb1751b3b\",\"modelDigest\":\"8a43428062692d36\",\"request\":{\"messageCount\":1,\"roles\":[\"user\"],\"toolCallCount\":0,\"toolResultCount\":0,\"toolNames\":[],\"contentBytes\":24,\"toolArgumentBytes\":0,\"toolOutputBytes\":0,\"advertisedToolNames\":[],\"advertisedToolCount\":0},\"toolCallIdCorrelation\":[],\"unansweredToolCallIds\":[],\"orphanToolResultIndexes\":[],\"correlationTruncated\":false,\"redacted\":true,\"contentRetained\":false}",
+                "cause": 429,
+                "provider": {
+                  "kind": "rate_limit",
+                  "status": 429,
+                  "retryAfterMs": 1000
+                }
+              },
+              "timestamp": 1791201946883
+            }
+          },
+          {
+            "elapsedMs": 48.876972999999964,
+            "event": {
+              "type": "completed",
+              "result": {
+                "finishReason": "cancelled"
+              },
+              "timestamp": 1791201946929
+            }
+          }
+        ],
+        "ownership": {
+          "waitListenersRegistered": 1,
+          "waitListenersExplicitlyRemoved": 1,
+          "waitListenersRetained": 0,
+          "waitTimersAllocated": 1,
+          "waitTimersPending": 0,
+          "waitTimersFired": 0,
+          "waitTimersCleared": 1,
+          "registrations": [
+            {
+              "stack": "Error\n    at AbortSignal.addEventListener (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:57:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:188:16\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async test (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:91:19)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:106:2",
+              "once": true,
+              "source": "() => {\n            if (settled)\n                return;\n            settled = true;\n            if (timer !== undefined)\n                clearTimeout(timer);\n            signal.removeEventListener(\"abort\", finish);\n            resolve();\n        }",
+              "effectiveSignalIsCaller": true
+            }
+          ],
+          "timers": [
+            {
+              "delay": 1000,
+              "stack": "Error\n    at globalThis.setTimeout (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:61:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:193:17\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async test (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:91:19)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:106:2",
+              "fired": false,
+              "cleared": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "deadline-expired-before-wait",
+      "status": "PASS",
+      "result": {
+        "name": "deadline-expired-before-wait",
+        "config": {
+          "kind": "429",
+          "retryAfter": "1",
+          "timeout": 50,
+          "delay": 0,
+          "retries": 1,
+          "abortAtRetry": false,
+          "delayResumeMs": 70,
+          "abortBeforeResume": false,
+          "preAborted": false
+        },
+        "elapsedMs": 73.65234900000002,
+        "fetchAttempts": 2,
+        "httpRequests": 1,
+        "callerAborted": false,
+        "events": [
+          {
+            "elapsedMs": 0.059861000000012154,
+            "event": {
+              "type": "started",
+              "timestamp": 1791201946933
+            }
+          },
+          {
+            "elapsedMs": 3.094801000000018,
+            "event": {
+              "type": "retry",
+              "attempt": 1,
+              "error": {
+                "code": "MODEL_ERROR",
+                "message": "OpenAI chat completion failed: HTTP 429: offline fixture",
+                "retryable": false,
+                "safeToRetry": false,
+                "evidence": "{\"schema\":\"ar.provider-diagnostics.v1\",\"reason\":\"http_status\",\"status\":429,\"endpointDigest\":\"273fdbffb1751b3b\",\"modelDigest\":\"8a43428062692d36\",\"request\":{\"messageCount\":1,\"roles\":[\"user\"],\"toolCallCount\":0,\"toolResultCount\":0,\"toolNames\":[],\"contentBytes\":28,\"toolArgumentBytes\":0,\"toolOutputBytes\":0,\"advertisedToolNames\":[],\"advertisedToolCount\":0},\"toolCallIdCorrelation\":[],\"unansweredToolCallIds\":[],\"orphanToolResultIndexes\":[],\"correlationTruncated\":false,\"redacted\":true,\"contentRetained\":false}",
+                "cause": 429,
+                "provider": {
+                  "kind": "rate_limit",
+                  "status": 429,
+                  "retryAfterMs": 1000
+                }
+              },
+              "timestamp": 1791201946936
+            }
+          },
+          {
+            "elapsedMs": 73.649565,
+            "event": {
+              "type": "error",
+              "error": {
+                "code": "MODEL_ERROR",
+                "message": "OpenAI chat completion timed out after 50ms",
+                "retryable": true,
+                "safeToRetry": true,
+                "cause": {},
+                "provider": {
+                  "kind": "timeout"
+                }
+              },
+              "timestamp": 1791201947006
+            }
+          }
+        ],
+        "ownership": {
+          "waitListenersRegistered": 0,
+          "waitListenersExplicitlyRemoved": 0,
+          "waitListenersRetained": 0,
+          "waitTimersAllocated": 0,
+          "waitTimersPending": 0,
+          "waitTimersFired": 0,
+          "waitTimersCleared": 0,
+          "registrations": [],
+          "timers": []
+        }
+      }
+    },
+    {
+      "name": "caller-wins-expired-deadline",
+      "status": "PASS",
+      "result": {
+        "name": "caller-wins-expired-deadline",
+        "config": {
+          "kind": "429",
+          "retryAfter": "1",
+          "timeout": 50,
+          "delay": 0,
+          "retries": 1,
+          "abortAtRetry": false,
+          "delayResumeMs": 70,
+          "abortBeforeResume": true,
+          "preAborted": false
+        },
+        "elapsedMs": 74.48487899999998,
+        "fetchAttempts": 2,
+        "httpRequests": 1,
+        "callerAborted": true,
+        "events": [
+          {
+            "elapsedMs": 0.06105200000001787,
+            "event": {
+              "type": "started",
+              "timestamp": 1791201947009
+            }
+          },
+          {
+            "elapsedMs": 3.0746199999999817,
+            "event": {
+              "type": "retry",
+              "attempt": 1,
+              "error": {
+                "code": "MODEL_ERROR",
+                "message": "OpenAI chat completion failed: HTTP 429: offline fixture",
+                "retryable": false,
+                "safeToRetry": false,
+                "evidence": "{\"schema\":\"ar.provider-diagnostics.v1\",\"reason\":\"http_status\",\"status\":429,\"endpointDigest\":\"273fdbffb1751b3b\",\"modelDigest\":\"8a43428062692d36\",\"request\":{\"messageCount\":1,\"roles\":[\"user\"],\"toolCallCount\":0,\"toolResultCount\":0,\"toolNames\":[],\"contentBytes\":28,\"toolArgumentBytes\":0,\"toolOutputBytes\":0,\"advertisedToolNames\":[],\"advertisedToolCount\":0},\"toolCallIdCorrelation\":[],\"unansweredToolCallIds\":[],\"orphanToolResultIndexes\":[],\"correlationTruncated\":false,\"redacted\":true,\"contentRetained\":false}",
+                "cause": 429,
+                "provider": {
+                  "kind": "rate_limit",
+                  "status": 429,
+                  "retryAfterMs": 1000
+                }
+              },
+              "timestamp": 1791201947012
+            }
+          },
+          {
+            "elapsedMs": 74.48134300000004,
+            "event": {
+              "type": "completed",
+              "result": {
+                "finishReason": "cancelled"
+              },
+              "timestamp": 1791201947083
+            }
+          }
+        ],
+        "ownership": {
+          "waitListenersRegistered": 0,
+          "waitListenersExplicitlyRemoved": 0,
+          "waitListenersRetained": 0,
+          "waitTimersAllocated": 0,
+          "waitTimersPending": 0,
+          "waitTimersFired": 0,
+          "waitTimersCleared": 0,
+          "registrations": [],
+          "timers": []
+        }
+      }
+    },
+    {
+      "name": "deadline-budget-preserved",
+      "status": "PASS",
+      "result": {
+        "name": "deadline-budget-preserved",
+        "config": {
+          "kind": "429",
+          "retryAfter": "1",
+          "timeout": 50,
+          "delay": 0,
+          "retries": 3,
+          "abortAtRetry": false,
+          "delayResumeMs": 0,
+          "abortBeforeResume": false,
+          "preAborted": false
+        },
+        "elapsedMs": 58.952313000000004,
+        "fetchAttempts": 4,
+        "httpRequests": 1,
+        "callerAborted": false,
+        "events": [
+          {
+            "elapsedMs": 0.040100000000052205,
+            "event": {
+              "type": "started",
+              "timestamp": 1791201947088
+            }
+          },
+          {
+            "elapsedMs": 3.163475000000062,
+            "event": {
+              "type": "retry",
+              "attempt": 1,
+              "error": {
+                "code": "MODEL_ERROR",
+                "message": "OpenAI chat completion failed: HTTP 429: offline fixture",
+                "retryable": false,
+                "safeToRetry": false,
+                "evidence": "{\"schema\":\"ar.provider-diagnostics.v1\",\"reason\":\"http_status\",\"status\":429,\"endpointDigest\":\"273fdbffb1751b3b\",\"modelDigest\":\"8a43428062692d36\",\"request\":{\"messageCount\":1,\"roles\":[\"user\"],\"toolCallCount\":0,\"toolResultCount\":0,\"toolNames\":[],\"contentBytes\":25,\"toolArgumentBytes\":0,\"toolOutputBytes\":0,\"advertisedToolNames\":[],\"advertisedToolCount\":0},\"toolCallIdCorrelation\":[],\"unansweredToolCallIds\":[],\"orphanToolResultIndexes\":[],\"correlationTruncated\":false,\"redacted\":true,\"contentRetained\":false}",
+                "cause": 429,
+                "provider": {
+                  "kind": "rate_limit",
+                  "status": 429,
+                  "retryAfterMs": 1000
+                }
+              },
+              "timestamp": 1791201947091
+            }
+          },
+          {
+            "elapsedMs": 58.62229300000001,
+            "event": {
+              "type": "retry",
+              "attempt": 2,
+              "error": {
+                "code": "MODEL_ERROR",
+                "message": "OpenAI chat completion timed out after 50ms",
+                "retryable": true,
+                "safeToRetry": true,
+                "cause": {},
+                "provider": {
+                  "kind": "timeout"
+                }
+              },
+              "timestamp": 1791201947147
+            }
+          },
+          {
+            "elapsedMs": 58.816617000000065,
+            "event": {
+              "type": "retry",
+              "attempt": 3,
+              "error": {
+                "code": "MODEL_ERROR",
+                "message": "OpenAI chat completion timed out after 50ms",
+                "retryable": true,
+                "safeToRetry": true,
+                "cause": {},
+                "provider": {
+                  "kind": "timeout"
+                }
+              },
+              "timestamp": 1791201947147
+            }
+          },
+          {
+            "elapsedMs": 58.95037000000002,
+            "event": {
+              "type": "error",
+              "error": {
+                "code": "MODEL_ERROR",
+                "message": "OpenAI chat completion timed out after 50ms",
+                "retryable": true,
+                "safeToRetry": true,
+                "cause": {},
+                "provider": {
+                  "kind": "timeout"
+                }
+              },
+              "timestamp": 1791201947147
+            }
+          }
+        ],
+        "ownership": {
+          "waitListenersRegistered": 1,
+          "waitListenersExplicitlyRemoved": 1,
+          "waitListenersRetained": 0,
+          "waitTimersAllocated": 1,
+          "waitTimersPending": 0,
+          "waitTimersFired": 0,
+          "waitTimersCleared": 1,
+          "registrations": [
+            {
+              "stack": "Error\n    at AbortSignal.addEventListener (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:57:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:188:16\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async test (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:91:19)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:109:2",
+              "once": true,
+              "source": "() => {\n            if (settled)\n                return;\n            settled = true;\n            if (timer !== undefined)\n                clearTimeout(timer);\n            signal.removeEventListener(\"abort\", finish);\n            resolve();\n        }",
+              "effectiveSignalIsCaller": false
+            }
+          ],
+          "timers": [
+            {
+              "delay": 1000,
+              "stack": "Error\n    at globalThis.setTimeout (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:61:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:193:17\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async test (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:91:19)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:109:2",
+              "fired": false,
+              "cleared": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "retry-after-preserved",
+      "status": "PASS",
+      "result": {
+        "name": "retry-after-preserved",
+        "config": {
+          "kind": "429",
+          "retryAfter": "1",
+          "timeout": 0,
+          "delay": 0,
+          "retries": 1,
+          "abortAtRetry": false,
+          "delayResumeMs": 0,
+          "abortBeforeResume": false,
+          "preAborted": false
+        },
+        "elapsedMs": 1008.681291,
+        "fetchAttempts": 2,
+        "httpRequests": 2,
+        "callerAborted": false,
+        "events": [
+          {
+            "elapsedMs": 0.0370660000000953,
+            "event": {
+              "type": "started",
+              "timestamp": 1791201947154
+            }
+          },
+          {
+            "elapsedMs": 3.012407000000053,
+            "event": {
+              "type": "retry",
+              "attempt": 1,
+              "error": {
+                "code": "MODEL_ERROR",
+                "message": "OpenAI chat completion failed: HTTP 429: offline fixture",
+                "retryable": false,
+                "safeToRetry": false,
+                "evidence": "{\"schema\":\"ar.provider-diagnostics.v1\",\"reason\":\"http_status\",\"status\":429,\"endpointDigest\":\"273fdbffb1751b3b\",\"modelDigest\":\"8a43428062692d36\",\"request\":{\"messageCount\":1,\"roles\":[\"user\"],\"toolCallCount\":0,\"toolResultCount\":0,\"toolNames\":[],\"contentBytes\":21,\"toolArgumentBytes\":0,\"toolOutputBytes\":0,\"advertisedToolNames\":[],\"advertisedToolCount\":0},\"toolCallIdCorrelation\":[],\"unansweredToolCallIds\":[],\"orphanToolResultIndexes\":[],\"correlationTruncated\":false,\"redacted\":true,\"contentRetained\":false}",
+                "cause": 429,
+                "provider": {
+                  "kind": "rate_limit",
+                  "status": 429,
+                  "retryAfterMs": 1000
+                }
+              },
+              "timestamp": 1791201947157
+            }
+          },
+          {
+            "elapsedMs": 1008.5871490000001,
+            "event": {
+              "type": "usage",
+              "usage": {
+                "inputTokens": 7,
+                "outputTokens": 2
+              },
+              "timestamp": 1791201948162
+            }
+          },
+          {
+            "elapsedMs": 1008.594009,
+            "event": {
+              "type": "text_delta",
+              "text": "ok",
+              "timestamp": 1791201948162
+            }
+          },
+          {
+            "elapsedMs": 1008.5960820000001,
+            "event": {
+              "type": "completed",
+              "result": {
+                "finishReason": "stop",
+                "text": "ok",
+                "usage": {
+                  "inputTokens": 7,
+                  "outputTokens": 2
+                }
+              },
+              "timestamp": 1791201948162
+            }
+          }
+        ],
+        "ownership": {
+          "waitListenersRegistered": 1,
+          "waitListenersExplicitlyRemoved": 1,
+          "waitListenersRetained": 0,
+          "waitTimersAllocated": 1,
+          "waitTimersPending": 0,
+          "waitTimersFired": 1,
+          "waitTimersCleared": 1,
+          "registrations": [
+            {
+              "stack": "Error\n    at AbortSignal.addEventListener (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:57:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:188:16\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async test (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:91:19)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:110:2",
+              "once": true,
+              "source": "() => {\n            if (settled)\n                return;\n            settled = true;\n            if (timer !== undefined)\n                clearTimeout(timer);\n            signal.removeEventListener(\"abort\", finish);\n            resolve();\n        }",
+              "effectiveSignalIsCaller": true
+            }
+          ],
+          "timers": [
+            {
+              "delay": 1000,
+              "stack": "Error\n    at globalThis.setTimeout (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:61:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:193:17\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async test (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:91:19)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:110:2",
+              "fired": true,
+              "cleared": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "retry-budget-zero",
+      "status": "PASS",
+      "result": {
+        "name": "retry-budget-zero",
+        "config": {
+          "kind": "429",
+          "retryAfter": "1",
+          "timeout": 0,
+          "delay": 0,
+          "retries": 0,
+          "abortAtRetry": false,
+          "delayResumeMs": 0,
+          "abortBeforeResume": false,
+          "preAborted": false
+        },
+        "elapsedMs": 10.272298000000092,
+        "fetchAttempts": 1,
+        "httpRequests": 1,
+        "callerAborted": false,
+        "events": [
+          {
+            "elapsedMs": 0.029875000000174623,
+            "event": {
+              "type": "started",
+              "timestamp": 1791201948167
+            }
+          },
+          {
+            "elapsedMs": 10.270665000000008,
+            "event": {
+              "type": "error",
+              "error": {
+                "code": "MODEL_ERROR",
+                "message": "OpenAI chat completion failed: HTTP 429: offline fixture",
+                "retryable": false,
+                "safeToRetry": false,
+                "evidence": "{\"schema\":\"ar.provider-diagnostics.v1\",\"reason\":\"http_status\",\"status\":429,\"endpointDigest\":\"273fdbffb1751b3b\",\"modelDigest\":\"8a43428062692d36\",\"request\":{\"messageCount\":1,\"roles\":[\"user\"],\"toolCallCount\":0,\"toolResultCount\":0,\"toolNames\":[],\"contentBytes\":17,\"toolArgumentBytes\":0,\"toolOutputBytes\":0,\"advertisedToolNames\":[],\"advertisedToolCount\":0},\"toolCallIdCorrelation\":[],\"unansweredToolCallIds\":[],\"orphanToolResultIndexes\":[],\"correlationTruncated\":false,\"redacted\":true,\"contentRetained\":false}",
+                "cause": 429,
+                "provider": {
+                  "kind": "rate_limit",
+                  "status": 429,
+                  "retryAfterMs": 1000
+                }
+              },
+              "timestamp": 1791201948177
+            }
+          }
+        ],
+        "ownership": {
+          "waitListenersRegistered": 0,
+          "waitListenersExplicitlyRemoved": 0,
+          "waitListenersRetained": 0,
+          "waitTimersAllocated": 0,
+          "waitTimersPending": 0,
+          "waitTimersFired": 0,
+          "waitTimersCleared": 0,
+          "registrations": [],
+          "timers": []
+        }
+      }
+    },
+    {
+      "name": "caller-preaborted",
+      "status": "PASS",
+      "result": {
+        "name": "caller-preaborted",
+        "config": {
+          "kind": "direct",
+          "timeout": 0,
+          "delay": 0,
+          "retries": 1,
+          "abortAtRetry": false,
+          "delayResumeMs": 0,
+          "abortBeforeResume": false,
+          "preAborted": true
+        },
+        "elapsedMs": 0.09634600000003957,
+        "fetchAttempts": 0,
+        "httpRequests": 0,
+        "callerAborted": true,
+        "events": [
+          {
+            "elapsedMs": 0.08575000000018917,
+            "event": {
+              "type": "started",
+              "timestamp": 1791201948187
+            }
+          },
+          {
+            "elapsedMs": 0.09526400000004287,
+            "event": {
+              "type": "completed",
+              "result": {
+                "finishReason": "cancelled"
+              },
+              "timestamp": 1791201948187
+            }
+          }
+        ],
+        "ownership": {
+          "waitListenersRegistered": 0,
+          "waitListenersExplicitlyRemoved": 0,
+          "waitListenersRetained": 0,
+          "waitTimersAllocated": 0,
+          "waitTimersPending": 0,
+          "waitTimersFired": 0,
+          "waitTimersCleared": 0,
+          "registrations": [],
+          "timers": []
+        }
+      }
+    },
+    {
+      "name": "exhausted-server-budget",
+      "status": "PASS",
+      "result": {
+        "name": "exhausted-server-budget",
+        "config": {
+          "kind": "503",
+          "timeout": 0,
+          "delay": 0,
+          "retries": 2,
+          "abortAtRetry": false,
+          "delayResumeMs": 0,
+          "abortBeforeResume": false,
+          "preAborted": false
+        },
+        "elapsedMs": 11.202494999999999,
+        "fetchAttempts": 3,
+        "httpRequests": 3,
+        "callerAborted": false,
+        "events": [
+          {
+            "elapsedMs": 0.020590999999967607,
+            "event": {
+              "type": "started",
+              "timestamp": 1791201948189
+            }
+          },
+          {
+            "elapsedMs": 2.368152000000009,
+            "event": {
+              "type": "retry",
+              "attempt": 1,
+              "error": {
+                "code": "MODEL_ERROR",
+                "message": "OpenAI chat completion failed: HTTP 503: offline fixture",
+                "retryable": false,
+                "safeToRetry": false,
+                "evidence": "{\"schema\":\"ar.provider-diagnostics.v1\",\"reason\":\"http_status\",\"status\":503,\"endpointDigest\":\"273fdbffb1751b3b\",\"modelDigest\":\"8a43428062692d36\",\"request\":{\"messageCount\":1,\"roles\":[\"user\"],\"toolCallCount\":0,\"toolResultCount\":0,\"toolNames\":[],\"contentBytes\":23,\"toolArgumentBytes\":0,\"toolOutputBytes\":0,\"advertisedToolNames\":[],\"advertisedToolCount\":0},\"toolCallIdCorrelation\":[],\"unansweredToolCallIds\":[],\"orphanToolResultIndexes\":[],\"correlationTruncated\":false,\"redacted\":true,\"contentRetained\":false}",
+                "cause": 503,
+                "provider": {
+                  "kind": "server_error",
+                  "status": 503
+                }
+              },
+              "timestamp": 1791201948192
+            }
+          },
+          {
+            "elapsedMs": 6.886396999999988,
+            "event": {
+              "type": "retry",
+              "attempt": 2,
+              "error": {
+                "code": "MODEL_ERROR",
+                "message": "OpenAI chat completion failed: HTTP 503: offline fixture",
+                "retryable": false,
+                "safeToRetry": false,
+                "evidence": "{\"schema\":\"ar.provider-diagnostics.v1\",\"reason\":\"http_status\",\"status\":503,\"endpointDigest\":\"273fdbffb1751b3b\",\"modelDigest\":\"8a43428062692d36\",\"request\":{\"messageCount\":1,\"roles\":[\"user\"],\"toolCallCount\":0,\"toolResultCount\":0,\"toolNames\":[],\"contentBytes\":23,\"toolArgumentBytes\":0,\"toolOutputBytes\":0,\"advertisedToolNames\":[],\"advertisedToolCount\":0},\"toolCallIdCorrelation\":[],\"unansweredToolCallIds\":[],\"orphanToolResultIndexes\":[],\"correlationTruncated\":false,\"redacted\":true,\"contentRetained\":false}",
+                "cause": 503,
+                "provider": {
+                  "kind": "server_error",
+                  "status": 503
+                }
+              },
+              "timestamp": 1791201948196
+            }
+          },
+          {
+            "elapsedMs": 11.201293999999962,
+            "event": {
+              "type": "error",
+              "error": {
+                "code": "MODEL_ERROR",
+                "message": "OpenAI chat completion failed: HTTP 503: offline fixture",
+                "retryable": false,
+                "safeToRetry": false,
+                "evidence": "{\"schema\":\"ar.provider-diagnostics.v1\",\"reason\":\"http_status\",\"status\":503,\"endpointDigest\":\"273fdbffb1751b3b\",\"modelDigest\":\"8a43428062692d36\",\"request\":{\"messageCount\":1,\"roles\":[\"user\"],\"toolCallCount\":0,\"toolResultCount\":0,\"toolNames\":[],\"contentBytes\":23,\"toolArgumentBytes\":0,\"toolOutputBytes\":0,\"advertisedToolNames\":[],\"advertisedToolCount\":0},\"toolCallIdCorrelation\":[],\"unansweredToolCallIds\":[],\"orphanToolResultIndexes\":[],\"correlationTruncated\":false,\"redacted\":true,\"contentRetained\":false}",
+                "cause": 503,
+                "provider": {
+                  "kind": "server_error",
+                  "status": 503
+                }
+              },
+              "timestamp": 1791201948201
+            }
+          }
+        ],
+        "ownership": {
+          "waitListenersRegistered": 2,
+          "waitListenersExplicitlyRemoved": 2,
+          "waitListenersRetained": 0,
+          "waitTimersAllocated": 2,
+          "waitTimersPending": 0,
+          "waitTimersFired": 2,
+          "waitTimersCleared": 2,
+          "registrations": [
+            {
+              "stack": "Error\n    at AbortSignal.addEventListener (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:57:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:188:16\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async test (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:91:19)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:113:2",
+              "once": true,
+              "source": "() => {\n            if (settled)\n                return;\n            settled = true;\n            if (timer !== undefined)\n                clearTimeout(timer);\n            signal.removeEventListener(\"abort\", finish);\n            resolve();\n        }",
+              "effectiveSignalIsCaller": true
+            },
+            {
+              "stack": "Error\n    at AbortSignal.addEventListener (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:57:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:188:16\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async test (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:91:19)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:113:2",
+              "once": true,
+              "source": "() => {\n            if (settled)\n                return;\n            settled = true;\n            if (timer !== undefined)\n                clearTimeout(timer);\n            signal.removeEventListener(\"abort\", finish);\n            resolve();\n        }",
+              "effectiveSignalIsCaller": true
+            }
+          ],
+          "timers": [
+            {
+              "delay": 0,
+              "stack": "Error\n    at globalThis.setTimeout (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:61:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:193:17\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async test (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:91:19)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:113:2",
+              "fired": true,
+              "cleared": true
+            },
+            {
+              "delay": 0,
+              "stack": "Error\n    at globalThis.setTimeout (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:61:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:193:17\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async test (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:91:19)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:113:2",
+              "fired": true,
+              "cleared": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "streaming-failure-never-retried",
+      "status": "PASS",
+      "result": {
+        "name": "streaming-failure-never-retried",
+        "config": {
+          "kind": "stream-failure",
+          "timeout": 0,
+          "delay": 0,
+          "retries": 2,
+          "abortAtRetry": false,
+          "delayResumeMs": 0,
+          "abortBeforeResume": false,
+          "preAborted": false
+        },
+        "elapsedMs": 43.838211,
+        "fetchAttempts": 1,
+        "httpRequests": 1,
+        "callerAborted": false,
+        "events": [
+          {
+            "elapsedMs": 0.017606999999998152,
+            "event": {
+              "type": "started",
+              "timestamp": 1791201948203
+            }
+          },
+          {
+            "elapsedMs": 2.466109999999844,
+            "event": {
+              "type": "text_delta",
+              "text": "partial",
+              "timestamp": 1791201948206
+            }
+          },
+          {
+            "elapsedMs": 43.83620799999994,
+            "event": {
+              "type": "error",
+              "error": {
+                "code": "MODEL_ERROR",
+                "message": "OpenAI chat completion stream failed: terminated",
+                "retryable": false,
+                "safeToRetry": false,
+                "provider": {
+                  "kind": "network"
+                }
+              },
+              "timestamp": 1791201948247
+            }
+          }
+        ],
+        "ownership": {
+          "waitListenersRegistered": 0,
+          "waitListenersExplicitlyRemoved": 0,
+          "waitListenersRetained": 0,
+          "waitTimersAllocated": 0,
+          "waitTimersPending": 0,
+          "waitTimersFired": 0,
+          "waitTimersCleared": 0,
+          "registrations": [],
+          "timers": []
+        }
+      }
+    },
+    {
+      "name": "zero-delay-retry",
+      "status": "PASS",
+      "result": {
+        "name": "zero-delay-retry",
+        "config": {
+          "kind": "429",
+          "timeout": 0,
+          "delay": 0,
+          "retries": 1,
+          "abortAtRetry": false,
+          "delayResumeMs": 0,
+          "abortBeforeResume": false,
+          "preAborted": false
+        },
+        "elapsedMs": 8.18403000000012,
+        "fetchAttempts": 2,
+        "httpRequests": 2,
+        "callerAborted": false,
+        "events": [
+          {
+            "elapsedMs": 0.042374000000108936,
+            "event": {
+              "type": "started",
+              "timestamp": 1791201948251
+            }
+          },
+          {
+            "elapsedMs": 4.380407000000105,
+            "event": {
+              "type": "retry",
+              "attempt": 1,
+              "error": {
+                "code": "MODEL_ERROR",
+                "message": "OpenAI chat completion failed: HTTP 429: offline fixture",
+                "retryable": false,
+                "safeToRetry": false,
+                "evidence": "{\"schema\":\"ar.provider-diagnostics.v1\",\"reason\":\"http_status\",\"status\":429,\"endpointDigest\":\"273fdbffb1751b3b\",\"modelDigest\":\"8a43428062692d36\",\"request\":{\"messageCount\":1,\"roles\":[\"user\"],\"toolCallCount\":0,\"toolResultCount\":0,\"toolNames\":[],\"contentBytes\":16,\"toolArgumentBytes\":0,\"toolOutputBytes\":0,\"advertisedToolNames\":[],\"advertisedToolCount\":0},\"toolCallIdCorrelation\":[],\"unansweredToolCallIds\":[],\"orphanToolResultIndexes\":[],\"correlationTruncated\":false,\"redacted\":true,\"contentRetained\":false}",
+                "cause": 429,
+                "provider": {
+                  "kind": "rate_limit",
+                  "status": 429
+                }
+              },
+              "timestamp": 1791201948256
+            }
+          },
+          {
+            "elapsedMs": 8.125371000000086,
+            "event": {
+              "type": "usage",
+              "usage": {
+                "inputTokens": 7,
+                "outputTokens": 2
+              },
+              "timestamp": 1791201948259
+            }
+          },
+          {
+            "elapsedMs": 8.127244000000019,
+            "event": {
+              "type": "text_delta",
+              "text": "ok",
+              "timestamp": 1791201948259
+            }
+          },
+          {
+            "elapsedMs": 8.128947000000153,
+            "event": {
+              "type": "completed",
+              "result": {
+                "finishReason": "stop",
+                "text": "ok",
+                "usage": {
+                  "inputTokens": 7,
+                  "outputTokens": 2
+                }
+              },
+              "timestamp": 1791201948259
+            }
+          }
+        ],
+        "ownership": {
+          "waitListenersRegistered": 1,
+          "waitListenersExplicitlyRemoved": 1,
+          "waitListenersRetained": 0,
+          "waitTimersAllocated": 1,
+          "waitTimersPending": 0,
+          "waitTimersFired": 1,
+          "waitTimersCleared": 1,
+          "registrations": [
+            {
+              "stack": "Error\n    at AbortSignal.addEventListener (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:57:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:188:16\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async test (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:91:19)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:115:2",
+              "once": true,
+              "source": "() => {\n            if (settled)\n                return;\n            settled = true;\n            if (timer !== undefined)\n                clearTimeout(timer);\n            signal.removeEventListener(\"abort\", finish);\n            resolve();\n        }",
+              "effectiveSignalIsCaller": true
+            }
+          ],
+          "timers": [
+            {
+              "delay": 0,
+              "stack": "Error\n    at globalThis.setTimeout (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:61:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:193:17\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async test (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:91:19)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:115:2",
+              "fired": true,
+              "cleared": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "reuse-caller-12-calls",
+      "status": "PASS",
+      "results": [
+        {
+          "name": "reuse-caller-0",
+          "config": {
+            "kind": "429",
+            "timeout": 0,
+            "delay": 0,
+            "retries": 1,
+            "abortAtRetry": false,
+            "delayResumeMs": 0,
+            "abortBeforeResume": false,
+            "preAborted": false
+          },
+          "elapsedMs": 10.068590000000086,
+          "fetchAttempts": 2,
+          "httpRequests": 2,
+          "callerAborted": false,
+          "events": [
+            {
+              "elapsedMs": 0.02317500000003747,
+              "event": {
+                "type": "started",
+                "timestamp": 1791201948261
+              }
+            },
+            {
+              "elapsedMs": 2.3090819999999894,
+              "event": {
+                "type": "retry",
+                "attempt": 1,
+                "error": {
+                  "code": "MODEL_ERROR",
+                  "message": "OpenAI chat completion failed: HTTP 429: offline fixture",
+                  "retryable": false,
+                  "safeToRetry": false,
+                  "evidence": "{\"schema\":\"ar.provider-diagnostics.v1\",\"reason\":\"http_status\",\"status\":429,\"endpointDigest\":\"273fdbffb1751b3b\",\"modelDigest\":\"8a43428062692d36\",\"request\":{\"messageCount\":1,\"roles\":[\"user\"],\"toolCallCount\":0,\"toolResultCount\":0,\"toolNames\":[],\"contentBytes\":14,\"toolArgumentBytes\":0,\"toolOutputBytes\":0,\"advertisedToolNames\":[],\"advertisedToolCount\":0},\"toolCallIdCorrelation\":[],\"unansweredToolCallIds\":[],\"orphanToolResultIndexes\":[],\"correlationTruncated\":false,\"redacted\":true,\"contentRetained\":false}",
+                  "cause": 429,
+                  "provider": {
+                    "kind": "rate_limit",
+                    "status": 429
+                  }
+                },
+                "timestamp": 1791201948263
+              }
+            },
+            {
+              "elapsedMs": 10.028078999999934,
+              "event": {
+                "type": "usage",
+                "usage": {
+                  "inputTokens": 7,
+                  "outputTokens": 2
+                },
+                "timestamp": 1791201948271
+              }
+            },
+            {
+              "elapsedMs": 10.029800999999907,
+              "event": {
+                "type": "text_delta",
+                "text": "ok",
+                "timestamp": 1791201948271
+              }
+            },
+            {
+              "elapsedMs": 10.030753000000004,
+              "event": {
+                "type": "completed",
+                "result": {
+                  "finishReason": "stop",
+                  "text": "ok",
+                  "usage": {
+                    "inputTokens": 7,
+                    "outputTokens": 2
+                  }
+                },
+                "timestamp": 1791201948271
+              }
+            }
+          ],
+          "ownership": {
+            "waitListenersRegistered": 1,
+            "waitListenersExplicitlyRemoved": 1,
+            "waitListenersRetained": 0,
+            "waitTimersAllocated": 1,
+            "waitTimersPending": 0,
+            "waitTimersFired": 1,
+            "waitTimersCleared": 1,
+            "registrations": [
+              {
+                "stack": "Error\n    at AbortSignal.addEventListener (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:57:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:188:16\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:117:76",
+                "once": true,
+                "source": "() => {\n            if (settled)\n                return;\n            settled = true;\n            if (timer !== undefined)\n                clearTimeout(timer);\n            signal.removeEventListener(\"abort\", finish);\n            resolve();\n        }",
+                "effectiveSignalIsCaller": true
+              }
+            ],
+            "timers": [
+              {
+                "delay": 0,
+                "stack": "Error\n    at globalThis.setTimeout (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:61:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:193:17\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:117:76",
+                "fired": true,
+                "cleared": true
+              }
+            ]
+          }
+        },
+        {
+          "name": "reuse-caller-1",
+          "config": {
+            "kind": "429",
+            "timeout": 0,
+            "delay": 0,
+            "retries": 1,
+            "abortAtRetry": false,
+            "delayResumeMs": 0,
+            "abortBeforeResume": false,
+            "preAborted": false
+          },
+          "elapsedMs": 4.953714000000218,
+          "fetchAttempts": 2,
+          "httpRequests": 2,
+          "callerAborted": false,
+          "events": [
+            {
+              "elapsedMs": 0.014803000000028987,
+              "event": {
+                "type": "started",
+                "timestamp": 1791201948271
+              }
+            },
+            {
+              "elapsedMs": 1.6830260000001545,
+              "event": {
+                "type": "retry",
+                "attempt": 1,
+                "error": {
+                  "code": "MODEL_ERROR",
+                  "message": "OpenAI chat completion failed: HTTP 429: offline fixture",
+                  "retryable": false,
+                  "safeToRetry": false,
+                  "evidence": "{\"schema\":\"ar.provider-diagnostics.v1\",\"reason\":\"http_status\",\"status\":429,\"endpointDigest\":\"273fdbffb1751b3b\",\"modelDigest\":\"8a43428062692d36\",\"request\":{\"messageCount\":1,\"roles\":[\"user\"],\"toolCallCount\":0,\"toolResultCount\":0,\"toolNames\":[],\"contentBytes\":14,\"toolArgumentBytes\":0,\"toolOutputBytes\":0,\"advertisedToolNames\":[],\"advertisedToolCount\":0},\"toolCallIdCorrelation\":[],\"unansweredToolCallIds\":[],\"orphanToolResultIndexes\":[],\"correlationTruncated\":false,\"redacted\":true,\"contentRetained\":false}",
+                  "cause": 429,
+                  "provider": {
+                    "kind": "rate_limit",
+                    "status": 429
+                  }
+                },
+                "timestamp": 1791201948273
+              }
+            },
+            {
+              "elapsedMs": 4.914094000000205,
+              "event": {
+                "type": "usage",
+                "usage": {
+                  "inputTokens": 7,
+                  "outputTokens": 2
+                },
+                "timestamp": 1791201948276
+              }
+            },
+            {
+              "elapsedMs": 4.915766000000076,
+              "event": {
+                "type": "text_delta",
+                "text": "ok",
+                "timestamp": 1791201948276
+              }
+            },
+            {
+              "elapsedMs": 4.916638000000148,
+              "event": {
+                "type": "completed",
+                "result": {
+                  "finishReason": "stop",
+                  "text": "ok",
+                  "usage": {
+                    "inputTokens": 7,
+                    "outputTokens": 2
+                  }
+                },
+                "timestamp": 1791201948276
+              }
+            }
+          ],
+          "ownership": {
+            "waitListenersRegistered": 1,
+            "waitListenersExplicitlyRemoved": 1,
+            "waitListenersRetained": 0,
+            "waitTimersAllocated": 1,
+            "waitTimersPending": 0,
+            "waitTimersFired": 1,
+            "waitTimersCleared": 1,
+            "registrations": [
+              {
+                "stack": "Error\n    at AbortSignal.addEventListener (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:57:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:188:16\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:117:76",
+                "once": true,
+                "source": "() => {\n            if (settled)\n                return;\n            settled = true;\n            if (timer !== undefined)\n                clearTimeout(timer);\n            signal.removeEventListener(\"abort\", finish);\n            resolve();\n        }",
+                "effectiveSignalIsCaller": true
+              }
+            ],
+            "timers": [
+              {
+                "delay": 0,
+                "stack": "Error\n    at globalThis.setTimeout (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:61:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:193:17\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:117:76",
+                "fired": true,
+                "cleared": true
+              }
+            ]
+          }
+        },
+        {
+          "name": "reuse-caller-2",
+          "config": {
+            "kind": "429",
+            "timeout": 0,
+            "delay": 0,
+            "retries": 1,
+            "abortAtRetry": false,
+            "delayResumeMs": 0,
+            "abortBeforeResume": false,
+            "preAborted": false
+          },
+          "elapsedMs": 4.264570000000049,
+          "fetchAttempts": 2,
+          "httpRequests": 2,
+          "callerAborted": false,
+          "events": [
+            {
+              "elapsedMs": 0.01435100000003331,
+              "event": {
+                "type": "started",
+                "timestamp": 1791201948276
+              }
+            },
+            {
+              "elapsedMs": 2.0708219999999073,
+              "event": {
+                "type": "retry",
+                "attempt": 1,
+                "error": {
+                  "code": "MODEL_ERROR",
+                  "message": "OpenAI chat completion failed: HTTP 429: offline fixture",
+                  "retryable": false,
+                  "safeToRetry": false,
+                  "evidence": "{\"schema\":\"ar.provider-diagnostics.v1\",\"reason\":\"http_status\",\"status\":429,\"endpointDigest\":\"273fdbffb1751b3b\",\"modelDigest\":\"8a43428062692d36\",\"request\":{\"messageCount\":1,\"roles\":[\"user\"],\"toolCallCount\":0,\"toolResultCount\":0,\"toolNames\":[],\"contentBytes\":14,\"toolArgumentBytes\":0,\"toolOutputBytes\":0,\"advertisedToolNames\":[],\"advertisedToolCount\":0},\"toolCallIdCorrelation\":[],\"unansweredToolCallIds\":[],\"orphanToolResultIndexes\":[],\"correlationTruncated\":false,\"redacted\":true,\"contentRetained\":false}",
+                  "cause": 429,
+                  "provider": {
+                    "kind": "rate_limit",
+                    "status": 429
+                  }
+                },
+                "timestamp": 1791201948278
+              }
+            },
+            {
+              "elapsedMs": 4.223588000000063,
+              "event": {
+                "type": "usage",
+                "usage": {
+                  "inputTokens": 7,
+                  "outputTokens": 2
+                },
+                "timestamp": 1791201948280
+              }
+            },
+            {
+              "elapsedMs": 4.22531099999992,
+              "event": {
+                "type": "text_delta",
+                "text": "ok",
+                "timestamp": 1791201948280
+              }
+            },
+            {
+              "elapsedMs": 4.226151999999956,
+              "event": {
+                "type": "completed",
+                "result": {
+                  "finishReason": "stop",
+                  "text": "ok",
+                  "usage": {
+                    "inputTokens": 7,
+                    "outputTokens": 2
+                  }
+                },
+                "timestamp": 1791201948280
+              }
+            }
+          ],
+          "ownership": {
+            "waitListenersRegistered": 1,
+            "waitListenersExplicitlyRemoved": 1,
+            "waitListenersRetained": 0,
+            "waitTimersAllocated": 1,
+            "waitTimersPending": 0,
+            "waitTimersFired": 1,
+            "waitTimersCleared": 1,
+            "registrations": [
+              {
+                "stack": "Error\n    at AbortSignal.addEventListener (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:57:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:188:16\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:117:76",
+                "once": true,
+                "source": "() => {\n            if (settled)\n                return;\n            settled = true;\n            if (timer !== undefined)\n                clearTimeout(timer);\n            signal.removeEventListener(\"abort\", finish);\n            resolve();\n        }",
+                "effectiveSignalIsCaller": true
+              }
+            ],
+            "timers": [
+              {
+                "delay": 0,
+                "stack": "Error\n    at globalThis.setTimeout (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:61:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:193:17\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:117:76",
+                "fired": true,
+                "cleared": true
+              }
+            ]
+          }
+        },
+        {
+          "name": "reuse-caller-3",
+          "config": {
+            "kind": "429",
+            "timeout": 0,
+            "delay": 0,
+            "retries": 1,
+            "abortAtRetry": false,
+            "delayResumeMs": 0,
+            "abortBeforeResume": false,
+            "preAborted": false
+          },
+          "elapsedMs": 6.565781000000015,
+          "fetchAttempts": 2,
+          "httpRequests": 2,
+          "callerAborted": false,
+          "events": [
+            {
+              "elapsedMs": 0.012509000000136439,
+              "event": {
+                "type": "started",
+                "timestamp": 1791201948280
+              }
+            },
+            {
+              "elapsedMs": 2.2312950000000455,
+              "event": {
+                "type": "retry",
+                "attempt": 1,
+                "error": {
+                  "code": "MODEL_ERROR",
+                  "message": "OpenAI chat completion failed: HTTP 429: offline fixture",
+                  "retryable": false,
+                  "safeToRetry": false,
+                  "evidence": "{\"schema\":\"ar.provider-diagnostics.v1\",\"reason\":\"http_status\",\"status\":429,\"endpointDigest\":\"273fdbffb1751b3b\",\"modelDigest\":\"8a43428062692d36\",\"request\":{\"messageCount\":1,\"roles\":[\"user\"],\"toolCallCount\":0,\"toolResultCount\":0,\"toolNames\":[],\"contentBytes\":14,\"toolArgumentBytes\":0,\"toolOutputBytes\":0,\"advertisedToolNames\":[],\"advertisedToolCount\":0},\"toolCallIdCorrelation\":[],\"unansweredToolCallIds\":[],\"orphanToolResultIndexes\":[],\"correlationTruncated\":false,\"redacted\":true,\"contentRetained\":false}",
+                  "cause": 429,
+                  "provider": {
+                    "kind": "rate_limit",
+                    "status": 429
+                  }
+                },
+                "timestamp": 1791201948283
+              }
+            },
+            {
+              "elapsedMs": 6.501915000000054,
+              "event": {
+                "type": "usage",
+                "usage": {
+                  "inputTokens": 7,
+                  "outputTokens": 2
+                },
+                "timestamp": 1791201948287
+              }
+            },
+            {
+              "elapsedMs": 6.503567000000203,
+              "event": {
+                "type": "text_delta",
+                "text": "ok",
+                "timestamp": 1791201948287
+              }
+            },
+            {
+              "elapsedMs": 6.504359000000022,
+              "event": {
+                "type": "completed",
+                "result": {
+                  "finishReason": "stop",
+                  "text": "ok",
+                  "usage": {
+                    "inputTokens": 7,
+                    "outputTokens": 2
+                  }
+                },
+                "timestamp": 1791201948287
+              }
+            }
+          ],
+          "ownership": {
+            "waitListenersRegistered": 1,
+            "waitListenersExplicitlyRemoved": 1,
+            "waitListenersRetained": 0,
+            "waitTimersAllocated": 1,
+            "waitTimersPending": 0,
+            "waitTimersFired": 1,
+            "waitTimersCleared": 1,
+            "registrations": [
+              {
+                "stack": "Error\n    at AbortSignal.addEventListener (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:57:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:188:16\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:117:76",
+                "once": true,
+                "source": "() => {\n            if (settled)\n                return;\n            settled = true;\n            if (timer !== undefined)\n                clearTimeout(timer);\n            signal.removeEventListener(\"abort\", finish);\n            resolve();\n        }",
+                "effectiveSignalIsCaller": true
+              }
+            ],
+            "timers": [
+              {
+                "delay": 0,
+                "stack": "Error\n    at globalThis.setTimeout (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:61:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:193:17\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:117:76",
+                "fired": true,
+                "cleared": true
+              }
+            ]
+          }
+        },
+        {
+          "name": "reuse-caller-4",
+          "config": {
+            "kind": "429",
+            "timeout": 0,
+            "delay": 0,
+            "retries": 1,
+            "abortAtRetry": false,
+            "delayResumeMs": 0,
+            "abortBeforeResume": false,
+            "preAborted": false
+          },
+          "elapsedMs": 7.88848199999984,
+          "fetchAttempts": 2,
+          "httpRequests": 2,
+          "callerAborted": false,
+          "events": [
+            {
+              "elapsedMs": 0.013429999999971187,
+              "event": {
+                "type": "started",
+                "timestamp": 1791201948287
+              }
+            },
+            {
+              "elapsedMs": 2.0831309999998666,
+              "event": {
+                "type": "retry",
+                "attempt": 1,
+                "error": {
+                  "code": "MODEL_ERROR",
+                  "message": "OpenAI chat completion failed: HTTP 429: offline fixture",
+                  "retryable": false,
+                  "safeToRetry": false,
+                  "evidence": "{\"schema\":\"ar.provider-diagnostics.v1\",\"reason\":\"http_status\",\"status\":429,\"endpointDigest\":\"273fdbffb1751b3b\",\"modelDigest\":\"8a43428062692d36\",\"request\":{\"messageCount\":1,\"roles\":[\"user\"],\"toolCallCount\":0,\"toolResultCount\":0,\"toolNames\":[],\"contentBytes\":14,\"toolArgumentBytes\":0,\"toolOutputBytes\":0,\"advertisedToolNames\":[],\"advertisedToolCount\":0},\"toolCallIdCorrelation\":[],\"unansweredToolCallIds\":[],\"orphanToolResultIndexes\":[],\"correlationTruncated\":false,\"redacted\":true,\"contentRetained\":false}",
+                  "cause": 429,
+                  "provider": {
+                    "kind": "rate_limit",
+                    "status": 429
+                  }
+                },
+                "timestamp": 1791201948289
+              }
+            },
+            {
+              "elapsedMs": 7.840678999999909,
+              "event": {
+                "type": "usage",
+                "usage": {
+                  "inputTokens": 7,
+                  "outputTokens": 2
+                },
+                "timestamp": 1791201948295
+              }
+            },
+            {
+              "elapsedMs": 7.842591999999968,
+              "event": {
+                "type": "text_delta",
+                "text": "ok",
+                "timestamp": 1791201948295
+              }
+            },
+            {
+              "elapsedMs": 7.843403999999964,
+              "event": {
+                "type": "completed",
+                "result": {
+                  "finishReason": "stop",
+                  "text": "ok",
+                  "usage": {
+                    "inputTokens": 7,
+                    "outputTokens": 2
+                  }
+                },
+                "timestamp": 1791201948295
+              }
+            }
+          ],
+          "ownership": {
+            "waitListenersRegistered": 1,
+            "waitListenersExplicitlyRemoved": 1,
+            "waitListenersRetained": 0,
+            "waitTimersAllocated": 1,
+            "waitTimersPending": 0,
+            "waitTimersFired": 1,
+            "waitTimersCleared": 1,
+            "registrations": [
+              {
+                "stack": "Error\n    at AbortSignal.addEventListener (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:57:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:188:16\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:117:76",
+                "once": true,
+                "source": "() => {\n            if (settled)\n                return;\n            settled = true;\n            if (timer !== undefined)\n                clearTimeout(timer);\n            signal.removeEventListener(\"abort\", finish);\n            resolve();\n        }",
+                "effectiveSignalIsCaller": true
+              }
+            ],
+            "timers": [
+              {
+                "delay": 0,
+                "stack": "Error\n    at globalThis.setTimeout (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:61:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:193:17\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:117:76",
+                "fired": true,
+                "cleared": true
+              }
+            ]
+          }
+        },
+        {
+          "name": "reuse-caller-5",
+          "config": {
+            "kind": "429",
+            "timeout": 0,
+            "delay": 0,
+            "retries": 1,
+            "abortAtRetry": false,
+            "delayResumeMs": 0,
+            "abortBeforeResume": false,
+            "preAborted": false
+          },
+          "elapsedMs": 4.196608999999853,
+          "fetchAttempts": 2,
+          "httpRequests": 2,
+          "callerAborted": false,
+          "events": [
+            {
+              "elapsedMs": 0.014582999999902313,
+              "event": {
+                "type": "started",
+                "timestamp": 1791201948295
+              }
+            },
+            {
+              "elapsedMs": 0.986842999999908,
+              "event": {
+                "type": "retry",
+                "attempt": 1,
+                "error": {
+                  "code": "MODEL_ERROR",
+                  "message": "OpenAI chat completion failed: HTTP 429: offline fixture",
+                  "retryable": false,
+                  "safeToRetry": false,
+                  "evidence": "{\"schema\":\"ar.provider-diagnostics.v1\",\"reason\":\"http_status\",\"status\":429,\"endpointDigest\":\"273fdbffb1751b3b\",\"modelDigest\":\"8a43428062692d36\",\"request\":{\"messageCount\":1,\"roles\":[\"user\"],\"toolCallCount\":0,\"toolResultCount\":0,\"toolNames\":[],\"contentBytes\":14,\"toolArgumentBytes\":0,\"toolOutputBytes\":0,\"advertisedToolNames\":[],\"advertisedToolCount\":0},\"toolCallIdCorrelation\":[],\"unansweredToolCallIds\":[],\"orphanToolResultIndexes\":[],\"correlationTruncated\":false,\"redacted\":true,\"contentRetained\":false}",
+                  "cause": 429,
+                  "provider": {
+                    "kind": "rate_limit",
+                    "status": 429
+                  }
+                },
+                "timestamp": 1791201948296
+              }
+            },
+            {
+              "elapsedMs": 4.1570990000000165,
+              "event": {
+                "type": "usage",
+                "usage": {
+                  "inputTokens": 7,
+                  "outputTokens": 2
+                },
+                "timestamp": 1791201948299
+              }
+            },
+            {
+              "elapsedMs": 4.158680999999888,
+              "event": {
+                "type": "text_delta",
+                "text": "ok",
+                "timestamp": 1791201948299
+              }
+            },
+            {
+              "elapsedMs": 4.159783000000061,
+              "event": {
+                "type": "completed",
+                "result": {
+                  "finishReason": "stop",
+                  "text": "ok",
+                  "usage": {
+                    "inputTokens": 7,
+                    "outputTokens": 2
+                  }
+                },
+                "timestamp": 1791201948299
+              }
+            }
+          ],
+          "ownership": {
+            "waitListenersRegistered": 1,
+            "waitListenersExplicitlyRemoved": 1,
+            "waitListenersRetained": 0,
+            "waitTimersAllocated": 1,
+            "waitTimersPending": 0,
+            "waitTimersFired": 1,
+            "waitTimersCleared": 1,
+            "registrations": [
+              {
+                "stack": "Error\n    at AbortSignal.addEventListener (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:57:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:188:16\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:117:76",
+                "once": true,
+                "source": "() => {\n            if (settled)\n                return;\n            settled = true;\n            if (timer !== undefined)\n                clearTimeout(timer);\n            signal.removeEventListener(\"abort\", finish);\n            resolve();\n        }",
+                "effectiveSignalIsCaller": true
+              }
+            ],
+            "timers": [
+              {
+                "delay": 0,
+                "stack": "Error\n    at globalThis.setTimeout (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:61:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:193:17\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:117:76",
+                "fired": true,
+                "cleared": true
+              }
+            ]
+          }
+        },
+        {
+          "name": "reuse-caller-6",
+          "config": {
+            "kind": "429",
+            "timeout": 0,
+            "delay": 0,
+            "retries": 1,
+            "abortAtRetry": false,
+            "delayResumeMs": 0,
+            "abortBeforeResume": false,
+            "preAborted": false
+          },
+          "elapsedMs": 5.500931000000037,
+          "fetchAttempts": 2,
+          "httpRequests": 2,
+          "callerAborted": false,
+          "events": [
+            {
+              "elapsedMs": 0.013190000000122382,
+              "event": {
+                "type": "started",
+                "timestamp": 1791201948299
+              }
+            },
+            {
+              "elapsedMs": 2.18392300000005,
+              "event": {
+                "type": "retry",
+                "attempt": 1,
+                "error": {
+                  "code": "MODEL_ERROR",
+                  "message": "OpenAI chat completion failed: HTTP 429: offline fixture",
+                  "retryable": false,
+                  "safeToRetry": false,
+                  "evidence": "{\"schema\":\"ar.provider-diagnostics.v1\",\"reason\":\"http_status\",\"status\":429,\"endpointDigest\":\"273fdbffb1751b3b\",\"modelDigest\":\"8a43428062692d36\",\"request\":{\"messageCount\":1,\"roles\":[\"user\"],\"toolCallCount\":0,\"toolResultCount\":0,\"toolNames\":[],\"contentBytes\":14,\"toolArgumentBytes\":0,\"toolOutputBytes\":0,\"advertisedToolNames\":[],\"advertisedToolCount\":0},\"toolCallIdCorrelation\":[],\"unansweredToolCallIds\":[],\"orphanToolResultIndexes\":[],\"correlationTruncated\":false,\"redacted\":true,\"contentRetained\":false}",
+                  "cause": 429,
+                  "provider": {
+                    "kind": "rate_limit",
+                    "status": 429
+                  }
+                },
+                "timestamp": 1791201948301
+              }
+            },
+            {
+              "elapsedMs": 5.45918800000004,
+              "event": {
+                "type": "usage",
+                "usage": {
+                  "inputTokens": 7,
+                  "outputTokens": 2
+                },
+                "timestamp": 1791201948305
+              }
+            },
+            {
+              "elapsedMs": 5.460559999999987,
+              "event": {
+                "type": "text_delta",
+                "text": "ok",
+                "timestamp": 1791201948305
+              }
+            },
+            {
+              "elapsedMs": 5.461631000000125,
+              "event": {
+                "type": "completed",
+                "result": {
+                  "finishReason": "stop",
+                  "text": "ok",
+                  "usage": {
+                    "inputTokens": 7,
+                    "outputTokens": 2
+                  }
+                },
+                "timestamp": 1791201948305
+              }
+            }
+          ],
+          "ownership": {
+            "waitListenersRegistered": 1,
+            "waitListenersExplicitlyRemoved": 1,
+            "waitListenersRetained": 0,
+            "waitTimersAllocated": 1,
+            "waitTimersPending": 0,
+            "waitTimersFired": 1,
+            "waitTimersCleared": 1,
+            "registrations": [
+              {
+                "stack": "Error\n    at AbortSignal.addEventListener (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:57:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:188:16\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:117:76",
+                "once": true,
+                "source": "() => {\n            if (settled)\n                return;\n            settled = true;\n            if (timer !== undefined)\n                clearTimeout(timer);\n            signal.removeEventListener(\"abort\", finish);\n            resolve();\n        }",
+                "effectiveSignalIsCaller": true
+              }
+            ],
+            "timers": [
+              {
+                "delay": 0,
+                "stack": "Error\n    at globalThis.setTimeout (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:61:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:193:17\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:117:76",
+                "fired": true,
+                "cleared": true
+              }
+            ]
+          }
+        },
+        {
+          "name": "reuse-caller-7",
+          "config": {
+            "kind": "429",
+            "timeout": 0,
+            "delay": 0,
+            "retries": 1,
+            "abortAtRetry": false,
+            "delayResumeMs": 0,
+            "abortBeforeResume": false,
+            "preAborted": false
+          },
+          "elapsedMs": 5.274409000000105,
+          "fetchAttempts": 2,
+          "httpRequests": 2,
+          "callerAborted": false,
+          "events": [
+            {
+              "elapsedMs": 0.0147429999999531,
+              "event": {
+                "type": "started",
+                "timestamp": 1791201948305
+              }
+            },
+            {
+              "elapsedMs": 2.057072000000062,
+              "event": {
+                "type": "retry",
+                "attempt": 1,
+                "error": {
+                  "code": "MODEL_ERROR",
+                  "message": "OpenAI chat completion failed: HTTP 429: offline fixture",
+                  "retryable": false,
+                  "safeToRetry": false,
+                  "evidence": "{\"schema\":\"ar.provider-diagnostics.v1\",\"reason\":\"http_status\",\"status\":429,\"endpointDigest\":\"273fdbffb1751b3b\",\"modelDigest\":\"8a43428062692d36\",\"request\":{\"messageCount\":1,\"roles\":[\"user\"],\"toolCallCount\":0,\"toolResultCount\":0,\"toolNames\":[],\"contentBytes\":14,\"toolArgumentBytes\":0,\"toolOutputBytes\":0,\"advertisedToolNames\":[],\"advertisedToolCount\":0},\"toolCallIdCorrelation\":[],\"unansweredToolCallIds\":[],\"orphanToolResultIndexes\":[],\"correlationTruncated\":false,\"redacted\":true,\"contentRetained\":false}",
+                  "cause": 429,
+                  "provider": {
+                    "kind": "rate_limit",
+                    "status": 429
+                  }
+                },
+                "timestamp": 1791201948307
+              }
+            },
+            {
+              "elapsedMs": 5.23805399999992,
+              "event": {
+                "type": "usage",
+                "usage": {
+                  "inputTokens": 7,
+                  "outputTokens": 2
+                },
+                "timestamp": 1791201948310
+              }
+            },
+            {
+              "elapsedMs": 5.239536000000044,
+              "event": {
+                "type": "text_delta",
+                "text": "ok",
+                "timestamp": 1791201948310
+              }
+            },
+            {
+              "elapsedMs": 5.240387000000055,
+              "event": {
+                "type": "completed",
+                "result": {
+                  "finishReason": "stop",
+                  "text": "ok",
+                  "usage": {
+                    "inputTokens": 7,
+                    "outputTokens": 2
+                  }
+                },
+                "timestamp": 1791201948310
+              }
+            }
+          ],
+          "ownership": {
+            "waitListenersRegistered": 1,
+            "waitListenersExplicitlyRemoved": 1,
+            "waitListenersRetained": 0,
+            "waitTimersAllocated": 1,
+            "waitTimersPending": 0,
+            "waitTimersFired": 1,
+            "waitTimersCleared": 1,
+            "registrations": [
+              {
+                "stack": "Error\n    at AbortSignal.addEventListener (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:57:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:188:16\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:117:76",
+                "once": true,
+                "source": "() => {\n            if (settled)\n                return;\n            settled = true;\n            if (timer !== undefined)\n                clearTimeout(timer);\n            signal.removeEventListener(\"abort\", finish);\n            resolve();\n        }",
+                "effectiveSignalIsCaller": true
+              }
+            ],
+            "timers": [
+              {
+                "delay": 0,
+                "stack": "Error\n    at globalThis.setTimeout (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:61:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:193:17\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:117:76",
+                "fired": true,
+                "cleared": true
+              }
+            ]
+          }
+        },
+        {
+          "name": "reuse-caller-8",
+          "config": {
+            "kind": "429",
+            "timeout": 0,
+            "delay": 0,
+            "retries": 1,
+            "abortAtRetry": false,
+            "delayResumeMs": 0,
+            "abortBeforeResume": false,
+            "preAborted": false
+          },
+          "elapsedMs": 5.360599000000093,
+          "fetchAttempts": 2,
+          "httpRequests": 2,
+          "callerAborted": false,
+          "events": [
+            {
+              "elapsedMs": 0.0123390000001109,
+              "event": {
+                "type": "started",
+                "timestamp": 1791201948310
+              }
+            },
+            {
+              "elapsedMs": 1.9892590000001746,
+              "event": {
+                "type": "retry",
+                "attempt": 1,
+                "error": {
+                  "code": "MODEL_ERROR",
+                  "message": "OpenAI chat completion failed: HTTP 429: offline fixture",
+                  "retryable": false,
+                  "safeToRetry": false,
+                  "evidence": "{\"schema\":\"ar.provider-diagnostics.v1\",\"reason\":\"http_status\",\"status\":429,\"endpointDigest\":\"273fdbffb1751b3b\",\"modelDigest\":\"8a43428062692d36\",\"request\":{\"messageCount\":1,\"roles\":[\"user\"],\"toolCallCount\":0,\"toolResultCount\":0,\"toolNames\":[],\"contentBytes\":14,\"toolArgumentBytes\":0,\"toolOutputBytes\":0,\"advertisedToolNames\":[],\"advertisedToolCount\":0},\"toolCallIdCorrelation\":[],\"unansweredToolCallIds\":[],\"orphanToolResultIndexes\":[],\"correlationTruncated\":false,\"redacted\":true,\"contentRetained\":false}",
+                  "cause": 429,
+                  "provider": {
+                    "kind": "rate_limit",
+                    "status": 429
+                  }
+                },
+                "timestamp": 1791201948312
+              }
+            },
+            {
+              "elapsedMs": 5.323712999999998,
+              "event": {
+                "type": "usage",
+                "usage": {
+                  "inputTokens": 7,
+                  "outputTokens": 2
+                },
+                "timestamp": 1791201948315
+              }
+            },
+            {
+              "elapsedMs": 5.325526000000082,
+              "event": {
+                "type": "text_delta",
+                "text": "ok",
+                "timestamp": 1791201948315
+              }
+            },
+            {
+              "elapsedMs": 5.326357000000144,
+              "event": {
+                "type": "completed",
+                "result": {
+                  "finishReason": "stop",
+                  "text": "ok",
+                  "usage": {
+                    "inputTokens": 7,
+                    "outputTokens": 2
+                  }
+                },
+                "timestamp": 1791201948315
+              }
+            }
+          ],
+          "ownership": {
+            "waitListenersRegistered": 1,
+            "waitListenersExplicitlyRemoved": 1,
+            "waitListenersRetained": 0,
+            "waitTimersAllocated": 1,
+            "waitTimersPending": 0,
+            "waitTimersFired": 1,
+            "waitTimersCleared": 1,
+            "registrations": [
+              {
+                "stack": "Error\n    at AbortSignal.addEventListener (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:57:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:188:16\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:117:76",
+                "once": true,
+                "source": "() => {\n            if (settled)\n                return;\n            settled = true;\n            if (timer !== undefined)\n                clearTimeout(timer);\n            signal.removeEventListener(\"abort\", finish);\n            resolve();\n        }",
+                "effectiveSignalIsCaller": true
+              }
+            ],
+            "timers": [
+              {
+                "delay": 0,
+                "stack": "Error\n    at globalThis.setTimeout (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:61:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:193:17\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:117:76",
+                "fired": true,
+                "cleared": true
+              }
+            ]
+          }
+        },
+        {
+          "name": "reuse-caller-9",
+          "config": {
+            "kind": "429",
+            "timeout": 0,
+            "delay": 0,
+            "retries": 1,
+            "abortAtRetry": false,
+            "delayResumeMs": 0,
+            "abortBeforeResume": false,
+            "preAborted": false
+          },
+          "elapsedMs": 5.226967000000059,
+          "fetchAttempts": 2,
+          "httpRequests": 2,
+          "callerAborted": false,
+          "events": [
+            {
+              "elapsedMs": 0.01248899999995956,
+              "event": {
+                "type": "started",
+                "timestamp": 1791201948315
+              }
+            },
+            {
+              "elapsedMs": 1.9707909999999629,
+              "event": {
+                "type": "retry",
+                "attempt": 1,
+                "error": {
+                  "code": "MODEL_ERROR",
+                  "message": "OpenAI chat completion failed: HTTP 429: offline fixture",
+                  "retryable": false,
+                  "safeToRetry": false,
+                  "evidence": "{\"schema\":\"ar.provider-diagnostics.v1\",\"reason\":\"http_status\",\"status\":429,\"endpointDigest\":\"273fdbffb1751b3b\",\"modelDigest\":\"8a43428062692d36\",\"request\":{\"messageCount\":1,\"roles\":[\"user\"],\"toolCallCount\":0,\"toolResultCount\":0,\"toolNames\":[],\"contentBytes\":14,\"toolArgumentBytes\":0,\"toolOutputBytes\":0,\"advertisedToolNames\":[],\"advertisedToolCount\":0},\"toolCallIdCorrelation\":[],\"unansweredToolCallIds\":[],\"orphanToolResultIndexes\":[],\"correlationTruncated\":false,\"redacted\":true,\"contentRetained\":false}",
+                  "cause": 429,
+                  "provider": {
+                    "kind": "rate_limit",
+                    "status": 429
+                  }
+                },
+                "timestamp": 1791201948317
+              }
+            },
+            {
+              "elapsedMs": 5.19350600000007,
+              "event": {
+                "type": "usage",
+                "usage": {
+                  "inputTokens": 7,
+                  "outputTokens": 2
+                },
+                "timestamp": 1791201948321
+              }
+            },
+            {
+              "elapsedMs": 5.195077999999967,
+              "event": {
+                "type": "text_delta",
+                "text": "ok",
+                "timestamp": 1791201948321
+              }
+            },
+            {
+              "elapsedMs": 5.195859000000155,
+              "event": {
+                "type": "completed",
+                "result": {
+                  "finishReason": "stop",
+                  "text": "ok",
+                  "usage": {
+                    "inputTokens": 7,
+                    "outputTokens": 2
+                  }
+                },
+                "timestamp": 1791201948321
+              }
+            }
+          ],
+          "ownership": {
+            "waitListenersRegistered": 1,
+            "waitListenersExplicitlyRemoved": 1,
+            "waitListenersRetained": 0,
+            "waitTimersAllocated": 1,
+            "waitTimersPending": 0,
+            "waitTimersFired": 1,
+            "waitTimersCleared": 1,
+            "registrations": [
+              {
+                "stack": "Error\n    at AbortSignal.addEventListener (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:57:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:188:16\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:117:76",
+                "once": true,
+                "source": "() => {\n            if (settled)\n                return;\n            settled = true;\n            if (timer !== undefined)\n                clearTimeout(timer);\n            signal.removeEventListener(\"abort\", finish);\n            resolve();\n        }",
+                "effectiveSignalIsCaller": true
+              }
+            ],
+            "timers": [
+              {
+                "delay": 0,
+                "stack": "Error\n    at globalThis.setTimeout (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:61:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:193:17\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:117:76",
+                "fired": true,
+                "cleared": true
+              }
+            ]
+          }
+        },
+        {
+          "name": "reuse-caller-10",
+          "config": {
+            "kind": "429",
+            "timeout": 0,
+            "delay": 0,
+            "retries": 1,
+            "abortAtRetry": false,
+            "delayResumeMs": 0,
+            "abortBeforeResume": false,
+            "preAborted": false
+          },
+          "elapsedMs": 30.338711999999987,
+          "fetchAttempts": 2,
+          "httpRequests": 2,
+          "callerAborted": false,
+          "events": [
+            {
+              "elapsedMs": 0.012289000000009764,
+              "event": {
+                "type": "started",
+                "timestamp": 1791201948321
+              }
+            },
+            {
+              "elapsedMs": 26.689200999999912,
+              "event": {
+                "type": "retry",
+                "attempt": 1,
+                "error": {
+                  "code": "MODEL_ERROR",
+                  "message": "OpenAI chat completion failed: HTTP 429: offline fixture",
+                  "retryable": false,
+                  "safeToRetry": false,
+                  "evidence": "{\"schema\":\"ar.provider-diagnostics.v1\",\"reason\":\"http_status\",\"status\":429,\"endpointDigest\":\"273fdbffb1751b3b\",\"modelDigest\":\"8a43428062692d36\",\"request\":{\"messageCount\":1,\"roles\":[\"user\"],\"toolCallCount\":0,\"toolResultCount\":0,\"toolNames\":[],\"contentBytes\":15,\"toolArgumentBytes\":0,\"toolOutputBytes\":0,\"advertisedToolNames\":[],\"advertisedToolCount\":0},\"toolCallIdCorrelation\":[],\"unansweredToolCallIds\":[],\"orphanToolResultIndexes\":[],\"correlationTruncated\":false,\"redacted\":true,\"contentRetained\":false}",
+                  "cause": 429,
+                  "provider": {
+                    "kind": "rate_limit",
+                    "status": 429
+                  }
+                },
+                "timestamp": 1791201948347
+              }
+            },
+            {
+              "elapsedMs": 30.295796999999993,
+              "event": {
+                "type": "usage",
+                "usage": {
+                  "inputTokens": 7,
+                  "outputTokens": 2
+                },
+                "timestamp": 1791201948351
+              }
+            },
+            {
+              "elapsedMs": 30.297338999999965,
+              "event": {
+                "type": "text_delta",
+                "text": "ok",
+                "timestamp": 1791201948351
+              }
+            },
+            {
+              "elapsedMs": 30.29830099999981,
+              "event": {
+                "type": "completed",
+                "result": {
+                  "finishReason": "stop",
+                  "text": "ok",
+                  "usage": {
+                    "inputTokens": 7,
+                    "outputTokens": 2
+                  }
+                },
+                "timestamp": 1791201948351
+              }
+            }
+          ],
+          "ownership": {
+            "waitListenersRegistered": 1,
+            "waitListenersExplicitlyRemoved": 1,
+            "waitListenersRetained": 0,
+            "waitTimersAllocated": 1,
+            "waitTimersPending": 0,
+            "waitTimersFired": 1,
+            "waitTimersCleared": 1,
+            "registrations": [
+              {
+                "stack": "Error\n    at AbortSignal.addEventListener (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:57:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:188:16\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:117:76",
+                "once": true,
+                "source": "() => {\n            if (settled)\n                return;\n            settled = true;\n            if (timer !== undefined)\n                clearTimeout(timer);\n            signal.removeEventListener(\"abort\", finish);\n            resolve();\n        }",
+                "effectiveSignalIsCaller": true
+              }
+            ],
+            "timers": [
+              {
+                "delay": 0,
+                "stack": "Error\n    at globalThis.setTimeout (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:61:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:193:17\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:117:76",
+                "fired": true,
+                "cleared": true
+              }
+            ]
+          }
+        },
+        {
+          "name": "reuse-caller-11",
+          "config": {
+            "kind": "429",
+            "timeout": 0,
+            "delay": 0,
+            "retries": 1,
+            "abortAtRetry": false,
+            "delayResumeMs": 0,
+            "abortBeforeResume": false,
+            "preAborted": false
+          },
+          "elapsedMs": 5.275138000000197,
+          "fetchAttempts": 2,
+          "httpRequests": 2,
+          "callerAborted": false,
+          "events": [
+            {
+              "elapsedMs": 0.01667500000007749,
+              "event": {
+                "type": "started",
+                "timestamp": 1791201948351
+              }
+            },
+            {
+              "elapsedMs": 2.0480870000001232,
+              "event": {
+                "type": "retry",
+                "attempt": 1,
+                "error": {
+                  "code": "MODEL_ERROR",
+                  "message": "OpenAI chat completion failed: HTTP 429: offline fixture",
+                  "retryable": false,
+                  "safeToRetry": false,
+                  "evidence": "{\"schema\":\"ar.provider-diagnostics.v1\",\"reason\":\"http_status\",\"status\":429,\"endpointDigest\":\"273fdbffb1751b3b\",\"modelDigest\":\"8a43428062692d36\",\"request\":{\"messageCount\":1,\"roles\":[\"user\"],\"toolCallCount\":0,\"toolResultCount\":0,\"toolNames\":[],\"contentBytes\":15,\"toolArgumentBytes\":0,\"toolOutputBytes\":0,\"advertisedToolNames\":[],\"advertisedToolCount\":0},\"toolCallIdCorrelation\":[],\"unansweredToolCallIds\":[],\"orphanToolResultIndexes\":[],\"correlationTruncated\":false,\"redacted\":true,\"contentRetained\":false}",
+                  "cause": 429,
+                  "provider": {
+                    "kind": "rate_limit",
+                    "status": 429
+                  }
+                },
+                "timestamp": 1791201948353
+              }
+            },
+            {
+              "elapsedMs": 5.2351280000000315,
+              "event": {
+                "type": "usage",
+                "usage": {
+                  "inputTokens": 7,
+                  "outputTokens": 2
+                },
+                "timestamp": 1791201948356
+              }
+            },
+            {
+              "elapsedMs": 5.2365000000002055,
+              "event": {
+                "type": "text_delta",
+                "text": "ok",
+                "timestamp": 1791201948356
+              }
+            },
+            {
+              "elapsedMs": 5.2373710000001665,
+              "event": {
+                "type": "completed",
+                "result": {
+                  "finishReason": "stop",
+                  "text": "ok",
+                  "usage": {
+                    "inputTokens": 7,
+                    "outputTokens": 2
+                  }
+                },
+                "timestamp": 1791201948356
+              }
+            }
+          ],
+          "ownership": {
+            "waitListenersRegistered": 1,
+            "waitListenersExplicitlyRemoved": 1,
+            "waitListenersRetained": 0,
+            "waitTimersAllocated": 1,
+            "waitTimersPending": 0,
+            "waitTimersFired": 1,
+            "waitTimersCleared": 1,
+            "registrations": [
+              {
+                "stack": "Error\n    at AbortSignal.addEventListener (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:57:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:188:16\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:117:76",
+                "once": true,
+                "source": "() => {\n            if (settled)\n                return;\n            settled = true;\n            if (timer !== undefined)\n                clearTimeout(timer);\n            signal.removeEventListener(\"abort\", finish);\n            resolve();\n        }",
+                "effectiveSignalIsCaller": true
+              }
+            ],
+            "timers": [
+              {
+                "delay": 0,
+                "stack": "Error\n    at globalThis.setTimeout (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:61:15)\n    at file:///workspace/harness-agent/packages/model/dist/openai.js:193:17\n    at new Promise (<anonymous>)\n    at backoff (file:///workspace/harness-agent/packages/model/dist/openai.js:176:11)\n    at streamChatCompletion (file:///workspace/harness-agent/packages/model/dist/openai.js:345:23)\n    at streamChatCompletion.next (<anonymous>)\n    at sample (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:70:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/provider-retry-probe.mjs:117:76",
+                "fired": true,
+                "cleared": true
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "requests": [
+    {
+      "name": "direct-success",
+      "n": 1,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "direct-success"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:46.689Z"
+    },
+    {
+      "name": "normal-429-recovery",
+      "n": 1,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "normal-429-recovery"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:46.704Z"
+    },
+    {
+      "name": "normal-429-recovery",
+      "n": 2,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "normal-429-recovery"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:46.720Z"
+    },
+    {
+      "name": "normal-network-recovery",
+      "n": 1,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "normal-network-recovery"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:46.726Z"
+    },
+    {
+      "name": "normal-network-recovery",
+      "n": 2,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "normal-network-recovery"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:46.740Z"
+    },
+    {
+      "name": "non-transient-401",
+      "n": 1,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "non-transient-401"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:46.749Z"
+    },
+    {
+      "name": "retry-after-deadline",
+      "n": 1,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "retry-after-deadline"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:46.755Z"
+    },
+    {
+      "name": "network-backoff-deadline",
+      "n": 1,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "network-backoff-deadline"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:46.808Z"
+    },
+    {
+      "name": "caller-abort-at-retry",
+      "n": 1,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "caller-abort-at-retry"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:46.861Z"
+    },
+    {
+      "name": "caller-abort-at-network-retry",
+      "n": 1,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "caller-abort-at-network-retry"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:46.877Z"
+    },
+    {
+      "name": "caller-abort-during-wait",
+      "n": 1,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "caller-abort-during-wait"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:46.882Z"
+    },
+    {
+      "name": "deadline-expired-before-wait",
+      "n": 1,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "deadline-expired-before-wait"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:46.935Z"
+    },
+    {
+      "name": "caller-wins-expired-deadline",
+      "n": 1,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "caller-wins-expired-deadline"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:47.011Z"
+    },
+    {
+      "name": "deadline-budget-preserved",
+      "n": 1,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "deadline-budget-preserved"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:47.090Z"
+    },
+    {
+      "name": "retry-after-preserved",
+      "n": 1,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "retry-after-preserved"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:47.156Z"
+    },
+    {
+      "name": "retry-after-preserved",
+      "n": 2,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "retry-after-preserved"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:48.159Z"
+    },
+    {
+      "name": "retry-budget-zero",
+      "n": 1,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "retry-budget-zero"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:48.176Z"
+    },
+    {
+      "name": "exhausted-server-budget",
+      "n": 1,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "exhausted-server-budget"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:48.191Z"
+    },
+    {
+      "name": "exhausted-server-budget",
+      "n": 2,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "exhausted-server-budget"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:48.195Z"
+    },
+    {
+      "name": "exhausted-server-budget",
+      "n": 3,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "exhausted-server-budget"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:48.200Z"
+    },
+    {
+      "name": "streaming-failure-never-retried",
+      "n": 1,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "streaming-failure-never-retried"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:48.205Z"
+    },
+    {
+      "name": "zero-delay-retry",
+      "n": 1,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "zero-delay-retry"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:48.255Z"
+    },
+    {
+      "name": "zero-delay-retry",
+      "n": 2,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "zero-delay-retry"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:48.259Z"
+    },
+    {
+      "name": "reuse-caller-0",
+      "n": 1,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "reuse-caller-0"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:48.263Z"
+    },
+    {
+      "name": "reuse-caller-0",
+      "n": 2,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "reuse-caller-0"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:48.271Z"
+    },
+    {
+      "name": "reuse-caller-1",
+      "n": 1,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "reuse-caller-1"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:48.272Z"
+    },
+    {
+      "name": "reuse-caller-1",
+      "n": 2,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "reuse-caller-1"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:48.276Z"
+    },
+    {
+      "name": "reuse-caller-2",
+      "n": 1,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "reuse-caller-2"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:48.278Z"
+    },
+    {
+      "name": "reuse-caller-2",
+      "n": 2,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "reuse-caller-2"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:48.280Z"
+    },
+    {
+      "name": "reuse-caller-3",
+      "n": 1,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "reuse-caller-3"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:48.282Z"
+    },
+    {
+      "name": "reuse-caller-3",
+      "n": 2,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "reuse-caller-3"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:48.287Z"
+    },
+    {
+      "name": "reuse-caller-4",
+      "n": 1,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "reuse-caller-4"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:48.289Z"
+    },
+    {
+      "name": "reuse-caller-4",
+      "n": 2,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "reuse-caller-4"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:48.292Z"
+    },
+    {
+      "name": "reuse-caller-5",
+      "n": 1,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "reuse-caller-5"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:48.296Z"
+    },
+    {
+      "name": "reuse-caller-5",
+      "n": 2,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "reuse-caller-5"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:48.299Z"
+    },
+    {
+      "name": "reuse-caller-6",
+      "n": 1,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "reuse-caller-6"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:48.301Z"
+    },
+    {
+      "name": "reuse-caller-6",
+      "n": 2,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "reuse-caller-6"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:48.304Z"
+    },
+    {
+      "name": "reuse-caller-7",
+      "n": 1,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "reuse-caller-7"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:48.306Z"
+    },
+    {
+      "name": "reuse-caller-7",
+      "n": 2,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "reuse-caller-7"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:48.310Z"
+    },
+    {
+      "name": "reuse-caller-8",
+      "n": 1,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "reuse-caller-8"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:48.312Z"
+    },
+    {
+      "name": "reuse-caller-8",
+      "n": 2,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "reuse-caller-8"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:48.315Z"
+    },
+    {
+      "name": "reuse-caller-9",
+      "n": 1,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "reuse-caller-9"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:48.317Z"
+    },
+    {
+      "name": "reuse-caller-9",
+      "n": 2,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "reuse-caller-9"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:48.320Z"
+    },
+    {
+      "name": "reuse-caller-10",
+      "n": 1,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "reuse-caller-10"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:48.347Z"
+    },
+    {
+      "name": "reuse-caller-10",
+      "n": 2,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "reuse-caller-10"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:48.351Z"
+    },
+    {
+      "name": "reuse-caller-11",
+      "n": 1,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "reuse-caller-11"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:48.353Z"
+    },
+    {
+      "name": "reuse-caller-11",
+      "n": 2,
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "reuse-caller-11"
+          }
+        ],
+        "stream": true,
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "closed": true,
+      "at": "2026-10-05T12:05:48.356Z"
+    }
+  ],
+  "sourceShaAtEnd": "0c70309de478797be8d0f6b8a3c2dbbe282f7844",
+  "sourceStatusAtEnd": "M packages/context/src/pipeline.ts\n M packages/harness/src/memory-runtime-bridge.ts\n M packages/memory/src/memory-store.ts\n M packages/memory/src/sqlite-memory-store.ts\n M packages/model/src/openai.ts\n M packages/tools/src/tools/search-files.ts\n?? packages/context/src/rehydration-headroom.regressions.test.ts\n?? packages/harness/src/memory-feedback-atomic.regressions.test.ts\n?? packages/harness/src/rehydration-headroom.integration.test.ts\n?? packages/memory/src/usefulness-atomic.regressions.test.ts\n?? packages/model/src/openai-retry-wait.regressions.test.ts\n?? packages/tools/src/scoped-search-paths.regressions.test.ts\n?? scripts/research/agent-next2-20261005/",
+  "sourceTrackedDirtyAtEnd": true,
+  "sourceFingerprintsAfter": {
+    "packages/model/src/openai.ts": "5f2d341bc6299b689249699dfe2561ba1bc623e1ef836c53e4eb526511e1a481",
+    "packages/model/dist/openai.js": "a5bd50a96d1af60b9878a113fff879c2936500bdaa268c4bf8b9a959970a842b",
+    "packages/model/src/openai-retry-wait.regressions.test.ts": "d07212c3f1a0a3416e1981aa79552b2f738f50b9fd2f3f3e8921174e7e00f3ea",
+    "scripts/research/agent-next2-20261005/provider-retry-probe.mjs": "bbbfbe163322797b6b4bad2c58a9fa6b34358cbdf47f357a0143c5a9cfcd42a1"
+  },
+  "endedAt": "2026-10-05T12:05:48.451Z"
+}

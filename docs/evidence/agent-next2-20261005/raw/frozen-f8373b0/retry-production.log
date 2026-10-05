@@ -1,0 +1,19 @@
+{"name":"direct-success","status":"PASS","elapsedMs":23.604887000000005,"httpRequests":1,"fetchAttempts":1}
+{"name":"normal-429-recovery","status":"PASS","elapsedMs":19.629012999999986,"httpRequests":2,"fetchAttempts":2}
+{"name":"normal-network-recovery","status":"PASS","elapsedMs":17.689549,"httpRequests":2,"fetchAttempts":2}
+{"name":"non-transient-401","status":"PASS","elapsedMs":3.2711679999999888,"httpRequests":1,"fetchAttempts":1}
+{"name":"retry-after-deadline","status":"PASS","elapsedMs":52.06121200000001,"httpRequests":1,"fetchAttempts":2}
+{"name":"network-backoff-deadline","status":"PASS","elapsedMs":51.11357199999998,"httpRequests":1,"fetchAttempts":2}
+{"name":"caller-abort-at-retry","status":"PASS","elapsedMs":3.2334920000000125,"httpRequests":1,"fetchAttempts":2}
+{"name":"caller-abort-at-network-retry","status":"PASS","elapsedMs":2.921059000000014,"httpRequests":1,"fetchAttempts":2}
+{"name":"caller-abort-during-wait","status":"PASS","elapsedMs":43.77384500000005,"httpRequests":1,"fetchAttempts":2}
+{"name":"deadline-expired-before-wait","status":"PASS","elapsedMs":73.27874000000003,"httpRequests":1,"fetchAttempts":2}
+{"name":"caller-wins-expired-deadline","status":"PASS","elapsedMs":74.02654899999999,"httpRequests":1,"fetchAttempts":2}
+{"name":"deadline-budget-preserved","status":"PASS","elapsedMs":51.04837699999996,"httpRequests":1,"fetchAttempts":4}
+{"name":"retry-after-preserved","status":"PASS","elapsedMs":1005.8812269999999,"httpRequests":2,"fetchAttempts":2}
+{"name":"retry-budget-zero","status":"PASS","elapsedMs":2.5007929999999305,"httpRequests":1,"fetchAttempts":1}
+{"name":"caller-preaborted","status":"PASS","elapsedMs":0.06595000000015716,"httpRequests":0,"fetchAttempts":0}
+{"name":"exhausted-server-budget","status":"PASS","elapsedMs":8.368270000000166,"httpRequests":3,"fetchAttempts":3}
+[degraded] openai.reader.cancel: response cleanup failed
+{"name":"streaming-failure-never-retried","status":"PASS","elapsedMs":13.202611999999817,"httpRequests":1,"fetchAttempts":1}
+{"name":"zero-delay-retry","status":"PASS","elapsedMs":5.558588999999984,"httpRequests":2,"fetchAttempts":2}

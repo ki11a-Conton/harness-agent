@@ -1,0 +1,27 @@
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+ ✓ packages/harness/src/memory-feedback-atomic.regressions.test.ts (14 tests) 220ms
+ ✓ packages/memory/src/usefulness-atomic.regressions.test.ts (27 tests) 150ms
+
+ Test Files  2 passed (2)
+      Tests  41 passed (41)
+   Start at  12:05:28
+   Duration  2.66s (transform 1.54s, setup 0ms, import 2.04s, tests 370ms, environment 0ms)
+

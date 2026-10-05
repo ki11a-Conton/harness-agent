@@ -1,0 +1,178 @@
+[degraded] openai.reader.cancel: response cleanup failed
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 12 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/model/src/openai-retry-wait.regressions.test.ts > OpenAI retry wait deadline, cancellation and native listener ownership > whole-call deadline interrupts http retry backoff at 50 ms
+ FAIL  packages/model/src/openai-retry-wait.regressions.test.ts > OpenAI retry wait deadline, cancellation and native listener ownership > whole-call deadline interrupts network retry backoff at 50 ms
+AssertionError: expected undefined to be 50 // Object.is equality
+
+- Expected:
+50
+
++ Received:
+undefined
+
+ ❯ packages/model/src/openai-retry-wait.regressions.test.ts:64:32
+     62|     const finishedAtDeadline = runResult.finishedAt();
+     63|     await vi.runAllTimersAsync(); const events = await runResult.pendi…
+     64|     expect(finishedAtDeadline).toBe(50);
+       |                                ^
+     65|     expect(fetch).toHaveBeenCalledTimes(2);
+     66|     expect(events.filter(e => e.type === "retry")).toHaveLength(1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/12]⎯
+
+ FAIL  packages/model/src/openai-retry-wait.regressions.test.ts > OpenAI retry wait deadline, cancellation and native listener ownership > caller abort while consuming http retry event does not wait for a future abort
+ FAIL  packages/model/src/openai-retry-wait.regressions.test.ts > OpenAI retry wait deadline, cancellation and native listener ownership > caller abort while consuming network retry event does not wait for a future abort
+AssertionError: expected undefined to be +0 // Object.is equality
+
+- Expected:
+0
+
++ Received:
+undefined
+
+ ❯ packages/model/src/openai-retry-wait.regressions.test.ts:81:35
+     79|     const completedWithoutDelay = r.finishedAt();
+     80|     await vi.runAllTimersAsync(); const events = await r.pending;
+     81|     expect(completedWithoutDelay).toBe(0);
+       |                                   ^
+     82|     expect(fetch).toHaveBeenCalledTimes(2);
+     83|     expect(terminals(events)).toEqual([expect.objectContaining({ type:…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/12]⎯
+
+ FAIL  packages/model/src/openai-retry-wait.regressions.test.ts > OpenAI retry wait deadline, cancellation and native listener ownership > normal http retry success removes the native wait listener
+ FAIL  packages/model/src/openai-retry-wait.regressions.test.ts > OpenAI retry wait deadline, cancellation and native listener ownership > normal network retry success removes the native wait listener
+AssertionError: expected [ [Function] ] to have a length of +0 but got 1
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ packages/model/src/openai-retry-wait.regressions.test.ts:95:50
+     93|     expect(r.finishedAt()).toBe(1000); expect(fetch).toHaveBeenCalledT…
+     94|     expect(terminals(events)).toEqual([expect.objectContaining({ type:…
+     95|     expect(getEventListeners(c.signal, "abort")).toHaveLength(0);
+       |                                                  ^
+     96|     expect(vi.getTimerCount()).toBe(0);
+     97|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/12]⎯
+
+ FAIL  packages/model/src/openai-retry-wait.regressions.test.ts > OpenAI retry wait deadline, cancellation and native listener ownership > already-expired deadline at the yielded retry event skips waiting
+AssertionError: expected undefined to be 1791201857027 // Object.is equality
+
+- Expected:
+1791201857027
+
++ Received:
+undefined
+
+ ❯ packages/model/src/openai-retry-wait.regressions.test.ts:118:35
+    116|     const resumedAt = Date.now(); await vi.advanceTimersByTimeAsync(0)…
+    117|     await vi.runAllTimersAsync(); const final = await pending;
+    118|     expect(completedWithoutDelay).toBe(resumedAt); expect(final.value)…
+       |                                   ^
+    119|     expect(fetch).toHaveBeenCalledTimes(2); expect((await iter.next())…
+    120|     expect(vi.getTimerCount()).toBe(0); expect(getEventListeners(c.sig…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/12]⎯
+
+ FAIL  packages/model/src/openai-retry-wait.regressions.test.ts > OpenAI retry wait deadline, cancellation and native listener ownership > zero-delay retry success does not retain an abort listener
+AssertionError: expected [ [Function] ] to have a length of +0 but got 1
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ packages/model/src/openai-retry-wait.regressions.test.ts:127:50
+    125|     await vi.runAllTimersAsync(); const events = await r.pending;
+    126|     expect(fetch).toHaveBeenCalledTimes(2); expect(events.at(-1)).toMa…
+    127|     expect(getEventListeners(c.signal, "abort")).toHaveLength(0); expe…
+       |                                                  ^
+    128|   });
+    129|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/12]⎯
+
+ FAIL  packages/model/src/openai-retry-wait.regressions.test.ts > OpenAI retry wait deadline, cancellation and native listener ownership > reused caller signal does not accumulate listeners across 12 successful retrying calls
+AssertionError: expected [ [Function], [Function], …(10) ] to have a length of +0 but got 12
+
+- Expected
++ Received
+
+- 0
++ 12
+
+ ❯ packages/model/src/openai-retry-wait.regressions.test.ts:137:50
+    135|       expect(fetch).toHaveBeenCalledTimes(2); expect(events.at(-1)).to…
+    136|     }
+    137|     expect(getEventListeners(c.signal, "abort")).toHaveLength(0); expe…
+       |                                                  ^
+    138|   });
+    139|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/12]⎯
+
+ FAIL  packages/model/src/openai-retry-wait.regressions.test.ts > OpenAI retry wait deadline, cancellation and native listener ownership > caller cancellation wins if the whole-call deadline also expires before retry resumes
+AssertionError: expected [ [Function] ] to have a length of +0 but got 1
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ packages/model/src/openai-retry-wait.regressions.test.ts:147:50
+    145|     expect(final.value).toMatchObject({ type: "completed", result: { f…
+    146|     expect(fetch).toHaveBeenCalledTimes(2); expect((await iter.next())…
+    147|     expect(getEventListeners(c.signal, "abort")).toHaveLength(0); expe…
+       |                                                  ^
+    148|   });
+    149|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/12]⎯
+
+ FAIL  packages/model/src/openai-retry-wait.regressions.test.ts > OpenAI retry wait deadline, cancellation and native listener ownership > Retry-After remains a lower bound when the deadline is disabled
+AssertionError: expected [ [Function] ] to have a length of +0 but got 1
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ packages/model/src/openai-retry-wait.regressions.test.ts:156:50
+    154|     expect(r.finishedAt()).toBe(2000); expect(fetch).toHaveBeenCalledT…
+    155|     expect(events.find(e => e.type === "retry")).toMatchObject({ type:…
+    156|     expect(getEventListeners(c.signal, "abort")).toHaveLength(0);
+       |                                                  ^
+    157|   });
+    158|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/12]⎯
+
+ FAIL  packages/model/src/openai-retry-wait.regressions.test.ts > OpenAI retry wait deadline, cancellation and native listener ownership > exhausted 503 retry budget keeps three fetches and two retry events
+AssertionError: expected [ [Function], [Function] ] to have a length of +0 but got 2
+
+- Expected
++ Received
+
+- 0
++ 2
+
+ ❯ packages/model/src/openai-retry-wait.regressions.test.ts:172:86
+    170|     expect(fetch).toHaveBeenCalledTimes(3); expect(events.filter(e => …
+    171|     expect(terminals(events)).toEqual([expect.objectContaining({ type:…
+    172|     expect(vi.getTimerCount()).toBe(0); expect(getEventListeners(c.sig…
+       |                                                                                      ^
+    173|   });
+    174|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/12]⎯
+

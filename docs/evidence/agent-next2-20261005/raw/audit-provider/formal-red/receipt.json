@@ -1,0 +1,29 @@
+{
+  "status": "RED_REPRODUCED",
+  "sourceSha": "0c70309de478797be8d0f6b8a3c2dbbe282f7844",
+  "sourceTrackedStatusAtStart": " M packages/tools/src/tools/search-files.ts\n",
+  "sourceHashesBefore": {
+    "packages/model/src/openai.ts": "e299fa1a965719b56ce25867c707298de6a6d2e9c5a1ce9478b9a20844f4522d",
+    "packages/model/src/openai-retry-wait.regressions.test.ts": "d07212c3f1a0a3416e1981aa79552b2f738f50b9fd2f3f3e8921174e7e00f3ea"
+  },
+  "exitCode": 1,
+  "passed": 4,
+  "failed": 12,
+  "total": 16,
+  "skipped": 0,
+  "sourceHashesAfter": {
+    "packages/model/src/openai.ts": "e299fa1a965719b56ce25867c707298de6a6d2e9c5a1ce9478b9a20844f4522d",
+    "packages/model/src/openai-retry-wait.regressions.test.ts": "d07212c3f1a0a3416e1981aa79552b2f738f50b9fd2f3f3e8921174e7e00f3ea"
+  },
+  "sourceTrackedStatusAtEnd": " M packages/tools/src/tools/search-files.ts\n",
+  "rawLogs": {
+    "stdout.log": {
+      "bytes": 1579,
+      "sha256": "44827154ce9c8a50e6aaf2e5fe76700f9f639ede3fc61bdc2c84df26101a099c"
+    },
+    "stderr.log": {
+      "bytes": 8141,
+      "sha256": "63af635d79fcc31395176975e0adc3a129c86095631e81fa0c6d5b1d3d237033"
+    }
+  }
+}

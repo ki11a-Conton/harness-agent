@@ -1,0 +1,66 @@
+{
+  "name": "context-no-compaction-no-refs",
+  "observed": {
+    "input": {
+      "cwd": "/workspace/harness-agent",
+      "systemPrompt": "sys",
+      "priorBlocks": [],
+      "budget": {
+        "maxTokens": 100,
+        "reserved": {
+          "system": 0,
+          "task": 0,
+          "output": 0
+        },
+        "dynamic": 0
+      },
+      "summaryOverride": {
+        "goal": "short task",
+        "constraints": [],
+        "decisions": [],
+        "completed": [],
+        "filesChanged": [
+          "src/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.ts"
+        ],
+        "commandsRun": [],
+        "tests": [],
+        "failures": [],
+        "openTasks": [],
+        "importantFacts": [],
+        "artifactRefs": [],
+        "childAgentRefs": []
+      }
+    },
+    "result": {
+      "blocks": [
+        {
+          "id": "system-prompt",
+          "source": "system",
+          "trust": "trusted",
+          "priority": 9007199254740991,
+          "tokens": 1,
+          "content": "sys",
+          "compressible": false,
+          "ephemeral": false,
+          "category": "protected-instruction",
+          "instructional": true,
+          "persistable": false
+        }
+      ],
+      "report": {
+        "used": 1,
+        "available": 99,
+        "dropped": 0,
+        "compressed": 0,
+        "messagesTokens": 0
+      },
+      "compacted": false,
+      "compactionBreakerOpen": false,
+      "discovered": [],
+      "injected": []
+    },
+    "compactedBeforeHydration": 1,
+    "spendable": 100,
+    "optionalHydrationTokens": 0
+  }
+}

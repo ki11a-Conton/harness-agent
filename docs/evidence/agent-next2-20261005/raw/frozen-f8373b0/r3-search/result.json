@@ -1,0 +1,1023 @@
+{
+  "sourceSha": "f8373b0fa4ec6491a55a9a3ba198235b689cc140",
+  "sourceTrackedDirtyAtStart": false,
+  "profile": "production ToolRegistry -> ToolOrchestrator -> DeterministicPermissionEngine -> SandboxManager -> unchanged native filesystem tools",
+  "schema": "HARNESS_SCOPED_SEARCH_PATH_PRODUCTION_V1",
+  "paidProviderCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "windowsRuntime": "NOT_RUN",
+  "contract": "tasks/P0/VS-001.md: search_files returns workspace-relative POSIX paths",
+  "observedAt": "2026-10-05T12:22:27.988Z",
+  "sourceFingerprintsBefore": {
+    "packages/tools/src/tools/search-files.ts": "8ef52a59661d16648de1a0d9ad6d04b90327dda4839d80c3268390e615ca1969",
+    "packages/tools/src/tools/read-file.ts": "becc6263cca637b70bd73c3fe52348a18506e413ec9dc477b723436c7dbc7515",
+    "packages/tools/src/orchestrator.ts": "adcd42ba547d15e725b9d0236bd7ca550cf2f363e60f2ed10951f92d1604d3eb",
+    "packages/security/src/permission.ts": "a4bc2eea7947b0fdc11decabcbb80222057c6e7c3ee0f7e3b90b611e08b6fe13",
+    "packages/security/src/sandbox.ts": "76a312520e76e3a84eee6dd59cb07ac261fbbc438e41b05c40bd506ddaa0e08d",
+    "tasks/P0/VS-001.md": "de753b42e6194b22d0d0a2f2ac73d61094caf67641c2cb75fac16ca7bfba335f",
+    "packages/tools/dist/tools/search-files.js": "64350b0dbbe078973b1e8ebbf9105efca1af8a6d6480ad9c988d0dc38e47bca9",
+    "packages/tools/dist/tools/read-file.js": "fde9c62fdf03b294394fdf524b171eec760fee2c28cbd9648eb8e594e0a2565e",
+    "packages/tools/src/production-tools.ts": "68cc1acd87bdcd97da6207904cd0d7d3a366a27b5d58fea90981cd35ed643417",
+    "packages/tools/dist/production-tools.js": "0e49b556e6893053fbda094d15a257cd97bf8fa020d3cc3df24fbd061303c405",
+    "packages/tools/dist/orchestrator.js": "edda2f2b44e7352766b40fe6d599fcd2c408432a72f8ed75c60e99e36bb97766",
+    "packages/tools/dist/registry.js": "89b0b2a04d79a242fef60c7f2475fab98dbfab10fc25b95c5cdcdbd7fbd058c8",
+    "packages/security/dist/permission.js": "22c677383170133361d7e2d3002b7ebdcd2a947b2a9d1b4db96718ddcc6d99cb",
+    "packages/security/dist/sandbox.js": "8f9b230c286738bf0cde0511d9530c1c96646113861641df04e7488c00c04717",
+    "packages/harness/src/create-harness.ts": "a115aa9c8ec71b86e689e80ab9195c21cd85c8f19a0d9de669e9e19d8becf84e",
+    "packages/harness/dist/create-harness.js": "442874f7297e7e0b7df5e715af249457fbd0bf6cd33f15b75d5e198700ea29e3",
+    "scripts/research/agent-next2-20261005/search-path-probe.mjs": "3ff1f831a6b27a8057b0b7b610d69b580fee9ceb07a4c64ab4ac02f1a91ded75"
+  },
+  "cases": [
+    {
+      "name": "UNSCOPED_WORKSPACE_RELATIVE_CONTROL",
+      "expected": {
+        "contains": "src/deep/target.ts"
+      },
+      "observed": {
+        "args": {
+          "pattern": "**/*.ts"
+        },
+        "result": {
+          "status": "success",
+          "output": [
+            "root.ts",
+            "src/deep/target.ts",
+            "src/root.ts",
+            "target.ts"
+          ],
+          "evidence": [
+            {
+              "type": "file",
+              "description": "search_files: 4 match(es) for **/*.ts",
+              "source": "**/*.ts",
+              "timestamp": 1791202948166
+            }
+          ]
+        },
+        "operations": [
+          {
+            "operation": "readdir",
+            "path": "/tmp/ar-search-path-audit-tUgptY"
+          },
+          {
+            "operation": "readdir",
+            "path": "/tmp/ar-search-path-audit-tUgptY/src"
+          },
+          {
+            "operation": "readdir",
+            "path": "/tmp/ar-search-path-audit-tUgptY/src/deep"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "name": "SCOPED_RELATIVE",
+      "expected": {
+        "paths": [
+          "src/deep/target.ts",
+          "src/root.ts"
+        ],
+        "roundtrip": "SCOPED_TARGET_SENTINEL"
+      },
+      "observed": {
+        "found": {
+          "args": {
+            "pattern": "**/*.ts",
+            "path": "src"
+          },
+          "result": {
+            "status": "success",
+            "output": [
+              "src/deep/target.ts",
+              "src/root.ts"
+            ],
+            "evidence": [
+              {
+                "type": "file",
+                "description": "search_files: 2 match(es) for **/*.ts",
+                "source": "**/*.ts",
+                "timestamp": 1791202948167
+              }
+            ]
+          },
+          "operations": [
+            {
+              "operation": "readdir",
+              "path": "/tmp/ar-search-path-audit-tUgptY/src"
+            },
+            {
+              "operation": "readdir",
+              "path": "/tmp/ar-search-path-audit-tUgptY/src/deep"
+            }
+          ]
+        },
+        "returned": "src/deep/target.ts",
+        "followup": {
+          "args": {
+            "path": "src/deep/target.ts"
+          },
+          "result": {
+            "status": "success",
+            "output": "SCOPED_TARGET_SENTINEL",
+            "evidence": [
+              {
+                "type": "file",
+                "description": "read_file executed",
+                "source": "/tmp/ar-search-path-audit-tUgptY/src/deep/target.ts",
+                "timestamp": 1791202948168
+              }
+            ]
+          },
+          "operations": [
+            {
+              "operation": "readFile",
+              "path": "/tmp/ar-search-path-audit-tUgptY/src/deep/target.ts"
+            }
+          ]
+        }
+      },
+      "status": "PASS"
+    },
+    {
+      "name": "SCOPED_RELATIVE_ALIAS",
+      "expected": {
+        "paths": [
+          "src/deep/target.ts",
+          "src/root.ts"
+        ],
+        "roundtrip": "SCOPED_TARGET_SENTINEL"
+      },
+      "observed": {
+        "found": {
+          "args": {
+            "pattern": "**/*.ts",
+            "path": "./src/deep/.."
+          },
+          "result": {
+            "status": "success",
+            "output": [
+              "src/deep/target.ts",
+              "src/root.ts"
+            ],
+            "evidence": [
+              {
+                "type": "file",
+                "description": "search_files: 2 match(es) for **/*.ts",
+                "source": "**/*.ts",
+                "timestamp": 1791202948169
+              }
+            ]
+          },
+          "operations": [
+            {
+              "operation": "readdir",
+              "path": "/tmp/ar-search-path-audit-tUgptY/src"
+            },
+            {
+              "operation": "readdir",
+              "path": "/tmp/ar-search-path-audit-tUgptY/src/deep"
+            }
+          ]
+        },
+        "returned": "src/deep/target.ts",
+        "followup": {
+          "args": {
+            "path": "src/deep/target.ts"
+          },
+          "result": {
+            "status": "success",
+            "output": "SCOPED_TARGET_SENTINEL",
+            "evidence": [
+              {
+                "type": "file",
+                "description": "read_file executed",
+                "source": "/tmp/ar-search-path-audit-tUgptY/src/deep/target.ts",
+                "timestamp": 1791202948169
+              }
+            ]
+          },
+          "operations": [
+            {
+              "operation": "readFile",
+              "path": "/tmp/ar-search-path-audit-tUgptY/src/deep/target.ts"
+            }
+          ]
+        }
+      },
+      "status": "PASS"
+    },
+    {
+      "name": "SCOPED_ABSOLUTE_ALIAS",
+      "expected": {
+        "paths": [
+          "src/deep/target.ts",
+          "src/root.ts"
+        ],
+        "roundtrip": "SCOPED_TARGET_SENTINEL"
+      },
+      "observed": {
+        "found": {
+          "args": {
+            "pattern": "**/*.ts",
+            "path": "/tmp/ar-search-path-audit-tUgptY/src"
+          },
+          "result": {
+            "status": "success",
+            "output": [
+              "src/deep/target.ts",
+              "src/root.ts"
+            ],
+            "evidence": [
+              {
+                "type": "file",
+                "description": "search_files: 2 match(es) for **/*.ts",
+                "source": "**/*.ts",
+                "timestamp": 1791202948170
+              }
+            ]
+          },
+          "operations": [
+            {
+              "operation": "readdir",
+              "path": "/tmp/ar-search-path-audit-tUgptY/src"
+            },
+            {
+              "operation": "readdir",
+              "path": "/tmp/ar-search-path-audit-tUgptY/src/deep"
+            }
+          ]
+        },
+        "returned": "src/deep/target.ts",
+        "followup": {
+          "args": {
+            "path": "src/deep/target.ts"
+          },
+          "result": {
+            "status": "success",
+            "output": "SCOPED_TARGET_SENTINEL",
+            "evidence": [
+              {
+                "type": "file",
+                "description": "read_file executed",
+                "source": "/tmp/ar-search-path-audit-tUgptY/src/deep/target.ts",
+                "timestamp": 1791202948170
+              }
+            ]
+          },
+          "operations": [
+            {
+              "operation": "readFile",
+              "path": "/tmp/ar-search-path-audit-tUgptY/src/deep/target.ts"
+            }
+          ]
+        }
+      },
+      "status": "PASS"
+    },
+    {
+      "name": "SCOPED_BASENAME_WRONG_FILE_CLOSED_LOOP",
+      "expected": {
+        "path": "src/root.ts",
+        "read": "SCOPED_TOPLEVEL_SENTINEL"
+      },
+      "observed": {
+        "shallow": {
+          "args": {
+            "pattern": "root.ts",
+            "path": "src"
+          },
+          "result": {
+            "status": "success",
+            "output": [
+              "src/root.ts"
+            ],
+            "evidence": [
+              {
+                "type": "file",
+                "description": "search_files: 1 match(es) for root.ts",
+                "source": "root.ts",
+                "timestamp": 1791202948171
+              }
+            ]
+          },
+          "operations": [
+            {
+              "operation": "readdir",
+              "path": "/tmp/ar-search-path-audit-tUgptY/src"
+            },
+            {
+              "operation": "readdir",
+              "path": "/tmp/ar-search-path-audit-tUgptY/src/deep"
+            }
+          ]
+        },
+        "wrongRead": {
+          "args": {
+            "path": "src/root.ts"
+          },
+          "result": {
+            "status": "success",
+            "output": "SCOPED_TOPLEVEL_SENTINEL",
+            "evidence": [
+              {
+                "type": "file",
+                "description": "read_file executed",
+                "source": "/tmp/ar-search-path-audit-tUgptY/src/root.ts",
+                "timestamp": 1791202948171
+              }
+            ]
+          },
+          "operations": [
+            {
+              "operation": "readFile",
+              "path": "/tmp/ar-search-path-audit-tUgptY/src/root.ts"
+            }
+          ]
+        }
+      },
+      "status": "PASS"
+    },
+    {
+      "name": "NESTED_SESSION_CWD_CLOSED_LOOP",
+      "expected": {
+        "path": "deep/target.ts",
+        "read": "SCOPED_TARGET_SENTINEL"
+      },
+      "observed": {
+        "nested": {
+          "args": {
+            "pattern": "**/*.ts",
+            "path": "deep"
+          },
+          "result": {
+            "status": "success",
+            "output": [
+              "deep/target.ts"
+            ],
+            "evidence": [
+              {
+                "type": "file",
+                "description": "search_files: 1 match(es) for **/*.ts",
+                "source": "**/*.ts",
+                "timestamp": 1791202948172
+              }
+            ]
+          },
+          "operations": [
+            {
+              "operation": "readdir",
+              "path": "/tmp/ar-search-path-audit-tUgptY/src/deep"
+            }
+          ]
+        },
+        "nestedRead": {
+          "args": {
+            "path": "deep/target.ts"
+          },
+          "result": {
+            "status": "success",
+            "output": "SCOPED_TARGET_SENTINEL",
+            "evidence": [
+              {
+                "type": "file",
+                "description": "read_file executed",
+                "source": "/tmp/ar-search-path-audit-tUgptY/src/deep/target.ts",
+                "timestamp": 1791202948172
+              }
+            ]
+          },
+          "operations": [
+            {
+              "operation": "readFile",
+              "path": "/tmp/ar-search-path-audit-tUgptY/src/deep/target.ts"
+            }
+          ]
+        }
+      },
+      "status": "PASS"
+    },
+    {
+      "name": "PATTERN_REMAINS_SELECTED_ROOT_RELATIVE",
+      "expected": {
+        "matchCount": 1
+      },
+      "observed": {
+        "args": {
+          "pattern": "deep/*.ts",
+          "path": "src"
+        },
+        "result": {
+          "status": "success",
+          "output": [
+            "src/deep/target.ts"
+          ],
+          "evidence": [
+            {
+              "type": "file",
+              "description": "search_files: 1 match(es) for deep/*.ts",
+              "source": "deep/*.ts",
+              "timestamp": 1791202948172
+            }
+          ]
+        },
+        "operations": [
+          {
+            "operation": "readdir",
+            "path": "/tmp/ar-search-path-audit-tUgptY/src"
+          },
+          {
+            "operation": "readdir",
+            "path": "/tmp/ar-search-path-audit-tUgptY/src/deep"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "name": "MAX_RESULTS_CONTROL",
+      "expected": {
+        "count": 1
+      },
+      "observed": {
+        "args": {
+          "pattern": "**/*.ts",
+          "path": "src",
+          "maxResults": 1
+        },
+        "result": {
+          "status": "success",
+          "output": [
+            "src/deep/target.ts"
+          ],
+          "evidence": [
+            {
+              "type": "file",
+              "description": "search_files: 1 match(es) for **/*.ts",
+              "source": "**/*.ts",
+              "timestamp": 1791202948173
+            }
+          ]
+        },
+        "operations": [
+          {
+            "operation": "readdir",
+            "path": "/tmp/ar-search-path-audit-tUgptY/src"
+          },
+          {
+            "operation": "readdir",
+            "path": "/tmp/ar-search-path-audit-tUgptY/src/deep"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "name": "IGNORED_DIRS_CONTROL",
+      "expected": {
+        "hiddenHits": 0,
+        "hiddenReads": 0
+      },
+      "observed": {
+        "args": {
+          "pattern": "**/*.ts"
+        },
+        "result": {
+          "status": "success",
+          "output": [
+            "root.ts",
+            "src/deep/target.ts",
+            "src/root.ts",
+            "target.ts"
+          ],
+          "evidence": [
+            {
+              "type": "file",
+              "description": "search_files: 4 match(es) for **/*.ts",
+              "source": "**/*.ts",
+              "timestamp": 1791202948166
+            }
+          ]
+        },
+        "operations": [
+          {
+            "operation": "readdir",
+            "path": "/tmp/ar-search-path-audit-tUgptY"
+          },
+          {
+            "operation": "readdir",
+            "path": "/tmp/ar-search-path-audit-tUgptY/src"
+          },
+          {
+            "operation": "readdir",
+            "path": "/tmp/ar-search-path-audit-tUgptY/src/deep"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "name": "DESCENDANT_SYMLINK_EXISTING_NO_FOLLOW_CONTROL",
+      "expected": {
+        "outsideReads": 0,
+        "symlinkNamesMayBeReturned": true
+      },
+      "observed": {
+        "args": {
+          "pattern": "**/*",
+          "path": "src"
+        },
+        "result": {
+          "status": "success",
+          "output": [
+            "src/deep/target.ts",
+            "src/outside-dir-link",
+            "src/outside-file-link.ts",
+            "src/root.ts"
+          ],
+          "evidence": [
+            {
+              "type": "file",
+              "description": "search_files: 4 match(es) for **/*",
+              "source": "**/*",
+              "timestamp": 1791202948173
+            }
+          ]
+        },
+        "operations": [
+          {
+            "operation": "readdir",
+            "path": "/tmp/ar-search-path-audit-tUgptY/src"
+          },
+          {
+            "operation": "readdir",
+            "path": "/tmp/ar-search-path-audit-tUgptY/src/deep"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "name": "SELECTED_SCOPE_PERMISSION_CONTROL",
+      "expected": {
+        "status": "success",
+        "allEnumerationWithinSrc": true
+      },
+      "observed": {
+        "args": {
+          "pattern": "**/*.ts",
+          "path": "src"
+        },
+        "result": {
+          "status": "success",
+          "output": [
+            "src/deep/target.ts",
+            "src/outside-file-link.ts",
+            "src/root.ts"
+          ],
+          "evidence": [
+            {
+              "type": "file",
+              "description": "search_files: 3 match(es) for **/*.ts",
+              "source": "**/*.ts",
+              "timestamp": 1791202948174
+            }
+          ]
+        },
+        "operations": [
+          {
+            "operation": "readdir",
+            "path": "/tmp/ar-search-path-audit-tUgptY/src"
+          },
+          {
+            "operation": "readdir",
+            "path": "/tmp/ar-search-path-audit-tUgptY/src/deep"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "name": "PERMISSION_DENIAL_ZERO_ENUMERATION_CONTROL",
+      "expected": {
+        "status": "denied",
+        "enumerations": 0
+      },
+      "observed": {
+        "args": {
+          "pattern": "**/*",
+          "path": "src"
+        },
+        "result": {
+          "status": "denied",
+          "error": {
+            "code": "PERMISSION_DENIED",
+            "message": "permission denied: no rule matched read:file; fallback 'deny'",
+            "retryable": false,
+            "safeToRetry": false
+          }
+        },
+        "operations": []
+      },
+      "status": "PASS"
+    },
+    {
+      "name": "SANDBOX_DENIAL_ZERO_ENUMERATION_CONTROL",
+      "expected": {
+        "status": "denied",
+        "enumerations": 0
+      },
+      "observed": {
+        "args": {
+          "pattern": "**/*",
+          "path": "/tmp/ar-search-path-audit-outside-lEj5Ed"
+        },
+        "result": {
+          "status": "denied",
+          "error": {
+            "code": "SANDBOX_FILESYSTEM_DENIED",
+            "message": "sandbox denied: path outside workspace: /tmp/ar-search-path-audit-outside-lEj5Ed",
+            "retryable": false,
+            "safeToRetry": false
+          }
+        },
+        "operations": []
+      },
+      "status": "PASS"
+    },
+    {
+      "name": "MISSING_ROOT_FAILURE_CONTROL",
+      "expected": {
+        "status": "failed",
+        "evidence": false
+      },
+      "observed": {
+        "args": {
+          "pattern": "**/*",
+          "path": "missing"
+        },
+        "result": {
+          "status": "failed",
+          "error": {
+            "code": "PROCESS_ERROR",
+            "message": "ENOENT: no such file or directory, scandir '/tmp/ar-search-path-audit-tUgptY/missing'",
+            "retryable": true,
+            "safeToRetry": false
+          }
+        },
+        "operations": [
+          {
+            "operation": "readdir",
+            "path": "/tmp/ar-search-path-audit-tUgptY/missing"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "name": "SCHEMA_DENIAL_ZERO_ENUMERATION_CONTROL",
+      "expected": {
+        "status": "failed",
+        "code": "TOOL_SCHEMA_ERROR",
+        "enumerations": 0
+      },
+      "observed": {
+        "args": {
+          "pattern": "**/*",
+          "path": "src",
+          "maxResults": 0
+        },
+        "result": {
+          "status": "failed",
+          "error": {
+            "code": "TOOL_SCHEMA_ERROR",
+            "message": "schema validation failed for search_files: maxResults: Number must be greater than 0",
+            "retryable": false,
+            "safeToRetry": false
+          }
+        },
+        "operations": []
+      },
+      "status": "PASS"
+    },
+    {
+      "name": "UNICODE_SCOPED_PATH_CLOSED_LOOP",
+      "expected": {
+        "path": "代码/深层/目标.ts",
+        "read": "UNICODE_SCOPED_SENTINEL"
+      },
+      "observed": {
+        "unicode": {
+          "args": {
+            "pattern": "**/*.ts",
+            "path": "代码"
+          },
+          "result": {
+            "status": "success",
+            "output": [
+              "代码/深层/目标.ts"
+            ],
+            "evidence": [
+              {
+                "type": "file",
+                "description": "search_files: 1 match(es) for **/*.ts",
+                "source": "**/*.ts",
+                "timestamp": 1791202948176
+              }
+            ]
+          },
+          "operations": [
+            {
+              "operation": "readdir",
+              "path": "/tmp/ar-search-path-audit-tUgptY/代码"
+            },
+            {
+              "operation": "readdir",
+              "path": "/tmp/ar-search-path-audit-tUgptY/代码/深层"
+            }
+          ]
+        },
+        "unicodeRead": {
+          "args": {
+            "path": "代码/深层/目标.ts"
+          },
+          "result": {
+            "status": "success",
+            "output": "UNICODE_SCOPED_SENTINEL",
+            "evidence": [
+              {
+                "type": "file",
+                "description": "read_file executed",
+                "source": "/tmp/ar-search-path-audit-tUgptY/代码/深层/目标.ts",
+                "timestamp": 1791202948176
+              }
+            ]
+          },
+          "operations": [
+            {
+              "operation": "readFile",
+              "path": "/tmp/ar-search-path-audit-tUgptY/代码/深层/目标.ts"
+            }
+          ]
+        }
+      },
+      "status": "PASS"
+    },
+    {
+      "name": "HARNESS_SCOPED_BASENAME_RETURNED_PATH_READ",
+      "expected": {
+        "status": "completed",
+        "requests": 3,
+        "searchDispatches": 1,
+        "readDispatches": 1,
+        "readBody": "SCOPED_TOPLEVEL_SENTINEL",
+        "returnedPathUsedExactly": true
+      },
+      "observed": {
+        "returnedPath": "src/root.ts",
+        "selectedReadPath": "src/root.ts",
+        "readBody": "SCOPED_TOPLEVEL_SENTINEL",
+        "outcome": {
+          "status": "completed",
+          "statusDetail": "completed",
+          "turn": {
+            "id": "turn_c7457f83-85af-4da3-9eaf-5d2d29ea79e6",
+            "sessionId": "session_89cf26ab-7172-4f38-927e-5be77e25407f",
+            "input": {
+              "sessionId": "session_89cf26ab-7172-4f38-927e-5be77e25407f",
+              "text": "Search the selected directory and read the single returned path; preserve session cwd."
+            },
+            "status": "completed",
+            "startedAt": 1791202948186,
+            "completedAt": 1791202948215
+          },
+          "toolCalls": 2,
+          "iterations": 2,
+          "state": {
+            "goal": "Search the selected directory and read the single returned path; preserve session cwd.",
+            "constraints": [],
+            "plan": [],
+            "decisions": [],
+            "completed": [],
+            "pending": [],
+            "filesChanged": [],
+            "commandsRun": [],
+            "testsRun": [],
+            "failures": [],
+            "importantFacts": [],
+            "openQuestions": [],
+            "toolRefs": [],
+            "artifactRefs": [],
+            "memoryRefs": [],
+            "childAgentRefs": []
+          },
+          "terminationReason": "model_stopped",
+          "grade": "unverified_complete"
+        },
+        "requests": 3,
+        "rawFile": "HARNESS_SCOPED_BASENAME_RETURNED_PATH_READ.json",
+        "rawSha256": "3f778d85419dadeb809c3d4afdab0d5245bec1dd33dd3266e63896f85ee688b3"
+      },
+      "status": "PASS"
+    },
+    {
+      "name": "HARNESS_ABSOLUTE_ALIAS_RETURNED_PATH_READ",
+      "expected": {
+        "status": "completed",
+        "requests": 3,
+        "searchDispatches": 1,
+        "readDispatches": 1,
+        "readBody": "SCOPED_TARGET_SENTINEL",
+        "returnedPathUsedExactly": true
+      },
+      "observed": {
+        "returnedPath": "src/deep/target.ts",
+        "selectedReadPath": "src/deep/target.ts",
+        "readBody": "SCOPED_TARGET_SENTINEL",
+        "outcome": {
+          "status": "completed",
+          "statusDetail": "completed",
+          "turn": {
+            "id": "turn_b8c7abf6-2b11-40de-b6c8-b04e96556016",
+            "sessionId": "session_690248c5-1d2f-4df1-ab4f-e1d7c93deaa5",
+            "input": {
+              "sessionId": "session_690248c5-1d2f-4df1-ab4f-e1d7c93deaa5",
+              "text": "Search the selected directory and read the single returned path; preserve session cwd."
+            },
+            "status": "completed",
+            "startedAt": 1791202948222,
+            "completedAt": 1791202948240
+          },
+          "toolCalls": 2,
+          "iterations": 2,
+          "state": {
+            "goal": "Search the selected directory and read the single returned path; preserve session cwd.",
+            "constraints": [],
+            "plan": [],
+            "decisions": [],
+            "completed": [],
+            "pending": [],
+            "filesChanged": [],
+            "commandsRun": [],
+            "testsRun": [],
+            "failures": [],
+            "importantFacts": [],
+            "openQuestions": [],
+            "toolRefs": [],
+            "artifactRefs": [],
+            "memoryRefs": [],
+            "childAgentRefs": []
+          },
+          "terminationReason": "model_stopped",
+          "grade": "unverified_complete"
+        },
+        "requests": 3,
+        "rawFile": "HARNESS_ABSOLUTE_ALIAS_RETURNED_PATH_READ.json",
+        "rawSha256": "0ac8595ac627f5bcbf2be51d5973eb03599cce79995caa3f340523f5639c7b85"
+      },
+      "status": "PASS"
+    },
+    {
+      "name": "HARNESS_NESTED_CWD_RETURNED_PATH_READ",
+      "expected": {
+        "status": "completed",
+        "requests": 3,
+        "searchDispatches": 1,
+        "readDispatches": 1,
+        "readBody": "SCOPED_TARGET_SENTINEL",
+        "returnedPathUsedExactly": true
+      },
+      "observed": {
+        "returnedPath": "deep/target.ts",
+        "selectedReadPath": "deep/target.ts",
+        "readBody": "SCOPED_TARGET_SENTINEL",
+        "outcome": {
+          "status": "completed",
+          "statusDetail": "completed",
+          "turn": {
+            "id": "turn_a60ec142-7c62-4817-b418-427437604709",
+            "sessionId": "session_8a2cf17f-3275-4319-9194-ca94e19ead4f",
+            "input": {
+              "sessionId": "session_8a2cf17f-3275-4319-9194-ca94e19ead4f",
+              "text": "Search the selected directory and read the single returned path; preserve session cwd."
+            },
+            "status": "completed",
+            "startedAt": 1791202948245,
+            "completedAt": 1791202948262
+          },
+          "toolCalls": 2,
+          "iterations": 2,
+          "state": {
+            "goal": "Search the selected directory and read the single returned path; preserve session cwd.",
+            "constraints": [],
+            "plan": [],
+            "decisions": [],
+            "completed": [],
+            "pending": [],
+            "filesChanged": [],
+            "commandsRun": [],
+            "testsRun": [],
+            "failures": [],
+            "importantFacts": [],
+            "openQuestions": [],
+            "toolRefs": [],
+            "artifactRefs": [],
+            "memoryRefs": [],
+            "childAgentRefs": []
+          },
+          "terminationReason": "model_stopped",
+          "grade": "unverified_complete"
+        },
+        "requests": 3,
+        "rawFile": "HARNESS_NESTED_CWD_RETURNED_PATH_READ.json",
+        "rawSha256": "8cdc3801c7edf9fc0557ce0a08ab3e4d5ac2c9207397986d6b8eed3fbdd7b4a0"
+      },
+      "status": "PASS"
+    },
+    {
+      "name": "HARNESS_UNICODE_RETURNED_PATH_READ",
+      "expected": {
+        "status": "completed",
+        "requests": 3,
+        "searchDispatches": 1,
+        "readDispatches": 1,
+        "readBody": "UNICODE_SCOPED_SENTINEL",
+        "returnedPathUsedExactly": true
+      },
+      "observed": {
+        "returnedPath": "代码/深层/目标.ts",
+        "selectedReadPath": "代码/深层/目标.ts",
+        "readBody": "UNICODE_SCOPED_SENTINEL",
+        "outcome": {
+          "status": "completed",
+          "statusDetail": "completed",
+          "turn": {
+            "id": "turn_e479bfbe-056e-482c-a4c6-5c63d26afc80",
+            "sessionId": "session_8151f4d6-fc71-4f07-8aeb-53429495b0e4",
+            "input": {
+              "sessionId": "session_8151f4d6-fc71-4f07-8aeb-53429495b0e4",
+              "text": "Search the selected directory and read the single returned path; preserve session cwd."
+            },
+            "status": "completed",
+            "startedAt": 1791202948268,
+            "completedAt": 1791202948288
+          },
+          "toolCalls": 2,
+          "iterations": 2,
+          "state": {
+            "goal": "Search the selected directory and read the single returned path; preserve session cwd.",
+            "constraints": [],
+            "plan": [],
+            "decisions": [],
+            "completed": [],
+            "pending": [],
+            "filesChanged": [],
+            "commandsRun": [],
+            "testsRun": [],
+            "failures": [],
+            "importantFacts": [],
+            "openQuestions": [],
+            "toolRefs": [],
+            "artifactRefs": [],
+            "memoryRefs": [],
+            "childAgentRefs": []
+          },
+          "terminationReason": "model_stopped",
+          "grade": "unverified_complete"
+        },
+        "requests": 3,
+        "rawFile": "HARNESS_UNICODE_RETURNED_PATH_READ.json",
+        "rawSha256": "d1d653800c511fe87349b6de033b2001943f38d0685dc076602eeb59994e69a9"
+      },
+      "status": "PASS"
+    }
+  ],
+  "sourceShaAtEnd": "f8373b0fa4ec6491a55a9a3ba198235b689cc140",
+  "sourceTrackedDirtyAtEnd": false,
+  "sourceFingerprintsAfter": {
+    "packages/tools/src/tools/search-files.ts": "8ef52a59661d16648de1a0d9ad6d04b90327dda4839d80c3268390e615ca1969",
+    "packages/tools/src/tools/read-file.ts": "becc6263cca637b70bd73c3fe52348a18506e413ec9dc477b723436c7dbc7515",
+    "packages/tools/src/orchestrator.ts": "adcd42ba547d15e725b9d0236bd7ca550cf2f363e60f2ed10951f92d1604d3eb",
+    "packages/security/src/permission.ts": "a4bc2eea7947b0fdc11decabcbb80222057c6e7c3ee0f7e3b90b611e08b6fe13",
+    "packages/security/src/sandbox.ts": "76a312520e76e3a84eee6dd59cb07ac261fbbc438e41b05c40bd506ddaa0e08d",
+    "tasks/P0/VS-001.md": "de753b42e6194b22d0d0a2f2ac73d61094caf67641c2cb75fac16ca7bfba335f",
+    "packages/tools/dist/tools/search-files.js": "64350b0dbbe078973b1e8ebbf9105efca1af8a6d6480ad9c988d0dc38e47bca9",
+    "packages/tools/dist/tools/read-file.js": "fde9c62fdf03b294394fdf524b171eec760fee2c28cbd9648eb8e594e0a2565e",
+    "packages/tools/src/production-tools.ts": "68cc1acd87bdcd97da6207904cd0d7d3a366a27b5d58fea90981cd35ed643417",
+    "packages/tools/dist/production-tools.js": "0e49b556e6893053fbda094d15a257cd97bf8fa020d3cc3df24fbd061303c405",
+    "packages/tools/dist/orchestrator.js": "edda2f2b44e7352766b40fe6d599fcd2c408432a72f8ed75c60e99e36bb97766",
+    "packages/tools/dist/registry.js": "89b0b2a04d79a242fef60c7f2475fab98dbfab10fc25b95c5cdcdbd7fbd058c8",
+    "packages/security/dist/permission.js": "22c677383170133361d7e2d3002b7ebdcd2a947b2a9d1b4db96718ddcc6d99cb",
+    "packages/security/dist/sandbox.js": "8f9b230c286738bf0cde0511d9530c1c96646113861641df04e7488c00c04717",
+    "packages/harness/src/create-harness.ts": "a115aa9c8ec71b86e689e80ab9195c21cd85c8f19a0d9de669e9e19d8becf84e",
+    "packages/harness/dist/create-harness.js": "442874f7297e7e0b7df5e715af249457fbd0bf6cd33f15b75d5e198700ea29e3",
+    "scripts/research/agent-next2-20261005/search-path-probe.mjs": "3ff1f831a6b27a8057b0b7b610d69b580fee9ceb07a4c64ab4ac02f1a91ded75"
+  },
+  "sourceUnchanged": true,
+  "summary": {
+    "cases": 20,
+    "passed": 20,
+    "failed": []
+  },
+  "status": "PASS"
+}

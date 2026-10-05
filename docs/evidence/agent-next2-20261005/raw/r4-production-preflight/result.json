@@ -1,0 +1,235 @@
+{
+  "status": "FAIL",
+  "sourceSha": "0c70309de478797be8d0f6b8a3c2dbbe282f7844",
+  "sourceShaAtEnd": "0c70309de478797be8d0f6b8a3c2dbbe282f7844",
+  "sourceTrackedDirtyAtStart": true,
+  "sourceTrackedDirtyAtEnd": true,
+  "sourceFingerprintsBefore": {
+    "packages/context/src/pipeline.ts": "ba80475151326f65eb23d507c9c997e738daa972d570c8c5c5aa69448879bc0f",
+    "packages/context/dist/pipeline.js": "0a6ea1170d2b378e8e861c8eb842651275fc0b8f5b16343cfb0af145c59121aa",
+    "packages/context/src/rehydration.ts": "0d6c7077a9f6e207b51db023bcc0f2f4d9dde90cc94a3f0361090ce119fe8bc1",
+    "packages/context/dist/rehydration.js": "c81c70dd959274f4655ee32b51851a66ea68f6c241c1eaeed553d4c2cc4b4e49",
+    "packages/context/src/budget.ts": "5697332e832d5571599e41456caec44f71e4f9335e2c5c7672b7a2a9738eaf16",
+    "packages/context/dist/budget.js": "c23c3196e6dc6f2a19859618be874faec59df08b6199fee876ee3130143cd6f8",
+    "packages/context/src/compaction.ts": "99f85d898514c495be9cd2c2414333c191d4c715cd845f4c32fd0c0446d3c186",
+    "packages/context/dist/compaction.js": "b8139b3a5908ecfe335149997268517917caa87ecd9159edb76ee8701ae937f2",
+    "packages/core/src/runtime/context-controller.ts": "22fe6661072b6674e0ab75a9535a6530de8700cec1a596d6ba858a3d0bda9bfd",
+    "packages/core/dist/runtime/context-controller.js": "601b8ad652675e360a408dd06a08b4a4f6e29e27b98117bd580ea2816a110c57",
+    "packages/harness/src/create-harness.ts": "a115aa9c8ec71b86e689e80ab9195c21cd85c8f19a0d9de669e9e19d8becf84e",
+    "packages/harness/dist/create-harness.js": "442874f7297e7e0b7df5e715af249457fbd0bf6cd33f15b75d5e198700ea29e3",
+    "packages/harness/src/memory-runtime-bridge.ts": "b7e3900693198379a9e27a6cd82fa39ac4f4614ab11ead8af878fde58ed15406",
+    "packages/harness/dist/memory-runtime-bridge.js": "536009673b747fa4fa4091d54d24c212dacb097531b2da6e14c9a4f4ba66eede",
+    "scripts/research/agent-next2-20261005/rehydration-budget-probe.mjs": "00de965190c0c48d5dbeca299d3e2f9d6f8fb099046548fa8c3659a9b85ec2b5"
+  },
+  "sourceFingerprintsAfter": {
+    "packages/context/src/pipeline.ts": "ba80475151326f65eb23d507c9c997e738daa972d570c8c5c5aa69448879bc0f",
+    "packages/context/dist/pipeline.js": "0a6ea1170d2b378e8e861c8eb842651275fc0b8f5b16343cfb0af145c59121aa",
+    "packages/context/src/rehydration.ts": "0d6c7077a9f6e207b51db023bcc0f2f4d9dde90cc94a3f0361090ce119fe8bc1",
+    "packages/context/dist/rehydration.js": "c81c70dd959274f4655ee32b51851a66ea68f6c241c1eaeed553d4c2cc4b4e49",
+    "packages/context/src/budget.ts": "5697332e832d5571599e41456caec44f71e4f9335e2c5c7672b7a2a9738eaf16",
+    "packages/context/dist/budget.js": "c23c3196e6dc6f2a19859618be874faec59df08b6199fee876ee3130143cd6f8",
+    "packages/context/src/compaction.ts": "99f85d898514c495be9cd2c2414333c191d4c715cd845f4c32fd0c0446d3c186",
+    "packages/context/dist/compaction.js": "b8139b3a5908ecfe335149997268517917caa87ecd9159edb76ee8701ae937f2",
+    "packages/core/src/runtime/context-controller.ts": "22fe6661072b6674e0ab75a9535a6530de8700cec1a596d6ba858a3d0bda9bfd",
+    "packages/core/dist/runtime/context-controller.js": "601b8ad652675e360a408dd06a08b4a4f6e29e27b98117bd580ea2816a110c57",
+    "packages/harness/src/create-harness.ts": "a115aa9c8ec71b86e689e80ab9195c21cd85c8f19a0d9de669e9e19d8becf84e",
+    "packages/harness/dist/create-harness.js": "442874f7297e7e0b7df5e715af249457fbd0bf6cd33f15b75d5e198700ea29e3",
+    "packages/harness/src/memory-runtime-bridge.ts": "b7e3900693198379a9e27a6cd82fa39ac4f4614ab11ead8af878fde58ed15406",
+    "packages/harness/dist/memory-runtime-bridge.js": "536009673b747fa4fa4091d54d24c212dacb097531b2da6e14c9a4f4ba66eede",
+    "scripts/research/agent-next2-20261005/rehydration-budget-probe.mjs": "00de965190c0c48d5dbeca299d3e2f9d6f8fb099046548fa8c3659a9b85ec2b5"
+  },
+  "cases": [
+    {
+      "name": "context-boundary-51",
+      "status": "PASS",
+      "rawFile": "context-boundary-51.json",
+      "rawSha256": "085819832615ba49b81f1ea0f3c5a018b6b9dccb631ed74531a0075e51a384a9"
+    },
+    {
+      "name": "context-boundary-52",
+      "status": "PASS",
+      "rawFile": "context-boundary-52.json",
+      "rawSha256": "7abb671d1a0cfb6bececcd57aab666c8a99e1743e31ce1c0b5979f4517e2d922"
+    },
+    {
+      "name": "context-boundary-60",
+      "status": "PASS",
+      "rawFile": "context-boundary-60.json",
+      "rawSha256": "3648583e56549f8b6d602a78170c920d01708e1339688956998b5a141dd65241"
+    },
+    {
+      "name": "context-boundary-61",
+      "status": "PASS",
+      "rawFile": "context-boundary-61.json",
+      "rawSha256": "c6ce851e03e129cd6c01bfa88d30f4bd70417671a4ea94f2e52b743acf744350"
+    },
+    {
+      "name": "context-boundary-62",
+      "status": "PASS",
+      "rawFile": "context-boundary-62.json",
+      "rawSha256": "e4c2991ad8e02a0c1ec1c4a2cdefdb6e73f7410d685edce8bf70604895927850"
+    },
+    {
+      "name": "context-boundary-89",
+      "status": "PASS",
+      "rawFile": "context-boundary-89.json",
+      "rawSha256": "19178961a35c4386feb6ca9938fe9f5ecb2cc0b311bfad50103e23f8699a1a42"
+    },
+    {
+      "name": "context-boundary-90",
+      "status": "PASS",
+      "rawFile": "context-boundary-90.json",
+      "rawSha256": "56a8c7c60a95e6fce08a715714d3a73f7fa980221f52097b7e1662d0113a0f09"
+    },
+    {
+      "name": "context-boundary-100",
+      "status": "PASS",
+      "rawFile": "context-boundary-100.json",
+      "rawSha256": "4985e8acde13bc7780b9e8c3bfdbe4ad98a3605a8f33c86e14db5f395c3109e6"
+    },
+    {
+      "name": "context-boundary-101",
+      "status": "PASS",
+      "rawFile": "context-boundary-101.json",
+      "rawSha256": "e166686e55237360c5e965b864d17d29b6a5ef1fc63968eadb5621f0d7292441"
+    },
+    {
+      "name": "context-boundary-150",
+      "status": "PASS",
+      "rawFile": "context-boundary-150.json",
+      "rawSha256": "fc226b137d55d825af3681b8d03975b6b587f253ee4c21f1a56967e54857ee73"
+    },
+    {
+      "name": "context-reserved-system",
+      "status": "PASS",
+      "rawFile": "context-reserved-system.json",
+      "rawSha256": "275748866b5fa94dcaaa13a269d758826aaadbf762e6028a2cafc5017f7d2868"
+    },
+    {
+      "name": "context-reserved-task",
+      "status": "PASS",
+      "rawFile": "context-reserved-task.json",
+      "rawSha256": "afd3ac8a597503c3ed290859d30a0ea65afb74dbd705103fefa738aea3cf0c7c"
+    },
+    {
+      "name": "context-reserved-output",
+      "status": "PASS",
+      "rawFile": "context-reserved-output.json",
+      "rawSha256": "ee6e97c7193e4d56f4ae8605ca2044fb3497c77fc4d1981680e628625e82fa77"
+    },
+    {
+      "name": "context-reserved-combined",
+      "status": "PASS",
+      "rawFile": "context-reserved-combined.json",
+      "rawSha256": "627b5e6f06793ef28aeb5979d8fb79ffcca4848a8cba2bea0cdb433895d90ef8"
+    },
+    {
+      "name": "context-history-not-deducted-twice",
+      "status": "PASS",
+      "rawFile": "context-history-not-deducted-twice.json",
+      "rawSha256": "c5800569b504cf082072b92b3f3c72bbfe1359d67e7080a81d949ea4561835dc"
+    },
+    {
+      "name": "context-unicode-byte-estimator-exact-pointer",
+      "status": "PASS",
+      "rawFile": "context-unicode-byte-estimator-exact-pointer.json",
+      "rawSha256": "19d31ca7deda82bf879016011c90b6c204d5f77b9eaa77e9f5dba31856915f86"
+    },
+    {
+      "name": "context-existing-600-cap",
+      "status": "FAIL",
+      "rawFile": "context-existing-600-cap.json",
+      "rawSha256": "dfe732c1f2bb3c31e83ba9446204ea402c6d52ea11e6939f88b0b6cad6fe963d",
+      "failure": {
+        "message": "TypeError: Cannot read properties of undefined (reading 'maxTokens')",
+        "stack": "TypeError: Cannot read properties of undefined (reading 'maxTokens')\n    at file:///workspace/harness-agent/scripts/research/agent-next2-20261005/rehydration-budget-probe.mjs:90:71\n    at async check (file:///workspace/harness-agent/scripts/research/agent-next2-20261005/rehydration-budget-probe.mjs:45:9)\n    at async file:///workspace/harness-agent/scripts/research/agent-next2-20261005/rehydration-budget-probe.mjs:87:1"
+      }
+    },
+    {
+      "name": "context-protected-overflow-not-evicted",
+      "status": "PASS",
+      "rawFile": "context-protected-overflow-not-evicted.json",
+      "rawSha256": "02294043973f079ff49cb2c786660e56c4c9dfc9b94ad8d6a2541126f8317783"
+    },
+    {
+      "name": "context-irreducible-digest-no-extra-refs",
+      "status": "PASS",
+      "rawFile": "context-irreducible-digest-no-extra-refs.json",
+      "rawSha256": "1ac6f8f1e02d215e0c2452d76c3155304afd9f2b8b57776e63c6eb3c94ca67eb"
+    },
+    {
+      "name": "context-no-compaction-no-refs",
+      "status": "PASS",
+      "rawFile": "context-no-compaction-no-refs.json",
+      "rawSha256": "174eb069de9942a3bef9342682b32dc1f82154a2b20e1cd1013fc639bdae3071"
+    },
+    {
+      "name": "context-breaker-and-telemetry-final-footprint",
+      "status": "PASS",
+      "rawFile": "context-breaker-and-telemetry-final-footprint.json",
+      "rawSha256": "bb12051a1e10195a94bcb96b11802ea0a2bc6403098c83e69006f87bbb061b16"
+    },
+    {
+      "name": "context-frozen-inputs-not-mutated",
+      "status": "PASS",
+      "rawFile": "context-frozen-inputs-not-mutated.json",
+      "rawSha256": "99d65130ccf0ca3c6683b4461cad48e58103e042521bb441527377bd6b00f08d"
+    },
+    {
+      "name": "context-summary-missing-still-failclosed",
+      "status": "PASS",
+      "rawFile": "context-summary-missing-still-failclosed.json",
+      "rawSha256": "e19bd8a2c7ab05169bdc3f7513892ae55c9e67095e85ab2d801c4e4ee22334d4"
+    },
+    {
+      "name": "context-open-breaker-no-rehydration",
+      "status": "PASS",
+      "rawFile": "context-open-breaker-no-rehydration.json",
+      "rawSha256": "64370fa38c15ad42137960a89359e0b53ffff59cea4b3b5a40b3961870e3ddbf"
+    },
+    {
+      "name": "harness-165-original-avoidable-failure",
+      "status": "PASS",
+      "rawFile": "harness-165-original-avoidable-failure.json",
+      "rawSha256": "4b695830f60c719433db52de1bb3c032df1c9bdaffce034491d163ff5c767771"
+    },
+    {
+      "name": "harness-170-pointer-still-admitted",
+      "status": "PASS",
+      "rawFile": "harness-170-pointer-still-admitted.json",
+      "rawSha256": "68ab1cca44533e5749804132365062e06627f2204f55a83a77f6ec59b45bf9a0"
+    },
+    {
+      "name": "harness-output-reservation",
+      "status": "PASS",
+      "rawFile": "harness-output-reservation.json",
+      "rawSha256": "9b3d3278edce1405bd653f798ce7e355cf93e7b27403024bf492acc7a4cc0424"
+    },
+    {
+      "name": "harness-unicode-user-reservation",
+      "status": "PASS",
+      "rawFile": "harness-unicode-user-reservation.json",
+      "rawSha256": "2163322e0595f36accdcfc7651c0969cad38bfcb8776df0d199efb59d87de96e"
+    },
+    {
+      "name": "harness-default-memory-off",
+      "status": "PASS",
+      "rawFile": "harness-default-memory-off.json",
+      "rawSha256": "bcacdca1ab5defa0a1b0181ba572e9a4a88037d1eb783b5be5633d5907559f74"
+    },
+    {
+      "name": "harness-protected-overflow-still-fails",
+      "status": "PASS",
+      "rawFile": "harness-protected-overflow-still-fails.json",
+      "rawSha256": "b36159c3ce06f09e74a1e254d497aa7afe12a33ac41d793ffa843443042f9c33"
+    }
+  ],
+  "paidProviderCalls": 0,
+  "actualHarnessTurns": 6,
+  "actualHarnessRequests": 5,
+  "node": "v24.19.0",
+  "platform": "linux",
+  "realModelQuality": "NOT_RUN",
+  "windowsRuntime": "NOT_RUN",
+  "limits": "Production compiled pipeline and actual Harness/JSONL retrieval with scripted provider. Estimates verify the existing context accounting contract, not a real tokenizer hard limit or model quality. Host configured reserved0 differs from effective active-user reserved.task10; complete message history is not charged twice. Protected/digest overflow remains visible. Memory remains opt-in; no promotion or paid calls."
+}

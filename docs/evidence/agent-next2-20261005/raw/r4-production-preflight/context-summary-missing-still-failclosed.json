@@ -1,0 +1,40 @@
+{
+  "name": "context-summary-missing-still-failclosed",
+  "observed": {
+    "input": {
+      "cwd": "/workspace/harness-agent",
+      "systemPrompt": "sys",
+      "priorBlocks": [
+        {
+          "id": "fits",
+          "source": "tool",
+          "trust": "untrusted",
+          "priority": 100,
+          "tokens": 10,
+          "content": "ordinary data",
+          "compressible": true,
+          "ephemeral": false
+        },
+        {
+          "id": "dropped",
+          "source": "tool",
+          "trust": "untrusted",
+          "priority": 100,
+          "tokens": 100000,
+          "content": "ordinary data",
+          "compressible": true,
+          "ephemeral": false
+        }
+      ],
+      "budget": {
+        "maxTokens": 100,
+        "reserved": {
+          "system": 0,
+          "task": 0,
+          "output": 0
+        },
+        "dynamic": 0
+      }
+    }
+  }
+}

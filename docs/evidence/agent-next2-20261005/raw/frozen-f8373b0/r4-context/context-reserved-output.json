@@ -1,0 +1,125 @@
+{
+  "name": "context-reserved-output",
+  "observed": {
+    "input": {
+      "cwd": "/workspace/harness-agent",
+      "systemPrompt": "sys",
+      "priorBlocks": [
+        {
+          "id": "fits",
+          "source": "tool",
+          "trust": "untrusted",
+          "priority": 100,
+          "tokens": 10,
+          "content": "ordinary data",
+          "compressible": true,
+          "ephemeral": false
+        },
+        {
+          "id": "dropped",
+          "source": "tool",
+          "trust": "untrusted",
+          "priority": 100,
+          "tokens": 100000,
+          "content": "ordinary data",
+          "compressible": true,
+          "ephemeral": false
+        }
+      ],
+      "budget": {
+        "maxTokens": 110,
+        "reserved": {
+          "system": 0,
+          "task": 0,
+          "output": 20
+        },
+        "dynamic": 0
+      },
+      "summaryOverride": {
+        "goal": "short task",
+        "constraints": [],
+        "decisions": [],
+        "completed": [],
+        "filesChanged": [
+          "src/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.ts"
+        ],
+        "commandsRun": [],
+        "tests": [],
+        "failures": [],
+        "openTasks": [],
+        "importantFacts": [],
+        "artifactRefs": [],
+        "childAgentRefs": []
+      }
+    },
+    "result": {
+      "blocks": [
+        {
+          "id": "system-prompt",
+          "source": "system",
+          "trust": "trusted",
+          "priority": 9007199254740991,
+          "tokens": 1,
+          "content": "sys",
+          "compressible": false,
+          "ephemeral": false,
+          "category": "protected-instruction",
+          "instructional": true,
+          "persistable": false
+        },
+        {
+          "id": "compaction-summary",
+          "source": "memory",
+          "trust": "semi-trusted",
+          "priority": 900,
+          "tokens": 50,
+          "content": "# Compaction Summary\n\n## Goal\nshort task\n\n## Files Changed\n- src/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.ts",
+          "compressible": false,
+          "ephemeral": false,
+          "category": "working-state",
+          "timestamp": 1791202949015,
+          "instructional": false,
+          "persistable": false
+        },
+        {
+          "id": "rehydrate:files",
+          "source": "memory",
+          "trust": "semi-trusted",
+          "priority": 800,
+          "tokens": 39,
+          "content": "## Files in play\n- src/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.ts",
+          "compressible": true,
+          "ephemeral": false,
+          "category": "working-state"
+        }
+      ],
+      "report": {
+        "used": 90,
+        "available": 20,
+        "dropped": 1,
+        "compressed": 1,
+        "messagesTokens": 0
+      },
+      "compacted": true,
+      "summary": {
+        "id": "compaction-summary",
+        "source": "memory",
+        "trust": "semi-trusted",
+        "priority": 900,
+        "tokens": 50,
+        "content": "# Compaction Summary\n\n## Goal\nshort task\n\n## Files Changed\n- src/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.ts",
+        "compressible": false,
+        "ephemeral": false,
+        "category": "working-state",
+        "timestamp": 1791202949015,
+        "instructional": false,
+        "persistable": false
+      },
+      "discovered": [],
+      "injected": []
+    },
+    "compactedBeforeHydration": 51,
+    "spendable": 90,
+    "optionalHydrationTokens": 39
+  }
+}

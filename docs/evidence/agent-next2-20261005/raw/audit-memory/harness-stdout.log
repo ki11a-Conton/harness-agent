@@ -1,0 +1,72 @@
+[
+  {
+    "backend": "jsonl",
+    "expected": {
+      "completedTurns": 4,
+      "modelRequests": 4,
+      "retrievedCount": 4,
+      "injectedCount": 4,
+      "usedCount": 4,
+      "taskSuccessCount": 4
+    },
+    "actual": {
+      "outcomes": [
+        "completed",
+        "completed",
+        "completed",
+        "completed"
+      ],
+      "modelRequests": 4,
+      "requestMemoryRefs": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "usefulness": {
+        "retrievedCount": 2,
+        "injectedCount": 1,
+        "usedCount": 2,
+        "taskSuccessCount": 1,
+        "verificationPassedCount": 0,
+        "score": 0.88975
+      },
+      "retrievedEvents": 4
+    }
+  },
+  {
+    "backend": "sqlite",
+    "expected": {
+      "completedTurns": 4,
+      "modelRequests": 4,
+      "retrievedCount": 4,
+      "injectedCount": 4,
+      "usedCount": 4,
+      "taskSuccessCount": 4
+    },
+    "actual": {
+      "outcomes": [
+        "completed",
+        "completed",
+        "completed",
+        "completed"
+      ],
+      "modelRequests": 4,
+      "requestMemoryRefs": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "usefulness": {
+        "retrievedCount": 4,
+        "injectedCount": 4,
+        "usedCount": 4,
+        "taskSuccessCount": 4,
+        "verificationPassedCount": 0,
+        "score": 0.9950771996875
+      },
+      "retrievedEvents": 4
+    }
+  }
+]

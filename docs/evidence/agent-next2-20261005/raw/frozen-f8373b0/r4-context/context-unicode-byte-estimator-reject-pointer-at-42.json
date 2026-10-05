@@ -1,0 +1,191 @@
+{
+  "name": "context-unicode-byte-estimator-reject-pointer-at-42",
+  "observed": {
+    "ample": {
+      "blocks": [
+        {
+          "id": "system-prompt",
+          "source": "system",
+          "trust": "trusted",
+          "priority": 9007199254740991,
+          "tokens": 3,
+          "content": "sys",
+          "compressible": false,
+          "ephemeral": false,
+          "category": "protected-instruction",
+          "instructional": true,
+          "persistable": false
+        },
+        {
+          "id": "compaction-summary",
+          "source": "memory",
+          "trust": "semi-trusted",
+          "priority": 900,
+          "tokens": 164,
+          "content": "# Compaction Summary\n\n## Goal\n继续优化🙂\n\n## Files Changed\n- src/界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界.ts",
+          "compressible": false,
+          "ephemeral": false,
+          "category": "working-state",
+          "timestamp": 1791202949018,
+          "instructional": false,
+          "persistable": false
+        },
+        {
+          "id": "rehydrate:files",
+          "source": "memory",
+          "trust": "semi-trusted",
+          "priority": 800,
+          "tokens": 116,
+          "content": "## Files in play\n- src/界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界.ts",
+          "compressible": true,
+          "ephemeral": false,
+          "category": "working-state"
+        },
+        {
+          "id": "rehydrate:pointers",
+          "source": "memory",
+          "trust": "semi-trusted",
+          "priority": 600,
+          "tokens": 43,
+          "content": "## Refs\n- full transcript preserved on disk",
+          "compressible": true,
+          "ephemeral": false,
+          "category": "working-state"
+        }
+      ],
+      "report": {
+        "used": 326,
+        "available": 674,
+        "dropped": 1,
+        "compressed": 1,
+        "messagesTokens": 0
+      },
+      "compacted": true,
+      "summary": {
+        "id": "compaction-summary",
+        "source": "memory",
+        "trust": "semi-trusted",
+        "priority": 900,
+        "tokens": 164,
+        "content": "# Compaction Summary\n\n## Goal\n继续优化🙂\n\n## Files Changed\n- src/界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界.ts",
+        "compressible": false,
+        "ephemeral": false,
+        "category": "working-state",
+        "timestamp": 1791202949018,
+        "instructional": false,
+        "persistable": false
+      },
+      "discovered": [],
+      "injected": []
+    },
+    "input": {
+      "cwd": "/workspace/harness-agent",
+      "systemPrompt": "sys",
+      "priorBlocks": [
+        {
+          "id": "fits",
+          "source": "tool",
+          "trust": "untrusted",
+          "priority": 100,
+          "tokens": 10,
+          "content": "ordinary data",
+          "compressible": true,
+          "ephemeral": false
+        },
+        {
+          "id": "dropped",
+          "source": "tool",
+          "trust": "untrusted",
+          "priority": 100,
+          "tokens": 100000,
+          "content": "ordinary data",
+          "compressible": true,
+          "ephemeral": false
+        }
+      ],
+      "budget": {
+        "maxTokens": 209,
+        "reserved": {
+          "system": 0,
+          "task": 0,
+          "output": 0
+        },
+        "dynamic": 0
+      },
+      "summaryOverride": {
+        "goal": "继续优化🙂",
+        "constraints": [],
+        "decisions": [],
+        "completed": [],
+        "filesChanged": [
+          "src/界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界.ts"
+        ],
+        "commandsRun": [],
+        "tests": [],
+        "failures": [],
+        "openTasks": [],
+        "importantFacts": [],
+        "artifactRefs": [],
+        "childAgentRefs": []
+      }
+    },
+    "result": {
+      "blocks": [
+        {
+          "id": "system-prompt",
+          "source": "system",
+          "trust": "trusted",
+          "priority": 9007199254740991,
+          "tokens": 3,
+          "content": "sys",
+          "compressible": false,
+          "ephemeral": false,
+          "category": "protected-instruction",
+          "instructional": true,
+          "persistable": false
+        },
+        {
+          "id": "compaction-summary",
+          "source": "memory",
+          "trust": "semi-trusted",
+          "priority": 900,
+          "tokens": 164,
+          "content": "# Compaction Summary\n\n## Goal\n继续优化🙂\n\n## Files Changed\n- src/界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界.ts",
+          "compressible": false,
+          "ephemeral": false,
+          "category": "working-state",
+          "timestamp": 1791202949018,
+          "instructional": false,
+          "persistable": false
+        }
+      ],
+      "report": {
+        "used": 167,
+        "available": 42,
+        "dropped": 1,
+        "compressed": 1,
+        "messagesTokens": 0
+      },
+      "compacted": true,
+      "summary": {
+        "id": "compaction-summary",
+        "source": "memory",
+        "trust": "semi-trusted",
+        "priority": 900,
+        "tokens": 164,
+        "content": "# Compaction Summary\n\n## Goal\n继续优化🙂\n\n## Files Changed\n- src/界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界.ts",
+        "compressible": false,
+        "ephemeral": false,
+        "category": "working-state",
+        "timestamp": 1791202949018,
+        "instructional": false,
+        "persistable": false
+      },
+      "discovered": [],
+      "injected": []
+    },
+    "compactedBeforeHydration": 167,
+    "spendable": 209,
+    "optionalHydrationTokens": 0
+  }
+}

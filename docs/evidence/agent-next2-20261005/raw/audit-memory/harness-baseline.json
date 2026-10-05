@@ -1,0 +1,170 @@
+{
+  "sourceSha": "320cf3e0bd87d714d17d95709e10c0ddf56d9c5d",
+  "cases": [
+    {
+      "backend": "jsonl",
+      "expected": {
+        "completedTurns": 4,
+        "modelRequests": 4,
+        "retrievedCount": 4,
+        "injectedCount": 4,
+        "usedCount": 4,
+        "taskSuccessCount": 4
+      },
+      "actual": {
+        "outcomes": [
+          "completed",
+          "completed",
+          "completed",
+          "completed"
+        ],
+        "modelRequests": 4,
+        "requestMemoryRefs": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "memory": {
+          "id": "memory_harness_audit",
+          "content": "auditneedle requires checking actual persisted memory feedback",
+          "type": "procedural",
+          "sourceSession": "session_6fe86ca1-0323-48a6-bbb8-9643dd60a1fb",
+          "scope": "workspace",
+          "importance": 0.9,
+          "confidence": 0.9,
+          "novelty": 0.9,
+          "stability": 0.9,
+          "createdAt": 1791190394711,
+          "updatedAt": 1791190394711,
+          "deleted": false,
+          "usefulness": {
+            "retrievedCount": 2,
+            "injectedCount": 1,
+            "usedCount": 2,
+            "taskSuccessCount": 1,
+            "verificationPassedCount": 0,
+            "score": 0.88975
+          }
+        },
+        "retrievedEvents": [
+          {
+            "query": "auditneedle",
+            "count": 1,
+            "memoryIds": [
+              "memory_harness_audit"
+            ],
+            "suppressed": 0
+          },
+          {
+            "query": "auditneedle",
+            "count": 1,
+            "memoryIds": [
+              "memory_harness_audit"
+            ],
+            "suppressed": 0
+          },
+          {
+            "query": "auditneedle",
+            "count": 1,
+            "memoryIds": [
+              "memory_harness_audit"
+            ],
+            "suppressed": 0
+          },
+          {
+            "query": "auditneedle",
+            "count": 1,
+            "memoryIds": [
+              "memory_harness_audit"
+            ],
+            "suppressed": 0
+          }
+        ]
+      }
+    },
+    {
+      "backend": "sqlite",
+      "expected": {
+        "completedTurns": 4,
+        "modelRequests": 4,
+        "retrievedCount": 4,
+        "injectedCount": 4,
+        "usedCount": 4,
+        "taskSuccessCount": 4
+      },
+      "actual": {
+        "outcomes": [
+          "completed",
+          "completed",
+          "completed",
+          "completed"
+        ],
+        "modelRequests": 4,
+        "requestMemoryRefs": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "memory": {
+          "id": "memory_harness_audit",
+          "content": "auditneedle requires checking actual persisted memory feedback",
+          "type": "procedural",
+          "sourceSession": "session_4adde7c2-6bc4-4cb1-8767-ea1a7dc8aab3",
+          "scope": "workspace",
+          "importance": 0.9,
+          "confidence": 0.9,
+          "novelty": 0.9,
+          "stability": 0.9,
+          "createdAt": 1791190394788,
+          "updatedAt": 1791190394788,
+          "deleted": false,
+          "usefulness": {
+            "retrievedCount": 4,
+            "injectedCount": 4,
+            "usedCount": 4,
+            "taskSuccessCount": 4,
+            "verificationPassedCount": 0,
+            "score": 0.9950771996875
+          }
+        },
+        "retrievedEvents": [
+          {
+            "query": "auditneedle",
+            "count": 1,
+            "memoryIds": [
+              "memory_harness_audit"
+            ],
+            "suppressed": 0
+          },
+          {
+            "query": "auditneedle",
+            "count": 1,
+            "memoryIds": [
+              "memory_harness_audit"
+            ],
+            "suppressed": 0
+          },
+          {
+            "query": "auditneedle",
+            "count": 1,
+            "memoryIds": [
+              "memory_harness_audit"
+            ],
+            "suppressed": 0
+          },
+          {
+            "query": "auditneedle",
+            "count": 1,
+            "memoryIds": [
+              "memory_harness_audit"
+            ],
+            "suppressed": 0
+          }
+        ]
+      }
+    }
+  ],
+  "paidRequests": 0
+}

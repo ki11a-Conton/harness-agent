@@ -1,0 +1,391 @@
+{
+  "schemaVersion": "agent-next2-independent-runtime-review-v1",
+  "status": "FINAL_RUNTIME_REVIEW_PASS",
+  "reviewedAt": "2026-10-05T12:41:36.567363+00:00",
+  "reviewer": "/root/independent_followup_review",
+  "testedSourceSha": "f8373b0fa4ec6491a55a9a3ba198235b689cc140",
+  "baselineSha": "320cf3e0bd87d714d17d95709e10c0ddf56d9c5d",
+  "manifestSha256": "f0b9947326c4458d793a8ad42871c783a24c6a7dc85d438a5bcc42b86319dc84",
+  "staticReviewSha256": "aa8fa0c727b994f0af6d4d4b8d1360a5d31ad522521525c6fde02246125d104a",
+  "exactCleanSourceVerified": true,
+  "rawCommandLogsVerified": {
+    "typecheck": {
+      "sha256": "faeaa94bcf7012d86f91ca647580449f56a263fb7eaf572c54789764f60a9b8f",
+      "bytes": 9,
+      "exitCode": 0
+    },
+    "build": {
+      "sha256": "faeaa94bcf7012d86f91ca647580449f56a263fb7eaf572c54789764f60a9b8f",
+      "bytes": 9,
+      "exitCode": 0
+    },
+    "new-regressions": {
+      "sha256": "5583f957dd6bda5721d0fc13ec5c3c601dd122ab8d582838b291a43b5a6e92c0",
+      "bytes": 2713,
+      "exitCode": 0
+    },
+    "related-integration": {
+      "sha256": "e5b7f4bed52980c3d7dc510dfaadefbcae95105f9ea677f6a434ae3fe0119aa6",
+      "bytes": 21067,
+      "exitCode": 0
+    },
+    "retry-production": {
+      "sha256": "c249f5aaa022fa8f3332958fc301f4db426662389a97cba8d33d89914eabb80e",
+      "bytes": 2129,
+      "exitCode": 0
+    },
+    "memory-feedback-production": {
+      "sha256": "287b0ec23072fa3939e4f5aceacee8a27c330b6c144d0c81c4dc71e505a8168e",
+      "bytes": 110,
+      "exitCode": 0
+    },
+    "search-path-production": {
+      "sha256": "09932b91c4d7476022f9e9e3b33f57e2811e8116f1b618329b3286c71f1dbb26",
+      "bytes": 76,
+      "exitCode": 0
+    },
+    "rehydration-production": {
+      "sha256": "9a90b0ad3c0a8d98102c9dfb962594bb4865a6f59c8bc990619073a72f83d8b5",
+      "bytes": 1284,
+      "exitCode": 0
+    },
+    "provider-footer-control": {
+      "sha256": "a2d270cba2bc772a9755831aaf558ec3f842505219204782958e6c5d70fef1fc",
+      "bytes": 891,
+      "exitCode": 0
+    },
+    "main-accounting": {
+      "sha256": "9a1ec2921d2270789f4f9cfb826c6e332e8d73e46a1af1f7a6614fb751b9de29",
+      "bytes": 2100,
+      "exitCode": 0
+    },
+    "joint-browser": {
+      "sha256": "9ae0ca577652bb7b711d7da32b834f68641d36fd22b29b383450af92be7be283",
+      "bytes": 3185,
+      "exitCode": 0
+    },
+    "security": {
+      "sha256": "8db0ae2972951b8236f3104b1dec38e90ba285021663f367ad15b1919390f4a2",
+      "bytes": 1569,
+      "exitCode": 0
+    },
+    "docs-verify": {
+      "sha256": "1faa3994d2af687328bb0facc7d9481013a5c8ceef03dd41275a8465c165a3d1",
+      "bytes": 1734,
+      "exitCode": 0
+    },
+    "full": {
+      "sha256": "5b5967a59bc70de888da4a51192abf00b2efefba1cae5996ede76c8bb6de18f6",
+      "bytes": 94387,
+      "exitCode": 0
+    },
+    "usage-audit": {
+      "sha256": "f2cf7a87fa38978ce86d8717f2c58808bb41b78ea4b0f95a8c1d383987323dba",
+      "bytes": 763,
+      "exitCode": 0
+    },
+    "prior-artifact-integrity": {
+      "sha256": "d58475986f62d73a27ae5c51ce3ba3478aa712ee17a2142cc0317e8d38cf846c",
+      "bytes": 46,
+      "exitCode": 0
+    },
+    "diff-check": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "exitCode": 0
+    }
+  },
+  "rawVitestCountsVerified": {
+    "new-regressions": {
+      "files": {
+        "passed": 6,
+        "total": 6
+      },
+      "tests": {
+        "passed": 111,
+        "total": 111
+      }
+    },
+    "related-integration": {
+      "files": {
+        "passed": 118,
+        "total": 118
+      },
+      "tests": {
+        "passed": 1674,
+        "skipped": 10,
+        "total": 1684
+      }
+    },
+    "security": {
+      "files": {
+        "passed": 19,
+        "total": 19
+      },
+      "tests": {
+        "passed": 2135,
+        "total": 2135
+      }
+    },
+    "full": {
+      "files": {
+        "passed": 469,
+        "skipped": 1,
+        "total": 470
+      },
+      "tests": {
+        "passed": 8690,
+        "skipped": 12,
+        "total": 8702
+      }
+    }
+  },
+  "sourceGitBlobsAndCurrentSha256Verified": 1093,
+  "sourceBeforeAfterByteEqual": true,
+  "distCurrentSha256Verified": 3512,
+  "distAfterBuildAfterAcceptanceByteEqual": true,
+  "productionProbeEvidence": {
+    "r1-retry": {
+      "casesPassed": 19,
+      "cleanExactSource": true,
+      "nativeHttpRequests": 47,
+      "deadlineAndCancelMs": {
+        "retry-after-deadline": 52.06121200000001,
+        "network-backoff-deadline": 51.11357199999998,
+        "caller-abort-at-retry": 3.2334920000000125,
+        "caller-abort-at-network-retry": 2.921059000000014
+      },
+      "ownedWaitResourcesRetained": 0
+    },
+    "r2-memory": {
+      "casesPassed": 44,
+      "cleanExactSource": true,
+      "actualHarnessScenarios": [
+        {
+          "backend": "jsonl",
+          "scenario": "concurrent",
+          "modelRequests": 4,
+          "completedTurns": 4,
+          "cancelledTurns": 0
+        },
+        {
+          "backend": "jsonl",
+          "scenario": "tool-loop",
+          "modelRequests": 2,
+          "completedTurns": 1,
+          "cancelledTurns": 0
+        },
+        {
+          "backend": "jsonl",
+          "scenario": "unsupported",
+          "modelRequests": 1,
+          "completedTurns": 1,
+          "cancelledTurns": 0
+        },
+        {
+          "backend": "jsonl",
+          "scenario": "default-off",
+          "modelRequests": 1,
+          "completedTurns": 1,
+          "cancelledTurns": 0
+        },
+        {
+          "backend": "jsonl",
+          "scenario": "cancel-unadmitted",
+          "modelRequests": 0,
+          "completedTurns": 0,
+          "cancelledTurns": 1
+        },
+        {
+          "backend": "sqlite",
+          "scenario": "concurrent",
+          "modelRequests": 4,
+          "completedTurns": 4,
+          "cancelledTurns": 0
+        },
+        {
+          "backend": "sqlite",
+          "scenario": "tool-loop",
+          "modelRequests": 2,
+          "completedTurns": 1,
+          "cancelledTurns": 0
+        },
+        {
+          "backend": "sqlite",
+          "scenario": "unsupported",
+          "modelRequests": 1,
+          "completedTurns": 1,
+          "cancelledTurns": 0
+        },
+        {
+          "backend": "sqlite",
+          "scenario": "default-off",
+          "modelRequests": 1,
+          "completedTurns": 1,
+          "cancelledTurns": 0
+        },
+        {
+          "backend": "sqlite",
+          "scenario": "cancel-unadmitted",
+          "modelRequests": 0,
+          "completedTurns": 0,
+          "cancelledTurns": 1
+        }
+      ]
+    },
+    "r3-search": {
+      "casesPassed": 20,
+      "cleanExactSource": true,
+      "actualHarnessTurns": 4,
+      "actualHarnessModelRequests": 12,
+      "returnedPathUsedDirectly": true
+    },
+    "r4-context": {
+      "casesPassed": 31,
+      "cleanExactSource": true,
+      "actualHarnessTurns": 6,
+      "actualHarnessModelRequests": 5,
+      "effectiveReservedTask": 10,
+      "postDigestUsed": 147,
+      "optionalHeadroom": 8,
+      "original165NowCompleted": true,
+      "exact43AndRejected42Observed": true
+    },
+    "provider-footer": {
+      "casesPassed": 31,
+      "cleanExactSource": true,
+      "nativeHttpRequests": 26
+    },
+    "main-accounting": {
+      "casesPassed": 7,
+      "cleanExactSource": true,
+      "nativeHttpRequests": 10,
+      "actualCliMeasuredTokens": "20/12",
+      "actualWebMeasuredTokens": "30/18",
+      "durableMeasuredSourceVerified": true
+    }
+  },
+  "rawReferencedReceiptSha256": {
+    ".ci/agent-next2-20261005/frozen-f8373b0/r1-retry/result.json": "f886d8dcf36127ff9c25c44aa144b3a2188ea77694fc7c03a76b00f21b9212e9",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r2-memory/result.json": "8739486bf9cfb78f3e72e66daeb270b19121e42fbaba8a1f3da281e62c26adf5",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r2-memory/harness-jsonl-concurrent.json": "5f3cd38feb380013bd661ea7dec158dbb56fe326ed7294ad7fa5c04e6f2e26e5",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r2-memory/harness-jsonl-tool-loop.json": "9e866c59679d292f2832fec1a4984f2ae55bc8a4af0a5d2f514c81d6bc172b06",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r2-memory/harness-jsonl-unsupported.json": "0fe3b4ee9e4e2f51633c5545e5534baf9669a0c3cfe19e64c305c6bfcb212d5e",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r2-memory/harness-jsonl-default-off.json": "564295f8c351463036b0dcb5159eb9e4973d8d246bc34a994386fe659446d24a",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r2-memory/harness-jsonl-cancel-unadmitted.json": "ec37eb49c74e576073874a53efcb663ccfdd0d0265c144af6c5b5928613119ed",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r2-memory/harness-sqlite-concurrent.json": "cff6a7690d5b0ce8608de1b904364caf60f36b9f2fe22f7d4c83406b2cf9f9bb",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r2-memory/harness-sqlite-tool-loop.json": "4e0e0dbbc2a58bf06f777199f380dcc1bd1888ba0a25f480c7f1871f25e006d4",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r2-memory/harness-sqlite-unsupported.json": "f1d7059058c3b7406ab38ec8bbd3e32a63f428e6ce73c9ef833ff94724f0e3a2",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r2-memory/harness-sqlite-default-off.json": "e715cf0afc0d52cc7c4de9c3c90a310afe8dad7554810d70b2a7bc7f495a225a",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r2-memory/harness-sqlite-cancel-unadmitted.json": "3d2dddec03e0f8f51254d2d31d6cace1a99aef6959584c850c0be13f982c6c36",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r3-search/result.json": "7a77be2788cadb431e85c76bae158343471a8721f4dc945fc74a38e83f39264e",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r3-search/HARNESS_SCOPED_BASENAME_RETURNED_PATH_READ.json": "3f778d85419dadeb809c3d4afdab0d5245bec1dd33dd3266e63896f85ee688b3",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r3-search/HARNESS_ABSOLUTE_ALIAS_RETURNED_PATH_READ.json": "0ac8595ac627f5bcbf2be51d5973eb03599cce79995caa3f340523f5639c7b85",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r3-search/HARNESS_NESTED_CWD_RETURNED_PATH_READ.json": "8cdc3801c7edf9fc0557ce0a08ab3e4d5ac2c9207397986d6b8eed3fbdd7b4a0",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r3-search/HARNESS_UNICODE_RETURNED_PATH_READ.json": "d1d653800c511fe87349b6de033b2001943f38d0685dc076602eeb59994e69a9",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r4-context/result.json": "0e539735d4e5cbb1c0777ba65ec68d1af224825a4b38df13e8c63238757b00ee",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r4-context/context-boundary-51.json": "2b51759632d04e4baf5396cc4a38b5d561043cfd576bca1c4c4f3c8d85f84cbe",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r4-context/context-boundary-52.json": "1998975327143bd620a3da9e7d9e97bba1352b08794d15bbe84156b9d40205fb",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r4-context/context-boundary-60.json": "c25ecd9d6f885e94862975706327acdb1990bc74ae1e3b8b5e98a0f71f4ae89f",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r4-context/context-boundary-61.json": "392a369a21cda46fda9e079a792a9ea0f7bcf17e35a1b6a0d28d202271aaf72b",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r4-context/context-boundary-62.json": "49916cb404e5d5b8a8b3dae2b1dafdecc01b4bdb3d0412e6365fa90f1539744f",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r4-context/context-boundary-89.json": "fa9a416fd31fcce75e7a662e39b8defecd78548f8e00845dccb5b3462f079c18",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r4-context/context-boundary-90.json": "1bdf02c193e8d19df162dd2f959a893c6cfe07bcb70764965f17a51189b5ed7c",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r4-context/context-boundary-100.json": "b17db740f041c221cb64ac3af2edb8f4d5afc9bbc2ddecdd5e578ba1aabe25d5",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r4-context/context-boundary-101.json": "2f4965d4a132120619c6131d3f4a82a286376a6ac28c1916324f006eed45b943",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r4-context/context-boundary-150.json": "63794b01da82443ef1343a34ec7ab049a74f6011c8f9bf1d782e5c67f0f6b4e9",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r4-context/context-reserved-system.json": "3af24a5912189aa41e2b3734c19c4b2ddf2f08f7f8bdd71e8cf59aaa3a20eeeb",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r4-context/context-reserved-task.json": "156e3f891ec50e1dd8c7a98a4f8129dbc5356ee7ea4c2e57fdb601737efb4176",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r4-context/context-reserved-output.json": "f370cb4796ef47a3b6b8a30c603099206919539489cb41f2a4fc0d851d3e9690",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r4-context/context-reserved-combined.json": "37a9526494ff6df7d7121445897fb0bd32e429fbf3d08a4a7c41ac6f960986fd",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r4-context/context-history-not-deducted-twice.json": "6061ba7e01566fef35457495a17ffb6bef4926d5a61a4d967883fe62f709de37",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r4-context/context-unicode-byte-estimator-exact-pointer.json": "ba807c7fb586131f1b036010fa842f71fed0c68e57ba89afee5b72041ebc0311",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r4-context/context-unicode-byte-estimator-reject-pointer-at-42.json": "29133b372e1eee8449b6fd0a4db8c7be9811b8244a8c2b635d646ec003935d98",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r4-context/context-existing-600-cap.json": "38ca87eab93f8064d8cc641a3b3062244d0f33422e59dcc8b15e85779c20d4e0",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r4-context/context-protected-overflow-not-evicted.json": "eecf355927aa5a7ffe79ca28c3dc1fc39fb7a892efaf690c2da83648db0acf1b",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r4-context/context-irreducible-digest-no-extra-refs.json": "50c8a41dda00738a630eb6342983a5768844b4a50ac1cef5e163d005085720c1",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r4-context/context-no-compaction-no-refs.json": "174eb069de9942a3bef9342682b32dc1f82154a2b20e1cd1013fc639bdae3071",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r4-context/context-breaker-and-telemetry-final-footprint.json": "3d1b2836baf20009fb6cbe68fb32e5e0ddef8f5bdb3f998462938b2681be87ce",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r4-context/context-frozen-inputs-not-mutated.json": "b0b83c26d8e2fc091fb8759730319201756922278bfd962b45961055783a530a",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r4-context/context-summary-missing-still-failclosed.json": "e19bd8a2c7ab05169bdc3f7513892ae55c9e67095e85ab2d801c4e4ee22334d4",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r4-context/context-open-breaker-no-rehydration.json": "64370fa38c15ad42137960a89359e0b53ffff59cea4b3b5a40b3961870e3ddbf",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r4-context/harness-165-original-avoidable-failure.json": "c13918fa0e0f75c7be5a3a0eaab9db2925945710ce759eb32ef4c5872adbed59",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r4-context/harness-170-pointer-still-admitted.json": "01c6f95b5a183b88da534aebe7ae47e1f4bf517e5f20d94fde4c9374e5bdbc3c",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r4-context/harness-output-reservation.json": "6d238512f5ed3b0399212bed27ad3df9094dcd719c952dfa188071eaf3310dbf",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r4-context/harness-unicode-user-reservation.json": "1295e5213b4845183c50f7a0e10b854cac3924f1277e7e40f9bed5436531b66c",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r4-context/harness-default-memory-off.json": "e4cb7fec834ef9cf780d200efee3d6d3f8140cbf265cef6ce0099696bd748097",
+    ".ci/agent-next2-20261005/frozen-f8373b0/r4-context/harness-protected-overflow-still-fails.json": "11126594dbd438a71c0acc90136d6f1579e79ec468827c509a13078f4141c39a",
+    ".ci/agent-next2-20261005/frozen-f8373b0/provider-footer/result.json": "9b9cd045ba3dbc34dfdd8b51cc380e873753d2809aad3fe22c92476fcefed992",
+    ".ci/agent-next2-20261005/frozen-f8373b0/main-accounting/result.json": "bfc6c5279ecabd4e535a4528cf52654494c91724d3c49774014f768b26604e6a",
+    ".ci/agent-next2-20261005/frozen-f8373b0/main-accounting/cli-memory-tool-loop/durable-events.json": "8474c53bbba305026256bef30821b15e89874cc99ca60fa84ff7315514537790",
+    ".ci/agent-next2-20261005/frozen-f8373b0/main-accounting/web-default-system/durable-events.json": "5d9d546a597c1315319d3b2680debf23014191bccad9739b4f1c08444584b2be",
+    ".ci/agent-next2-20261005/frozen-f8373b0/joint-browser/browser-result.json": "e0450dc09336b6755828cb41567ece83da64072393f247987b391f54a94d1fd9"
+  },
+  "browser": {
+    "casesPassed": 27,
+    "assertCount": 77,
+    "browserErrors": 0,
+    "sourceCleanExact": true,
+    "fingerprintsVerified": 21
+  },
+  "skipBaselineLineage": [
+    {
+      "testFile": "packages/tools/src/process/executor.test.ts",
+      "actualSkippedTests": 7,
+      "sha256": "5cea7f0b3734b20f6a952429ba160a41ebdc336abe7f513248f4d362017044e9",
+      "baselineGitBlob": "4037dd6ace145b9be5d450bd53b5ea4931a14641",
+      "finalGitBlob": "4037dd6ace145b9be5d450bd53b5ea4931a14641"
+    },
+    {
+      "testFile": "apps/cli/src/n5-pair-setup.test.ts",
+      "actualSkippedTests": 1,
+      "sha256": "702a2ba481ee0b45fdfc0049de390a8b3f04213909758ea5d4f4f6139fe972ac",
+      "baselineGitBlob": "22ba4c172d3de35778117ba8653d972a64eb50a9",
+      "finalGitBlob": "22ba4c172d3de35778117ba8653d972a64eb50a9"
+    },
+    {
+      "testFile": "packages/tools/src/process/r96-windows-execution-boundary.test.ts",
+      "actualSkippedTests": 3,
+      "sha256": "e095ef76c58e021e784fc43cd08761bd0afa2655acbb9944190d81cafd30577f",
+      "baselineGitBlob": "14ebc40714f655d663a845d5c0dff343eef0369d",
+      "finalGitBlob": "14ebc40714f655d663a845d5c0dff343eef0369d"
+    },
+    {
+      "testFile": "apps/cli/src/n2-release-cli-forward.test.ts",
+      "actualSkippedTests": 1,
+      "sha256": "6c6ebf33b1ae8f716329d3b61c33ecdc8bedc10d8180157651f700e36d3e1349",
+      "baselineGitBlob": "ea15abb23d4e20272bd2fd784b6fbe026df3d329",
+      "finalGitBlob": "ea15abb23d4e20272bd2fd784b6fbe026df3d329"
+    }
+  ],
+  "sameRunStrictUsage": {
+    "runId": "agent-next2-linux-f8373b0fa4ec-1791202881603663663",
+    "observed": 7,
+    "candidates": 7,
+    "allSourceShaExactAndFrameworkPassed": true,
+    "allEvidenceAndResultDigestsRecomputed": true,
+    "allTestFilesPassedInRawFullLog": true,
+    "observationSha256": "680972f5d7a4c0726da01d81cdb9a3ec781ca31f182c2cf262b07deb79ba434d",
+    "candidateSha256": "40bb3bddfbbb48af78e7cca704568fa829f973fc35741b694c56d3b3ac453257",
+    "capabilities": [
+      "createActivationRecorderV2",
+      "classifySecurityOutcomeV2",
+      "canonical V3 writer",
+      "strict promotion loader",
+      "durable RecoveryStore",
+      "resolveChampionHarness",
+      "GateEvidenceV2 generator"
+    ],
+    "strictExitCode": 0
+  },
+  "blockingFindings": [],
+  "reviewMethod": "Read-only independent actual Git blobs, raw logs and receipts, source/dist bytes, durable measured token source, loopback cancellation/resource ownership, actual Harness counters/search/read/budget, browser and same-run strict usage. No new tests or tracked edits; old review/failure receipts preserved.",
+  "limits": [
+    "Paid calls0; real model task quality, promotion and Windows native execution NOT_RUN.",
+    "JSONL shared lock is process-local; cross-process CAS NOT_GUARANTEED.",
+    "Actual four-session feedback uses sequential real admission and concurrent completion; Core busy admission unchanged.",
+    "Fixture evolution and all old failures described by static receipt; not all current tests are byte-identical to original RED.",
+    "Known read_file FIFO ownership defect excluded from this round."
+  ],
+  "nativePublicationAndArchiveReview": "PENDING_ROOT_SOURCE_PUBLICATION_AND_STAGED_COMPLETION_ARCHIVE"
+}

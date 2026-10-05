@@ -1,0 +1,46 @@
+{
+  "schemaVersion": "agent-next2-independent-initial-review-v1",
+  "status": "PREREGISTERED_SCOPE_AND_BASELINE_REVIEW_PASS",
+  "reviewedAt": "2026-10-05T12:01:57.230054+00:00",
+  "baselineSha": "320cf3e0bd87d714d17d95709e10c0ddf56d9c5d",
+  "planCommit": "0c70309de478797be8d0f6b8a3c2dbbe282f7844",
+  "reviewedInputSha256": {
+    ".ci/agent-next2-20261005/audit-provider/baseline.json": "e268f88d82978ddba8c7e4d30063e0c4fd53d831f164b41f824fe3aa35b671f8",
+    ".ci/agent-next2-20261005/audit-provider/recommendation.md": "f794208146549bbea46483245f32d06823112a98a7c0ced383e6ff11c94f7ff7",
+    ".ci/agent-next2-20261005/audit-memory/baseline.json": "5b6d40c387de60005489bcedda03a30338202b724623b37da2fd9ad24ee3cfab",
+    ".ci/agent-next2-20261005/audit-memory/harness-baseline.json": "b5228d1de5f4cbca2f210bec9e0fecb55070c0235715cd2cbb1f1ca7b592b81b",
+    ".ci/agent-next2-20261005/audit-memory/audit.md": "1582d1d80038aa03bb9f9b00604f986d94ff1f6f1bbbd63a2ca8c309cf2949cb",
+    ".ci/agent-next2-20261005/audit-tools/baseline-search-paths/result.json": "e783faf16fad24d68af32e173e0c03f4ca18353fd338fe8a56c0d1d780ecbfdb",
+    ".ci/agent-next2-20261005/audit-tools/audit-summary.md": "d7665647916729121b45ae22b3ac9d421b641e78881c777b22586882b513bcb0",
+    ".ci/agent-next2-20261005/audit-context/findings.json": "2b73975d38227e4139f0bc9a159c73b2f25d4461a56e1711b1dadd4922b4e510",
+    ".ci/agent-next2-20261005/audit-context/harness-memory-exploration.json": "230ab4f19c30b78ac34b73dcc5dc6a06341cb64640d834c6ac67fc97d81980dc",
+    "plan(20261005-085851).md": "522faa83cc1c0c36602ee0b8fe6cc71a9645d639363a5a23a23f4934be0db587",
+    "tasks/AGENT-NEXT2-20261005.md": "a930f72072af64e11074731793dbeabd7d3479ce3318fa67388762ddd78c059f"
+  },
+  "baselineEvidenceLimits": [
+    "Provider native loopback baseline is seven cases/nine physical requests; timeout/yield-boundary cancel delayed about one second and successful retry retains listener.",
+    "Both memory backends direct race reproductions lose count, resurrect delete and overwrite edit; only JSONL incidental actual Harness schedule fails, SQLite Harness case is a passing control.",
+    "Search real pipeline has five failed coordinate/closed-loop cases and ten existing controls; read_file FIFO resource defect is separately proven and explicitly excluded.",
+    "Context original script import failure and nonreproducing tool-loop controls are preserved; default Harness memory driver uses effective pipeline task reserve10 and budget165 genuinely fails before provider."
+  ],
+  "staticReviewPriorities": [
+    "Atomic memory feedback must derive from latest entry under existing JSONL lock / SQLite immediate transaction, retain safety gate and all non-usefulness columns and no FTS rebuild/resurrection; optional capability absent never get/update stale rows.",
+    "Headroom uses actual opts.budget reserved sums and post-compacted block tokens only, never subtract messagesTokens twice or mutate Core.",
+    "Retry wait uses existing effectiveSignal and exact once-settlement cleanup; retain existing retry-fetch budget/whole-call deadline and streamed-error classifications.",
+    "Search selected-root glob matching stays stable while returned tool path is relative to context.cwd for real search/read sentinel closed loop."
+  ],
+  "allowedProductionFiles": [
+    "packages/model/src/openai.ts",
+    "packages/memory/src/memory-store.ts",
+    "packages/memory/src/sqlite-memory-store.ts",
+    "packages/harness/src/memory-runtime-bridge.ts",
+    "packages/tools/src/tools/search-files.ts",
+    "packages/context/src/pipeline.ts"
+  ],
+  "blockingFindings": [],
+  "implementationAndFinalAcceptance": "PENDING_SOURCE_READY_AND_ROOT_FROZEN_RUN",
+  "limits": [
+    "Read-only review, no tracked mutation, new agents or independent heavy tests.",
+    "JSONL cross-process consistency / model quality / promotion / Windows native execution are not claimed."
+  ]
+}

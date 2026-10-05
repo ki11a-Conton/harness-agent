@@ -1,0 +1,705 @@
+{
+  "sourceSha": "320cf3e0bd87d714d17d95709e10c0ddf56d9c5d",
+  "trackedDirtyAtStart": false,
+  "profile": "production ToolRegistry -> ToolOrchestrator -> DeterministicPermissionEngine -> SandboxManager -> unchanged native filesystem tools",
+  "paidCalls": 0,
+  "contract": "tasks/P0/VS-001.md: search_files returns workspace-relative POSIX paths",
+  "observedAt": "2026-10-05T08:53:21.029Z",
+  "before": {
+    "packages/tools/src/tools/search-files.ts": "930e437271c40b012d344f182c30cb874e811c1d3f0464b2c0843a5a923c30f1",
+    "packages/tools/src/tools/read-file.ts": "becc6263cca637b70bd73c3fe52348a18506e413ec9dc477b723436c7dbc7515",
+    "packages/tools/src/orchestrator.ts": "adcd42ba547d15e725b9d0236bd7ca550cf2f363e60f2ed10951f92d1604d3eb",
+    "packages/security/src/permission.ts": "a4bc2eea7947b0fdc11decabcbb80222057c6e7c3ee0f7e3b90b611e08b6fe13",
+    "packages/security/src/sandbox.ts": "76a312520e76e3a84eee6dd59cb07ac261fbbc438e41b05c40bd506ddaa0e08d",
+    "tasks/P0/VS-001.md": "de753b42e6194b22d0d0a2f2ac73d61094caf67641c2cb75fac16ca7bfba335f",
+    "packages/tools/dist/tools/search-files.js": "5841c6e2a41968573e2bc9b9086b9010c871c45d969fe5be8981ddb418c01531",
+    "packages/tools/dist/tools/read-file.js": "fde9c62fdf03b294394fdf524b171eec760fee2c28cbd9648eb8e594e0a2565e"
+  },
+  "cases": [
+    {
+      "id": "UNSCOPED_WORKSPACE_RELATIVE_CONTROL",
+      "expected": {
+        "contains": "src/deep/target.ts"
+      },
+      "observed": {
+        "args": {
+          "pattern": "**/*.ts"
+        },
+        "result": {
+          "status": "success",
+          "output": [
+            "root.ts",
+            "src/deep/target.ts",
+            "src/root.ts",
+            "target.ts"
+          ],
+          "evidence": [
+            {
+              "type": "file",
+              "description": "search_files: 4 match(es) for **/*.ts",
+              "source": "**/*.ts",
+              "timestamp": 1791190401103
+            }
+          ]
+        },
+        "operations": [
+          {
+            "operation": "readdir",
+            "path": "/tmp/ar-search-path-audit-fByyBs"
+          },
+          {
+            "operation": "readdir",
+            "path": "/tmp/ar-search-path-audit-fByyBs/src"
+          },
+          {
+            "operation": "readdir",
+            "path": "/tmp/ar-search-path-audit-fByyBs/src/deep"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "SCOPED_RELATIVE",
+      "expected": {
+        "paths": [
+          "src/deep/target.ts",
+          "src/root.ts"
+        ],
+        "roundtrip": "SCOPED_TARGET_SENTINEL"
+      },
+      "observed": {
+        "found": {
+          "args": {
+            "pattern": "**/*.ts",
+            "path": "src"
+          },
+          "result": {
+            "status": "success",
+            "output": [
+              "deep/target.ts",
+              "root.ts"
+            ],
+            "evidence": [
+              {
+                "type": "file",
+                "description": "search_files: 2 match(es) for **/*.ts",
+                "source": "**/*.ts",
+                "timestamp": 1791190401103
+              }
+            ]
+          },
+          "operations": [
+            {
+              "operation": "readdir",
+              "path": "/tmp/ar-search-path-audit-fByyBs/src"
+            },
+            {
+              "operation": "readdir",
+              "path": "/tmp/ar-search-path-audit-fByyBs/src/deep"
+            }
+          ]
+        },
+        "returned": "deep/target.ts",
+        "followup": {
+          "args": {
+            "path": "deep/target.ts"
+          },
+          "result": {
+            "status": "failed",
+            "error": {
+              "code": "PROCESS_ERROR",
+              "message": "ENOENT: no such file or directory, open '/tmp/ar-search-path-audit-fByyBs/deep/target.ts'",
+              "retryable": false,
+              "safeToRetry": false
+            }
+          },
+          "operations": [
+            {
+              "operation": "readFile",
+              "path": "/tmp/ar-search-path-audit-fByyBs/deep/target.ts"
+            }
+          ]
+        }
+      },
+      "status": "FAIL"
+    },
+    {
+      "id": "SCOPED_RELATIVE_ALIAS",
+      "expected": {
+        "paths": [
+          "src/deep/target.ts",
+          "src/root.ts"
+        ],
+        "roundtrip": "SCOPED_TARGET_SENTINEL"
+      },
+      "observed": {
+        "found": {
+          "args": {
+            "pattern": "**/*.ts",
+            "path": "./src/deep/.."
+          },
+          "result": {
+            "status": "success",
+            "output": [
+              "deep/target.ts",
+              "root.ts"
+            ],
+            "evidence": [
+              {
+                "type": "file",
+                "description": "search_files: 2 match(es) for **/*.ts",
+                "source": "**/*.ts",
+                "timestamp": 1791190401106
+              }
+            ]
+          },
+          "operations": [
+            {
+              "operation": "readdir",
+              "path": "/tmp/ar-search-path-audit-fByyBs/src"
+            },
+            {
+              "operation": "readdir",
+              "path": "/tmp/ar-search-path-audit-fByyBs/src/deep"
+            }
+          ]
+        },
+        "returned": "deep/target.ts",
+        "followup": {
+          "args": {
+            "path": "deep/target.ts"
+          },
+          "result": {
+            "status": "failed",
+            "error": {
+              "code": "PROCESS_ERROR",
+              "message": "ENOENT: no such file or directory, open '/tmp/ar-search-path-audit-fByyBs/deep/target.ts'",
+              "retryable": false,
+              "safeToRetry": false
+            }
+          },
+          "operations": [
+            {
+              "operation": "readFile",
+              "path": "/tmp/ar-search-path-audit-fByyBs/deep/target.ts"
+            }
+          ]
+        }
+      },
+      "status": "FAIL"
+    },
+    {
+      "id": "SCOPED_ABSOLUTE_ALIAS",
+      "expected": {
+        "paths": [
+          "src/deep/target.ts",
+          "src/root.ts"
+        ],
+        "roundtrip": "SCOPED_TARGET_SENTINEL"
+      },
+      "observed": {
+        "found": {
+          "args": {
+            "pattern": "**/*.ts",
+            "path": "/tmp/ar-search-path-audit-fByyBs/src"
+          },
+          "result": {
+            "status": "success",
+            "output": [
+              "deep/target.ts",
+              "root.ts"
+            ],
+            "evidence": [
+              {
+                "type": "file",
+                "description": "search_files: 2 match(es) for **/*.ts",
+                "source": "**/*.ts",
+                "timestamp": 1791190401107
+              }
+            ]
+          },
+          "operations": [
+            {
+              "operation": "readdir",
+              "path": "/tmp/ar-search-path-audit-fByyBs/src"
+            },
+            {
+              "operation": "readdir",
+              "path": "/tmp/ar-search-path-audit-fByyBs/src/deep"
+            }
+          ]
+        },
+        "returned": "deep/target.ts",
+        "followup": {
+          "args": {
+            "path": "deep/target.ts"
+          },
+          "result": {
+            "status": "failed",
+            "error": {
+              "code": "PROCESS_ERROR",
+              "message": "ENOENT: no such file or directory, open '/tmp/ar-search-path-audit-fByyBs/deep/target.ts'",
+              "retryable": false,
+              "safeToRetry": false
+            }
+          },
+          "operations": [
+            {
+              "operation": "readFile",
+              "path": "/tmp/ar-search-path-audit-fByyBs/deep/target.ts"
+            }
+          ]
+        }
+      },
+      "status": "FAIL"
+    },
+    {
+      "id": "SCOPED_BASENAME_WRONG_FILE_CLOSED_LOOP",
+      "expected": {
+        "path": "src/root.ts",
+        "read": "SCOPED_TOPLEVEL_SENTINEL"
+      },
+      "observed": {
+        "shallow": {
+          "args": {
+            "pattern": "root.ts",
+            "path": "src"
+          },
+          "result": {
+            "status": "success",
+            "output": [
+              "root.ts"
+            ],
+            "evidence": [
+              {
+                "type": "file",
+                "description": "search_files: 1 match(es) for root.ts",
+                "source": "root.ts",
+                "timestamp": 1791190401108
+              }
+            ]
+          },
+          "operations": [
+            {
+              "operation": "readdir",
+              "path": "/tmp/ar-search-path-audit-fByyBs/src"
+            },
+            {
+              "operation": "readdir",
+              "path": "/tmp/ar-search-path-audit-fByyBs/src/deep"
+            }
+          ]
+        },
+        "wrongRead": {
+          "args": {
+            "path": "root.ts"
+          },
+          "result": {
+            "status": "success",
+            "output": "WRONG_ROOT_SENTINEL",
+            "evidence": [
+              {
+                "type": "file",
+                "description": "read_file executed",
+                "source": "/tmp/ar-search-path-audit-fByyBs/root.ts",
+                "timestamp": 1791190401109
+              }
+            ]
+          },
+          "operations": [
+            {
+              "operation": "readFile",
+              "path": "/tmp/ar-search-path-audit-fByyBs/root.ts"
+            }
+          ]
+        }
+      },
+      "status": "FAIL"
+    },
+    {
+      "id": "NESTED_SESSION_CWD_CLOSED_LOOP",
+      "expected": {
+        "path": "deep/target.ts",
+        "read": "SCOPED_TARGET_SENTINEL"
+      },
+      "observed": {
+        "nested": {
+          "args": {
+            "pattern": "**/*.ts",
+            "path": "deep"
+          },
+          "result": {
+            "status": "success",
+            "output": [
+              "target.ts"
+            ],
+            "evidence": [
+              {
+                "type": "file",
+                "description": "search_files: 1 match(es) for **/*.ts",
+                "source": "**/*.ts",
+                "timestamp": 1791190401109
+              }
+            ]
+          },
+          "operations": [
+            {
+              "operation": "readdir",
+              "path": "/tmp/ar-search-path-audit-fByyBs/src/deep"
+            }
+          ]
+        },
+        "nestedRead": {
+          "args": {
+            "path": "target.ts"
+          },
+          "result": {
+            "status": "failed",
+            "error": {
+              "code": "PROCESS_ERROR",
+              "message": "ENOENT: no such file or directory, open '/tmp/ar-search-path-audit-fByyBs/src/target.ts'",
+              "retryable": false,
+              "safeToRetry": false
+            }
+          },
+          "operations": [
+            {
+              "operation": "readFile",
+              "path": "/tmp/ar-search-path-audit-fByyBs/src/target.ts"
+            }
+          ]
+        }
+      },
+      "status": "FAIL"
+    },
+    {
+      "id": "PATTERN_REMAINS_SELECTED_ROOT_RELATIVE",
+      "expected": {
+        "matchCount": 1
+      },
+      "observed": {
+        "args": {
+          "pattern": "deep/*.ts",
+          "path": "src"
+        },
+        "result": {
+          "status": "success",
+          "output": [
+            "deep/target.ts"
+          ],
+          "evidence": [
+            {
+              "type": "file",
+              "description": "search_files: 1 match(es) for deep/*.ts",
+              "source": "deep/*.ts",
+              "timestamp": 1791190401110
+            }
+          ]
+        },
+        "operations": [
+          {
+            "operation": "readdir",
+            "path": "/tmp/ar-search-path-audit-fByyBs/src"
+          },
+          {
+            "operation": "readdir",
+            "path": "/tmp/ar-search-path-audit-fByyBs/src/deep"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "MAX_RESULTS_CONTROL",
+      "expected": {
+        "count": 1
+      },
+      "observed": {
+        "args": {
+          "pattern": "**/*.ts",
+          "path": "src",
+          "maxResults": 1
+        },
+        "result": {
+          "status": "success",
+          "output": [
+            "deep/target.ts"
+          ],
+          "evidence": [
+            {
+              "type": "file",
+              "description": "search_files: 1 match(es) for **/*.ts",
+              "source": "**/*.ts",
+              "timestamp": 1791190401111
+            }
+          ]
+        },
+        "operations": [
+          {
+            "operation": "readdir",
+            "path": "/tmp/ar-search-path-audit-fByyBs/src"
+          },
+          {
+            "operation": "readdir",
+            "path": "/tmp/ar-search-path-audit-fByyBs/src/deep"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "IGNORED_DIRS_CONTROL",
+      "expected": {
+        "hiddenHits": 0,
+        "hiddenReads": 0
+      },
+      "observed": {
+        "args": {
+          "pattern": "**/*.ts"
+        },
+        "result": {
+          "status": "success",
+          "output": [
+            "root.ts",
+            "src/deep/target.ts",
+            "src/root.ts",
+            "target.ts"
+          ],
+          "evidence": [
+            {
+              "type": "file",
+              "description": "search_files: 4 match(es) for **/*.ts",
+              "source": "**/*.ts",
+              "timestamp": 1791190401103
+            }
+          ]
+        },
+        "operations": [
+          {
+            "operation": "readdir",
+            "path": "/tmp/ar-search-path-audit-fByyBs"
+          },
+          {
+            "operation": "readdir",
+            "path": "/tmp/ar-search-path-audit-fByyBs/src"
+          },
+          {
+            "operation": "readdir",
+            "path": "/tmp/ar-search-path-audit-fByyBs/src/deep"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "DESCENDANT_SYMLINK_EXISTING_NO_FOLLOW_CONTROL",
+      "expected": {
+        "outsideReads": 0,
+        "symlinkNamesMayBeReturned": true
+      },
+      "observed": {
+        "args": {
+          "pattern": "**/*",
+          "path": "src"
+        },
+        "result": {
+          "status": "success",
+          "output": [
+            "deep/target.ts",
+            "outside-dir-link",
+            "outside-file-link.ts",
+            "root.ts"
+          ],
+          "evidence": [
+            {
+              "type": "file",
+              "description": "search_files: 4 match(es) for **/*",
+              "source": "**/*",
+              "timestamp": 1791190401111
+            }
+          ]
+        },
+        "operations": [
+          {
+            "operation": "readdir",
+            "path": "/tmp/ar-search-path-audit-fByyBs/src"
+          },
+          {
+            "operation": "readdir",
+            "path": "/tmp/ar-search-path-audit-fByyBs/src/deep"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "SELECTED_SCOPE_PERMISSION_CONTROL",
+      "expected": {
+        "status": "success",
+        "allEnumerationWithinSrc": true
+      },
+      "observed": {
+        "args": {
+          "pattern": "**/*.ts",
+          "path": "src"
+        },
+        "result": {
+          "status": "success",
+          "output": [
+            "deep/target.ts",
+            "outside-file-link.ts",
+            "root.ts"
+          ],
+          "evidence": [
+            {
+              "type": "file",
+              "description": "search_files: 3 match(es) for **/*.ts",
+              "source": "**/*.ts",
+              "timestamp": 1791190401117
+            }
+          ]
+        },
+        "operations": [
+          {
+            "operation": "readdir",
+            "path": "/tmp/ar-search-path-audit-fByyBs/src"
+          },
+          {
+            "operation": "readdir",
+            "path": "/tmp/ar-search-path-audit-fByyBs/src/deep"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "PERMISSION_DENIAL_ZERO_ENUMERATION_CONTROL",
+      "expected": {
+        "status": "denied",
+        "enumerations": 0
+      },
+      "observed": {
+        "args": {
+          "pattern": "**/*",
+          "path": "src"
+        },
+        "result": {
+          "status": "denied",
+          "error": {
+            "code": "PERMISSION_DENIED",
+            "message": "permission denied: no rule matched read:file; fallback 'deny'",
+            "retryable": false,
+            "safeToRetry": false
+          }
+        },
+        "operations": []
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "SANDBOX_DENIAL_ZERO_ENUMERATION_CONTROL",
+      "expected": {
+        "status": "denied",
+        "enumerations": 0
+      },
+      "observed": {
+        "args": {
+          "pattern": "**/*",
+          "path": "/tmp/ar-search-path-audit-outside-OkXGax"
+        },
+        "result": {
+          "status": "denied",
+          "error": {
+            "code": "SANDBOX_FILESYSTEM_DENIED",
+            "message": "sandbox denied: path outside workspace: /tmp/ar-search-path-audit-outside-OkXGax",
+            "retryable": false,
+            "safeToRetry": false
+          }
+        },
+        "operations": []
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "MISSING_ROOT_FAILURE_CONTROL",
+      "expected": {
+        "status": "failed",
+        "evidence": false
+      },
+      "observed": {
+        "args": {
+          "pattern": "**/*",
+          "path": "missing"
+        },
+        "result": {
+          "status": "failed",
+          "error": {
+            "code": "PROCESS_ERROR",
+            "message": "ENOENT: no such file or directory, scandir '/tmp/ar-search-path-audit-fByyBs/missing'",
+            "retryable": true,
+            "safeToRetry": false
+          }
+        },
+        "operations": [
+          {
+            "operation": "readdir",
+            "path": "/tmp/ar-search-path-audit-fByyBs/missing"
+          }
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "SCHEMA_DENIAL_ZERO_ENUMERATION_CONTROL",
+      "expected": {
+        "status": "failed",
+        "code": "TOOL_SCHEMA_ERROR",
+        "enumerations": 0
+      },
+      "observed": {
+        "args": {
+          "pattern": "**/*",
+          "path": "src",
+          "maxResults": 0
+        },
+        "result": {
+          "status": "failed",
+          "error": {
+            "code": "TOOL_SCHEMA_ERROR",
+            "message": "schema validation failed for search_files: maxResults: Number must be greater than 0",
+            "retryable": false,
+            "safeToRetry": false
+          }
+        },
+        "operations": []
+      },
+      "status": "PASS"
+    }
+  ],
+  "sourceShaAtEnd": "320cf3e0bd87d714d17d95709e10c0ddf56d9c5d",
+  "trackedDirtyAtEnd": false,
+  "after": {
+    "packages/tools/src/tools/search-files.ts": "930e437271c40b012d344f182c30cb874e811c1d3f0464b2c0843a5a923c30f1",
+    "packages/tools/src/tools/read-file.ts": "becc6263cca637b70bd73c3fe52348a18506e413ec9dc477b723436c7dbc7515",
+    "packages/tools/src/orchestrator.ts": "adcd42ba547d15e725b9d0236bd7ca550cf2f363e60f2ed10951f92d1604d3eb",
+    "packages/security/src/permission.ts": "a4bc2eea7947b0fdc11decabcbb80222057c6e7c3ee0f7e3b90b611e08b6fe13",
+    "packages/security/src/sandbox.ts": "76a312520e76e3a84eee6dd59cb07ac261fbbc438e41b05c40bd506ddaa0e08d",
+    "tasks/P0/VS-001.md": "de753b42e6194b22d0d0a2f2ac73d61094caf67641c2cb75fac16ca7bfba335f",
+    "packages/tools/dist/tools/search-files.js": "5841c6e2a41968573e2bc9b9086b9010c871c45d969fe5be8981ddb418c01531",
+    "packages/tools/dist/tools/read-file.js": "fde9c62fdf03b294394fdf524b171eec760fee2c28cbd9648eb8e594e0a2565e"
+  },
+  "sourceUnchanged": true,
+  "summary": {
+    "cases": 15,
+    "passed": 10,
+    "failed": [
+      "SCOPED_RELATIVE",
+      "SCOPED_RELATIVE_ALIAS",
+      "SCOPED_ABSOLUTE_ALIAS",
+      "SCOPED_BASENAME_WRONG_FILE_CLOSED_LOOP",
+      "NESTED_SESSION_CWD_CLOSED_LOOP"
+    ]
+  },
+  "status": "REPRODUCED_DEFECT"
+}

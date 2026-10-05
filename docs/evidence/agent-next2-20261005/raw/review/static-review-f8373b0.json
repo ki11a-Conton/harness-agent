@@ -1,0 +1,195 @@
+{
+  "schemaVersion": "agent-next2-independent-static-review-v1",
+  "status": "EXACT_SOURCE_STATIC_REVIEW_PASS",
+  "reviewedAt": "2026-10-05T12:23:04.304968+00:00",
+  "reviewer": "/root/independent_followup_review",
+  "testedSourceSha": "f8373b0fa4ec6491a55a9a3ba198235b689cc140",
+  "baselineSha": "320cf3e0bd87d714d17d95709e10c0ddf56d9c5d",
+  "planCommit": "0c70309de478797be8d0f6b8a3c2dbbe282f7844",
+  "cleanWorkingTree": true,
+  "changedSourceFiles": {
+    "packages/context/src/pipeline.ts": {
+      "gitBlob": "21c2af17bb412d43ab32a90d4a901cc077a61e44",
+      "sha256": "ba80475151326f65eb23d507c9c997e738daa972d570c8c5c5aa69448879bc0f",
+      "bytes": 25046
+    },
+    "packages/context/src/rehydration-headroom.regressions.test.ts": {
+      "gitBlob": "a782e896b67bc920cd6f6394089b87faa7a9f4a1",
+      "sha256": "f6b5a88dd912629a549e646150eb91acac7bd030c0bc319592fa95cfc2d2c02f",
+      "bytes": 9241
+    },
+    "packages/harness/src/memory-feedback-atomic.regressions.test.ts": {
+      "gitBlob": "58ff0ceb4a9e9ea0b2b34cdae9d0c159f985d1fe",
+      "sha256": "64941c892cf1d3984cdc273710f55d74cdf547bae719b203c72c6c931e91fa69",
+      "bytes": 13423
+    },
+    "packages/harness/src/memory-runtime-bridge.ts": {
+      "gitBlob": "b758c06dc22428fa67169b2b586438e78245ae31",
+      "sha256": "b7e3900693198379a9e27a6cd82fa39ac4f4614ab11ead8af878fde58ed15406",
+      "bytes": 10969
+    },
+    "packages/harness/src/rehydration-headroom.integration.test.ts": {
+      "gitBlob": "5ab23eaf6b0e44b6fdc4da73eb18c7f373ab0d3b",
+      "sha256": "a9002f474ab9400b267732a83cecfc94bafb4a2b989096be6350d11ebe7f603c",
+      "bytes": 6354
+    },
+    "packages/memory/src/memory-store.ts": {
+      "gitBlob": "a554f36fbd34533724a4c720ad5da3b51239d75e",
+      "sha256": "04e14e9568f3ccda75b8e51863381bddc738017ff1e02fc4017c8c74ff534e91",
+      "bytes": 10852
+    },
+    "packages/memory/src/sqlite-memory-store.ts": {
+      "gitBlob": "6f5b126aa8548d19ed34e1af74061d046e23ed49",
+      "sha256": "64837373f1ca4e85abf938f1851eb25c4c709890cc61e61efa511d95a1fb0d9c",
+      "bytes": 23626
+    },
+    "packages/memory/src/usefulness-atomic.regressions.test.ts": {
+      "gitBlob": "4d6deb2376b210eb291f42ee63d41add46bb8a21",
+      "sha256": "cc83e7ab10e84720267bda85f6e81b592d77323a0adfda58a096ee8dd9923fe1",
+      "bytes": 11342
+    },
+    "packages/model/src/openai-retry-wait.regressions.test.ts": {
+      "gitBlob": "8820f51ba7dead1ee39bfcfc5f22bac90dff98eb",
+      "sha256": "d07212c3f1a0a3416e1981aa79552b2f738f50b9fd2f3f3e8921174e7e00f3ea",
+      "bytes": 12276
+    },
+    "packages/model/src/openai.ts": {
+      "gitBlob": "27f60480d760d9bdf41a878fed5ec23df5f0554c",
+      "sha256": "5f2d341bc6299b689249699dfe2561ba1bc623e1ef836c53e4eb526511e1a481",
+      "bytes": 33282
+    },
+    "packages/tools/src/scoped-search-paths.regressions.test.ts": {
+      "gitBlob": "6648d4c0492d9c48a02ccdeff8801cb9a3941ae1",
+      "sha256": "fef84f85d003f9e8ebfc5fa5b7918df2e74581f8475aeb19fe5a76adfec8015a",
+      "bytes": 10689
+    },
+    "packages/tools/src/tools/search-files.ts": {
+      "gitBlob": "cc2f23935a6bcab26b2a60f65f3bbffdd60bd8c2",
+      "sha256": "8ef52a59661d16648de1a0d9ad6d04b90327dda4839d80c3268390e615ca1969",
+      "bytes": 3199
+    },
+    "scripts/research/agent-next2-20261005/README.md": {
+      "gitBlob": "3f04347b6b350c777258bb7c8e75f4faf6f71d46",
+      "sha256": "0d7507ab029dd75232cfd8974f5a47404543b4a60d0fe46a7803ab234b445bb7",
+      "bytes": 3274
+    },
+    "scripts/research/agent-next2-20261005/frozen-acceptance.py": {
+      "gitBlob": "9a056c714867977feec1938ee7a29c1ac07c5272",
+      "sha256": "23442157172592ee233c6ffcc825bdbd385b2b7086ba81c4695e358a5e82e2c7",
+      "bytes": 19729
+    },
+    "scripts/research/agent-next2-20261005/memory-feedback-probe.mjs": {
+      "gitBlob": "b882a5facfa58799d6fbb3b418dd11d4faf77f50",
+      "sha256": "194e5f0f1b1cedc047b3d2d80a20007d3c4bf3827f53a54e1a4172f67284a969",
+      "bytes": 27134
+    },
+    "scripts/research/agent-next2-20261005/provider-retry-probe.mjs": {
+      "gitBlob": "60ed022efdf806bb1d994a135151cbdb54ec85e9",
+      "sha256": "bbbfbe163322797b6b4bad2c58a9fa6b34358cbdf47f357a0143c5a9cfcd42a1",
+      "bytes": 13829
+    },
+    "scripts/research/agent-next2-20261005/rehydration-budget-probe.mjs": {
+      "gitBlob": "650e89091d3262ccc7f79f5d8f7e424a0370e62c",
+      "sha256": "127285f1bd2820db0ed8c52d41b9ba4cb834fcdd8ea732ea3eba7ad9990c9130",
+      "bytes": 18186
+    },
+    "scripts/research/agent-next2-20261005/search-path-probe.mjs": {
+      "gitBlob": "a270dfa891185bd56a283caea4a85f8d67550e04",
+      "sha256": "3ff1f831a6b27a8057b0b7b610d69b580fee9ceb07a4c64ab4ac02f1a91ded75",
+      "bytes": 16526
+    }
+  },
+  "productionChangedExactlySix": [
+    "packages/context/src/pipeline.ts",
+    "packages/harness/src/memory-runtime-bridge.ts",
+    "packages/memory/src/memory-store.ts",
+    "packages/memory/src/sqlite-memory-store.ts",
+    "packages/model/src/openai.ts",
+    "packages/tools/src/tools/search-files.ts"
+  ],
+  "preregisteredPlanSha256": "522faa83cc1c0c36602ee0b8fe6cc71a9645d639363a5a23a23f4934be0db587",
+  "unchangedBaselineChecks": {
+    "protectedCoreContractsSecurityAndPolicyFiles": 190,
+    "allExistingTestFiles": 478,
+    "dependenciesAndRootConfigurations": true
+  },
+  "findings": {
+    "retry": "Both pre-stream waits use original whole-call effectiveSignal; pre/post aborted guards and once settlement clean timer/listener, preserving Retry-After/jitter/attempt budget and stream classifications.",
+    "atomicMemory": "JSONL latest row is inside existing shared process lock; SQLite BEGIN IMMEDIATE reads latest row and updates only usefulness with safety gate and rollback. Missing/deleted rows never rewrite; non-usefulness/FTS unchanged. Bridge calls optional capability with correct receiver; absence skips unsafe durable get/update and emits one fixed diagnostic, retrieval/ROI retained.",
+    "search": "Glob candidate remains selected-root relative; output alone becomes cwd-relative POSIX path, preserving traversal/permissions/sandbox/ignore/cap/symlink policies. Actual scripted Harness chooses read_file path from real tool result.",
+    "rehydration": "Optional references bounded by min(default600, max(0,effective maxTokens - reserved.sum - compacted block footprint)); active-user task reserve10 retained, message history not deducted twice, protected digest/report/breaker behavior unchanged.",
+    "runner": "17 serial gates refuse reused outputs and nonclean/nonexact SHA, fingerprint all source/dist before/after, bind unique exact probe inventories19/44/20/31 plus31 previous footer controls, same-run named full and strict usage. Full floor8579+allnew111 and baseline463+6 files, exactly12 existing skips."
+  },
+  "testLineage": [
+    {
+      "finalTest": "packages/model/src/openai-retry-wait.regressions.test.ts",
+      "originalRedSnapshot": ".ci/agent-next2-20261005/audit-provider/formal-red/openai-retry-wait.regressions.test.ts",
+      "finalSha256": "d07212c3f1a0a3416e1981aa79552b2f738f50b9fd2f3f3e8921174e7e00f3ea",
+      "originalSha256": "d07212c3f1a0a3416e1981aa79552b2f738f50b9fd2f3f3e8921174e7e00f3ea",
+      "byteEqual": true
+    },
+    {
+      "finalTest": "packages/tools/src/scoped-search-paths.regressions.test.ts",
+      "originalRedSnapshot": ".ci/agent-next2-20261005/audit-tools/formal-red-v2/scoped-search-paths.regressions.test.ts",
+      "finalSha256": "fef84f85d003f9e8ebfc5fa5b7918df2e74581f8475aeb19fe5a76adfec8015a",
+      "originalSha256": "fef84f85d003f9e8ebfc5fa5b7918df2e74581f8475aeb19fe5a76adfec8015a",
+      "byteEqual": true
+    },
+    {
+      "finalTest": "packages/memory/src/usefulness-atomic.regressions.test.ts",
+      "originalRedSnapshot": ".ci/agent-next2-20261005/audit-memory/formal-red/usefulness-atomic.regressions.test.ts",
+      "finalSha256": "cc83e7ab10e84720267bda85f6e81b592d77323a0adfda58a096ee8dd9923fe1",
+      "originalSha256": "cc83e7ab10e84720267bda85f6e81b592d77323a0adfda58a096ee8dd9923fe1",
+      "byteEqual": true
+    },
+    {
+      "finalTest": "packages/harness/src/memory-feedback-atomic.regressions.test.ts",
+      "originalRedSnapshot": ".ci/agent-next2-20261005/audit-memory/formal-red/memory-feedback-atomic.regressions.test.ts",
+      "finalSha256": "64941c892cf1d3984cdc273710f55d74cdf547bae719b203c72c6c931e91fa69",
+      "originalSha256": "b1a0122468ff27e373b1e158ab3a0a4ac27c63757ae031125ac1072cc9f4f7e2",
+      "byteEqual": false
+    },
+    {
+      "finalTest": "packages/harness/src/rehydration-headroom.integration.test.ts",
+      "originalRedSnapshot": ".ci/agent-next2-20261005/r4-red/rehydration-headroom.integration.test.ts",
+      "finalSha256": "a9002f474ab9400b267732a83cecfc94bafb4a2b989096be6350d11ebe7f603c",
+      "originalSha256": "a9002f474ab9400b267732a83cecfc94bafb4a2b989096be6350d11ebe7f603c",
+      "byteEqual": true
+    },
+    {
+      "finalTest": "packages/context/src/rehydration-headroom.regressions.test.ts",
+      "originalRedSnapshot": ".ci/agent-next2-20261005/r4-red/rehydration-headroom.regressions.test.ts",
+      "finalSha256": "f6b5a88dd912629a549e646150eb91acac7bd030c0bc319592fa95cfc2d2c02f",
+      "originalSha256": "a6c1b408aaa5f767fdb81386a0bf04dd205998fb75e1cea69ae5de749e0c0a2e",
+      "byteEqual": false
+    }
+  ],
+  "fixtureEvolutionLimits": [
+    "R2 Harness concurrent fixture changed after original RED to sequential real prefetch admission plus concurrent model-completion release; no Core busy/admission bypass. Do not call final Harness test byte-identical to original RED.",
+    "R3 original RED-v1 ESM export synchronization omission preserved; valid RED-v2 matches final formal24 tests.",
+    "R4 originalRED29 tests21fail8pass and initialGREEN28pass1 wrong42-byte admission oracle preserved. Corrected43-byte unit fixture was re-run on exact native baseline23 tests18fail5pass; final adds rejected42 neighbor (now24unit+6Harness). Do not call final unit fixture byte-identical to originalRED/corrected23-test fixture.",
+    "R2 dirty native probe v1 FAIL on busy simultaneous admission and v2 FAIL on one-request tool-loop oracle retained; v3 PASS44 uses two real model requests for one successful tool loop and labels sequential admission/concurrent terminal feedback. Dirty runs do not replace final clean acceptance."
+  ],
+  "reviewedEvidenceSha256": {
+    ".ci/agent-next2-20261005/review/initial-scope-review.json": "177bfcec5297030e2f0430c3ec34ba010adc0031d738ba180af0a1fedc1fa009",
+    ".ci/agent-next2-20261005/audit-provider/formal-red/receipt.json": "15adb21b1befc420f246ec13a1ef8e9391bd5fd67b6c594a2e9355f853c81228",
+    ".ci/agent-next2-20261005/audit-provider/formal-red/lineage.json": "3ab85d56706267446307b17a9420a8b105149150e19a810ce94743cb5843e1ac",
+    ".ci/agent-next2-20261005/audit-memory/formal-red/receipt.json": "56cc68d1ea26dae8e649ea7e63efc4f9bdcb40b34498f21628c3c9dc5d553074",
+    ".ci/agent-next2-20261005/audit-memory/formal-red/source-receipt.json": "7e6e7d54e416d8d9d3518070cd4895fdc97fac72409c42eacf9823d26e8ec806",
+    ".ci/agent-next2-20261005/audit-tools/handoff.json": "5ebbd30e5b0c24deaba461c3f6f90061e3399382ac6c5d525ec1dd1e81188fbd",
+    ".ci/agent-next2-20261005/r4-red-corrected-v2/receipt.json": "f209bdf16c61dcc3006fcd36e785100505ca6de7c8a6222b0e15e66b4245a7b8",
+    ".ci/agent-next2-20261005/r4-green-boundary/summary.json": "c5c8c669a3eb695b24b1cedb632e279f5567a657225665f5cee11944c30fbbe1",
+    ".ci/agent-next2-20261005/audit-memory/production-development/result.json": "862a6b514dba5f3de439d5fdd3fe5bb1306fe6c1ea1d1d7f60fbcfc61391cc2f",
+    ".ci/agent-next2-20261005/audit-memory/production-development-v2/result.json": "4928b9589e89a45560361af2afd50f6976c26f2a1cd44f28d2378dd7a82c3445",
+    ".ci/agent-next2-20261005/audit-memory/production-development-v3/result.json": "c80a5b2eadc2138d1a8a353b3e39c4ed5f370d26c8c6516b42f5071ef53eb205",
+    ".ci/agent-next2-20261005/r4-green/custom-estimator-oracle.jsonl": "b6abf5ddc6decd0ae5fa5c810f7e75639b6bb4119637148d3b1838f718f3121a"
+  },
+  "blockingFindings": [],
+  "runtimeAcceptance": "PENDING_ROOT_FROZEN_SEVENTEEN_GATES",
+  "limits": [
+    "Read-only static review; no tracked edits, subagents or independent heavy tests.",
+    "JSONL existing process-local cooperation only; cross-process CAS not claimed.",
+    "Paid model calls0; real model task quality, promotion and Windows native execution NOT_RUN.",
+    "Known read_file FIFO ownership defect deliberately excluded and retained."
+  ]
+}

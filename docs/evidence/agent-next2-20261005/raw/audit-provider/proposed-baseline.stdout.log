@@ -1,0 +1,22 @@
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+ ❯ .ci/agent-next2-20261005/audit-provider/baseline-regressions.test.ts (16 tests | 12 failed) 83ms
+     × whole-call deadline interrupts http retry backoff at 50 ms 39ms
+     × whole-call deadline interrupts network retry backoff at 50 ms 2ms
+     × caller abort while consuming http retry event does not wait for a future abort 2ms
+     × caller abort while consuming network retry event does not wait for a future abort 1ms
+     × normal http retry success removes the native wait listener 9ms
+     × normal network retry success removes the native wait listener 2ms
+     × already-expired deadline at the yielded retry event skips waiting 2ms
+     × zero-delay retry success does not retain an abort listener 2ms
+     × reused caller signal does not accumulate listeners across 12 successful retrying calls 7ms
+     × caller cancellation wins if the whole-call deadline also expires before retry resumes 2ms
+     × Retry-After remains a lower bound when the deadline is disabled 1ms
+     × exhausted 503 retry budget keeps three fetches and two retry events 1ms
+
+ Test Files  1 failed (1)
+      Tests  12 failed | 4 passed (16)
+   Start at  08:57:49
+   Duration  660ms (transform 355ms, setup 0ms, import 433ms, tests 83ms, environment 0ms)
+

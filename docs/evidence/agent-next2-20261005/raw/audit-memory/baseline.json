@@ -1,0 +1,189 @@
+{
+  "sourceSha": "320cf3e0bd87d714d17d95709e10c0ddf56d9c5d",
+  "dirty": "",
+  "artifacts": [
+    {
+      "file": "packages/harness/src/memory-runtime-bridge.ts",
+      "sha256": "2d6cf39686f2884d2c390dcd13e7c7f46a3e368094d807b79124a79297a4f4cf"
+    },
+    {
+      "file": "packages/harness/dist/memory-runtime-bridge.js",
+      "sha256": "b3b45a131640fad6a294aa8cb30a5c0d0770f1706c3281130a3816037d9eba09"
+    },
+    {
+      "file": "packages/memory/src/memory-store.ts",
+      "sha256": "925f718e3f92baf32fb2868bafcdcd0701cb520e441049892848a4cb6d494caf"
+    },
+    {
+      "file": "packages/memory/dist/memory-store.js",
+      "sha256": "8722ce368b39c5626668437f3ced379d035ae938e480f693a6971f12e3cf5ed5"
+    },
+    {
+      "file": "packages/memory/src/sqlite-memory-store.ts",
+      "sha256": "f278be463dec22f5ed15039e6e727b22a942eb6afbaab19e6961e177ae20cb6f"
+    },
+    {
+      "file": "packages/memory/dist/sqlite-memory-store.js",
+      "sha256": "300bf553eb208898c79d7d557b5dfb8b649b5e01f28a5b934ac56eb1d39dceb7"
+    }
+  ],
+  "cases": [
+    {
+      "name": "concurrent-feedback-count",
+      "backend": "jsonl",
+      "expectedInjectedCount": 8,
+      "actualInjectedCount": 1
+    },
+    {
+      "name": "delete-between-feedback-read-and-write",
+      "backend": "jsonl",
+      "expectedDeleted": true,
+      "actualDeleted": false,
+      "expectedRecallCount": 0,
+      "actualRecallCount": 1,
+      "actualMemory": {
+        "id": "memory_audit",
+        "content": "use memory-audit-needle to validate exact feedback",
+        "type": "procedural",
+        "sourceSession": "session_audit",
+        "scope": "workspace",
+        "importance": 0.9,
+        "confidence": 0.9,
+        "novelty": 0.9,
+        "stability": 0.9,
+        "createdAt": 1,
+        "updatedAt": 1,
+        "deleted": false,
+        "usefulness": {
+          "retrievedCount": 0,
+          "injectedCount": 1,
+          "usedCount": 0,
+          "taskSuccessCount": 0,
+          "verificationPassedCount": 0,
+          "score": 0.55
+        }
+      }
+    },
+    {
+      "name": "edit-retirement-between-feedback-read-and-write",
+      "backend": "jsonl",
+      "expectedContent": "changed memory content preserved by user",
+      "actualContent": "use memory-audit-needle to validate exact feedback",
+      "expectedState": "deprecated",
+      "actualState": "absent",
+      "actualMemory": {
+        "id": "memory_audit",
+        "content": "use memory-audit-needle to validate exact feedback",
+        "type": "procedural",
+        "sourceSession": "session_audit",
+        "scope": "workspace",
+        "importance": 0.9,
+        "confidence": 0.9,
+        "novelty": 0.9,
+        "stability": 0.9,
+        "createdAt": 1,
+        "updatedAt": 1,
+        "deleted": false,
+        "usefulness": {
+          "retrievedCount": 0,
+          "injectedCount": 1,
+          "usedCount": 0,
+          "taskSuccessCount": 0,
+          "verificationPassedCount": 0,
+          "score": 0.55
+        }
+      }
+    },
+    {
+      "name": "sequential-feedback-control",
+      "backend": "jsonl",
+      "expectedInjectedCount": 1,
+      "actualInjectedCount": 1
+    },
+    {
+      "name": "delete-before-feedback-control",
+      "backend": "jsonl",
+      "expectedDeleted": true,
+      "actualDeleted": true
+    },
+    {
+      "name": "concurrent-feedback-count",
+      "backend": "sqlite",
+      "expectedInjectedCount": 8,
+      "actualInjectedCount": 1
+    },
+    {
+      "name": "delete-between-feedback-read-and-write",
+      "backend": "sqlite",
+      "expectedDeleted": true,
+      "actualDeleted": false,
+      "expectedRecallCount": 0,
+      "actualRecallCount": 1,
+      "actualMemory": {
+        "id": "memory_audit",
+        "content": "use memory-audit-needle to validate exact feedback",
+        "type": "procedural",
+        "sourceSession": "session_audit",
+        "scope": "workspace",
+        "importance": 0.9,
+        "confidence": 0.9,
+        "novelty": 0.9,
+        "stability": 0.9,
+        "createdAt": 1,
+        "updatedAt": 1,
+        "deleted": false,
+        "usefulness": {
+          "retrievedCount": 0,
+          "injectedCount": 1,
+          "usedCount": 0,
+          "taskSuccessCount": 0,
+          "verificationPassedCount": 0,
+          "score": 0.55
+        }
+      }
+    },
+    {
+      "name": "edit-retirement-between-feedback-read-and-write",
+      "backend": "sqlite",
+      "expectedContent": "changed memory content preserved by user",
+      "actualContent": "use memory-audit-needle to validate exact feedback",
+      "expectedState": "deprecated",
+      "actualState": "absent",
+      "actualMemory": {
+        "id": "memory_audit",
+        "content": "use memory-audit-needle to validate exact feedback",
+        "type": "procedural",
+        "sourceSession": "session_audit",
+        "scope": "workspace",
+        "importance": 0.9,
+        "confidence": 0.9,
+        "novelty": 0.9,
+        "stability": 0.9,
+        "createdAt": 1,
+        "updatedAt": 1,
+        "deleted": false,
+        "usefulness": {
+          "retrievedCount": 0,
+          "injectedCount": 1,
+          "usedCount": 0,
+          "taskSuccessCount": 0,
+          "verificationPassedCount": 0,
+          "score": 0.55
+        }
+      }
+    },
+    {
+      "name": "sequential-feedback-control",
+      "backend": "sqlite",
+      "expectedInjectedCount": 1,
+      "actualInjectedCount": 1
+    },
+    {
+      "name": "delete-before-feedback-control",
+      "backend": "sqlite",
+      "expectedDeleted": true,
+      "actualDeleted": true
+    }
+  ],
+  "paidRequests": 0
+}

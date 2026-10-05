@@ -1,0 +1,447 @@
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+ ❯ packages/harness/src/memory-feedback-atomic.regressions.test.ts (14 tests | 11 failed) 208ms
+     × records every simultaneous signal across multiple bridges sharing the store 24ms
+     × preserves a removal before the feedback mutation rather than writing an old snapshot 3ms
+     × preserves the latest editor content and retirement state at the feedback mutation boundary 6ms
+     ✓ missing/deleted feedback stays quiet and does not mutate reviewable tombstones 3ms
+     × records every simultaneous signal across multiple bridges sharing the store 6ms
+     × preserves a removal before the feedback mutation rather than writing an old snapshot 2ms
+     × preserves the latest editor content and retirement state at the feedback mutation boundary 2ms
+     ✓ missing/deleted feedback stays quiet and does not mutate reviewable tombstones 2ms
+   × legacy stores without atomic capability preserve retrieval and ROI while skipping unsafe durable writes 3ms
+   × a throwing optional capability is observed and never breaks the feedback caller 2ms
+     × four concurrent admitted successful turns retain four of every observed feedback signal 67ms
+     × an unsupported optional feedback capability still admits memory and completes a model turn 24ms
+     ✓ four concurrent admitted successful turns retain four of every observed feedback signal 43ms
+     × an unsupported optional feedback capability still admits memory and completes a model turn 18ms
+ ❯ packages/memory/src/usefulness-atomic.regressions.test.ts (27 tests | 27 failed) 83ms
+     × counts all simultaneous 'retrieved' signals with the existing score formula 15ms
+     × counts all simultaneous 'injected' signals with the existing score formula 3ms
+     × counts all simultaneous 'used' signals with the existing score formula 4ms
+     × counts all simultaneous 'taskSucceeded' signals with the existing score formula 2ms
+     × counts all simultaneous 'verificationPassed' signals with the existing score formula 2ms
+     × serializes two production store instances at the same store path 2ms
+     × keeps different entry counters independent under mixed concurrent signals 3ms
+     × does not create unknown memories or mutate deleted history 4ms
+     × cannot resurrect a memory removed concurrently with feedback 2ms
+     × preserves revised content, provenance, evidence, retirement and timestamps exactly 4ms
+     × persists exact counters on reopen without altering lexical matches 2ms
+     × runs the existing security gate on a tampered persisted row and changes no bytes on rejection 2ms
+     × counts all simultaneous 'retrieved' signals with the existing score formula 3ms
+     × counts all simultaneous 'injected' signals with the existing score formula 2ms
+     × counts all simultaneous 'used' signals with the existing score formula 2ms
+     × counts all simultaneous 'taskSucceeded' signals with the existing score formula 2ms
+     × counts all simultaneous 'verificationPassed' signals with the existing score formula 7ms
+     × serializes two production store instances at the same store path 2ms
+     × keeps different entry counters independent under mixed concurrent signals 2ms
+     × does not create unknown memories or mutate deleted history 2ms
+     × cannot resurrect a memory removed concurrently with feedback 2ms
+     × preserves revised content, provenance, evidence, retirement and timestamps exactly 2ms
+     × persists exact counters on reopen without altering lexical matches 2ms
+     × runs the existing security gate on a tampered persisted row and changes no bytes on rejection 2ms
+   × SQLite feedback does not rewrite content or rebuild the full-text index 4ms
+   × SQLite rolls back a failed usefulness write and accepts a later valid feedback 2ms
+   × JSONL atomic rewrite failure does not mutate the durable snapshot or poison the store lock 2ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 38 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/harness/src/memory-feedback-atomic.regressions.test.ts > jsonl bridge atomic persistence > records every simultaneous signal across multiple bridges sharing the store
+ FAIL  packages/harness/src/memory-feedback-atomic.regressions.test.ts > sqlite bridge atomic persistence > records every simultaneous signal across multiple bridges sharing the store
+AssertionError: expected 1 to be 16 // Object.is equality
+
+- Expected
++ Received
+
+- 16
++ 1
+
+ ❯ packages/harness/src/memory-feedback-atomic.regressions.test.ts:32:68
+     30|     const first = new MemoryRuntimeBridge({ store, scope: "workspace" …
+     31|     await Promise.all(Array.from({ length: 16 }, (_, index) => (index …
+     32|     expect((await store.get(entry.id))?.usefulness?.injectedCount).toB…
+       |                                                                    ^
+     33|   });
+     34|   it("preserves a removal before the feedback mutation rather than wri…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/38]⎯
+
+ FAIL  packages/harness/src/memory-feedback-atomic.regressions.test.ts > jsonl bridge atomic persistence > preserves a removal before the feedback mutation rather than writing an old snapshot
+ FAIL  packages/harness/src/memory-feedback-atomic.regressions.test.ts > sqlite bridge atomic persistence > preserves a removal before the feedback mutation rather than writing an old snapshot
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ packages/harness/src/memory-feedback-atomic.regressions.test.ts:45:78
+     43|     };
+     44|     await new MemoryRuntimeBridge({ store: wrapper, scope: "workspace"…
+     45|     expect(mutated).toBe(true); expect((await store.get(entry.id))?.de…
+       |                                                                              ^
+     46|   });
+     47|   it("preserves the latest editor content and retirement state at the …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/38]⎯
+
+ FAIL  packages/harness/src/memory-feedback-atomic.regressions.test.ts > jsonl bridge atomic persistence > preserves the latest editor content and retirement state at the feedback mutation boundary
+ FAIL  packages/harness/src/memory-feedback-atomic.regressions.test.ts > sqlite bridge atomic persistence > preserves the latest editor content and retirement state at the feedback mutation boundary
+AssertionError: expected 'auditneedle check admitted persisted …' to be 'user edited 中文记忆' // Object.is equality
+
+Expected: "user edited 中文记忆"
+Received: "auditneedle check admitted persisted memory feedback"
+
+ ❯ packages/harness/src/memory-feedback-atomic.regressions.test.ts:60:25
+     58|     await new MemoryRuntimeBridge({ store: wrapper, scope: "workspace"…
+     59|     expect(mutated).toBe(true); const got = (await store.get(entry.id)…
+     60|     expect(got.content).toBe(edited.content); expect(got.state).toEqua…
+       |                         ^
+     61|     expect(got.usefulness?.injectedCount).toBe(1);
+     62|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/38]⎯
+
+ FAIL  packages/harness/src/memory-feedback-atomic.regressions.test.ts > legacy stores without atomic capability preserve retrieval and ROI while skipping unsafe durable writes
+AssertionError: expected "vi.fn()" to not be called at all, but actually been called 4 times
+
+Received:
+
+  1st vi.fn() call:
+
+    Array [
+      "memory_1dbf8bde-4b02-4933-a432-df5cb667deb6",
+    ]
+
+  2nd vi.fn() call:
+
+    Array [
+      "memory_1dbf8bde-4b02-4933-a432-df5cb667deb6",
+    ]
+
+  3rd vi.fn() call:
+
+    Array [
+      "memory_1dbf8bde-4b02-4933-a432-df5cb667deb6",
+    ]
+
+  4th vi.fn() call:
+
+    Array [
+      "memory_1dbf8bde-4b02-4933-a432-df5cb667deb6",
+    ]
+
+
+Number of calls: 4
+
+ ❯ packages/harness/src/memory-feedback-atomic.regressions.test.ts:80:19
+     78|   expect(retrieved.items.map((item) => item.memory.id)).toEqual([entry…
+     79|   await bridge.recordInjected([entry.id]); await bridge.recordOutcome(…
+     80|   expect(get).not.toHaveBeenCalled(); expect(update).not.toHaveBeenCal…
+       |                   ^
+     81|   expect(stderr).toHaveBeenCalledTimes(1); expect(stderr.mock.calls[0]…
+     82|   expect(bridge.tokenROI()).toMatchObject([{ memoryId: entry.id, injec…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/38]⎯
+
+ FAIL  packages/harness/src/memory-feedback-atomic.regressions.test.ts > a throwing optional capability is observed and never breaks the feedback caller
+AssertionError: expected "vi.fn()" to be called with arguments: [ …(2) ]
+
+Number of calls: 0
+
+ ❯ packages/harness/src/memory-feedback-atomic.regressions.test.ts:92:18
+     90|   const bridge = new MemoryRuntimeBridge({ store, scope: "workspace", …
+     91|   await expect(bridge.recordRetrieved([memoryToBlock({ memory: entry, …
+     92|   expect(atomic).toHaveBeenCalledWith(entry.id, { kind: "retrieved" })…
+       |                  ^
+     93|   expect(stderr.mock.calls.map(([value]) => String(value)).join("")).t…
+     94|   expect(bridge.tokenROI()).toMatchObject([{ memoryId: entry.id, injec…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/38]⎯
+
+ FAIL  packages/harness/src/memory-feedback-atomic.regressions.test.ts > jsonl actual Harness feedback admission > four concurrent admitted successful turns retain four of every observed feedback signal
+AssertionError: expected { retrievedCount: 2, …(5) } to match object { retrievedCount: 4, …(4) }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "injectedCount": 4,
+-   "retrievedCount": 4,
+-   "taskSuccessCount": 4,
+-   "usedCount": 4,
++   "injectedCount": 1,
++   "retrievedCount": 2,
++   "taskSuccessCount": 1,
++   "usedCount": 2,
+    "verificationPassedCount": 0,
+  }
+
+ ❯ packages/harness/src/memory-feedback-atomic.regressions.test.ts:123:70
+    121|       const events = (await Promise.all(sessions.map((session) => harn…
+    122|       expect(events.filter((event) => event.type === "memory.retrieved…
+    123|       expect((await harness.memoryStore!.get(entry.id))?.usefulness).t…
+       |                                                                      ^
+    124|     } finally { await harness.close(); }
+    125|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/38]⎯
+
+ FAIL  packages/harness/src/memory-feedback-atomic.regressions.test.ts > jsonl actual Harness feedback admission > an unsupported optional feedback capability still admits memory and completes a model turn
+ FAIL  packages/harness/src/memory-feedback-atomic.regressions.test.ts > sqlite actual Harness feedback admission > an unsupported optional feedback capability still admits memory and completes a model turn
+AssertionError: expected { retrievedCount: 1, …(5) } to be undefined
+
+- Expected:
+undefined
+
++ Received:
+{
+  "injectedCount": 1,
+  "retrievedCount": 1,
+  "score": 0.8425,
+  "taskSuccessCount": 1,
+  "usedCount": 1,
+  "verificationPassedCount": 0,
+}
+
+ ❯ packages/harness/src/memory-feedback-atomic.regressions.test.ts:139:125
+    137|       const turn = await harness.runtime.startTurn(session.id, "auditn…
+    138|       expect(outcome.status).toBe("completed"); expect(requests).toHav…
+    139|       expect(outcome.state?.memoryRefs).toEqual([entry.id]); expect((a…
+       |                                                                                                                             ^
+    140|       expect(stderr.mock.calls.filter(([value]) => String(value).inclu…
+    141|     } finally { await harness.close(); }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/38]⎯
+
+ FAIL  packages/memory/src/usefulness-atomic.regressions.test.ts > jsonl atomic memory feedback > counts all simultaneous 'retrieved' signals with the existing score formula
+ FAIL  packages/memory/src/usefulness-atomic.regressions.test.ts > jsonl atomic memory feedback > counts all simultaneous 'injected' signals with the existing score formula
+ FAIL  packages/memory/src/usefulness-atomic.regressions.test.ts > jsonl atomic memory feedback > counts all simultaneous 'used' signals with the existing score formula
+ FAIL  packages/memory/src/usefulness-atomic.regressions.test.ts > jsonl atomic memory feedback > counts all simultaneous 'taskSucceeded' signals with the existing score formula
+ FAIL  packages/memory/src/usefulness-atomic.regressions.test.ts > jsonl atomic memory feedback > counts all simultaneous 'verificationPassed' signals with the existing score formula
+ FAIL  packages/memory/src/usefulness-atomic.regressions.test.ts > sqlite atomic memory feedback > counts all simultaneous 'retrieved' signals with the existing score formula
+ FAIL  packages/memory/src/usefulness-atomic.regressions.test.ts > sqlite atomic memory feedback > counts all simultaneous 'injected' signals with the existing score formula
+ FAIL  packages/memory/src/usefulness-atomic.regressions.test.ts > sqlite atomic memory feedback > counts all simultaneous 'used' signals with the existing score formula
+ FAIL  packages/memory/src/usefulness-atomic.regressions.test.ts > sqlite atomic memory feedback > counts all simultaneous 'taskSucceeded' signals with the existing score formula
+ FAIL  packages/memory/src/usefulness-atomic.regressions.test.ts > sqlite atomic memory feedback > counts all simultaneous 'verificationPassed' signals with the existing score formula
+AssertionError: production backend must provide atomic feedback: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ atomic packages/memory/src/usefulness-atomic.regressions.test.ts:21:71
+     19| function atomic(store: Store): AtomicStore["recordUsefulnessFeedback"]…
+     20|   const callback = (store as Partial<AtomicStore>).recordUsefulnessFee…
+     21|   expect(callback, "production backend must provide atomic feedback").…
+       |                                                                       ^
+     22|   return callback!.bind(store);
+     23| }
+ ❯ packages/memory/src/usefulness-atomic.regressions.test.ts:45:72
+ ❯ packages/memory/src/usefulness-atomic.regressions.test.ts:45:45
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/38]⎯
+
+ FAIL  packages/memory/src/usefulness-atomic.regressions.test.ts > jsonl atomic memory feedback > serializes two production store instances at the same store path
+ FAIL  packages/memory/src/usefulness-atomic.regressions.test.ts > sqlite atomic memory feedback > serializes two production store instances at the same store path
+AssertionError: production backend must provide atomic feedback: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ atomic packages/memory/src/usefulness-atomic.regressions.test.ts:21:71
+     19| function atomic(store: Store): AtomicStore["recordUsefulnessFeedback"]…
+     20|   const callback = (store as Partial<AtomicStore>).recordUsefulnessFee…
+     21|   expect(callback, "production backend must provide atomic feedback").…
+       |                                                                       ^
+     22|   return callback!.bind(store);
+     23| }
+ ❯ packages/memory/src/usefulness-atomic.regressions.test.ts:58:60
+ ❯ packages/memory/src/usefulness-atomic.regressions.test.ts:58:29
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/38]⎯
+
+ FAIL  packages/memory/src/usefulness-atomic.regressions.test.ts > jsonl atomic memory feedback > keeps different entry counters independent under mixed concurrent signals
+ FAIL  packages/memory/src/usefulness-atomic.regressions.test.ts > sqlite atomic memory feedback > keeps different entry counters independent under mixed concurrent signals
+AssertionError: production backend must provide atomic feedback: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ atomic packages/memory/src/usefulness-atomic.regressions.test.ts:21:71
+     19| function atomic(store: Store): AtomicStore["recordUsefulnessFeedback"]…
+     20|   const callback = (store as Partial<AtomicStore>).recordUsefulnessFee…
+     21|   expect(callback, "production backend must provide atomic feedback").…
+       |                                                                       ^
+     22|   return callback!.bind(store);
+     23| }
+ ❯ packages/memory/src/usefulness-atomic.regressions.test.ts:66:7
+ ❯ packages/memory/src/usefulness-atomic.regressions.test.ts:65:29
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/38]⎯
+
+ FAIL  packages/memory/src/usefulness-atomic.regressions.test.ts > jsonl atomic memory feedback > does not create unknown memories or mutate deleted history
+ FAIL  packages/memory/src/usefulness-atomic.regressions.test.ts > sqlite atomic memory feedback > does not create unknown memories or mutate deleted history
+AssertionError: production backend must provide atomic feedback: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ atomic packages/memory/src/usefulness-atomic.regressions.test.ts:21:71
+     19| function atomic(store: Store): AtomicStore["recordUsefulnessFeedback"]…
+     20|   const callback = (store as Partial<AtomicStore>).recordUsefulnessFee…
+     21|   expect(callback, "production backend must provide atomic feedback").…
+       |                                                                       ^
+     22|   return callback!.bind(store);
+     23| }
+ ❯ packages/memory/src/usefulness-atomic.regressions.test.ts:74:18
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/38]⎯
+
+ FAIL  packages/memory/src/usefulness-atomic.regressions.test.ts > jsonl atomic memory feedback > cannot resurrect a memory removed concurrently with feedback
+ FAIL  packages/memory/src/usefulness-atomic.regressions.test.ts > sqlite atomic memory feedback > cannot resurrect a memory removed concurrently with feedback
+AssertionError: production backend must provide atomic feedback: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ atomic packages/memory/src/usefulness-atomic.regressions.test.ts:21:71
+     19| function atomic(store: Store): AtomicStore["recordUsefulnessFeedback"]…
+     20|   const callback = (store as Partial<AtomicStore>).recordUsefulnessFee…
+     21|   expect(callback, "production backend must provide atomic feedback").…
+       |                                                                       ^
+     22|   return callback!.bind(store);
+     23| }
+ ❯ packages/memory/src/usefulness-atomic.regressions.test.ts:81:24
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/38]⎯
+
+ FAIL  packages/memory/src/usefulness-atomic.regressions.test.ts > jsonl atomic memory feedback > preserves revised content, provenance, evidence, retirement and timestamps exactly
+ FAIL  packages/memory/src/usefulness-atomic.regressions.test.ts > sqlite atomic memory feedback > preserves revised content, provenance, evidence, retirement and timestamps exactly
+AssertionError: production backend must provide atomic feedback: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ atomic packages/memory/src/usefulness-atomic.regressions.test.ts:21:71
+     19| function atomic(store: Store): AtomicStore["recordUsefulnessFeedback"]…
+     20|   const callback = (store as Partial<AtomicStore>).recordUsefulnessFee…
+     21|   expect(callback, "production backend must provide atomic feedback").…
+       |                                                                       ^
+     22|   return callback!.bind(store);
+     23| }
+ ❯ packages/memory/src/usefulness-atomic.regressions.test.ts:91:46
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/38]⎯
+
+ FAIL  packages/memory/src/usefulness-atomic.regressions.test.ts > jsonl atomic memory feedback > persists exact counters on reopen without altering lexical matches
+ FAIL  packages/memory/src/usefulness-atomic.regressions.test.ts > sqlite atomic memory feedback > persists exact counters on reopen without altering lexical matches
+AssertionError: production backend must provide atomic feedback: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ atomic packages/memory/src/usefulness-atomic.regressions.test.ts:21:71
+     19| function atomic(store: Store): AtomicStore["recordUsefulnessFeedback"]…
+     20|   const callback = (store as Partial<AtomicStore>).recordUsefulnessFee…
+     21|   expect(callback, "production backend must provide atomic feedback").…
+       |                                                                       ^
+     22|   return callback!.bind(store);
+     23| }
+ ❯ packages/memory/src/usefulness-atomic.regressions.test.ts:97:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/38]⎯
+
+ FAIL  packages/memory/src/usefulness-atomic.regressions.test.ts > jsonl atomic memory feedback > runs the existing security gate on a tampered persisted row and changes no bytes on rejection
+ FAIL  packages/memory/src/usefulness-atomic.regressions.test.ts > sqlite atomic memory feedback > runs the existing security gate on a tampered persisted row and changes no bytes on rejection
+AssertionError: production backend must provide atomic feedback: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ atomic packages/memory/src/usefulness-atomic.regressions.test.ts:21:71
+     19| function atomic(store: Store): AtomicStore["recordUsefulnessFeedback"]…
+     20|   const callback = (store as Partial<AtomicStore>).recordUsefulnessFee…
+     21|   expect(callback, "production backend must provide atomic feedback").…
+       |                                                                       ^
+     22|   return callback!.bind(store);
+     23| }
+ ❯ packages/memory/src/usefulness-atomic.regressions.test.ts:109:18
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/38]⎯
+
+ FAIL  packages/memory/src/usefulness-atomic.regressions.test.ts > SQLite feedback does not rewrite content or rebuild the full-text index
+AssertionError: production backend must provide atomic feedback: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ atomic packages/memory/src/usefulness-atomic.regressions.test.ts:21:71
+     19| function atomic(store: Store): AtomicStore["recordUsefulnessFeedback"]…
+     20|   const callback = (store as Partial<AtomicStore>).recordUsefulnessFee…
+     21|   expect(callback, "production backend must provide atomic feedback").…
+       |                                                                       ^
+     22|   return callback!.bind(store);
+     23| }
+ ❯ packages/memory/src/usefulness-atomic.regressions.test.ts:120:9
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/38]⎯
+
+ FAIL  packages/memory/src/usefulness-atomic.regressions.test.ts > SQLite rolls back a failed usefulness write and accepts a later valid feedback
+AssertionError: production backend must provide atomic feedback: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ atomic packages/memory/src/usefulness-atomic.regressions.test.ts:21:71
+     19| function atomic(store: Store): AtomicStore["recordUsefulnessFeedback"]…
+     20|   const callback = (store as Partial<AtomicStore>).recordUsefulnessFee…
+     21|   expect(callback, "production backend must provide atomic feedback").…
+       |                                                                       ^
+     22|   return callback!.bind(store);
+     23| }
+ ❯ packages/memory/src/usefulness-atomic.regressions.test.ts:130:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/38]⎯
+
+ FAIL  packages/memory/src/usefulness-atomic.regressions.test.ts > JSONL atomic rewrite failure does not mutate the durable snapshot or poison the store lock
+AssertionError: production backend must provide atomic feedback: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ atomic packages/memory/src/usefulness-atomic.regressions.test.ts:21:71
+     19| function atomic(store: Store): AtomicStore["recordUsefulnessFeedback"]…
+     20|   const callback = (store as Partial<AtomicStore>).recordUsefulnessFee…
+     21|   expect(callback, "production backend must provide atomic feedback").…
+       |                                                                       ^
+     22|   return callback!.bind(store);
+     23| }
+ ❯ packages/memory/src/usefulness-atomic.regressions.test.ts:140:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/38]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  38 failed | 3 passed (41)
+   Start at  12:04:11
+   Duration  2.53s (transform 1.54s, setup 0ms, import 2.00s, tests 291ms, environment 0ms)
+

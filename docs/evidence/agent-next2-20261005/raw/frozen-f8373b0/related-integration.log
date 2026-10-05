@@ -1,0 +1,307 @@
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+ ✓ packages/harness/src/durable-recovery-store-xproc.test.ts (1 test) 2543ms
+     ✓ a live child's old lock is NOT stolen; after the child exits it is reclaimed  2542ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ packages/harness/src/mcp-wiring.integration.test.ts (6 tests) 1628ms
+     ✓ connects an http MCP server LAZILY when a step needs it, binds its tool and executes over the real transport  579ms
+     ✓ connects a stdio MCP server lazily (local IPC — default sandbox suffices)  523ms
+     ✓ P24-7: an unreachable NON-needed server does NOT abort startup; needing it yields MCP_CONNECT_FAILED  511ms
+ ✓ packages/tools/src/production-tools.test.ts (9 tests) 1541ms
+     ✓ env_snapshot tool is wired to the host network mode + tool list  516ms
+     ✓ createProductionTools forwards harness profile + workspace root to env_snapshot  502ms
+     ✓ createEnvSnapshotTool rejects nothing and reports the live injected policy + harness facts  512ms
+ ✓ packages/tools/src/process/executor.test.ts (30 tests | 7 skipped) 1357ms
+     ✓ kills the process tree on timeout (no orphan)  303ms
+     ✓ honors timeout, cancellation, output cap and env on the argv path  413ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:41121
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:34693
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:40251
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:44947
+[harness] context budget: model capabilities unknown for web-cancellation-probe/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:36953
+[harness] context budget: model capabilities unknown for web-queued-followup-stop-probe/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:45461
+ ✓ apps/web/src/harness.integration.test.ts (6 tests) 1484ms
+     ✓ serves a full turn end-to-end through the harness runtime  355ms
+     ✓ U4 stops the active queued follow-up through HTTP without cancelling another sender's session  543ms
+ ✓ packages/model/src/openai.test.ts (40 tests) 1135ms
+     ✓ P1-18: honors Retry-After on 429 and classifies it rate_limit with retryAfterMs  1002ms
+ ✓ packages/harness/src/verification-trust.regressions.test.ts (13 tests) 1063ms
+ ✓ packages/harness/src/context-wiring.integration.test.ts (3 tests) 532ms
+     ✓ env_snapshot reports the live harness wiring (profile, workspace root, tool list)  501ms
+ ✓ packages/tools/src/r4-file-regressions.test.ts (41 tests) 528ms
+[harness] context budget: model capabilities unknown for fake/unknown-window — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ packages/harness/src/create-harness.test.ts (17 tests) 687ms
+     ✓ all harness-emitted events use the INJECTED clock (deterministic timestamps)  315ms
+     ✓ same-session event sequences are strictly monotonic and replay-stable  303ms
+ ✓ packages/harness/src/delegation-worker.integration.test.ts (13 tests) 420ms
+[skill denied] detection=injection target=/tmp/ar-skill-admission-efY7bC/skills/blocked-injection/SKILL.md reasons=dismiss-previous-instructions,dismiss-all-instructions,override-own-instructions,extract-system-prompt
+[skill denied] detection=secret target=/tmp/ar-skill-admission-hVwl02/skills/blocked-secret/SKILL.md reasons=openai-key
+[skill denied] detection=required-tools target=/tmp/ar-skill-admission-gwQmri/skills/blocked-tools/SKILL.md reasons=required tool not allowed by host policy: unavailable_tool
+ ✓ packages/harness/src/skill-admission.regressions.test.ts (11 tests) 369ms
+ ✓ packages/tools/src/vs001.test.ts (13 tests) 352ms
+[skill denied] detection=required-tools target=/tmp/ar-task-skills-AmhVyO/skills/danger/SKILL.md reasons=required tool not allowed by host policy: ungranted-tool
+[skill denied] detection=injection target=/tmp/ar-task-skills-AmhVyO/skills/hostile/SKILL.md reasons=dismiss-previous-instructions,dismiss-all-instructions,override-own-instructions,extract-system-prompt
+ ✓ packages/harness/src/task-scoped-skills.integration.test.ts (10 tests) 268ms
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+ ✓ packages/harness/src/memory-search-production.regressions.test.ts (10 tests) 242ms
+[skill denied] detection=required-tools target=/tmp/ar-skill-revision-WR986A/skills/lint/SKILL.md reasons=required tool not allowed by host policy: exec_command
+[skill denied] detection=injection target=/tmp/ar-skill-revision-ltIGCr/skills/lint/SKILL.md reasons=dismiss-previous-instructions,dismiss-all-instructions,override-own-instructions
+[skill denied] detection=secret target=/tmp/ar-skill-revision-ULcZEJ/skills/lint/SKILL.md reasons=openai-key
+ ✓ packages/harness/src/skill-revision-regressions.test.ts (20 tests) 250ms
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+ ✓ packages/harness/src/rehydration-headroom.integration.test.ts (6 tests) 216ms
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+ ✓ packages/harness/src/memory-feedback-atomic.regressions.test.ts (14 tests) 251ms
+ ✓ packages/tools/src/orchestrator.test.ts (32 tests) 190ms
+[degraded] path-scoped-discovery.close: instruction handle cleanup failed
+ ✓ packages/context/src/scoped-instruction-read.regressions.test.ts (34 tests) 118ms
+ ✓ packages/harness/src/path-scoped-instructions.regressions.test.ts (9 tests) 157ms
+ ✓ packages/memory/src/usefulness-atomic.regressions.test.ts (27 tests) 187ms
+ ✓ packages/tools/src/process/sandbox-executor.test.ts (33 tests) 159ms
+[degraded] openai.reader.cancel: response cleanup failed
+ ✓ packages/model/src/openai-stream-footer.regressions.test.ts (33 tests) 158ms
+ ✓ packages/harness/src/verification-wiring.integration.test.ts (4 tests) 133ms
+ ✓ packages/tools/src/verification/task-verifier.test.ts (20 tests) 164ms
+ ✓ packages/model/src/openai-request-policy.test.ts (7 tests) 122ms
+ ✓ packages/context/src/path-scoped-discovery.test.ts (24 tests) 99ms
+ ✓ packages/context/src/default-discovery-budget-regressions.test.ts (49 tests) 124ms
+ ✓ packages/tools/src/workspace-knowledge-regressions.test.ts (29 tests) 120ms
+[degraded] memory-store.corrupt-line: Expected property name or '}' in JSON at position 1 (line 1 column 2)
+[degraded] memory-store.corrupt-line: Expected property name or '}' in JSON at position 1 (line 1 column 2)
+ ✓ packages/memory/src/memory-store.test.ts (25 tests) 114ms
+ ✓ packages/core/src/runtime/wire-protocol-e2e.test.ts (8 tests) 112ms
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+ ✓ packages/harness/src/memory-prefetch-production.regressions.test.ts (4 tests) 128ms
+ ✓ packages/harness/src/reflection-turn-isolation.regressions.test.ts (18 tests) 119ms
+[degraded] memory.search: FTS unavailable or query rejected; using literal search
+ ✓ packages/memory/src/memory-search-contract.regressions.test.ts (43 tests) 107ms
+ ✓ packages/tools/src/symbol-scope.regressions.test.ts (23 tests) 89ms
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+ ✓ packages/harness/src/memory.integration.test.ts (2 tests) 78ms
+ ✓ packages/tools/src/process/utf8-output.regressions.test.ts (34 tests) 89ms
+[degraded] memory.search: FTS unavailable or query rejected; using literal search
+ ✓ packages/memory/src/sqlite-memory-store.test.ts (31 tests) 89ms
+ ✓ packages/memory/src/sqlite-memory-metadata.regressions.test.ts (29 tests) 81ms
+ ✓ packages/harness/src/config-wiring.test.ts (10 tests) 65ms
+ ✓ packages/tools/src/scoped-search-paths.regressions.test.ts (24 tests) 71ms
+ ✓ packages/context/src/pipeline.test.ts (38 tests) 73ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts (21 tests) 67ms
+ ✓ packages/context/src/circuit-breaker.test.ts (6 tests) 71ms
+ ✓ packages/memory/src/memory-visibility.regressions.test.ts (28 tests) 61ms
+[degraded] openai.reader.cancel: response cleanup failed
+ ✓ packages/model/src/openai-retry-wait.regressions.test.ts (16 tests) 62ms
+ ✓ packages/model/src/openai.wire-stub.test.ts (22 tests) 80ms
+[degraded] path-scoped-discovery.close: instruction handle cleanup failed
+ ✓ packages/harness/src/scoped-instruction-read.integration.test.ts (5 tests) 58ms
+ ✓ packages/harness/src/effective-instruction-context.regressions.test.ts (6 tests) 61ms
+ ✓ packages/memory/src/retrieval.test.ts (19 tests) 55ms
+[degraded] durable-recovery-store.release-lock (ownership changed, not deleting /tmp/e4-08-rec-Z4l50a/recovery/t10.json.lock): lock token "9999 newer-owner" != mine
+ ✓ packages/harness/src/durable-recovery-store.test.ts (15 tests) 47ms
+ ✓ packages/harness/src/command-discovery-cache.regressions.test.ts (3 tests) 39ms
+ ✓ packages/context/src/discovery.test.ts (11 tests) 43ms
+ ✓ packages/tools/src/tools/exec-workspace-policy.test.ts (12 tests) 43ms
+ ✓ packages/model/src/model.test.ts (9 tests) 49ms
+ ✓ packages/harness/src/skill.integration.test.ts (1 test) 43ms
+ ✓ packages/model/src/openai-termination-regressions.test.ts (19 tests) 44ms
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+ ✓ packages/harness/src/scope-resolver.test.ts (6 tests) 38ms
+ ✓ packages/model/src/openai-system-context.regressions.test.ts (13 tests) 48ms
+ ✓ packages/tools/src/review-regressions.test.ts (42 tests) 38ms
+ ✓ packages/tools/src/command-discovery.test.ts (15 tests) 29ms
+ ✓ packages/tools/src/verification-plan.test.ts (9 tests) 31ms
+ ✓ packages/harness/src/candidate-persistence.regressions.test.ts (11 tests) 37ms
+ ✓ packages/memory/src/migration.test.ts (7 tests) 40ms
+ ✓ packages/harness/src/memory-runtime-bridge.test.ts (7 tests) 41ms
+ ✓ packages/tools/src/repo-map.test.ts (12 tests) 31ms
+ ✓ packages/harness/src/skill-context.test.ts (7 tests) 26ms
+ ✓ packages/tools/src/transaction.test.ts (9 tests) 22ms
+ ✓ packages/harness/src/trust-envelope.test.ts (8 tests) 20ms
+ ✓ packages/tools/src/symbol-index.test.ts (6 tests) 26ms
+ ✓ packages/tools/src/env-snapshot.test.ts (6 tests) 25ms
+ ✓ packages/harness/src/workspace-manager.test.ts (6 tests) 26ms
+ ✓ packages/memory/src/retrieval-work.regressions.test.ts (29 tests) 30ms
+[degraded] reflection.events.list: boom
+ ✓ packages/harness/src/reflection-runner.test.ts (8 tests) 28ms
+ ✓ packages/tools/src/source-matrix.test.ts (22 tests) 16ms
+ ✓ packages/tools/src/process/windows-fixture-guard.test.ts (15 tests) 20ms
+ ✓ packages/harness/src/tool-budget-binding.test.ts (3 tests) 22ms
+ ✓ packages/context/src/context-optimization-regressions.test.ts (39 tests) 21ms
+ ✓ packages/context/src/taxonomy.test.ts (18 tests) 22ms
+ ✓ packages/harness/src/child-merge.test.ts (3 tests) 14ms
+[degraded] discovery.close: instruction handle cleanup failed
+ ✓ packages/context/src/default-discovery-read-failures.test.ts (3 tests) 17ms
+ ✓ packages/tools/src/navigate.test.ts (7 tests) 23ms
+ ✓ packages/tools/src/tool-dispatch-budget.test.ts (6 tests) 15ms
+ ✓ packages/harness/src/security-regression-matrix.test.ts (12 tests) 16ms
+ ✓ packages/tools/src/tools/exec-workspace-root-alias.test.ts (7 tests) 9ms
+ ✓ packages/context/src/rehydration-headroom.regressions.test.ts (24 tests) 15ms
+[degraded] candidate-store.corrupt-line: Unexpected token 'o', "not-json" is not valid JSON
+ ✓ packages/harness/src/candidate-store.test.ts (3 tests) 16ms
+ ✓ packages/tools/src/process/r96-windows-execution-boundary.test.ts (25 tests | 3 skipped) 15ms
+ ✓ packages/tools/src/write-file-safety.test.ts (4 tests) 18ms
+ ✓ packages/harness/src/command-discovery-service.test.ts (3 tests) 11ms
+ ✓ packages/harness/src/adversarial-regression.test.ts (12 tests) 12ms
+ ✓ packages/memory/src/write-gate.test.ts (15 tests) 10ms
+ ✓ packages/tools/src/workspace.test.ts (8 tests) 18ms
+ ✓ packages/harness/src/config-drift.test.ts (14 tests) 9ms
+ ✓ packages/memory/src/reflection.test.ts (19 tests) 10ms
+ ✓ packages/context/src/message-budget-regressions.test.ts (14 tests) 7ms
+ ✓ packages/harness/src/config-drift-matrix.test.ts (13 tests) 10ms
+ ✓ packages/context/src/compaction.test.ts (10 tests) 8ms
+ ✓ packages/harness/src/config-resolver.test.ts (12 tests) 9ms
+ ✓ packages/model/src/provider-diagnostics.test.ts (8 tests) 8ms
+ ✓ packages/tools/src/schema-advert.test.ts (7 tests) 8ms
+ ✓ packages/tools/src/write-safety.test.ts (11 tests) 7ms
+ ✓ packages/context/src/prompt-versioning.test.ts (9 tests) 8ms
+ ✓ packages/harness/src/delegation-tools.test.ts (7 tests) 9ms
+ ✓ packages/context/src/policy-versioning.test.ts (10 tests) 9ms
+ ✓ packages/harness/src/config-layers.test.ts (10 tests) 7ms
+ ✓ packages/tools/src/edit.test.ts (14 tests) 7ms
+ ✓ packages/tools/src/tool-lookup.test.ts (2 tests) 6ms
+ ✓ packages/memory/src/evidence.test.ts (6 tests) 6ms
+ ✓ packages/memory/src/lifecycle.test.ts (8 tests) 5ms
+ ✓ packages/context/src/budget.test.ts (8 tests) 5ms
+stdout | packages/harness/src/perf-suite.perf.test.ts > P11-1: long-session scale (deterministic) > handles 10k messages + 1k events + 500 sessions without corruption
+[P11-1] 10k msgs + 1k events + 500 sessions: 4369ms
+
+stdout | packages/harness/src/perf-suite.perf.test.ts > P11-1: long-session scale (deterministic) > builds context over a 10k-message history deterministically
+[P11-2] context build over 10k-message history: 6.2ms (messagesTokens=309990)
+
+ ✓ packages/harness/src/perf-suite.perf.test.ts (2 tests) 4436ms
+     ✓ handles 10k messages + 1k events + 500 sessions without corruption  4426ms
+ ✓ packages/memory/src/derivability.test.ts (4 tests) 4ms
+ ✓ packages/tools/src/semantics.test.ts (4 tests) 5ms
+ ✓ packages/model/src/capability-resolver.test.ts (6 tests) 4ms
+ ✓ packages/memory/src/usefulness.test.ts (5 tests) 5ms
+ ✓ packages/harness/src/champion-profile.test.ts (5 tests) 4ms
+
+ Test Files  118 passed (118)
+      Tests  1674 passed | 10 skipped (1684)
+   Start at  12:21:30
+   Duration  52.86s (transform 2.81s, setup 0ms, import 15.55s, tests 24.07s, environment 9ms)
+

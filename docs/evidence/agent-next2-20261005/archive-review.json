@@ -1,0 +1,49 @@
+{
+  "schemaVersion": "agent-next2-independent-archive-review-v1",
+  "status": "ARCHIVE_AND_COMPLETION_REVIEW_PASS",
+  "reviewedAt": "2026-10-05T12:46:34.144541+00:00",
+  "reviewer": "/root/independent_followup_review",
+  "testedSourceSha": "f8373b0fa4ec6491a55a9a3ba198235b689cc140",
+  "baselineSha": "320cf3e0bd87d714d17d95709e10c0ddf56d9c5d",
+  "preregisteredPlanSha": "0c70309de478797be8d0f6b8a3c2dbbe282f7844",
+  "artifactIndexSha256": "131d3e3157bfe8962c1b34815547c172520706e900f3957cc5eb91271209d1c7",
+  "rawOriginalWorkingIndexAndStagedGitBlobExact": true,
+  "rawFileCount": 813,
+  "rawBytes": 12121950,
+  "allRawGitTextAttributeUnset": true,
+  "credentialPatternsFound": 0,
+  "stagedPathsBeforeAddingThisReceipt": 820,
+  "onlyAllowedCompletionDocsPlanTaskAttributesChanged": true,
+  "productionTestsAndResearchScriptsUnchangedFromTestedSource": true,
+  "preregisteredSpecificationAndPreviousEntryBytePreserved": true,
+  "completionPlanSnapshotExactCurrentEntry": true,
+  "completionCommandsActualLogs": {
+    "passed": 4,
+    "allExitCodeZero": true,
+    "allEmbeddedOriginalBytesAndSha256Verified": true,
+    "sha256": "6e7973e3ea6ed50be478e34230433c89bed61cb30da1e0bfa328b8fb7e51b361"
+  },
+  "nativeSourcePublication": {
+    "localGitRemoteApiSourceSha": "f8373b0fa4ec6491a55a9a3ba198235b689cc140",
+    "nonForcePush": true,
+    "verifiedReceiptSha256": "25c765fbb6e20f10104afdb00eab5765fc54cf0b547c5bde4b7c0d6329dbe5f2",
+    "allReferencedHashesVerified": true
+  },
+  "finalRuntimeReceiptSha256": "953272dce1a4c258086944ff37099250bc1de2e5d67b879732427ae31161eec7",
+  "reportFactsMatchFrozenRuntimeAndPreservedFailureLineage": true,
+  "localMarkdownLinksChecked": 36,
+  "pendingExpectedSelfReceiptLink": [
+    "docs/evidence/agent-next2-20261005/archive-review.json"
+  ],
+  "reviewerSupplementToImmutableStaticReceipt": {
+    "originalStaticPreserved": true,
+    "detail": "Earlier static fixtureEvolutionLimits labels R2 dirty probe v2 failure as one-request tool-loop oracle. That label is imprecise: preserved failure is 2 != 1; final native v3 tool-loop raw evidence contains two model requests and two tool.completed events, exactly one with status=success. The report specifies the duplicate-event oracle correction. Final acceptance correctly requires two model requests, one successful tool execution and one admitted feedback set. This clarification preserves prior static receipt bytes and does not change source, tests, acceptance results or index."
+  },
+  "blockingFindings": [],
+  "limits": [
+    "Reviewed finite preregistered R5 completion scope only; no new tests, tracked edits or full rerun.",
+    "Full acceptance applies to frozen tested source, not a new completion-documentation commit.",
+    "Final completion-documentation native main SHA check remains root publication step.",
+    "Paid model quality/promotion/Windows NOT_RUN; JSONL cross-process consistency not claimed; FIFO read defect still explicitly excluded."
+  ]
+}

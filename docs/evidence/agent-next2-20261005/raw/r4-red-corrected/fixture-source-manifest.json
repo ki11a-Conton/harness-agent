@@ -1,0 +1,54 @@
+{
+  "baselineSha": "320cf3e0bd87d714d17d95709e10c0ddf56d9c5d",
+  "reason": "Fix test-only byte estimator pointer cap42->43; original RED and initial GREEN retained. Re-run final unit fixture bytes against exact native baseline context source blobs in ignored isolated directory, no live source rollback.",
+  "files": {
+    "packages/context/src/path-scoped-discovery.ts": {
+      "bytes": 10152,
+      "sha256": "3d04fb274e7a1365e1c5d821c86fa491af6c666779e8d8ba53072937d60ca169"
+    },
+    "packages/context/src/rehydration.ts": {
+      "bytes": 3769,
+      "sha256": "0d6c7077a9f6e207b51db023bcc0f2f4d9dde90cc94a3f0361090ce119fe8bc1"
+    },
+    "packages/context/src/index.ts": {
+      "bytes": 2088,
+      "sha256": "a6bf5a166a7d45d0f129f0f1b1dcbbaccfac0e74d32ee5ef51bf027971269e9e"
+    },
+    "packages/context/src/pipeline.ts": {
+      "bytes": 24441,
+      "sha256": "4de75bc3e3dd5b57d694401ee85325793e7e317348a22e4f03beadcd3ee67661"
+    },
+    "packages/context/src/policy-versioning.ts": {
+      "bytes": 7409,
+      "sha256": "1288adfedb0bd8044634ddf845f1628b12b0c4ccf6aa9080774cc2154938ed20"
+    },
+    "packages/context/src/discovery.ts": {
+      "bytes": 10543,
+      "sha256": "1bdec0d2aa562b210870cf577adb56ad872b6c860b66979ae87903d1b83c3a67"
+    },
+    "packages/context/src/tokenizer.ts": {
+      "bytes": 991,
+      "sha256": "832c0e89b1d5c7ce48735812e23558f408b8d94c96ba664f9db1bd2812d4ba90"
+    },
+    "packages/context/src/prompt-versioning.ts": {
+      "bytes": 6318,
+      "sha256": "b3fa5a3a778525ef40531d70611f9575602677f119c8a5256d27df2e3288501a"
+    },
+    "packages/context/src/compaction.ts": {
+      "bytes": 17916,
+      "sha256": "99f85d898514c495be9cd2c2414333c191d4c715cd845f4c32fd0c0446d3c186"
+    },
+    "packages/context/src/circuit-breaker.ts": {
+      "bytes": 3864,
+      "sha256": "dd4eeaffb38edb6f52e3ef536ef8fed5a2c61707dfcf69e691f6881293e963e0"
+    },
+    "packages/context/src/budget.ts": {
+      "bytes": 2778,
+      "sha256": "5697332e832d5571599e41456caec44f71e4f9335e2c5c7672b7a2a9738eaf16"
+    }
+  },
+  "finalRegressionFixture": {
+    "path": "packages/context/src/rehydration-headroom.regressions.test.ts",
+    "sha256": "bb4efe0b2cf0bb4e27006f0881e11684fbb58b18c1d19f90e2be3d2b829491c2"
+  }
+}

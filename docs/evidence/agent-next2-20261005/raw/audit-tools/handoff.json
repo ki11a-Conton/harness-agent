@@ -1,0 +1,94 @@
+{
+  "schema": "R3_SCOPED_SEARCH_HANDOFF_V1",
+  "observedAt": "2026-10-05T12:07:02.748634+00:00",
+  "currentHead": "0c70309de478797be8d0f6b8a3c2dbbe282f7844",
+  "status": "TARGETED_PASS_FREEZE_PENDING",
+  "allowedTrackedEdits": [
+    "packages/tools/src/tools/search-files.ts",
+    "packages/tools/src/scoped-search-paths.regressions.test.ts",
+    "scripts/research/agent-next2-20261005/search-path-probe.mjs"
+  ],
+  "runtimeModification": "search-files output only; glob candidate/traversal/scope/permission/sandbox untouched",
+  "readFileByteEqualBaseline": true,
+  "outOfScopeFifoDefect": "UNFIXED; original audit/baseline evidence retained",
+  "formalRed": {
+    "exitCode": 1,
+    "tests": 24,
+    "failed": 10,
+    "passed": 14,
+    "productionByteEqualBaseline": true,
+    "path": "formal-red-v2",
+    "originalFixtureFailurePreserved": "formal-red; Node ESM export synchronization corrected without oracle changes"
+  },
+  "targetedGreen": {
+    "exitCode": 0,
+    "files": 4,
+    "passed": 120,
+    "skipped": 0,
+    "command": [
+      "pnpm",
+      "exec",
+      "vitest",
+      "run",
+      "packages/tools/src/scoped-search-paths.regressions.test.ts",
+      "packages/tools/src/vs001.test.ts",
+      "packages/tools/src/review-regressions.test.ts",
+      "packages/tools/src/r4-file-regressions.test.ts",
+      "--no-file-parallelism"
+    ]
+  },
+  "toolsBuild": {
+    "exitCode": 0,
+    "command": [
+      "pnpm",
+      "exec",
+      "tsc",
+      "-b",
+      "packages/tools"
+    ]
+  },
+  "productionPreflight": {
+    "status": "PASS",
+    "cases": 20,
+    "actualHarnessTurns": 4,
+    "scriptedRequests": 12,
+    "dirtyExploration": true,
+    "paidProviderCalls": 0,
+    "criticalCaseNames": [
+      "HARNESS_SCOPED_BASENAME_RETURNED_PATH_READ",
+      "HARNESS_ABSOLUTE_ALIAS_RETURNED_PATH_READ",
+      "HARNESS_NESTED_CWD_RETURNED_PATH_READ",
+      "HARNESS_UNICODE_RETURNED_PATH_READ"
+    ]
+  },
+  "files": {
+    "packages/tools/src/tools/search-files.ts": {
+      "sha256": "8ef52a59661d16648de1a0d9ad6d04b90327dda4839d80c3268390e615ca1969",
+      "bytes": 3199
+    },
+    "packages/tools/src/scoped-search-paths.regressions.test.ts": {
+      "sha256": "fef84f85d003f9e8ebfc5fa5b7918df2e74581f8475aeb19fe5a76adfec8015a",
+      "bytes": 10689
+    },
+    "scripts/research/agent-next2-20261005/search-path-probe.mjs": {
+      "sha256": "3ff1f831a6b27a8057b0b7b610d69b580fee9ceb07a4c64ab4ac02f1a91ded75",
+      "bytes": 16526
+    },
+    ".ci/agent-next2-20261005/audit-tools/formal-red-v2/vitest.log": {
+      "sha256": "e045562d5563ff6037f47ef8282722e8fd1065f2301694fd368f3d7dab4c1017",
+      "bytes": 9074
+    },
+    ".ci/agent-next2-20261005/audit-tools/formal-green/vitest.log": {
+      "sha256": "593247603243b4742fc1acd3b241c8d3bf0dacabef1c0af8f27ff1ccedb10b1e",
+      "bytes": 484
+    },
+    ".ci/agent-next2-20261005/audit-tools/formal-green/build.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    ".ci/agent-next2-20261005/audit-tools/production-preflight-v1/result.json": {
+      "sha256": "7d49af630ac9d9c60342f77d91d9fd742cfbe8adcb38dcc81d0f0365a306324d",
+      "bytes": 32097
+    }
+  }
+}

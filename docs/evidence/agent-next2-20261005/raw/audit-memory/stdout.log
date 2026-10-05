@@ -1,0 +1,70 @@
+[
+  {
+    "name": "concurrent-feedback-count",
+    "backend": "jsonl",
+    "expectedInjectedCount": 8,
+    "actualInjectedCount": 1
+  },
+  {
+    "name": "delete-between-feedback-read-and-write",
+    "backend": "jsonl",
+    "expectedDeleted": true,
+    "actualDeleted": false,
+    "expectedRecallCount": 0,
+    "actualRecallCount": 1
+  },
+  {
+    "name": "edit-retirement-between-feedback-read-and-write",
+    "backend": "jsonl",
+    "expectedContent": "changed memory content preserved by user",
+    "actualContent": "use memory-audit-needle to validate exact feedback",
+    "expectedState": "deprecated",
+    "actualState": "absent"
+  },
+  {
+    "name": "sequential-feedback-control",
+    "backend": "jsonl",
+    "expectedInjectedCount": 1,
+    "actualInjectedCount": 1
+  },
+  {
+    "name": "delete-before-feedback-control",
+    "backend": "jsonl",
+    "expectedDeleted": true,
+    "actualDeleted": true
+  },
+  {
+    "name": "concurrent-feedback-count",
+    "backend": "sqlite",
+    "expectedInjectedCount": 8,
+    "actualInjectedCount": 1
+  },
+  {
+    "name": "delete-between-feedback-read-and-write",
+    "backend": "sqlite",
+    "expectedDeleted": true,
+    "actualDeleted": false,
+    "expectedRecallCount": 0,
+    "actualRecallCount": 1
+  },
+  {
+    "name": "edit-retirement-between-feedback-read-and-write",
+    "backend": "sqlite",
+    "expectedContent": "changed memory content preserved by user",
+    "actualContent": "use memory-audit-needle to validate exact feedback",
+    "expectedState": "deprecated",
+    "actualState": "absent"
+  },
+  {
+    "name": "sequential-feedback-control",
+    "backend": "sqlite",
+    "expectedInjectedCount": 1,
+    "actualInjectedCount": 1
+  },
+  {
+    "name": "delete-before-feedback-control",
+    "backend": "sqlite",
+    "expectedDeleted": true,
+    "actualDeleted": true
+  }
+]

@@ -1,0 +1,231 @@
+{
+  "status": "PASS",
+  "sourceSha": "0c70309de478797be8d0f6b8a3c2dbbe282f7844",
+  "sourceShaAtEnd": "0c70309de478797be8d0f6b8a3c2dbbe282f7844",
+  "sourceTrackedDirtyAtStart": true,
+  "sourceTrackedDirtyAtEnd": true,
+  "sourceFingerprintsBefore": {
+    "packages/context/src/pipeline.ts": "ba80475151326f65eb23d507c9c997e738daa972d570c8c5c5aa69448879bc0f",
+    "packages/context/dist/pipeline.js": "0a6ea1170d2b378e8e861c8eb842651275fc0b8f5b16343cfb0af145c59121aa",
+    "packages/context/src/rehydration.ts": "0d6c7077a9f6e207b51db023bcc0f2f4d9dde90cc94a3f0361090ce119fe8bc1",
+    "packages/context/dist/rehydration.js": "c81c70dd959274f4655ee32b51851a66ea68f6c241c1eaeed553d4c2cc4b4e49",
+    "packages/context/src/budget.ts": "5697332e832d5571599e41456caec44f71e4f9335e2c5c7672b7a2a9738eaf16",
+    "packages/context/dist/budget.js": "c23c3196e6dc6f2a19859618be874faec59df08b6199fee876ee3130143cd6f8",
+    "packages/context/src/compaction.ts": "99f85d898514c495be9cd2c2414333c191d4c715cd845f4c32fd0c0446d3c186",
+    "packages/context/dist/compaction.js": "b8139b3a5908ecfe335149997268517917caa87ecd9159edb76ee8701ae937f2",
+    "packages/core/src/runtime/context-controller.ts": "22fe6661072b6674e0ab75a9535a6530de8700cec1a596d6ba858a3d0bda9bfd",
+    "packages/core/dist/runtime/context-controller.js": "601b8ad652675e360a408dd06a08b4a4f6e29e27b98117bd580ea2816a110c57",
+    "packages/harness/src/create-harness.ts": "a115aa9c8ec71b86e689e80ab9195c21cd85c8f19a0d9de669e9e19d8becf84e",
+    "packages/harness/dist/create-harness.js": "442874f7297e7e0b7df5e715af249457fbd0bf6cd33f15b75d5e198700ea29e3",
+    "packages/harness/src/memory-runtime-bridge.ts": "b7e3900693198379a9e27a6cd82fa39ac4f4614ab11ead8af878fde58ed15406",
+    "packages/harness/dist/memory-runtime-bridge.js": "536009673b747fa4fa4091d54d24c212dacb097531b2da6e14c9a4f4ba66eede",
+    "scripts/research/agent-next2-20261005/rehydration-budget-probe.mjs": "52749ed368e24b0caea35c5cd9ebe99150f19cc0b2e4025734ccb53c9d0e9b04"
+  },
+  "sourceFingerprintsAfter": {
+    "packages/context/src/pipeline.ts": "ba80475151326f65eb23d507c9c997e738daa972d570c8c5c5aa69448879bc0f",
+    "packages/context/dist/pipeline.js": "0a6ea1170d2b378e8e861c8eb842651275fc0b8f5b16343cfb0af145c59121aa",
+    "packages/context/src/rehydration.ts": "0d6c7077a9f6e207b51db023bcc0f2f4d9dde90cc94a3f0361090ce119fe8bc1",
+    "packages/context/dist/rehydration.js": "c81c70dd959274f4655ee32b51851a66ea68f6c241c1eaeed553d4c2cc4b4e49",
+    "packages/context/src/budget.ts": "5697332e832d5571599e41456caec44f71e4f9335e2c5c7672b7a2a9738eaf16",
+    "packages/context/dist/budget.js": "c23c3196e6dc6f2a19859618be874faec59df08b6199fee876ee3130143cd6f8",
+    "packages/context/src/compaction.ts": "99f85d898514c495be9cd2c2414333c191d4c715cd845f4c32fd0c0446d3c186",
+    "packages/context/dist/compaction.js": "b8139b3a5908ecfe335149997268517917caa87ecd9159edb76ee8701ae937f2",
+    "packages/core/src/runtime/context-controller.ts": "22fe6661072b6674e0ab75a9535a6530de8700cec1a596d6ba858a3d0bda9bfd",
+    "packages/core/dist/runtime/context-controller.js": "601b8ad652675e360a408dd06a08b4a4f6e29e27b98117bd580ea2816a110c57",
+    "packages/harness/src/create-harness.ts": "a115aa9c8ec71b86e689e80ab9195c21cd85c8f19a0d9de669e9e19d8becf84e",
+    "packages/harness/dist/create-harness.js": "442874f7297e7e0b7df5e715af249457fbd0bf6cd33f15b75d5e198700ea29e3",
+    "packages/harness/src/memory-runtime-bridge.ts": "b7e3900693198379a9e27a6cd82fa39ac4f4614ab11ead8af878fde58ed15406",
+    "packages/harness/dist/memory-runtime-bridge.js": "536009673b747fa4fa4091d54d24c212dacb097531b2da6e14c9a4f4ba66eede",
+    "scripts/research/agent-next2-20261005/rehydration-budget-probe.mjs": "52749ed368e24b0caea35c5cd9ebe99150f19cc0b2e4025734ccb53c9d0e9b04"
+  },
+  "cases": [
+    {
+      "name": "context-boundary-51",
+      "status": "PASS",
+      "rawFile": "context-boundary-51.json",
+      "rawSha256": "0e46bc48b3dac7ab910344fd5dfa1fd8bfb7808b03838daf229ebbe69662eb23"
+    },
+    {
+      "name": "context-boundary-52",
+      "status": "PASS",
+      "rawFile": "context-boundary-52.json",
+      "rawSha256": "d1c27447526e628397080f22227c04e3bff69a775b1c5993fa4602d961321424"
+    },
+    {
+      "name": "context-boundary-60",
+      "status": "PASS",
+      "rawFile": "context-boundary-60.json",
+      "rawSha256": "5926d60ebc5c686844c382cd7af6e733bb921dbe2fdcf68d39a4b80e532ba909"
+    },
+    {
+      "name": "context-boundary-61",
+      "status": "PASS",
+      "rawFile": "context-boundary-61.json",
+      "rawSha256": "f8073c81931cd13a66c2c73fd9b03111d5c9575a0de6a49e539c3c91d76c2c86"
+    },
+    {
+      "name": "context-boundary-62",
+      "status": "PASS",
+      "rawFile": "context-boundary-62.json",
+      "rawSha256": "73dc687ca1b0e952f7866084ea9b77eef10e51bceb4fe45e77ab217618fe1a88"
+    },
+    {
+      "name": "context-boundary-89",
+      "status": "PASS",
+      "rawFile": "context-boundary-89.json",
+      "rawSha256": "f8bfff0f94381881e83f7453896d2f83d29186e55acc3ebd22a219bb9e939f6a"
+    },
+    {
+      "name": "context-boundary-90",
+      "status": "PASS",
+      "rawFile": "context-boundary-90.json",
+      "rawSha256": "bd4457b2bb481cb6c418f1b0afa7256577fdf37eda4c51f7f8f1c26b14fa5a93"
+    },
+    {
+      "name": "context-boundary-100",
+      "status": "PASS",
+      "rawFile": "context-boundary-100.json",
+      "rawSha256": "d345a056178c470412dd1d6e531f944594c99f1f1dad156256132f6229b2ee53"
+    },
+    {
+      "name": "context-boundary-101",
+      "status": "PASS",
+      "rawFile": "context-boundary-101.json",
+      "rawSha256": "a3292a8addb36377d6a335674ec25f1ad7228b40aaec1ee48be1103ac7a4e62e"
+    },
+    {
+      "name": "context-boundary-150",
+      "status": "PASS",
+      "rawFile": "context-boundary-150.json",
+      "rawSha256": "b26ea836d849b539704b356d6fed899f595c42639a85a3c220d15cc78b1866cb"
+    },
+    {
+      "name": "context-reserved-system",
+      "status": "PASS",
+      "rawFile": "context-reserved-system.json",
+      "rawSha256": "191875a3157f307fc051d94f952adf16e7a1dbcf1e255f9ff73ea73ef6881706"
+    },
+    {
+      "name": "context-reserved-task",
+      "status": "PASS",
+      "rawFile": "context-reserved-task.json",
+      "rawSha256": "dd8dec13d16d5da6e1baf890e4c193754502fe1322d51bd05b1675ce0d709e07"
+    },
+    {
+      "name": "context-reserved-output",
+      "status": "PASS",
+      "rawFile": "context-reserved-output.json",
+      "rawSha256": "9970284d707132dcdd156872462a2bd2a178d7c26be84f1c70e2465d2cb31a59"
+    },
+    {
+      "name": "context-reserved-combined",
+      "status": "PASS",
+      "rawFile": "context-reserved-combined.json",
+      "rawSha256": "355ecab117bb16672b453db3b226c814865ce6a4836139c331dcab4a699156c6"
+    },
+    {
+      "name": "context-history-not-deducted-twice",
+      "status": "PASS",
+      "rawFile": "context-history-not-deducted-twice.json",
+      "rawSha256": "cb5afd89d663cb64ae5739cc9a937db341f861f8c18c81e45068a920e31714f6"
+    },
+    {
+      "name": "context-unicode-byte-estimator-exact-pointer",
+      "status": "PASS",
+      "rawFile": "context-unicode-byte-estimator-exact-pointer.json",
+      "rawSha256": "f5e3eff18d95873a90c7ec41a5d7cf7685e042f337f4e672c8478202bd390799"
+    },
+    {
+      "name": "context-existing-600-cap",
+      "status": "PASS",
+      "rawFile": "context-existing-600-cap.json",
+      "rawSha256": "0f99412fd1b3a0c4db316a2bbe1d29260e89e5cdec550f50db280a85d4a6c0e1"
+    },
+    {
+      "name": "context-protected-overflow-not-evicted",
+      "status": "PASS",
+      "rawFile": "context-protected-overflow-not-evicted.json",
+      "rawSha256": "82105eee7431f9cdef6701511ce3cda70f80928611efd43e0865518bf395a9df"
+    },
+    {
+      "name": "context-irreducible-digest-no-extra-refs",
+      "status": "PASS",
+      "rawFile": "context-irreducible-digest-no-extra-refs.json",
+      "rawSha256": "124eec474c722ea20a921ef2c9dd23704ecd3b032a3c01d4a3902790c4169773"
+    },
+    {
+      "name": "context-no-compaction-no-refs",
+      "status": "PASS",
+      "rawFile": "context-no-compaction-no-refs.json",
+      "rawSha256": "174eb069de9942a3bef9342682b32dc1f82154a2b20e1cd1013fc639bdae3071"
+    },
+    {
+      "name": "context-breaker-and-telemetry-final-footprint",
+      "status": "PASS",
+      "rawFile": "context-breaker-and-telemetry-final-footprint.json",
+      "rawSha256": "51a2c76757e73f774838aae79be6fef16af28e3663c296c774d9faf60c54a920"
+    },
+    {
+      "name": "context-frozen-inputs-not-mutated",
+      "status": "PASS",
+      "rawFile": "context-frozen-inputs-not-mutated.json",
+      "rawSha256": "388c20aabcc656c1526e7efac9e1c4f2952c1b1b511824361266a95faab14c9f"
+    },
+    {
+      "name": "context-summary-missing-still-failclosed",
+      "status": "PASS",
+      "rawFile": "context-summary-missing-still-failclosed.json",
+      "rawSha256": "e19bd8a2c7ab05169bdc3f7513892ae55c9e67095e85ab2d801c4e4ee22334d4"
+    },
+    {
+      "name": "context-open-breaker-no-rehydration",
+      "status": "PASS",
+      "rawFile": "context-open-breaker-no-rehydration.json",
+      "rawSha256": "64370fa38c15ad42137960a89359e0b53ffff59cea4b3b5a40b3961870e3ddbf"
+    },
+    {
+      "name": "harness-165-original-avoidable-failure",
+      "status": "PASS",
+      "rawFile": "harness-165-original-avoidable-failure.json",
+      "rawSha256": "e0f744d0c9a33ef1be01414e0e9ad173fb206f59bd81dca5e18ad84807789dfe"
+    },
+    {
+      "name": "harness-170-pointer-still-admitted",
+      "status": "PASS",
+      "rawFile": "harness-170-pointer-still-admitted.json",
+      "rawSha256": "2abf87e97a206955881819c330e784715e9b3cbde74db598201710e1d17d1cf4"
+    },
+    {
+      "name": "harness-output-reservation",
+      "status": "PASS",
+      "rawFile": "harness-output-reservation.json",
+      "rawSha256": "90d74acaec11af3598c5e74237eb8bffd020455967e94384ec4d94f2de5b446f"
+    },
+    {
+      "name": "harness-unicode-user-reservation",
+      "status": "PASS",
+      "rawFile": "harness-unicode-user-reservation.json",
+      "rawSha256": "80cbe79c7c02e54ff98a982db949052389189e583b5a5397e71f81d62503058d"
+    },
+    {
+      "name": "harness-default-memory-off",
+      "status": "PASS",
+      "rawFile": "harness-default-memory-off.json",
+      "rawSha256": "a2c0e1bcf2db1cb3b21fe3fca9557fecdc0cbb46773c7a066f1e19cf2d97cc89"
+    },
+    {
+      "name": "harness-protected-overflow-still-fails",
+      "status": "PASS",
+      "rawFile": "harness-protected-overflow-still-fails.json",
+      "rawSha256": "842271196c14c6fa4604d20e3281e4a7267a48fb814bfdf6217225756b5c4b3b"
+    }
+  ],
+  "paidProviderCalls": 0,
+  "actualHarnessTurns": 6,
+  "actualHarnessRequests": 5,
+  "node": "v24.19.0",
+  "platform": "linux",
+  "realModelQuality": "NOT_RUN",
+  "windowsRuntime": "NOT_RUN",
+  "limits": "Production compiled pipeline and actual Harness/JSONL retrieval with scripted provider. Estimates verify the existing context accounting contract, not a real tokenizer hard limit or model quality. Host configured reserved0 differs from effective active-user reserved.task10; complete message history is not charged twice. Protected/digest overflow remains visible. Memory remains opt-in; no promotion or paid calls."
+}

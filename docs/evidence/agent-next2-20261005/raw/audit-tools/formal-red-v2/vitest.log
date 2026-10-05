@@ -1,0 +1,186 @@
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+ ❯ packages/tools/src/scoped-search-paths.regressions.test.ts (24 tests | 10 failed) 98ms
+     × reads the selected deep file from a relative scope result 15ms
+     × reads the selected deep file from a normalized scope result 3ms
+     × reads the selected deep file from a absolute scope result 4ms
+     × does not read a root distractor after a basename search in src 5ms
+     × returns a directly usable path when the session cwd is nested 4ms
+     × preserves Unicode scope and file names in the search -> read loop 5ms
+     ✓ retains the default root's existing workspace-relative output 2ms
+     ✓ retains matching relative to the selected scope rather than output prefix 6ms
+     × retains basename matching below the selected directory 4ms
+     × preserves POSIX separators for nested returned paths 6ms
+     ✓ retains maxResults=1 7ms
+     ✓ retains maxResults=2 3ms
+     × skips existing VCS, dependency and DS_Store entries 4ms
+     × does not traverse existing descendant directory symlinks 5ms
+     ✓ enumerates only the explicitly allowed selected scope 2ms
+     ✓ rejects permission denial before any directory enumeration 2ms
+     ✓ rejects an outside scope before any directory enumeration 2ms
+     ✓ preserves failure for an unavailable directory: missing 4ms
+     ✓ preserves failure for an unavailable directory: root.ts 2ms
+     ✓ does not turn an unreadable descendant into partial success 3ms
+     ✓ rejects invalid maxResults=0 before enumeration 3ms
+     ✓ rejects invalid maxResults=10001 before enumeration 2ms
+     ✓ retains cancellation before dispatch with no enumeration 2ms
+     ✓ retains cancellation during actual selected directory enumeration 2ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 10 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/tools/src/scoped-search-paths.regressions.test.ts > search_files returned paths work in the session cwd > reads the selected deep file from a relative scope result
+ FAIL  packages/tools/src/scoped-search-paths.regressions.test.ts > search_files returned paths work in the session cwd > reads the selected deep file from a normalized scope result
+ FAIL  packages/tools/src/scoped-search-paths.regressions.test.ts > search_files returned paths work in the session cwd > reads the selected deep file from a absolute scope result
+AssertionError: expected [ 'deep/target.ts' ] to deeply equal [ 'src/deep/target.ts' ]
+
+- Expected
++ Received
+
+  [
+-   "src/deep/target.ts",
++   "deep/target.ts",
+  ]
+
+ ❯ packages/tools/src/scoped-search-paths.regressions.test.ts:58:26
+     56|     const found = await invoke("search_files", { pattern: "deep/*.ts",…
+     57|     expect(found.status).toBe("success");
+     58|     expect(found.output).toEqual(["src/deep/target.ts"]);
+       |                          ^
+     59|     const read = await invoke("read_file", { path: (found.output as st…
+     60|     expect(read.status).toBe("success");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/10]⎯
+
+ FAIL  packages/tools/src/scoped-search-paths.regressions.test.ts > search_files returned paths work in the session cwd > does not read a root distractor after a basename search in src
+AssertionError: expected 'WRONG_ROOT_SENTINEL' to be 'SCOPED_TOPLEVEL_SENTINEL' // Object.is equality
+
+Expected: "SCOPED_TOPLEVEL_SENTINEL"
+Received: "WRONG_ROOT_SENTINEL"
+
+ ❯ packages/tools/src/scoped-search-paths.regressions.test.ts:68:25
+     66|     expect(found.status).toBe("success");
+     67|     const read = await invoke("read_file", { path: (found.output as st…
+     68|     expect(read.output).toBe("SCOPED_TOPLEVEL_SENTINEL");
+       |                         ^
+     69|     expect(found.output).toEqual(["src/root.ts"]);
+     70|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/10]⎯
+
+ FAIL  packages/tools/src/scoped-search-paths.regressions.test.ts > search_files returned paths work in the session cwd > returns a directly usable path when the session cwd is nested
+AssertionError: expected [ 'target.ts' ] to deeply equal [ 'deep/target.ts' ]
+
+- Expected
++ Received
+
+  [
+-   "deep/target.ts",
++   "target.ts",
+  ]
+
+ ❯ packages/tools/src/scoped-search-paths.regressions.test.ts:75:26
+     73|     const ctx = context(join(root, "src"));
+     74|     const found = await invoke("search_files", { pattern: "**/*.ts", p…
+     75|     expect(found.output).toEqual(["deep/target.ts"]);
+       |                          ^
+     76|     const read = await invoke("read_file", { path: (found.output as st…
+     77|     expect(read.output).toBe("SCOPED_DEEP_SENTINEL");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/10]⎯
+
+ FAIL  packages/tools/src/scoped-search-paths.regressions.test.ts > search_files returned paths work in the session cwd > preserves Unicode scope and file names in the search -> read loop
+AssertionError: expected [ '深层/目标.ts' ] to deeply equal [ '代码/深层/目标.ts' ]
+
+- Expected
++ Received
+
+  [
+-   "代码/深层/目标.ts",
++   "深层/目标.ts",
+  ]
+
+ ❯ packages/tools/src/scoped-search-paths.regressions.test.ts:82:26
+     80|   it("preserves Unicode scope and file names in the search -> read loo…
+     81|     const found = await invoke("search_files", { pattern: "**/*.ts", p…
+     82|     expect(found.output).toEqual(["代码/深层/目标.ts"]);
+       |                          ^
+     83|     const read = await invoke("read_file", { path: (found.output as st…
+     84|     expect(read.output).toBe("UNICODE_SCOPED_SENTINEL");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/10]⎯
+
+ FAIL  packages/tools/src/scoped-search-paths.regressions.test.ts > search_files returned paths work in the session cwd > retains basename matching below the selected directory
+AssertionError: expected [ 'deep/target.ts' ] to deeply equal [ 'src/deep/target.ts' ]
+
+- Expected
++ Received
+
+  [
+-   "src/deep/target.ts",
++   "deep/target.ts",
+  ]
+
+ ❯ packages/tools/src/scoped-search-paths.regressions.test.ts:101:26
+     99|   it("retains basename matching below the selected directory", async (…
+    100|     const found = await invoke("search_files", { pattern: "target.ts",…
+    101|     expect(found.output).toEqual(["src/deep/target.ts"]);
+       |                          ^
+    102|   });
+    103|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/10]⎯
+
+ FAIL  packages/tools/src/scoped-search-paths.regressions.test.ts > search_files returned paths work in the session cwd > preserves POSIX separators for nested returned paths
+AssertionError: expected [ 'deep/target.ts', 'root.ts' ] to include 'src/deep/target.ts'
+ ❯ packages/tools/src/scoped-search-paths.regressions.test.ts:107:26
+    105|     const found = await invoke("search_files", { pattern: "**/*.ts", p…
+    106|     expect((found.output as string[]).every(path => !path.includes("\\…
+    107|     expect(found.output).toContain("src/deep/target.ts");
+       |                          ^
+    108|   });
+    109| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/10]⎯
+
+ FAIL  packages/tools/src/scoped-search-paths.regressions.test.ts > scoped output correction preserves traversal and fail-closed gates > skips existing VCS, dependency and DS_Store entries
+AssertionError: expected [ 'deep/target.ts', 'root.ts' ] to deeply equal [ 'src/deep/target.ts', 'src/root.ts' ]
+
+- Expected
++ Received
+
+  [
+-   "src/deep/target.ts",
+-   "src/root.ts",
++   "deep/target.ts",
++   "root.ts",
+  ]
+
+ ❯ packages/tools/src/scoped-search-paths.regressions.test.ts:124:47
+    122|     const found = await invoke("search_files", { pattern: "**/*", path…
+    123|     expect(found.status).toBe("success");
+    124|     expect((found.output as string[]).sort()).toEqual(["src/deep/targe…
+       |                                               ^
+    125|   });
+    126|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/10]⎯
+
+ FAIL  packages/tools/src/scoped-search-paths.regressions.test.ts > scoped output correction preserves traversal and fail-closed gates > does not traverse existing descendant directory symlinks
+AssertionError: expected [ 'deep/target.ts', …(2) ] to include 'src/linked-directory'
+ ❯ packages/tools/src/scoped-search-paths.regressions.test.ts:133:26
+    131|     const found = await invoke("search_files", { pattern: "**/*", path…
+    132|     expect(found.status).toBe("success");
+    133|     expect(found.output).toContain("src/linked-directory");
+       |                          ^
+    134|     expect((found.output as string[]).some(path => path.endsWith("outs…
+    135|     expect(list.mock.calls.some(([path]) => String(path).includes("lin…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/10]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  10 failed | 14 passed (24)
+   Start at  12:01:55
+   Duration  686ms (transform 351ms, setup 0ms, import 464ms, tests 98ms, environment 0ms)
+

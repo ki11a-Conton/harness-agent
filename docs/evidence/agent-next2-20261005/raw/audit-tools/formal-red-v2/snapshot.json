@@ -1,0 +1,15 @@
+{
+  "sourceSha": "0c70309de478797be8d0f6b8a3c2dbbe282f7844",
+  "sourceProductionUnchangedFromBaseline": true,
+  "files": {
+    "packages/tools/src/tools/search-files.ts": {
+      "sha256": "930e437271c40b012d344f182c30cb874e811c1d3f0464b2c0843a5a923c30f1",
+      "bytes": 3155
+    },
+    "packages/tools/src/scoped-search-paths.regressions.test.ts": {
+      "sha256": "fef84f85d003f9e8ebfc5fa5b7918df2e74581f8475aeb19fe5a76adfec8015a",
+      "bytes": 10689
+    }
+  },
+  "fixtureCorrection": "original formal-red includes three fs spy observation failures; v2 synchronizes Node builtin exports before invocation; all assertions unchanged; original bytes/log preserved"
+}

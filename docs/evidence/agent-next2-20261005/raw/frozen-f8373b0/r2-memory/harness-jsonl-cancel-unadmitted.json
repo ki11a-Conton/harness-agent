@@ -1,0 +1,109 @@
+{
+  "backend": "jsonl",
+  "scenario": "cancel-unadmitted",
+  "sessions": [
+    "session_95cb6e81-5e52-4bdc-8eb1-9bfb52d32e0f"
+  ],
+  "requests": [],
+  "outcomes": [
+    {
+      "status": "cancelled",
+      "statusDetail": "cancelled_no_effect",
+      "turn": {
+        "id": "turn_2fceed0b-4f98-43dc-a724-df7834a8e651",
+        "sessionId": "session_95cb6e81-5e52-4bdc-8eb1-9bfb52d32e0f",
+        "input": {
+          "sessionId": "session_95cb6e81-5e52-4bdc-8eb1-9bfb52d32e0f",
+          "text": "auditneedle"
+        },
+        "status": "cancelled",
+        "startedAt": 1791202947188,
+        "completedAt": 1791202947193
+      },
+      "toolCalls": 0,
+      "iterations": 0,
+      "state": {
+        "goal": "auditneedle",
+        "constraints": [],
+        "plan": [],
+        "decisions": [],
+        "completed": [],
+        "pending": [],
+        "filesChanged": [],
+        "commandsRun": [],
+        "testsRun": [],
+        "failures": [],
+        "importantFacts": [],
+        "openQuestions": [],
+        "toolRefs": [],
+        "artifactRefs": [],
+        "memoryRefs": [],
+        "childAgentRefs": []
+      },
+      "terminationReason": "cancelled",
+      "grade": "unverified_complete"
+    }
+  ],
+  "events": [
+    {
+      "id": "event_1af5408e-2c1d-4e55-a6d6-d042f9eec59a",
+      "sessionId": "session_95cb6e81-5e52-4bdc-8eb1-9bfb52d32e0f",
+      "timestamp": 1791202947185,
+      "type": "session.created",
+      "payload": {
+        "sessionId": "session_95cb6e81-5e52-4bdc-8eb1-9bfb52d32e0f",
+        "agentId": "agent_877ab043-3344-4255-a41b-af843fa6fd54"
+      },
+      "sequence": 0,
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_e0fd8488-274c-41a1-aac3-d9105881e0ee",
+      "sessionId": "session_95cb6e81-5e52-4bdc-8eb1-9bfb52d32e0f",
+      "turnId": "turn_2fceed0b-4f98-43dc-a724-df7834a8e651",
+      "timestamp": 1791202947191,
+      "type": "turn.started",
+      "payload": {
+        "turnId": "turn_2fceed0b-4f98-43dc-a724-df7834a8e651",
+        "text": "auditneedle"
+      },
+      "sequence": 1,
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_3e545459-eaa6-4d10-aac1-46ee8b2c357e",
+      "sessionId": "session_95cb6e81-5e52-4bdc-8eb1-9bfb52d32e0f",
+      "turnId": "turn_2fceed0b-4f98-43dc-a724-df7834a8e651",
+      "timestamp": 1791202947195,
+      "type": "turn.cancelled",
+      "payload": {
+        "turnId": "turn_2fceed0b-4f98-43dc-a724-df7834a8e651",
+        "status": "cancelled",
+        "statusDetail": "cancelled_no_effect",
+        "terminationReason": "cancelled",
+        "grade": "unverified_complete"
+      },
+      "sequence": 2,
+      "schemaVersion": 1
+    }
+  ],
+  "latest": {
+    "id": "memory_probe_41",
+    "content": "auditneedle verify actual persisted memory feedback",
+    "type": "procedural",
+    "sourceSession": "session_95cb6e81-5e52-4bdc-8eb1-9bfb52d32e0f",
+    "scope": "workspace",
+    "importance": 0.8,
+    "confidence": 0.9,
+    "novelty": 0.7,
+    "stability": 0.6,
+    "createdAt": 1791202947186,
+    "updatedAt": 1791202947186,
+    "deleted": false
+  },
+  "roi": [],
+  "diagnostics": [],
+  "hooks": [
+    "controlled read-only search barrier, actual runtime caller cancellation, release late production retrieval"
+  ]
+}

@@ -1,0 +1,96 @@
+{
+  "status": "DIRTY_TARGETED_PASS_FROZEN_ACCEPTANCE_PENDING",
+  "productionScope": [
+    "packages/context/src/pipeline.ts"
+  ],
+  "newTests": {
+    "files": 2,
+    "passed": 29,
+    "failed": 0,
+    "skipped": 0
+  },
+  "related": {
+    "files": 19,
+    "passed": 320,
+    "failed": 0,
+    "skipped": 0
+  },
+  "build": {
+    "argv": [
+      "pnpm",
+      "exec",
+      "tsc",
+      "-b",
+      "packages/context",
+      "packages/harness"
+    ],
+    "exitCode": 0,
+    "rawLog": "../r4-green/build.log"
+  },
+  "productionProbe": {
+    "status": "PASS",
+    "cases": 30,
+    "actualHarnessTurns": 6,
+    "actualHarnessRequests": 5,
+    "rawResult": "../r4-production-final/result.json",
+    "paidProviderCalls": 0
+  },
+  "originals": {
+    "formalRed": "../r4-red",
+    "initialGreen": "../r4-green",
+    "correctedRed": "../r4-red-corrected-v2",
+    "probeFirstFailure": "../r4-production-preflight",
+    "correctedRedInitialCollectionFailure": "../r4-red-corrected"
+  },
+  "corrections": [
+    {
+      "type": "TEST_ORACLE",
+      "detail": "Custom byte estimator pointer is43B; initial42B headroom incorrectly expected admission. Finalfixture uses exact43B; originalRED21FAIL/8PASS0skip and initialGREEN28PASS/1FAIL preserved. Finalunitfixture bytes run against native exact320cf3e context source blobs:23tests18FAIL5PASS0skip in r4-red-corrected-v2. First isolated collection failed0tests because workspace dependency symlink missing; exact original failure retained in r4-red-corrected, then transient package-context node_modules link supplied and removed."
+    },
+    {
+      "type": "PROBE_IMPORT",
+      "detail": "DEFAULT_REHYDRATION_OPTIONS is not re-exported byindex; import from original productionrehydration.js. Originalprobe29PASS/1FAIL and exactoldprobe retained; final30PASS."
+    }
+  ],
+  "actual165": {
+    "hostReserved": {
+      "system": 0,
+      "task": 0,
+      "output": 0
+    },
+    "actualPipelineReserved": {
+      "system": 0,
+      "task": 10,
+      "output": 0
+    },
+    "beforeOptionalReferences": 147,
+    "spendable": 155,
+    "remaining": 8,
+    "omittedPointerTokens": 11,
+    "candidateFinalUsed": 147,
+    "candidateRequests": 1,
+    "candidateOutcome": "completed",
+    "baselineFinalUsed": 158,
+    "baselineProtectedUsed": 168,
+    "baselineRequests": 0,
+    "baselineOutcome": "failed"
+  },
+  "files": {
+    "packages/context/src/pipeline.ts": {
+      "bytes": 25046,
+      "sha256": "ba80475151326f65eb23d507c9c997e738daa972d570c8c5c5aa69448879bc0f"
+    },
+    "packages/context/src/rehydration-headroom.regressions.test.ts": {
+      "bytes": 8413,
+      "sha256": "bb4efe0b2cf0bb4e27006f0881e11684fbb58b18c1d19f90e2be3d2b829491c2"
+    },
+    "packages/harness/src/rehydration-headroom.integration.test.ts": {
+      "bytes": 6354,
+      "sha256": "a9002f474ab9400b267732a83cecfc94bafb4a2b989096be6350d11ebe7f603c"
+    },
+    "scripts/research/agent-next2-20261005/rehydration-budget-probe.mjs": {
+      "bytes": 17375,
+      "sha256": "52749ed368e24b0caea35c5cd9ebe99150f19cc0b2e4025734ccb53c9d0e9b04"
+    }
+  }
+}

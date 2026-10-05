@@ -1,0 +1,240 @@
+{
+  "schemaVersion": 1,
+  "status": "NEW_DETERMINISTIC_DEFECT_REPRODUCED_NOT_IMPLEMENTED",
+  "baselineSha": "320cf3e0bd87d714d17d95709e10c0ddf56d9c5d",
+  "capturedAt": "2026-10-05T08:57:23.484235+00:00",
+  "commands": [
+    {
+      "argv": [
+        "node",
+        ".ci/agent-next2-20261005/audit-context/harness-memory-exploration.mjs"
+      ],
+      "exitCode": 0,
+      "stdout": "harness-memory-exploration.json",
+      "stderr": "harness-memory-exploration.stderr.log",
+      "meaning": "Exploration completes successfully; actual production outcome165 is failed before provider, not command failure."
+    }
+  ],
+  "cases": [
+    {
+      "maxTokens": 155,
+      "actualPipelineReserved": {
+        "system": 0,
+        "task": 10,
+        "output": 0
+      },
+      "pipelineSpendable": 145,
+      "postDigestBeforeRehydration": 130,
+      "rehydrationTokens": 0,
+      "finalContextUsed": 130,
+      "activeUsersTokens": 10,
+      "beforeFitsSpendable": true,
+      "afterFitsSpendable": true,
+      "proposedHydrationRemaining": 15,
+      "requests": 1,
+      "outcome": "completed",
+      "runLimitEvents": []
+    },
+    {
+      "maxTokens": 160,
+      "actualPipelineReserved": {
+        "system": 0,
+        "task": 10,
+        "output": 0
+      },
+      "pipelineSpendable": 150,
+      "postDigestBeforeRehydration": 130,
+      "rehydrationTokens": 0,
+      "finalContextUsed": 130,
+      "activeUsersTokens": 10,
+      "beforeFitsSpendable": true,
+      "afterFitsSpendable": true,
+      "proposedHydrationRemaining": 20,
+      "requests": 1,
+      "outcome": "completed",
+      "runLimitEvents": []
+    },
+    {
+      "maxTokens": 165,
+      "actualPipelineReserved": {
+        "system": 0,
+        "task": 10,
+        "output": 0
+      },
+      "pipelineSpendable": 155,
+      "postDigestBeforeRehydration": 147,
+      "rehydrationTokens": 11,
+      "finalContextUsed": 158,
+      "activeUsersTokens": 10,
+      "beforeFitsSpendable": true,
+      "afterFitsSpendable": false,
+      "proposedHydrationRemaining": 8,
+      "requests": 0,
+      "outcome": "failed",
+      "runLimitEvents": [
+        {
+          "limit": "maxTokens",
+          "used": 168
+        }
+      ]
+    },
+    {
+      "maxTokens": 170,
+      "actualPipelineReserved": {
+        "system": 0,
+        "task": 10,
+        "output": 0
+      },
+      "pipelineSpendable": 160,
+      "postDigestBeforeRehydration": 147,
+      "rehydrationTokens": 11,
+      "finalContextUsed": 158,
+      "activeUsersTokens": 10,
+      "beforeFitsSpendable": true,
+      "afterFitsSpendable": true,
+      "proposedHydrationRemaining": 13,
+      "requests": 1,
+      "outcome": "completed",
+      "runLimitEvents": []
+    },
+    {
+      "maxTokens": 180,
+      "actualPipelineReserved": {
+        "system": 0,
+        "task": 10,
+        "output": 0
+      },
+      "pipelineSpendable": 170,
+      "postDigestBeforeRehydration": 147,
+      "rehydrationTokens": 11,
+      "finalContextUsed": 158,
+      "activeUsersTokens": 10,
+      "beforeFitsSpendable": true,
+      "afterFitsSpendable": true,
+      "proposedHydrationRemaining": 23,
+      "requests": 1,
+      "outcome": "completed",
+      "runLimitEvents": []
+    },
+    {
+      "maxTokens": 220,
+      "actualPipelineReserved": {
+        "system": 0,
+        "task": 10,
+        "output": 0
+      },
+      "pipelineSpendable": 210,
+      "postDigestBeforeRehydration": 147,
+      "rehydrationTokens": 11,
+      "finalContextUsed": 158,
+      "activeUsersTokens": 10,
+      "beforeFitsSpendable": true,
+      "afterFitsSpendable": true,
+      "proposedHydrationRemaining": 63,
+      "requests": 1,
+      "outcome": "completed",
+      "runLimitEvents": []
+    }
+  ],
+  "sourceFingerprints": {
+    "packages/context/src/pipeline.ts": {
+      "bytes": 24441,
+      "sha256": "4de75bc3e3dd5b57d694401ee85325793e7e317348a22e4f03beadcd3ee67661",
+      "equalsBaselineGitBlob": true
+    },
+    "packages/context/src/rehydration.ts": {
+      "bytes": 3769,
+      "sha256": "0d6c7077a9f6e207b51db023bcc0f2f4d9dde90cc94a3f0361090ce119fe8bc1",
+      "equalsBaselineGitBlob": true
+    },
+    "packages/context/src/budget.ts": {
+      "bytes": 2778,
+      "sha256": "5697332e832d5571599e41456caec44f71e4f9335e2c5c7672b7a2a9738eaf16",
+      "equalsBaselineGitBlob": true
+    },
+    "packages/core/src/runtime/context-controller.ts": {
+      "bytes": 33514,
+      "sha256": "22fe6661072b6674e0ab75a9535a6530de8700cec1a596d6ba858a3d0bda9bfd",
+      "equalsBaselineGitBlob": true
+    },
+    "packages/context/dist/pipeline.js": {
+      "bytes": 19643,
+      "sha256": "3d4bd953470a1ec0ab5874a33f063e6a82d5de123b4316c3331d2f9bda35d1cf"
+    },
+    "packages/context/dist/rehydration.js": {
+      "bytes": 2738,
+      "sha256": "c81c70dd959274f4655ee32b51851a66ea68f6c241c1eaeed553d4c2cc4b4e49"
+    },
+    "packages/harness/dist/create-harness.js": {
+      "bytes": 37207,
+      "sha256": "442874f7297e7e0b7df5e715af249457fbd0bf6cd33f15b75d5e198700ea29e3"
+    }
+  },
+  "originalArtifacts": [
+    {
+      "path": "harness-exploration-v2.json",
+      "bytes": 390859,
+      "sha256": "af33b66ae1fe446b66d61a14adcb087d16b3cc04d83aae449ea5089306fcb067"
+    },
+    {
+      "path": "harness-exploration-v2.mjs",
+      "bytes": 2416,
+      "sha256": "8d725787bfaeb85f7b995d51c3b2a0f81641c7f7bc52890a2e8d1f54e26b1288"
+    },
+    {
+      "path": "harness-exploration-v2.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "harness-exploration.json",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "harness-exploration.mjs",
+      "bytes": 2422,
+      "sha256": "e5adb7833a6fd530d9a8c018800b0f6644da24fdcc598b534e914c151737cb62"
+    },
+    {
+      "path": "harness-exploration.stderr.log",
+      "bytes": 1103,
+      "sha256": "79b2f9e25663abcab61da71aeb978c5954a3914f5d44fb6a7daa9d351ac19044"
+    },
+    {
+      "path": "harness-memory-exploration.json",
+      "bytes": 217090,
+      "sha256": "230ab4f19c30b78ac34b73dcc5dc6a06341cb64640d834c6ac67fc97d81980dc"
+    },
+    {
+      "path": "harness-memory-exploration.mjs",
+      "bytes": 2158,
+      "sha256": "62df6487b026a20a02bc3e0bb14f1b22aa6cf15821c4996e67f6b24cf48e9e92"
+    },
+    {
+      "path": "harness-memory-exploration.stderr.log",
+      "bytes": 1302,
+      "sha256": "a1ff7fd56ee90d3c3c9d6f7d0fb26ca63d815f26d11d3f748c5f48739a44b2c3"
+    },
+    {
+      "path": "pipeline-exploration.json",
+      "bytes": 2325,
+      "sha256": "876286017a059e82be39d7a1226bfcb7656f8c5692d299c7aa1f29e6b76b15e4"
+    }
+  ],
+  "proposal": {
+    "productionFiles": [
+      "packages/context/src/pipeline.ts"
+    ],
+    "formula": "min(DEFAULT_REHYDRATION_OPTIONS.maxTokens, max(0, opts.budget.maxTokens - reserved.system - reserved.task - reserved.output - sum(compactedBlock.tokens)))",
+    "important": "Core passes active-user cost in opts.budget.reserved.task already. Config reserved0 does not mean pipeline reserved0; observed max165 task10 means remaining8. report.messagesTokens is history-owned and must not be subtracted a second time.",
+    "implementationStatus": "NOT_IMPLEMENTED",
+    "candidateVerification": "NOT_RUN"
+  },
+  "limits": {
+    "realModelQuality": "NOT_RUN",
+    "paid": 0,
+    "Windows": "NOT_RUN",
+    "modelTokens": "Context budget estimates, not actual provider tokenizer validation."
+  }
+}

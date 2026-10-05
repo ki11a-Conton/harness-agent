@@ -1,0 +1,32 @@
+{
+  "status": "TARGETED_GREEN_DIRTY_EXPLORATION",
+  "testFilesPassed": 3,
+  "testsPassed": 89,
+  "testsSkipped": 0,
+  "testsTodo": 0,
+  "testExitCode": 0,
+  "modelBuildExitCode": 0,
+  "productionProbeStatus": "PASS",
+  "productionCases": 19,
+  "productionHttpRequests": 47,
+  "sourceSha": "0c70309de478797be8d0f6b8a3c2dbbe282f7844",
+  "trackedDirty": true,
+  "files": {
+    "packages/model/src/openai.ts": {
+      "bytes": 33282,
+      "sha256": "5f2d341bc6299b689249699dfe2561ba1bc623e1ef836c53e4eb526511e1a481"
+    },
+    "packages/model/src/openai-retry-wait.regressions.test.ts": {
+      "bytes": 12276,
+      "sha256": "d07212c3f1a0a3416e1981aa79552b2f738f50b9fd2f3f3e8921174e7e00f3ea"
+    },
+    "scripts/research/agent-next2-20261005/provider-retry-probe.mjs": {
+      "bytes": 13829,
+      "sha256": "bbbfbe163322797b6b4bad2c58a9fa6b34358cbdf47f357a0143c5a9cfcd42a1"
+    },
+    "packages/model/dist/openai.js": {
+      "bytes": 30373,
+      "sha256": "a5bd50a96d1af60b9878a113fff879c2936500bdaa268c4bf8b9a959970a842b"
+    }
+  }
+}

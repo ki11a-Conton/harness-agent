@@ -1,0 +1,53 @@
+{
+  "status": "PASS",
+  "sourceSha": "f8373b0fa4ec6491a55a9a3ba198235b689cc140",
+  "baselineSha": "320cf3e0bd87d714d17d95709e10c0ddf56d9c5d",
+  "observationRunId": "agent-next2-linux-f8373b0fa4ec-1791202881603663663",
+  "fullLogSha256": "5b5967a59bc70de888da4a51192abf00b2efefba1cae5996ede76c8bb6de18f6",
+  "fullCounts": {
+    "files": {
+      "passed": 469,
+      "skipped": 1,
+      "total": 470
+    },
+    "tests": {
+      "passed": 8690,
+      "skipped": 12,
+      "total": 8702
+    }
+  },
+  "files": [
+    {
+      "path": "packages/tools/src/process/executor.test.ts",
+      "baselineAndCurrentSha256": "5cea7f0b3734b20f6a952429ba160a41ebdc336abe7f513248f4d362017044e9",
+      "expectedSkipped": 7,
+      "sourceUnchangedFromBaseline": true,
+      "actualFullSkipped": 7,
+      "rawFullLine": "\u2713 packages/tools/src/process/executor.test.ts (30 tests | 7 skipped) 1371ms"
+    },
+    {
+      "path": "packages/tools/src/process/r96-windows-execution-boundary.test.ts",
+      "baselineAndCurrentSha256": "e095ef76c58e021e784fc43cd08761bd0afa2655acbb9944190d81cafd30577f",
+      "expectedSkipped": 3,
+      "sourceUnchangedFromBaseline": true,
+      "actualFullSkipped": 3,
+      "rawFullLine": "\u2713 packages/tools/src/process/r96-windows-execution-boundary.test.ts (25 tests | 3 skipped) 12ms"
+    },
+    {
+      "path": "apps/cli/src/n5-pair-setup.test.ts",
+      "baselineAndCurrentSha256": "702a2ba481ee0b45fdfc0049de390a8b3f04213909758ea5d4f4f6139fe972ac",
+      "expectedSkipped": 1,
+      "sourceUnchangedFromBaseline": true,
+      "actualFullSkipped": 1,
+      "rawFullLine": "\u2713 apps/cli/src/n5-pair-setup.test.ts (8 tests | 1 skipped) 449ms"
+    },
+    {
+      "path": "apps/cli/src/n2-release-cli-forward.test.ts",
+      "baselineAndCurrentSha256": "6c6ebf33b1ae8f716329d3b61c33ecdc8bedc10d8180157651f700e36d3e1349",
+      "expectedSkipped": 1,
+      "sourceUnchangedFromBaseline": true,
+      "actualFullSkipped": 1,
+      "rawFullLine": "\u2193 apps/cli/src/n2-release-cli-forward.test.ts (1 test | 1 skipped)"
+    }
+  ]
+}

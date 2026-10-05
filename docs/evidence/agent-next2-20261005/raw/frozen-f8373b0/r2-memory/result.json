@@ -1,0 +1,755 @@
+{
+  "status": "PASS",
+  "sourceSha": "f8373b0fa4ec6491a55a9a3ba198235b689cc140",
+  "sourceShaAtEnd": "f8373b0fa4ec6491a55a9a3ba198235b689cc140",
+  "sourceTrackedDirtyAtStart": false,
+  "sourceTrackedDirtyAtEnd": false,
+  "sourceFingerprintsBefore": {
+    "packages/memory/src/memory-store.ts": "04e14e9568f3ccda75b8e51863381bddc738017ff1e02fc4017c8c74ff534e91",
+    "packages/memory/dist/memory-store.js": "1a80256830b67d8bc6f03547788822446ae5b24523649d4289ca1924ee761dff",
+    "packages/memory/src/sqlite-memory-store.ts": "64837373f1ca4e85abf938f1851eb25c4c709890cc61e61efa511d95a1fb0d9c",
+    "packages/memory/dist/sqlite-memory-store.js": "a37c10435fa6027d473e5adae812db2a2b54ede6e4251f49e64160632ab94e61",
+    "packages/memory/src/usefulness.ts": "a6f232a3f1e2f6d4789cf5f0e050d9b967b14f491fcba1290ac4d847e93c17e2",
+    "packages/memory/dist/usefulness.js": "2ef8d6e5bc8ebc05114886760feae6e74f3f8b57041e987139f8ae8507efbd3d",
+    "packages/harness/src/memory-runtime-bridge.ts": "b7e3900693198379a9e27a6cd82fa39ac4f4614ab11ead8af878fde58ed15406",
+    "packages/harness/dist/memory-runtime-bridge.js": "536009673b747fa4fa4091d54d24c212dacb097531b2da6e14c9a4f4ba66eede",
+    "packages/harness/src/create-harness.ts": "a115aa9c8ec71b86e689e80ab9195c21cd85c8f19a0d9de669e9e19d8becf84e",
+    "packages/harness/dist/create-harness.js": "442874f7297e7e0b7df5e715af249457fbd0bf6cd33f15b75d5e198700ea29e3",
+    "scripts/research/agent-next2-20261005/memory-feedback-probe.mjs": "194e5f0f1b1cedc047b3d2d80a20007d3c4bf3827f53a54e1a4172f67284a969"
+  },
+  "sourceFingerprintsAfter": {
+    "packages/memory/src/memory-store.ts": "04e14e9568f3ccda75b8e51863381bddc738017ff1e02fc4017c8c74ff534e91",
+    "packages/memory/dist/memory-store.js": "1a80256830b67d8bc6f03547788822446ae5b24523649d4289ca1924ee761dff",
+    "packages/memory/src/sqlite-memory-store.ts": "64837373f1ca4e85abf938f1851eb25c4c709890cc61e61efa511d95a1fb0d9c",
+    "packages/memory/dist/sqlite-memory-store.js": "a37c10435fa6027d473e5adae812db2a2b54ede6e4251f49e64160632ab94e61",
+    "packages/memory/src/usefulness.ts": "a6f232a3f1e2f6d4789cf5f0e050d9b967b14f491fcba1290ac4d847e93c17e2",
+    "packages/memory/dist/usefulness.js": "2ef8d6e5bc8ebc05114886760feae6e74f3f8b57041e987139f8ae8507efbd3d",
+    "packages/harness/src/memory-runtime-bridge.ts": "b7e3900693198379a9e27a6cd82fa39ac4f4614ab11ead8af878fde58ed15406",
+    "packages/harness/dist/memory-runtime-bridge.js": "536009673b747fa4fa4091d54d24c212dacb097531b2da6e14c9a4f4ba66eede",
+    "packages/harness/src/create-harness.ts": "a115aa9c8ec71b86e689e80ab9195c21cd85c8f19a0d9de669e9e19d8becf84e",
+    "packages/harness/dist/create-harness.js": "442874f7297e7e0b7df5e715af249457fbd0bf6cd33f15b75d5e198700ea29e3",
+    "scripts/research/agent-next2-20261005/memory-feedback-probe.mjs": "194e5f0f1b1cedc047b3d2d80a20007d3c4bf3827f53a54e1a4172f67284a969"
+  },
+  "cases": [
+    {
+      "name": "jsonl-concurrent-retrieved-exact-count",
+      "status": "PASS",
+      "signals": 16,
+      "counter": "retrievedCount",
+      "persisted": {
+        "retrievedCount": 16,
+        "injectedCount": 0,
+        "usedCount": 0,
+        "taskSuccessCount": 0,
+        "verificationPassedCount": 0,
+        "score": 0.5
+      },
+      "unchangedNonFeedbackFields": true,
+      "hooks": []
+    },
+    {
+      "name": "jsonl-concurrent-injected-exact-count",
+      "status": "PASS",
+      "signals": 16,
+      "counter": "injectedCount",
+      "persisted": {
+        "retrievedCount": 0,
+        "injectedCount": 16,
+        "usedCount": 0,
+        "taskSuccessCount": 0,
+        "verificationPassedCount": 0,
+        "score": 0.907348990557408
+      },
+      "unchangedNonFeedbackFields": true,
+      "hooks": []
+    },
+    {
+      "name": "jsonl-concurrent-used-exact-count",
+      "status": "PASS",
+      "signals": 16,
+      "counter": "usedCount",
+      "persisted": {
+        "retrievedCount": 0,
+        "injectedCount": 0,
+        "usedCount": 16,
+        "taskSuccessCount": 0,
+        "verificationPassedCount": 0,
+        "score": 0.9983383534715199
+      },
+      "unchangedNonFeedbackFields": true,
+      "hooks": []
+    },
+    {
+      "name": "jsonl-concurrent-taskSucceeded-exact-count",
+      "status": "PASS",
+      "signals": 16,
+      "counter": "taskSuccessCount",
+      "persisted": {
+        "retrievedCount": 0,
+        "injectedCount": 0,
+        "usedCount": 0,
+        "taskSuccessCount": 16,
+        "verificationPassedCount": 0,
+        "score": 0.9999923706054688
+      },
+      "unchangedNonFeedbackFields": true,
+      "hooks": []
+    },
+    {
+      "name": "jsonl-concurrent-verificationPassed-exact-count",
+      "status": "PASS",
+      "signals": 16,
+      "counter": "verificationPassedCount",
+      "persisted": {
+        "retrievedCount": 0,
+        "injectedCount": 0,
+        "usedCount": 0,
+        "taskSuccessCount": 0,
+        "verificationPassedCount": 16,
+        "score": 0.9999923706054688
+      },
+      "unchangedNonFeedbackFields": true,
+      "hooks": []
+    },
+    {
+      "name": "jsonl-multiple-bridges-exact-count",
+      "status": "PASS",
+      "bridges": 2,
+      "signals": 16,
+      "injectedCount": 16,
+      "hooks": []
+    },
+    {
+      "name": "jsonl-two-store-instances-exact-count",
+      "status": "PASS",
+      "instances": 2,
+      "sharedPath": true,
+      "injectedCount": 16,
+      "hooks": [],
+      "consistencyBoundary": "same process existing shared lock"
+    },
+    {
+      "name": "jsonl-independent-entry-counters",
+      "status": "PASS",
+      "first": {
+        "retrievedCount": 8,
+        "injectedCount": 0,
+        "usedCount": 8,
+        "taskSuccessCount": 0,
+        "verificationPassedCount": 0,
+        "score": 0.971175995
+      },
+      "second": {
+        "retrievedCount": 0,
+        "injectedCount": 16,
+        "usedCount": 0,
+        "taskSuccessCount": 0,
+        "verificationPassedCount": 0,
+        "score": 0.907348990557408
+      },
+      "hooks": []
+    },
+    {
+      "name": "jsonl-missing-deleted-quiet-reviewable-no-recall",
+      "status": "PASS",
+      "missingApplied": false,
+      "deletedApplied": false,
+      "diagnostics": [],
+      "tombstonePreserved": true,
+      "recalls": 0,
+      "hooks": []
+    },
+    {
+      "name": "jsonl-remove-at-feedback-mutation-boundary",
+      "status": "PASS",
+      "actualRemove": true,
+      "latestDeleted": true,
+      "recalls": 0,
+      "hooks": [
+        "controlled scheduling wrapper invokes real remove immediately before concrete atomic feedback"
+      ]
+    },
+    {
+      "name": "jsonl-editor-at-feedback-mutation-boundary",
+      "status": "PASS",
+      "editedContent": "用户已编辑的中文记忆",
+      "lifecycle": {
+        "kind": "deprecated",
+        "at": 30,
+        "reason": "user retired"
+      },
+      "updatedAt": 40,
+      "usefulness": {
+        "retrievedCount": 0,
+        "injectedCount": 1,
+        "usedCount": 0,
+        "taskSuccessCount": 0,
+        "verificationPassedCount": 0,
+        "score": 0.55
+      },
+      "hooks": [
+        "controlled scheduling wrapper invokes real editor update immediately before concrete atomic feedback"
+      ]
+    },
+    {
+      "name": "jsonl-metadata-reopen-lexical-index-preserved",
+      "status": "PASS",
+      "reopened": true,
+      "nonFeedbackFieldsPreserved": true,
+      "usefulness": {
+        "retrievedCount": 0,
+        "injectedCount": 1,
+        "usedCount": 1,
+        "taskSuccessCount": 0,
+        "verificationPassedCount": 0,
+        "score": 0.685
+      },
+      "lexicalIdsBeforeAfter": [
+        "memory_probe_13"
+      ],
+      "sqlitePreparedSql": [],
+      "sqliteFullTextWrites": 0,
+      "hooks": []
+    },
+    {
+      "name": "jsonl-existing-security-gate-content-rollback",
+      "status": "PASS",
+      "rejected": "SECURITY_DENIED",
+      "denied": [
+        {
+          "detection": "injection",
+          "source": "memory-store",
+          "reasons": [
+            "dismiss-previous-instructions",
+            "dismiss-all-instructions",
+            "override-own-instructions"
+          ]
+        }
+      ],
+      "priorRowPreserved": true,
+      "recovered": true,
+      "hooks": [
+        "controlled persisted tampering bypasses write gate solely to exercise unchanged feedback safety gate"
+      ]
+    },
+    {
+      "name": "jsonl-existing-security-gate-strategy-rollback",
+      "status": "PASS",
+      "rejected": "SECURITY_DENIED",
+      "denied": [
+        {
+          "detection": "injection",
+          "source": "memory-store",
+          "reasons": [
+            "dismiss-previous-instructions",
+            "dismiss-all-instructions",
+            "override-own-instructions"
+          ]
+        }
+      ],
+      "priorRowPreserved": true,
+      "recovered": true,
+      "hooks": [
+        "controlled persisted tampering bypasses write gate solely to exercise unchanged feedback safety gate"
+      ]
+    },
+    {
+      "name": "jsonl-durable-failure-rollback-and-recovery",
+      "status": "PASS",
+      "failedWriteObserved": true,
+      "durableSnapshotPreserved": true,
+      "recoveredCounter": 1,
+      "hooks": [
+        "controlled rewrite failure hook before durable write"
+      ]
+    },
+    {
+      "name": "jsonl-concurrent-delete-never-revives",
+      "status": "PASS",
+      "deleted": true,
+      "recalls": 0,
+      "hooks": []
+    },
+    {
+      "name": "sqlite-concurrent-retrieved-exact-count",
+      "status": "PASS",
+      "signals": 16,
+      "counter": "retrievedCount",
+      "persisted": {
+        "retrievedCount": 16,
+        "injectedCount": 0,
+        "usedCount": 0,
+        "taskSuccessCount": 0,
+        "verificationPassedCount": 0,
+        "score": 0.5
+      },
+      "unchangedNonFeedbackFields": true,
+      "hooks": []
+    },
+    {
+      "name": "sqlite-concurrent-injected-exact-count",
+      "status": "PASS",
+      "signals": 16,
+      "counter": "injectedCount",
+      "persisted": {
+        "retrievedCount": 0,
+        "injectedCount": 16,
+        "usedCount": 0,
+        "taskSuccessCount": 0,
+        "verificationPassedCount": 0,
+        "score": 0.907348990557408
+      },
+      "unchangedNonFeedbackFields": true,
+      "hooks": []
+    },
+    {
+      "name": "sqlite-concurrent-used-exact-count",
+      "status": "PASS",
+      "signals": 16,
+      "counter": "usedCount",
+      "persisted": {
+        "retrievedCount": 0,
+        "injectedCount": 0,
+        "usedCount": 16,
+        "taskSuccessCount": 0,
+        "verificationPassedCount": 0,
+        "score": 0.9983383534715199
+      },
+      "unchangedNonFeedbackFields": true,
+      "hooks": []
+    },
+    {
+      "name": "sqlite-concurrent-taskSucceeded-exact-count",
+      "status": "PASS",
+      "signals": 16,
+      "counter": "taskSuccessCount",
+      "persisted": {
+        "retrievedCount": 0,
+        "injectedCount": 0,
+        "usedCount": 0,
+        "taskSuccessCount": 16,
+        "verificationPassedCount": 0,
+        "score": 0.9999923706054688
+      },
+      "unchangedNonFeedbackFields": true,
+      "hooks": []
+    },
+    {
+      "name": "sqlite-concurrent-verificationPassed-exact-count",
+      "status": "PASS",
+      "signals": 16,
+      "counter": "verificationPassedCount",
+      "persisted": {
+        "retrievedCount": 0,
+        "injectedCount": 0,
+        "usedCount": 0,
+        "taskSuccessCount": 0,
+        "verificationPassedCount": 16,
+        "score": 0.9999923706054688
+      },
+      "unchangedNonFeedbackFields": true,
+      "hooks": []
+    },
+    {
+      "name": "sqlite-multiple-bridges-exact-count",
+      "status": "PASS",
+      "bridges": 2,
+      "signals": 16,
+      "injectedCount": 16,
+      "hooks": []
+    },
+    {
+      "name": "sqlite-two-store-instances-exact-count",
+      "status": "PASS",
+      "instances": 2,
+      "sharedPath": true,
+      "injectedCount": 16,
+      "hooks": [],
+      "consistencyBoundary": "separate native SQLite connections same database"
+    },
+    {
+      "name": "sqlite-independent-entry-counters",
+      "status": "PASS",
+      "first": {
+        "retrievedCount": 8,
+        "injectedCount": 0,
+        "usedCount": 8,
+        "taskSuccessCount": 0,
+        "verificationPassedCount": 0,
+        "score": 0.971175995
+      },
+      "second": {
+        "retrievedCount": 0,
+        "injectedCount": 16,
+        "usedCount": 0,
+        "taskSuccessCount": 0,
+        "verificationPassedCount": 0,
+        "score": 0.907348990557408
+      },
+      "hooks": []
+    },
+    {
+      "name": "sqlite-missing-deleted-quiet-reviewable-no-recall",
+      "status": "PASS",
+      "missingApplied": false,
+      "deletedApplied": false,
+      "diagnostics": [],
+      "tombstonePreserved": true,
+      "recalls": 0,
+      "hooks": []
+    },
+    {
+      "name": "sqlite-remove-at-feedback-mutation-boundary",
+      "status": "PASS",
+      "actualRemove": true,
+      "latestDeleted": true,
+      "recalls": 0,
+      "hooks": [
+        "controlled scheduling wrapper invokes real remove immediately before concrete atomic feedback"
+      ]
+    },
+    {
+      "name": "sqlite-editor-at-feedback-mutation-boundary",
+      "status": "PASS",
+      "editedContent": "用户已编辑的中文记忆",
+      "lifecycle": {
+        "kind": "deprecated",
+        "at": 30,
+        "reason": "user retired"
+      },
+      "updatedAt": 40,
+      "usefulness": {
+        "retrievedCount": 0,
+        "injectedCount": 1,
+        "usedCount": 0,
+        "taskSuccessCount": 0,
+        "verificationPassedCount": 0,
+        "score": 0.55
+      },
+      "hooks": [
+        "controlled scheduling wrapper invokes real editor update immediately before concrete atomic feedback"
+      ]
+    },
+    {
+      "name": "sqlite-metadata-reopen-lexical-index-preserved",
+      "status": "PASS",
+      "reopened": true,
+      "nonFeedbackFieldsPreserved": true,
+      "usefulness": {
+        "retrievedCount": 0,
+        "injectedCount": 1,
+        "usedCount": 1,
+        "taskSuccessCount": 0,
+        "verificationPassedCount": 0,
+        "score": 0.685
+      },
+      "lexicalIdsBeforeAfter": [
+        "memory_probe_30"
+      ],
+      "sqlitePreparedSql": [
+        "SELECT * FROM memories WHERE id = ?",
+        "UPDATE memories SET usefulness = ? WHERE id = ?",
+        "SELECT * FROM memories WHERE id = ?",
+        "UPDATE memories SET usefulness = ? WHERE id = ?"
+      ],
+      "sqliteFullTextWrites": 0,
+      "hooks": [
+        "observational native DatabaseSync.prepare wrapper"
+      ]
+    },
+    {
+      "name": "sqlite-existing-security-gate-content-rollback",
+      "status": "PASS",
+      "rejected": "SECURITY_DENIED",
+      "denied": [
+        {
+          "detection": "injection",
+          "source": "sqlite-memory-store",
+          "reasons": [
+            "dismiss-previous-instructions",
+            "dismiss-all-instructions",
+            "override-own-instructions"
+          ]
+        }
+      ],
+      "priorRowPreserved": true,
+      "recovered": true,
+      "hooks": [
+        "controlled persisted tampering bypasses write gate solely to exercise unchanged feedback safety gate"
+      ]
+    },
+    {
+      "name": "sqlite-existing-security-gate-strategy-rollback",
+      "status": "PASS",
+      "rejected": "SECURITY_DENIED",
+      "denied": [
+        {
+          "detection": "injection",
+          "source": "sqlite-memory-store",
+          "reasons": [
+            "dismiss-previous-instructions",
+            "dismiss-all-instructions",
+            "override-own-instructions"
+          ]
+        }
+      ],
+      "priorRowPreserved": true,
+      "recovered": true,
+      "hooks": [
+        "controlled persisted tampering bypasses write gate solely to exercise unchanged feedback safety gate"
+      ]
+    },
+    {
+      "name": "sqlite-durable-failure-rollback-and-recovery",
+      "status": "PASS",
+      "failedWriteObserved": true,
+      "durableSnapshotPreserved": true,
+      "recoveredCounter": 1,
+      "hooks": [
+        "native SQLite rejecting UPDATE trigger"
+      ]
+    },
+    {
+      "name": "sqlite-concurrent-delete-never-revives",
+      "status": "PASS",
+      "deleted": true,
+      "recalls": 0,
+      "hooks": []
+    },
+    {
+      "name": "unsupported-custom-store-safe-feedback-skip-retrieval-roi",
+      "status": "PASS",
+      "externalStore": "synthetic legacy MemoryStore with no optional capability",
+      "gets": 0,
+      "updates": 0,
+      "diagnostics": [
+        "[degraded] memory.usefulness.update: atomic feedback unavailable\n"
+      ],
+      "admittedBlocks": 1,
+      "roi": [
+        {
+          "memoryId": "memory_probe_35",
+          "tokens": 29,
+          "injected": 1,
+          "succeeded": 1,
+          "roiPer1k": 34.48275862068965
+        }
+      ],
+      "hooks": [
+        "synthetic external store compatibility fixture"
+      ]
+    },
+    {
+      "name": "throwing-atomic-capability-feedback-error-isolated",
+      "status": "PASS",
+      "atomics": 1,
+      "gets": 0,
+      "updates": 0,
+      "callerCompleted": true,
+      "diagnostics": [
+        "[degraded] memory.usefulness.update: synthetic atomic feedback failure\n"
+      ],
+      "hooks": [
+        "synthetic throwing optional capability compatibility fixture"
+      ]
+    },
+    {
+      "name": "jsonl-actual-harness-concurrent",
+      "status": "PASS",
+      "rawArtifact": "harness-jsonl-concurrent.json",
+      "backend": "jsonl",
+      "scenario": "concurrent",
+      "modelRequests": 4,
+      "completedTurns": 4,
+      "cancelledTurns": 0,
+      "persistedUsefulness": {
+        "retrievedCount": 4,
+        "injectedCount": 4,
+        "usedCount": 4,
+        "taskSuccessCount": 4,
+        "verificationPassedCount": 0,
+        "score": 0.9950771996875
+      },
+      "memoryAdmissionEvents": 4,
+      "actualToolSuccesses": 0,
+      "hooks": [
+        "sequential actual pre-turn admission respects existing single prefetch lane; model completion barrier releases all admitted turns concurrently"
+      ]
+    },
+    {
+      "name": "jsonl-actual-harness-tool-loop",
+      "status": "PASS",
+      "rawArtifact": "harness-jsonl-tool-loop.json",
+      "backend": "jsonl",
+      "scenario": "tool-loop",
+      "modelRequests": 2,
+      "completedTurns": 1,
+      "cancelledTurns": 0,
+      "persistedUsefulness": {
+        "retrievedCount": 1,
+        "injectedCount": 1,
+        "usedCount": 1,
+        "taskSuccessCount": 1,
+        "verificationPassedCount": 0,
+        "score": 0.8425
+      },
+      "memoryAdmissionEvents": 1,
+      "actualToolSuccesses": 1,
+      "hooks": []
+    },
+    {
+      "name": "jsonl-actual-harness-unsupported",
+      "status": "PASS",
+      "rawArtifact": "harness-jsonl-unsupported.json",
+      "backend": "jsonl",
+      "scenario": "unsupported",
+      "modelRequests": 1,
+      "completedTurns": 1,
+      "cancelledTurns": 0,
+      "persistedUsefulness": null,
+      "memoryAdmissionEvents": 1,
+      "actualToolSuccesses": 0,
+      "hooks": [
+        "public optional capability shadowed as undefined to model unsupported external store"
+      ]
+    },
+    {
+      "name": "jsonl-actual-harness-default-off",
+      "status": "PASS",
+      "rawArtifact": "harness-jsonl-default-off.json",
+      "backend": "jsonl",
+      "scenario": "default-off",
+      "modelRequests": 1,
+      "completedTurns": 1,
+      "cancelledTurns": 0,
+      "persistedUsefulness": null,
+      "memoryAdmissionEvents": 0,
+      "actualToolSuccesses": 0,
+      "hooks": []
+    },
+    {
+      "name": "jsonl-actual-harness-cancel-unadmitted",
+      "status": "PASS",
+      "rawArtifact": "harness-jsonl-cancel-unadmitted.json",
+      "backend": "jsonl",
+      "scenario": "cancel-unadmitted",
+      "modelRequests": 0,
+      "completedTurns": 0,
+      "cancelledTurns": 1,
+      "persistedUsefulness": null,
+      "memoryAdmissionEvents": 0,
+      "actualToolSuccesses": 0,
+      "hooks": [
+        "controlled read-only search barrier, actual runtime caller cancellation, release late production retrieval"
+      ]
+    },
+    {
+      "name": "sqlite-actual-harness-concurrent",
+      "status": "PASS",
+      "rawArtifact": "harness-sqlite-concurrent.json",
+      "backend": "sqlite",
+      "scenario": "concurrent",
+      "modelRequests": 4,
+      "completedTurns": 4,
+      "cancelledTurns": 0,
+      "persistedUsefulness": {
+        "retrievedCount": 4,
+        "injectedCount": 4,
+        "usedCount": 4,
+        "taskSuccessCount": 4,
+        "verificationPassedCount": 0,
+        "score": 0.9950771996875
+      },
+      "memoryAdmissionEvents": 4,
+      "actualToolSuccesses": 0,
+      "hooks": [
+        "sequential actual pre-turn admission respects existing single prefetch lane; model completion barrier releases all admitted turns concurrently"
+      ]
+    },
+    {
+      "name": "sqlite-actual-harness-tool-loop",
+      "status": "PASS",
+      "rawArtifact": "harness-sqlite-tool-loop.json",
+      "backend": "sqlite",
+      "scenario": "tool-loop",
+      "modelRequests": 2,
+      "completedTurns": 1,
+      "cancelledTurns": 0,
+      "persistedUsefulness": {
+        "retrievedCount": 1,
+        "injectedCount": 1,
+        "usedCount": 1,
+        "taskSuccessCount": 1,
+        "verificationPassedCount": 0,
+        "score": 0.8425
+      },
+      "memoryAdmissionEvents": 1,
+      "actualToolSuccesses": 1,
+      "hooks": []
+    },
+    {
+      "name": "sqlite-actual-harness-unsupported",
+      "status": "PASS",
+      "rawArtifact": "harness-sqlite-unsupported.json",
+      "backend": "sqlite",
+      "scenario": "unsupported",
+      "modelRequests": 1,
+      "completedTurns": 1,
+      "cancelledTurns": 0,
+      "persistedUsefulness": null,
+      "memoryAdmissionEvents": 1,
+      "actualToolSuccesses": 0,
+      "hooks": [
+        "public optional capability shadowed as undefined to model unsupported external store"
+      ]
+    },
+    {
+      "name": "sqlite-actual-harness-default-off",
+      "status": "PASS",
+      "rawArtifact": "harness-sqlite-default-off.json",
+      "backend": "sqlite",
+      "scenario": "default-off",
+      "modelRequests": 1,
+      "completedTurns": 1,
+      "cancelledTurns": 0,
+      "persistedUsefulness": null,
+      "memoryAdmissionEvents": 0,
+      "actualToolSuccesses": 0,
+      "hooks": []
+    },
+    {
+      "name": "sqlite-actual-harness-cancel-unadmitted",
+      "status": "PASS",
+      "rawArtifact": "harness-sqlite-cancel-unadmitted.json",
+      "backend": "sqlite",
+      "scenario": "cancel-unadmitted",
+      "modelRequests": 0,
+      "completedTurns": 0,
+      "cancelledTurns": 1,
+      "persistedUsefulness": null,
+      "memoryAdmissionEvents": 0,
+      "actualToolSuccesses": 0,
+      "hooks": [
+        "controlled read-only search barrier, actual runtime caller cancellation, release late production retrieval"
+      ]
+    }
+  ],
+  "caseCount": 44,
+  "artifacts": [
+    "harness-jsonl-concurrent.json",
+    "harness-jsonl-tool-loop.json",
+    "harness-jsonl-unsupported.json",
+    "harness-jsonl-default-off.json",
+    "harness-jsonl-cancel-unadmitted.json",
+    "harness-sqlite-concurrent.json",
+    "harness-sqlite-tool-loop.json",
+    "harness-sqlite-unsupported.json",
+    "harness-sqlite-default-off.json",
+    "harness-sqlite-cancel-unadmitted.json"
+  ],
+  "paidProviderCalls": 0,
+  "liveModelQuality": "NOT_RUN",
+  "windowsNative": "NOT_RUN",
+  "jsonlCrossProcessConsistency": "NOT_GUARANTEED",
+  "unsupportedStorePersistence": "SKIPPED_WITH_FIXED_DEGRADED_DIAGNOSTIC"
+}

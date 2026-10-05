@@ -1,0 +1,26 @@
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+ ❯ packages/model/src/openai-retry-wait.regressions.test.ts (16 tests | 12 failed) 72ms
+     × whole-call deadline interrupts http retry backoff at 50 ms 31ms
+     × whole-call deadline interrupts network retry backoff at 50 ms 5ms
+     × caller abort while consuming http retry event does not wait for a future abort 2ms
+     × caller abort while consuming network retry event does not wait for a future abort 1ms
+     × normal http retry success removes the native wait listener 6ms
+     × normal network retry success removes the native wait listener 1ms
+     ✓ caller abort during an installed wait cancels its timer and listener 1ms
+     × already-expired deadline at the yielded retry event skips waiting 1ms
+     × zero-delay retry success does not retain an abort listener 2ms
+     × reused caller signal does not accumulate listeners across 12 successful retrying calls 6ms
+     × caller cancellation wins if the whole-call deadline also expires before retry resumes 2ms
+     × Retry-After remains a lower bound when the deadline is disabled 1ms
+     ✓ non-transient 401 does not schedule a retry wait 6ms
+     × exhausted 503 retry budget keeps three fetches and two retry events 2ms
+     ✓ streaming read failure never enters provider retry backoff 2ms
+     ✓ Retry-After parsing and backoff jitter policy stay unchanged 1ms
+
+ Test Files  1 failed (1)
+      Tests  12 failed | 4 passed (16)
+   Start at  12:04:16
+   Duration  507ms (transform 233ms, setup 0ms, import 301ms, tests 72ms, environment 0ms)
+

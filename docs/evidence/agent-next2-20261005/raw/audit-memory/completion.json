@@ -1,0 +1,83 @@
+{
+  "status": "EXPLORATORY_CANDIDATE_PASS",
+  "head": "0c70309de478797be8d0f6b8a3c2dbbe282f7844",
+  "production": [
+    {
+      "path": "packages/memory/src/memory-store.ts",
+      "sha256": "04e14e9568f3ccda75b8e51863381bddc738017ff1e02fc4017c8c74ff534e91"
+    },
+    {
+      "path": "packages/memory/src/sqlite-memory-store.ts",
+      "sha256": "64837373f1ca4e85abf938f1851eb25c4c709890cc61e61efa511d95a1fb0d9c"
+    },
+    {
+      "path": "packages/harness/src/memory-runtime-bridge.ts",
+      "sha256": "b7e3900693198379a9e27a6cd82fa39ac4f4614ab11ead8af878fde58ed15406"
+    }
+  ],
+  "tests": [
+    {
+      "path": "packages/memory/src/usefulness-atomic.regressions.test.ts",
+      "sha256": "cc83e7ab10e84720267bda85f6e81b592d77323a0adfda58a096ee8dd9923fe1"
+    },
+    {
+      "path": "packages/harness/src/memory-feedback-atomic.regressions.test.ts",
+      "sha256": "64941c892cf1d3984cdc273710f55d74cdf547bae719b203c72c6c931e91fa69"
+    }
+  ],
+  "formalNew": {
+    "files": 2,
+    "passed": 41,
+    "skipped": 0,
+    "log": "formal-green-final.log",
+    "sha256": "76aaabe655e5ff45749956f803bfc94723f74dbb040cbee58af45387e101d269"
+  },
+  "related": {
+    "files": 20,
+    "passed": 322,
+    "skipped": 0,
+    "log": "related-green.log",
+    "sha256": "736d629d921e760dcb1af1205ecfa394bc71bd67d8c053cd1f52e82db11bc077",
+    "productionSameAsFinal": true
+  },
+  "build": {
+    "command": [
+      "pnpm",
+      "exec",
+      "tsc",
+      "-b",
+      "packages/memory",
+      "packages/harness"
+    ],
+    "log": "build-final.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "probe": {
+    "path": "production-development-v3/result.json",
+    "sha256": "c80a5b2eadc2138d1a8a353b3e39c4ed5f370d26c8c6516b42f5071ef53eb205",
+    "status": "PASS",
+    "caseCount": 44,
+    "sourceDirtyAtStart": true,
+    "sourceDirtyAtEnd": true,
+    "fingerprintsBeforeAfterEqual": true
+  },
+  "failedAttempts": [
+    {
+      "path": "production-development/result.json",
+      "failure": "existing memory_prefetch_busy policy intentionally skipped three simultaneous retrievals; corrected fixture admits each turn until actual provider entry before concurrent model completion",
+      "originalStatus": "FAIL"
+    },
+    {
+      "path": "production-development-v2/result.json",
+      "failure": "existing Orchestrator success and runtime summary both emit tool.completed; corrected oracle counts status=success event, retains raw summary",
+      "originalStatus": "FAIL"
+    }
+  ],
+  "paidProviderCalls": 0,
+  "limits": {
+    "jsonlCrossProcessConsistency": "NOT_GUARANTEED",
+    "unsupportedCustomStorePersistentFeedback": "SKIPPED_WITH_FIXED_ONCE_DIAGNOSTIC",
+    "liveModelQuality": "NOT_RUN"
+  },
+  "noExistingTestsModified": true
+}

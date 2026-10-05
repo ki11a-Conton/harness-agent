@@ -1,0 +1,74 @@
+{
+  "status": "R1_TARGETED_GREEN_DIRTY_EXPLORATION",
+  "sourceSha": "0c70309de478797be8d0f6b8a3c2dbbe282f7844",
+  "paidProviderCalls": 0,
+  "newTests": 16,
+  "targetedTests": {
+    "files": 3,
+    "passed": 89,
+    "skipped": 0,
+    "todo": 0,
+    "exitCode": 0
+  },
+  "modelBuildExitCode": 0,
+  "productionProbe": {
+    "cases": 19,
+    "physicalHttpRequests": 47,
+    "status": "PASS",
+    "dirtyAtStart": true,
+    "dirtyAtEnd": true,
+    "sourceAndDistStable": true,
+    "criticalCases": [
+      "retry-after-deadline",
+      "network-backoff-deadline",
+      "caller-abort-at-retry",
+      "caller-abort-at-network-retry",
+      "caller-abort-during-wait",
+      "deadline-expired-before-wait",
+      "caller-wins-expired-deadline",
+      "deadline-budget-preserved",
+      "reuse-caller-12-calls"
+    ],
+    "allCaseNames": [
+      "direct-success",
+      "normal-429-recovery",
+      "normal-network-recovery",
+      "non-transient-401",
+      "retry-after-deadline",
+      "network-backoff-deadline",
+      "caller-abort-at-retry",
+      "caller-abort-at-network-retry",
+      "caller-abort-during-wait",
+      "deadline-expired-before-wait",
+      "caller-wins-expired-deadline",
+      "deadline-budget-preserved",
+      "retry-after-preserved",
+      "retry-budget-zero",
+      "caller-preaborted",
+      "exhausted-server-budget",
+      "streaming-failure-never-retried",
+      "zero-delay-retry",
+      "reuse-caller-12-calls"
+    ]
+  },
+  "trackedFiles": {
+    "packages/model/src/openai.ts": {
+      "bytes": 33282,
+      "sha256": "5f2d341bc6299b689249699dfe2561ba1bc623e1ef836c53e4eb526511e1a481",
+      "crlf": 835,
+      "lf": 835
+    },
+    "packages/model/src/openai-retry-wait.regressions.test.ts": {
+      "bytes": 12276,
+      "sha256": "d07212c3f1a0a3416e1981aa79552b2f738f50b9fd2f3f3e8921174e7e00f3ea",
+      "crlf": 0,
+      "lf": 193
+    },
+    "scripts/research/agent-next2-20261005/provider-retry-probe.mjs": {
+      "bytes": 13829,
+      "sha256": "bbbfbe163322797b6b4bad2c58a9fa6b34358cbdf47f357a0143c5a9cfcd42a1",
+      "crlf": 0,
+      "lf": 124
+    }
+  }
+}

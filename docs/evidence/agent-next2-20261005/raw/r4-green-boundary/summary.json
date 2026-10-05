@@ -1,0 +1,38 @@
+{
+  "status": "PASS_DIRTY_BOUNDARY_ACCEPTANCE",
+  "productionPipelineByteIdentical": true,
+  "productionSha256": "ba80475151326f65eb23d507c9c997e738daa972d570c8c5c5aa69448879bc0f",
+  "newTests": {
+    "passed": 30,
+    "failed": 0,
+    "skipped": 0,
+    "context": 24,
+    "Harness": 6
+  },
+  "productionProbe": {
+    "status": "PASS",
+    "cases": 31,
+    "actualHarnessTurns": 6,
+    "actualHarnessRequests": 5,
+    "newCase": "context-unicode-byte-estimator-reject-pointer-at-42"
+  },
+  "lineage": "Earlier formalRED21FAIL8PASS and initialGREEN28PASS1wrong-oracle retained. Corrected43exact unitfixture rerun nativebaseline23tests18FAIL5PASS. This acceptance adds only rejected42neighbor, now30formaltests31productioncases; preceding29GREEN and30probe snapshots/results preserved. No320related rerun.",
+  "files": {
+    "packages/context/src/pipeline.ts": {
+      "bytes": 25046,
+      "sha256": "ba80475151326f65eb23d507c9c997e738daa972d570c8c5c5aa69448879bc0f"
+    },
+    "packages/context/src/rehydration-headroom.regressions.test.ts": {
+      "bytes": 9241,
+      "sha256": "f6b5a88dd912629a549e646150eb91acac7bd030c0bc319592fa95cfc2d2c02f"
+    },
+    "packages/harness/src/rehydration-headroom.integration.test.ts": {
+      "bytes": 6354,
+      "sha256": "a9002f474ab9400b267732a83cecfc94bafb4a2b989096be6350d11ebe7f603c"
+    },
+    "scripts/research/agent-next2-20261005/rehydration-budget-probe.mjs": {
+      "bytes": 18186,
+      "sha256": "127285f1bd2820db0ed8c52d41b9ba4cb834fcdd8ea732ea3eba7ad9990c9130"
+    }
+  }
+}

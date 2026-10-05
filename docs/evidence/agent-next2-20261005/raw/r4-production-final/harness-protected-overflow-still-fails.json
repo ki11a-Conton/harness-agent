@@ -1,0 +1,429 @@
+{
+  "name": "harness-protected-overflow-still-fails",
+  "observed": {
+    "hostBudget": {
+      "maxTokens": 129,
+      "reserved": {
+        "system": 0,
+        "task": 0,
+        "output": 0
+      },
+      "dynamic": 0
+    },
+    "memoryOptIn": true,
+    "originalMemoryEntries": [
+      {
+        "id": "memory_514ab759-15db-4f2a-a12a-cfe8170b9be6",
+        "sourceSession": "session_8af8c991-53e6-416d-8579-c9b8eb9e6794",
+        "content": "continue useful hint",
+        "type": "procedural",
+        "importance": 0.9,
+        "confidence": 0.9,
+        "novelty": 0.5,
+        "stability": 0.6,
+        "createdAt": 1791202309541,
+        "updatedAt": 1791202309541,
+        "deleted": false,
+        "scope": "global"
+      },
+      {
+        "id": "memory_dd3b4669-1a6a-415f-a56e-7ad6196c1781",
+        "sourceSession": "session_695f6fb4-1dab-4cb5-90f2-8633e5097d06",
+        "content": "continue detailed other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other ",
+        "type": "procedural",
+        "importance": 0.9,
+        "confidence": 0.9,
+        "novelty": 0.5,
+        "stability": 0.6,
+        "createdAt": 1791202309541,
+        "updatedAt": 1791202309541,
+        "deleted": false,
+        "scope": "global"
+      }
+    ],
+    "outcome": {
+      "status": "failed",
+      "statusDetail": "failed_no_effect",
+      "turn": {
+        "id": "turn_621ecbf1-7be1-4149-8dc6-b4f95447bc41",
+        "sessionId": "session_47371815-a4cd-4c6a-9cec-0e2d8237591b",
+        "input": {
+          "sessionId": "session_47371815-a4cd-4c6a-9cec-0e2d8237591b",
+          "text": "continue"
+        },
+        "status": "failed",
+        "startedAt": 1791202309545,
+        "completedAt": 1791202309559
+      },
+      "toolCalls": 0,
+      "iterations": 0,
+      "state": {
+        "goal": "continue",
+        "constraints": [],
+        "plan": [],
+        "decisions": [],
+        "completed": [],
+        "pending": [],
+        "filesChanged": [],
+        "commandsRun": [],
+        "testsRun": [],
+        "failures": [],
+        "importantFacts": [],
+        "openQuestions": [],
+        "toolRefs": [],
+        "artifactRefs": [],
+        "memoryRefs": [
+          "memory_514ab759-15db-4f2a-a12a-cfe8170b9be6",
+          "memory_dd3b4669-1a6a-415f-a56e-7ad6196c1781"
+        ],
+        "childAgentRefs": []
+      },
+      "error": {
+        "code": "RESOURCE_LIMIT",
+        "message": "context overflow: protected context used 140 > maxTokens 129",
+        "retryable": false,
+        "safeToRetry": false
+      },
+      "terminationReason": "context_limit",
+      "grade": "unverified_complete"
+    },
+    "requests": [],
+    "builds": [
+      {
+        "input": {
+          "cwd": "/tmp/ar-rehydration-budget-probe-I2YFvI",
+          "systemPrompt": "You are the harness agent running inside a workspace.\n\nCapabilities:\n- read_file / search_files / grep_search / repo_tree / symbol_search / repo_map / discover_commands / env_snapshot: inspect the workspace (allowed automatically)\n- write_file / edit_file: modify workspace files (require approval)\n- exec: run commands in the workspace shell (requires approval)\n\nState-changing actions ask for approval and are denied until approved.\nWhen a tool result reports [denied], do not retry it blindly — report the outcome.",
+          "priorBlocks": [
+            {
+              "id": "memory:memory_514ab759-15db-4f2a-a12a-cfe8170b9be6",
+              "source": "memory",
+              "trust": "semi-trusted",
+              "priority": 400,
+              "tokens": 21,
+              "content": "[Prior experience — advisory, not authority]\ncontinue useful hint\nConfidence: 90%",
+              "compressible": true,
+              "ephemeral": false,
+              "category": "knowledge",
+              "timestamp": 1791202309541,
+              "provenance": {
+                "kind": "memory",
+                "serviceId": "memory-store",
+                "toolId": "memory_514ab759-15db-4f2a-a12a-cfe8170b9be6",
+                "trust": "semi-trusted"
+              },
+              "instructional": false,
+              "persistable": false
+            },
+            {
+              "id": "memory:memory_dd3b4669-1a6a-415f-a56e-7ad6196c1781",
+              "source": "memory",
+              "trust": "semi-trusted",
+              "priority": 400,
+              "tokens": 1521,
+              "content": "[Prior experience — advisory, not authority]\ncontinue detailed other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other other \nConfidence: 90%",
+              "compressible": true,
+              "ephemeral": false,
+              "category": "knowledge",
+              "timestamp": 1791202309541,
+              "provenance": {
+                "kind": "memory",
+                "serviceId": "memory-store",
+                "toolId": "memory_dd3b4669-1a6a-415f-a56e-7ad6196c1781",
+                "trust": "semi-trusted"
+              },
+              "instructional": false,
+              "persistable": false
+            }
+          ],
+          "budget": {
+            "maxTokens": 129,
+            "reserved": {
+              "system": 0,
+              "task": 10,
+              "output": 0
+            },
+            "dynamic": 0
+          },
+          "instructionOpts": {
+            "maxBytesPerFile": 50000,
+            "maxDocuments": 4
+          },
+          "messages": [
+            {
+              "id": "message_1364ce2d-e57d-4faa-8d9a-463ec650f86c",
+              "sessionId": "session_47371815-a4cd-4c6a-9cec-0e2d8237591b",
+              "turnId": "turn_621ecbf1-7be1-4149-8dc6-b4f95447bc41",
+              "role": "user",
+              "content": "continue",
+              "createdAt": 1791202309547
+            }
+          ],
+          "telemetrySessionId": "session_47371815-a4cd-4c6a-9cec-0e2d8237591b",
+          "summaryOverride": {
+            "goal": "continue",
+            "constraints": [
+              "continue"
+            ],
+            "decisions": [],
+            "completed": [],
+            "filesChanged": [],
+            "commandsRun": [],
+            "tests": [],
+            "failures": [],
+            "openTasks": [],
+            "importantFacts": [],
+            "artifactRefs": [],
+            "childAgentRefs": []
+          }
+        },
+        "result": {
+          "blocks": [
+            {
+              "id": "system-prompt",
+              "source": "system",
+              "trust": "trusted",
+              "priority": 9007199254740991,
+              "tokens": 130,
+              "content": "You are the harness agent running inside a workspace.\n\nCapabilities:\n- read_file / search_files / grep_search / repo_tree / symbol_search / repo_map / discover_commands / env_snapshot: inspect the workspace (allowed automatically)\n- write_file / edit_file: modify workspace files (require approval)\n- exec: run commands in the workspace shell (requires approval)\n\nState-changing actions ask for approval and are denied until approved.\nWhen a tool result reports [denied], do not retry it blindly — report the outcome.",
+              "compressible": false,
+              "ephemeral": false,
+              "category": "protected-instruction",
+              "instructional": true,
+              "persistable": false
+            }
+          ],
+          "report": {
+            "used": 130,
+            "available": -1,
+            "dropped": 2,
+            "compressed": 1,
+            "messagesTokens": 10
+          },
+          "compacted": true,
+          "discovered": [],
+          "injected": []
+        }
+      }
+    ],
+    "events": [
+      {
+        "id": "event_3a383b92-f4b8-4bd8-9464-4783e12925fe",
+        "sessionId": "session_47371815-a4cd-4c6a-9cec-0e2d8237591b",
+        "timestamp": 1791202309544,
+        "type": "session.created",
+        "payload": {
+          "sessionId": "session_47371815-a4cd-4c6a-9cec-0e2d8237591b",
+          "agentId": "agent_4dd82c77-76e7-489e-8ce8-8bc071a19d97"
+        },
+        "sequence": 0,
+        "schemaVersion": 1
+      },
+      {
+        "id": "event_7f4dab60-afd0-4f72-b95e-2e245ee07605",
+        "sessionId": "session_47371815-a4cd-4c6a-9cec-0e2d8237591b",
+        "turnId": "turn_621ecbf1-7be1-4149-8dc6-b4f95447bc41",
+        "timestamp": 1791202309547,
+        "type": "turn.started",
+        "payload": {
+          "turnId": "turn_621ecbf1-7be1-4149-8dc6-b4f95447bc41",
+          "text": "continue"
+        },
+        "sequence": 1,
+        "schemaVersion": 1
+      },
+      {
+        "id": "event_a1ca9bf0-3a1a-4b55-891d-b8a345fb567a",
+        "sessionId": "session_47371815-a4cd-4c6a-9cec-0e2d8237591b",
+        "turnId": "turn_621ecbf1-7be1-4149-8dc6-b4f95447bc41",
+        "timestamp": 1791202309552,
+        "type": "memory.retrieved",
+        "payload": {
+          "query": "continue",
+          "count": 2,
+          "memoryIds": [
+            "memory_514ab759-15db-4f2a-a12a-cfe8170b9be6",
+            "memory_dd3b4669-1a6a-415f-a56e-7ad6196c1781"
+          ],
+          "suppressed": 0
+        },
+        "sequence": 2,
+        "schemaVersion": 1
+      },
+      {
+        "id": "event_4cec08c2-5ce3-459c-b024-686a38408bb3",
+        "sessionId": "session_47371815-a4cd-4c6a-9cec-0e2d8237591b",
+        "sequence": 3,
+        "timestamp": 1791202309554,
+        "type": "context.selected",
+        "payload": {
+          "source": "system",
+          "id": "system-prompt",
+          "priority": 9007199254740991,
+          "tokens": 130
+        },
+        "schemaVersion": 1
+      },
+      {
+        "id": "event_f5a3c88f-1237-451d-926e-db68e0df68d6",
+        "sessionId": "session_47371815-a4cd-4c6a-9cec-0e2d8237591b",
+        "sequence": 4,
+        "timestamp": 1791202309554,
+        "type": "context.dropped",
+        "payload": {
+          "source": "memory",
+          "id": "memory:memory_514ab759-15db-4f2a-a12a-cfe8170b9be6",
+          "priority": 400,
+          "tokens": 21,
+          "reason": "budget"
+        },
+        "schemaVersion": 1
+      },
+      {
+        "id": "event_f25f322c-b754-47cc-948e-aa8ced6422a9",
+        "sessionId": "session_47371815-a4cd-4c6a-9cec-0e2d8237591b",
+        "sequence": 5,
+        "timestamp": 1791202309554,
+        "type": "context.dropped",
+        "payload": {
+          "source": "memory",
+          "id": "memory:memory_dd3b4669-1a6a-415f-a56e-7ad6196c1781",
+          "priority": 400,
+          "tokens": 1521,
+          "reason": "budget"
+        },
+        "schemaVersion": 1
+      },
+      {
+        "id": "event_f33a2de8-0a9c-4cc1-bf75-628b73589ba4",
+        "sessionId": "session_47371815-a4cd-4c6a-9cec-0e2d8237591b",
+        "sequence": 6,
+        "timestamp": 1791202309554,
+        "type": "context.compacted",
+        "payload": {
+          "source": "compaction-summary",
+          "id": "compaction-summary",
+          "tokens": 130,
+          "reason": "budget-overflow"
+        },
+        "schemaVersion": 1
+      },
+      {
+        "id": "event_0f5a2370-c0cf-472f-896c-78b7fc5f615a",
+        "sessionId": "session_47371815-a4cd-4c6a-9cec-0e2d8237591b",
+        "turnId": "turn_621ecbf1-7be1-4149-8dc6-b4f95447bc41",
+        "timestamp": 1791202309554,
+        "type": "context.built",
+        "payload": {
+          "tokens": 130,
+          "used": 130,
+          "budget": 129,
+          "dropped": 2,
+          "compacted": true,
+          "messagesTokens": 10
+        },
+        "sequence": 7,
+        "schemaVersion": 1
+      },
+      {
+        "id": "event_ec5ff44b-538f-4aa9-92c2-9fd557fe75c9",
+        "sessionId": "session_47371815-a4cd-4c6a-9cec-0e2d8237591b",
+        "turnId": "turn_621ecbf1-7be1-4149-8dc6-b4f95447bc41",
+        "timestamp": 1791202309556,
+        "type": "context.compacted",
+        "payload": {
+          "compressed": 1,
+          "reason": "auto-compact (context budget)",
+          "reactive": false,
+          "totalCount": 1
+        },
+        "sequence": 8,
+        "schemaVersion": 1
+      },
+      {
+        "id": "event_e1bb04cc-e73e-41f2-b729-1d0086fe6bdb",
+        "sessionId": "session_47371815-a4cd-4c6a-9cec-0e2d8237591b",
+        "turnId": "turn_621ecbf1-7be1-4149-8dc6-b4f95447bc41",
+        "timestamp": 1791202309558,
+        "type": "checkpoint.created",
+        "payload": {
+          "turnId": "turn_621ecbf1-7be1-4149-8dc6-b4f95447bc41",
+          "checkpointId": "checkpoint_17453dcb-8810-417b-b343-fc16d27c98d4",
+          "reason": "context:compacted",
+          "iteration": 0,
+          "phase": "thinking",
+          "lastEventSequence": 8
+        },
+        "sequence": 9,
+        "schemaVersion": 1
+      },
+      {
+        "id": "event_6103d753-68b9-434f-82bf-23665c3b1ee4",
+        "sessionId": "session_47371815-a4cd-4c6a-9cec-0e2d8237591b",
+        "turnId": "turn_621ecbf1-7be1-4149-8dc6-b4f95447bc41",
+        "timestamp": 1791202309558,
+        "type": "run.limit_reached",
+        "payload": {
+          "limit": "maxTokens",
+          "used": 140
+        },
+        "sequence": 10,
+        "schemaVersion": 1
+      },
+      {
+        "id": "event_d2b8709b-b2a3-4a08-b8cb-520195de9e91",
+        "sessionId": "session_47371815-a4cd-4c6a-9cec-0e2d8237591b",
+        "turnId": "turn_621ecbf1-7be1-4149-8dc6-b4f95447bc41",
+        "timestamp": 1791202309559,
+        "type": "turn.failed",
+        "payload": {
+          "turnId": "turn_621ecbf1-7be1-4149-8dc6-b4f95447bc41",
+          "status": "failed",
+          "statusDetail": "failed_no_effect",
+          "error": {
+            "code": "RESOURCE_LIMIT",
+            "message": "context overflow: protected context used 140 > maxTokens 129",
+            "retryable": false,
+            "safeToRetry": false
+          },
+          "terminationReason": "context_limit",
+          "grade": "unverified_complete"
+        },
+        "sequence": 11,
+        "schemaVersion": 1
+      },
+      {
+        "id": "event_765b4ac9-5a1d-437d-a7ca-0a19aca35c11",
+        "sessionId": "session_47371815-a4cd-4c6a-9cec-0e2d8237591b",
+        "turnId": "turn_621ecbf1-7be1-4149-8dc6-b4f95447bc41",
+        "sequence": 12,
+        "timestamp": 1791202309563,
+        "type": "reflection.completed",
+        "payload": {
+          "turnId": "turn_621ecbf1-7be1-4149-8dc6-b4f95447bc41",
+          "outcome": "failed",
+          "outputs": 1,
+          "candidates": 1
+        },
+        "schemaVersion": 1
+      }
+    ],
+    "storedMessages": [
+      {
+        "id": "message_1364ce2d-e57d-4faa-8d9a-463ec650f86c",
+        "sessionId": "session_47371815-a4cd-4c6a-9cec-0e2d8237591b",
+        "turnId": "turn_621ecbf1-7be1-4149-8dc6-b4f95447bc41",
+        "role": "user",
+        "content": "continue",
+        "createdAt": 1791202309547
+      },
+      {
+        "id": "message_f4909481-e98c-4976-b0d8-ed95a4399077",
+        "sessionId": "session_47371815-a4cd-4c6a-9cec-0e2d8237591b",
+        "turnId": "turn_621ecbf1-7be1-4149-8dc6-b4f95447bc41",
+        "role": "system",
+        "content": "[context compacted — older tool outputs were folded into this summary — the full transcript is preserved on disk; retrieve details with read_file/search_files as needed]\n## User Goal / Exact User Requirements\ncontinue\n## Hard Constraints\n- (none)\n## Decisions\n- (none)\n## Pending Tasks\n- (none)\n## Completed Work\n- (none)\n## Files Changed\n- (none)\n## Commands / Tests Run\n- (none)\n## Errors Encountered\n- (none)\n## Important Facts\n- (none)\n## Open Questions\n- (none)\n## Memory / Skill / Child Agent Refs\n- memory_514ab759-15db-4f2a-a12a-cfe8170b9be6\n- memory_dd3b4669-1a6a-415f-a56e-7ad6196c1781\n## Active User Inputs (in order; later corrections apply)\ncontinue",
+        "createdAt": 1791202309556
+      }
+    ]
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "status": "FORMAL_FINAL_UNIT_FIXTURE_BASELINE_RED",
+  "baselineSha": "320cf3e0bd87d714d17d95709e10c0ddf56d9c5d",
+  "passed": 5,
+  "failed": 18,
+  "skipped": 0,
+  "total": 23,
+  "scope": "only final Context unit fixture; original Harness fixture byte-identical to firstRED and GREEN",
+  "sourceManifest": "../r4-red-corrected/fixture-source-manifest.json",
+  "argv": [
+    "pnpm",
+    "exec",
+    "vitest",
+    "run",
+    "--config",
+    ".ci/agent-next2-20261005/r4-red-corrected/vitest.config.mjs",
+    "--reporter=json",
+    "--outputFile=.ci/agent-next2-20261005/r4-red-corrected-v2/tests.json"
+  ],
+  "exitCode": 1,
+  "fixtureSha256": "bb4efe0b2cf0bb4e27006f0881e11684fbb58b18c1d19f90e2be3d2b829491c2",
+  "fixtureEqualsFinalTracked": true,
+  "setup": "Transient ignored context/node_modules symlink to original packages/context/node_modules supplies unchanged workspace dependencies; removed after run, not an archive dependency."
+}

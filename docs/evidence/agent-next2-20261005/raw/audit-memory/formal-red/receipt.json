@@ -1,0 +1,26 @@
+{
+  "status": "RED_CONFIRMED",
+  "exitCode": 1,
+  "files": 2,
+  "failed": 38,
+  "passed": 3,
+  "skipped": 0,
+  "originalLogSha256": "89023e439776a09796533c78ff7716cf5e9110d7af7f328ec9f42a90cafa027f",
+  "originalSourceReceiptSha256": "7e6e7d54e416d8d9d3518070cd4895fdc97fac72409c42eacf9823d26e8ec806",
+  "testLineage": [
+    {
+      "path": "packages/memory/src/usefulness-atomic.regressions.test.ts",
+      "redBytesSha256": "cc83e7ab10e84720267bda85f6e81b592d77323a0adfda58a096ee8dd9923fe1",
+      "currentBytesSha256": "cc83e7ab10e84720267bda85f6e81b592d77323a0adfda58a096ee8dd9923fe1",
+      "byteEqual": true,
+      "changedAfterRed": null
+    },
+    {
+      "path": "packages/harness/src/memory-feedback-atomic.regressions.test.ts",
+      "redBytesSha256": "b1a0122468ff27e373b1e158ab3a0a4ac27c63757ae031125ac1072cc9f4f7e2",
+      "currentBytesSha256": "64941c892cf1d3984cdc273710f55d74cdf547bae719b203c72c6c931e91fa69",
+      "byteEqual": false,
+      "changedAfterRed": "Harness concurrent fixture now admits sequentially to respect existing busy prefetch lane, holds four actual provider calls and releases terminal outcomes concurrently"
+    }
+  ]
+}
