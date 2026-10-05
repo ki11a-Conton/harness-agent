@@ -31,7 +31,7 @@
 import { createHash } from "node:crypto";
 import { getCandidateRegistry, PATH_SCOPED_INSTRUCTIONS_CONFIG_V1, TASK_SCOPED_SKILLS_CONFIG_V1, type CandidateRegistration, type PathScopedInstructionsRuntimeConfig, type TaskScopedSkillsRuntimeConfig } from "./candidate-registry.js";
 import { stableStringify } from "./manifest.js";
-import { budgetAwareCompletionGuidanceDigest, toolCallEfficiencyGuidanceDigest, diagnosticFirstRepairGuidanceDigest, DIAGNOSTIC_FIRST_REPAIR_GUIDANCE_V1 } from "./mechanism-guidance.js";
+import { budgetAwareCompletionGuidanceDigest, toolCallEfficiencyGuidanceDigest, contextSafeToolCallEfficiencyGuidanceDigest, diagnosticFirstRepairGuidanceDigest, DIAGNOSTIC_FIRST_REPAIR_GUIDANCE_V1 } from "./mechanism-guidance.js";
 
 export const ARM_FACTORY_SCHEMA_VERSION = "1.0.0";
 export const ARM_FACTORY_POLICY_VERSION = "e3-03-arm-v1";
@@ -120,6 +120,10 @@ export interface RuntimeMechanisms {
   budgetAwareCompletion: boolean;
   /** Tool-call efficiency guidance injected into the system prompt (N5). */
   toolCallEfficiency: boolean;
+  /** N6: context-safe tool-call efficiency guidance injected into the system
+   *  prompt. Occupies the SAME `completionGuidance` slot as the other
+   *  prompt-guidance mechanisms, so it is mutually exclusive with them. */
+  contextSafeToolCallEfficiency?: boolean;
   /** S1 experimental diagnostic guidance; omitted on existing arms. */
   diagnosticFirstRepair?: boolean;
   /** S2 experimental discovery; absent on existing arms. */
@@ -298,6 +302,21 @@ export function wireCandidateMechanism(reg: CandidateRegistration): MechanismWir
           promptAdditionsDigest: toolCallEfficiencyGuidanceDigest(),
         }),
         declaredPaths: ["harnessConfig.toolCallEfficiency"],
+      };
+    case "context_safe_tool_call_efficiency_v1":
+      return {
+        constructorId: "completion:context-safe-tool-call-efficiency-guide-v1",
+        apply: (config) => ({ ...config, contextSafeToolCallEfficiency: "v1" }),
+        isActive: (config) => config.contextSafeToolCallEfficiency === "v1",
+        applyRuntime: (base) => ({
+          ...base,
+          contextSafeToolCallEfficiency: true,
+          // Binds the ACTUAL candidate bytes (one rule different from v2) to the
+          // arm digest / execution identity, so an old evaluation can never
+          // authorize a rewritten candidate under the same candidateId.
+          promptAdditionsDigest: contextSafeToolCallEfficiencyGuidanceDigest(),
+        }),
+        declaredPaths: ["harnessConfig.contextSafeToolCallEfficiency"],
       };
     case "diagnostic_first_repair_v1":
       return {

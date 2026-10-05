@@ -731,8 +731,15 @@ export const MUTATIONS = [
     // is closed before any provider construction. This mutation removes that
     // refusal, so the pre-registered candidate runs through the legacy paid path
     // again (its own plan-digest/cap guards are not the v2 gate).
-    find: `  if (opts.candidate === TOOL_CALL_EFFICIENCY_CANDIDATE_ID_V2 && billingClass === "external-billed") {`,
-    replace: `  if (false && opts.candidate === TOOL_CALL_EFFICIENCY_CANDIDATE_ID_V2 && billingClass === "external-billed") { // A7 mutation: the legacy candidate paid path is open again`,
+    // N6: the anchor tracks the CURRENT production text — the same refusal now
+    // covers BOTH pre-registered prompt-guidance candidates
+    // (`tool_call_efficiency_v1` and `context_safe_tool_call_efficiency_v1`).
+    find: `  if (
+    (opts.candidate === TOOL_CALL_EFFICIENCY_CANDIDATE_ID_V2 ||
+      opts.candidate === CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_CANDIDATE_ID) &&
+    billingClass === "external-billed"
+  ) {`,
+    replace: `  if (false) { // A7 mutation: the legacy candidate paid path is open again (both pre-registered candidates)`,
     suite: "apps/cli/src/benchmark-command.test.ts",
     test: "a billed legacy run is refused before provider construction",
     catchExpectation:

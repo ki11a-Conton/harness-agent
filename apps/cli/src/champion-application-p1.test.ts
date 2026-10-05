@@ -24,6 +24,8 @@ import {
   applyPromotion,
   createInitialChampionState,
   TOOL_CALL_EFFICIENCY_GUIDANCE_V1,
+  CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_CANDIDATE_ID,
+  CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_V1,
   type ChampionState,
 } from "@ar/evaluation";
 import { championStateDigest, readChampionStateFile, writeChampionStateFileCas } from "./champion-state-file.js";
@@ -32,6 +34,7 @@ import {
   projectChampionFieldChecks,
   createHarnessWithChampion,
   CHAMPION_TOOL_CALL_EFFICIENCY_GUIDANCE,
+  CHAMPION_CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE,
 } from "./champion-application.js";
 
 let dir: string;
@@ -132,5 +135,82 @@ describe("P1 — tool_call_efficiency_v1 is really installed at production start
     const budgetCheck = budget.find((c) => c.key === "completionGuidance");
     // Different mechanisms bind different guidance → different intended bytes.
     expect(toolCheck?.intended).not.toBe(budgetCheck?.intended);
+  });
+});
+
+describe("N6 — context_safe_tool_call_efficiency_v1 is really installed at production startup", () => {
+  it("startup INSTALLS the exact candidate text (not a similar-meaning rewrite)", async () => {
+    await writePendingState(CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_CANDIDATE_ID);
+    const outcome = await createHarnessWithChampion({
+      runtimeEntrypoint: "cli",
+      baseConfig: baseConfig(join(dir, "data")),
+      stateFilePath: statePath,
+      sourceSha: "a".repeat(40),
+    });
+    try {
+      expect(outcome.status).toBe("applied");
+      expect(outcome.proof).not.toBeNull();
+      const main = outcome.harness.agents.find((a) => a.name === "main");
+      expect(main!.systemPrompt.endsWith(CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_V1)).toBe(true);
+      expect(outcome.harness.resolvedConfig.value.completionGuidance).toBe(CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_V1);
+      // The installed strategy is the candidate's own revision, never v2's.
+      expect(outcome.harness.resolvedConfig.value.completionGuidance).not.toBe(TOOL_CALL_EFFICIENCY_GUIDANCE_V1);
+    } finally {
+      await outcome.harness.close();
+    }
+  });
+
+  it("removing the install FAILS the application (never applied on flags alone)", async () => {
+    await writePendingState(CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_CANDIDATE_ID);
+    const outcome = await createHarnessWithChampion({
+      runtimeEntrypoint: "cli",
+      baseConfig: baseConfig(join(dir, "no-mech")),
+      stateFilePath: statePath,
+      sourceSha: "b".repeat(40),
+      createHarnessFn: async (config) => {
+        const { createHarness } = await import("@ar/harness");
+        return createHarness({ ...config, completionGuidance: undefined });
+      },
+    });
+    try {
+      expect(outcome.status).toBe("applicationFailed");
+      expect(outcome.proof).toBeNull();
+      expect(outcome.reason).toMatch(/completionGuidance|drift/i);
+      const saved = (await readChampionStateFile(statePath)) as ChampionState;
+      expect(saved.applied).toBe(false);
+      expect(saved.appliedProof).toBeUndefined();
+    } finally {
+      await outcome.harness.close();
+    }
+  });
+
+  it("the install plan recognizes the candidate and refuses EVERY mutually-exclusive pairing", () => {
+    expect(championMechanismInstallPlan({ contextSafeToolCallEfficiency: true }).ok).toBe(true);
+    // Any two prompt-guidance mechanisms would have to share one
+    // `completionGuidance` slot — refuse instead of silently picking one.
+    for (const both of [
+      championMechanismInstallPlan({ budgetAwareCompletion: true, contextSafeToolCallEfficiency: true }),
+      championMechanismInstallPlan({ toolCallEfficiency: true, contextSafeToolCallEfficiency: true }),
+      championMechanismInstallPlan({ budgetAwareCompletion: true, toolCallEfficiency: true, contextSafeToolCallEfficiency: true }),
+    ]) {
+      expect(both.ok).toBe(false);
+      expect(both.reason).toMatch(/mutually exclusive|conflicting/i);
+    }
+  });
+
+  it("the field checks bind the candidate's ACTUAL guidance bytes", () => {
+    const resolved = { featureFlags: {} } as never;
+    const origins = new Map<string, { source: string }>();
+    const checks = projectChampionFieldChecks({}, undefined, false, false, resolved, origins, {
+      contextSafeToolCallEfficiency: true,
+    });
+    const check = checks.find((c) => c.key === "completionGuidance");
+    expect(check?.intended).toBe(CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_V1);
+    expect(check?.intended).toBe(CHAMPION_CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE);
+    expect(check?.intended).not.toBe(TOOL_CALL_EFFICIENCY_GUIDANCE_V1);
+    // Absent flag → no completionGuidance demand at all (no phantom check).
+    expect(
+      projectChampionFieldChecks({}, undefined, false, false, resolved, origins).some((c) => c.key === "completionGuidance"),
+    ).toBe(false);
   });
 });

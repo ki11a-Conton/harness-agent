@@ -170,6 +170,21 @@ const CONTRACTS: Record<string, MechanismContract> = {
     requiredActivationEvents: ["tool-call-efficiency-guidance-injected"],
     forbiddenNoOpConditions: ["guidance only logged in CLI, absent from model-visible messages", "text identical to budget_aware_completion_v1 guidance"],
   },
+  context_safe_tool_call_efficiency_v1: {
+    schemaVersion: MECHANISM_CONTRACT_SCHEMA_VERSION,
+    candidateId: "context_safe_tool_call_efficiency_v1",
+    modelVisibleSurface: "context-safe tool-call efficiency guidance present in the final model-visible messages",
+    eligibilityRule: "case whose required source text is no longer visible (compacted, truncated or only rehydrated as a reference) while the original command verifier still applies",
+    minEligibleCases: 5,
+    expectedFailureCluster: "verification_failed / agent_limit (editing from a summary, a citation or memory after the original text was compacted away)",
+    requiredActivationEvents: ["context-safe-tool-call-efficiency-guidance-injected"],
+    forbiddenNoOpConditions: [
+      "guidance only logged in CLI, absent from model-visible messages",
+      "injected text identical to tool_call_efficiency_v1 guidance",
+      "history-only claim: the candidate reported activation without a real fresh read before the edit",
+      "compaction, rehydration, permission, sandbox or verification altered",
+    ],
+  },
 };
 
 export function mechanismContractFor(candidateId: string): MechanismContract | undefined {

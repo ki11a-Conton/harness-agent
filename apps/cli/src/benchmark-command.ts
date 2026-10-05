@@ -52,6 +52,8 @@ import {
   BUDGET_AWARE_COMPLETION_GUIDANCE_VERSION,
   TOOL_CALL_EFFICIENCY_GUIDANCE_V1,
   TOOL_CALL_EFFICIENCY_GUIDANCE_VERSION,
+  CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_V1,
+  CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_VERSION,
   DIAGNOSTIC_FIRST_REPAIR_GUIDANCE_V1,
   DIAGNOSTIC_FIRST_REPAIR_GUIDANCE_VERSION,
   DEFAULT_DECISION_POLICY_V3,
@@ -71,6 +73,7 @@ import {
   runPairedExperiment,
   writeBaselineFiles,
   TOOL_CALL_EFFICIENCY_CANDIDATE_ID_V2,
+  CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_CANDIDATE_ID,
   type RuntimeMechanisms,
 } from "@ar/evaluation";
 import type {
@@ -1347,11 +1350,15 @@ export async function preflightBenchmark(
   // chain. The offline/test path (a provider override, hence the `offline-test`
   // billing class) is untouched, so the existing guidance / activation tests
   // keep running with 0 external calls.
-  if (opts.candidate === TOOL_CALL_EFFICIENCY_CANDIDATE_ID_V2 && billingClass === "external-billed") {
+  if (
+    (opts.candidate === TOOL_CALL_EFFICIENCY_CANDIDATE_ID_V2 ||
+      opts.candidate === CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_CANDIDATE_ID) &&
+    billingClass === "external-billed"
+  ) {
     return {
       ok: false,
       reason:
-        `candidate "${TOOL_CALL_EFFICIENCY_CANDIDATE_ID_V2}" is a pre-registered experiment and does not run through the ` +
+        `candidate "${opts.candidate}" is a pre-registered experiment and does not run through the ` +
         `legacy benchmark candidate path on a billed provider — use the formal pre-registration gate instead: ` +
         `\`agent prereg build <config.json> --out <prereg.json>\`, \`agent prereg validate <prereg.json>\`, then ` +
         `\`agent prereg run <prereg.json> --authorization <auth.json> --budget-dir <dir> --out <dir>\`. ` +
@@ -1749,17 +1756,23 @@ export const BUDGET_AWARE_COMPLETION_GUIDANCE = BUDGET_AWARE_COMPLETION_GUIDANCE
  *  what is evaluated is what would be installed. */
 export const TOOL_CALL_EFFICIENCY_GUIDANCE = TOOL_CALL_EFFICIENCY_GUIDANCE_V1;
 
-/** N5/P3: the SINGLE model-visible system-prompt builder. The real model request
+/** N6 (context-safe tool-call efficiency): the candidate guidance block — the
+ *  v2 text with ONLY the re-read rule replaced. The AUTHORITATIVE text lives in
+ *  the strategy layer (mechanism-guidance.ts) so what is evaluated is what would
+ *  be installed. */
+export const CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE = CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_V1;
+
+/** N6/P3: the SINGLE model-visible system-prompt builder. The real model request
  *  (runOneCase), the run manifest's effective config and `runtimeConfigForHash`
  *  all derive the prompt through THIS function, so the bytes the model sees and
- *  the bytes the run identity hashes can never drift apart. The two guidance
- *  mechanisms are mutually exclusive (both occupy `completionGuidance`), so at
- *  most one is appended. */
+ *  the bytes the run identity hashes can never drift apart. The four guidance
+ *  mechanisms all occupy `completionGuidance`, so at most one is appended. */
 export function benchmarkModelVisibleSystemPrompt(
-  mech: Pick<RuntimeMechanisms, "budgetAwareCompletion" | "toolCallEfficiency" | "diagnosticFirstRepair">,
+  mech: Pick<RuntimeMechanisms, "budgetAwareCompletion" | "toolCallEfficiency" | "diagnosticFirstRepair" | "contextSafeToolCallEfficiency">,
 ): string {
   if (mech.budgetAwareCompletion) return BENCHMARK_SYSTEM_PROMPT + BUDGET_AWARE_COMPLETION_GUIDANCE;
   if (mech.toolCallEfficiency) return BENCHMARK_SYSTEM_PROMPT + TOOL_CALL_EFFICIENCY_GUIDANCE;
+  if (mech.contextSafeToolCallEfficiency) return BENCHMARK_SYSTEM_PROMPT + CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE;
   if (mech.diagnosticFirstRepair) return BENCHMARK_SYSTEM_PROMPT + DIAGNOSTIC_FIRST_REPAIR_GUIDANCE_V1;
   return BENCHMARK_SYSTEM_PROMPT;
 }
@@ -2190,9 +2203,11 @@ export async function runOneCase(
       ? { signal: "budget_guidance_injected", version: BUDGET_AWARE_COMPLETION_GUIDANCE_VERSION }
       : toolCallEfficiencyActive
         ? { signal: "tool_call_efficiency_guidance_injected", version: TOOL_CALL_EFFICIENCY_GUIDANCE_VERSION }
-        : armMechanisms.diagnosticFirstRepair
-          ? { signal: "diagnostic_first_repair_guidance_injected", version: DIAGNOSTIC_FIRST_REPAIR_GUIDANCE_VERSION }
-          : undefined;
+        : armMechanisms.contextSafeToolCallEfficiency
+          ? { signal: "context_safe_tool_call_efficiency_guidance_injected", version: CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_VERSION }
+          : armMechanisms.diagnosticFirstRepair
+            ? { signal: "diagnostic_first_repair_guidance_injected", version: DIAGNOSTIC_FIRST_REPAIR_GUIDANCE_VERSION }
+            : undefined;
     let observedGuidanceBlock: string | undefined;
 
     const agent: AgentDefinition = {
@@ -2685,6 +2700,7 @@ export async function runOneCase(
         e.type === "memory_retrieved" ||
         e.type === "budget_guidance_injected" ||
         e.type === "tool_call_efficiency_guidance_injected" ||
+        e.type === "context_safe_tool_call_efficiency_guidance_injected" ||
         e.type === "diagnostic_first_repair_guidance_injected" ||
         e.type === "task_scoped_skills_selected" ||
         e.type === "path_scoped_instructions_selected",
@@ -3002,6 +3018,10 @@ export function runtimeConfigForHash(opts: BenchmarkCommandOptions, defaultBudge
       deferredSchema: mech.deferredSchema,
       stepBudgetCompletion: mech.budgetAwareCompletion,
       toolCallEfficiency: mech.toolCallEfficiency,
+      // N6: added ONLY when the candidate is active, so every existing arm's
+      // runtime config hash is byte-identical to before (the same pattern
+      // diagnosticFirstRepair used).
+      ...(mech.contextSafeToolCallEfficiency ? { contextSafeToolCallEfficiency: true } : {}),
       ...(mech.diagnosticFirstRepair ? { diagnosticFirstRepair: true } : {}),
     },
   };

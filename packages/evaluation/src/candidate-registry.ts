@@ -14,6 +14,11 @@ import { DIAGNOSTIC_FIRST_REPAIR_GUIDANCE_V1 } from "./mechanism-guidance.js";
 export type CandidateStatus = "implemented" | "experimental" | "unsupported";
 export type CandidateLayer = "agent-strategy" | "harness-profile" | "benchmark-fixture";
 
+/** N6 — the context-safe tool-call-efficiency candidate id, the single source
+ *  every consumer (registry, arm wiring, contract, prereregistration, CLI
+ *  guards) reads instead of repeating the literal. */
+export const CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_CANDIDATE_ID = "context_safe_tool_call_efficiency_v1";
+
 /** S2's installed discovery policy is one content-addressed arm input. */
 export interface PathScopedInstructionsRuntimeConfig {
   strategy: "path_scoped_instructions_v1";
@@ -221,6 +226,18 @@ const CANDIDATES: CandidateRegistration[] = [
     // run are never the same configuration.
     enabledPatch: { toolCallEfficiency: "v1" },
     disabledPatch: { toolCallEfficiency: undefined },
+  },
+  {
+    id: CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_CANDIDATE_ID,
+    description: "context-safe tool-call efficiency strategy — the tool_call_efficiency_v1 guidance with ONLY the re-read rule replaced: re-use an earlier read while its text is still visible and the version matches, but read a file again before editing it once compaction, truncation or rehydration has dropped the original text (N6)",
+    status: "experimental",
+    layer: "agent-strategy",
+    // Agent-strategy layer: the real effect is a systemPrompt injection in the
+    // benchmark runner (context-safe tool-call efficiency guidance), installed
+    // through the SAME `completionGuidance` slot as the other prompt-guidance
+    // mechanisms (mutually exclusive — at most one may be active).
+    enabledPatch: { contextSafeToolCallEfficiency: "v1" },
+    disabledPatch: { contextSafeToolCallEfficiency: undefined },
   },
   {
     id: "diagnostic_first_repair_v1",

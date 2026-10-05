@@ -33,6 +33,7 @@ import {
   verifyAppliedProofV1,
   BUDGET_AWARE_COMPLETION_GUIDANCE_V1,
   TOOL_CALL_EFFICIENCY_GUIDANCE_V1,
+  CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_V1,
   type AppliedProofV1,
   type ChampionFieldCheckV1,
   type ChampionState,
@@ -70,6 +71,12 @@ export const CHAMPION_BUDGET_AWARE_GUIDANCE = BUDGET_AWARE_COMPLETION_GUIDANCE_V
  *  text would apply a strategy that was never measured. */
 export const CHAMPION_TOOL_CALL_EFFICIENCY_GUIDANCE = TOOL_CALL_EFFICIENCY_GUIDANCE_V1;
 
+/** N6: the context-safe tool-call-efficiency guidance the champion application
+ *  installs as `completionGuidance` — the EXACT SAME text the benchmark
+ *  evaluated (shared strategy-layer definition), one re-read rule different from
+ *  the v2 text. */
+export const CHAMPION_CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE = CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_V1;
+
 /**
  * E4-R05 (F12): mechanisms a champion may require and whether the production
  * startup can actually install them TODAY. Only mechanisms with a real install
@@ -80,11 +87,12 @@ export function championMechanismInstallPlan(championConfig: {
   memory?: { enabled?: boolean };
   budgetAwareCompletion?: boolean;
   toolCallEfficiency?: boolean;
+  contextSafeToolCallEfficiency?: boolean;
   toolSelector?: unknown;
   contextBudget?: unknown;
   recovery?: unknown;
 }): { ok: boolean; reason?: string; supported: Record<string, boolean> } {
-  const supported: Record<string, boolean> = { memory: false, budgetAware: false, toolCallEfficiency: false };
+  const supported: Record<string, boolean> = { memory: false, budgetAware: false, toolCallEfficiency: false, contextSafeToolCallEfficiency: false };
   if (championConfig.memory?.enabled === true || championConfig.memory?.enabled === false) {
     // memory is installed by the wrapper (enabled true/false both project).
     supported.memory = true;
@@ -95,14 +103,23 @@ export function championMechanismInstallPlan(championConfig: {
   if (championConfig.toolCallEfficiency === true) {
     supported.toolCallEfficiency = true;
   }
-  // Both prompt-guidance mechanisms write the SAME `completionGuidance` slot on
-  // the harness. A champion requiring both would have to choose one silently —
-  // refuse instead of installing a prompt that contradicts its declared intent.
-  if (championConfig.budgetAwareCompletion === true && championConfig.toolCallEfficiency === true) {
+  if (championConfig.contextSafeToolCallEfficiency === true) {
+    supported.contextSafeToolCallEfficiency = true;
+  }
+  // Every prompt-guidance mechanism writes the SAME `completionGuidance` slot on
+  // the harness. A champion requiring more than one would have to choose one
+  // silently — refuse instead of installing a prompt that contradicts its
+  // declared intent.
+  const promptGuidanceDemands = [
+    championConfig.budgetAwareCompletion === true ? "budgetAwareCompletion" : null,
+    championConfig.toolCallEfficiency === true ? "toolCallEfficiency" : null,
+    championConfig.contextSafeToolCallEfficiency === true ? "contextSafeToolCallEfficiency" : null,
+  ].filter((name): name is string => name !== null);
+  if (promptGuidanceDemands.length > 1) {
     return {
       ok: false,
       reason:
-        "champion candidate requires mutually exclusive prompt-guidance mechanisms (budgetAwareCompletion and toolCallEfficiency both occupy completionGuidance) — refusing to install a conflicting prompt",
+        `champion candidate requires mutually exclusive prompt-guidance mechanisms (${promptGuidanceDemands.join(" and ")} all occupy completionGuidance) — refusing to install a conflicting prompt`,
       supported,
     };
   }
@@ -128,6 +145,7 @@ export function projectChampionFieldChecks(
   championToolCallEfficiency: boolean,
   resolved: HarnessConfig,
   origins: ReadonlyMap<string, { source: string }>,
+  opts?: { contextSafeToolCallEfficiency?: boolean },
 ): ChampionFieldCheckV1[] {
   const checks: ChampionFieldCheckV1[] = [];
   const resolvedFlags = (resolved.featureFlags ?? {}) as Record<string, boolean>;
@@ -167,6 +185,15 @@ export function projectChampionFieldChecks(
     checks.push({
       key: "completionGuidance",
       intended: CHAMPION_TOOL_CALL_EFFICIENCY_GUIDANCE,
+      actual: resolved.completionGuidance ?? null,
+      origin: origins.get("completionGuidance")?.source ?? "none",
+    });
+  }
+  // N6: same INSTALL-not-a-flag rule for the context-safe candidate.
+  if (opts?.contextSafeToolCallEfficiency === true) {
+    checks.push({
+      key: "completionGuidance",
+      intended: CHAMPION_CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE,
       actual: resolved.completionGuidance ?? null,
       origin: origins.get("completionGuidance")?.source ?? "none",
     });
@@ -266,6 +293,7 @@ export async function createHarnessWithChampion(
   const championMemory = championConfig.memory?.enabled;
   const championBudgetAware = championConfig.budgetAwareCompletion === true;
   const championToolCallEfficiency = championConfig.toolCallEfficiency === true;
+  const championContextSafeToolCallEfficiency = championConfig.contextSafeToolCallEfficiency === true;
 
   // E4-R05 (F12): a champion whose required mechanisms have no real install
   // point is REFUSED here — never applied with flags-only PROVEN.
@@ -298,7 +326,9 @@ export async function createHarnessWithChampion(
       ? { completionGuidance: CHAMPION_BUDGET_AWARE_GUIDANCE }
       : championToolCallEfficiency
         ? { completionGuidance: CHAMPION_TOOL_CALL_EFFICIENCY_GUIDANCE }
-        : {}),
+        : championContextSafeToolCallEfficiency
+          ? { completionGuidance: CHAMPION_CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE }
+          : {}),
   };
 
   let harness: Harness;
@@ -317,6 +347,7 @@ export async function createHarnessWithChampion(
     championToolCallEfficiency,
     harness.resolvedConfig.value,
     harness.resolvedConfig.origins,
+    { contextSafeToolCallEfficiency: championContextSafeToolCallEfficiency },
   );
 
   const evaluation = evaluateChampionApplicationV1({ checks });

@@ -49,6 +49,10 @@ export interface ChampionHarnessConfig {
   /** N5/P1: whether the tool-call-efficiency guidance is injected. Mutually
    *  exclusive with `budgetAwareCompletion` (both occupy `completionGuidance`). */
   toolCallEfficiency?: boolean;
+  /** N6: whether the context-safe tool-call-efficiency guidance is injected.
+   *  Mutually exclusive with the other prompt-guidance mechanisms (all occupy
+   *  `completionGuidance`). */
+  contextSafeToolCallEfficiency?: boolean;
   /** Runtime mechanisms digest for audit. */
   runtimeDigest: string;
 }
@@ -117,6 +121,13 @@ export function championHarnessConfigFromProfile(
   // than recording a flags-only PROVEN.
   if (rc.toolCallEfficiency) {
     config.toolCallEfficiency = true;
+  }
+
+  // N6: the context-safe tool-call-efficiency guidance is likewise a real
+  // install requirement — carry it so the production application installs (and
+  // verifies) it rather than recording a flags-only PROVEN.
+  if (rc.contextSafeToolCallEfficiency) {
+    config.contextSafeToolCallEfficiency = true;
   }
 
   return config;

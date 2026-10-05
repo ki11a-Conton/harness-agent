@@ -6,7 +6,7 @@ import { ScriptedModelProvider } from "@ar/model";
 import { makeEventId, makeSessionId } from "@ar/contracts";
 import type { ModelEvent, ModelProvider, ModelRef, ModelRequest, ProviderConfig } from "@ar/contracts";
 import type { EvalOutcome } from "@ar/evaluation";
-import { TOOL_CALL_EFFICIENCY_GUIDANCE_V1, TOOL_CALL_EFFICIENCY_GUIDANCE_VERSION, BUDGET_AWARE_COMPLETION_GUIDANCE_V1, toolCallEfficiencyGuidanceDigest, computePromptDigest, computeRuntimeConfigHash, getArmFactory } from "@ar/evaluation";
+import { TOOL_CALL_EFFICIENCY_GUIDANCE_V1, TOOL_CALL_EFFICIENCY_GUIDANCE_VERSION, CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_V1, CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_VERSION, BUDGET_AWARE_COMPLETION_GUIDANCE_V1, toolCallEfficiencyGuidanceDigest, contextSafeToolCallEfficiencyGuidanceDigest, computePromptDigest, computeRuntimeConfigHash, getArmFactory } from "@ar/evaluation";
 import {
   assertWorkspaceIsolated,
   effectiveFeaturesFor,
@@ -1215,6 +1215,181 @@ describe("E3-02: paired promotion path (real PairedExperimentExecutor)", () => {
     }
     // One byte of drift in the strategy surface changes the recorded digest.
     expect(computePromptDigest(`${identityPrompt}x`)).not.toBe(manifestPromptDigest);
+  });
+
+  // -------------------------------------------------------------------------
+  // N6 — context_safe_tool_call_efficiency_v1: the v2 strategy with ONLY the
+  // re-read rule replaced. These tests bind the model-visible bytes, the
+  // activation fact site and the identity of BOTH candidates.
+  // -------------------------------------------------------------------------
+
+  /** Capture every REAL model request one benchmark run sends (offline, 0 cost). */
+  function captureRequests(): { provider: ModelProvider; seen: ModelRequest[] } {
+    const seen: ModelRequest[] = [];
+    const inner = new ScriptedModelProvider(Array.from({ length: 16 }, () => ScriptedModelProvider.text("done")));
+    return {
+      seen,
+      provider: {
+        id: inner.id,
+        listModels: () => inner.listModels(),
+        createClient(model: ModelRef, config: ProviderConfig) {
+          const client = inner.createClient(model, config);
+          return {
+            generate: async function* (request: ModelRequest, signal: AbortSignal) {
+              seen.push(request);
+              yield* client.generate(request, signal);
+            },
+          };
+        },
+      },
+    };
+  }
+
+  it("N6: the candidate injects ITS OWN guidance into the model-visible prompt — never the v2 bytes", async () => {
+    const root = await makePairCases();
+    const { provider, seen } = captureRequests();
+    const result = await runBenchmarkCommand(
+      ["--cases", join(root, "cases"), "--candidate", "context_safe_tool_call_efficiency_v1", "--allow-insecure-local-benchmark", "--out", join(root, "out")],
+      provider,
+    );
+    expect(result.exitCode).toBe(0);
+
+    const { readFile } = await import("node:fs/promises");
+    const artifact = JSON.parse(await readFile(join(root, "out", "paired-experiment.json"), "utf8"));
+    const cand = artifact.finalizedPairs[0].candidate.outcome;
+
+    const systems = seen.map((r) => r.system ?? "");
+    // The candidate block really reaches the model …
+    expect(systems.filter((s) => s.includes(CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_V1)).length).toBeGreaterThanOrEqual(1);
+    // … the BASELINE arm never carries it …
+    expect(systems.filter((s) => !s.includes(CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_V1)).length).toBeGreaterThanOrEqual(1);
+    for (const s of systems) {
+      // … and the v2 revision (a DIFFERENT text) is never what the model saw:
+      expect(s.includes(TOOL_CALL_EFFICIENCY_GUIDANCE_V1)).toBe(false);
+      // Mutually exclusive with the other prompt-guidance mechanisms.
+      expect(s.includes(CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_V1) && s.includes(BUDGET_AWARE_COMPLETION_GUIDANCE_V1)).toBe(false);
+    }
+
+    // Activation comes from the real fact site and binds the REAL block bytes.
+    const guidanceEvent = cand.activationEvidenceV2.events.find(
+      (e: { mechanism: string }) => e.mechanism === "prompt-guidance",
+    );
+    expect(guidanceEvent).toBeDefined();
+    expect(guidanceEvent.payload.digest).toBe(contextSafeToolCallEfficiencyGuidanceDigest());
+    expect(guidanceEvent.payload.digest).not.toBe(toolCallEfficiencyGuidanceDigest());
+    expect(guidanceEvent.payload.guidanceVersion).toBe(CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_VERSION);
+    expect(guidanceEvent.payload.blockLength).toBe(CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_V1.length);
+    expect(cand.activationEvidenceV2.validation.ok).toBe(true);
+    expect(cand.activationEvidenceV2.aggregation.activated).toBeGreaterThanOrEqual(1);
+
+    // The BASELINE arm never carries this candidate's guidance event.
+    const baseline = artifact.finalizedPairs[0].baseline.outcome;
+    expect(
+      (baseline.activationEvidenceV2?.events ?? []).find((e: { mechanism: string }) => e.mechanism === "prompt-guidance"),
+    ).toBeUndefined();
+  });
+
+  it("N6: the v2 candidate's bytes, digest and activation fact site are UNCHANGED", async () => {
+    // Frozen bytes: the sha256 the N1 boundary review recorded for the live v2
+    // text (docs/evidence/agent-next6-plan-20261005/review-result.json). If this
+    // fails, a shipped candidate's identity was silently rewritten.
+    expect(TOOL_CALL_EFFICIENCY_GUIDANCE_VERSION).toBe("tool-call-efficiency:v2");
+    expect(toolCallEfficiencyGuidanceDigest()).toBe("ebddf5eb125cbbe8ed25d7ecb1ea3554809494aea70716adf3a9f62924939619");
+
+    // The candidate is a ONE-rule change: the shared bullets are byte-identical
+    // and the v2 re-read rule is the only sentence that differs.
+    expect(CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_V1).not.toBe(TOOL_CALL_EFFICIENCY_GUIDANCE_V1);
+    expect(TOOL_CALL_EFFICIENCY_GUIDANCE_V1).toContain("do not re-read a\n  file you have already read unless it changed.");
+    expect(CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_V1).not.toContain("do not re-read a\n  file you have already read unless it changed.");
+    for (const shared of [
+      "Tool-call efficiency guidance:",
+      "  calls). This limit counts MODEL CALLS, not tool calls: you may attach",
+      "- Before repeating a tool call that just failed, change something — the",
+      "- Only abandon a tool when it keeps failing the SAME way with unchanged",
+      "- Make each edit complete before moving on, so the verification command you",
+    ]) {
+      expect(TOOL_CALL_EFFICIENCY_GUIDANCE_V1).toContain(shared);
+      expect(CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_V1).toContain(shared);
+    }
+
+    // A real v2 run still lands v2's digest on v2's own signal.
+    const root = await makePairCases();
+    const { provider, seen } = captureRequests();
+    const result = await runBenchmarkCommand(
+      ["--cases", join(root, "cases"), "--candidate", "tool_call_efficiency_v1", "--allow-insecure-local-benchmark", "--out", join(root, "out")],
+      provider,
+    );
+    expect(result.exitCode).toBe(0);
+    const { readFile } = await import("node:fs/promises");
+    const artifact = JSON.parse(await readFile(join(root, "out", "paired-experiment.json"), "utf8"));
+    const cand = artifact.finalizedPairs[0].candidate.outcome;
+    const guidanceEvent = cand.activationEvidenceV2.events.find(
+      (e: { mechanism: string }) => e.mechanism === "prompt-guidance",
+    );
+    expect(guidanceEvent.payload.digest).toBe(toolCallEfficiencyGuidanceDigest());
+    expect(guidanceEvent.payload.guidanceVersion).toBe(TOOL_CALL_EFFICIENCY_GUIDANCE_VERSION);
+    for (const s of seen.map((r) => r.system ?? "")) {
+      expect(s.includes(CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_V1)).toBe(false);
+    }
+  });
+
+  it("N6: the candidate's identity is its own and perturbs no existing arm", () => {
+    const mk = (candidate?: string): BenchmarkCommandOptions =>
+      ({ suite: "regression", candidate } as unknown as BenchmarkCommandOptions);
+    const baseline = runtimeConfigForHash(mk(), 32000);
+    const v2 = runtimeConfigForHash(mk("tool_call_efficiency_v1"), 32000);
+    const cand = runtimeConfigForHash(mk("context_safe_tool_call_efficiency_v1"), 32000);
+
+    expect(baseline.systemPrompt).toBe(BENCHMARK_SYSTEM_PROMPT);
+    expect(v2.systemPrompt).toBe(BENCHMARK_SYSTEM_PROMPT + TOOL_CALL_EFFICIENCY_GUIDANCE_V1);
+    expect(cand.systemPrompt).toBe(BENCHMARK_SYSTEM_PROMPT + CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_V1);
+
+    // The mechanism key exists ONLY on the new arm, so the baseline's and v2's
+    // resolved runtime config (and therefore their hashes) are untouched.
+    const mechanismsOf = (c: unknown): Record<string, unknown> => (c as { mechanisms: Record<string, unknown> }).mechanisms;
+    expect("contextSafeToolCallEfficiency" in mechanismsOf(baseline)).toBe(false);
+    expect("contextSafeToolCallEfficiency" in mechanismsOf(v2)).toBe(false);
+    expect(mechanismsOf(cand).contextSafeToolCallEfficiency).toBe(true);
+    expect(computeRuntimeConfigHash(cand)).not.toBe(computeRuntimeConfigHash(v2));
+    expect(computeRuntimeConfigHash(cand)).not.toBe(computeRuntimeConfigHash(baseline));
+
+    // The single model-visible builder: no mechanism → the plain benchmark prompt.
+    expect(benchmarkModelVisibleSystemPrompt(getArmFactory().resolveRuntimeMechanisms(null))).toBe(BENCHMARK_SYSTEM_PROMPT);
+    expect(benchmarkModelVisibleSystemPrompt(getArmFactory().resolveRuntimeMechanisms("context_safe_tool_call_efficiency_v1")))
+      .toBe(BENCHMARK_SYSTEM_PROMPT + CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_V1);
+  });
+
+  it("N6: the candidate's legacy paid entry is closed too (refused before provider construction)", async () => {
+    const root = await makePairCases();
+    const prevKey = process.env.OPENAI_API_KEY;
+    const prevPaid = process.env.RUN_PAID_BENCHMARKS;
+    // EVERYTHING a legacy paid run would need is present — a key AND the paid
+    // switch — so the only thing that can refuse this is the pre-registration
+    // gate. No provider override is passed: that would make the run
+    // `offline-test` and the external-billed gate would never be reached.
+    process.env.OPENAI_API_KEY = "sk-test-probe-never-real";
+    process.env.RUN_PAID_BENCHMARKS = "1";
+    try {
+      const result = await runBenchmarkCommand([
+        "--cases", join(root, "cases"),
+        "--candidate", "context_safe_tool_call_efficiency_v1",
+        "--allow-insecure-local-benchmark",
+        "--dry-run",
+        "--out", join(root, "out"),
+      ]);
+      expect(result.exitCode).toBe(1);
+      const out = result.lines.join("\n");
+      // The migration hint to the formal `agent prereg` chain.
+      expect(out).toContain("prereg");
+      // It refused BEFORE the legacy billing guard (i.e. before any provider was
+      // constructed), not through it.
+      expect(out).not.toContain("RUN_PAID_BENCHMARKS=1 is required");
+    } finally {
+      if (prevKey !== undefined) process.env.OPENAI_API_KEY = prevKey;
+      else delete process.env.OPENAI_API_KEY;
+      if (prevPaid !== undefined) process.env.RUN_PAID_BENCHMARKS = prevPaid;
+      else delete process.env.RUN_PAID_BENCHMARKS;
+    }
   });
 
   it("E4-02: paired run emits canonical V3 in-process (no paired-to-v3.mjs), facts from execution", async () => {

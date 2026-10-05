@@ -30,6 +30,7 @@ export type ActivationReasonCode =
   | "context_dynamic_used"
   | "budget_guidance_injected"
   | "tool_call_efficiency_guidance_injected"
+  | "context_safe_tool_call_efficiency_guidance_injected"
   | "diagnostic_first_repair_guidance_injected"
   | "task_scoped_skills_selected"
   | "path_scoped_instructions_selected"
@@ -385,6 +386,25 @@ export function activationEvidenceFor(
         reasonCodes: injections.length > 0 ? ["tool_call_efficiency_guidance_injected"] : ["activation_zero"],
         baselineMechanismDigest: "benchmark-standard-prompt",
         candidateMechanismDigest: "benchmark-prompt+tool-call-efficiency-guidance",
+        summary: { injectionCount: injections.length },
+      };
+    }
+    case "context_safe_tool_call_efficiency_v1": {
+      // N6: activation is observed when the context-safe guidance was actually
+      // injected into the agent's system prompt (a real wiring decision by the
+      // benchmark runner for this candidate). It is a SEPARATE signal from the
+      // v2 one, so a v2 injection can never corroborate this candidate.
+      const injections = activationEvents.filter((e) => e.type === "context_safe_tool_call_efficiency_guidance_injected");
+      return {
+        schemaVersion: ACTIVATION_EVIDENCE_SCHEMA_VERSION,
+        candidateId,
+        caseId: caseDef.id,
+        eligible: true,
+        activated: injections.length > 0,
+        activationCount: injections.length,
+        reasonCodes: injections.length > 0 ? ["context_safe_tool_call_efficiency_guidance_injected"] : ["activation_zero"],
+        baselineMechanismDigest: "benchmark-standard-prompt",
+        candidateMechanismDigest: "benchmark-prompt+context-safe-tool-call-efficiency-guidance",
         summary: { injectionCount: injections.length },
       };
     }
