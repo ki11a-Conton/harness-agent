@@ -160,6 +160,29 @@ describe("N6 — context_safe_tool_call_efficiency_v1 is really installed at pro
     }
   });
 
+  it("the WEB entrypoint installs and attests the SAME bytes as the CLI one", async () => {
+    // Both production entrypoints share this one application path, so the Web
+    // GUI must install the identical strategy text the CLI and the benchmark
+    // use — a "similar meaning" startup rewrite would apply a strategy that was
+    // never measured.
+    await writePendingState(CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_CANDIDATE_ID);
+    const outcome = await createHarnessWithChampion({
+      runtimeEntrypoint: "web",
+      baseConfig: baseConfig(join(dir, "web-data")),
+      stateFilePath: statePath,
+      sourceSha: "c".repeat(40),
+    });
+    try {
+      expect(outcome.status).toBe("applied");
+      expect(outcome.proof!.runtimeEntrypoint).toBe("web");
+      const main = outcome.harness.agents.find((a) => a.name === "main");
+      expect(main!.systemPrompt.endsWith(CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_V1)).toBe(true);
+      expect(outcome.harness.resolvedConfig.value.completionGuidance).toBe(CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_V1);
+    } finally {
+      await outcome.harness.close();
+    }
+  });
+
   it("removing the install FAILS the application (never applied on flags alone)", async () => {
     await writePendingState(CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_CANDIDATE_ID);
     const outcome = await createHarnessWithChampion({
