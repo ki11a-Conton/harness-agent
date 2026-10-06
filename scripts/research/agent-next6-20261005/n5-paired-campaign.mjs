@@ -337,12 +337,21 @@ const summary = {
 };
 writeFileSync(join(outDir, "campaign-result.json"), `${JSON.stringify(summary, null, 2)}\n`, "utf8");
 
-// Raw per-arm outcomes (the evidence the gates are computed from).
+// Raw per-arm outcomes (the evidence the gates are computed from). The event
+// trail is BOUNDED exactly as the CLI's own paired path bounds it (E3-14): the
+// journal keeps the full per-arm record, the artifact keeps a bounded trail so a
+// 192-run campaign does not produce an unreadable bundle.
+const { boundOutcomeEvents } = cli;
+const boundPair = (pair) => ({
+  ...pair,
+  baseline: { ...pair.baseline, outcome: boundOutcomeEvents(pair.baseline.outcome) },
+  candidate: { ...pair.candidate, outcome: boundOutcomeEvents(pair.candidate.outcome) },
+});
 if (Array.isArray(result.finalizedPairs)) {
-  writeFileSync(join(outDir, "finalized-pairs.json"), `${JSON.stringify(result.finalizedPairs, null, 2)}\n`, "utf8");
+  writeFileSync(join(outDir, "finalized-pairs.json"), `${JSON.stringify(result.finalizedPairs.map(boundPair), null, 2)}\n`, "utf8");
 }
 if (Array.isArray(result.partialPairs)) {
-  writeFileSync(join(outDir, "partial-pairs.json"), `${JSON.stringify(result.partialPairs, null, 2)}\n`, "utf8");
+  writeFileSync(join(outDir, "partial-pairs.json"), `${JSON.stringify(result.partialPairs.map(boundPair), null, 2)}\n`, "utf8");
 }
 
 // SHA256 index over everything this run wrote (raw evidence, not a summary).
@@ -377,4 +386,5 @@ process.stdout.write(
   `campaign: ${result.status} — pairs finalized ${summary.finalizedPairs}, partial ${summary.partialPairs}, ` +
     `logical runs ${result.counters?.logicalRuns ?? "?"}, elapsed ${summary.elapsedSeconds}s, out ${outDir.replace(REPO, ".")}\n`,
 );
-process.exit(result.status === "complete" ? 0 : 1);
+// "ok" is the executor's success status; partial pairs are reported, not hidden.
+process.exit(result.status === "ok" ? 0 : 1);
