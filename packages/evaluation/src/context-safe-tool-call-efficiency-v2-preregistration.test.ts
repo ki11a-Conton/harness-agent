@@ -465,26 +465,16 @@ describe("N7/N7-3 — the independent holdout pre-registration", () => {
     expect(report.promotion).toBe("NOT_RUN");
   });
 
-  it("12. the committed holdout artifact still reproduces, except for the arm snapshot the registry listing moves", () => {
+  it("12. the committed holdout artifact equals a fresh build, and holdout wiring is fail-closed", () => {
     const committed = JSON.parse(readFileSync(HOLDOUT_ARTIFACT_PATH, "utf8")) as ContextSafePreregistration;
-    // The artifact is NOT rewritten. What moves between the freeze and today is
-    // the CANDIDATE REGISTRY: the baseline arm's resolved snapshot lists every
-    // registered candidate as OFF (`arm-factory buildSnapshot`), so registering a
-    // later challenger legitimately moves the champion-resolved baseline arm
-    // digest — and the root identity derived from it. Everything the N7 holdout
-    // actually froze (role, dataset, schedule, provider, gates, candidate arm,
-    // champion provenance) must still be identical, and the frozen artifact must
-    // stay internally valid.
-    const { baselineArmDigest: frozenBaseline, ...committedSubject } = committed.subject;
-    const { baselineArmDigest: liveBaseline, ...liveSubject } = artifact.subject;
-    expect(liveSubject).toEqual(committedSubject);
-    expect(frozenBaseline).toBe("ee589c7e2361c8b79edade3d365bfd9e29a2778792eb650e295bf58d523d7895");
-    expect(liveBaseline).not.toBe(frozenBaseline);
-    expect(liveBaseline).toBe(resolvedChampion().digest);
-    const movedKeys = Object.keys(committed).filter(
-      (key) => JSON.stringify(committed[key as keyof ContextSafePreregistration]) !== JSON.stringify(artifact[key as keyof ContextSafePreregistration]),
-    );
-    expect(movedKeys.sort()).toEqual(["preregistrationDigest", "subject"]);
+    // Re-frozen in the P round (docs/evidence/agent-p-20261006/P-COMPLETION.md):
+    // registering a new challenger moves the champion-resolved BASELINE arm
+    // snapshot digest (the baseline snapshot lists every registered candidate as
+    // OFF), so the plan was re-frozen with the round's own freeze script BEFORE
+    // any N7 model result existed. It must reproduce byte-for-byte again, and the
+    // frozen arm must still be the champion resolved from the real state file.
+    expect(committed).toEqual(artifact);
+    expect(committed.subject.baselineArmDigest).toBe(resolvedChampion().digest);
     const frozenReport = dryRunContextSafeV2Preregistration(committed);
     expect(frozenReport.ok, frozenReport.problems.join("; ")).toBe(true);
     expect(frozenReport.logicalRuns).toBe(192);

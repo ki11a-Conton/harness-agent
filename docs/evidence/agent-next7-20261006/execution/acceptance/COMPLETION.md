@@ -53,3 +53,17 @@ JS
 当前执行绑定 `7056ab66740d59c7f5c9b062dd6ec5991bb421d19148c1f23bbf590e8bf7ab6b` 是缺环境时的诊断原件，不可用作已合格 soak。后续在 clean 实际执行 SHA 上配置冻结模型端点、模型凭据、有效 `prereg-pricing-v2` 和合格隔离后，重新 prepare，确认新 binding digest，再按使用入口运行。若选择显式 insecure-local 研究模式，其实测永久 promotion-ineligible。
 
 原 duration **1800000ms（30 分钟）**、工具总额 **600** 和其余预算保持不变。预计需要 9–10 小时的完整 campaign 必须在模型结果之前显式重新预注册预算，不能自动续 deadline 或增加 cap。两个真实实验、工程门、原件复核与强隔离资格均满足后，才可进入既有 champion 流程；联合判定器与归档器都不会自动修改 champion。
+
+## 追加记录：N7 holdout 预注册重新冻结（P 轮）
+
+P 轮登记新挑战者 `verified_completion_gate_v1` 后，`arm-factory buildSnapshot` 在 baseline 臂上把每个已注册候选列为 OFF，于是 champion 解析出的基线臂快照摘要移动，N7 holdout 预注册不再逐字节可复算，执行链的完整性守卫报 `ARM_DIGEST_DRIFT`。按计划建议的方式，用本轮的冻结脚本重新冻结：
+
+| 项目 | 旧值 | 新值 |
+| --- | --- | --- |
+| `preregistrationDigest` | `967da1dd…5664` | `7b675621…7321` |
+| `subject.baselineArmDigest` | `ee589c7e…7895` | `00d2c921…1fdc` |
+| 预注册文件 SHA256 | `eddff1af…1a3a` | `e9fe9b50…476f` |
+
+不变项：24 用例 / 4 重复 / **192 logical arm runs**（AB 48 / BA 48）、门限逐值相同、provider 与请求档相同、预算上限 $100,000、champion provenance 相同（level=C0、candidateId=null、validity=QUARANTINED_PENDING_REEVALUATION）。重新冻结发生在**任何 N7 模型结果之前**（soak / campaign / judge 均未运行，`paid calls = 0`）。
+
+本目录随之更新：`holdout-prereg.log`（按 `checks.json` 记录的同一命令重新生成）、`unchanged-originals.json`（两条条目更新，并新增 `updatedInLaterRounds` 说明旧值与原因）、`artifact-index.json` 与 `RAW-MANIFEST.json`（索引与原件字节重算）。本文件其余结论不变；唯一被 P 轮移动的既有原件是策略文件 `packages/evaluation/src/mechanism-guidance.ts`（新增门文本，既有候选文本与 digest 未变）。

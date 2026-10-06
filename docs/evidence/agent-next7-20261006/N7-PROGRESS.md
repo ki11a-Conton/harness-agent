@@ -60,10 +60,10 @@
 | 项目 | 主实验 | 独立 holdout |
 | --- | --- | --- |
 | 候选文本 | v2 `52a80e9c…9333c` | 同左 |
-| 对照臂 | `tool_call_efficiency_v1` `ebddf5eb…9619` | 运行时解析 champion（C0/`null`，arm `ee589c7e…`，validity=QUARANTINED_PENDING_REEVALUATION，applied=true） |
+| 对照臂 | `tool_call_efficiency_v1` `ebddf5eb…9619` | 运行时解析 champion（C0/`null`，arm `00d2c921…`，validity=QUARANTINED_PENDING_REEVALUATION，applied=true） |
 | 用例 / 重复 | 64 / 4 | 24 / 4 |
 | **logical arm runs** | **512**（AB 128 / BA 128） | **192**（AB 48 / BA 48） |
-| `preregistrationDigest` | `7c7d0b56ce6e22446fc7e1262dbb68b5310d3bd998eeb75c9f5b399c401f5b9b` | `967da1dd37a438cfdbc804c7cf7985fb9a787777c5c7e9bd801f211183055664` |
+| `preregistrationDigest` | `7c7d0b56ce6e22446fc7e1262dbb68b5310d3bd998eeb75c9f5b399c401f5b9b` | `7b675621258c1c63a3c7f429c71b4b274c571d3b2684c31b1d7fb98ec7e97321` |
 | 冻结 seed | 20261007 | 20261008 |
 | dry-run | 512 runs / `paidProviderCalls=0` / `modelQuality=NOT_RUN` | 192 runs / 同左 |
 
@@ -99,3 +99,5 @@
 - 494 个原件与补齐基线 `d92d727…` 逐字节一致，包括 N7 策略/语料/预注册、不可变规格和旧 N6 脚本。生产 Runtime/Core/权限/沙箱/工具/verifier/依赖未改。完整可复算原件见 [验收报告](execution/acceptance/COMPLETION.md) 和 [SHA256 索引](execution/acceptance/artifact-index.json)。
 - 当前执行环境为 Linux 管理工作区，但实际 bwrap capability self-test 失败，不能仅凭平台声称 strong。`OPENAI_API_KEY` 与有效价目未配置，8317 端点连接拒绝。因此真实 soak/campaign/效果仍为 **BLOCKED/NOT_RUN**，真实模型调用 **0**，候选 **NOT_PROVEN / 未 promotion**。这是当前环境阻塞，与 §5 的首次交付记录分开。
 - 原 duration **30 分钟**、工具总额 **600** 保持执行；预计 9–10 小时的实测需要在结果前重新预注册预算。补环境后，在实际 clean SHA 上重新 prepare/确认 binding digest，再按 [使用入口](execution/README.md) 执行；显式 insecure-local 实测永久不具备 promotion 资格。
+
+> **P 轮重新冻结（2026-10-06）**：登记 `verified_completion_gate_v1` 后，baseline 臂快照（枚举全部已注册候选为 OFF）使 champion 解析出的对照臂摘要移动，故 holdout 预注册按本轮冻结脚本重新冻结：`preregistrationDigest` `967da1dd…5664` → `7b675621…7321`，对照臂 `ee589c7e…` → `00d2c921…`；**24 用例 / 192 runs / 门限 / provider / 预算 / provenance 均不变**，且重新冻结发生在任何 N7 模型结果之前（paid calls = 0）。验收记录（`holdout-prereg.log`、`unchanged-originals.json`、`artifact-index.json`、`RAW-MANIFEST.json`）已同步更新并重新自校验通过。

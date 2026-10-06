@@ -42,13 +42,21 @@
 
 ## 4. 如实记录的两个副作用
 
-1. **登记新候选会移动"基线臂快照"摘要**（`arm-factory buildSnapshot` 在 baseline 臂上把每个已注册候选列为 OFF）：N7 **holdout** 预注册的对照臂是运行时解析的 champion（C0/`null` → baseline 臂），因此其 `baselineArmDigest` 由 `ee589c7e…` 变为新值，根身份随之变化。处理：**不改写已冻结的 N7 产物**，改为断言"除该臂摘要与其派生的根身份外逐字节一致"，显式记录冻结值，并断言冻结产物自身 dry-run 仍为 192 runs / 0 付费。**若将来要真跑 N7 holdout，必须先重新 prepare 并重新冻结/批准**（执行链文档本身即要求重新确认 binding digest）。N7 **main** 预注册两臂均为候选臂，不受登记影响，仍逐字节可复算。
+1. **登记新候选会移动"基线臂快照"摘要**（`arm-factory buildSnapshot` 在 baseline 臂上把每个已注册候选列为 OFF）：N7 **holdout** 预注册的对照臂是运行时解析的 champion（C0/`null` → baseline 臂），因此其 `baselineArmDigest` 移动，根身份随之变化。
 
-   **连带后果（本轮实测，已计入 §3 的全仓数字）**：并入的 `apps/cli/src/n7-execution-chain.regressions.test.ts` 在 `beforeAll` 里调用 `scripts/research/agent-next7-20261006/execution-common.mjs` 的 `loadExperiment("holdout")`，其完整性断言要求"基线臂摘要 == 预注册记录值"。登记新候选后该断言以 **`ARM_DIGEST_DRIFT`** 失败，导致该文件 55 项测试全部 **skipped**（Vitest 报告文件 FAIL，不是静默跳过）。
+   **已按操作者批准的推荐路径处理（本轮执行）**：用本轮冻结脚本 `scripts/research/agent-next7-20261006/freeze-n7-holdout-preregistration.mjs` **重新冻结**：
 
-   这是**设计内的 fail-closed 行为**，也是本机唯一可行的诚实处理：本轮计划明确承诺"不动 N7 预注册与语料"，而该预注册同时被 N7 验收证据的 `unchanged-originals.json` 以固定 SHA256 保护（494 项，当前 494/494 与 HEAD 一致）。因此**没有改写**它。要让 N7 holdout 执行链在本树重新可跑，二选一：
-   - **（推荐，等真要跑时再做）** 运行 `scripts/research/agent-next7-20261006/freeze-n7-holdout-preregistration.mjs` 重新冻结（24 用例 / 192 runs / 门限 / provider / 预算均不变，仅基线臂摘要与根身份更新），并在同一提交里更新 `unchanged-originals.json`/`artifact-index.json`/`RAW-MANIFEST.json` 的记录与 N7 README/PROGRESS 中的旧 digest；当前**没有任何模型结果**，因此重新冻结在时间上仍是"结果之前"。
-   - 或保持冻结不动，接受该 55 项在本树持续以 `ARM_DIGEST_DRIFT` fail-closed，直到真正准备运行 N7 holdout 时再重新冻结。
+   | 项目 | 旧值 | 新值 |
+   | --- | --- | --- |
+   | `preregistrationDigest` | `967da1dd…5664` | `7b675621…7321` |
+   | `subject.baselineArmDigest` | `ee589c7e…7895` | `00d2c921…1fdc` |
+   | 预注册文件 SHA256 | `eddff1af…1a3a` | `e9fe9b50…b476` |
+
+   **不变项**：24 用例 / 4 重复 / **192 logical arm runs**（AB 48 / BA 48）、门限逐值相同、provider 与请求档相同、预算上限 $100,000、champion provenance 相同（level=C0、candidateId=null、validity=QUARANTINED_PENDING_REEVALUATION）。重新冻结发生在**任何 N7 模型结果之前**（soak / campaign / judge 均未运行，`paid calls = 0`），因此仍满足"预注册先于结果"。
+
+   验收记录同步更新并已自校验：`holdout-prereg.log` 按 `checks.json` 记录的**同一命令**重新生成；`unchanged-originals.json` 更新两条条目（策略文件 `packages/evaluation/src/mechanism-guidance.ts` 与 holdout 预注册），并新增 `updatedInLaterRounds` 记录旧值、新值与原因；`artifact-index.json`（33 项）与 `RAW-MANIFEST.json`（28 项）重算；重新验证 **artifact-index OK · RAW-MANIFEST OK · unchanged-originals 494/494**。N7 README / N7-PROGRESS 的旧摘要已随同一提交更新并附说明。
+
+   **连带后果（本轮实测）**：并入的 `apps/cli/src/n7-execution-chain.regressions.test.ts` 在 `beforeAll` 里经 `loadExperiment("holdout")` 校验"基线臂摘要 == 预注册记录值"；登记新候选时它以 **`ARM_DIGEST_DRIFT`** fail-closed（该文件 55 项 skipped，Vitest 报告文件 FAIL，不是静默跳过）。重新冻结后该守卫重新通过，55 项恢复运行 —— 这正是执行链文档要求的"绑定移动后重新 prepare/冻结"路径。
 2. `apps/cli/src/benchmark-command.test.ts > E4-R41 …captureHostState UNVERIFIED` 在本机隔离复跑仍失败（102 通过 / 1 失败），且**在拉取前的基线提交上同样失败**，属本机 host-probe 环境性失败，非本轮引入。
 
 ## 5. 本机环境修复（同轮一并完成）

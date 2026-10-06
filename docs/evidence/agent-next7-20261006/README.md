@@ -20,11 +20,11 @@
 | 项目 | 主实验 | 独立 holdout |
 | --- | --- | --- |
 | 候选 | `context_safe_tool_call_efficiency_v2`，文本 SHA256 `52a80e9c…9333c` | 同左 |
-| 对照臂 | `tool_call_efficiency_v1`，文本 SHA256 `ebddf5eb…9619` | 运行时解析的 champion（`docs/evolution/champion-state.json`，level=C0，candidateId=null，arm `ee589c7e…`） |
+| 对照臂 | `tool_call_efficiency_v1`，文本 SHA256 `ebddf5eb…9619` | 运行时解析的 champion（`docs/evolution/champion-state.json`，level=C0，candidateId=null，arm `00d2c921…`） |
 | 用例 | 64（缺失 48 + 控制 16） | 24（缺失 16 + 控制 8） |
 | 重复 | 4 | 4 |
 | logical arm runs | **512**（AB 128 / BA 128） | **192**（AB 48 / BA 48） |
-| `preregistrationDigest` | `7c7d0b56ce6e22446fc7e1262dbb68b5310d3bd998eeb75c9f5b399c401f5b9b` | `967da1dd37a438cfdbc804c7cf7985fb9a787777c5c7e9bd801f211183055664` |
+| `preregistrationDigest` | `7c7d0b56ce6e22446fc7e1262dbb68b5310d3bd998eeb75c9f5b399c401f5b9b` | `7b675621258c1c63a3c7f429c71b4b274c571d3b2684c31b1d7fb98ec7e97321` |
 | 用例集摘要 | `03a77f3f…08fa1` | `7e8e42fd…b2a28` |
 | 冻结 seed（orderSeed） | 20261007 | 20261008 |
 | provider / model | `openai` / `workbuddy-deepseek-v4.1-flash`（端点仅以摘要入库，凭据不落盘） | 同左 |
@@ -44,3 +44,5 @@ N7 计划文本写作"每实验 512 runs"。算术上 512 = 2 × 64 × 4，是**
 - **当前隔离不具备 promotion 资格**：首次 Windows 环境没有 OS 级写隔离；本次 Linux 管理工作区的实际 capability self-test 也失败。只有实际强隔离自测合格、两个真实实验与工程门全部通过后，才可进入既有 champion 流程；显式 insecure-local 实测永久不具备资格。
 - **预算不能自动延长**：原 duration 30 分钟、工具总额 600 保持执行；9–10 小时实测需要在模型结果之前重新预注册预算。环境变化或最终实际执行 SHA 变化后须重新 prepare，不能复用本次 blocked 诊断 binding。
 - v1 候选 `context_safe_tool_call_efficiency_v1` 仍为 `candidate` / **NOT_PROVEN**，其文本与 digest 未被本轮修改，也不因本轮结果被追认。
+
+> **P 轮重新冻结（2026-10-06）**：登记 `verified_completion_gate_v1` 后，baseline 臂快照（枚举全部已注册候选为 OFF）使 champion 解析出的对照臂摘要移动，故 holdout 预注册按本轮冻结脚本重新冻结：`preregistrationDigest` `967da1dd…5664` → `7b675621…7321`，对照臂 `ee589c7e…` → `00d2c921…`；**24 用例 / 192 runs / 门限 / provider / 预算 / provenance 均不变**，且重新冻结发生在任何 N7 模型结果之前（paid calls = 0）。验收记录（`holdout-prereg.log`、`unchanged-originals.json`、`artifact-index.json`、`RAW-MANIFEST.json`）已同步更新并重新自校验通过。
