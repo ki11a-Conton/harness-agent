@@ -62,8 +62,8 @@ export function judgeData(experiment, data, { validateActivation, isStrictValidA
   if (absent > 0) issues.push("UNRUN_PAIRS");
   const condition = new Map(manifest.cases.map(c => [c.caseId, c.condition]));
   const grid = plan.pairs.map(p => ({ frozen: p, actual: pairs.get(p.pairId) }));
-  function stats(filter, protocol = "ITT") {
-    const rows = grid.filter(r => filter(condition.get(r.frozen.caseId)) && (protocol === "ITT" || r.actual?.kind === "finalized"));
+  function stats(filter, rowFilter = () => true) {
+    const rows = grid.filter(r => filter(condition.get(r.frozen.caseId)) && rowFilter(r));
     const perCase = new Map();
     for (const row of rows) {
       const entry = perCase.get(row.frozen.caseId) ?? { A: [], B: [] };
@@ -76,7 +76,12 @@ export function judgeData(experiment, data, { validateActivation, isStrictValidA
       liftPp: round((mean(bRates) - mean(aRates)) * 100), aRates, bRates };
   }
   const missing = stats(c => MISSING.has(c)), control = stats(c => CONTROL.has(c)), overall = stats(() => true);
-  const perProtocol = stats(c => MISSING.has(c), "PP");
+  const witnesses = data.probe?.entries ?? [];
+  const bitePairs = grid.filter(r => MISSING.has(condition.get(r.frozen.caseId)) && ["baseline", "candidate"].every(arm =>
+    witnesses.some(w => w.caseId === r.frozen.caseId && w.repetition === r.frozen.repetition && w.arm === arm && w.observed === true)));
+  const biteIds = new Set(bitePairs.map(r => r.frozen.pairId));
+  const perProtocol = stats(c => MISSING.has(c), r => r.actual?.kind === "finalized" && biteIds.has(r.frozen.pairId) &&
+    ["baseline", "candidate"].every(arm => r.actual[arm]?.valid === true && isStrictValidArm(r.actual[arm].outcome)));
   const lowerBound = bootstrap(missing.aRates, missing.bRates, gates.pairedBootstrapIterations);
   const all = side => [...pairs.values()].map(p => p[side]).filter(Boolean);
   const A = all("baseline"), B = all("candidate");
@@ -153,18 +158,19 @@ export function judgeData(experiment, data, { validateActivation, isStrictValidA
   if (facts.role === "holdout") add("holdout_overall_pass_rate_not_worse", overall.bPasses >= overall.aPasses, { A: overall.aPasses, B: overall.bPasses }, "B >= A");
   const passedAll = gateResults.every(g => g.passed);
   const compact = ({ aRates, bRates, ...s }) => s;
-  const witnesses = data.probe?.entries ?? [];
-  const bitePairs = grid.filter(r => ["baseline", "candidate"].every(arm => witnesses.some(w => w.caseId === r.frozen.caseId && w.repetition === r.frozen.repetition && w.arm === arm && w.observed)));
+  const ppReport = { ...compact(perProtocol), status: perProtocol.runsPerArm ? "CORROBORATION_ONLY" : "NOT_OBSERVED",
+    selection: "COMPLETE_MISSING_PAIRS_WITH_BOTH_ARMS_OBSERVED_AT_EDIT",
+    ...(perProtocol.runsPerArm ? {} : { aCaseMean: null, bCaseMean: null, liftPp: null }) };
   const biteStats = { observedPairs: bitePairs.length, aPasses: bitePairs.filter(r => pass(r.actual?.baseline)).length,
     bPasses: bitePairs.filter(r => pass(r.actual?.candidate)).length, status: bitePairs.length ? "CORROBORATION_ONLY" : "NOT_OBSERVED" };
   const report = { schemaVersion: "n7-judge-result-v1", experiment: facts.role, evidenceKind: real ? "REAL_PROVIDER" : "SYNTHETIC",
     frozenPreregistrationDigest: prereg.preregistrationDigest, executionBindingDigest: binding?.executionBindingDigest ?? null,
     executionIdentityDigest: result?.executionIdentityDigest ?? null,
-    groups: { missing: compact(missing), control: compact(control), overall: compact(overall) }, perProtocol: compact(perProtocol), conditionBite: biteStats,
+    groups: { missing: compact(missing), control: compact(control), overall: compact(overall) }, perProtocol: ppReport, conditionBite: biteStats,
     cost: { A: costA, B: costB }, security: { A: aSec, B: bSec }, coverage: { expected: plan.pairs.length, finalized: finalized.length, partial: partial.length, absent, issues: [...new Set(issues)] },
     gates: gateResults, verdict: real && passedAll ? "ALL_GATES_PASSED" : real ? "NOT_PROVEN" : "SYNTHETIC_CHECK_ONLY",
     modelQuality: real && infraOk ? "MEASURED_BY_THIS_CAMPAIGN" : "NOT_RUN",
-    promotion: real && passedAll && binding?.isolation?.promotionEligible === true ? "ELIGIBLE_FOR_EXISTING_CHAMPION_FLOW" : "NOT_ELIGIBLE",
-    note: "ITT uses the entire frozen grid; invalid/unrun arms fail. PP is corroboration only. Archiving never activates or promotes a candidate." };
+    promotion: real && passedAll && binding?.isolation?.promotionEligible === true ? "REQUIRES_BOTH_EXPERIMENTS_AND_ENGINEERING_GATES" : "NOT_ELIGIBLE",
+    note: "ITT uses the entire frozen grid; invalid/unrun arms fail. PP uses complete missing-condition pairs witnessed at edit in both arms, for corroboration only. A single experiment never qualifies promotion; archiving never activates a candidate." };
   return { ...report, judgeDigest: digest(report) };
 }

@@ -17,6 +17,7 @@ const SCRIPTS = join(REPO, "scripts/research/agent-next7-20261006");
 const support = await import(pathToFileURL(join(SCRIPTS, "execution-common.mjs")).href);
 const observation = await import(pathToFileURL(join(SCRIPTS, "provider-observation.mjs")).href);
 const judging = await import(pathToFileURL(join(SCRIPTS, "n7-judge-core.mjs")).href);
+const decision = await import(pathToFileURL(join(SCRIPTS, "n7-decision-core.mjs")).href);
 const campaign = await import(pathToFileURL(join(SCRIPTS, "n7-paired-campaign.mjs")).href);
 const condition = await import(pathToFileURL(join(SCRIPTS, "condition-probe.mjs")).href);
 const evidence = await import(pathToFileURL(join(SCRIPTS, "campaign-evidence.mjs")).href);
@@ -85,6 +86,27 @@ async function fixture(experiment = main) {
 }
 function judge(data: any, experiment = main) { return judging.judgeData(experiment, data, { validateActivation: validateActivationV2, isStrictValidArm }); }
 
+async function writeSyntheticBundle(experiment: any, raw: string) {
+  mkdirSync(join(raw, "attempts/0001"), { recursive: true }); mkdirSync(join(raw, "requests"));
+  const f = await fixture(experiment), { evaluation } = await support.dependencies();
+  const ledger = await evaluation.openR97BudgetLedger(join(raw, "budget"), { planDigest: f.header.campaignDigest,
+    campaignModelCalls: experiment.prereg.budget.campaignWorstCaseModelCalls, mode: "first-run" });
+  const reservation = await ledger.reserve("synthetic-fixture", f.records.length);
+  await ledger.commit(reservation.reservationId, f.records.length);
+  f.result.ledger = await ledger.view();
+  const cost = await evaluation.CostBudget.open(join(raw, "budget"), { ...experiment.prereg, preregistrationDigest: f.header.campaignDigest }, { allowCreate: true });
+  await cost.charge({ inputTokens: f.records.length * 10, outputTokens: f.records.length * 2, toolCalls: f.records.length, durationMs: 100, usdMicros: f.records.length });
+  f.result.costBudget = cost.view();
+  for (const [name, value] of [["campaign-header", f.header], ["execution-identity", f.identity], ["execution-binding", f.binding], ["soak-result", f.soak]])
+    support.writeJson(join(raw, `${name}.json`), value);
+  for (const r of f.records) support.writeJson(join(raw, "requests", `${String(r.requestId).padStart(7, "0")}.json`), r);
+  const attempt = join(raw, "attempts/0001");
+  for (const [name, value] of [["campaign-result", f.result], ["finalized-pairs", f.finalized], ["partial-pairs", f.partial],
+    ["budget-ledger-snapshot", await ledger.read()], ["cost-budget-snapshot", cost.view()], ["condition-probe", condition.conditionProbe(experiment, f.records)]])
+    support.writeJson(join(attempt, `${name}.json`), value);
+  support.writeJson(join(attempt, "raw-index.json"), { files: support.campaignFiles(raw) }); support.writeIndex(attempt);
+}
+
 describe("N7 frozen wiring and identity", () => {
   it("derives 512 main / 192 holdout, both v2, with exact frozen arm identities", () => {
     expect(main.plan.totalLogicalRuns).toBe(512); expect(holdout.plan.totalLogicalRuns).toBe(192);
@@ -140,6 +162,28 @@ describe("N7 ITT gates and safety", () => {
     expect(report.gates.every((g: any) => g.passed)).toBe(true);
     expect(report.groups.missing.runsPerArm).toBe(192); expect(report.groups.missing.liftPp).toBe(25);
     expect(report.verdict).toBe("SYNTHETIC_CHECK_ONLY"); expect(report.modelQuality).toBe("NOT_RUN"); expect(report.promotion).toBe("NOT_ELIGIBLE");
+    expect(report.perProtocol.status).toBe("NOT_OBSERVED"); expect(report.perProtocol.runsPerArm).toBe(0); expect(report.perProtocol.liftPp).toBeNull();
+  });
+  it("reports PP only on complete missing pairs witnessed at edit in both arms, retaining ITT unchanged", async () => {
+    const f: any = await fixture(), before = judge(f);
+    const caseId = main.manifest.cases.find((c: any) => c.condition === "compact-drop").caseId;
+    const selected = f.finalized.filter((p: any) => p.caseId === caseId && p.repetition < 3);
+    const controlId = main.manifest.cases.find((c: any) => c.condition === "visible").caseId;
+    const control = f.finalized.find((p: any) => p.caseId === controlId);
+    f.probe = { entries: [...selected, control].flatMap((p: any) => ["baseline", "candidate"].map(arm => ({
+      caseId: p.caseId, repetition: p.repetition, arm, observed: p.repetition !== 2 || arm === "candidate" }))) };
+    const report = judge(f);
+    expect(report.perProtocol).toMatchObject({ cases: 1, runsPerArm: 2, aPasses: 1, bPasses: 2, liftPp: 50, status: "CORROBORATION_ONLY" });
+    expect(report.groups).toEqual(before.groups); expect(report.gates).toEqual(before.gates);
+  });
+  it.each(["partial", "invalid"])("a witnessed %s pair does not enter PP", async (kind) => {
+    const f: any = await fixture();
+    const caseId = main.manifest.cases.find((c: any) => c.condition === "compact-drop").caseId;
+    const pair = f.finalized.find((p: any) => p.caseId === caseId);
+    if (kind === "partial") { f.finalized = f.finalized.filter((p: any) => p !== pair); f.partial.push(pair); }
+    else pair.baseline.valid = false;
+    f.probe = { entries: ["baseline", "candidate"].map(arm => ({ caseId, repetition: pair.repetition, arm, observed: true })) };
+    expect(judge(f).perProtocol).toMatchObject({ runsPerArm: 0, liftPp: null, status: "NOT_OBSERVED" });
   });
   it("holdout includes overall success and independent 96-pair coverage", async () => {
     const report = judge(await fixture(holdout), holdout);
@@ -205,6 +249,36 @@ describe("N7 ITT gates and safety", () => {
     const f = await fixture(), controlId = main.manifest.cases.find((c: any) => c.condition === "visible").caseId;
     for (const p of f.finalized.filter((p: any) => p.caseId === controlId)) p.candidate.outcome.status = "failed";
     expect(gate(judge(f), "control_group_not_worse").passed).toBe(false);
+  });
+});
+
+describe("N7 joint decision (fabricated unit inputs only, zero model evidence)", () => {
+  const report = (role: string, patch: any = {}) => {
+    const body = { schemaVersion: "n7-judge-result-v1", experiment: role, evidenceKind: "REAL_PROVIDER", verdict: "ALL_GATES_PASSED",
+      modelQuality: "MEASURED_BY_THIS_CAMPAIGN", executionBindingDigest: "a".repeat(64),
+      gates: [{ gate: "unit-fixture", passed: true }], promotion: "REQUIRES_BOTH_EXPERIMENTS_AND_ENGINEERING_GATES", ...patch };
+    return { ...body, judgeDigest: support.digest(body) };
+  };
+  it("requires both independent experiments and leaves promotion to the engineering/champion flow", () => {
+    const combined = decision.combineJudgments(report("main"), report("holdout"));
+    expect(combined.verdict).toBe("BOTH_EXPERIMENT_GATES_PASSED");
+    expect(combined.promotion).toBe("AWAITING_ENGINEERING_AND_EXISTING_CHAMPION_FLOW");
+  });
+  it.each(["missing-holdout", "duplicate-main", "failed-holdout", "synthetic-holdout", "different-binding", "altered-judge"])("%s cannot qualify a joint win", (kind) => {
+    const a = report("main"); let b: any = report("holdout");
+    if (kind === "missing-holdout") b = undefined;
+    if (kind === "duplicate-main") b = report("main");
+    if (kind === "failed-holdout") b = report("holdout", { gates: [{ gate: "unit-fixture", passed: false }] });
+    if (kind === "synthetic-holdout") b = report("holdout", { evidenceKind: "SYNTHETIC" });
+    if (kind === "different-binding") b = report("holdout", { executionBindingDigest: "b".repeat(64) });
+    if (kind === "altered-judge") b.modelQuality = "NOT_RUN";
+    const combined = decision.combineJudgments(a, b);
+    expect(combined.verdict).toBe("NOT_PROVEN"); expect(combined.promotion).toBe("NOT_ELIGIBLE");
+  });
+  it("even two measured gate passes cannot qualify an insecure-local run for promotion", () => {
+    const combined = decision.combineJudgments(report("main", { promotion: "NOT_ELIGIBLE" }), report("holdout", { promotion: "NOT_ELIGIBLE" }));
+    expect(combined.verdict).toBe("BOTH_EXPERIMENT_GATES_PASSED");
+    expect(combined.strongIsolationQualified).toBe(false); expect(combined.promotion).toBe("NOT_ELIGIBLE");
   });
 });
 
@@ -319,28 +393,13 @@ describe("N7 evidence and condition witnesses", () => {
     await expect(evidence.loadJudgment("main", root)).rejects.toThrow();
     const processResult = spawnSync(process.execPath, [join(SCRIPTS, "archive-n7-evidence.mjs"), "--campaign", root, "--judge", root, "--out", join(root, "archive")], { cwd: REPO, encoding: "utf8" });
     expect(processResult.status).toBe(1);
+    const joint = spawnSync(process.execPath, [join(SCRIPTS, "n7-decision.mjs"), "--main", root, "--holdout", root, "--out", join(root, "joint")], { cwd: REPO, encoding: "utf8" });
+    expect(joint.status).toBe(1);
   });
   it("recomputes judgment, archives namespaced raw bytes, and rejects a forged verdict after index regeneration", async () => {
     const root = temporary(), raw = join(root, "campaign"), out = join(root, "judge"), archive = join(root, "archive");
-    mkdirSync(join(raw, "attempts/0001"), { recursive: true }); mkdirSync(join(raw, "requests"));
-    const f = await fixture(), { evaluation } = await support.dependencies();
     vi.stubEnv("R97_CAMPAIGN_CLAIMS_DIR", join(root, "claims"));
-    const ledger = await evaluation.openR97BudgetLedger(join(raw, "budget"), { planDigest: f.header.campaignDigest,
-      campaignModelCalls: main.prereg.budget.campaignWorstCaseModelCalls, mode: "first-run" });
-    const reservation = await ledger.reserve("synthetic-fixture", f.records.length);
-    await ledger.commit(reservation.reservationId, f.records.length);
-    f.result.ledger = await ledger.view();
-    const cost = await evaluation.CostBudget.open(join(raw, "budget"), { ...main.prereg, preregistrationDigest: f.header.campaignDigest }, { allowCreate: true });
-    await cost.charge({ inputTokens: f.records.length * 10, outputTokens: f.records.length * 2, toolCalls: f.records.length, durationMs: 100, usdMicros: f.records.length });
-    f.result.costBudget = cost.view();
-    for (const [name, value] of [["campaign-header", f.header], ["execution-identity", f.identity], ["execution-binding", f.binding], ["soak-result", f.soak]])
-      support.writeJson(join(raw, `${name}.json`), value);
-    for (const r of f.records) support.writeJson(join(raw, "requests", `${String(r.requestId).padStart(7, "0")}.json`), r);
-    const attempt = join(raw, "attempts/0001");
-    for (const [name, value] of [["campaign-result", f.result], ["finalized-pairs", f.finalized], ["partial-pairs", f.partial],
-      ["budget-ledger-snapshot", await ledger.read()], ["cost-budget-snapshot", cost.view()], ["condition-probe", condition.conditionProbe(main, f.records)]])
-      support.writeJson(join(attempt, `${name}.json`), value);
-    support.writeJson(join(attempt, "raw-index.json"), { files: support.campaignFiles(raw) }); support.writeIndex(attempt);
+    await writeSyntheticBundle(main, raw);
     const loaded = await evidence.loadJudgment("main", raw);
     expect(loaded.judgment.verdict).toBe("SYNTHETIC_CHECK_ONLY");
     const judgeProcess = spawnSync(process.execPath, [join(SCRIPTS, "n7-judge.mjs"), "--campaign", raw, "--out", out], { cwd: REPO, encoding: "utf8" });
@@ -351,6 +410,12 @@ describe("N7 evidence and condition witnesses", () => {
     expect(verified.modelQuality).toBe("NOT_RUN"); expect(verified.promotion).toBe("NOT_ELIGIBLE");
     const manifest = support.readJson(join(archive, "RAW-MANIFEST.json"));
     expect(new Set(manifest.files.map((file: any) => file.path)).size).toBe(manifest.files.length);
+    const holdoutRaw = join(root, "holdout"), jointOut = join(root, "joint");
+    await writeSyntheticBundle(holdout, holdoutRaw);
+    const joint = spawnSync(process.execPath, [join(SCRIPTS, "n7-decision.mjs"), "--main", raw, "--holdout", holdoutRaw, "--out", jointOut], { cwd: REPO, encoding: "utf8" });
+    expect(joint.status).toBe(1); support.verifyIndex(jointOut);
+    expect(support.readJson(join(jointOut, "decision.json"))).toMatchObject({ verdict: "NOT_PROVEN", promotion: "NOT_ELIGIBLE" });
+    expect(support.readJson(join(jointOut, "holdout-judge-result.json"))).toMatchObject({ experiment: "holdout", coverage: { expected: 96 }, evidenceKind: "SYNTHETIC" });
     const forged = support.readJson(join(out, "judge-result.json")); forged.verdict = "ALL_GATES_PASSED";
     writeFileSync(join(out, "judge-result.json"), JSON.stringify(forged)); rmSync(join(out, "artifact-index.json")); support.writeIndex(out);
     const refused = spawnSync(process.execPath, [join(SCRIPTS, "archive-n7-evidence.mjs"), "--campaign", raw, "--judge", out, "--out", join(root, "forged-archive")], { cwd: REPO, encoding: "utf8" });

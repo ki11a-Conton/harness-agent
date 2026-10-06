@@ -27,6 +27,8 @@ node scripts/research/agent-next7-20261006/n7-soak.mjs --binding .ci/n7/executio
 node scripts/research/agent-next7-20261006/n7-paired-campaign.mjs --experiment main --binding .ci/n7/execution-binding/execution-binding.json --plan-digest DIGEST --soak .ci/n7/soak --out .ci/n7/main
 node scripts/research/agent-next7-20261006/n7-paired-campaign.mjs --experiment holdout --binding .ci/n7/execution-binding/execution-binding.json --plan-digest DIGEST --soak .ci/n7/soak --out .ci/n7/holdout
 node scripts/research/agent-next7-20261006/n7-judge.mjs --experiment main --campaign .ci/n7/main --out .ci/n7/main-judge
+node scripts/research/agent-next7-20261006/n7-judge.mjs --experiment holdout --campaign .ci/n7/holdout --out .ci/n7/holdout-judge
+node scripts/research/agent-next7-20261006/n7-decision.mjs --main .ci/n7/main --holdout .ci/n7/holdout --out .ci/n7/joint-decision
 node scripts/research/agent-next7-20261006/archive-n7-evidence.mjs --experiment main --campaign .ci/n7/main --judge .ci/n7/main-judge --out docs/evidence/agent-next7-20261006/execution/main
 node scripts/research/agent-next7-20261006/verify-n7-archive.mjs --experiment main --campaign .ci/n7/main --judge .ci/n7/main-judge --archive docs/evidence/agent-next7-20261006/execution/main
 ```
@@ -37,7 +39,9 @@ holdout 判定/归档/复核同样使用 `--experiment holdout` 和对应路径�
 
 复用 `CostBudget`、R97 ledger、formal provider、durable tool budget 和真实 Harness。逻辑 arm、generate、物理 retry 分计；成功前的 retry 同样算故障。冻结的 token、tool、USD 和 duration 上界全部执行，不自动提高。原预算 duration 是 **1800000 ms（30 分钟）**，工具总额 600；这不是完整 9–10 小时实验的承诺。若实测需要不同预算，须在结果前显式重新预注册，不能通过 deadline 参数偷延长。
 
-ITT 使用所有冻结 case/repetition；未完成和无效 arm 视失败，PP 与实际消息中的行可见性 probe 仅佐证，无法观察到 bite 时标 NOT_OBSERVED。效果门沿用 N6，bootstrap 保留原 N6 seed `20261005`、10000 次，orderSeed 仍为各自冻结的 20261007 / 20261008。完整网格、原件身份、两臂 usage/计数与 durable budget 均需匹配；缺激活字节证明、未知 usage、partial 安全违规、网络故障比例 ≥1% 或完成率 <95% 均阻止 all-gates。
+ITT 使用所有冻结 case/repetition；未完成和无效 arm 视失败。PP 仅使用两臂均在实际编辑时观察到条件命中的完整有效缺失组 pair，按 case 聚合，仅作佐证；无可观测子集时标 NOT_OBSERVED，lift 为 null。效果门沿用 N6，bootstrap 保留原 N6 seed `20261005`、10000 次，orderSeed 仍为各自冻结的 20261007 / 20261008。完整网格、原件身份、两臂 usage/计数与 durable budget 均需匹配；缺激活字节证明、未知 usage、partial 安全违规、网络故障比例 ≥1% 或完成率 <95% 均阻止 all-gates。
+
+单个实验通过仍标 `REQUIRES_BOTH_EXPERIMENTS_AND_ENGINEERING_GATES`。联合入口从两个 indexed raw campaign 重新计算判定，要求主实验、独立 holdout 均真实测量、所有门全过且 execution binding 相同；结果仍待工程门和既有 champion 流程，不自动晋升。
 
 归档不会改 champion。`RAW-MANIFEST.json` 给出带 campaign/judge 命名空间的 hash/bytes，原始大文件保留在本地 raw 根目录；需要移交时应连同这两个目录保存，单独摘要索引无法恢复原始字节。
 
