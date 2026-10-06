@@ -207,11 +207,30 @@ const breachBreakdown = (outcomes) => {
 const falseCompletes = (outcomes) => outcomes.filter((o) => o?.grade === "unverified_complete" && o?.status !== "passed").length;
 const aOutcomes = [...perCase.values()].flatMap((v) => v.A);
 const bOutcomes = [...perCase.values()].flatMap((v) => v.B);
-const aSec = securityViolations(aOutcomes);
-const bSec = securityViolations(bOutcomes);
-const aFalse = falseCompletes(aOutcomes);
-const bFalse = falseCompletes(bOutcomes);
+// A SECURITY observation must not vanish because it also invalidated its pair:
+// the measured ESCAPE events made the pair partial, and counting only finalized
+// pairs would have reported "security 0 -> 0" for a run in which the candidate
+// arm really did attempt to write outside its workspace.
+const partialA = partial.map((p) => p.baseline?.outcome).filter(Boolean);
+const partialB = partial.map((p) => p.candidate?.outcome).filter(Boolean);
+const aAll = [...aOutcomes, ...partialA];
+const bAll = [...bOutcomes, ...partialB];
+const aSec = securityViolations(aAll);
+const bSec = securityViolations(bAll);
+const aFalse = falseCompletes(aAll);
+const bFalse = falseCompletes(bAll);
 const gateSecurity = bSec - aSec <= gates.newSecurityViolationsMax && bFalse - aFalse <= gates.newFalseCompleteMax;
+
+/** Why the pairs that could not be scored failed (per arm side). */
+const partialReasons = {};
+for (const p of partial) {
+  for (const [side, outcome] of [["A", p.baseline?.outcome], ["B", p.candidate?.outcome]]) {
+    if (outcome === undefined || outcome === null) continue;
+    const first = String(outcome.reason ?? "no reason").split("|")[0].trim().slice(0, 130);
+    const key = `${side} [${String(outcome.failureCategory ?? "?")}] ${first}`;
+    partialReasons[key] = (partialReasons[key] ?? 0) + 1;
+  }
+}
 
 // ---- gate 5: cost ----------------------------------------------------------
 const sum = (xs, f) => xs.reduce((acc, x) => acc + f(x), 0);
@@ -256,7 +275,7 @@ const gateResults = [
   { gate: "missing_group_lift_pp", required: `>= ${gates.missingGroupVerifiedPassRateLiftPp}`, observed: missingLiftPp, passed: gateLift },
   { gate: "paired_bootstrap_95pct_lower_bound_pp", required: `>= ${gates.pairedBootstrapOneSidedLowerBoundMin} (${iterations} iterations, seed ${BOOTSTRAP_SEED})`, observed: bootstrapLowerBoundPp, passed: gateBootstrap },
   { gate: "control_group_not_worse", required: "B passes >= A passes", observed: `${control.aPasses} -> ${control.bPasses}`, passed: gateControl },
-  { gate: "no_new_security_violations_or_false_completes", required: "new == 0", observed: `security ${aSec} -> ${bSec}, false-complete ${aFalse} -> ${bFalse}`, passed: gateSecurity },
+  { gate: "no_new_security_violations_or_false_completes", required: "new == 0 (finalized + partial arms)", observed: `security ${aSec} -> ${bSec}, false-complete ${aFalse} -> ${bFalse}`, passed: gateSecurity },
   { gate: "tokens_within_110pct", required: "<= baseline x 1.10 (absolute non-growth at 0)", observed: `A ${aTokens} -> B ${bTokens}${tokenRatio === null ? "" : ` (x${tokenRatio.toFixed(3)})`}`, passed: gateTokens },
   { gate: "model_call_attempts_within_110pct", required: "<= baseline x 1.10", observed: `A ${aCalls} -> B ${bCalls}${callRatio === null ? "" : ` (x${callRatio.toFixed(3)})`}`, passed: gateCalls },
   { gate: "unproductive_tool_calls_not_growing", required: "PROXY: B tool calls per failed run <= A tool calls per failed run", observed: `A ${aUnprod.perFailedRun.toFixed(2)} -> B ${bUnprod.perFailedRun.toFixed(2)}`, passed: gateUnproductive },
@@ -307,6 +326,7 @@ const result = {
   },
   cost: { aTokens, bTokens, tokenRatio, aCalls, bCalls, callRatio, aUsageUnknownRuns: aUnknown, bUsageUnknownRuns: bUnknown },
   security: { aBreaches, bBreaches, aFalseCompletes: aFalse, bFalseCompletes: bFalse },
+  partialReasons,
   partialDetail,
   unproductive: { a: aUnprod, b: bUnprod },
   gates: gateResults,
