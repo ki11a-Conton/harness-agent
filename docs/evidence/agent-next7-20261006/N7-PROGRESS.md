@@ -62,6 +62,7 @@
 ## 4. 尚未完成（N7-3…N7-6）
 
 - **N7-3**：v2 预注册模块与冻结（v2 文本 SHA256、64 用例集与独立 holdout、AB/BA、provider/model/请求档/预算硬上限、两臂 digest、冻结 seed、门限不变），`dryRun` 必须精确 **2×64×4 = 512 logical arm runs/实验**、付费 0。
+  - 已核对的实施路线：N6 构建器 `buildContextSafePreregistration(options)` 的参数面（`ContextSafePreregistrationOptions`）已覆盖 subject/provider/cases/suite/evaluation/schedule/budget，N6 专有的只是 schema 常量、`CONTEXT_SAFE_CANDIDATE_ID`/`CONTEXT_SAFE_COMPARISON_ARM_ID` 与 `24 × 4` 调度常量。因此 N7-3 采用**带默认值的泛化**：新增可选 `candidateId`/`comparisonArmId`/`schemaVersion`/`repetitions`，默认值等于 N6 现值 —— 于是 N6 已提交产物的字节与 digest 保持不变（由既有 N6 预注册测试断言），N7 侧再以 v2 文本 digest、64 用例集、4 次重复换取 512 logical runs。**不得**通过复制 N6 常量再手改 digest 的方式绕过。
 - **N7-4**：24 次调用 soak（0 传输失败、0 `model_not_found`、usage 完整）→ 两个 campaign（各 512 runs，约 4–5 小时/实验，合计约 9–10 小时），带熔断与 journal 断点续跑；从绑定的 clean worktree 运行（避免 E2-09 宿主突变哨兵）。
 - **N7-5**：用同一 9 条门限判定（ITT；bite 命中子集仅佐证）。
 - **N7-6**：证据归档与 SHA256 索引；未达门则保持 `candidate` / NOT_PROVEN。
