@@ -387,4 +387,35 @@ describe("N6/N2 — independent holdout pre-registration (champion-resolved)", (
     // A different comparison arm AND a different order seed.
     expect(holdout.schedule.planDigest).not.toBe(main.schedule.planDigest);
   });
+
+  it("7. a CHAMPION CHANGE invalidates the plan (an old approval cannot ride on a new champion)", () => {
+    const base = holdoutOptions();
+    const frozen = buildContextSafePreregistration(base);
+    // Simulate the next champion: a different resolved arm plus its own
+    // provenance. Both are inside the root identity.
+    const nextChampion = {
+      ...base,
+      subject: {
+        ...base.subject,
+        baselineArmDigest: "e".repeat(64),
+        championProvenance: {
+          ...base.subject.championProvenance!,
+          level: "C1",
+          candidateId: "adaptive_recovery_v2",
+        },
+      },
+    };
+    const promoted = buildContextSafePreregistration(nextChampion);
+    expect(promoted.preregistrationDigest).not.toBe(frozen.preregistrationDigest);
+    // …and so does a provenance-only change (a re-resolution from a different
+    // source, or a state that moved) even with the SAME arm digest.
+    const rereresolved = buildContextSafePreregistration({
+      ...base,
+      subject: {
+        ...base.subject,
+        championProvenance: { ...base.subject.championProvenance!, stateDigest: "f".repeat(64) },
+      },
+    });
+    expect(rereresolved.preregistrationDigest).not.toBe(frozen.preregistrationDigest);
+  });
 });
