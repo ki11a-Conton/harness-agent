@@ -1,0 +1,22 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "n6",
+    "holdout",
+    "control",
+    "changed"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const {region}=require(\"./src/env.js\");if(region!==\"eu-west-2\"){console.error(\"n6 verifier failed: region\");process.exit(1);}"
+      ]
+    }
+  ]
+}

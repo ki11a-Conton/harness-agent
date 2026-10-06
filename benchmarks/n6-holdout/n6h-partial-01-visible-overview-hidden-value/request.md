@@ -1,0 +1,1 @@
+src/partitions.js allows too many partitions. spec/overview.txt explains the layout (read it for orientation); the binding ceiling is in spec/partition-limits.txt. Read both and correct src/partitions.js.

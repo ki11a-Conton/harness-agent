@@ -106,15 +106,28 @@ export interface ContextSafePreregCaseEntry {
   verifierDigest: string;
 }
 
+export interface ContextSafeChampionProvenance {
+  /** WHERE the champion arm was resolved from — a real source, never a guess. */
+  source: string;
+  level: string;
+  candidateId: string | null;
+  /** sha256 of the state bytes, or null when no champion state file exists. */
+  stateDigest: string | null;
+}
+
 export interface ContextSafePreregSubject {
   /** The executable source the run must check out. 40-hex git SHA. */
   candidateSourceSha: string;
-  /** Real resolved arm digest of the comparison arm (the live v2 strategy). */
+  /** Real resolved arm digest of the comparison arm: the live v2 strategy for
+   *  the main experiment, or the RESOLVED production champion for the holdout. */
   baselineArmDigest: string;
   /** Real resolved arm digest of the candidate. */
   candidateArmDigest: string;
   cleanTreePolicy: "require-clean";
   runtimeConfigDigest: string;
+  /** HOLDOUT ONLY: where the champion arm came from. Required for the holdout
+   *  experiment, so the comparison arm can never be silently assumed to be C0. */
+  championProvenance?: ContextSafeChampionProvenance;
 }
 
 export interface ContextSafePreregPrompt {
@@ -191,6 +204,9 @@ export interface ContextSafePreregBudget {
 
 export interface ContextSafePreregistration {
   schemaVersion: string;
+  /** Absent means the MAIN experiment (kept absent so the main artifact's bytes
+   *  and identity are unchanged by the holdout extension). */
+  role?: "main" | "holdout";
   subject: ContextSafePreregSubject;
   prompt: ContextSafePreregPrompt;
   provider: ContextSafePreregProvider;
@@ -203,11 +219,14 @@ export interface ContextSafePreregistration {
 }
 
 export interface ContextSafePreregistrationOptions {
+  /** Absent = the main experiment. "holdout" requires champion provenance. */
+  role?: "main" | "holdout";
   subject: {
     candidateSourceSha: string;
     baselineArmDigest: string;
     candidateArmDigest: string;
     runtimeConfigDigest: string;
+    championProvenance?: ContextSafeChampionProvenance;
   };
   provider: {
     providerId: string;
@@ -306,6 +325,9 @@ export function computeContextSafePreregistrationDigest(a: ContextSafePreregistr
   return sha256(
     stableStringify({
       schemaVersion: a.schemaVersion,
+      // Absent for the main experiment, so its identity is untouched by the
+      // holdout extension; present means the artifact is the holdout plan.
+      ...(a.role !== undefined ? { role: a.role } : {}),
       subject: a.subject,
       prompt: a.prompt,
       provider: a.provider,
@@ -347,12 +369,30 @@ export function buildContextSafePreregistration(
     throw new ContextSafePreregistrationError("NO_CONTRACT", `no mechanism contract for ${CONTEXT_SAFE_CANDIDATE_ID}`);
   }
 
+  const role = opts.role ?? "main";
+  if (role === "holdout" && opts.subject?.championProvenance === undefined) {
+    throw new ContextSafePreregistrationError(
+      "CHAMPION_UNRESOLVED",
+      "the holdout comparison arm must be a RESOLVED production champion with recorded provenance — it may never be assumed to be C0",
+    );
+  }
+
   const subject: ContextSafePreregSubject = {
     candidateSourceSha: requireSha40(opts.subject?.candidateSourceSha, "subject.candidateSourceSha"),
     baselineArmDigest: requireNonEmpty(opts.subject?.baselineArmDigest, "subject.baselineArmDigest"),
     candidateArmDigest: requireNonEmpty(opts.subject?.candidateArmDigest, "subject.candidateArmDigest"),
     cleanTreePolicy: "require-clean",
     runtimeConfigDigest: requireNonEmpty(opts.subject?.runtimeConfigDigest, "subject.runtimeConfigDigest"),
+    ...(opts.subject?.championProvenance !== undefined
+      ? {
+          championProvenance: {
+            source: requireNonEmpty(opts.subject.championProvenance.source, "subject.championProvenance.source"),
+            level: requireNonEmpty(opts.subject.championProvenance.level, "subject.championProvenance.level"),
+            candidateId: opts.subject.championProvenance.candidateId,
+            stateDigest: opts.subject.championProvenance.stateDigest,
+          },
+        }
+      : {}),
   };
   if (subject.baselineArmDigest === subject.candidateArmDigest) {
     throw new ContextSafePreregistrationError("ARMS_IDENTICAL", "baseline and candidate arm digests are identical — no causal delta");
@@ -382,7 +422,8 @@ export function buildContextSafePreregistration(
     ...(opts.provider?.usdMicrosPerCall !== undefined ? { usdMicrosPerCall: opts.provider.usdMicrosPerCall } : {}),
   };
 
-  // Dataset: the main experiment only. Holdout cases are refused outright.
+  // Dataset. The MAIN plan refuses holdout cases outright; the HOLDOUT plan
+  // accepts only holdout cases. The two sets may never be mixed.
   const cases = opts.cases ?? [];
   const seen = new Set<string>();
   for (const entry of cases) {
@@ -390,7 +431,14 @@ export function buildContextSafePreregistration(
       throw new ContextSafePreregistrationError("DUPLICATE_CASE", `duplicate case id ${entry.caseId}`);
     }
     seen.add(entry.caseId);
-    if (entry.suite === "holdout" || entry.suite.includes("holdout")) {
+    const looksHoldout = entry.suite === "holdout" || entry.suite.includes("holdout");
+    if (role === "holdout" && !looksHoldout) {
+      throw new ContextSafePreregistrationError(
+        "HOLDOUT_ROLE_MISMATCH",
+        `${entry.caseId} (suite ${entry.suite}) is not a holdout case — the holdout plan accepts only its own suite`,
+      );
+    }
+    if (role !== "holdout" && looksHoldout) {
       throw new ContextSafePreregistrationError("HOLDOUT_LEAK", `${entry.caseId} is a holdout case — refusing to freeze it into the main plan`);
     }
   }
@@ -488,6 +536,9 @@ export function buildContextSafePreregistration(
 
   const artifact: ContextSafePreregistration = {
     ...provisional,
+    // Written ONLY for the holdout plan: the main artifact keeps the exact bytes
+    // and identity it was frozen with.
+    ...(role === "holdout" ? { role: "holdout" as const } : {}),
     schedule,
     budget: { ...budget, campaignWorstCaseModelCalls: budget.maxModelCallsPerRun * derived.logicalRuns },
   };

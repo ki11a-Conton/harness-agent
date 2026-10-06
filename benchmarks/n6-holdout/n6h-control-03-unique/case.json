@@ -1,0 +1,22 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "n6",
+    "holdout",
+    "control",
+    "visible"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const {uniq}=require(\"./src/uniq.js\");if(JSON.stringify(uniq([1,1,2]))!==JSON.stringify([1,2])||JSON.stringify(uniq([\"b\",\"a\",\"b\"]))!==JSON.stringify([\"b\",\"a\"])){console.error(\"n6 verifier failed: uniq\");process.exit(1);}"
+      ]
+    }
+  ]
+}

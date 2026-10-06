@@ -1,0 +1,1 @@
+src/schema.js exports the wrong position for the dispatch column. data/schema.csv lists every column with its position; read the CSV and set dispatchColumnOrder to the position recorded for dispatch_window_minutes.

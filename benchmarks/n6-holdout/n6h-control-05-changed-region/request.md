@@ -1,0 +1,1 @@
+Step 1: run `node provision.js` — it rewrites src/env.js and prints the assigned region. Step 2: make src/env.js export region equal to the region provision.js assigned. A region read before provisioning is stale.

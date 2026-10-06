@@ -1,0 +1,22 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "n6",
+    "holdout",
+    "control",
+    "visible"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const {mean}=require(\"./src/stats.js\");if(mean([2,4,6])!==4||mean([5])!==5){console.error(\"n6 verifier failed: mean\");process.exit(1);}"
+      ]
+    }
+  ]
+}

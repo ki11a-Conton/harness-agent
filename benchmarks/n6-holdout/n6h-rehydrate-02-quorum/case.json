@@ -1,0 +1,23 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "n6",
+    "holdout",
+    "evidence-missing",
+    "rehydrate"
+  ],
+  "contextBudgetTokens": 1500,
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const m=require(\"./src/consensus.js\");if(!(m.quorumSize === 5)){console.error(\"n6 verifier failed: \"+JSON.stringify({got:m}));process.exit(1);}\nconst t=require(\"./src/tag.js\");if(t.build!==\"rc3\"){console.error(\"n6 verifier failed: build\");process.exit(1);}"
+      ]
+    }
+  ]
+}

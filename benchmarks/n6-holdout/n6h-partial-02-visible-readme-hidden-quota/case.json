@@ -1,0 +1,23 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "n6",
+    "holdout",
+    "evidence-missing",
+    "partial"
+  ],
+  "contextBudgetTokens": 1500,
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const m=require(\"./src/quota.js\");if(!(m.dailyQuotaUnits === 75000)){console.error(\"n6 verifier failed: \"+JSON.stringify({got:m}));process.exit(1);}"
+      ]
+    }
+  ]
+}

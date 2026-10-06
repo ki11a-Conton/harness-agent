@@ -1,52 +1,83 @@
 /**
- * N6 / N2 — case generator for the `context_safe_tool_call_efficiency_v1` main
- * experiment.
+ * N6 / N2 — case generator for both `context_safe_tool_call_efficiency_v1`
+ * experiments.
  *
- * The cases are AUTHORED in `n6-evidence-cases.mjs` and EMITTED here, so the
- * frozen bytes on disk can always be re-derived (and `--check` refuses any
- * silent drift after the pre-registration has been frozen).
+ * The cases are AUTHORED in `n6-evidence-cases.mjs` (main) and
+ * `n6-holdout-cases.mjs` (independent holdout) and EMITTED here, so the frozen
+ * bytes on disk can always be re-derived (and `--check` refuses any silent drift
+ * after a pre-registration has been frozen).
  *
  * Usage:
- *   node scripts/research/agent-next6-20261005/generate-n6-cases.mjs            # write
- *   node scripts/research/agent-next6-20261005/generate-n6-cases.mjs --check    # verify only
+ *   node scripts/research/agent-next6-20261005/generate-n6-cases.mjs [--set=main|holdout|all] [--check]
  *
- * Emits:
- *   benchmarks/n6-evidence/<caseId>/{case.json,request.md,expected.md,fixture/**}
- *   docs/evidence/agent-next6-20261005/case-manifest.json   (the frozen catalog)
+ * Emits, per set:
+ *   benchmarks/<suite>/<caseId>/{case.json,request.md,expected.md,fixture/**}
+ *   docs/evidence/agent-next6-20261005/<manifest>.json   (the frozen catalog)
  *
  * The manifest carries, per case, the condition class, the case-local context
  * budget, the content digest (sha256 over every emitted byte), the verifier
  * digest, the reference fix used to PROVE the verifier discriminates, and the
- * eligibility statement. It is the input the pre-registration builder consumes;
- * a case whose bytes change changes both digests and therefore the whole plan
- * identity.
+ * eligibility statement. A case whose bytes change changes both digests and
+ * therefore the whole plan identity.
  *
  * Zero provider calls, zero network. Pure filesystem work.
  */
 
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { CASES, EXPECTED_COMPOSITION } from "./n6-evidence-cases.mjs";
+import { HOLDOUT_CASES } from "./n6-holdout-cases.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, "..", "..", "..");
-const CASE_ROOT = join(REPO, "benchmarks", "n6-evidence");
-const MANIFEST_PATH = join(REPO, "docs", "evidence", "agent-next6-20261005", "case-manifest.json");
+const EVIDENCE_DIR = join(REPO, "docs", "evidence", "agent-next6-20261005");
 
-export const MANIFEST_SCHEMA = "n6-evidence-case-manifest-v1";
-export const SUITE_DIR = "n6-evidence";
+/**
+ * The two frozen sets. `caseJsonSuite` stays inside the loader's canonical
+ * four-value union (`baseline.ts` validates it) while the DIRECTORY names the
+ * real suite the selection resolver walks — the same convention
+ * `benchmarks/r98-fixtures` already uses.
+ */
+export const SETS = {
+  main: {
+    key: "main",
+    suiteId: "n6-evidence",
+    manifestSchema: "n6-evidence-case-manifest-v1",
+    manifestFile: "case-manifest.json",
+    caseJsonSuite: "regression",
+    cases: CASES,
+    composition: EXPECTED_COMPOSITION,
+  },
+  holdout: {
+    key: "holdout",
+    suiteId: "n6-holdout",
+    manifestSchema: "n6-holdout-case-manifest-v1",
+    manifestFile: "holdout-case-manifest.json",
+    caseJsonSuite: "holdout",
+    cases: HOLDOUT_CASES,
+    composition: EXPECTED_COMPOSITION,
+  },
+};
 
 const sha256 = (input) => createHash("sha256").update(input, "utf8").digest("hex");
 
 /** Canonical, platform-independent line endings for emitted text. */
 const lf = (text) => text.replace(/\r\n/g, "\n");
 
-function caseJsonOf(definition) {
+function caseRootOf(set) {
+  return join(REPO, "benchmarks", set.suiteId);
+}
+
+function manifestPathOf(set) {
+  return join(EVIDENCE_DIR, set.manifestFile);
+}
+
+function caseJsonOf(definition, suiteValue) {
   return {
     expected: { status: "completed" },
-    suite: "regression",
+    suite: suiteValue,
     tags: definition.tags,
     ...(definition.contextBudgetTokens !== undefined
       ? { contextBudgetTokens: definition.contextBudgetTokens }
@@ -58,9 +89,9 @@ function caseJsonOf(definition) {
 }
 
 /** Every file an emitted case directory must contain: path -> bytes. */
-function filesOf(definition) {
+function filesOf(definition, suiteValue) {
   const files = {
-    "case.json": `${JSON.stringify(caseJsonOf(definition), null, 2)}\n`,
+    "case.json": `${JSON.stringify(caseJsonOf(definition, suiteValue), null, 2)}\n`,
     "request.md": `${lf(definition.request).trim()}\n`,
     "expected.md": `${lf(definition.expected).trim()}\n`,
   };
@@ -84,8 +115,8 @@ function verifierDigestOf(definition) {
   );
 }
 
-function writeCase(definition, files) {
-  const dir = join(CASE_ROOT, definition.id);
+function writeCase(caseRoot, definition, files) {
+  const dir = join(caseRoot, definition.id);
   rmSync(dir, { recursive: true, force: true });
   for (const [rel, content] of Object.entries(files)) {
     const abs = join(dir, ...rel.split("/"));
@@ -109,24 +140,38 @@ function readCaseDir(dir) {
   return out;
 }
 
-function buildManifest() {
+function eligibilityOf(condition) {
+  return condition === "compact-drop" || condition === "rehydrate" || condition === "partial"
+    ? "case-local context budget makes the context compact after the authoritative spec was read; the required text is then absent while the original command verifier still applies"
+    : condition === "preview"
+      ? "the authoritative value sits in the middle of a file larger than the 16 KiB inline budget, so it is absent from the model-visible head/tail preview while the original command verifier still applies"
+      : condition === "changed"
+        ? "a setup command rewrites the target file before the fix, so the original command verifier judges the post-change state"
+        : condition === "diagnostic"
+          ? "the workspace ships a failing check that can be rerun for diagnostics and is also the command verifier"
+          : "everything the fix needs stays visible; the original command verifier applies unchanged";
+}
+
+function buildManifest(set) {
   const counts = {};
-  for (const c of CASES) counts[c.condition] = (counts[c.condition] ?? 0) + 1;
-  for (const [condition, expected] of Object.entries(EXPECTED_COMPOSITION)) {
+  for (const c of set.cases) counts[c.condition] = (counts[c.condition] ?? 0) + 1;
+  for (const [condition, expected] of Object.entries(set.composition)) {
     if (condition === "total") continue;
     if ((counts[condition] ?? 0) !== expected) {
-      throw new Error(`composition drift: ${condition} has ${counts[condition] ?? 0} case(s), expected ${expected}`);
+      throw new Error(
+        `${set.key}: composition drift: ${condition} has ${counts[condition] ?? 0} case(s), expected ${expected}`,
+      );
     }
   }
-  if (CASES.length !== EXPECTED_COMPOSITION.total) {
-    throw new Error(`composition drift: ${CASES.length} case(s), expected ${EXPECTED_COMPOSITION.total}`);
+  if (set.cases.length !== set.composition.total) {
+    throw new Error(`${set.key}: composition drift: ${set.cases.length} case(s), expected ${set.composition.total}`);
   }
 
   // The anti-rename rule: no two cases may share fixture bytes or task text.
   const byDigest = new Map();
   const byRequest = new Map();
-  for (const c of CASES) {
-    const files = filesOf(c);
+  for (const c of set.cases) {
+    const files = filesOf(c, set.caseJsonSuite);
     const digest = contentDigestOf(files);
     if (byDigest.has(digest)) throw new Error(`${c.id} duplicates the fixture content of ${byDigest.get(digest)}`);
     byDigest.set(digest, c.id);
@@ -135,26 +180,17 @@ function buildManifest() {
     byRequest.set(request, c.id);
   }
 
-  const cases = CASES.map((c) => {
-    const files = filesOf(c);
+  const cases = set.cases.map((c) => {
+    const files = filesOf(c, set.caseJsonSuite);
     return {
       caseId: c.id,
-      suite: SUITE_DIR,
+      suite: set.suiteId,
       condition: c.condition,
       tags: c.tags,
       ...(c.contextBudgetTokens !== undefined ? { contextBudgetTokens: c.contextBudgetTokens } : {}),
       contentDigest: contentDigestOf(files),
       verifierDigest: verifierDigestOf(c),
-      eligibility:
-        c.condition === "compact-drop" || c.condition === "rehydrate" || c.condition === "partial"
-          ? "case-local context budget makes the context compact after the authoritative spec was read; the required text is then absent while the original command verifier still applies"
-          : c.condition === "preview"
-            ? "the authoritative value sits in the middle of a file larger than the 16 KiB inline budget, so it is absent from the model-visible head/tail preview while the original command verifier still applies"
-            : c.condition === "changed"
-              ? "a setup command rewrites the target file before the fix, so the original command verifier judges the post-change state"
-              : c.condition === "diagnostic"
-                ? "the workspace ships a failing check that can be rerun for diagnostics and is also the command verifier"
-                : "everything the fix needs stays visible; the original command verifier applies unchanged",
+      eligibility: eligibilityOf(c.condition),
       referenceFix: c.referenceFix,
       referenceRun: c.referenceRun ?? [],
       request: c.request,
@@ -163,10 +199,10 @@ function buildManifest() {
   });
 
   return {
-    schemaVersion: MANIFEST_SCHEMA,
+    schemaVersion: set.manifestSchema,
     candidateId: "context_safe_tool_call_efficiency_v1",
-    suite: { id: SUITE_DIR, version: "1.0.0", caseRoot: `benchmarks/${SUITE_DIR}` },
-    composition: { ...EXPECTED_COMPOSITION, ...counts },
+    suite: { id: set.suiteId, version: "1.0.0", caseRoot: `benchmarks/${set.suiteId}` },
+    composition: { ...set.composition, ...counts },
     cases,
     manifestDigest: sha256(
       JSON.stringify(
@@ -176,14 +212,13 @@ function buildManifest() {
   };
 }
 
-function main() {
-  const check = process.argv.includes("--check");
-  const manifest = buildManifest();
+function problemsFor(set, manifest) {
+  const caseRoot = caseRootOf(set);
   const problems = [];
 
-  for (const c of CASES) {
-    const expectedFiles = filesOf(c);
-    const dir = join(CASE_ROOT, c.id);
+  for (const c of set.cases) {
+    const expectedFiles = filesOf(c, set.caseJsonSuite);
+    const dir = join(caseRoot, c.id);
     if (!existsSync(dir)) {
       problems.push(`${c.id}: case directory is missing`);
       continue;
@@ -200,44 +235,57 @@ function main() {
   }
 
   // Stale directories that are no longer authored cases must not linger.
-  if (existsSync(CASE_ROOT)) {
-    for (const entry of readdirSync(CASE_ROOT, { withFileTypes: true })) {
+  if (existsSync(caseRoot)) {
+    for (const entry of readdirSync(caseRoot, { withFileTypes: true })) {
       if (!entry.isDirectory()) continue;
-      if (!CASES.some((c) => c.id === entry.name)) problems.push(`${entry.name}: stale case directory`);
+      if (!set.cases.some((c) => c.id === entry.name)) problems.push(`${entry.name}: stale case directory`);
     }
   }
 
   const manifestText = `${JSON.stringify(manifest, null, 2)}\n`;
-  if (existsSync(MANIFEST_PATH)) {
-    const current = readFileSync(MANIFEST_PATH, "utf8");
-    if (lf(current) !== lf(manifestText)) problems.push("case-manifest.json differs from the generated manifest");
+  const manifestPath = manifestPathOf(set);
+  if (existsSync(manifestPath)) {
+    const current = readFileSync(manifestPath, "utf8");
+    if (lf(current) !== lf(manifestText)) problems.push(`${set.manifestFile} differs from the generated manifest`);
   } else {
-    problems.push("case-manifest.json is missing");
+    problems.push(`${set.manifestFile} is missing`);
+  }
+  return problems;
+}
+
+function main() {
+  const check = process.argv.includes("--check");
+  const setArg = process.argv.find((a) => a.startsWith("--set="));
+  const setName = setArg === undefined ? "all" : setArg.slice("--set=".length);
+  const selected = setName === "all" ? Object.values(SETS) : [SETS[setName]];
+  if (selected.some((s) => s === undefined)) {
+    process.stderr.write(`unknown --set value; expected one of ${Object.keys(SETS).join("|")}|all\n`);
+    process.exit(2);
   }
 
-  if (check) {
-    if (problems.length > 0) {
-      process.stderr.write(`n6 case check FAILED (${problems.length} problem(s)):\n`);
-      for (const p of problems.slice(0, 40)) process.stderr.write(`  - ${p}\n`);
-      process.exit(1);
+  const problems = [];
+  const summaries = [];
+  for (const set of selected) {
+    const manifest = buildManifest(set);
+    problems.push(...problemsFor(set, manifest).map((p) => `${set.key}: ${p}`));
+    summaries.push(
+      `${set.suiteId}: ${set.cases.length} case(s), manifest ${manifest.manifestDigest}`,
+    );
+    if (!check) {
+      const caseRoot = caseRootOf(set);
+      rmSync(caseRoot, { recursive: true, force: true });
+      for (const c of set.cases) writeCase(caseRoot, c, filesOf(c, set.caseJsonSuite));
+      mkdirSync(dirname(manifestPathOf(set)), { recursive: true });
+      writeFileSync(manifestPathOf(set), `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
     }
-    process.stdout.write(`n6 case check PASS: ${CASES.length} case(s), manifest ${manifest.manifestDigest}\n`);
-    return;
   }
 
-  rmSync(CASE_ROOT, { recursive: true, force: true });
-  for (const c of CASES) writeCase(c, filesOf(c));
-  mkdirSync(dirname(MANIFEST_PATH), { recursive: true });
-  writeFileSync(MANIFEST_PATH, manifestText, "utf8");
-  const bytes = CASES.reduce(
-    (acc, c) =>
-      acc +
-      Object.values(filesOf(c)).reduce((inner, text) => inner + Buffer.byteLength(text, "utf8"), 0),
-    0,
-  );
-  process.stdout.write(
-    `n6 cases written: ${CASES.length} case(s) into benchmarks/${SUITE_DIR}, ${bytes} bytes, manifest ${manifest.manifestDigest}\n`,
-  );
+  if (check && problems.length > 0) {
+    process.stderr.write(`n6 case check FAILED (${problems.length} problem(s)):\n`);
+    for (const p of problems.slice(0, 40)) process.stderr.write(`  - ${p}\n`);
+    process.exit(1);
+  }
+  process.stdout.write(`n6 case ${check ? "check PASS" : "written"}:\n  ${summaries.join("\n  ")}\n`);
 }
 
 if (process.argv[1] !== undefined && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url))) {

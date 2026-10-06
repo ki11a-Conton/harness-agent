@@ -15,6 +15,7 @@
  *     same frozen inputs (a hand-edited artifact is refused).
  */
 
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -224,5 +225,166 @@ describe("N6/N2 — context_safe_tool_call_efficiency_v1 pre-registration", () =
     expect(report.ok).toBe(true);
     expect(report.logicalRuns).toBe(192);
     expect(report.paidProviderCalls).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The INDEPENDENT HOLDOUT experiment. Its comparison arm is the CURRENT
+// production champion, RESOLVED from the real state file — never assumed C0.
+// ---------------------------------------------------------------------------
+
+const HOLDOUT_MANIFEST_PATH = join(REPO, "docs", "evidence", "agent-next6-20261005", "holdout-case-manifest.json");
+const HOLDOUT_ARTIFACT_PATH = join(REPO, "docs", "evidence", "agent-next6-20261005", "holdout-preregistration.json");
+const holdoutManifest = JSON.parse(readFileSync(HOLDOUT_MANIFEST_PATH, "utf8")) as ManifestShape;
+
+/** The champion the committed artifact was frozen against (C0 at freeze time).
+ *  Re-resolving it here is the point: the arm digest must be a real factory
+ *  digest, and a champion change must invalidate the plan. */
+function resolvedChampion(): {
+  digest: string;
+  provenance: {
+    source: string;
+    level: string;
+    candidateId: string | null;
+    stateDigest: string | null;
+  };
+} {
+  const statePath = join(REPO, "docs", "evolution", "champion-state.json");
+  const stateText = readFileSync(statePath, "utf8");
+  const state = JSON.parse(stateText) as {
+    level: string;
+    candidateId: string | null;
+    validity: string;
+    applied: boolean;
+  };
+  const candidateId = state.candidateId ?? null;
+  return {
+    digest: getArmFactory().resolveArm(candidateId).digest,
+    provenance: {
+      source:
+        `docs/evolution/champion-state.json (level=${state.level}, ` +
+        `candidateId=${candidateId === null ? "null" : candidateId}, ` +
+        `validity=${state.validity}, applied=${String(state.applied)})`,
+      level: state.level,
+      candidateId,
+      stateDigest: createHash("sha256").update(stateText.replace(/\r\n/g, "\n"), "utf8").digest("hex"),
+    },
+  };
+}
+
+function holdoutOptions(over: Partial<ContextSafePreregistrationOptions> = {}): ContextSafePreregistrationOptions {
+  const champion = resolvedChampion();
+  return {
+    role: "holdout",
+    subject: {
+      candidateSourceSha: "a".repeat(40),
+      baselineArmDigest: champion.digest,
+      candidateArmDigest: getArmFactory().resolveArm(CONTEXT_SAFE_CANDIDATE_ID).digest,
+      runtimeConfigDigest: "b".repeat(64),
+      championProvenance: champion.provenance,
+    },
+    provider: {
+      providerId: "openai",
+      modelId: "gpt-5",
+      requestProfile: { budgetTokens: 32_000, temperature: null, stallPolicy: "benchmark-default" },
+    },
+    cases: contextSafeCaseEntriesFromManifest(holdoutManifest.cases),
+    suite: {
+      id: holdoutManifest.suite.id,
+      version: holdoutManifest.suite.version,
+      caseRoot: holdoutManifest.suite.caseRoot,
+    },
+    holdoutPolicy:
+      "holdout per-case data is never read into an artifact; this plan IS the holdout experiment and never participates in prompt tuning",
+    selectionProvenanceDigest: holdoutManifest.manifestDigest,
+    evaluation: { scorerDigest: "c".repeat(64), judgeId: "task-verifier", judgeDigest: "d".repeat(64) },
+    schedule: { orderSeed: 20_261_006 },
+    budget: {
+      maxModelCallsPerRun: 30,
+      maxToolCalls: 600,
+      maxDurationMs: 1_800_000,
+      maxInputTokens: 3_000_000,
+      maxOutputTokens: 400_000,
+      maxTotalTokens: 4_000_000,
+      maxUsdMicros: null,
+    },
+    ...over,
+  };
+}
+
+describe("N6/N2 — independent holdout pre-registration (champion-resolved)", () => {
+  it("1. freezes 192 logical arm runs against the RESOLVED champion, not an assumed C0", () => {
+    const artifact = buildContextSafePreregistration(holdoutOptions());
+    expect(artifact.role).toBe("holdout");
+    expect(artifact.dataset.suiteId).toBe("n6-holdout");
+    expect(artifact.dataset.cases).toHaveLength(24);
+    expect(artifact.schedule.logicalRuns).toBe(192);
+    expect(artifact.schedule.abCount).toBe(48);
+    expect(artifact.schedule.baCount).toBe(48);
+    expect(artifact.schedule.balanced).toBe(true);
+
+    // The comparison arm is the champion resolved from the real state file, and
+    // its provenance is bound into the identity.
+    const champion = resolvedChampion();
+    expect(artifact.subject.baselineArmDigest).toBe(champion.digest);
+    expect(artifact.subject.championProvenance).toEqual(champion.provenance);
+    expect(artifact.subject.championProvenance!.source).toContain("docs/evolution/champion-state.json");
+    // …and it is a DIFFERENT arm from the candidate.
+    expect(artifact.subject.baselineArmDigest).not.toBe(artifact.subject.candidateArmDigest);
+  });
+
+  it("2. the dry run reports 192 runs and zero paid calls", () => {
+    const report = dryRunContextSafePreregistration(buildContextSafePreregistration(holdoutOptions()));
+    expect(report.ok).toBe(true);
+    expect(report.logicalRuns).toBe(192);
+    expect(report.paidProviderCalls).toBe(0);
+    expect(report.modelQuality).toBe("NOT_RUN");
+    expect(report.promotion).toBe("NOT_RUN");
+  });
+
+  it("3. fail-closed: a holdout plan without champion provenance is REFUSED", () => {
+    const base = holdoutOptions();
+    const { championProvenance: _omitted, ...subjectWithout } = base.subject;
+    void _omitted;
+    expect(() => buildContextSafePreregistration({ ...base, subject: subjectWithout })).toThrow(/CHAMPION_UNRESOLVED/);
+  });
+
+  it("4. fail-closed: the two case sets may never be mixed", () => {
+    // Main-suite cases in the holdout role …
+    expect(() =>
+      buildContextSafePreregistration({
+        ...holdoutOptions(),
+        cases: contextSafeCaseEntriesFromManifest(manifest.cases),
+      }),
+    ).toThrow(/HOLDOUT_ROLE_MISMATCH/);
+    // … and holdout cases in the main role (already covered for the main plan,
+    // re-asserted here against the same real inputs).
+    expect(() =>
+      buildContextSafePreregistration({
+        ...frozenOptions(),
+        cases: contextSafeCaseEntriesFromManifest(holdoutManifest.cases),
+      }),
+    ).toThrow(/HOLDOUT_LEAK/);
+  });
+
+  it("5. the committed holdout artifact equals a fresh build from the same resolved inputs", () => {
+    const committed = JSON.parse(readFileSync(HOLDOUT_ARTIFACT_PATH, "utf8")) as ContextSafePreregistration;
+    const fresh = buildContextSafePreregistration(holdoutOptions());
+    expect(committed).toEqual(fresh);
+    expect(committed.role).toBe("holdout");
+    const report = dryRunContextSafePreregistration(committed);
+    expect(report.ok).toBe(true);
+    expect(report.logicalRuns).toBe(192);
+    expect(report.paidProviderCalls).toBe(0);
+  });
+
+  it("6. the holdout identity is independent of the main experiment's", () => {
+    const main = buildContextSafePreregistration(frozenOptions());
+    const holdout = buildContextSafePreregistration(holdoutOptions());
+    expect(holdout.preregistrationDigest).not.toBe(main.preregistrationDigest);
+    expect(holdout.dataset.caseSetDigest).not.toBe(main.dataset.caseSetDigest);
+    expect(holdout.dataset.selectionProvenanceDigest).not.toBe(main.dataset.selectionProvenanceDigest);
+    // A different comparison arm AND a different order seed.
+    expect(holdout.schedule.planDigest).not.toBe(main.schedule.planDigest);
   });
 });

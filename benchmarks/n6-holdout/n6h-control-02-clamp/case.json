@@ -1,0 +1,22 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "n6",
+    "holdout",
+    "control",
+    "visible"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const {clamp}=require(\"./src/clamp.js\");if(clamp(5,1,3)!==3||clamp(-1,0,10)!==0||clamp(2,0,10)!==2){console.error(\"n6 verifier failed: clamp\");process.exit(1);}"
+      ]
+    }
+  ]
+}

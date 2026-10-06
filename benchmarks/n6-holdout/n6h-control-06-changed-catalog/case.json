@@ -1,0 +1,22 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "n6",
+    "holdout",
+    "control",
+    "changed"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const {itemCount}=require(\"./src/catalog.js\");if(itemCount()!==7){console.error(\"n6 verifier failed: itemCount\");process.exit(1);}"
+      ]
+    }
+  ]
+}

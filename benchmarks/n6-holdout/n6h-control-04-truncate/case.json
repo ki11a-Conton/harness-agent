@@ -1,0 +1,22 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "n6",
+    "holdout",
+    "control",
+    "visible"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const {truncate}=require(\"./src/text.js\");if(truncate(\"abcdef\",3)!==\"abc\"||truncate(\"ab\",5)!==\"ab\"){console.error(\"n6 verifier failed: truncate\");process.exit(1);}"
+      ]
+    }
+  ]
+}

@@ -43,53 +43,16 @@
  * of another.
  */
 
-/** Deterministic filler prose for the large evidence files (stable bytes). */
-function filler(prefix, count, from) {
-  const out = [];
-  for (let i = 0; i < count; i += 1) {
-    out.push(`${prefix} ${String(from + i).padStart(4, "0")}: the operational log records routine housekeeping only, no decision depends on this line.`);
-  }
-  return out.join("\n");
-}
+import {
+  assertExport,
+  companion,
+  EXPECTED_COMPOSITION,
+  largeSpec,
+  mediumSpec,
+  verifier,
+} from "./n6-case-helpers.mjs";
 
-/** A >16 KiB evidence file whose authoritative value sits in the middle. */
-function largeSpec(title, intro, keyLine, tailNote) {
-  const head = [`# ${title}`, "", intro, ""];
-  // Two ~8.6 KiB halves put the key line around the middle of an ~17 KiB file,
-  // i.e. far outside both the 2000-byte head and the 2000-byte tail the inline
-  // renderer keeps.
-  const headBody = filler("NOTE", 90, 1);
-  const tailBody = filler("NOTE", 90, 1000);
-  return [...head, headBody, "", keyLine, "", tailBody, "", tailNote, ""].join("\n");
-}
-
-/** A medium evidence file (fits the inline budget, big enough to matter). */
-function mediumSpec(title, intro, keyLine) {
-  return [
-    `# ${title}`,
-    "",
-    intro,
-    "",
-    filler("DETAIL", 26, 1),
-    "",
-    keyLine,
-    "",
-    filler("DETAIL", 26, 500),
-    "",
-  ].join("\n");
-}
-
-/** A small companion document the task also requires reading. */
-function companion(title, body) {
-  return [`# ${title}`, "", filler("LINE", 14, 1), "", body, ""].join("\n");
-}
-
-const verifier = (script) => ({ command: "node", args: ["-e", script] });
-
-/** `require`s a fixture module and asserts one exported value. */
-function assertExport(modulePath, expression) {
-  return `const m=require(${JSON.stringify(modulePath)});if(!(${expression})){console.error("n6 verifier failed: "+JSON.stringify({got:m}));process.exit(1);}`;
-}
+export { EXPECTED_COMPOSITION };
 
 export const CASES = [
   // ---------------------------------------------------------------------
@@ -566,15 +529,3 @@ export const CASES = [
     referenceFix: { "src/windowed.js": `"use strict";\nfunction windowed(xs, size) {\n  const out = [];\n  for (let i = 0; i + size <= xs.length; i += 1) out.push(xs.slice(i, i + size));\n  return out;\n}\nmodule.exports = { windowed };\n` },
   },
 ];
-
-/** The frozen composition the plan requires — asserted, never assumed. */
-export const EXPECTED_COMPOSITION = {
-  total: 24,
-  "compact-drop": 6,
-  preview: 4,
-  rehydrate: 4,
-  partial: 2,
-  visible: 4,
-  changed: 2,
-  diagnostic: 2,
-};

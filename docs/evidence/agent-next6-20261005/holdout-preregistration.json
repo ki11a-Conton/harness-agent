@@ -1,0 +1,253 @@
+{
+  "schemaVersion": "context-safe-tool-call-efficiency-preregistration-v1",
+  "subject": {
+    "candidateSourceSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "baselineArmDigest": "74b8465e3e7510cee74308b9cbe75fcbcf1f4262ce68d0a0bc1b7fa764f6466f",
+    "candidateArmDigest": "205ab0d7c71b44cdbb450378ffe23c355eb7474a3798b9ca637f4a6de5d3d7b5",
+    "cleanTreePolicy": "require-clean",
+    "runtimeConfigDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "championProvenance": {
+      "source": "docs/evolution/champion-state.json (level=C0, candidateId=null, validity=QUARANTINED_PENDING_REEVALUATION, applied=true)",
+      "level": "C0",
+      "candidateId": null,
+      "stateDigest": "f1ade2a09e2cbeb80da629396a626e6a8a09cee68f8c8d224f9d8521cd8f7cad"
+    }
+  },
+  "prompt": {
+    "candidateId": "context_safe_tool_call_efficiency_v1",
+    "guidanceVersion": "context-safe-tool-call-efficiency:v1",
+    "guidanceDigest": "ce66f3b091752fdb38774914d2d3e5f736c0684930d5162f25ecdb5bed2d56c2",
+    "contractDigest": "cd247970c6783731b427b1811a6b48830de3992ad706bcb2d122c12674be9d80",
+    "comparisonCandidateId": "tool_call_efficiency_v1",
+    "comparisonGuidanceVersion": "tool-call-efficiency:v2",
+    "comparisonGuidanceDigest": "ebddf5eb125cbbe8ed25d7ecb1ea3554809494aea70716adf3a9f62924939619"
+  },
+  "provider": {
+    "providerId": "openai",
+    "modelId": "gpt-5",
+    "endpointDigest": "provider-default-endpoint",
+    "requestProfileDigest": "9046af4fee7de86cf674214b1b379142eeb28e996a94420997d711f2df48b8ad"
+  },
+  "dataset": {
+    "suiteId": "n6-holdout",
+    "suiteVersion": "1.0.0",
+    "caseRoot": "benchmarks/n6-holdout",
+    "holdoutPolicy": "holdout per-case data is never read into an artifact; this plan IS the holdout experiment and never participates in prompt tuning",
+    "cases": [
+      {
+        "caseId": "n6h-compact-01-ledger-minor-units",
+        "suite": "n6-holdout",
+        "condition": "compact-drop",
+        "contentDigest": "271ea2184985bfd45ba99c382d1f433a6e4a48779352ad157e9093dee7cdf79a",
+        "verifierDigest": "fc4a8ae7944b4ee8260741627bc39131c5abdb21ddb1de830aea906c8507e2ca"
+      },
+      {
+        "caseId": "n6h-compact-02-fx-rate-scale",
+        "suite": "n6-holdout",
+        "condition": "compact-drop",
+        "contentDigest": "c69cbeaba289a202174434e7cbd3c4237a8cb3fd21c08a0e43237871fe422f03",
+        "verifierDigest": "841001883d9fb85a94326d83dfe37a7df2389aa462bafbef804d3f590380f614"
+      },
+      {
+        "caseId": "n6h-compact-03-sla-target",
+        "suite": "n6-holdout",
+        "condition": "compact-drop",
+        "contentDigest": "6d604afe8c04409a5cbf408536d0c25cd92ff61bfe54dc844387e874b1b7e2ec",
+        "verifierDigest": "94808c14b251906066377e76191d2367f22659f6be8f1d4e7dcda7e8565b17a8"
+      },
+      {
+        "caseId": "n6h-compact-04-parcel-weight",
+        "suite": "n6-holdout",
+        "condition": "compact-drop",
+        "contentDigest": "c5bb96012da3ea5c45d97745d878015140b637046b23c9e23bd9bcec7e57e999",
+        "verifierDigest": "6bf2dce8a96c319eed3bd6fbeb78961af61e162121e5a695f1ad1fc344a70fdf"
+      },
+      {
+        "caseId": "n6h-compact-05-route-hops",
+        "suite": "n6-holdout",
+        "condition": "compact-drop",
+        "contentDigest": "32aea681f6b7ee15ff6c0399f6a2fe0e780bfd6d89aa55044883c412c668100f",
+        "verifierDigest": "9736961f9991d64edc3547cf5794878deec891d1a800e099ade9b3a933eb200c"
+      },
+      {
+        "caseId": "n6h-compact-06-stock-reserve",
+        "suite": "n6-holdout",
+        "condition": "compact-drop",
+        "contentDigest": "9a37d221165efedf47305bb9942e4b8afa4df98c81b83c821ecbfa910f7f96c5",
+        "verifierDigest": "9ce6e9e4650c385df0e87cdaf4d2fa1c34708eb85c8c9b67969a1fe31b4340c6"
+      },
+      {
+        "caseId": "n6h-preview-01-csv-column-order",
+        "suite": "n6-holdout",
+        "condition": "preview",
+        "contentDigest": "f336360bcbc79f6e77804bcdb78d65daa6121925f14494bf6c442cf6245254d6",
+        "verifierDigest": "47d2ae2de094648cd604af24e9fb9c208a5ec3ec266865d770e17a3f8c8810c6"
+      },
+      {
+        "caseId": "n6h-preview-02-json-flag",
+        "suite": "n6-holdout",
+        "condition": "preview",
+        "contentDigest": "9637b88170c5865fb692680a644f14efd2b01744eb5c21654f79c9781f6536ad",
+        "verifierDigest": "961e035a7b91a7300602c1509481c845c3bc62f519cf44a6b1919436c4acfd51"
+      },
+      {
+        "caseId": "n6h-preview-03-log-retention",
+        "suite": "n6-holdout",
+        "condition": "preview",
+        "contentDigest": "e1e65d6b4c3db7d896f66d7b8debf4ab7952cc8c6860bfdcba16f0dbbc5e6927",
+        "verifierDigest": "09764024c84262d14c2e1fb5ba8d935ff6d2fd72b5ff8262b14777f2cda97be6"
+      },
+      {
+        "caseId": "n6h-preview-04-upload-chunk",
+        "suite": "n6-holdout",
+        "condition": "preview",
+        "contentDigest": "08b62f294f20c44672d7938ce1060b996541127f40170bd7268f6a2ec87d04c7",
+        "verifierDigest": "d7c8fc2c22e54cd572fa2986fb907fdb727a509aeedf626b40e2bd6ff7db8743"
+      },
+      {
+        "caseId": "n6h-rehydrate-01-session-ttl",
+        "suite": "n6-holdout",
+        "condition": "rehydrate",
+        "contentDigest": "c36a395bb6a8c2eee575f6591747320aecfb04844c19b287950f6b3fa350244f",
+        "verifierDigest": "93013ef52bff04190dada5ebb4544eb764a0aca124252c8629753ad8db71e476"
+      },
+      {
+        "caseId": "n6h-rehydrate-02-quorum",
+        "suite": "n6-holdout",
+        "condition": "rehydrate",
+        "contentDigest": "f0777e6e1fc7948b002f70241ff799ac37fd1b876a075fc0d55c65f095af325a",
+        "verifierDigest": "dd7eb29e04e4c10c197b85b3aa263d20a96cd55b506d7126671763982dbadd9d"
+      },
+      {
+        "caseId": "n6h-rehydrate-03-throttle",
+        "suite": "n6-holdout",
+        "condition": "rehydrate",
+        "contentDigest": "0c935fd87f7fd146c313d2230af3df1273c194562286feaacc1a76c3420965d0",
+        "verifierDigest": "669834b16b2576d8c0a92ce3c6761aa01755cf903ff914e6e0d9a199cc6875e0"
+      },
+      {
+        "caseId": "n6h-rehydrate-04-retention",
+        "suite": "n6-holdout",
+        "condition": "rehydrate",
+        "contentDigest": "895da150ff3baee859ecb9d4509a7577b946004b10f1ea13dfce610da1e879dc",
+        "verifierDigest": "1974319a45eb05eecb454c3bb19a5690759259b21b2cccf2fa0da1e674bbdae9"
+      },
+      {
+        "caseId": "n6h-partial-01-visible-overview-hidden-value",
+        "suite": "n6-holdout",
+        "condition": "partial",
+        "contentDigest": "7e74ff41a93b30b41dcea2ac8792e3cb9b16f74232b46c5e26f5ecbd7baa08c5",
+        "verifierDigest": "b1bc08e8429eb5234a129f6e1b0dd953475778270506817dbc633031e868b3e1"
+      },
+      {
+        "caseId": "n6h-partial-02-visible-readme-hidden-quota",
+        "suite": "n6-holdout",
+        "condition": "partial",
+        "contentDigest": "17c15375a7f675a471385c5f8d6b9da0f7324454c809830965246dbc61558c5b",
+        "verifierDigest": "dd916b99b7d98771266b6757c3caff70db4a9ad778cc1e6d57e3e1ddec0814bc"
+      },
+      {
+        "caseId": "n6h-control-01-mean",
+        "suite": "n6-holdout",
+        "condition": "visible",
+        "contentDigest": "57465982917808790ca6c81178cb326233bef2b543bb13382e0415958dc35b7b",
+        "verifierDigest": "1b73b0c8397ad58150e4ab36f4f1113e406e4f8bf9a7972feecd987215d16e91"
+      },
+      {
+        "caseId": "n6h-control-02-clamp",
+        "suite": "n6-holdout",
+        "condition": "visible",
+        "contentDigest": "a5fb6a535f5a9989cd23a667268cbd5b8294461dac54cd04e2990cc89ab0e9e3",
+        "verifierDigest": "ab0b8bbf4e09b0e8535a97d778a7653d8e1b5ea43ca71b5ab86e49d88906297c"
+      },
+      {
+        "caseId": "n6h-control-03-unique",
+        "suite": "n6-holdout",
+        "condition": "visible",
+        "contentDigest": "308772778acbe6f19fc8b173468c9608b7d8320630e9d008eb740e56ebf0ad8d",
+        "verifierDigest": "f732c0546c80812dc682a9a83d574f3f7f99dc83db32183df6b47ac0ac5b84d3"
+      },
+      {
+        "caseId": "n6h-control-04-truncate",
+        "suite": "n6-holdout",
+        "condition": "visible",
+        "contentDigest": "9990c6d36b3b28112b275d596181135642efb57e15bbd616f82b22280510f229",
+        "verifierDigest": "b2d15f4ec777b34912bccd86dae7bdb7a1b0ccfd39d7845662beeb72ec9b2458"
+      },
+      {
+        "caseId": "n6h-control-05-changed-region",
+        "suite": "n6-holdout",
+        "condition": "changed",
+        "contentDigest": "c8cb55f9b378375785dbd024cc6552f49da1b08875691046f2bebfbb914aa82a",
+        "verifierDigest": "2c83a5111efcca7f9aaf97d8249da30f6d05782d96f28595e2c5be8cb267c965"
+      },
+      {
+        "caseId": "n6h-control-06-changed-catalog",
+        "suite": "n6-holdout",
+        "condition": "changed",
+        "contentDigest": "1393a4895cc9c34141f5d58a860fb208549efb2d94da99db41c65d6002c5f8a1",
+        "verifierDigest": "2e7d7ea502bac50a3de45cb8e686446779847cf1f018ec2e0908b4862e8f83a2"
+      },
+      {
+        "caseId": "n6h-control-07-failing-rounding",
+        "suite": "n6-holdout",
+        "condition": "diagnostic",
+        "contentDigest": "acbe4f4493a70ef8dfbfbd159b05f557cc3098fbbc55fe8da5bfe3d3a837b927",
+        "verifierDigest": "00101cfeaf1a995401a0a85c1590ee3548d5aa1bcae92c99c4a2c497bd55ada8"
+      },
+      {
+        "caseId": "n6h-control-08-failing-dedupe",
+        "suite": "n6-holdout",
+        "condition": "diagnostic",
+        "contentDigest": "1ea886fa67d3fbcfb151f4a205bf3b83e5dc6683c83f1a05573a40dfe2351ffb",
+        "verifierDigest": "00101cfeaf1a995401a0a85c1590ee3548d5aa1bcae92c99c4a2c497bd55ada8"
+      }
+    ],
+    "caseSetDigest": "9c2f036f1765d410070d55a9dcc75b1b2e7590a8c7a9d60a7d95749cba8321f3",
+    "selectionProvenanceDigest": "cb83ded920177e01f0ac72894d150c007c2d8bcd7268483d8ebf13ceade9fdde"
+  },
+  "evaluation": {
+    "verifierDigest": "9578a33d6a247fe63a52556a9d630a07d5860bd0f7b2f230633e0b93cd8f6cf1",
+    "scorerDigest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "judgeId": "task-verifier",
+    "judgeDigest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "gates": {
+      "missingGroupVerifiedPassRateLiftPp": 5,
+      "pairedBootstrapIterations": 10000,
+      "pairedBootstrapOneSidedLowerBoundMin": 0,
+      "controlSuccessMustNotDecrease": true,
+      "newSecurityViolationsMax": 0,
+      "newFalseCompleteMax": 0,
+      "totalTokensMaxRatioOfBaseline": 1.1,
+      "modelCallAttemptsMaxRatioOfBaseline": 1.1,
+      "unproductiveRepeatedToolCallsMustNotGrow": true,
+      "holdoutOverallPassRateMustNotDecrease": true,
+      "holdoutMissingGroupLiftPp": 5,
+      "baselineZeroUsesAbsoluteNonGrowth": true,
+      "usageUnknownIsNotZero": true
+    },
+    "gatesDigest": "9bd350a420c5d4d881f0376008118c706e764e1a9aa392c9ec05d202ac0566d1"
+  },
+  "schedule": {
+    "repetitions": 4,
+    "orderSeed": 20261006,
+    "planDigest": "f4b86bf5a7428fb4f416d351e5c45404500c4053b75854b9d2f2c63aeab974b7",
+    "logicalRuns": 192,
+    "abCount": 48,
+    "baCount": 48,
+    "balanced": true
+  },
+  "budget": {
+    "maxModelCallsPerRun": 30,
+    "maxToolCalls": 600,
+    "maxDurationMs": 1800000,
+    "maxInputTokens": 3000000,
+    "maxOutputTokens": 400000,
+    "maxTotalTokens": 4000000,
+    "maxUsdMicros": null,
+    "pricingUnknownPolicy": "refuse",
+    "campaignWorstCaseModelCalls": 5760
+  },
+  "preregistrationDigest": "a102632cb91b28116bf960690b507c4d5752f0e118633e449300044f7ffab695",
+  "role": "holdout"
+}

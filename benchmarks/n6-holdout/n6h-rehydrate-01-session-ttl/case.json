@@ -1,0 +1,23 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "n6",
+    "holdout",
+    "evidence-missing",
+    "rehydrate"
+  ],
+  "contextBudgetTokens": 1500,
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const m=require(\"./src/session.js\");if(!(m.sessionTtlSeconds === 7200)){console.error(\"n6 verifier failed: \"+JSON.stringify({got:m}));process.exit(1);}\nconst s=require(\"./src/state.js\");if(s.phase!==\"warm\"){console.error(\"n6 verifier failed: phase\");process.exit(1);}"
+      ]
+    }
+  ]
+}
