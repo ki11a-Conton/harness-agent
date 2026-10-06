@@ -224,11 +224,15 @@ export const HOLDOUT_CASES = [
     condition: "preview",
     tags: ["n6", "holdout", "evidence-missing", "preview"],
     request:
-      "src/logging.js keeps logs for the wrong number of days. spec/service.log records the retention decision; read the log and set retentionDays to the recorded value.",
-    expected: "src/logging.js exports retentionDays equal to the value on the retention decision line in spec/service.log.",
+      "src/logging.js keeps logs for the wrong number of days. spec/service-log.txt records the retention decision; read the log and set retentionDays to the recorded value.",
+    expected: "src/logging.js exports retentionDays equal to the value on the retention decision line in spec/service-log.txt.",
     fixture: {
       "src/logging.js": `"use strict";\nconst RETENTION_DAYS = 7;\nmodule.exports = { retentionDays: RETENTION_DAYS };\n`,
-      "spec/service.log": largeLog("2026-10-05T06:00:00Z INFO policy: retention_days = 120 (authoritative decision)"),
+      // NOTE: the extension must stay committable — `.gitignore` carries `*.log`,
+      // and a frozen fixture that git will not track cannot be materialised from
+      // a clean checkout (this exact defect was caught by the clean-tree full-repo
+      // gate, and `n6-evidence-cases.regressions.test.ts` now refuses the class).
+      "spec/service-log.txt": largeLog("2026-10-05T06:00:00Z INFO policy: retention_days = 120 (authoritative decision)"),
     },
     verifier: verifier(assertExport("./src/logging.js", "m.retentionDays === 120")),
     referenceFix: { "src/logging.js": `"use strict";\nconst RETENTION_DAYS = 120;\nmodule.exports = { retentionDays: RETENTION_DAYS };\n` },

@@ -193,15 +193,15 @@
         "evidence-missing",
         "preview"
       ],
-      "contentDigest": "e1e65d6b4c3db7d896f66d7b8debf4ab7952cc8c6860bfdcba16f0dbbc5e6927",
+      "contentDigest": "0982099cf0459fc352c9d178e286e841ace6daac9d775b0016fbe59917d2f27e",
       "verifierDigest": "09764024c84262d14c2e1fb5ba8d935ff6d2fd72b5ff8262b14777f2cda97be6",
       "eligibility": "the authoritative value sits in the middle of a file larger than the 16 KiB inline budget, so it is absent from the model-visible head/tail preview while the original command verifier still applies",
       "referenceFix": {
         "src/logging.js": "\"use strict\";\nconst RETENTION_DAYS = 120;\nmodule.exports = { retentionDays: RETENTION_DAYS };\n"
       },
       "referenceRun": [],
-      "request": "src/logging.js keeps logs for the wrong number of days. spec/service.log records the retention decision; read the log and set retentionDays to the recorded value.",
-      "expected": "src/logging.js exports retentionDays equal to the value on the retention decision line in spec/service.log."
+      "request": "src/logging.js keeps logs for the wrong number of days. spec/service-log.txt records the retention decision; read the log and set retentionDays to the recorded value.",
+      "expected": "src/logging.js exports retentionDays equal to the value on the retention decision line in spec/service-log.txt."
     },
     {
       "caseId": "n6h-preview-04-upload-chunk",
@@ -516,5 +516,5 @@
       "expected": "node check.js exits 0 after the repair."
     }
   ],
-  "manifestDigest": "cb83ded920177e01f0ac72894d150c007c2d8bcd7268483d8ebf13ceade9fdde"
+  "manifestDigest": "3465db0004a13321180837416243040e0223b520654648f6ac3444b8905ee472"
 }

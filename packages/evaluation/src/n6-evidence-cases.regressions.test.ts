@@ -260,6 +260,38 @@ for (const set of SETS) {
         }
       }
     });
+
+    it("8. every emitted case file is TRACKED by git (a fixture git refuses to track cannot be materialised from a clean checkout)", () => {
+      // Measured defect: one holdout evidence file was named *.log, which the
+      // repository's `.gitignore` excludes. Every test that reads the WORKING
+      // TREE kept passing locally, while a clean checkout was missing the file —
+      // the case silently lost its evidence. This asserts the real git index.
+      const listed = spawnSync("git", ["ls-files", "-z", `benchmarks/${set.suiteId}`], {
+        cwd: REPO,
+        encoding: "utf8",
+      });
+      expect(listed.status, `git ls-files failed: ${String(listed.stderr ?? "")}`).toBe(0);
+      const trackedPaths = new Set(
+        String(listed.stdout ?? "")
+          .split("\0")
+          .filter((p) => p.length > 0)
+          .map((p) => p.replace(/^benchmarks\/[^/]+\//, "")),
+      );
+      const onDisk: string[] = [];
+      for (const entry of manifest.cases) {
+        const walk = (dir: string, prefix: string): void => {
+          for (const e of readdirSync(dir, { withFileTypes: true })) {
+            const abs = join(dir, e.name);
+            if (e.isDirectory()) walk(abs, `${prefix}${e.name}/`);
+            else onDisk.push(`${entry.caseId}/${prefix}${e.name}`);
+          }
+        };
+        walk(join(caseRootOf(set), entry.caseId), "");
+      }
+      expect(onDisk.length).toBeGreaterThan(0);
+      const untracked = onDisk.filter((p) => !trackedPaths.has(p));
+      expect(untracked, `case file(s) git does not track: ${untracked.join(", ")}`).toEqual([]);
+    });
   });
 }
 
@@ -314,6 +346,6 @@ describe("N6/N2 — the holdout is genuinely INDEPENDENT of the main set", () =>
     const holdoutOnly = [...holdoutPaths].filter((p) => !mainPaths.has(p));
     expect(holdoutOnly).toContain("data/schema.csv");
     expect(holdoutOnly).toContain("spec/features.json");
-    expect(holdoutOnly).toContain("spec/service.log");
+    expect(holdoutOnly).toContain("spec/service-log.txt");
   });
 });
