@@ -69,13 +69,41 @@ if (judge.frozenPreregistrationDigest !== header.frozenPreregistrationDigest) {
 if (header.smoke === true) {
   refuse("SMOKE_CAMPAIGN", "this campaign was a smoke run (--limit) and is not experiment evidence");
 }
+// An infrastructure-aborted run (provider unreachable) measures the network, not
+// the strategy: its pairs are invalid, and promoting it would dress that up as an
+// effect. Only a completed ("ok") campaign may be promoted.
+if (result.status !== "ok") {
+  refuse(
+    "CAMPAIGN_NOT_OK",
+    `the campaign result status is "${String(result.status)}"${result.reason === undefined ? "" : `: ${String(result.reason)}`} — only a completed campaign is evidence`,
+  );
+}
 
+// A campaign whose pairs mostly failed to complete is an infrastructure event,
+// not a measurement: the holdout's first attempt had 90 of 96 pairs partial
+// because the endpoint was unreachable (`fetch failed`, 0 model calls per arm).
+// The declared tolerance is 5% of pairs.
 const finalized = existsSync(join(campaignDir, "finalized-pairs.json"))
   ? readJson(join(campaignDir, "finalized-pairs.json"))
   : [];
 const partial = existsSync(join(campaignDir, "partial-pairs.json"))
   ? readJson(join(campaignDir, "partial-pairs.json"))
   : [];
+
+// A campaign whose pairs mostly failed to complete is an infrastructure event,
+// not a measurement: the holdout's first attempt had 90 of 96 pairs partial
+// because the endpoint was unreachable (`fetch failed`, 0 model calls per arm).
+// The declared tolerance is 5% of pairs.
+{
+  const pairs = finalized.length + partial.length;
+  const ratio = pairs === 0 ? 1 : partial.length / pairs;
+  if (ratio > 0.05) {
+    refuse(
+      "PARTIAL_RATIO_TOO_HIGH",
+      `${partial.length}/${pairs} pairs are partial (${(ratio * 100).toFixed(1)}% > 5%) — this is an infrastructure failure, not a measurement`,
+    );
+  }
+}
 
 /** The compact record the gates were computed from. */
 const armSummary = (outcome) => ({

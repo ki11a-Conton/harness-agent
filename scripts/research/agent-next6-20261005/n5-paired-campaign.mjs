@@ -206,6 +206,9 @@ const header = {
   schemaVersion: "n6-n5-campaign-header-v1",
   experiment: experimentName,
   smoke: !fullRun,
+  // Which RUNNER produced this bundle (the harness source under test is bound
+  // separately, by the pre-registration's candidateSourceSha).
+  runnerScriptSha256: createHash("sha256").update(readFileSync(fileURLToPath(import.meta.url))).digest("hex"),
   frozenPreregistrationDigest: declaredDigest,
   frozenPreregistrationFile: preregPath.replace(REPO, ".").split("\\").join("/"),
   armMapping: {
@@ -250,6 +253,53 @@ if (resolved.billingClass !== "external-billed") {
 }
 
 // ---------------------------------------------------------------------------
+// Infrastructure circuit breaker
+//
+// MEASURED: a transient outage of the approved endpoint made 88 of 90 pairs fail
+// with `MODEL_ERROR: OpenAI chat completion failed: fetch failed`
+// (`provider.kind: "network"`, 0 model calls, 3 provider retries per arm). The
+// campaign still ran all 192 arms and produced a bundle that LOOKS like a result
+// (-33pp on the missing group). It is not one. Consecutive transport failures now
+// abort the campaign with a distinct status, so an unreachable provider can never
+// be reported as a strategy outcome.
+// ---------------------------------------------------------------------------
+const TRANSPORT_ABORT_THRESHOLD = 6;
+let consecutiveTransportFailures = 0;
+let transportFailuresTotal = 0;
+function isTransportFailure(error) {
+  const e = error?.error ?? error ?? {};
+  const kind = e?.provider?.kind ?? "unknown";
+  const message = String(e?.message ?? "");
+  return (
+    kind === "network" ||
+    /fetch failed|ECONNREFUSED|ECONNRESET|ETIMEDOUT|socket hang up|network error|getaddrinfo/i.test(message)
+  );
+}
+const guardedProvider = {
+  id: provider.id,
+  listModels: () => provider.listModels(),
+  createClient: (model, config) => {
+    const client = provider.createClient(model, config);
+    return {
+      generate: async function* (request, signal) {
+        try {
+          yield* client.generate(request, signal);
+          consecutiveTransportFailures = 0;
+        } catch (error) {
+          if (isTransportFailure(error)) {
+            consecutiveTransportFailures += 1;
+            transportFailuresTotal += 1;
+          } else {
+            consecutiveTransportFailures = 0;
+          }
+          throw error;
+        }
+      },
+    };
+  },
+};
+
+// ---------------------------------------------------------------------------
 // Execution identity + journal
 // ---------------------------------------------------------------------------
 
@@ -288,10 +338,12 @@ process.stdout.write(`campaign: identity ${identityDigest.slice(0, 16)}… journ
 writeFileSync(join(outDir, "execution-identity.json"), `${JSON.stringify(identity, null, 2)}\n`, "utf8");
 
 const started = Date.now();
-const result = await runPairedExperiment({
+let result;
+try {
+result = await runPairedExperiment({
   plan,
   cases: planCaseIdsUsed.map((id) => byId.get(id)),
-  provider,
+  provider: guardedProvider,
   maxModelCalls: prereg.budget.maxModelCallsPerRun * plan.totalLogicalRuns,
   journalDir,
   identity,
@@ -299,6 +351,13 @@ const result = await runPairedExperiment({
   onArmCompleted: ({ armRunId, logicalRuns }) => {
     if (logicalRuns % 8 === 0 || logicalRuns === plan.totalLogicalRuns) {
       process.stdout.write(`  arm ${logicalRuns}/${plan.totalLogicalRuns} (${armRunId.slice(0, 12)}…) elapsed ${Math.round((Date.now() - started) / 1000)}s\n`);
+    }
+    if (consecutiveTransportFailures >= TRANSPORT_ABORT_THRESHOLD) {
+      throw new Error(
+        `infrastructure outage: ${consecutiveTransportFailures} consecutive transport failures ` +
+          `(${transportFailuresTotal} total) after ${logicalRuns}/${plan.totalLogicalRuns} arm runs — the provider is unreachable, ` +
+          `so this campaign measures the network, not the strategy (journal persists; resume by re-running when the endpoint is healthy)`,
+      );
     }
     if (deadlineAtMs !== null && Date.now() > deadlineAtMs) {
       throw new Error(`campaign deadline reached after ${logicalRuns}/${plan.totalLogicalRuns} arm runs (journal persists; resume by re-running)`);
@@ -320,6 +379,26 @@ const result = await runPairedExperiment({
       "regression",
     ),
 });
+} catch (error) {
+  const aborted = {
+    schemaVersion: "n6-n5-campaign-result-v1",
+    experiment: experimentName,
+    smoke: !fullRun,
+    frozenPreregistrationDigest: declaredDigest,
+    executionIdentityDigest: identityDigest,
+    planDigest: plan.planDigest,
+    status: "infrastructure-aborted",
+    reason: error instanceof Error ? error.message : String(error),
+    counters: { logicalRuns: null, modelCallAttempts: null, transportRetries: transportFailuresTotal, maxModelCalls: prereg.budget.maxModelCallsPerRun * plan.totalLogicalRuns },
+    finalizedPairs: 0,
+    partialPairs: 0,
+    elapsedSeconds: Math.round((Date.now() - started) / 1000),
+    finishedAt: new Date().toISOString(),
+  };
+  writeFileSync(join(outDir, "campaign-result.json"), `${JSON.stringify(aborted, null, 2)}\n`, "utf8");
+  process.stderr.write(`campaign ABORTED (infrastructure): ${aborted.reason}\n`);
+  process.exit(3);
+}
 
 const finishedAt = new Date().toISOString();
 const summary = {
