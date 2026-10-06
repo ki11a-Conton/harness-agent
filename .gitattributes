@@ -140,3 +140,14 @@ docs/evidence/agent-next5-20261005/raw/** -text
 docs/evidence/agent-next5-20261005/raw/**/*.log -whitespace
 docs/evidence/agent-next5-20261005/raw/**/*.ts whitespace=cr-at-eol
 scripts/research/agent-next5-20261005/* text eol=lf
+
+# N7 raw-byte evidence. verifyIndex / RAW-MANIFEST hash RAW FILE BYTES, and the N7
+# evidence tree had no eol rule: on a Windows checkout with core.autocrlf=true the
+# ten text files of execution/acceptance landed as CRLF, so verifyIndex reported
+# ARTIFACT_DRIFT for a CHECKOUT reason (measured on a Windows host: the index
+# matched 33/33 LF blobs but only 23/33 worktree files; the difference was exactly
+# one byte per line). Force LF for the round so the recorded digests verify on
+# every platform; the .gz originals stay binary.
+docs/evidence/agent-next7-20261006/** text eol=lf
+docs/evidence/agent-next7-20261006/**/*.gz -text
+scripts/research/agent-next7-20261006/* text eol=lf
