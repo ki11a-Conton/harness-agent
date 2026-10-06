@@ -1,0 +1,21 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "n6",
+    "control",
+    "diagnostic"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const {execFileSync}=require(\"node:child_process\");execFileSync(process.execPath,[\"check.js\"],{stdio:\"inherit\"});"
+      ]
+    }
+  ]
+}

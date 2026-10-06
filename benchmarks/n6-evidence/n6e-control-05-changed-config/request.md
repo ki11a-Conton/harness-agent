@@ -1,0 +1,1 @@
+Step 1: run `node setup.js` — it rotates src/config.js and prints the new value. Step 2: make src/config.js export port equal to the value setup.js printed. A value read before setup.js runs is stale.

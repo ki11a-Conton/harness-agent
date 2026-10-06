@@ -1,0 +1,21 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "n6",
+    "control",
+    "visible"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const {joinPath}=require(\"./src/paths.js\");if(joinPath([\"a\",\"\",\"b\"])!==\"a/b\"||joinPath([\"a\",\"b\"])!==\"a/b\"||joinPath([])!==\"\"){console.error(\"n6 verifier failed: joinPath\");process.exit(1);}"
+      ]
+    }
+  ]
+}

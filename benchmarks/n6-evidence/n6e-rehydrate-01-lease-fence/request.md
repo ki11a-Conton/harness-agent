@@ -1,0 +1,1 @@
+Two steps. First create src/version.js exporting version as the string "2". Then read spec/lease-policy.txt and set the fence value in src/lease.js so that it exports fenceTokens equal to the documented value.

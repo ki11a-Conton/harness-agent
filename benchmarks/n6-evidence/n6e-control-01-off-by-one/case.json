@@ -1,0 +1,21 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "n6",
+    "control",
+    "visible"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const {sum}=require(\"./src/sum.js\");if(sum([1,2,3])!==6||sum([])!==0||sum([5])!==5){console.error(\"n6 verifier failed: sum\");process.exit(1);}"
+      ]
+    }
+  ]
+}

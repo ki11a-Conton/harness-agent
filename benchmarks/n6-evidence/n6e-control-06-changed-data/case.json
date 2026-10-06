@@ -1,0 +1,21 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "n6",
+    "control",
+    "changed"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const {recordCount}=require(\"./src/load.js\");if(recordCount()!==5){console.error(\"n6 verifier failed: recordCount\");process.exit(1);}"
+      ]
+    }
+  ]
+}

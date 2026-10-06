@@ -1,0 +1,21 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "n6",
+    "evidence-missing",
+    "preview"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const m=require(\"./src/topology.js\");if(!(m.shardCount === 23)){console.error(\"n6 verifier failed: \"+JSON.stringify({got:m}));process.exit(1);}"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+src/backoff.js exports baseMs, but the shipped constant is a placeholder. The authoritative base delay is defined by the retry policy in spec/retry-policy.txt; read that policy, then make src/backoff.js export the correct baseMs. Do not guess the number.

@@ -1,0 +1,21 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "n6",
+    "control",
+    "visible"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const {parseIntValue}=require(\"./src/parse.js\");if(parseIntValue(\"12\")!==12||parseIntValue(\"07\")!==7||parseIntValue(\"nope\")!==null){console.error(\"n6 verifier failed: parseIntValue\");process.exit(1);}"
+      ]
+    }
+  ]
+}

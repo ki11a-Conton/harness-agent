@@ -1,0 +1,496 @@
+{
+  "schemaVersion": "n6-evidence-case-manifest-v1",
+  "candidateId": "context_safe_tool_call_efficiency_v1",
+  "suite": {
+    "id": "n6-evidence",
+    "version": "1.0.0",
+    "caseRoot": "benchmarks/n6-evidence"
+  },
+  "composition": {
+    "total": 24,
+    "compact-drop": 6,
+    "preview": 4,
+    "rehydrate": 4,
+    "partial": 2,
+    "visible": 4,
+    "changed": 2,
+    "diagnostic": 2
+  },
+  "cases": [
+    {
+      "caseId": "n6e-compact-01-retry-base",
+      "suite": "n6-evidence",
+      "condition": "compact-drop",
+      "tags": [
+        "n6",
+        "evidence-missing",
+        "compact-drop"
+      ],
+      "contextBudgetTokens": 1500,
+      "contentDigest": "32f6efcea4906e591d4716b06985e041dab20cbebf50d0c4fb1d152fb3665750",
+      "verifierDigest": "199aacbef92b7214ef077901517d9c700525005dd0c160236a5e8af95de0f489",
+      "eligibility": "case-local context budget makes the context compact after the authoritative spec was read; the required text is then absent while the original command verifier still applies",
+      "referenceFix": {
+        "src/backoff.js": "\"use strict\";\nconst BASE_MS = 250;\nmodule.exports = { baseMs: BASE_MS };\n"
+      },
+      "referenceRun": [],
+      "request": "src/backoff.js exports baseMs, but the shipped constant is a placeholder. The authoritative base delay is defined by the retry policy in spec/retry-policy.txt; read that policy, then make src/backoff.js export the correct baseMs. Do not guess the number.",
+      "expected": "src/backoff.js exports baseMs equal to the base_delay_ms value defined in spec/retry-policy.txt."
+    },
+    {
+      "caseId": "n6e-compact-02-page-size",
+      "suite": "n6-evidence",
+      "condition": "compact-drop",
+      "tags": [
+        "n6",
+        "evidence-missing",
+        "compact-drop"
+      ],
+      "contextBudgetTokens": 1500,
+      "contentDigest": "71c7f48f25f0a65b114f040d418bb4d671c92ec9034adba5fdd2d9b99f26a7c2",
+      "verifierDigest": "dbd73887b11a14ec6b95d8696cea62707a162f972f969086479243becd88b8ac",
+      "eligibility": "case-local context budget makes the context compact after the authoritative spec was read; the required text is then absent while the original command verifier still applies",
+      "referenceFix": {
+        "src/pagination.js": "\"use strict\";\nconst DEFAULT_PAGE_SIZE = 37;\nmodule.exports = { defaultPageSize: DEFAULT_PAGE_SIZE };\n"
+      },
+      "referenceRun": [],
+      "request": "src/pagination.js returns the wrong default page size. The API limits document in spec/api-limits.txt states the default page size this service must use; read it and correct src/pagination.js. Never invent the number.",
+      "expected": "src/pagination.js exports defaultPageSize equal to the value in spec/api-limits.txt."
+    },
+    {
+      "caseId": "n6e-compact-03-request-timeout",
+      "suite": "n6-evidence",
+      "condition": "compact-drop",
+      "tags": [
+        "n6",
+        "evidence-missing",
+        "compact-drop"
+      ],
+      "contextBudgetTokens": 1500,
+      "contentDigest": "9f843e6eaddef38388b11c3d52c43635931ece5ef222f337a5bdbe1b89dbe8a8",
+      "verifierDigest": "42510f077f11b931a7e52758e2daeec6f5dc99ce79a6f6f1ec8d19b3150d4d5f",
+      "eligibility": "case-local context budget makes the context compact after the authoritative spec was read; the required text is then absent while the original command verifier still applies",
+      "referenceFix": {
+        "src/http.js": "\"use strict\";\nconst TIMEOUT_MS = 12500;\nmodule.exports = { timeoutMs: TIMEOUT_MS };\n"
+      },
+      "referenceRun": [],
+      "request": "src/http.js hardcodes a request timeout that no longer matches the service level objective. Read spec/slo.txt to obtain the required timeout, then set it in src/http.js.",
+      "expected": "src/http.js exports timeoutMs equal to the timeout recorded in spec/slo.txt."
+    },
+    {
+      "caseId": "n6e-compact-04-max-attempts",
+      "suite": "n6-evidence",
+      "condition": "compact-drop",
+      "tags": [
+        "n6",
+        "evidence-missing",
+        "compact-drop"
+      ],
+      "contextBudgetTokens": 1500,
+      "contentDigest": "8ba574d332c3b37892340c70c6d957f495d473d8899212fc0ce732207ce77ef2",
+      "verifierDigest": "5b56c9b8fb0b76d7160535e6088c841c8ac8a121bb293c3337b8031e000a97d2",
+      "eligibility": "case-local context budget makes the context compact after the authoritative spec was read; the required text is then absent while the original command verifier still applies",
+      "referenceFix": {
+        "src/queue.js": "\"use strict\";\nconst MAX_ATTEMPTS = 7;\nmodule.exports = { maxAttempts: MAX_ATTEMPTS };\n"
+      },
+      "referenceRun": [],
+      "request": "src/queue.js retries too few times. spec/queue-policy.txt defines how many attempts a job gets; read the policy and update src/queue.js accordingly.",
+      "expected": "src/queue.js exports maxAttempts equal to the attempt count defined in spec/queue-policy.txt."
+    },
+    {
+      "caseId": "n6e-compact-05-cache-ttl",
+      "suite": "n6-evidence",
+      "condition": "compact-drop",
+      "tags": [
+        "n6",
+        "evidence-missing",
+        "compact-drop"
+      ],
+      "contextBudgetTokens": 1500,
+      "contentDigest": "d9812271eb1ca87330167aa4fb0cb4b9162293ed0985d879e4f6f74a0f603ab2",
+      "verifierDigest": "8ffd050eac0d1acadddf5f4ae445cd805c6511306f2eb3e3afc78cca6d81e50d",
+      "eligibility": "case-local context budget makes the context compact after the authoritative spec was read; the required text is then absent while the original command verifier still applies",
+      "referenceFix": {
+        "src/cache.js": "\"use strict\";\nconst TTL_SECONDS = 900;\nmodule.exports = { ttlSeconds: TTL_SECONDS };\n"
+      },
+      "referenceRun": [],
+      "request": "src/cache.js uses a stale time to live. spec/cache-policy.txt records the current TTL in seconds; read it and set src/cache.js to that value.",
+      "expected": "src/cache.js exports ttlSeconds equal to the TTL recorded in spec/cache-policy.txt."
+    },
+    {
+      "caseId": "n6e-compact-06-batch-width",
+      "suite": "n6-evidence",
+      "condition": "compact-drop",
+      "tags": [
+        "n6",
+        "evidence-missing",
+        "compact-drop"
+      ],
+      "contextBudgetTokens": 1500,
+      "contentDigest": "e38050a98b7014564319810715400c854729e211aaaf30651c9bc935d4975861",
+      "verifierDigest": "584ad45bec494afea9f31d0acef8979635f9058f77264a2d7e744f999591cd31",
+      "eligibility": "case-local context budget makes the context compact after the authoritative spec was read; the required text is then absent while the original command verifier still applies",
+      "referenceFix": {
+        "src/batch.js": "\"use strict\";\nconst BATCH_SIZE = 64;\nmodule.exports = { batchSize: BATCH_SIZE };\n"
+      },
+      "referenceRun": [],
+      "request": "src/batch.js batches more rows than the warehouse accepts. spec/etl-limits.txt states the maximum batch width; read it and correct src/batch.js.",
+      "expected": "src/batch.js exports batchSize equal to the maximum width in spec/etl-limits.txt."
+    },
+    {
+      "caseId": "n6e-preview-01-frame-limit",
+      "suite": "n6-evidence",
+      "condition": "preview",
+      "tags": [
+        "n6",
+        "evidence-missing",
+        "preview"
+      ],
+      "contentDigest": "ab6bac15dd98dd158a15bf428b20c784d60ef77213d5999b3210fb89634e134b",
+      "verifierDigest": "a047544471f329127b49b4bf83fb2e433883dcf6fa9ce22834747a970c188432",
+      "eligibility": "the authoritative value sits in the middle of a file larger than the 16 KiB inline budget, so it is absent from the model-visible head/tail preview while the original command verifier still applies",
+      "referenceFix": {
+        "src/framing.js": "\"use strict\";\nconst MAX_FRAME_BYTES = 6144;\nmodule.exports = { maxFrameBytes: MAX_FRAME_BYTES };\n"
+      },
+      "referenceRun": [],
+      "request": "src/framing.js advertises a maximum frame size that is wrong. The protocol specification spec/protocol.txt defines max_frame_bytes; read the specification and correct src/framing.js.",
+      "expected": "src/framing.js exports maxFrameBytes equal to max_frame_bytes in spec/protocol.txt."
+    },
+    {
+      "caseId": "n6e-preview-02-shard-count",
+      "suite": "n6-evidence",
+      "condition": "preview",
+      "tags": [
+        "n6",
+        "evidence-missing",
+        "preview"
+      ],
+      "contentDigest": "b571af05107c49a1291174edeb8378501c522b9ee3158bdd9f25ab3fbe4239f1",
+      "verifierDigest": "2a13d093d816433af50c3483599d2e0c06acf7984b0b6ed4b32d9e89bdf4d14e",
+      "eligibility": "the authoritative value sits in the middle of a file larger than the 16 KiB inline budget, so it is absent from the model-visible head/tail preview while the original command verifier still applies",
+      "referenceFix": {
+        "src/topology.js": "\"use strict\";\nconst SHARD_COUNT = 23;\nmodule.exports = { shardCount: SHARD_COUNT };\n"
+      },
+      "referenceRun": [],
+      "request": "src/topology.js declares the wrong shard count. spec/topology.txt is the authoritative topology document; read it and fix src/topology.js.",
+      "expected": "src/topology.js exports shardCount equal to shard_count in spec/topology.txt."
+    },
+    {
+      "caseId": "n6e-preview-03-burst-quota",
+      "suite": "n6-evidence",
+      "condition": "preview",
+      "tags": [
+        "n6",
+        "evidence-missing",
+        "preview"
+      ],
+      "contentDigest": "98af70e98924a6800819b7ee9e75c03853aadc5f393ecaeeaafd868a9abfb9a4",
+      "verifierDigest": "e3bb53cedaeadd7bdbbc5f8be14071556ccb3162a81b33d97fcc430230243f08",
+      "eligibility": "the authoritative value sits in the middle of a file larger than the 16 KiB inline budget, so it is absent from the model-visible head/tail preview while the original command verifier still applies",
+      "referenceFix": {
+        "src/quota.js": "\"use strict\";\nconst BURST_QUOTA = 480;\nmodule.exports = { burstQuota: BURST_QUOTA };\n"
+      },
+      "referenceRun": [],
+      "request": "src/quota.js allows the wrong burst. spec/quota.txt defines burst_quota; read the document and set src/quota.js to the documented value.",
+      "expected": "src/quota.js exports burstQuota equal to burst_quota in spec/quota.txt."
+    },
+    {
+      "caseId": "n6e-preview-04-service-port",
+      "suite": "n6-evidence",
+      "condition": "preview",
+      "tags": [
+        "n6",
+        "evidence-missing",
+        "preview"
+      ],
+      "contentDigest": "b29a4e8562bda4667e94e87fc7a11f9e9bcbdb0f447ece92128511576934569d",
+      "verifierDigest": "6aacf01e996537536c0ad59b300eca125269a3c0ab31f649f26e25acfde49f97",
+      "eligibility": "the authoritative value sits in the middle of a file larger than the 16 KiB inline budget, so it is absent from the model-visible head/tail preview while the original command verifier still applies",
+      "referenceFix": {
+        "src/network.js": "\"use strict\";\nconst SERVICE_PORT = 8642;\nmodule.exports = { servicePort: SERVICE_PORT };\n"
+      },
+      "referenceRun": [],
+      "request": "src/network.js listens on the wrong port. spec/network.txt records the assigned service port; read it and correct src/network.js.",
+      "expected": "src/network.js exports servicePort equal to service_port in spec/network.txt."
+    },
+    {
+      "caseId": "n6e-rehydrate-01-lease-fence",
+      "suite": "n6-evidence",
+      "condition": "rehydrate",
+      "tags": [
+        "n6",
+        "evidence-missing",
+        "rehydrate"
+      ],
+      "contextBudgetTokens": 1500,
+      "contentDigest": "92967a667ef0f57e6d4f85c8b8d37f8e58e35f5f10c1c7f69897a3d74af2da4d",
+      "verifierDigest": "00331960381e48fcf59169dc1c4ac789682855e7e33a0fabdac0976c315c6bc1",
+      "eligibility": "case-local context budget makes the context compact after the authoritative spec was read; the required text is then absent while the original command verifier still applies",
+      "referenceFix": {
+        "src/lease.js": "\"use strict\";\nconst FENCE_TOKENS = 12;\nmodule.exports = { fenceTokens: FENCE_TOKENS };\n",
+        "src/version.js": "\"use strict\";\nmodule.exports = { version: \"2\" };\n"
+      },
+      "referenceRun": [],
+      "request": "Two steps. First create src/version.js exporting version as the string \"2\". Then read spec/lease-policy.txt and set the fence value in src/lease.js so that it exports fenceTokens equal to the documented value.",
+      "expected": "src/version.js exports the string 2 and src/lease.js exports fenceTokens from spec/lease-policy.txt."
+    },
+    {
+      "caseId": "n6e-rehydrate-02-window",
+      "suite": "n6-evidence",
+      "condition": "rehydrate",
+      "tags": [
+        "n6",
+        "evidence-missing",
+        "rehydrate"
+      ],
+      "contextBudgetTokens": 1500,
+      "contentDigest": "d99534c730195e9bcf97e3a66a0ee2df6f8d6177a756852fc4b706187c418de2",
+      "verifierDigest": "e22f8dcc1c5b782cb670425299e1b6b8a96b626abdecb2af084e4de748a7cf83",
+      "eligibility": "case-local context budget makes the context compact after the authoritative spec was read; the required text is then absent while the original command verifier still applies",
+      "referenceFix": {
+        "src/window.js": "\"use strict\";\nconst WINDOW_SECONDS = 180;\nmodule.exports = { windowSeconds: WINDOW_SECONDS };\n",
+        "src/manifest.js": "\"use strict\";\nmodule.exports = { schema: \"B\" };\n"
+      },
+      "referenceRun": [],
+      "request": "Two steps. First create src/manifest.js exporting schema as \"B\". Then read spec/window-policy.txt and set src/window.js so it exports windowSeconds equal to the documented value.",
+      "expected": "src/manifest.js exports schema B and src/window.js exports the documented windowSeconds."
+    },
+    {
+      "caseId": "n6e-rehydrate-03-chunk",
+      "suite": "n6-evidence",
+      "condition": "rehydrate",
+      "tags": [
+        "n6",
+        "evidence-missing",
+        "rehydrate"
+      ],
+      "contextBudgetTokens": 1500,
+      "contentDigest": "80e9db06d7a31fc0f2d6094f3774f2cab34a1a9e2f6f018a97504c094f1908aa",
+      "verifierDigest": "1766af1989ce8c725dbc01ac05399348eb805197cb82c6a2901ac1d9c8807a86",
+      "eligibility": "case-local context budget makes the context compact after the authoritative spec was read; the required text is then absent while the original command verifier still applies",
+      "referenceFix": {
+        "src/chunk.js": "\"use strict\";\nconst CHUNK_BYTES = 32768;\nmodule.exports = { chunkBytes: CHUNK_BYTES };\n",
+        "src/build-info.js": "\"use strict\";\nmodule.exports = { stage: \"canary\" };\n"
+      },
+      "referenceRun": [],
+      "request": "Two steps. First create src/build-info.js exporting stage as \"canary\". Then read spec/chunk-policy.txt and make src/chunk.js export chunkBytes equal to the documented value.",
+      "expected": "src/build-info.js exports stage canary and src/chunk.js exports the documented chunkBytes."
+    },
+    {
+      "caseId": "n6e-rehydrate-04-sampling",
+      "suite": "n6-evidence",
+      "condition": "rehydrate",
+      "tags": [
+        "n6",
+        "evidence-missing",
+        "rehydrate"
+      ],
+      "contextBudgetTokens": 1500,
+      "contentDigest": "6939405cf97c380064fcb45eb468abd149ddd7af647771fe70a080a742e902b6",
+      "verifierDigest": "d70cbb9414da9622b76855a51137d201f8f703b860bc7593e69125ca0d2185a2",
+      "eligibility": "case-local context budget makes the context compact after the authoritative spec was read; the required text is then absent while the original command verifier still applies",
+      "referenceFix": {
+        "src/sampling.js": "\"use strict\";\nconst SAMPLE_RATE_PER_MILLE = 125;\nmodule.exports = { sampleRatePerMille: SAMPLE_RATE_PER_MILLE };\n",
+        "src/release.js": "\"use strict\";\nmodule.exports = { channel: \"beta\" };\n"
+      },
+      "referenceRun": [],
+      "request": "Two steps. First create src/release.js exporting channel as \"beta\". Then read spec/sampling-policy.txt and set src/sampling.js so it exports sampleRatePerMille equal to the documented value.",
+      "expected": "src/release.js exports channel beta and src/sampling.js exports the documented sampleRatePerMille."
+    },
+    {
+      "caseId": "n6e-partial-01-visible-plan-hidden-limit",
+      "suite": "n6-evidence",
+      "condition": "partial",
+      "tags": [
+        "n6",
+        "evidence-missing",
+        "partial"
+      ],
+      "contextBudgetTokens": 1500,
+      "contentDigest": "e22eae9323dfae0d9607ae501ccd7f885492c514462e83d1fbe14eaf5741f5c1",
+      "verifierDigest": "685174bd681a2f122eb716230034480e1905b8f9e5e82718254a9b1ce460ebf9",
+      "eligibility": "case-local context budget makes the context compact after the authoritative spec was read; the required text is then absent while the original command verifier still applies",
+      "referenceFix": {
+        "src/ingest.js": "\"use strict\";\nconst MAX_ROWS_PER_REQUEST = 1500;\nmodule.exports = { maxRowsPerRequest: MAX_ROWS_PER_REQUEST };\n"
+      },
+      "referenceRun": [],
+      "request": "src/ingest.js enforces the wrong per-request limit. spec/plan.txt describes the pipeline (read it for context) and spec/limits.txt holds the binding per-request limit; read both, then correct src/ingest.js.",
+      "expected": "src/ingest.js exports maxRowsPerRequest equal to the limit in spec/limits.txt."
+    },
+    {
+      "caseId": "n6e-partial-02-visible-index-hidden-value",
+      "suite": "n6-evidence",
+      "condition": "partial",
+      "tags": [
+        "n6",
+        "evidence-missing",
+        "partial"
+      ],
+      "contextBudgetTokens": 1500,
+      "contentDigest": "0431e1cc873fa2d880d84cf9f29be1caecbbf83b30edb15d3372b8ec5473a31a",
+      "verifierDigest": "c53b6a57779987fd2c583cefc7bd24a65c8658cb3460b8e244631690ed6e7f8a",
+      "eligibility": "case-local context budget makes the context compact after the authoritative spec was read; the required text is then absent while the original command verifier still applies",
+      "referenceFix": {
+        "src/tuning.js": "\"use strict\";\nconst CONCURRENCY = 48;\nmodule.exports = { concurrency: CONCURRENCY };\n"
+      },
+      "referenceRun": [],
+      "request": "src/tuning.js exports the wrong concurrency. spec/index.txt lists the documents (read it for orientation); the binding concurrency value is in spec/concurrency.txt. Read both and fix src/tuning.js.",
+      "expected": "src/tuning.js exports concurrency equal to the value in spec/concurrency.txt."
+    },
+    {
+      "caseId": "n6e-control-01-off-by-one",
+      "suite": "n6-evidence",
+      "condition": "visible",
+      "tags": [
+        "n6",
+        "control",
+        "visible"
+      ],
+      "contentDigest": "283d73ac26fc2898e3a73da2b76e231d9ae30da7fb496b97a7508a01efe06308",
+      "verifierDigest": "54f9a8e3be8789cf8d719d4e0d2d421657acfd769af72bcceecabb384e1f7ca3",
+      "eligibility": "everything the fix needs stays visible; the original command verifier applies unchanged",
+      "referenceFix": {
+        "src/sum.js": "\"use strict\";\nfunction sum(xs) {\n  let total = 0;\n  for (let i = 0; i < xs.length; i += 1) total += xs[i];\n  return total;\n}\nmodule.exports = { sum };\n"
+      },
+      "referenceRun": [],
+      "request": "src/sum.js returns the wrong total: it drops the last element. Fix src/sum.js so sum([1,2,3]) === 6.",
+      "expected": "src/sum.js adds every element including the last one."
+    },
+    {
+      "caseId": "n6e-control-02-join",
+      "suite": "n6-evidence",
+      "condition": "visible",
+      "tags": [
+        "n6",
+        "control",
+        "visible"
+      ],
+      "contentDigest": "e8db84f487c3633174a3314e2f6b37c169ac779746a4cc3d713d079670955412",
+      "verifierDigest": "47f2a5af6666fbe18a204b3c7df9b7d6ff77403ed24070564a57d7c73b8d1c6e",
+      "eligibility": "everything the fix needs stays visible; the original command verifier applies unchanged",
+      "referenceFix": {
+        "src/paths.js": "\"use strict\";\nfunction joinPath(parts) {\n  return parts.filter((p) => p !== \"\").join(\"/\");\n}\nmodule.exports = { joinPath };\n"
+      },
+      "referenceRun": [],
+      "request": "src/paths.js builds paths with the wrong separator handling and breaks on an empty segment. Fix joinPath so it skips empty segments.",
+      "expected": "src/paths.js joinPath ignores empty segments and keeps the remaining order."
+    },
+    {
+      "caseId": "n6e-control-03-parse-guard",
+      "suite": "n6-evidence",
+      "condition": "visible",
+      "tags": [
+        "n6",
+        "control",
+        "visible"
+      ],
+      "contentDigest": "e28deaa3470d86f7def49021d7164e8015778943e769391399e204272b3beea3",
+      "verifierDigest": "28e08701e4eb239badd447d10de4127c9bb28697100df9651a1e86af1606e2c7",
+      "eligibility": "everything the fix needs stays visible; the original command verifier applies unchanged",
+      "referenceFix": {
+        "src/parse.js": "\"use strict\";\nfunction parseIntValue(text) {\n  const value = parseInt(text, 10);\n  return Number.isInteger(value) ? value : null;\n}\nmodule.exports = { parseIntValue };\n"
+      },
+      "referenceRun": [],
+      "request": "src/parse.js parses decimal strings but silently returns NaN for input that is not an integer. It must return null for invalid input and the parsed integer otherwise. Fix parseIntValue.",
+      "expected": "parseIntValue returns 12 for \"12\", 7 for \"07\" and null for \"nope\"."
+    },
+    {
+      "caseId": "n6e-control-04-sort",
+      "suite": "n6-evidence",
+      "condition": "visible",
+      "tags": [
+        "n6",
+        "control",
+        "visible"
+      ],
+      "contentDigest": "0ac4aa300651c559b16bc9c149993841184df32b85dcb39384e6c8ce9eb87122",
+      "verifierDigest": "cd9f49ba6295619bc84665404375dba19d244dac8d573f0e95a14f940f3e3428",
+      "eligibility": "everything the fix needs stays visible; the original command verifier applies unchanged",
+      "referenceFix": {
+        "src/sort.js": "\"use strict\";\nfunction ascending(xs) {\n  return [...xs].sort((a, b) => a - b);\n}\nmodule.exports = { ascending };\n"
+      },
+      "referenceRun": [],
+      "request": "src/sort.js sorts numbers lexicographically. Fix ascending so [10,2,33] becomes [2,10,33].",
+      "expected": "src/sort.js ascending sorts numerically."
+    },
+    {
+      "caseId": "n6e-control-05-changed-config",
+      "suite": "n6-evidence",
+      "condition": "changed",
+      "tags": [
+        "n6",
+        "control",
+        "changed"
+      ],
+      "contentDigest": "4b58e96179adbb553feaa9df8585a02eba636eb538695fc9c96ca878200e825e",
+      "verifierDigest": "4bf0d099b00212d15de1e70bb4f67504a58921874c783c8388b1672d9a2a938f",
+      "eligibility": "a setup command rewrites the target file before the fix, so the original command verifier judges the post-change state",
+      "referenceFix": {},
+      "referenceRun": [
+        "setup.js"
+      ],
+      "request": "Step 1: run `node setup.js` — it rotates src/config.js and prints the new value. Step 2: make src/config.js export port equal to the value setup.js printed. A value read before setup.js runs is stale.",
+      "expected": "src/config.js exports the port that setup.js wrote."
+    },
+    {
+      "caseId": "n6e-control-06-changed-data",
+      "suite": "n6-evidence",
+      "condition": "changed",
+      "tags": [
+        "n6",
+        "control",
+        "changed"
+      ],
+      "contentDigest": "977e76e439370da808bc1437afbc37ffe9fd3934ee91138c91d4a6fb1d7d77cf",
+      "verifierDigest": "057e8c771257c9add3d5429b6c418b90967fec185f0bdebb820c4070386ed198",
+      "eligibility": "a setup command rewrites the target file before the fix, so the original command verifier judges the post-change state",
+      "referenceFix": {
+        "src/load.js": "\"use strict\";\nconst fs = require(\"node:fs\");\nfunction recordCount() {\n  return JSON.parse(fs.readFileSync(\"data/current.json\", \"utf8\")).rows.length;\n}\nmodule.exports = { recordCount };\n"
+      },
+      "referenceRun": [
+        "rotate.js"
+      ],
+      "request": "Step 1: run `node rotate.js` — it rewrites data/current.json. Step 2: make src/load.js export recordCount equal to the number of rows rotate.js wrote into data/current.json.",
+      "expected": "src/load.js exports the row count of the rotated data/current.json."
+    },
+    {
+      "caseId": "n6e-control-07-failing-check",
+      "suite": "n6-evidence",
+      "condition": "diagnostic",
+      "tags": [
+        "n6",
+        "control",
+        "diagnostic"
+      ],
+      "contentDigest": "cf6e92431154f7c679925f98a8d1c5808ffdacaf177103ba32ebc0b44cd27b6e",
+      "verifierDigest": "00101cfeaf1a995401a0a85c1590ee3548d5aa1bcae92c99c4a2c497bd55ada8",
+      "eligibility": "the workspace ships a failing check that can be rerun for diagnostics and is also the command verifier",
+      "referenceFix": {
+        "src/discount.js": "\"use strict\";\nfunction discounted(cents, percent) {\n  return cents - Math.round((cents * percent) / 100);\n}\nmodule.exports = { discounted };\n"
+      },
+      "referenceRun": [],
+      "request": "`node check.js` fails. Read its output, repair src/discount.js, and rerun the same command until it exits 0. The verifier is that same command.",
+      "expected": "node check.js exits 0 after the repair."
+    },
+    {
+      "caseId": "n6e-control-08-failing-suite",
+      "suite": "n6-evidence",
+      "condition": "diagnostic",
+      "tags": [
+        "n6",
+        "control",
+        "diagnostic"
+      ],
+      "contentDigest": "3f9718b3337e506ecc707c5f868ba5772ba7b162ba6d49a28d4fb5e0da90d3f1",
+      "verifierDigest": "00101cfeaf1a995401a0a85c1590ee3548d5aa1bcae92c99c4a2c497bd55ada8",
+      "eligibility": "the workspace ships a failing check that can be rerun for diagnostics and is also the command verifier",
+      "referenceFix": {
+        "src/windowed.js": "\"use strict\";\nfunction windowed(xs, size) {\n  const out = [];\n  for (let i = 0; i + size <= xs.length; i += 1) out.push(xs.slice(i, i + size));\n  return out;\n}\nmodule.exports = { windowed };\n"
+      },
+      "referenceRun": [],
+      "request": "`node check.js` reports a failing assertion. Inspect the message, repair src/windowed.js, and rerun the same command until it passes.",
+      "expected": "node check.js exits 0 after the repair."
+    }
+  ],
+  "manifestDigest": "df5c7d8a59a06b3f7445428670b3218564628f50a0c766b1d109e206a8226740"
+}

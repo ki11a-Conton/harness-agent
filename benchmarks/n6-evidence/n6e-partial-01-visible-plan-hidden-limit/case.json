@@ -1,0 +1,22 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "n6",
+    "evidence-missing",
+    "partial"
+  ],
+  "contextBudgetTokens": 1500,
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const m=require(\"./src/ingest.js\");if(!(m.maxRowsPerRequest === 1500)){console.error(\"n6 verifier failed: \"+JSON.stringify({got:m}));process.exit(1);}"
+      ]
+    }
+  ]
+}

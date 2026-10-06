@@ -1,0 +1,1 @@
+src/ingest.js enforces the wrong per-request limit. spec/plan.txt describes the pipeline (read it for context) and spec/limits.txt holds the binding per-request limit; read both, then correct src/ingest.js.

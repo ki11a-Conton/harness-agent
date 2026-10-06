@@ -1,0 +1,22 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "n6",
+    "evidence-missing",
+    "compact-drop"
+  ],
+  "contextBudgetTokens": 1500,
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const m=require(\"./src/pagination.js\");if(!(m.defaultPageSize === 37)){console.error(\"n6 verifier failed: \"+JSON.stringify({got:m}));process.exit(1);}"
+      ]
+    }
+  ]
+}

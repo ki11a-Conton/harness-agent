@@ -1,0 +1,21 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "n6",
+    "control",
+    "visible"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const {ascending}=require(\"./src/sort.js\");const r=ascending([10,2,33]);if(JSON.stringify(r)!==JSON.stringify([2,10,33])){console.error(\"n6 verifier failed: ascending\");process.exit(1);}"
+      ]
+    }
+  ]
+}

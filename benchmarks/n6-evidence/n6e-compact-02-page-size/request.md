@@ -1,0 +1,1 @@
+src/pagination.js returns the wrong default page size. The API limits document in spec/api-limits.txt states the default page size this service must use; read it and correct src/pagination.js. Never invent the number.

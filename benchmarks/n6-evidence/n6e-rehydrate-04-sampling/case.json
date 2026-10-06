@@ -1,0 +1,22 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "n6",
+    "evidence-missing",
+    "rehydrate"
+  ],
+  "contextBudgetTokens": 1500,
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const m=require(\"./src/sampling.js\");if(!(m.sampleRatePerMille === 125)){console.error(\"n6 verifier failed: \"+JSON.stringify({got:m}));process.exit(1);}\nconst r=require(\"./src/release.js\");if(r.channel!==\"beta\"){console.error(\"n6 verifier failed: channel\");process.exit(1);}"
+      ]
+    }
+  ]
+}

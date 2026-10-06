@@ -1,0 +1,246 @@
+{
+  "schemaVersion": "context-safe-tool-call-efficiency-preregistration-v1",
+  "subject": {
+    "candidateSourceSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "baselineArmDigest": "c31e2d05183bdb696c29ae14474a0a23ab40ea9c6739cb374a5cf3959c56feac",
+    "candidateArmDigest": "205ab0d7c71b44cdbb450378ffe23c355eb7474a3798b9ca637f4a6de5d3d7b5",
+    "cleanTreePolicy": "require-clean",
+    "runtimeConfigDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "prompt": {
+    "candidateId": "context_safe_tool_call_efficiency_v1",
+    "guidanceVersion": "context-safe-tool-call-efficiency:v1",
+    "guidanceDigest": "ce66f3b091752fdb38774914d2d3e5f736c0684930d5162f25ecdb5bed2d56c2",
+    "contractDigest": "cd247970c6783731b427b1811a6b48830de3992ad706bcb2d122c12674be9d80",
+    "comparisonCandidateId": "tool_call_efficiency_v1",
+    "comparisonGuidanceVersion": "tool-call-efficiency:v2",
+    "comparisonGuidanceDigest": "ebddf5eb125cbbe8ed25d7ecb1ea3554809494aea70716adf3a9f62924939619"
+  },
+  "provider": {
+    "providerId": "openai",
+    "modelId": "gpt-5",
+    "endpointDigest": "provider-default-endpoint",
+    "requestProfileDigest": "9046af4fee7de86cf674214b1b379142eeb28e996a94420997d711f2df48b8ad"
+  },
+  "dataset": {
+    "suiteId": "n6-evidence",
+    "suiteVersion": "1.0.0",
+    "caseRoot": "benchmarks/n6-evidence",
+    "holdoutPolicy": "holdout per-case data is never read into an artifact; the holdout experiment uses its own suite and never participates in prompt tuning",
+    "cases": [
+      {
+        "caseId": "n6e-compact-01-retry-base",
+        "suite": "n6-evidence",
+        "condition": "compact-drop",
+        "contentDigest": "32f6efcea4906e591d4716b06985e041dab20cbebf50d0c4fb1d152fb3665750",
+        "verifierDigest": "199aacbef92b7214ef077901517d9c700525005dd0c160236a5e8af95de0f489"
+      },
+      {
+        "caseId": "n6e-compact-02-page-size",
+        "suite": "n6-evidence",
+        "condition": "compact-drop",
+        "contentDigest": "71c7f48f25f0a65b114f040d418bb4d671c92ec9034adba5fdd2d9b99f26a7c2",
+        "verifierDigest": "dbd73887b11a14ec6b95d8696cea62707a162f972f969086479243becd88b8ac"
+      },
+      {
+        "caseId": "n6e-compact-03-request-timeout",
+        "suite": "n6-evidence",
+        "condition": "compact-drop",
+        "contentDigest": "9f843e6eaddef38388b11c3d52c43635931ece5ef222f337a5bdbe1b89dbe8a8",
+        "verifierDigest": "42510f077f11b931a7e52758e2daeec6f5dc99ce79a6f6f1ec8d19b3150d4d5f"
+      },
+      {
+        "caseId": "n6e-compact-04-max-attempts",
+        "suite": "n6-evidence",
+        "condition": "compact-drop",
+        "contentDigest": "8ba574d332c3b37892340c70c6d957f495d473d8899212fc0ce732207ce77ef2",
+        "verifierDigest": "5b56c9b8fb0b76d7160535e6088c841c8ac8a121bb293c3337b8031e000a97d2"
+      },
+      {
+        "caseId": "n6e-compact-05-cache-ttl",
+        "suite": "n6-evidence",
+        "condition": "compact-drop",
+        "contentDigest": "d9812271eb1ca87330167aa4fb0cb4b9162293ed0985d879e4f6f74a0f603ab2",
+        "verifierDigest": "8ffd050eac0d1acadddf5f4ae445cd805c6511306f2eb3e3afc78cca6d81e50d"
+      },
+      {
+        "caseId": "n6e-compact-06-batch-width",
+        "suite": "n6-evidence",
+        "condition": "compact-drop",
+        "contentDigest": "e38050a98b7014564319810715400c854729e211aaaf30651c9bc935d4975861",
+        "verifierDigest": "584ad45bec494afea9f31d0acef8979635f9058f77264a2d7e744f999591cd31"
+      },
+      {
+        "caseId": "n6e-preview-01-frame-limit",
+        "suite": "n6-evidence",
+        "condition": "preview",
+        "contentDigest": "ab6bac15dd98dd158a15bf428b20c784d60ef77213d5999b3210fb89634e134b",
+        "verifierDigest": "a047544471f329127b49b4bf83fb2e433883dcf6fa9ce22834747a970c188432"
+      },
+      {
+        "caseId": "n6e-preview-02-shard-count",
+        "suite": "n6-evidence",
+        "condition": "preview",
+        "contentDigest": "b571af05107c49a1291174edeb8378501c522b9ee3158bdd9f25ab3fbe4239f1",
+        "verifierDigest": "2a13d093d816433af50c3483599d2e0c06acf7984b0b6ed4b32d9e89bdf4d14e"
+      },
+      {
+        "caseId": "n6e-preview-03-burst-quota",
+        "suite": "n6-evidence",
+        "condition": "preview",
+        "contentDigest": "98af70e98924a6800819b7ee9e75c03853aadc5f393ecaeeaafd868a9abfb9a4",
+        "verifierDigest": "e3bb53cedaeadd7bdbbc5f8be14071556ccb3162a81b33d97fcc430230243f08"
+      },
+      {
+        "caseId": "n6e-preview-04-service-port",
+        "suite": "n6-evidence",
+        "condition": "preview",
+        "contentDigest": "b29a4e8562bda4667e94e87fc7a11f9e9bcbdb0f447ece92128511576934569d",
+        "verifierDigest": "6aacf01e996537536c0ad59b300eca125269a3c0ab31f649f26e25acfde49f97"
+      },
+      {
+        "caseId": "n6e-rehydrate-01-lease-fence",
+        "suite": "n6-evidence",
+        "condition": "rehydrate",
+        "contentDigest": "92967a667ef0f57e6d4f85c8b8d37f8e58e35f5f10c1c7f69897a3d74af2da4d",
+        "verifierDigest": "00331960381e48fcf59169dc1c4ac789682855e7e33a0fabdac0976c315c6bc1"
+      },
+      {
+        "caseId": "n6e-rehydrate-02-window",
+        "suite": "n6-evidence",
+        "condition": "rehydrate",
+        "contentDigest": "d99534c730195e9bcf97e3a66a0ee2df6f8d6177a756852fc4b706187c418de2",
+        "verifierDigest": "e22f8dcc1c5b782cb670425299e1b6b8a96b626abdecb2af084e4de748a7cf83"
+      },
+      {
+        "caseId": "n6e-rehydrate-03-chunk",
+        "suite": "n6-evidence",
+        "condition": "rehydrate",
+        "contentDigest": "80e9db06d7a31fc0f2d6094f3774f2cab34a1a9e2f6f018a97504c094f1908aa",
+        "verifierDigest": "1766af1989ce8c725dbc01ac05399348eb805197cb82c6a2901ac1d9c8807a86"
+      },
+      {
+        "caseId": "n6e-rehydrate-04-sampling",
+        "suite": "n6-evidence",
+        "condition": "rehydrate",
+        "contentDigest": "6939405cf97c380064fcb45eb468abd149ddd7af647771fe70a080a742e902b6",
+        "verifierDigest": "d70cbb9414da9622b76855a51137d201f8f703b860bc7593e69125ca0d2185a2"
+      },
+      {
+        "caseId": "n6e-partial-01-visible-plan-hidden-limit",
+        "suite": "n6-evidence",
+        "condition": "partial",
+        "contentDigest": "e22eae9323dfae0d9607ae501ccd7f885492c514462e83d1fbe14eaf5741f5c1",
+        "verifierDigest": "685174bd681a2f122eb716230034480e1905b8f9e5e82718254a9b1ce460ebf9"
+      },
+      {
+        "caseId": "n6e-partial-02-visible-index-hidden-value",
+        "suite": "n6-evidence",
+        "condition": "partial",
+        "contentDigest": "0431e1cc873fa2d880d84cf9f29be1caecbbf83b30edb15d3372b8ec5473a31a",
+        "verifierDigest": "c53b6a57779987fd2c583cefc7bd24a65c8658cb3460b8e244631690ed6e7f8a"
+      },
+      {
+        "caseId": "n6e-control-01-off-by-one",
+        "suite": "n6-evidence",
+        "condition": "visible",
+        "contentDigest": "283d73ac26fc2898e3a73da2b76e231d9ae30da7fb496b97a7508a01efe06308",
+        "verifierDigest": "54f9a8e3be8789cf8d719d4e0d2d421657acfd769af72bcceecabb384e1f7ca3"
+      },
+      {
+        "caseId": "n6e-control-02-join",
+        "suite": "n6-evidence",
+        "condition": "visible",
+        "contentDigest": "e8db84f487c3633174a3314e2f6b37c169ac779746a4cc3d713d079670955412",
+        "verifierDigest": "47f2a5af6666fbe18a204b3c7df9b7d6ff77403ed24070564a57d7c73b8d1c6e"
+      },
+      {
+        "caseId": "n6e-control-03-parse-guard",
+        "suite": "n6-evidence",
+        "condition": "visible",
+        "contentDigest": "e28deaa3470d86f7def49021d7164e8015778943e769391399e204272b3beea3",
+        "verifierDigest": "28e08701e4eb239badd447d10de4127c9bb28697100df9651a1e86af1606e2c7"
+      },
+      {
+        "caseId": "n6e-control-04-sort",
+        "suite": "n6-evidence",
+        "condition": "visible",
+        "contentDigest": "0ac4aa300651c559b16bc9c149993841184df32b85dcb39384e6c8ce9eb87122",
+        "verifierDigest": "cd9f49ba6295619bc84665404375dba19d244dac8d573f0e95a14f940f3e3428"
+      },
+      {
+        "caseId": "n6e-control-05-changed-config",
+        "suite": "n6-evidence",
+        "condition": "changed",
+        "contentDigest": "4b58e96179adbb553feaa9df8585a02eba636eb538695fc9c96ca878200e825e",
+        "verifierDigest": "4bf0d099b00212d15de1e70bb4f67504a58921874c783c8388b1672d9a2a938f"
+      },
+      {
+        "caseId": "n6e-control-06-changed-data",
+        "suite": "n6-evidence",
+        "condition": "changed",
+        "contentDigest": "977e76e439370da808bc1437afbc37ffe9fd3934ee91138c91d4a6fb1d7d77cf",
+        "verifierDigest": "057e8c771257c9add3d5429b6c418b90967fec185f0bdebb820c4070386ed198"
+      },
+      {
+        "caseId": "n6e-control-07-failing-check",
+        "suite": "n6-evidence",
+        "condition": "diagnostic",
+        "contentDigest": "cf6e92431154f7c679925f98a8d1c5808ffdacaf177103ba32ebc0b44cd27b6e",
+        "verifierDigest": "00101cfeaf1a995401a0a85c1590ee3548d5aa1bcae92c99c4a2c497bd55ada8"
+      },
+      {
+        "caseId": "n6e-control-08-failing-suite",
+        "suite": "n6-evidence",
+        "condition": "diagnostic",
+        "contentDigest": "3f9718b3337e506ecc707c5f868ba5772ba7b162ba6d49a28d4fb5e0da90d3f1",
+        "verifierDigest": "00101cfeaf1a995401a0a85c1590ee3548d5aa1bcae92c99c4a2c497bd55ada8"
+      }
+    ],
+    "caseSetDigest": "0efd74bb9f92810c5b1bd16271be4c2b65063a67192ddd91fc7888e764897e30",
+    "selectionProvenanceDigest": "df5c7d8a59a06b3f7445428670b3218564628f50a0c766b1d109e206a8226740"
+  },
+  "evaluation": {
+    "verifierDigest": "d1a737af1b770d1b745118d191645806eb2d72a29601d1b1b5643a808e2b0a68",
+    "scorerDigest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "judgeId": "task-verifier",
+    "judgeDigest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "gates": {
+      "missingGroupVerifiedPassRateLiftPp": 5,
+      "pairedBootstrapIterations": 10000,
+      "pairedBootstrapOneSidedLowerBoundMin": 0,
+      "controlSuccessMustNotDecrease": true,
+      "newSecurityViolationsMax": 0,
+      "newFalseCompleteMax": 0,
+      "totalTokensMaxRatioOfBaseline": 1.1,
+      "modelCallAttemptsMaxRatioOfBaseline": 1.1,
+      "unproductiveRepeatedToolCallsMustNotGrow": true,
+      "holdoutOverallPassRateMustNotDecrease": true,
+      "holdoutMissingGroupLiftPp": 5,
+      "baselineZeroUsesAbsoluteNonGrowth": true,
+      "usageUnknownIsNotZero": true
+    },
+    "gatesDigest": "9bd350a420c5d4d881f0376008118c706e764e1a9aa392c9ec05d202ac0566d1"
+  },
+  "schedule": {
+    "repetitions": 4,
+    "orderSeed": 20261005,
+    "planDigest": "fc1b0b042aab9712395a014c3c8767752213f55dcdea044c9e80bb8656b97648",
+    "logicalRuns": 192,
+    "abCount": 48,
+    "baCount": 48,
+    "balanced": true
+  },
+  "budget": {
+    "maxModelCallsPerRun": 30,
+    "maxToolCalls": 600,
+    "maxDurationMs": 1800000,
+    "maxInputTokens": 3000000,
+    "maxOutputTokens": 400000,
+    "maxTotalTokens": 4000000,
+    "maxUsdMicros": null,
+    "pricingUnknownPolicy": "refuse",
+    "campaignWorstCaseModelCalls": 5760
+  },
+  "preregistrationDigest": "1e61a0ec9900a235731daa9a56e230c299193b1f1dc37785f8d07dc084a00830"
+}

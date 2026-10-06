@@ -1,0 +1,21 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "n6",
+    "control",
+    "changed"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const {port}=require(\"./src/config.js\");if(port!==4310){console.error(\"n6 verifier failed: port\");process.exit(1);}"
+      ]
+    }
+  ]
+}

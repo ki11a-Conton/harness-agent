@@ -1,0 +1,22 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "n6",
+    "evidence-missing",
+    "rehydrate"
+  ],
+  "contextBudgetTokens": 1500,
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const m=require(\"./src/lease.js\");if(!(m.fenceTokens === 12)){console.error(\"n6 verifier failed: \"+JSON.stringify({got:m}));process.exit(1);}\nconst v=require(\"./src/version.js\");if(v.version!==\"2\"){console.error(\"n6 verifier failed: version\");process.exit(1);}"
+      ]
+    }
+  ]
+}
