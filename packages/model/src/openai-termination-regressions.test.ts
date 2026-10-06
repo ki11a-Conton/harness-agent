@@ -40,7 +40,15 @@ describe("R1: OpenAI stream termination evidence", () => {
     { label: "output length", suffix: [terminal("length")], reason: "length", boundary: "finish_reason" },
     { label: "content filter", suffix: [terminal("content_filter")], reason: "content_filter", boundary: "finish_reason" },
     { label: "unknown finish reason", suffix: [terminal("unexpected")], reason: "unexpected", boundary: "finish_reason" },
-    { label: "empty finish reason", suffix: [terminal("")], reason: "", boundary: "finish_reason" },
+    // N5 (measured): a stream whose LAST frame carries an EMPTY finish_reason is
+    // still a failure — nothing terminal was ever reported, so the turn must not
+    // be treated as a normal stop. What changed is only the diagnostic boundary:
+    // an empty string no longer counts as terminal evidence of its own (an
+    // approved OpenAI-compatible endpoint emits `finish_reason: ""` on every
+    // content frame and the real reason on the final frame, which previously
+    // aborted the turn on the first frame), so the refusal now comes from the
+    // EOF guard with no terminal reason recorded.
+    { label: "empty finish reason (no real terminal frame)", suffix: [terminal("")], reason: null, boundary: "eof" },
     { label: "natural EOF", suffix: [], reason: null, boundary: "eof" },
     { label: "DONE without finish reason", suffix: ["data: [DONE]\n\n"], reason: null, boundary: "done" },
   ];

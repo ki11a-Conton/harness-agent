@@ -624,7 +624,12 @@ async function* streamChatCompletion(
       }
     }
     const reason = choice?.finish_reason;
-    if (reason !== undefined && reason !== null) {
+    // MEASURED (the approved local OpenAI-compatible endpoint): a server may send
+    // `finish_reason: ""` on EVERY content frame and the real reason only on the
+    // final frame. An empty string carries no terminal meaning — treating it as an
+    // abnormal terminal reason aborted the whole turn on the first frame, before
+    // any tool call, so `""` must mean "not finished yet", exactly like absent.
+    if (reason !== undefined && reason !== null && reason !== "") {
       if (reason !== "stop" && reason !== "tool_calls") {
         return { events: [...events, ...finishEvents("error", streamTerminationError("finish_reason", reason))], finished: true };
       }
