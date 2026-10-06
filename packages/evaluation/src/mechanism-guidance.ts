@@ -169,6 +169,85 @@ export function contextSafeToolCallEfficiencyGuidanceDigest(): string {
   return createHash("sha256").update(CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_V1, "utf8").digest("hex");
 }
 
+// ---------------------------------------------------------------------------
+// N7 — `context_safe_tool_call_efficiency_v2`.
+//
+// Measured diagnosis (N5, not a guess): the v1 rule's trigger — "the text you
+// need is still visible in this conversation" — is not reliably self-observable,
+// so the SAME rule was applied inconsistently. Activation was 95/95 and 83/83
+// (the text always reached the model), the main evidence-missing group moved
+// +7.29pp but its 95% lower bound was -4.69pp and the independent holdout did
+// not transfer (+2.08pp, lower bound -14.58pp, plus a new security event and
+// more false-completes). The failure mode is the invisible precondition, not the
+// intent.
+//
+// v2 is a ONE-RULE change against the v1 text: every other bullet is reused
+// VERBATIM (identical bytes), so the diff between the two constants is exactly
+// the freshness rule — which becomes an explicit, OBSERVABLE pre-edit step. The
+// plan's N7-1 criterion is that the real model request carries these exact bytes
+// and this exact digest; a flags-only or uninstalled run is NOT activation.
+// ---------------------------------------------------------------------------
+
+/** Version identity of the v2 context-safe tool-call efficiency strategy. */
+export const CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_V2_GUIDANCE_VERSION = "context-safe-tool-call-efficiency:v2";
+
+/** The SINGLE authoritative strategy text for
+ *  `context_safe_tool_call_efficiency_v2` (N7 challenger).
+ *
+ *  Only the freshness rule differs from `CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_V1`:
+ *   - the precondition is CHECKED AND STATED before the edit instead of being
+ *     assumed ("say which exact text you are about to change and confirm it is
+ *     visible now");
+ *   - when it is not visible, the re-read is specified with the real tools —
+ *     `read_file` with `versioned=true` plus a sha256 comparison (different hash
+ *     = the file changed), and `grep_search` to locate a file past the inline
+ *     preview budget, because `read_file` has no offset/limit parameter;
+ *   - editing from a summary, a citation or a memory of an earlier read is
+ *     forbidden explicitly, not implied. */
+export const CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_V2 = [
+  "",
+  "Tool-call efficiency guidance:",
+  "- A turn allows a limited number of model iterations (typically 30 model",
+  "  calls). This limit counts MODEL CALLS, not tool calls: you may attach",
+  "  several tool calls to one model call, so tool calls can outnumber model",
+  "  calls.",
+  "- Before repeating a tool call that just failed, change something — the",
+  "  arguments, the target, or the approach. Re-issuing an identical call with",
+  "  the same arguments against unchanged state tends to fail the same way and",
+  "  only spends an iteration.",
+  "- Only abandon a tool when it keeps failing the SAME way with unchanged",
+  "  inputs and no change in state. Once you have fixed the underlying cause,",
+  "  calling the same tool again (for example re-running the test command) is",
+  "  expected and correct.",
+  "- Read each file you need in as few calls as possible. Re-use an earlier read",
+  "  ONLY while the text you need is still visible in this conversation and the",
+  "  version you already have matches the current file.",
+  "- Before you edit a file, make the freshness check an explicit step: state",
+  "  which exact text you are about to change and confirm that text is visible",
+  "  in this conversation NOW. Do not edit while the answer to that question is",
+  "  unknown.",
+  "- If that text is not visible — compaction, truncation or rehydration dropped",
+  "  it — read the file again before editing. Read it with versioned=true and",
+  "  compare the returned sha256 with the version you already hold: a different",
+  "  hash means the file changed, so every earlier read of it is stale.",
+  "- If the file is larger than the inline preview budget, do not re-read it",
+  "  whole: use grep_search to locate the exact key or line you must change, then",
+  "  read only the region you need. read_file takes no offset/limit parameter, so",
+  "  a guess about where the text sits is not a substitute for looking it up.",
+  "- Never edit a file from a summary, from a citation, from a tool count or from",
+  "  your memory of an earlier read: those are not the current file. Do not",
+  "  re-read a file whose current content and version you can still see.",
+  "- Make each edit complete before moving on, so the verification command you",
+  "  run near the end reflects finished work rather than a half-applied change.",
+].join("\n");
+
+/** sha256 over the ACTUAL v2 strategy text — binds the v2 arm digest, the
+ *  execution identity and the activation evidence to the real bytes, so a v1
+ *  injection can never corroborate the v2 candidate. */
+export function contextSafeToolCallEfficiencyV2GuidanceDigest(): string {
+  return createHash("sha256").update(CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_V2, "utf8").digest("hex");
+}
+
 
 /** S1: experimental guidance only; verification remains the original gate. */
 export const DIAGNOSTIC_FIRST_REPAIR_GUIDANCE_VERSION = "diagnostic-first-repair:v1";

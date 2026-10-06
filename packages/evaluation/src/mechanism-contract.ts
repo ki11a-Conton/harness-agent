@@ -185,6 +185,21 @@ const CONTRACTS: Record<string, MechanismContract> = {
       "compaction, rehydration, permission, sandbox or verification altered",
     ],
   },
+  context_safe_tool_call_efficiency_v2: {
+    schemaVersion: MECHANISM_CONTRACT_SCHEMA_VERSION,
+    candidateId: "context_safe_tool_call_efficiency_v2",
+    modelVisibleSurface: "v2 context-safe tool-call efficiency guidance (observable freshness pre-edit step) present in the final model-visible messages",
+    eligibilityRule: "case whose required source text is no longer visible (compacted, truncated or only rehydrated as a reference) while the original command verifier still applies",
+    minEligibleCases: 5,
+    expectedFailureCluster: "verification_failed / agent_limit (editing from a summary, a citation or memory after the original text was compacted away)",
+    requiredActivationEvents: ["context-safe-tool-call-efficiency-guidance-injected"],
+    forbiddenNoOpConditions: [
+      "guidance only logged in CLI, absent from model-visible messages",
+      "injected text identical to context_safe_tool_call_efficiency_v1 guidance (the v2 text must reach the model byte-for-byte, proven by its own digest)",
+      "history-only claim: the candidate reported activation without a real fresh read before the edit",
+      "compaction, rehydration, permission, sandbox or verification altered",
+    ],
+  },
 };
 
 export function mechanismContractFor(candidateId: string): MechanismContract | undefined {

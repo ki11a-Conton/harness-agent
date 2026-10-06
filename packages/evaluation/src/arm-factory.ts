@@ -31,7 +31,7 @@
 import { createHash } from "node:crypto";
 import { getCandidateRegistry, PATH_SCOPED_INSTRUCTIONS_CONFIG_V1, TASK_SCOPED_SKILLS_CONFIG_V1, type CandidateRegistration, type PathScopedInstructionsRuntimeConfig, type TaskScopedSkillsRuntimeConfig } from "./candidate-registry.js";
 import { stableStringify } from "./manifest.js";
-import { budgetAwareCompletionGuidanceDigest, toolCallEfficiencyGuidanceDigest, contextSafeToolCallEfficiencyGuidanceDigest, diagnosticFirstRepairGuidanceDigest, DIAGNOSTIC_FIRST_REPAIR_GUIDANCE_V1 } from "./mechanism-guidance.js";
+import { budgetAwareCompletionGuidanceDigest, toolCallEfficiencyGuidanceDigest, contextSafeToolCallEfficiencyGuidanceDigest, contextSafeToolCallEfficiencyV2GuidanceDigest, diagnosticFirstRepairGuidanceDigest, DIAGNOSTIC_FIRST_REPAIR_GUIDANCE_V1 } from "./mechanism-guidance.js";
 
 export const ARM_FACTORY_SCHEMA_VERSION = "1.0.0";
 export const ARM_FACTORY_POLICY_VERSION = "e3-03-arm-v1";
@@ -124,6 +124,11 @@ export interface RuntimeMechanisms {
    *  prompt. Occupies the SAME `completionGuidance` slot as the other
    *  prompt-guidance mechanisms, so it is mutually exclusive with them. */
   contextSafeToolCallEfficiency?: boolean;
+  /** N7: the v2 context-safe guidance (observable freshness pre-edit step)
+   *  injected into the system prompt. Occupies the SAME `completionGuidance`
+   *  slot as v1, so the two are mutually exclusive; the field is separate so a
+   *  v1 arm and a v2 arm can never resolve to the same mechanism snapshot. */
+  contextSafeToolCallEfficiencyV2?: boolean;
   /** S1 experimental diagnostic guidance; omitted on existing arms. */
   diagnosticFirstRepair?: boolean;
   /** S2 experimental discovery; absent on existing arms. */
@@ -317,6 +322,22 @@ export function wireCandidateMechanism(reg: CandidateRegistration): MechanismWir
           promptAdditionsDigest: contextSafeToolCallEfficiencyGuidanceDigest(),
         }),
         declaredPaths: ["harnessConfig.contextSafeToolCallEfficiency"],
+      };
+    case "context_safe_tool_call_efficiency_v2":
+      return {
+        constructorId: "completion:context-safe-tool-call-efficiency-v2-guide",
+        apply: (config) => ({ ...config, contextSafeToolCallEfficiencyV2: "v2" }),
+        isActive: (config) => config.contextSafeToolCallEfficiencyV2 === "v2",
+        applyRuntime: (base) => ({
+          ...base,
+          contextSafeToolCallEfficiencyV2: true,
+          // Binds the ACTUAL v2 bytes (the observable freshness rule) to the arm
+          // digest / execution identity: an evaluation performed under v1 can
+          // never authorize the v2 text under the same candidateId, and vice
+          // versa.
+          promptAdditionsDigest: contextSafeToolCallEfficiencyV2GuidanceDigest(),
+        }),
+        declaredPaths: ["harnessConfig.contextSafeToolCallEfficiencyV2"],
       };
     case "diagnostic_first_repair_v1":
       return {

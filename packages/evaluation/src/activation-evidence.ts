@@ -13,6 +13,7 @@
  */
 
 import { guidanceBlockDigest } from "./activation-evidence-v2.js";
+import { CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_V2_GUIDANCE_VERSION } from "./mechanism-guidance.js";
 
 export const ACTIVATION_EVIDENCE_SCHEMA_VERSION = "1.0.0";
 
@@ -405,6 +406,32 @@ export function activationEvidenceFor(
         reasonCodes: injections.length > 0 ? ["context_safe_tool_call_efficiency_guidance_injected"] : ["activation_zero"],
         baselineMechanismDigest: "benchmark-standard-prompt",
         candidateMechanismDigest: "benchmark-prompt+context-safe-tool-call-efficiency-guidance",
+        summary: { injectionCount: injections.length },
+      };
+    }
+    case "context_safe_tool_call_efficiency_v2": {
+      // N7: the v2 candidate shares the guidance-injection SIGNAL TYPE with v1
+      // (no new Core event type is introduced), so activation is pinned to the
+      // v2 VERSION carried by the event payload — an injection of the v1 block
+      // can never corroborate the v2 candidate. The payload's block bytes are
+      // what the real model request contained (see the runner's
+      // observeGuidanceRequest), and the digest of those bytes is checked by the
+      // execution-bound evidence path.
+      const injections = activationEvents.filter(
+        (e) =>
+          e.type === "context_safe_tool_call_efficiency_guidance_injected" &&
+          e.payload?.guidanceVersion === CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_V2_GUIDANCE_VERSION,
+      );
+      return {
+        schemaVersion: ACTIVATION_EVIDENCE_SCHEMA_VERSION,
+        candidateId,
+        caseId: caseDef.id,
+        eligible: true,
+        activated: injections.length > 0,
+        activationCount: injections.length,
+        reasonCodes: injections.length > 0 ? ["context_safe_tool_call_efficiency_guidance_injected"] : ["activation_zero"],
+        baselineMechanismDigest: "benchmark-standard-prompt",
+        candidateMechanismDigest: "benchmark-prompt+context-safe-tool-call-efficiency-v2-guidance",
         summary: { injectionCount: injections.length },
       };
     }

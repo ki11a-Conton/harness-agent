@@ -53,6 +53,10 @@ export interface ChampionHarnessConfig {
    *  Mutually exclusive with the other prompt-guidance mechanisms (all occupy
    *  `completionGuidance`). */
   contextSafeToolCallEfficiency?: boolean;
+  /** N7: whether the v2 context-safe guidance (observable freshness pre-edit
+   *  step) is injected. A distinct requirement from v1 because the installed
+   *  bytes differ; mutually exclusive with every other guidance mechanism. */
+  contextSafeToolCallEfficiencyV2?: boolean;
   /** Runtime mechanisms digest for audit. */
   runtimeDigest: string;
 }
@@ -128,6 +132,13 @@ export function championHarnessConfigFromProfile(
   // verifies) it rather than recording a flags-only PROVEN.
   if (rc.contextSafeToolCallEfficiency) {
     config.contextSafeToolCallEfficiency = true;
+  }
+
+  // N7: the v2 context-safe guidance is a SEPARATE install requirement — the
+  // bytes differ from v1, so carrying only the v1 flag would install the wrong
+  // prompt for a champion that declared v2.
+  if (rc.contextSafeToolCallEfficiencyV2) {
+    config.contextSafeToolCallEfficiencyV2 = true;
   }
 
   return config;

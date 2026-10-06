@@ -369,11 +369,36 @@ describe("N6/N2 — independent holdout pre-registration (champion-resolved)", (
     ).toThrow(/HOLDOUT_LEAK/);
   });
 
-  it("5. the committed holdout artifact equals a fresh build from the same resolved inputs", () => {
+  it("5. the committed holdout artifact still reproduces, except for the arm snapshot the registry listing moves", () => {
     const committed = JSON.parse(readFileSync(HOLDOUT_ARTIFACT_PATH, "utf8")) as ContextSafePreregistration;
     const fresh = buildContextSafePreregistration(holdoutOptions());
-    expect(committed).toEqual(fresh);
+
+    // The artifact is NOT rewritten to match the live tree. What changed between
+    // the freeze and today is the CANDIDATE REGISTRY: the baseline arm's
+    // resolved snapshot lists every registered candidate as OFF
+    // (`arm-factory.ts buildSnapshot`), so registering the N7 v2 challenger
+    // legitimately moved the baseline arm digest. Everything the N6 experiment
+    // actually froze — role, dataset, schedule, provider, budget, gates, the
+    // candidate arm and the champion provenance — must still be identical.
+    const { baselineArmDigest: frozenBaseline, ...committedSubject } = committed.subject;
+    const { baselineArmDigest: freshBaseline, ...freshSubject } = fresh.subject;
+    expect(freshSubject).toEqual(committedSubject);
     expect(committed.role).toBe("holdout");
+    expect(frozenBaseline).toBe("74b8465e3e7510cee74308b9cbe75fcbcf1f4262ce68d0a0bc1b7fa764f6466f");
+    expect(freshBaseline).not.toBe(frozenBaseline);
+    // The moved input is exactly the resolved champion arm, nothing else: the
+    // fresh build's baseline digest is the live resolved champion's digest.
+    expect(freshBaseline).toBe(resolvedChampion().digest);
+    // …so the root identity moves with it, which is the intended fail-closed
+    // behaviour: an old approval cannot authorize a plan built against a
+    // different resolved baseline. The differing keys are exactly those two.
+    const differingKeys = Object.keys(committed).filter(
+      (key) => JSON.stringify(committed[key as keyof ContextSafePreregistration]) !== JSON.stringify(fresh[key as keyof ContextSafePreregistration]),
+    );
+    expect(differingKeys.sort()).toEqual(["preregistrationDigest", "subject"]);
+    expect(fresh.preregistrationDigest).not.toBe(committed.preregistrationDigest);
+
+    // The FROZEN artifact itself remains internally valid and payable-zero.
     const report = dryRunContextSafePreregistration(committed);
     expect(report.ok).toBe(true);
     expect(report.logicalRuns).toBe(192);

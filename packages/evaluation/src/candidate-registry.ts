@@ -19,6 +19,12 @@ export type CandidateLayer = "agent-strategy" | "harness-profile" | "benchmark-f
  *  guards) reads instead of repeating the literal. */
 export const CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_CANDIDATE_ID = "context_safe_tool_call_efficiency_v1";
 
+/** N7 — the v2 challenger id. It shares the `contextSafeToolCallEfficiency`
+ *  family with v1 (SAME `completionGuidance` slot: at most one may be active)
+ *  but carries its OWN text, digest, contract and activation evidence, so a v1
+ *  injection can never be counted as v2 activation. */
+export const CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_V2_CANDIDATE_ID = "context_safe_tool_call_efficiency_v2";
+
 /** S2's installed discovery policy is one content-addressed arm input. */
 export interface PathScopedInstructionsRuntimeConfig {
   strategy: "path_scoped_instructions_v1";
@@ -238,6 +244,20 @@ const CANDIDATES: CandidateRegistration[] = [
     // mechanisms (mutually exclusive — at most one may be active).
     enabledPatch: { contextSafeToolCallEfficiency: "v1" },
     disabledPatch: { contextSafeToolCallEfficiency: undefined },
+  },
+  {
+    id: CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_V2_CANDIDATE_ID,
+    description: "context-safe tool-call efficiency strategy v2 — v1 with ONLY the freshness rule made observable: before editing, state which exact text is about to change and confirm it is visible now; if not, re-read with versioned=true and compare sha256, and locate oversized files with grep_search instead of guessing an offset (N7)",
+    status: "experimental",
+    layer: "agent-strategy",
+    // Agent-strategy layer: the real effect is a systemPrompt injection in the
+    // benchmark runner (the v2 text), installed through the SAME
+    // `completionGuidance` slot as v1 and the other prompt-guidance mechanisms
+    // (mutually exclusive — at most one may be active). The candidate id, text
+    // and digest are distinct from v1, so the two can never be conflated in an
+    // evaluation, a pre-registration or an activation proof.
+    enabledPatch: { contextSafeToolCallEfficiencyV2: "v2" },
+    disabledPatch: { contextSafeToolCallEfficiencyV2: undefined },
   },
   {
     id: "diagnostic_first_repair_v1",
