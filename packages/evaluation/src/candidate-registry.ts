@@ -25,6 +25,11 @@ export const CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_CANDIDATE_ID = "context_safe_tool
  *  injection can never be counted as v2 activation. */
 export const CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_V2_CANDIDATE_ID = "context_safe_tool_call_efficiency_v2";
 
+/** P 轮 — the verified-completion gate challenger id. It occupies the SAME
+ *  `completionGuidance` slot as the other prompt-guidance candidates (mutually
+ *  exclusive) and carries its own text, digest, contract and activation proof. */
+export const VERIFIED_COMPLETION_GATE_CANDIDATE_ID = "verified_completion_gate_v1";
+
 /** S2's installed discovery policy is one content-addressed arm input. */
 export interface PathScopedInstructionsRuntimeConfig {
   strategy: "path_scoped_instructions_v1";
@@ -258,6 +263,19 @@ const CANDIDATES: CandidateRegistration[] = [
     // evaluation, a pre-registration or an activation proof.
     enabledPatch: { contextSafeToolCallEfficiencyV2: "v2" },
     disabledPatch: { contextSafeToolCallEfficiencyV2: undefined },
+  },
+  {
+    id: VERIFIED_COMPLETION_GATE_CANDIDATE_ID,
+    description: "verified-completion gate — completion must be an OBSERVED claim: rerun the task's own check after the last edit, quote the passing output, never claim success from intent, and report the failure verbatim when the repair does not converge (targets the measured false-complete cluster, P round)",
+    status: "experimental",
+    layer: "agent-strategy",
+    // Agent-strategy layer: the real effect is a systemPrompt injection in the
+    // benchmark runner, installed through the SAME `completionGuidance` slot as
+    // the other prompt-guidance mechanisms (mutually exclusive). The candidate
+    // id, text and digest are its own, so no other mechanism's injection can be
+    // counted as this candidate's activation.
+    enabledPatch: { verifiedCompletionGate: "v1" },
+    disabledPatch: { verifiedCompletionGate: undefined },
   },
   {
     id: "diagnostic_first_repair_v1",

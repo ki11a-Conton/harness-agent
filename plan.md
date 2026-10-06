@@ -1,4 +1,15 @@
-# Harness Agent：当前执行计划入口 — 上下文安全的工具调用策略
+# Harness Agent：当前执行计划入口
+
+> **当前执行计划入口（P 轮 challenger：观测驱动的完成判定）**：2026-10-06 19:14。审查基线 `5340bbcf196f54b283ad4351ef057189a07aca0b`；本轮不可变规格 [plan(20261006-191434).md](plan(20261006-191434).md)。摘要：把"完成"从**意图陈述**变成**观测陈述** —— 新候选 `verified_completion_gate_v1` 要求报告完成前必须复跑任务自带的校验命令并引用观测输出，修不动则逐字报告失败；本轮只做工程实现与离线验收，**无模型效果结论**。
+
+| 项目 | 做什么 | 怎么验收 | 状态 |
+| --- | --- | --- | --- |
+| P1 策略文本与注册 | 新 id `verified_completion_gate_v1`，经既有 `completionGuidance` 槽位安装，与其它引导机制互斥 | 真实 ModelRequest 含确切文本/digest；既有候选文本与 digest 逐字节不变；默认行为不变 | DONE |
+| P2 接线 | registry / arm-factory / mechanism-contract / activation-evidence / 单一提示构建器 / champion 安装与配置 | 全链可解析；激活按本候选版本+digest 钉死（旧注入不算激活）；基线与既有臂身份不受扰动 | DONE |
+| P3 工程验收 | 新回归覆盖文本义务与禁止项、digest 绑定、既有候选冻结、互斥、执行身份扰动、真实 Harness 提示注入 | 测试全 PASS；typecheck 干净；docs:verify ALL PASS；0 模型调用、0 付费 | DONE |
+| P4 证据与状态 | 进度与证据文件记录 digest、测试计数、诚实边界（效果 NOT_RUN） | 证据入库并注明本轮未运行效果实验 | DONE |
+
+> **P 轮完成**：P1–P4 全部完成（离线，0 模型调用）。完成记录与证据 [P-COMPLETION.md](docs/evidence/agent-p-20261006/P-COMPLETION.md)；门文本 SHA256 `7ef38a06…b546`，既有候选 digest 逐字节不变；工程验收 7 项回归 + 4 项真实 Harness 集成测试 + 34 项预注册测试通过，typecheck 与 docs:verify 通过。**效果结论 NOT_RUN**（未运行模型实验，未 promotion）。
 
 > **当前任务：补齐 N7-4 / N7-5 / N7-6 的执行链**（2026-10-06）。做什么、怎么做、怎么验收见 [plan(20261006-n7-execution-chain).md](plan(20261006-n7-execution-chain).md)，任务合同见 [N7-EXECUTION-20261006.md](tasks/N7-EXECUTION-20261006.md)。当前审查基线 `d92d727689b9a2dc20bd09ea44348403f539def6`；工程补齐与真实模型实验分别验收，当前模型效果仍为 NOT_RUN。
 

@@ -465,9 +465,30 @@ describe("N7/N7-3 — the independent holdout pre-registration", () => {
     expect(report.promotion).toBe("NOT_RUN");
   });
 
-  it("12. the committed holdout artifact equals a fresh build, and holdout wiring is fail-closed", () => {
+  it("12. the committed holdout artifact still reproduces, except for the arm snapshot the registry listing moves", () => {
     const committed = JSON.parse(readFileSync(HOLDOUT_ARTIFACT_PATH, "utf8")) as ContextSafePreregistration;
-    expect(committed).toEqual(artifact);
+    // The artifact is NOT rewritten. What moves between the freeze and today is
+    // the CANDIDATE REGISTRY: the baseline arm's resolved snapshot lists every
+    // registered candidate as OFF (`arm-factory buildSnapshot`), so registering a
+    // later challenger legitimately moves the champion-resolved baseline arm
+    // digest — and the root identity derived from it. Everything the N7 holdout
+    // actually froze (role, dataset, schedule, provider, gates, candidate arm,
+    // champion provenance) must still be identical, and the frozen artifact must
+    // stay internally valid.
+    const { baselineArmDigest: frozenBaseline, ...committedSubject } = committed.subject;
+    const { baselineArmDigest: liveBaseline, ...liveSubject } = artifact.subject;
+    expect(liveSubject).toEqual(committedSubject);
+    expect(frozenBaseline).toBe("ee589c7e2361c8b79edade3d365bfd9e29a2778792eb650e295bf58d523d7895");
+    expect(liveBaseline).not.toBe(frozenBaseline);
+    expect(liveBaseline).toBe(resolvedChampion().digest);
+    const movedKeys = Object.keys(committed).filter(
+      (key) => JSON.stringify(committed[key as keyof ContextSafePreregistration]) !== JSON.stringify(artifact[key as keyof ContextSafePreregistration]),
+    );
+    expect(movedKeys.sort()).toEqual(["preregistrationDigest", "subject"]);
+    const frozenReport = dryRunContextSafeV2Preregistration(committed);
+    expect(frozenReport.ok, frozenReport.problems.join("; ")).toBe(true);
+    expect(frozenReport.logicalRuns).toBe(192);
+    expect(frozenReport.paidProviderCalls).toBe(0);
     expect(committed.role).toBe("holdout");
     expect(committed.schemaVersion).toBe(CONTEXT_SAFE_V2_PREREGISTRATION_SCHEMA);
 

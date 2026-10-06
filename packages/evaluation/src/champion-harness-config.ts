@@ -57,6 +57,10 @@ export interface ChampionHarnessConfig {
    *  step) is injected. A distinct requirement from v1 because the installed
    *  bytes differ; mutually exclusive with every other guidance mechanism. */
   contextSafeToolCallEfficiencyV2?: boolean;
+  /** P 轮: whether the verified-completion gate guidance is injected. A distinct
+   *  requirement from every other guidance mechanism (all occupy
+   *  `completionGuidance`, so at most one may be declared). */
+  verifiedCompletionGate?: boolean;
   /** Runtime mechanisms digest for audit. */
   runtimeDigest: string;
 }
@@ -139,6 +143,13 @@ export function championHarnessConfigFromProfile(
   // prompt for a champion that declared v2.
   if (rc.contextSafeToolCallEfficiencyV2) {
     config.contextSafeToolCallEfficiencyV2 = true;
+  }
+
+  // P 轮: the verified-completion gate is a real install requirement too — the
+  // bytes differ from every other guidance mechanism, so carrying a different
+  // flag would install the wrong prompt for a champion that declared this one.
+  if (rc.verifiedCompletionGate) {
+    config.verifiedCompletionGate = true;
   }
 
   return config;

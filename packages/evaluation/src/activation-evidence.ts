@@ -13,7 +13,7 @@
  */
 
 import { guidanceBlockDigest } from "./activation-evidence-v2.js";
-import { CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_V2_GUIDANCE_VERSION } from "./mechanism-guidance.js";
+import { CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_V2_GUIDANCE_VERSION, VERIFIED_COMPLETION_GATE_GUIDANCE_VERSION } from "./mechanism-guidance.js";
 
 export const ACTIVATION_EVIDENCE_SCHEMA_VERSION = "1.0.0";
 
@@ -32,6 +32,7 @@ export type ActivationReasonCode =
   | "budget_guidance_injected"
   | "tool_call_efficiency_guidance_injected"
   | "context_safe_tool_call_efficiency_guidance_injected"
+  | "verified_completion_gate_guidance_injected"
   | "diagnostic_first_repair_guidance_injected"
   | "task_scoped_skills_selected"
   | "path_scoped_instructions_selected"
@@ -432,6 +433,27 @@ export function activationEvidenceFor(
         reasonCodes: injections.length > 0 ? ["context_safe_tool_call_efficiency_guidance_injected"] : ["activation_zero"],
         baselineMechanismDigest: "benchmark-standard-prompt",
         candidateMechanismDigest: "benchmark-prompt+context-safe-tool-call-efficiency-v2-guidance",
+        summary: { injectionCount: injections.length },
+      };
+    }
+    case "verified_completion_gate_v1": {
+      // P 轮: activation is pinned to THIS candidate's signal AND version, so no
+      // other prompt-guidance injection can be counted as the gate activating.
+      const injections = activationEvents.filter(
+        (e) =>
+          e.type === "verified_completion_gate_guidance_injected" &&
+          e.payload?.guidanceVersion === VERIFIED_COMPLETION_GATE_GUIDANCE_VERSION,
+      );
+      return {
+        schemaVersion: ACTIVATION_EVIDENCE_SCHEMA_VERSION,
+        candidateId,
+        caseId: caseDef.id,
+        eligible: true,
+        activated: injections.length > 0,
+        activationCount: injections.length,
+        reasonCodes: injections.length > 0 ? ["verified_completion_gate_guidance_injected"] : ["activation_zero"],
+        baselineMechanismDigest: "benchmark-standard-prompt",
+        candidateMechanismDigest: "benchmark-prompt+verified-completion-gate-guidance",
         summary: { injectionCount: injections.length },
       };
     }

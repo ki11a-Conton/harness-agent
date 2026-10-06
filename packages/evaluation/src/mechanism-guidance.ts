@@ -248,6 +248,51 @@ export function contextSafeToolCallEfficiencyV2GuidanceDigest(): string {
   return createHash("sha256").update(CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_V2, "utf8").digest("hex");
 }
 
+// ---------------------------------------------------------------------------
+// P 轮 challenger — `verified_completion_gate_v1`.
+//
+// Measured motivation (N5 experiment record, not a guess): the independent
+// holdout produced 38 -> 42 FALSE COMPLETES (claiming success with no observed
+// verification), and the promotion gates allow ZERO new false-completes; about
+// 10% of arms exhausted the 30-model-call iteration budget — exactly the budget
+// the "verify before you claim done" step needs.
+//
+// The candidate turns completion from an INTENT statement into an OBSERVED one.
+// It stays soft guidance: no new tool, no new parameter, no Core event type and
+// no permission/sandbox behaviour — every obligation uses the command and output
+// the task already ships.
+// ---------------------------------------------------------------------------
+
+/** Version identity of the verified-completion gate strategy. */
+export const VERIFIED_COMPLETION_GATE_GUIDANCE_VERSION = "verified-completion-gate:v1";
+
+/** The SINGLE authoritative strategy text for `verified_completion_gate_v1`. */
+export const VERIFIED_COMPLETION_GATE_GUIDANCE_V1 = [
+  "",
+  "Verified completion guidance:",
+  "- A task is complete only when the workspace's own check says so. Before you",
+  "  report completion, run the command that decides this task — the failing test,",
+  "  the check script or the verifier the task names — AFTER your last change to",
+  "  the code.",
+  "- Report success only from output you actually observed: name the command, its",
+  "  exit status and the summary line that passed. An edit you believe is correct",
+  "  is not a verified completion, and \"it should work now\" is never a completion",
+  "  claim.",
+  "- If that command still fails and you cannot fix it with the iterations left,",
+  "  report the failure verbatim: the command, the exact error text, and what",
+  "  blocked the repair. An honest failure report is a correct outcome; a claimed",
+  "  success that the same command then fails is not.",
+  "- If a step produces no new information, or the same failure with unchanged",
+  "  inputs, change the approach or stop and report. Repeating it only spends the",
+  "  iterations the verification step still needs.",
+].join("\n");
+
+/** sha256 over the ACTUAL gate text — binds the arm digest, the execution
+ *  identity and the activation evidence to the real bytes. */
+export function verifiedCompletionGateGuidanceDigest(): string {
+  return createHash("sha256").update(VERIFIED_COMPLETION_GATE_GUIDANCE_V1, "utf8").digest("hex");
+}
+
 
 /** S1: experimental guidance only; verification remains the original gate. */
 export const DIAGNOSTIC_FIRST_REPAIR_GUIDANCE_VERSION = "diagnostic-first-repair:v1";

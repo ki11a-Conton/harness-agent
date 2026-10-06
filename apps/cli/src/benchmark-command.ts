@@ -56,6 +56,8 @@ import {
   CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_VERSION,
   CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_V2,
   CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_V2_GUIDANCE_VERSION,
+  VERIFIED_COMPLETION_GATE_GUIDANCE_V1,
+  VERIFIED_COMPLETION_GATE_GUIDANCE_VERSION,
   DIAGNOSTIC_FIRST_REPAIR_GUIDANCE_V1,
   DIAGNOSTIC_FIRST_REPAIR_GUIDANCE_VERSION,
   DEFAULT_DECISION_POLICY_V3,
@@ -1774,12 +1776,13 @@ export const CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_V2_BLOCK = CONTEXT_SAFE_
  *  the bytes the run identity hashes can never drift apart. The four guidance
  *  mechanisms all occupy `completionGuidance`, so at most one is appended. */
 export function benchmarkModelVisibleSystemPrompt(
-  mech: Pick<RuntimeMechanisms, "budgetAwareCompletion" | "toolCallEfficiency" | "diagnosticFirstRepair" | "contextSafeToolCallEfficiency" | "contextSafeToolCallEfficiencyV2">,
+  mech: Pick<RuntimeMechanisms, "budgetAwareCompletion" | "toolCallEfficiency" | "diagnosticFirstRepair" | "contextSafeToolCallEfficiency" | "contextSafeToolCallEfficiencyV2" | "verifiedCompletionGate">,
 ): string {
   if (mech.budgetAwareCompletion) return BENCHMARK_SYSTEM_PROMPT + BUDGET_AWARE_COMPLETION_GUIDANCE;
   if (mech.toolCallEfficiency) return BENCHMARK_SYSTEM_PROMPT + TOOL_CALL_EFFICIENCY_GUIDANCE;
   if (mech.contextSafeToolCallEfficiencyV2) return BENCHMARK_SYSTEM_PROMPT + CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_V2;
   if (mech.contextSafeToolCallEfficiency) return BENCHMARK_SYSTEM_PROMPT + CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE;
+  if (mech.verifiedCompletionGate) return BENCHMARK_SYSTEM_PROMPT + VERIFIED_COMPLETION_GATE_GUIDANCE_V1;
   if (mech.diagnosticFirstRepair) return BENCHMARK_SYSTEM_PROMPT + DIAGNOSTIC_FIRST_REPAIR_GUIDANCE_V1;
   return BENCHMARK_SYSTEM_PROMPT;
 }
@@ -2212,7 +2215,9 @@ export async function runOneCase(
         ? { signal: "tool_call_efficiency_guidance_injected", version: TOOL_CALL_EFFICIENCY_GUIDANCE_VERSION }
         : armMechanisms.contextSafeToolCallEfficiencyV2
           ? { signal: "context_safe_tool_call_efficiency_guidance_injected", version: CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_V2_GUIDANCE_VERSION }
-          : armMechanisms.contextSafeToolCallEfficiency
+          : armMechanisms.verifiedCompletionGate
+            ? { signal: "verified_completion_gate_guidance_injected", version: VERIFIED_COMPLETION_GATE_GUIDANCE_VERSION }
+            : armMechanisms.contextSafeToolCallEfficiency
             ? { signal: "context_safe_tool_call_efficiency_guidance_injected", version: CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_VERSION }
           : armMechanisms.diagnosticFirstRepair
             ? { signal: "diagnostic_first_repair_guidance_injected", version: DIAGNOSTIC_FIRST_REPAIR_GUIDANCE_VERSION }
@@ -2710,6 +2715,7 @@ export async function runOneCase(
         e.type === "budget_guidance_injected" ||
         e.type === "tool_call_efficiency_guidance_injected" ||
         e.type === "context_safe_tool_call_efficiency_guidance_injected" ||
+        e.type === "verified_completion_gate_guidance_injected" ||
         e.type === "diagnostic_first_repair_guidance_injected" ||
         e.type === "task_scoped_skills_selected" ||
         e.type === "path_scoped_instructions_selected",
@@ -3034,6 +3040,9 @@ export function runtimeConfigForHash(opts: BenchmarkCommandOptions, defaultBudge
       // N7: same pattern for the v2 challenger — present ONLY when active, so
       // every existing arm's runtime config hash stays byte-identical.
       ...(mech.contextSafeToolCallEfficiencyV2 ? { contextSafeToolCallEfficiencyV2: true } : {}),
+      // P 轮: present ONLY when the gate candidate is active, so every existing
+      // arm's runtime config hash stays byte-identical.
+      ...(mech.verifiedCompletionGate ? { verifiedCompletionGate: true } : {}),
       ...(mech.diagnosticFirstRepair ? { diagnosticFirstRepair: true } : {}),
     },
   };

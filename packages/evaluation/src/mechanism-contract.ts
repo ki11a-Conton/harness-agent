@@ -200,6 +200,21 @@ const CONTRACTS: Record<string, MechanismContract> = {
       "compaction, rehydration, permission, sandbox or verification altered",
     ],
   },
+  verified_completion_gate_v1: {
+    schemaVersion: MECHANISM_CONTRACT_SCHEMA_VERSION,
+    candidateId: "verified_completion_gate_v1",
+    modelVisibleSurface: "verified-completion gate guidance present in the final model-visible messages",
+    eligibilityRule: "case that ships its own deciding command (test, check script or verifier) and can report a completion claim before or after running it",
+    minEligibleCases: 5,
+    expectedFailureCluster: "false-complete (claiming success without an observed verification) / agent_limit (iteration budget spent before the verifying run)",
+    requiredActivationEvents: ["verified-completion-gate-guidance-injected"],
+    forbiddenNoOpConditions: [
+      "guidance only logged in CLI, absent from model-visible messages",
+      "injected text identical to another prompt-guidance candidate (the gate text must reach the model byte-for-byte, proven by its own digest)",
+      "completion claimed from intent: the guidance must not be satisfiable by asserting correctness without an observed command result",
+      "compaction, rehydration, permission, sandbox or verification altered",
+    ],
+  },
 };
 
 export function mechanismContractFor(candidateId: string): MechanismContract | undefined {

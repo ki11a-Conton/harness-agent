@@ -31,7 +31,7 @@
 import { createHash } from "node:crypto";
 import { getCandidateRegistry, PATH_SCOPED_INSTRUCTIONS_CONFIG_V1, TASK_SCOPED_SKILLS_CONFIG_V1, type CandidateRegistration, type PathScopedInstructionsRuntimeConfig, type TaskScopedSkillsRuntimeConfig } from "./candidate-registry.js";
 import { stableStringify } from "./manifest.js";
-import { budgetAwareCompletionGuidanceDigest, toolCallEfficiencyGuidanceDigest, contextSafeToolCallEfficiencyGuidanceDigest, contextSafeToolCallEfficiencyV2GuidanceDigest, diagnosticFirstRepairGuidanceDigest, DIAGNOSTIC_FIRST_REPAIR_GUIDANCE_V1 } from "./mechanism-guidance.js";
+import { budgetAwareCompletionGuidanceDigest, toolCallEfficiencyGuidanceDigest, contextSafeToolCallEfficiencyGuidanceDigest, contextSafeToolCallEfficiencyV2GuidanceDigest, verifiedCompletionGateGuidanceDigest, diagnosticFirstRepairGuidanceDigest, DIAGNOSTIC_FIRST_REPAIR_GUIDANCE_V1 } from "./mechanism-guidance.js";
 
 export const ARM_FACTORY_SCHEMA_VERSION = "1.0.0";
 export const ARM_FACTORY_POLICY_VERSION = "e3-03-arm-v1";
@@ -129,6 +129,10 @@ export interface RuntimeMechanisms {
    *  slot as v1, so the two are mutually exclusive; the field is separate so a
    *  v1 arm and a v2 arm can never resolve to the same mechanism snapshot. */
   contextSafeToolCallEfficiencyV2?: boolean;
+  /** P 轮: the verified-completion gate guidance (observed completion claims)
+   *  injected into the system prompt. Occupies the SAME `completionGuidance`
+   *  slot as the other prompt-guidance mechanisms. */
+  verifiedCompletionGate?: boolean;
   /** S1 experimental diagnostic guidance; omitted on existing arms. */
   diagnosticFirstRepair?: boolean;
   /** S2 experimental discovery; absent on existing arms. */
@@ -338,6 +342,20 @@ export function wireCandidateMechanism(reg: CandidateRegistration): MechanismWir
           promptAdditionsDigest: contextSafeToolCallEfficiencyV2GuidanceDigest(),
         }),
         declaredPaths: ["harnessConfig.contextSafeToolCallEfficiencyV2"],
+      };
+    case "verified_completion_gate_v1":
+      return {
+        constructorId: "completion:verified-completion-gate-guide-v1",
+        apply: (config) => ({ ...config, verifiedCompletionGate: "v1" }),
+        isActive: (config) => config.verifiedCompletionGate === "v1",
+        applyRuntime: (base) => ({
+          ...base,
+          verifiedCompletionGate: true,
+          // Binds the ACTUAL gate bytes to the arm digest / execution identity:
+          // no other candidate's injection can authorize this text.
+          promptAdditionsDigest: verifiedCompletionGateGuidanceDigest(),
+        }),
+        declaredPaths: ["harnessConfig.verifiedCompletionGate"],
       };
     case "diagnostic_first_repair_v1":
       return {

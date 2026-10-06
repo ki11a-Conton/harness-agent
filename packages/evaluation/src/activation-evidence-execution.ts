@@ -42,6 +42,7 @@ export type ObservedActivationSignalType =
   | "budget_guidance_injected"
   | "tool_call_efficiency_guidance_injected"
   | "context_safe_tool_call_efficiency_guidance_injected"
+  | "verified_completion_gate_guidance_injected"
   | "diagnostic_first_repair_guidance_injected"
   | "task_scoped_skills_selected"
   | "path_scoped_instructions_selected";
@@ -86,6 +87,7 @@ const SIGNAL_MAP: Record<
   budget_guidance_injected: { mechanism: "prompt-guidance", evidenceType: "prompt-guidance-injected" },
   tool_call_efficiency_guidance_injected: { mechanism: "prompt-guidance", evidenceType: "prompt-guidance-injected" },
   context_safe_tool_call_efficiency_guidance_injected: { mechanism: "prompt-guidance", evidenceType: "prompt-guidance-injected" },
+  verified_completion_gate_guidance_injected: { mechanism: "prompt-guidance", evidenceType: "prompt-guidance-injected" },
   diagnostic_first_repair_guidance_injected: { mechanism: "prompt-guidance", evidenceType: "prompt-guidance-injected" },
   task_scoped_skills_selected: { mechanism: "context", evidenceType: "context-selection" },
   path_scoped_instructions_selected: { mechanism: "context", evidenceType: "context-selection" },

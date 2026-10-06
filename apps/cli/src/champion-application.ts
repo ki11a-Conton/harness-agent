@@ -35,6 +35,7 @@ import {
   TOOL_CALL_EFFICIENCY_GUIDANCE_V1,
   CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_V1,
   CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_V2,
+  VERIFIED_COMPLETION_GATE_GUIDANCE_V1,
   type AppliedProofV1,
   type ChampionFieldCheckV1,
   type ChampionState,
@@ -80,6 +81,9 @@ export const CHAMPION_CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE = CONTEXT_SAFE_
 /** N7: the v2 challenger's installed bytes — a distinct constant, so a champion
  *  that declares v2 can never be satisfied by the v1 text (or vice versa). */
 export const CHAMPION_CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_V2_GUIDANCE = CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_V2;
+/** P 轮: the verified-completion gate's installed bytes — a distinct constant, so
+ *  a champion that declares the gate can never be satisfied by another text. */
+export const CHAMPION_VERIFIED_COMPLETION_GATE_GUIDANCE = VERIFIED_COMPLETION_GATE_GUIDANCE_V1;
 
 /**
  * E4-R05 (F12): mechanisms a champion may require and whether the production
@@ -93,11 +97,12 @@ export function championMechanismInstallPlan(championConfig: {
   toolCallEfficiency?: boolean;
   contextSafeToolCallEfficiency?: boolean;
   contextSafeToolCallEfficiencyV2?: boolean;
+  verifiedCompletionGate?: boolean;
   toolSelector?: unknown;
   contextBudget?: unknown;
   recovery?: unknown;
 }): { ok: boolean; reason?: string; supported: Record<string, boolean> } {
-  const supported: Record<string, boolean> = { memory: false, budgetAware: false, toolCallEfficiency: false, contextSafeToolCallEfficiency: false, contextSafeToolCallEfficiencyV2: false };
+  const supported: Record<string, boolean> = { memory: false, budgetAware: false, toolCallEfficiency: false, contextSafeToolCallEfficiency: false, contextSafeToolCallEfficiencyV2: false, verifiedCompletionGate: false };
   if (championConfig.memory?.enabled === true || championConfig.memory?.enabled === false) {
     // memory is installed by the wrapper (enabled true/false both project).
     supported.memory = true;
@@ -114,6 +119,9 @@ export function championMechanismInstallPlan(championConfig: {
   if (championConfig.contextSafeToolCallEfficiencyV2 === true) {
     supported.contextSafeToolCallEfficiencyV2 = true;
   }
+  if (championConfig.verifiedCompletionGate === true) {
+    supported.verifiedCompletionGate = true;
+  }
   // Every prompt-guidance mechanism writes the SAME `completionGuidance` slot on
   // the harness. A champion requiring more than one would have to choose one
   // silently — refuse instead of installing a prompt that contradicts its
@@ -124,6 +132,7 @@ export function championMechanismInstallPlan(championConfig: {
     championConfig.toolCallEfficiency === true ? "toolCallEfficiency" : null,
     championConfig.contextSafeToolCallEfficiency === true ? "contextSafeToolCallEfficiency" : null,
     championConfig.contextSafeToolCallEfficiencyV2 === true ? "contextSafeToolCallEfficiencyV2" : null,
+    championConfig.verifiedCompletionGate === true ? "verifiedCompletionGate" : null,
   ].filter((name): name is string => name !== null);
   if (promptGuidanceDemands.length > 1) {
     return {
@@ -155,7 +164,7 @@ export function projectChampionFieldChecks(
   championToolCallEfficiency: boolean,
   resolved: HarnessConfig,
   origins: ReadonlyMap<string, { source: string }>,
-  opts?: { contextSafeToolCallEfficiency?: boolean; contextSafeToolCallEfficiencyV2?: boolean },
+  opts?: { contextSafeToolCallEfficiency?: boolean; contextSafeToolCallEfficiencyV2?: boolean; verifiedCompletionGate?: boolean },
 ): ChampionFieldCheckV1[] {
   const checks: ChampionFieldCheckV1[] = [];
   const resolvedFlags = (resolved.featureFlags ?? {}) as Record<string, boolean>;
@@ -215,6 +224,16 @@ export function projectChampionFieldChecks(
     checks.push({
       key: "completionGuidance",
       intended: CHAMPION_CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_V2_GUIDANCE,
+      actual: resolved.completionGuidance ?? null,
+      origin: origins.get("completionGuidance")?.source ?? "none",
+    });
+  }
+  // P 轮: the gate's INSTALLED bytes are checked the same way — a champion that
+  // declares the gate while the harness carries another text fails application.
+  if (opts?.verifiedCompletionGate === true) {
+    checks.push({
+      key: "completionGuidance",
+      intended: CHAMPION_VERIFIED_COMPLETION_GATE_GUIDANCE,
       actual: resolved.completionGuidance ?? null,
       origin: origins.get("completionGuidance")?.source ?? "none",
     });
@@ -316,6 +335,7 @@ export async function createHarnessWithChampion(
   const championToolCallEfficiency = championConfig.toolCallEfficiency === true;
   const championContextSafeToolCallEfficiency = championConfig.contextSafeToolCallEfficiency === true;
   const championContextSafeToolCallEfficiencyV2 = championConfig.contextSafeToolCallEfficiencyV2 === true;
+  const championVerifiedCompletionGate = championConfig.verifiedCompletionGate === true;
 
   // E4-R05 (F12): a champion whose required mechanisms have no real install
   // point is REFUSED here — never applied with flags-only PROVEN.
@@ -352,6 +372,8 @@ export async function createHarnessWithChampion(
           ? { completionGuidance: CHAMPION_CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE }
           : championContextSafeToolCallEfficiencyV2
             ? { completionGuidance: CHAMPION_CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_V2_GUIDANCE }
+            : championVerifiedCompletionGate
+              ? { completionGuidance: CHAMPION_VERIFIED_COMPLETION_GATE_GUIDANCE }
             : {}),
   };
 
@@ -371,7 +393,7 @@ export async function createHarnessWithChampion(
     championToolCallEfficiency,
     harness.resolvedConfig.value,
     harness.resolvedConfig.origins,
-    { contextSafeToolCallEfficiency: championContextSafeToolCallEfficiency, contextSafeToolCallEfficiencyV2: championContextSafeToolCallEfficiencyV2 },
+    { contextSafeToolCallEfficiency: championContextSafeToolCallEfficiency, contextSafeToolCallEfficiencyV2: championContextSafeToolCallEfficiencyV2, verifiedCompletionGate: championVerifiedCompletionGate },
   );
 
   const evaluation = evaluateChampionApplicationV1({ checks });
