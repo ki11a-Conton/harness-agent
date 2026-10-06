@@ -1,0 +1,21 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "n7",
+    "control",
+    "visible"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const {formatBytes}=require(\"./src/bytes.js\");if(formatBytes(2048)!==\"2.0 KB\"||formatBytes(1048576)!==\"1.0 MB\"){console.error(\"n7 verifier failed: formatBytes\");process.exit(1);}"
+      ]
+    }
+  ]
+}

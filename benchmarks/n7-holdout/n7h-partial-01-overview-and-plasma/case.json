@@ -1,0 +1,23 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "n7",
+    "holdout",
+    "evidence-missing",
+    "partial"
+  ],
+  "contextBudgetTokens": 1500,
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const m=require(\"./lib/plasma.js\");if(!(m.plasmaThreshold === 40)){console.error(\"n7 verifier failed: \"+JSON.stringify({got:m}));process.exit(1);}"
+      ]
+    }
+  ]
+}

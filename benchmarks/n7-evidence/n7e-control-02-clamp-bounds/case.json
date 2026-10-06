@@ -1,0 +1,21 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "n7",
+    "control",
+    "visible"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const {clamp}=require(\"./src/clamp.js\");if(clamp(5,0,10)!==5||clamp(-3,0,10)!==0||clamp(42,0,10)!==10){console.error(\"n7 verifier failed: clamp\");process.exit(1);}"
+      ]
+    }
+  ]
+}

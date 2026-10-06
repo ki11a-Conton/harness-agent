@@ -1,0 +1,22 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "n7",
+    "evidence-missing",
+    "rehydrate"
+  ],
+  "contextBudgetTokens": 1500,
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const m=require(\"./src/throttle.js\");if(!(m.throttleBurst === 75)){console.error(\"n7 verifier failed: \"+JSON.stringify({got:m}));process.exit(1);}\nconst v=require(\"./src/runtime-tier.js\");if(!(v.runtimeTier === \"standard\")){console.error(\"n7 verifier failed: \"+JSON.stringify({got:v}));process.exit(1);}"
+      ]
+    }
+  ]
+}

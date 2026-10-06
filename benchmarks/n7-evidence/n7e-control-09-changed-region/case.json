@@ -1,0 +1,21 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "n7",
+    "control",
+    "changed"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const {region}=require(\"./src/region.js\");if(region!==\"eu-west\"){console.error(\"n7 verifier failed: region\");process.exit(1);}"
+      ]
+    }
+  ]
+}

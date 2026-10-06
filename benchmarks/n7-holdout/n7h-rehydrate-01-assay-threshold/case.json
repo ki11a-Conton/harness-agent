@@ -1,0 +1,23 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "n7",
+    "holdout",
+    "evidence-missing",
+    "rehydrate"
+  ],
+  "contextBudgetTokens": 1500,
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const m=require(\"./lib/assay.js\");if(!(m.assayThresholdNg === 25)){console.error(\"n7 verifier failed: \"+JSON.stringify({got:m}));process.exit(1);}\nconst v=require(\"./lib/dataset-tag.js\");if(!(v.datasetTag === \"ds1\")){console.error(\"n7 verifier failed: \"+JSON.stringify({got:v}));process.exit(1);}"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "n7",
+    "control",
+    "visible"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const {equal}=require(\"./src/equal.js\");if(equal({a:1,b:2},{b:2,a:1})!==true||equal({a:1},{a:2})!==false||equal({a:{b:1}},{a:{b:1}})!==true){console.error(\"n7 verifier failed: equal\");process.exit(1);}"
+      ]
+    }
+  ]
+}

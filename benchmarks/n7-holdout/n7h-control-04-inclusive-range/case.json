@@ -1,0 +1,22 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "n7",
+    "holdout",
+    "control",
+    "visible"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const {rangeOf}=require(\"./lib/range.js\");const a=rangeOf(2,5);const b=rangeOf(3,3);if(JSON.stringify(a)!==JSON.stringify([2,3,4,5])||JSON.stringify(b)!==JSON.stringify([3])){console.error(\"n7 verifier failed: rangeOf\");process.exit(1);}"
+      ]
+    }
+  ]
+}

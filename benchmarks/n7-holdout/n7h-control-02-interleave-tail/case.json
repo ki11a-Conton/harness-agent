@@ -1,0 +1,22 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "n7",
+    "holdout",
+    "control",
+    "visible"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const {interleave}=require(\"./lib/interleave.js\");const x=interleave([1,2,3],[\"a\"]);const y=interleave([\"a\"],[1,2]);if(JSON.stringify(x)!==JSON.stringify([1,\"a\",2,3])||JSON.stringify(y)!==JSON.stringify([\"a\",1,2])){console.error(\"n7 verifier failed: interleave\");process.exit(1);}"
+      ]
+    }
+  ]
+}

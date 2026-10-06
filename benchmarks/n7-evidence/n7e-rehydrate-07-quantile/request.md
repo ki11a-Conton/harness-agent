@@ -1,0 +1,1 @@
+Two steps. First create src/config-schema.js exporting configSchema as the string "v4". Then read spec/quantile-policy.txt and set src/quantile.js so it exports the documented quantile in basis points.

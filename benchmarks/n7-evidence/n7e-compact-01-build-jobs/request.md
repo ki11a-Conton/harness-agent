@@ -1,0 +1,1 @@
+src/build.js still exports the placeholder parallelism. The building policy in spec/ci-policy.txt fixes how many jobs a pipeline may run; read that policy and make src/build.js export the documented buildJobs.

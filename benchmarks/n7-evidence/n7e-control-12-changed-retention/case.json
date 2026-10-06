@@ -1,0 +1,21 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "n7",
+    "control",
+    "changed"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const {retentionDays}=require(\"./src/policy.js\");if(retentionDays()!==365){console.error(\"n7 verifier failed: retentionDays\");process.exit(1);}"
+      ]
+    }
+  ]
+}

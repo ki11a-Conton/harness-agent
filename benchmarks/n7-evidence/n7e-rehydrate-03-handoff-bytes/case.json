@@ -1,0 +1,22 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "n7",
+    "evidence-missing",
+    "rehydrate"
+  ],
+  "contextBudgetTokens": 1500,
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const m=require(\"./src/handoff.js\");if(!(m.handoffBytes === 524288)){console.error(\"n7 verifier failed: \"+JSON.stringify({got:m}));process.exit(1);}\nconst v=require(\"./src/schema-tag.js\");if(!(v.schemaTag === \"C\")){console.error(\"n7 verifier failed: \"+JSON.stringify({got:v}));process.exit(1);}"
+      ]
+    }
+  ]
+}

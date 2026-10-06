@@ -1,0 +1,1 @@
+src/artifacts.js uses an obsolete retention window. spec/artifact-policy.txt records the artifact time-to-live this service must honour; read it and correct src/artifacts.js. Do not invent the number.

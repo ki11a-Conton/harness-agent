@@ -1,0 +1,21 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "n7",
+    "control",
+    "visible"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const {mergeDefaults}=require(\"./src/merge.js\");const a=mergeDefaults({a:1},{b:2});const b=mergeDefaults({a:1},{a:3});if(JSON.stringify(a)!==JSON.stringify({a:1,b:2})||JSON.stringify(b)!==JSON.stringify({a:3})){console.error(\"n7 verifier failed: mergeDefaults\");process.exit(1);}"
+      ]
+    }
+  ]
+}

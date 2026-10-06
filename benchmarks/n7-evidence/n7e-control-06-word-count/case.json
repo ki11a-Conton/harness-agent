@@ -1,0 +1,21 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "n7",
+    "control",
+    "visible"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const {countWords}=require(\"./src/words.js\");if(countWords(\"alpha  beta gamma\")!==3||countWords(\"\")!==0||countWords(\"  \")!==0){console.error(\"n7 verifier failed: countWords\");process.exit(1);}"
+      ]
+    }
+  ]
+}

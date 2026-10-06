@@ -1,0 +1,21 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "n7",
+    "control",
+    "visible"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const {truncate}=require(\"./src/truncate.js\");const a=truncate(\"abcdefgh\",8);const b=truncate(\"abcdefgh\",5);if(a!==\"abcdefgh\"||b!==\"ab...\"||b.length>5){console.error(\"n7 verifier failed: truncate\");process.exit(1);}"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "n7",
+    "holdout",
+    "control",
+    "visible"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const {mean}=require(\"./lib/mean.js\");if(mean([2,4,6])!==4||mean([])!==0){console.error(\"n7 verifier failed: mean\");process.exit(1);}"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "n7",
+    "evidence-missing",
+    "rehydrate"
+  ],
+  "contextBudgetTokens": 1500,
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const m=require(\"./src/budget.js\");if(!(m.tokenBudget === 100000)){console.error(\"n7 verifier failed: \"+JSON.stringify({got:m}));process.exit(1);}\nconst v=require(\"./src/api-revision.js\");if(!(v.apiRevision === \"r7\")){console.error(\"n7 verifier failed: \"+JSON.stringify({got:v}));process.exit(1);}"
+      ]
+    }
+  ]
+}

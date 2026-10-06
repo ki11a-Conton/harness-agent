@@ -1,0 +1,22 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "n7",
+    "holdout",
+    "control",
+    "changed"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const {alertThreshold}=require(\"./lib/threshold.js\");if(alertThreshold()!==88){console.error(\"n7 verifier failed: alertThreshold\");process.exit(1);}"
+      ]
+    }
+  ]
+}

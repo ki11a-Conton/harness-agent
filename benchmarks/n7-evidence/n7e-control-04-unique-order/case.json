@@ -1,0 +1,21 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "n7",
+    "control",
+    "visible"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const {unique}=require(\"./src/unique.js\");const r=unique([3,1,3,2]);if(JSON.stringify(r)!==JSON.stringify([3,1,2])){console.error(\"n7 verifier failed: unique\");process.exit(1);}"
+      ]
+    }
+  ]
+}

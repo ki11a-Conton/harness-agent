@@ -1,0 +1,1 @@
+Two steps. First create lib/manifest-version.js exporting manifestVersion as the string "mv2". Then read spec/registry/consignment-policy.txt and make lib/consignment.js export the documented batch size.

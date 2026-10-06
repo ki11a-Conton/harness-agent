@@ -1,0 +1,1 @@
+src/truncate.js cuts text to exactly the limit with no marker, so a reader cannot tell it was shortened and the result can exceed the limit once a marker is added. truncate("abcdefgh", 8) must be "abcdefgh" and truncate("abcdefgh", 5) must be "ab...". Fix src/truncate.js.

@@ -1,0 +1,22 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "n7",
+    "holdout",
+    "control",
+    "diagnostic"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const {execFileSync}=require(\"node:child_process\");execFileSync(process.execPath,[\"check.js\"],{stdio:\"inherit\"});"
+      ]
+    }
+  ]
+}

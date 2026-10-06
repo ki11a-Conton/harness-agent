@@ -1,0 +1,22 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "n7",
+    "holdout",
+    "control",
+    "visible"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const {normalizeUnit}=require(\"./lib/normalize.js\");if(normalizeUnit(\"  Mg \").trim()!==\"mg\"||normalizeUnit(\"UL\")!==\"ul\"){console.error(\"n7 verifier failed: normalizeUnit\");process.exit(1);}"
+      ]
+    }
+  ]
+}

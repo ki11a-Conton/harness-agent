@@ -1,0 +1,21 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "n7",
+    "control",
+    "changed"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const {tokenTtlSeconds}=require(\"./src/load.js\");if(tokenTtlSeconds()!==900){console.error(\"n7 verifier failed: tokenTtlSeconds\");process.exit(1);}"
+      ]
+    }
+  ]
+}

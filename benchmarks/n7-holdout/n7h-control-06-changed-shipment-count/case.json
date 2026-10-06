@@ -1,0 +1,22 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "n7",
+    "holdout",
+    "control",
+    "changed"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const {shipmentCount}=require(\"./lib/shipment.js\");if(shipmentCount()!==41){console.error(\"n7 verifier failed: shipmentCount\");process.exit(1);}"
+      ]
+    }
+  ]
+}

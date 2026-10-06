@@ -1,0 +1,21 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "n7",
+    "control",
+    "changed"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const {shardOf}=require(\"./src/lookup.js\");if(shardOf(\"beta\")!==7||shardOf(\"alpha\")!==3){console.error(\"n7 verifier failed: shardOf\");process.exit(1);}"
+      ]
+    }
+  ]
+}
