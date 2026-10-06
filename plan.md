@@ -2,6 +2,8 @@
 
 > **当前任务：补齐 N7-4 / N7-5 / N7-6 的执行链**（2026-10-06）。做什么、怎么做、怎么验收见 [plan(20261006-n7-execution-chain).md](plan(20261006-n7-execution-chain).md)，任务合同见 [N7-EXECUTION-20261006.md](tasks/N7-EXECUTION-20261006.md)。当前审查基线 `d92d727689b9a2dc20bd09ea44348403f539def6`；工程补齐与真实模型实验分别验收，当前模型效果仍为 NOT_RUN。
 
+> **执行链工程验收完成**：55 项新增回归通过；clean `85564f0` 全仓 8967 PASS、0 FAIL、12 项原有 skip，source/dist 指纹前后一致。24-call soak、512/192-run 执行器、ITT/实测命中 PP、双实验联合判定与归档工具已补齐。[完成报告与原件](docs/evidence/agent-next7-20261006/execution/acceptance/COMPLETION.md)；真实实验因模型凭据、价目、端点与隔离条件不足仍为 BLOCKED/NOT_RUN，候选未晋升。
+
 > **当前入口（N7 challenger）**：2026-10-06 14:49。审查基线 `ea79130902824d73dafd6fd6bf02f8a8e38fe264`；本轮不可变规格 [plan(20261006-144930).md](plan(20261006-144930).md)；任务合同 [AGENT-NEXT7-20261006.md](tasks/AGENT-NEXT7-20261006.md)；上一轮（N6/N5）完成记录 [N5-COMPLETION.md](docs/evidence/agent-next6-20261005/N5-COMPLETION.md)。以下为上一轮（N6）计划正文，保留原字节。
 
 2026-10-05（Asia/Shanghai）。审查基线 `65d8711aa4ffa8401d219fc9f0aef2bca93898d2`。[上一轮完成入口](plan(20261005-agent-next5-entry-before-next6).md)保留原字节；本计划的不可变规格 [plan(20261005-234821).md](plan(20261005-234821).md)；任务合同 [AGENT-NEXT6-20261005.md](tasks/AGENT-NEXT6-20261005.md)。

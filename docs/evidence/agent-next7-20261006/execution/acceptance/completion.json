@@ -1,0 +1,76 @@
+{
+  "schemaVersion": "n7-execution-engineering-completion-v1",
+  "baseline": "d92d727689b9a2dc20bd09ea44348403f539def6",
+  "testedCodeSha": "85564f0650f5efe715d6fe25e0c3fbef8b58db0c",
+  "sourceDigest": "e476cf0dc36db425dcc333f10b6cc998cd1ac3b357a22a4e366d85320cb0f6ca",
+  "buildDigest": "eae43da8a8bff2c26ef4eb758e136e63631ee05d61bbc28571381cc092f27362",
+  "sourceAndBuildUnchangedDuringFullSuite": true,
+  "executionBindingDigest": "7056ab66740d59c7f5c9b062dd6ec5991bb421d19148c1f23bbf590e8bf7ab6b",
+  "fullSuite": {
+    "totalFiles": 485,
+    "frameworkReportedPassedFiles": 485,
+    "filesWithPassedTests": 484,
+    "fullySkippedFiles": 1,
+    "totalTests": 8979,
+    "passedTests": 8967,
+    "failedTests": 0,
+    "existingSkippedTests": 12,
+    "frameworkStartTimeUtc": "2026-10-06T09:38:05.674000+00:00"
+  },
+  "newRegressions": {
+    "passed": 55,
+    "failed": 0,
+    "skipped": 0,
+    "verifiedAgainOnCleanCodeByFullSuite": true,
+    "standaloneRunContext": "Final file contents before the 85564f0 commit; full-suite report binds the clean committed subject."
+  },
+  "dryRuns": {
+    "main": {
+      "logicalRuns": 512,
+      "pairs": 256,
+      "paidProviderCalls": 0
+    },
+    "holdout": {
+      "logicalRuns": 192,
+      "pairs": 96,
+      "paidProviderCalls": 0
+    }
+  },
+  "unchangedOriginalFiles": 494,
+  "engineering": "COMPLETED",
+  "realSoak": "BLOCKED_ENVIRONMENT",
+  "realCampaigns": "NOT_RUN",
+  "realJudgment": "NOT_RUN",
+  "realModelCalls": 0,
+  "modelQuality": "NOT_RUN",
+  "candidateStatus": "NOT_PROVEN",
+  "promotion": "NOT_ELIGIBLE",
+  "environment": {
+    "observedAt": "2026-10-06T09:39:47Z",
+    "credentialPresent": false,
+    "pricingPresent": false,
+    "localEndpoint": {
+      "reachable": false,
+      "errno": 111
+    },
+    "realProviderCalls": 0,
+    "modelQuality": "NOT_RUN"
+  },
+  "readiness": {
+    "modelQuality": "NOT_RUN",
+    "paidProviderCalls": 0,
+    "blockers": [
+      "CREDENTIAL_MISSING",
+      "PRICING_UNKNOWN",
+      "STRONG_ISOLATION_REQUIRED"
+    ],
+    "note": "Original duration/token/tool/USD caps remain fixed; missing inputs require a fresh binding before a real soak."
+  },
+  "budget": {
+    "maxDurationMs": 1800000,
+    "maxToolCalls": 600,
+    "changed": false,
+    "note": "A longer/larger real campaign requires explicit new pre-registration before results."
+  },
+  "publication": "Native non-force Git push followed by native Git/API SHA verification; final publication receipt stays under .ci/n7-completion/publish because it identifies the final documentation commit."
+}

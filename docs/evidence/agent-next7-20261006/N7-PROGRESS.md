@@ -3,7 +3,7 @@
 本文件是 **N7 轮的过程记录**。不可变规格保持原字节：[plan(20261006-144930).md](../../../plan(20261006-144930).md)（按上一轮惯例，规格内状态表不修改，进度一律记录在本文件）；任务合同 [AGENT-NEXT7-20261006.md](../../../tasks/AGENT-NEXT7-20261006.md)。当前计划入口 [plan.md](../../../plan.md)。
 
 - 本轮基线：`ea79130902824d73dafd6fd6bf02f8a8e38fe264`（审查基线）；N7-2 提交 `e99cb3f1`。
-- 用户决定：**不迁移到 Linux 强隔离环境**（接受"效果已测、资格不足"的结案方式；Windows 上不得假造 promotion）。
+- 首次交付时的用户决定：**不迁移到 Linux 强隔离环境**（接受"效果已测、资格不足"的结案方式；Windows 上不得假造 promotion）。后续用户要求补齐执行任务，当前工程与真实环境状态见 §6。
 - 门限（8 条）与上一轮完全一致，未放宽；seed 冻结；仅改 Agent 策略层。
 
 ## 状态
@@ -13,9 +13,9 @@
 | N7-1 写 v2 策略文本并注册 | **DONE** | 下方 §1 |
 | N7-2 建全新评测语料（88 用例） | **DONE** | 下方 §2 |
 | N7-3 预注册（任何模型结果之前） | **DONE** | 下方 §3 |
-| N7-4 基础设施资格门 + campaign | **不执行（操作者决定）** | 详见 §5：本轮无模型调用，无效果结论 |
-| N7-5 双实验判定 | 未执行（依赖 N7-4） | — |
-| N7-6 证据、发布与回退 | 部分：预注册证据已归档；无 judged 结果可发布 | 见 `README.md` |
+| N7-4 基础设施资格门 + campaign | **执行工具已验收；真实实验 BLOCKED_ENVIRONMENT** | §6；模型凭据/价目缺失、端点不可达、隔离自测未通过 |
+| N7-5 双实验判定 | **判定器及联合入口已验收；真实效果 NOT_RUN** | 完整 ITT、实测命中 PP 与双实验资格，55 项新回归通过 |
+| N7-6 证据、发布与回退 | **工程原件已归档、工具提交并按授权发布；未 promotion** | [完成报告](execution/acceptance/COMPLETION.md)；无真实 campaign 原件可归档 |
 
 ## 1. N7-1 — v2 策略文本与注册（DONE）
 
@@ -75,16 +75,27 @@
 - 两个冻结脚本 `--check` 均 PASS（可复算、0 付费调用）。
 - 未授权付费 preflight：0 次调用；本轮**从未**读取或写入凭据。
 
-## 4. 本轮已发现的副作用（如实记录，未修饰）
+## 4. 首次 N7-3 交付时发现的副作用（历史记录）
 
 1. **注册新候选会移动"基线臂快照"摘要**：`arm-factory.ts buildSnapshot` 在 baseline 臂上把**每个已注册候选**列为 OFF，因此登记 v2 后 baseline 臂 digest 变化。受影响的既有测试 `context-safe-tool-call-efficiency-preregistration.test.ts` 第 5 项原本断言"已提交 holdout 产物 == 现场重建"。处理方式：**不改写已冻结的 N6 产物**，改为断言"除 baseline 臂快照与由此导出的根身份外，其余字段逐字节一致"，并显式记录冻结值 `74b8465e…6466f` 与现场值不同及其原因；同时断言冻结产物自身 dry-run 仍为 192 logical runs / 0 付费调用。v1 与既有候选的**文本与 digest 未变**（测试第 1 项固定 `ce66f3b0…`）。
 2. **全仓测试基线对比**：全仓 `pnpm test` 有 15 个文件失败。其中 **11 个文件在 `e99cb3f1`（未含本轮改动）上以同样方式失败**（symlink 权限、worker 终止超时、平台 oracle 等环境性问题），另有 2 个文件（`apps/cli/src/cli.test.ts`、`apps/web/src/harness.integration.test.ts`）在并行满载下失败、单独复跑通过（负载波动）。真正由本轮引入并已修复的只有 `candidate-registry.test.ts`（新增登记项需出现在矩阵列表）与上述预注册复算测试。
 3. `pnpm typecheck` 通过；`pnpm docs:verify` ALL CHECKS PASS（含 E2-12、E4-00）。
 
-## 5. 未执行与剩余工作
+## 5. 首次 N7-3 交付时未执行的部分（历史记录）
 
 - **N7-4 不执行（操作者决定：两个实验实测约 9–10 小时，本轮不做）**。因此本轮**没有任何模型调用**：无 soak、无 campaign、无 raw request/tool event/usage 证据，也没有任何效果、质量或成本结论。
 - N7-5（双实验判定）因此未执行；N7-6 只完成了预注册证据归档与 SHA256 索引，没有 judged 结果可发布。
 - 未完成部分若要继续：先跑 24 次调用 soak（0 传输失败、0 `model_not_found`、usage 完整），再在绑定 SHA 的 clean worktree 上跑主实验 512 runs 与 holdout 192 runs（熔断 + journal 断点续跑），然后用与 N5/N6 相同的门限做 ITT 判定（bite 命中子集仅作佐证）。
 - **资格限制（不可绕过）**：本机 win32 无 OS 级写隔离后端，所有运行均为 `insecure-local`、`promotionEligible: false`；即使在 Windows 上全部门限通过，也只能得出"**效果已测、隔离资格不足**"的结论，除非将来在强隔离环境按同一预注册复跑。
 - 候选状态保持不变：`context_safe_tool_call_efficiency_v2` 为 `candidate`，**未测效果 / 未 promotion**；v1 仍为 `candidate` / NOT_PROVEN，其文本与 digest 未被本轮修改。
+
+## 6. N7-4 / N7-5 / N7-6 执行链工程补齐（2026-10-06）
+
+按用户后续要求，先提交 [执行补齐计划](../../../plan(20261006-n7-execution-chain).md)，再实施独立 N7 研究入口。旧 N6 runner 拒绝主实验 512 runs，holdout 仍安装 v1，旧 judge 也固定 N6/v1；不能直接复用这些入口作为 N7 执行器。旧脚本保持原字节，新入口复用既有 Harness/paired executor、原工具/verifier、安全边界、durable ledger 与 cost budget。
+
+- 实际 clean 源码与强制重建的 dist 重新绑定；原预注册 SHA 只作 lineage，不冒充当前执行源码。两实验真实 CLI dry-run 分别 512/192，AB/BA 平衡，v2 安装及实际对照正确，0 模型调用。
+- 新增 24-call soak 与 retry/usage 计量、原冻结预算/deadline、断点原件、完整 ITT 判定、条件实际命中 PP 佐证、两实验联合判定及不可覆盖归档。局部或合成证据不作为模型获胜；单个实验通过不具备晋级结论；不改 champion。
+- **clean `85564f0650f5efe715d6fe25e0c3fbef8b58db0c` 全仓：8967 PASS / 0 FAIL / 12 项旧 skip，485 个测试文件**。55 项新增回归全过且无 skip；typecheck、docs、冻结语料/预注册复算通过；source/dist 逐文件指纹在全仓测试前后完全一致。旧 skip 来源的 4 个测试文件与基线相同。
+- 494 个原件与补齐基线 `d92d727…` 逐字节一致，包括 N7 策略/语料/预注册、不可变规格和旧 N6 脚本。生产 Runtime/Core/权限/沙箱/工具/verifier/依赖未改。完整可复算原件见 [验收报告](execution/acceptance/COMPLETION.md) 和 [SHA256 索引](execution/acceptance/artifact-index.json)。
+- 当前执行环境为 Linux 管理工作区，但实际 bwrap capability self-test 失败，不能仅凭平台声称 strong。`OPENAI_API_KEY` 与有效价目未配置，8317 端点连接拒绝。因此真实 soak/campaign/效果仍为 **BLOCKED/NOT_RUN**，真实模型调用 **0**，候选 **NOT_PROVEN / 未 promotion**。这是当前环境阻塞，与 §5 的首次交付记录分开。
+- 原 duration **30 分钟**、工具总额 **600** 保持执行；预计 9–10 小时的实测需要在结果前重新预注册预算。补环境后，在实际 clean SHA 上重新 prepare/确认 binding digest，再按 [使用入口](execution/README.md) 执行；显式 insecure-local 实测永久不具备 promotion 资格。

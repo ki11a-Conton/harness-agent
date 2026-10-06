@@ -1,0 +1,2969 @@
+{
+  "baseline": "d92d727689b9a2dc20bd09ea44348403f539def6",
+  "files": [
+    {
+      "path": "packages/evaluation/src/mechanism-guidance.ts",
+      "bytes": 17206,
+      "sha256": "74360b106b61f7583b7ffd216a66e02ae8d62b18e2847acb5ad5ba1ee9ad3554",
+      "unchanged": true
+    },
+    {
+      "path": "docs/evidence/agent-next7-20261006/main-preregistration.json",
+      "bytes": 23936,
+      "sha256": "48942df92df8265952b0aa5e9ff9e6feb7ea91762011bd8c8abd90074504b19f",
+      "unchanged": true
+    },
+    {
+      "path": "docs/evidence/agent-next7-20261006/holdout-preregistration.json",
+      "bytes": 11501,
+      "sha256": "eddff1aff1a5f8171b878dcc1c28c4b32aa52b5fcae59123a10bc24e8e8a1a3a",
+      "unchanged": true
+    },
+    {
+      "path": "plan(20261006-144930).md",
+      "bytes": 8392,
+      "sha256": "b460c1e8ad3412b6cac760e638ae209f67d4c1ca9c35b12d653923fa33163581",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-01-build-jobs/case.json",
+      "bytes": 455,
+      "sha256": "c517eae14356aaf7f45b4a62d5693374d14a49f2e0f0d1e631dd3f3488ceb827",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-01-build-jobs/expected.md",
+      "bytes": 74,
+      "sha256": "788b33a808b8f17bff1ffd96d970186e7b5a8d7935ad40049c2d1c0a388adc1f",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-01-build-jobs/fixture/spec/ci-notes.txt",
+      "bytes": 1496,
+      "sha256": "0884a6eb39a48e79fa7bbe7a9f043405aff69e8fa098a9330ca306bfc3894776",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-01-build-jobs/fixture/spec/ci-policy.txt",
+      "bytes": 5414,
+      "sha256": "6ca612337b7b5232242ebcab4ca89153dde9e0397f3ebd2360d6564b61c94df9",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-01-build-jobs/fixture/src/build.js",
+      "bytes": 80,
+      "sha256": "2788f2c13049e09f984f792bafd17cacf5264223ea424f145d37a208c054e051",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-01-build-jobs/request.md",
+      "bytes": 210,
+      "sha256": "9bda1f97ae18026def0fd6a381b85c8affdce9d0899aba9ec018078be3a1349b",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-02-artifact-ttl/case.json",
+      "bytes": 465,
+      "sha256": "b4a4124c898759a9756a266b4df07c9c75cb90df2906c0f2be8ea45177c0e718",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-02-artifact-ttl/expected.md",
+      "bytes": 97,
+      "sha256": "a4baa11b294bf84de532147346c88755295535ae021bdf0dcd7ce55aee07a215",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-02-artifact-ttl/fixture/spec/artifact-notes.txt",
+      "bytes": 1469,
+      "sha256": "6a7c23f6cce1d1a740dddf94da6871225af2e0ca136df385dae7a66eb5ab1fd1",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-02-artifact-ttl/fixture/spec/artifact-policy.txt",
+      "bytes": 5422,
+      "sha256": "b8d83b0a7a4aeca4674987b890c576b967343bd90f3a2ae5bcc6f24cf66b38eb",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-02-artifact-ttl/fixture/src/artifacts.js",
+      "bytes": 100,
+      "sha256": "eb87c9e7ab1864b2a0e9eb9ae3cceded6d777ff243626d3fe4ad5f76e098f181",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-02-artifact-ttl/request.md",
+      "bytes": 201,
+      "sha256": "3199bf685f09af08ec0d11ad3d53c7b18cf892f2e398560cbac5a737187378fc",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-03-probe-interval/case.json",
+      "bytes": 466,
+      "sha256": "d96f07ade19165614846008ef03ae247a7ccede6e8c8a2ec1e92f61d2a076370",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-03-probe-interval/expected.md",
+      "bytes": 100,
+      "sha256": "9ad5240129da72e75ab9a178f69c79d5e4683a421e31cffc935f8a4554ec87b0",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-03-probe-interval/fixture/spec/probe-notes.txt",
+      "bytes": 1472,
+      "sha256": "14f5f7ca7cc3a2f452a3a964b56ed3adeee9e5ac79e502a0a7dbdb293e78e026",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-03-probe-interval/fixture/spec/probe-policy.txt",
+      "bytes": 5430,
+      "sha256": "688ff693383e71b706a6d47c639af070df8c6fcdd165240ee1fc2745bfd83631",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-03-probe-interval/fixture/src/probe.js",
+      "bytes": 116,
+      "sha256": "8999add4d8eec863c7cf1065a94c887bef21e43704a06aef12e40a45e3771c46",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-03-probe-interval/request.md",
+      "bytes": 150,
+      "sha256": "d9aa85b90bd947a0c86eb147c9d03154f4ff203322514f978ad204d5e410b0c4",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-04-canary-share/case.json",
+      "bytes": 460,
+      "sha256": "695c088bcb7b0036f4cda4ebf7c20b5ac7f5364884e90b280d9ca6b5fa8af8dd",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-04-canary-share/expected.md",
+      "bytes": 88,
+      "sha256": "21b88eb97165a59f2b01419d7ec4d631842340a7eec9c84c653bfdd55da40836",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-04-canary-share/fixture/spec/rollout-notes.txt",
+      "bytes": 1495,
+      "sha256": "6c73563e6b1389765ddc522658c3a0e26b309f623cff04b4570ecb2ef5c29707",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-04-canary-share/fixture/spec/rollout-policy.txt",
+      "bytes": 5431,
+      "sha256": "821023a0b2cef21dd42d3abbf066dc8db05c92b2e2c928b8d90e84b69caa1f67",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-04-canary-share/fixture/src/canary.js",
+      "bytes": 92,
+      "sha256": "4df66c236de5676c15eabd7314570987cf20896c2b7ce4eebb6265ecfe3900eb",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-04-canary-share/request.md",
+      "bytes": 156,
+      "sha256": "7486acd14e2ba9ab0e77e2b1b742bc8c9d70520eeec41c2db622f99982740578",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-05-audio-bitrate/case.json",
+      "bytes": 463,
+      "sha256": "9518c3f1add4bd3f72cdd23463e2d4a92f520defcbe3e41afb63092d2390f8f7",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-05-audio-bitrate/expected.md",
+      "bytes": 92,
+      "sha256": "84d75ece00408ea9e96f00849be092d5a7746b9358b7ffb111c6e79cef3abc49",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-05-audio-bitrate/fixture/spec/media-notes.txt",
+      "bytes": 1465,
+      "sha256": "291409a8d3f0d0c2f39e6500a70766f52b63600af6e1fa91470e4de306ad1920",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-05-audio-bitrate/fixture/spec/media-policy.txt",
+      "bytes": 5426,
+      "sha256": "51c499ee45d46fca3f97e8aeaca6c4d8050e7d61ace3ba8cfe43122cacb16286",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-05-audio-bitrate/fixture/src/audio.js",
+      "bytes": 104,
+      "sha256": "9ce1823acd5274303a3e32e84895b3d8e14eb182318df742a44b79f9cc96bf42",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-05-audio-bitrate/request.md",
+      "bytes": 144,
+      "sha256": "f469a424f12e24b2c143b088aaf5a76b2c034e6c457aaf152db71f73424af403",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-06-frame-rate/case.json",
+      "bytes": 455,
+      "sha256": "08e66a586e3abf3d149b2af5e5aa6e733d881ce5b95a92dc8ba8eb98f58ac71a",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-06-frame-rate/expected.md",
+      "bytes": 78,
+      "sha256": "3785389cfd6e73c5591b914ec260062e0dd684447ead05ab1a2ce1c501859cb4",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-06-frame-rate/fixture/spec/render-notes.txt",
+      "bytes": 1484,
+      "sha256": "80bcc7b825de369c73ce0f3b7b171c1c0bb16464b12380d7a400f0bc5e0434cf",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-06-frame-rate/fixture/spec/render-policy.txt",
+      "bytes": 5419,
+      "sha256": "f1af8a8bc8202a84e90b1c603f10d5ed244d6a630081a403871c8b0546116d6a",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-06-frame-rate/fixture/src/frame.js",
+      "bytes": 81,
+      "sha256": "0f0d9d7c71b1318d0a128a537b168367347e37bddf685412789379b175baa054",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-06-frame-rate/request.md",
+      "bytes": 147,
+      "sha256": "bacbe0765aeea37848caba77e4716d8ced7d1c328800abadacb2e028bf6d3777",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-07-vat-rate/case.json",
+      "bytes": 455,
+      "sha256": "2cdf4b6415c2917583a8c3ff9fc062ca913b30e0261473f7b2bba1e863c013ec",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-07-vat-rate/expected.md",
+      "bytes": 73,
+      "sha256": "1fee6d9b837f97617a1dcbb4221a96270ce1e2f46867dc24e6863234b72377d8",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-07-vat-rate/fixture/spec/tax-notes.txt",
+      "bytes": 1479,
+      "sha256": "38251f0303f3cb9eec9282ac94c04ca6c6cac4c23a2b648e124814d0e834e10a",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-07-vat-rate/fixture/spec/tax-table.txt",
+      "bytes": 5419,
+      "sha256": "e673c579d5c92b2b3e87ca859e689b5501ff0ee8af82270e573aabab321a09e1",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-07-vat-rate/fixture/src/tax.js",
+      "bytes": 85,
+      "sha256": "eacd6b4442c3d75be90b4d379339a9d85d7c81d04fb55ef52f28c93316ba2135",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-07-vat-rate/request.md",
+      "bytes": 134,
+      "sha256": "203e7ca566a19a95579b01071a0f86c4363353134f8740802caea7884657b43f",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-08-invoice-due/case.json",
+      "bytes": 462,
+      "sha256": "127ab2edfead0f3cc7e02b52b0e633604ed13d59e9593f531cb98dbde9516dba",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-08-invoice-due/expected.md",
+      "bytes": 92,
+      "sha256": "55e33e362a94beb279a23ffe57ab165c2afa4a21fb188144a8079c5d6a6e5284",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-08-invoice-due/fixture/spec/invoice-notes.txt",
+      "bytes": 1477,
+      "sha256": "c3cb8c5228dffb4285b49e09109259679dd00a8163af177b9263461d2890f347",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-08-invoice-due/fixture/spec/invoice-policy.txt",
+      "bytes": 5431,
+      "sha256": "0607822ebc42a2f693735b96d36bf4ad06db6a4af7f6f63ed590f649c1eb6943",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-08-invoice-due/fixture/src/invoice.js",
+      "bytes": 98,
+      "sha256": "30dfce53e14696deb552c194b511123060a1cd8601bcda905b81e6012cb21406",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-08-invoice-due/request.md",
+      "bytes": 139,
+      "sha256": "7c24680c41ae6a876add9bb0b32b3204971ea9cfb355e14d3de0916f6d7885f3",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-09-storage-quota/case.json",
+      "bytes": 473,
+      "sha256": "2fadf32ec231214b8c6de6354a0d84b2bfa3a2fc7447f46c17b7659f8577c9a5",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-09-storage-quota/expected.md",
+      "bytes": 98,
+      "sha256": "403440457e126976f90cfa6a295c1613632d199a1aae8bae287b9b32cc42a260",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-09-storage-quota/fixture/spec/storage-notes.txt",
+      "bytes": 1480,
+      "sha256": "28ab6683ab4ad14d7818f08acc74bc20240311a834ec0afe6e61181a9702247f",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-09-storage-quota/fixture/spec/storage-policy.txt",
+      "bytes": 5439,
+      "sha256": "3cca366e94edf11bb3e45fd328419b7cec3bcf547060e3458e242f823118b0d6",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-09-storage-quota/fixture/src/storage.js",
+      "bytes": 115,
+      "sha256": "578888eb004f3d508436fd7ff82b879c3ca9ed97427a13d17c83a67e91864f78",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-09-storage-quota/request.md",
+      "bytes": 154,
+      "sha256": "6765b5c6c1679a0be3f266021af0d5804163d968fc696b965bd551efa1967ebf",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-10-index-shards/case.json",
+      "bytes": 457,
+      "sha256": "c78033f7fad7dd0404cff5165c8c8716e5d6bfe4842fabf732052c1c516023c5",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-10-index-shards/expected.md",
+      "bytes": 83,
+      "sha256": "a9ff699f81dc644ebd900a051d9e39c43f4ace0b006ce43d802b4e3029f32e92",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-10-index-shards/fixture/spec/search-notes.txt",
+      "bytes": 1491,
+      "sha256": "8a72f2c480077f0c6ee6c0ca2c6d1e2eec08677ab6e101c5103ec574b9c70273",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-10-index-shards/fixture/spec/search-policy.txt",
+      "bytes": 5411,
+      "sha256": "52c6033b539ccab77486c6680c3504ef310faecfc772082b764225ddd7fa8310",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-10-index-shards/fixture/src/search.js",
+      "bytes": 86,
+      "sha256": "f52b519f1acd84b620a7293d0aea75ee06024b85e0ae368b481769649a07dd60",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-10-index-shards/request.md",
+      "bytes": 142,
+      "sha256": "d91d45322238e2460c4c2f340cd0f7d1b99db732c6168c6dafe688346ede91b0",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-11-scan-window/case.json",
+      "bytes": 463,
+      "sha256": "a3f3063a2567e912327a62bc039f6f295dc08b9f7577349c4856e2bd916a24eb",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-11-scan-window/expected.md",
+      "bytes": 91,
+      "sha256": "82abd118f2501cfe39014f90b08bb1bdfb59d33f6123dffcf25f87b9998fa6ef",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-11-scan-window/fixture/spec/scan-notes.txt",
+      "bytes": 1478,
+      "sha256": "b7ddd2c48a64e7041b47a2bfe1c05df18a3701e356f9b20317f5ea78f8aeed63",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-11-scan-window/fixture/spec/scan-policy.txt",
+      "bytes": 5412,
+      "sha256": "a5263ab84f5076b2692363e193f2b98a7b7caa9387a03e83c4481916205dfa93",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-11-scan-window/fixture/src/scanner.js",
+      "bytes": 100,
+      "sha256": "02ad2ff5a338c21117bcf4da9eef3878d21850d951adbb3ba60163313e05ec4b",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-11-scan-window/request.md",
+      "bytes": 144,
+      "sha256": "1bce24a25f385cd98574fe59d445e6bc8d197ddbde748f0284346601d9e7bb81",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-12-buffer-rows/case.json",
+      "bytes": 459,
+      "sha256": "d1eee4f35cd3f47ccb4e06a8841fdd13bc7efbdd32a23df43418ad850885c628",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-12-buffer-rows/expected.md",
+      "bytes": 81,
+      "sha256": "395a674abce94fcdc00944b55a9a067343148d723091cc8ad27ed0715df5e2cd",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-12-buffer-rows/fixture/spec/buffer-notes.txt",
+      "bytes": 1480,
+      "sha256": "c65af31666554dc5aa7da206a0a7f90254ab38843641b0e5ee31b921fe659b67",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-12-buffer-rows/fixture/spec/buffer-policy.txt",
+      "bytes": 5409,
+      "sha256": "6200634a29c133dbfcb2763465e07ebf6594eea956681a37c3222c7fbda98a19",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-12-buffer-rows/fixture/src/buffer.js",
+      "bytes": 85,
+      "sha256": "2da5a4851c452f6c80179d74f5ea689ded55f2d1314f3caf6cf5f2f2943d6421",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-12-buffer-rows/request.md",
+      "bytes": 142,
+      "sha256": "778e963a8a9a7569ba41b7206544f9ff6702783a2fc1698c0187b70d79a8eeb6",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-13-seed-length/case.json",
+      "bytes": 454,
+      "sha256": "13d5181630bd533579e415e34dac99f1cb19eab09669d26e64c5787b3505aa28",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-13-seed-length/expected.md",
+      "bytes": 75,
+      "sha256": "7f53d9e16571941155a7cc5fe177e945c503ee1914f5fe5fb6ed6ac605720f38",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-13-seed-length/fixture/spec/rng-notes.txt",
+      "bytes": 1471,
+      "sha256": "6ee3a2ae0ab265f291180bd29524fc06f126e3ba05274763f4ce3c2770c74ec9",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-13-seed-length/fixture/spec/rng-policy.txt",
+      "bytes": 5409,
+      "sha256": "f65e14c3998556f1695a18ee0c3911ca0693c58c53a2947f7da5ada294ec8415",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-13-seed-length/fixture/src/rng.js",
+      "bytes": 83,
+      "sha256": "32df0e2672e36cacf8932b1ef606322c50fdb9951b979be88aac5c572c68255d",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-13-seed-length/request.md",
+      "bytes": 137,
+      "sha256": "149bd5de752c73760031fb7e5b0bee53df0d3643f880464a3a7867085be4f712",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-14-label-keys/case.json",
+      "bytes": 459,
+      "sha256": "f502d09e084ab580f79ede89a24b7acae84264b712c7f52e2c6c90cb766345c9",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-14-label-keys/expected.md",
+      "bytes": 85,
+      "sha256": "2489ad9d9e43926f9262487cc4d12d4f607a49dc959e89e9f44de40f38d302f1",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-14-label-keys/fixture/spec/label-notes.txt",
+      "bytes": 1464,
+      "sha256": "b0d3402374f14433f07b8b4ddba85be973b8e82282326caa4c86c1653f0b98fa",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-14-label-keys/fixture/spec/label-policy.txt",
+      "bytes": 5407,
+      "sha256": "a9ca57c2c78606943c21f85f84106f125ecbbeca6eb96b29433505ae8e70be19",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-14-label-keys/fixture/src/labels.js",
+      "bytes": 92,
+      "sha256": "28a16c7a43e6a3a39e161a5df6f7e07ead03f42342aa658cf2321681ce64a779",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-14-label-keys/request.md",
+      "bytes": 160,
+      "sha256": "fe13eef31542e9814de913503c9ef0efc34a6f568bea866bb18369a3438c6369",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-15-replica-count/case.json",
+      "bytes": 459,
+      "sha256": "e8cdfb511c212076a126f88ae95a175d4f2ce477a1be73d465d6ad20901313b1",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-15-replica-count/expected.md",
+      "bytes": 87,
+      "sha256": "1db8cda14042356706656fe78deb5fe1a1ac8e7e8b49ff0f08e8a9b85e8556de",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-15-replica-count/fixture/spec/replica-notes.txt",
+      "bytes": 1503,
+      "sha256": "8fb7e7e51ea865ed453cd58354bdb18d05a30a55c2ed7aa3c446c6d44ce53d85",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-15-replica-count/fixture/spec/replica-policy.txt",
+      "bytes": 5411,
+      "sha256": "a18afd37d9f46b66d173016d3784890e0a2e5e3d568d36770c9ca41db20d18a8",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-15-replica-count/fixture/src/replica.js",
+      "bytes": 89,
+      "sha256": "355e5c250107f8543bbbf101d93f43fbf6b6dae5ac80cc43b59eb7d2aeb74305",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-15-replica-count/request.md",
+      "bytes": 153,
+      "sha256": "20a2c02eb0503921731897ec547e36b7152f9d2bc78e0e1a1cea4b30de1c30f4",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-16-cron-jitter/case.json",
+      "bytes": 462,
+      "sha256": "c540c7254ea59ecaef3b8b0ab7890106a45f551c21ff132355318dff6e042581",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-16-cron-jitter/expected.md",
+      "bytes": 92,
+      "sha256": "63becbb9f62c6b414b806e4d2bd2a755572ae3d42d13e39d4c3c5106220ab39d",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-16-cron-jitter/fixture/spec/cron-notes.txt",
+      "bytes": 1473,
+      "sha256": "cbf0a7282319908197a1613b0beb23ef18a08d2c8e6348875962ac1804796aef",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-16-cron-jitter/fixture/spec/cron-policy.txt",
+      "bytes": 5420,
+      "sha256": "dff1436a490e85781fe920074cfb7770bb67d2a0c23d7f9281f049c6990b8f66",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-16-cron-jitter/fixture/src/cron.js",
+      "bytes": 106,
+      "sha256": "d8cf8ed75e81aa3ed090b38f5dc7991e2118fee64767a4f6ebc21dab84fdf106",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-16-cron-jitter/request.md",
+      "bytes": 140,
+      "sha256": "d12d8a103325a74a047fe9f1097b784a40db4879e57f156a19eae02a213fe417",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-17-alert-threshold/case.json",
+      "bytes": 464,
+      "sha256": "6b5e93a7eee51a64fa01c53a62b1ce2ab2bcd63b93bb349d17456dac33595308",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-17-alert-threshold/expected.md",
+      "bytes": 93,
+      "sha256": "7985f9ccf5b105b10936891b4ab61e382b1d0da65c8ce7ccd0508a57eed4f704",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-17-alert-threshold/fixture/spec/alert-notes.txt",
+      "bytes": 1487,
+      "sha256": "83b5b9eb5bd78e45f4cb3174ba969a77a5347a1c7b67ff77d21538371f32d1c9",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-17-alert-threshold/fixture/spec/alert-policy.txt",
+      "bytes": 5424,
+      "sha256": "aa8536f6a307324ad033c91d2af546864fc0338e9365deb5b0040fe33e0d7a69",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-17-alert-threshold/fixture/src/alerts.js",
+      "bytes": 105,
+      "sha256": "e7dba2edb76ce56bb1c6cf035459d5f83db41451396cef94e37b6c6d90b1d04f",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-17-alert-threshold/request.md",
+      "bytes": 137,
+      "sha256": "7ee68e7df6eb26f7577494f33c8c1e9e8c84b69ea4a060bbd03b656cd62d94d9",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-18-upload-chunk/case.json",
+      "bytes": 467,
+      "sha256": "74c3dc11a45c4b4eda22ae4fa19cc0e21be5d93b8d1c51b42dd810a9e54306b7",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-18-upload-chunk/expected.md",
+      "bytes": 94,
+      "sha256": "a4cf0add2631b04aa2f499c6c0529d630cb9195f2c82fb9ce3e1cf15907eaa71",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-18-upload-chunk/fixture/spec/upload-notes.txt",
+      "bytes": 1478,
+      "sha256": "37eb240f07c7a20cc69e91e37b9c5ccef6d0f2e3e3ee7b2e2ac9ed320fcd2209",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-18-upload-chunk/fixture/spec/upload-policy.txt",
+      "bytes": 5422,
+      "sha256": "79d64dce21fc5a38a811148610336b195344b09786c591230632a65ddf0fd95f",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-18-upload-chunk/fixture/src/upload.js",
+      "bytes": 107,
+      "sha256": "d4997e740883bf93364cd9ad1b3e26d193e8fdd3aa9248f4a07b14d136d2e7a3",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-18-upload-chunk/request.md",
+      "bytes": 147,
+      "sha256": "e02c5e996da45cd3fff0173f9478a3d4b716a301e02d178855cca84f93b4240c",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-19-session-ttl/case.json",
+      "bytes": 465,
+      "sha256": "f377086286080426fa58da568c0ad167dd5176538c48dd0e8e2af9e4604a102b",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-19-session-ttl/expected.md",
+      "bytes": 98,
+      "sha256": "3540fe567f5144d5187d3e842769dd26157c4b9ced6e1e744443efd9bfe9d255",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-19-session-ttl/fixture/spec/session-notes.txt",
+      "bytes": 1482,
+      "sha256": "40e69bb2008dec617ce379235bab8cbc95f4df165205e6a12f2fde6113029282",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-19-session-ttl/fixture/spec/session-policy.txt",
+      "bytes": 5429,
+      "sha256": "ebabb0dbea85a7b73c20c8c7c27b2ae6f597c860f9d3931cbaae5c9569339aad",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-19-session-ttl/fixture/src/session.js",
+      "bytes": 107,
+      "sha256": "99e9ab82e9f6eb049ccca458371aa195f487f83a29ea3120dc3e3a10a459f093",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-19-session-ttl/request.md",
+      "bytes": 140,
+      "sha256": "81cf5dfa87af45a559fcefbb27e512773f4236c82d659533f8e59bef4a9121b3",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-20-cache-entries/case.json",
+      "bytes": 463,
+      "sha256": "ddf4a179d6e84b6f1d755ac780374392982a6caf5f58814082c6477c0e8b49bd",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-20-cache-entries/expected.md",
+      "bytes": 90,
+      "sha256": "fdff4dda2d43f48331bf81acb05130a33ef1f483b413d1899e7fe88910ba68d4",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-20-cache-entries/fixture/spec/cache-notes.txt",
+      "bytes": 1483,
+      "sha256": "0ad5e3815c2ec21b2031331a24d3874622ed5ef367859feb61b9ec3375d4ca2a",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-20-cache-entries/fixture/spec/cache-policy.txt",
+      "bytes": 5418,
+      "sha256": "c296a88aec3b0a89821173f9bf7ecff1e268a0a0ef2d05747f65fb4caea6bb9d",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-20-cache-entries/fixture/src/cache.js",
+      "bytes": 102,
+      "sha256": "fae847d5255f7b1f4c8e63abb74410a8531835ab1e867300ed633d5bbb29b618",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-compact-20-cache-entries/request.md",
+      "bytes": 142,
+      "sha256": "ef3cf4a9b26b9bbf54f681409134d46a27a7dc007d928656ad67a58d8bbb7373",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-01-chunk-tail/case.json",
+      "bytes": 482,
+      "sha256": "41f49174dd57afebcf8a538840842fb8fc6d8343c9d30919e3d312aedeeb5f93",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-01-chunk-tail/expected.md",
+      "bytes": 53,
+      "sha256": "e5286d70a8ea77715579f9fbd576e6d4c02995f2021c83e256bfe17dd3909e91",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-01-chunk-tail/fixture/src/chunk.js",
+      "bytes": 187,
+      "sha256": "ce885aaf6680c241737d7501f81605793af01642d58f7091946d7a393942aedc",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-01-chunk-tail/request.md",
+      "bytes": 111,
+      "sha256": "7650bcef07633ba2f52fc5ab1718320839f3f9973e45bfafb3ff185140d65b89",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-02-clamp-bounds/case.json",
+      "bytes": 434,
+      "sha256": "8146f9cd509651e33693080a4badb23416b819ca8dd2ecc236e43ef46594de63",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-02-clamp-bounds/expected.md",
+      "bytes": 83,
+      "sha256": "fc963b6145069e88ff270ad8e087131b79f8b1f2832a242db39044b4c0591acc",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-02-clamp-bounds/fixture/src/clamp.js",
+      "bytes": 159,
+      "sha256": "5bc3b3f11d868abf5c830362781b50e8c75aaa6c62d664dacc7f6a54e4f332f9",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-02-clamp-bounds/request.md",
+      "bytes": 89,
+      "sha256": "e7dca4ef2542a56f76e04cf5449148b4f78587b3fbfb14b90c725dea7354efd9",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-03-merge-defaults/case.json",
+      "bytes": 550,
+      "sha256": "2cf09c6cc6bc16356a5ea5a1f564649c4656ef2e1cbdd77a7e96c145ce7dc023",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-03-merge-defaults/expected.md",
+      "bytes": 73,
+      "sha256": "4be5d06030eb953ab62c0cb51184edda84580736ce60dca1306f66b927d0530b",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-03-merge-defaults/fixture/src/merge.js",
+      "bytes": 257,
+      "sha256": "2c9e5b53cb117ba9a079495999d8e54ce7b89f260c3ca43adc0dc0c2dc130bde",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-03-merge-defaults/request.md",
+      "bytes": 123,
+      "sha256": "8bfa0fa03258e15f83e7ad6efabba89cd777a9e53b8b796e1db2c5bca5150fc0",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-04-unique-order/case.json",
+      "bytes": 448,
+      "sha256": "02b0ed3212f61acb886b19ab5ae95f7e6262cc154e4f6a34eecd1167137d9e2c",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-04-unique-order/expected.md",
+      "bytes": 45,
+      "sha256": "2e254faa3d1d3986c348c281ee81c903aaed2b920138cf8d05000a084f704ce9",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-04-unique-order/fixture/src/unique.js",
+      "bytes": 257,
+      "sha256": "5e6bd7be001290346f483ff2122cfafe9fc40da261eb0da9704becf36a731be0",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-04-unique-order/request.md",
+      "bytes": 131,
+      "sha256": "267928665d44ee6b04f864abf6d8579f3cad1eac06a0562b1297e5b27e586b83",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-05-format-bytes/case.json",
+      "bytes": 453,
+      "sha256": "4d4fb73039709ce934830ce62ad6be7613b92154b96b7a5bae35416a5f89b8d2",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-05-format-bytes/expected.md",
+      "bytes": 76,
+      "sha256": "1c95fe4da6512a0d27ca0cf2cd6e24140b60aa684284411b313e2e166c698e3b",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-05-format-bytes/fixture/src/bytes.js",
+      "bytes": 124,
+      "sha256": "f14e7d279c2f69178e7ab578fc02e79190f458b1dc96d8b0199f11f3d6be438a",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-05-format-bytes/request.md",
+      "bytes": 176,
+      "sha256": "a4ba6f4df5924c6b2fd2f01a04c0b9e71e9081a8f68f7e8861e231895a7862ee",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-06-word-count/case.json",
+      "bytes": 469,
+      "sha256": "7228158e4042c2d57bc4dae4a65c5733b5c5ea04254667a047d34a02edfd5266",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-06-word-count/expected.md",
+      "bytes": 95,
+      "sha256": "7798a417cd1e7f8c00f65abfa3f79eb091ecaf4185e6afcc1254ed29356f849c",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-06-word-count/fixture/src/words.js",
+      "bytes": 110,
+      "sha256": "de8749886248e0715fd32a503f0ee5bc189d0725c4da92c6f487b04a61054ef8",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-06-word-count/request.md",
+      "bytes": 127,
+      "sha256": "03fa7fd119022bf5119d1297ba0811803c7d2fdb9d09ca9c321b6a3a4f9afa70",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-07-truncate-suffix/case.json",
+      "bytes": 494,
+      "sha256": "a3463095b8556752855490291304a82e0ab57c2ec8a14abadc73f5c5c4dc300c",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-07-truncate-suffix/expected.md",
+      "bytes": 105,
+      "sha256": "f90a1813eb4e43cc2202886bb32d75f9077a256a1e96261a48efc0fa66cde865",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-07-truncate-suffix/fixture/src/truncate.js",
+      "bytes": 111,
+      "sha256": "86b6f0a92af0723498facec9f1499790f7c907d33bebbcccc9700c697e895000",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-07-truncate-suffix/request.md",
+      "bytes": 273,
+      "sha256": "5fa7f50e97a9d10969c9658c379fcec520f984e0336b86ef54bc1aae4358303e",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-08-key-order-equal/case.json",
+      "bytes": 472,
+      "sha256": "a775109ea6726f36b1b78bfb6149bdce97f90bd55557211091ea2702f599a960",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-08-key-order-equal/expected.md",
+      "bytes": 83,
+      "sha256": "d5b3248bb90c0b7bf1263cd30192bd7cccec5efa0ca8355160d801e87bbd4983",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-08-key-order-equal/fixture/src/equal.js",
+      "bytes": 117,
+      "sha256": "afcb7ddd1b7489d2adffa22d78220430d92b45aad4111693bebc310f327336e2",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-08-key-order-equal/request.md",
+      "bytes": 131,
+      "sha256": "1e728bb1f981392f07d1023a98392710faff97ab8b6ea27264b3f9e618ebeaa9",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-09-changed-region/case.json",
+      "bytes": 399,
+      "sha256": "b40aa18cc144697b1a707401ccca9b1887e49c373ead5aa5e2c9ab4fa4874d15",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-09-changed-region/expected.md",
+      "bytes": 54,
+      "sha256": "ec8e9cd0ab8145e44b478739d9f256a9147898be2c320d49085e5f9fb71349d4",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-09-changed-region/fixture/setup.js",
+      "bytes": 214,
+      "sha256": "6963fb9bbebbcd52a77026f31f494712e8df762ba325afd36322d6fbe542d225",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-09-changed-region/fixture/src/region.js",
+      "bytes": 54,
+      "sha256": "fc04923e9ff98b7dd7b15e0d417b9d574cba19c9deda0aee76d7843409da1572",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-09-changed-region/request.md",
+      "bytes": 190,
+      "sha256": "4746827d6221199788d20f320364630f886f02c3766634a6ab59c3966313f040",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-10-changed-token-ttl/case.json",
+      "bytes": 418,
+      "sha256": "f9f149ce58c9d6359877b8c189a246af876136c847fa466c07f1c70b0f76a2d5",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-10-changed-token-ttl/expected.md",
+      "bytes": 74,
+      "sha256": "09db1768fe80b918c20c260cfb309e496c67280541adec30a90ff067173b7fd6",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-10-changed-token-ttl/fixture/config/token.json",
+      "bytes": 18,
+      "sha256": "2ef38065c8e1ee030715f08f29794b331e93af33dc09400ed7b935124f1c8b49",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-10-changed-token-ttl/fixture/rotate.js",
+      "bytes": 166,
+      "sha256": "93e98d0f4cfa6097baf6b98643682c8e76399edf3bfae88b95746757cd1664d6",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-10-changed-token-ttl/fixture/src/load.js",
+      "bytes": 95,
+      "sha256": "0ae1ff89944778550d15eb5580c695b9bd488d2bf8c7ac7fc49444a7518efac7",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-10-changed-token-ttl/request.md",
+      "bytes": 170,
+      "sha256": "d02a8fc44c426adb3685e0765b91119fa622e00eacad3011126c6e606a98d637",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-11-changed-shard-map/case.json",
+      "bytes": 426,
+      "sha256": "c51cef744744b82cddcc8d9f630a0d98352df599268d83127b932f9aba5220c9",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-11-changed-shard-map/expected.md",
+      "bytes": 87,
+      "sha256": "c834b8032bad7f963bb4db96f9f04f738fb6e4eaa55a42d70864d5bfacd60092",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-11-changed-shard-map/fixture/data/shards.json",
+      "bytes": 14,
+      "sha256": "83d90b9f31e389e4765c853120d161ab9850175211badfd7ac45ba95f29a9990",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-11-changed-shard-map/fixture/setup.js",
+      "bytes": 202,
+      "sha256": "5e351fa6ac870b025469e70dc7adf09b9755b8c7d7eeb7c1108d9a022fed6b35",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-11-changed-shard-map/fixture/src/lookup.js",
+      "bytes": 84,
+      "sha256": "27727e1e026d23bc873030a194afccb999a45d48d1192faca4eaba6418cd3bd5",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-11-changed-shard-map/request.md",
+      "bytes": 164,
+      "sha256": "6ea419b09a28defb7a5fe067d7f2249a2387c8f0b4bee739d056d0858c0deb34",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-12-changed-retention/case.json",
+      "bytes": 414,
+      "sha256": "d0ea7e5087e7ce097e61df8095e91f0251be901c0b64edd69e6f39ee0d4fce0f",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-12-changed-retention/expected.md",
+      "bytes": 89,
+      "sha256": "6a21cdb014162cc2370856012de3e2c8efedf83d8e2de7342399a3c372990b8a",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-12-changed-retention/fixture/policy/retention.json",
+      "bytes": 11,
+      "sha256": "941d7cb2370e3aea10e13d5571da6a1539f46a49af33150ade4bcba74b316b6e",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-12-changed-retention/fixture/rotate.js",
+      "bytes": 161,
+      "sha256": "727df3be57f4913fd968ed33ee9316935f914e7487dc9f188e4f2ae7b23fe728",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-12-changed-retention/fixture/src/policy.js",
+      "bytes": 91,
+      "sha256": "955df82c6503075361748805355b881a27b42f8d83c5681131af4151db667ca5",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-12-changed-retention/request.md",
+      "bytes": 148,
+      "sha256": "a316f89041b69b321fe2dae0e7ca64062d6968b83ed1a10a1a009efc1dc95103",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-13-failing-fee-check/case.json",
+      "bytes": 389,
+      "sha256": "d9dd2f84249d5da2bbfb795c51169f9343c1829041a637831eac5e7b81295f0f",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-13-failing-fee-check/expected.md",
+      "bytes": 40,
+      "sha256": "f4cf26990212ce212a02208ca28e8ab111d9fd17f139806f4909254d09ec856d",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-13-failing-fee-check/fixture/check.js",
+      "bytes": 214,
+      "sha256": "a9e2590998543f95cca802f940913bcb0370ce949f06c02e0a9ad50ed6f78ddd",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-13-failing-fee-check/fixture/src/fee.js",
+      "bytes": 104,
+      "sha256": "3292d16ed19b2edcefe9a2c4dfa33cadab1fbad2d91a693b34c6543685abbc86",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-13-failing-fee-check/request.md",
+      "bytes": 139,
+      "sha256": "fd670db6ffdaffc83e1d5f0ecbb0dbdb26f6ba0cffa1488b50379466c318ec55",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-14-failing-ranges-check/case.json",
+      "bytes": 389,
+      "sha256": "d9dd2f84249d5da2bbfb795c51169f9343c1829041a637831eac5e7b81295f0f",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-14-failing-ranges-check/expected.md",
+      "bytes": 40,
+      "sha256": "f4cf26990212ce212a02208ca28e8ab111d9fd17f139806f4909254d09ec856d",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-14-failing-ranges-check/fixture/check.js",
+      "bytes": 233,
+      "sha256": "c29037a31c89c3e6278a1b2751a21e99affdce34b930d1af79b3d6f73e2996c2",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-14-failing-ranges-check/fixture/src/ranges.js",
+      "bytes": 104,
+      "sha256": "43f59ccf2ef09b45a9faf2703a0624efd3ba07918aa8c6f258f9497e12492021",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-14-failing-ranges-check/request.md",
+      "bytes": 132,
+      "sha256": "02d8aac2d98b3289d220289fa03d6d76bd0dd72b97e81758593e39c79bd512ea",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-15-failing-checksum-check/case.json",
+      "bytes": 389,
+      "sha256": "d9dd2f84249d5da2bbfb795c51169f9343c1829041a637831eac5e7b81295f0f",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-15-failing-checksum-check/expected.md",
+      "bytes": 40,
+      "sha256": "f4cf26990212ce212a02208ca28e8ab111d9fd17f139806f4909254d09ec856d",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-15-failing-checksum-check/fixture/check.js",
+      "bytes": 210,
+      "sha256": "a41c774b45ae2961397ed53f6d3346ddbdd9bd8fe1009bd42dd3eec586adcdb5",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-15-failing-checksum-check/fixture/src/checksum.js",
+      "bytes": 158,
+      "sha256": "d6152829db4a4899d59cf30c24be65efc226cece0cf837ace9c3ff9fe6e6503c",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-15-failing-checksum-check/request.md",
+      "bytes": 136,
+      "sha256": "834c18c063b94a1d06f1f849c3d8beb6ac54e5950b4900305380198a02b1b584",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-16-failing-template-check/case.json",
+      "bytes": 389,
+      "sha256": "d9dd2f84249d5da2bbfb795c51169f9343c1829041a637831eac5e7b81295f0f",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-16-failing-template-check/expected.md",
+      "bytes": 40,
+      "sha256": "f4cf26990212ce212a02208ca28e8ab111d9fd17f139806f4909254d09ec856d",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-16-failing-template-check/fixture/check.js",
+      "bytes": 262,
+      "sha256": "8a5e892a37a6164f11e6aaab3004fe66e02ee1dcfdfa543f1fa71992a8b949d1",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-16-failing-template-check/fixture/src/template.js",
+      "bytes": 189,
+      "sha256": "e79c9cbef7f94bf251822ecc170f9faa87f1f23d8d3bd03a7f235b4733cf2c64",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-control-16-failing-template-check/request.md",
+      "bytes": 188,
+      "sha256": "87f30c99b72243349f31fa123ae211cd00d0ac522d172dda8e58c09055145f27",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-partial-01-topology-and-limit/case.json",
+      "bytes": 462,
+      "sha256": "c40958d8461366a09a50e8a2bd6b36aeff2b0b2ab818a6741d90fbf6013deedd",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-partial-01-topology-and-limit/expected.md",
+      "bytes": 85,
+      "sha256": "8f9b4a6e351dc6677549860caf01bb7faa78d5b5d8342d790f07b969d3ac039d",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-partial-01-topology-and-limit/fixture/spec/rate-limits.txt",
+      "bytes": 5410,
+      "sha256": "b1ad47132b0cc5abb0a45a321f46c4b94fe257c2cfc6b31b641d80d62d6d3873",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-partial-01-topology-and-limit/fixture/spec/topology.txt",
+      "bytes": 1515,
+      "sha256": "091a56de337d491b6403117e0b62a3a1ce9d48df0b7aaa9c5aab6351ed904650",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-partial-01-topology-and-limit/fixture/src/ingest-rate.js",
+      "bytes": 96,
+      "sha256": "ddda7f9bbf5b77c12bf08701682fca451239680cecd294b640fc99b06a20fd61",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-partial-01-topology-and-limit/request.md",
+      "bytes": 196,
+      "sha256": "df358120af2b578e7b2d6ccdda006b2f628ff1a5b7c223875ab3b5b5e7ed8d96",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-partial-02-index-and-ceiling/case.json",
+      "bytes": 455,
+      "sha256": "99ed028ceb8e2857b517384ab964a3a8182bfdcd4cb11c1cceeec7791074dae0",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-partial-02-index-and-ceiling/expected.md",
+      "bytes": 79,
+      "sha256": "9982a5229f2696dc4cdef9ca3c88d429c6f664e53e63699860c5a5fe649e5b93",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-partial-02-index-and-ceiling/fixture/spec/index.txt",
+      "bytes": 1503,
+      "sha256": "130ca581c9bdb7c332105721137dcae54c60f7f6ceabf5f706d7cfc51ac3220e",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-partial-02-index-and-ceiling/fixture/spec/queue-limits.txt",
+      "bytes": 5417,
+      "sha256": "5b0a3f8ed97f9d28a0448835c8b4372a111a3feb33041313529848c16e3738b5",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-partial-02-index-and-ceiling/fixture/src/queue.js",
+      "bytes": 91,
+      "sha256": "c1b4f8cdfe4f951886f61d89ee5381097c00b5caf99905e3177da99c22543a95",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-partial-02-index-and-ceiling/request.md",
+      "bytes": 191,
+      "sha256": "7951b68b4d609b805ace7405f7b1c046a9fc88161f2bfb68558eabb2eb42a040",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-partial-03-overview-and-ttl/case.json",
+      "bytes": 456,
+      "sha256": "f58ad6a9fd78f9bc3240eafb30ada31d0cd2008645dd50110f0370818806ed86",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-partial-03-overview-and-ttl/expected.md",
+      "bytes": 82,
+      "sha256": "45adbbcc3c136dec328fbe780addb002d3cf8c20913fadaf6d75a85a2de6fbd1",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-partial-03-overview-and-ttl/fixture/spec/object-limits.txt",
+      "bytes": 5418,
+      "sha256": "64f9e9e2191684d420f075f1e9c3a8a885f724492c8d5e0a290e9f8b88cd9af5",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-partial-03-overview-and-ttl/fixture/spec/overview.txt",
+      "bytes": 1512,
+      "sha256": "3e9e09b2167f826c41185e4cb60719640d37eb3a2afebdf6ced16134753e24e4",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-partial-03-overview-and-ttl/fixture/src/object.js",
+      "bytes": 95,
+      "sha256": "e51cd22cca759b8be360e47f8b5f89f6b5d34f19ee67d6fe9f3bd6a6fc5ac7c9",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-partial-03-overview-and-ttl/request.md",
+      "bytes": 168,
+      "sha256": "d260998529f10f8bd0ea45eb25b53dd7147e99790533e6a1ebad6b3373d85bdf",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-partial-04-roadmap-and-batch/case.json",
+      "bytes": 452,
+      "sha256": "bfde90611ceca6a74951818a9e7719c35acf584c6581973653974bc15b2f9e3e",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-partial-04-roadmap-and-batch/expected.md",
+      "bytes": 78,
+      "sha256": "d8754945e3dde7c69f294fed6f13409310b2d60e158ae46a0a70f26bdb24a797",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-partial-04-roadmap-and-batch/fixture/spec/mailer-limits.txt",
+      "bytes": 5420,
+      "sha256": "d743f475a8c5a2ded20effb45db3d3a1ca1dea7a2f2c7c302c23ecf16a8e84d2",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-partial-04-roadmap-and-batch/fixture/spec/roadmap.txt",
+      "bytes": 1514,
+      "sha256": "d3b26951c12a2dda0d364c319a813a801a93687c51027547ac188d542ecdc728",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-partial-04-roadmap-and-batch/fixture/src/mailer.js",
+      "bytes": 81,
+      "sha256": "60d22271b85ea4c557fbfb605811751c5d36998a9c468f5e56835276aba268e6",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-partial-04-roadmap-and-batch/request.md",
+      "bytes": 167,
+      "sha256": "5f30abcbd5ddcc81a4714f149641beecb89cb458f6d8ea75dfb9333b8ec1a427",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-partial-05-dependency-and-pool/case.json",
+      "bytes": 448,
+      "sha256": "c50c1ace711c34e9a7454bceeacad83a8c3fc9f790ced01847ec9bab680599c4",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-partial-05-dependency-and-pool/expected.md",
+      "bytes": 71,
+      "sha256": "3e6291fb84d88dfde13223993afc243d1136373c377ea94bc6ca398ab8faf40d",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-partial-05-dependency-and-pool/fixture/spec/db-limits.txt",
+      "bytes": 5412,
+      "sha256": "050580627654bb58767cc76054e37a1567c6f93fc99b2e6555319c08109293d7",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-partial-05-dependency-and-pool/fixture/spec/dependencies.txt",
+      "bytes": 1504,
+      "sha256": "63c6c6aa8fc2ca822835fc3b4a6cd41249492c2a77a037b078d3d2efe5890339",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-partial-05-dependency-and-pool/fixture/src/db.js",
+      "bytes": 85,
+      "sha256": "790fd5b84029d43e9f2639b929bb6ab2be9599145167e41dea0a48cb55b4fabc",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-partial-05-dependency-and-pool/request.md",
+      "bytes": 173,
+      "sha256": "70b3d1388a2e8d185aea43933dc07ff970454914e3e9f8e2f26d35ae16ed52e0",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-partial-06-operations-and-timeout/case.json",
+      "bytes": 469,
+      "sha256": "f79afb6ea02f5ece542a143a2f4d49f97f918a7eff939adfeabc447a76102bbc",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-partial-06-operations-and-timeout/expected.md",
+      "bytes": 95,
+      "sha256": "cc9b91bf012f7a2788be15233939ac573585a3daf829ae5e0fbc4bd3e5ffc6cc",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-partial-06-operations-and-timeout/fixture/spec/gateway-limits.txt",
+      "bytes": 5423,
+      "sha256": "4838152beff592f156e7c5a15ff052d990b2144a021e374d9a1a3747c4a1b655",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-partial-06-operations-and-timeout/fixture/spec/operations.txt",
+      "bytes": 1516,
+      "sha256": "6ce4458da8d9d55d8e8935a0b75fde49c6e5a878fc9b9dbe65db2a07397aeeda",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-partial-06-operations-and-timeout/fixture/src/gateway-timeout.js",
+      "bytes": 106,
+      "sha256": "31ba71b37bd02cd044b35c4e8b8bf571c043fb5b8a5857f42651d3850c3c30a1",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-partial-06-operations-and-timeout/request.md",
+      "bytes": 183,
+      "sha256": "cefe17ca47ce34a54c1fd7dc428b8d9c883a7f48d9a5ab3f39d9af5cf58d87aa",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-01-ingest-limit/case.json",
+      "bytes": 436,
+      "sha256": "85c23676a56da096e06d4d2f479dd29640db091ab671ad9101edac3ab4ef9478",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-01-ingest-limit/expected.md",
+      "bytes": 96,
+      "sha256": "55ef3b769ba0ef6a9162616e644c8f1aa2125ea2b7273810330bc49cf20f530a",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-01-ingest-limit/fixture/spec/ingest-policy.txt",
+      "bytes": 18145,
+      "sha256": "e1b1db54e4a56b5a0fd22cfe39e783633629a542a0a945564b281ff25a3384d5",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-01-ingest-limit/fixture/src/ingest-limit.js",
+      "bytes": 103,
+      "sha256": "6c0ff26f24fe562646fd9bb48957517cf8aa968f927edc66ac92f8872460c820",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-01-ingest-limit/request.md",
+      "bytes": 172,
+      "sha256": "1dfd37d3853b154b833be2917284aa300f0e96d96e1f2a98bde5cddbf464ca14",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-02-routing-column/case.json",
+      "bytes": 427,
+      "sha256": "2934e289492203169021b3dd4fe6b844117a757912f1ce0f0d6c8e1f4baa06af",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-02-routing-column/expected.md",
+      "bytes": 118,
+      "sha256": "efd49d432f761b5cd49d52e57bb4f42dbeab55a88c98ca0a26ae1fd6f7a2ec7f",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-02-routing-column/fixture/spec/routing-table.csv",
+      "bytes": 19861,
+      "sha256": "ef2823dc23b632b9c66f06ee4178ff45b4c664eec85a418d97d278e20f3797e7",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-02-routing-column/fixture/src/routing.js",
+      "bytes": 103,
+      "sha256": "be182a6c3178599f76fb3ba228853d03824710324c87e9c3581218e072ce3625",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-02-routing-column/request.md",
+      "bytes": 146,
+      "sha256": "ee5ada33ea243b6d377377c17ac0dba07383b8bc3c29f7ea8b264d2363a57a82",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-03-retention-flag/case.json",
+      "bytes": 428,
+      "sha256": "ed9bec67c7374fa3167b9993157516661d28eeae24fb783f251d643e0a43e687",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-03-retention-flag/expected.md",
+      "bytes": 83,
+      "sha256": "481227a7802f75504ce268a58b99a045fb77a8078aaea782b4ae319d4133f6c3",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-03-retention-flag/fixture/spec/flags.json",
+      "bytes": 35392,
+      "sha256": "b1502888d27b22bc3aa3349ae0d70aa6c4d27f98e8dbf81350719a4e2e7dabdb",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-03-retention-flag/fixture/src/retention.js",
+      "bytes": 93,
+      "sha256": "3c135ab249153d5de469b16f18e56eab0ea6ac92704dc3877a80250d3fbbb60d",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-03-retention-flag/request.md",
+      "bytes": 178,
+      "sha256": "ec850640f2a3db8d1494b0fb383d626ae6cce723677b2e4d43153346155a47ce",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-04-checkpoint-interval/case.json",
+      "bytes": 440,
+      "sha256": "afd3594cc4d0962b3aedb65a694b1f25ca76e581b68b76717baf6b6a770746d4",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-04-checkpoint-interval/expected.md",
+      "bytes": 126,
+      "sha256": "0fd50e8f117315dace46d504e2f2c9c48aaebd459d5656aa1ad78a06d0cd3bfa",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-04-checkpoint-interval/fixture/spec/checkpoint-log.txt",
+      "bytes": 20757,
+      "sha256": "9e46739e149511b96e88bea1020df7baf08b5e2649f75f08501101bdb8d2d88e",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-04-checkpoint-interval/fixture/src/checkpoint.js",
+      "bytes": 131,
+      "sha256": "539cdbeb87d8157d979037ac8f72cca7e3416710f7ecc222174c9b3311d3dedd",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-04-checkpoint-interval/request.md",
+      "bytes": 165,
+      "sha256": "6c645a3accf71cb45a06539cd53ff976346635c0ff853e34fe9ce91fbcb9ea6e",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-05-burst-window/case.json",
+      "bytes": 429,
+      "sha256": "5ca69c7fb1f0b3d5d96e68fdee7fbfb152f01cc681071dbd62e22b1d6a0db49c",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-05-burst-window/expected.md",
+      "bytes": 105,
+      "sha256": "61508001c7e667ff7ba56123a2b266a66338e5725794abbc356b8e34b9d21ec1",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-05-burst-window/fixture/spec/burst-table.txt",
+      "bytes": 17960,
+      "sha256": "c705b963de7da09584d485b8f0c86c08c52b5ed8fda1ce6de5adaf01ad8de254",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-05-burst-window/fixture/src/burst.js",
+      "bytes": 110,
+      "sha256": "9b94dd0d5dedaffae5012b073cc970743e2fb5ae23b4ffe666d9b2081313c13d",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-05-burst-window/request.md",
+      "bytes": 149,
+      "sha256": "339bb8ce788a24f494474a7d22a02526938cb2bc1a7a97e8c9f45e114f1b523d",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-06-max-connections/case.json",
+      "bytes": 428,
+      "sha256": "d002a1151f7767de7ceebe64c109effec05af131b9d1b472d54a909eeabd7bb9",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-06-max-connections/expected.md",
+      "bytes": 91,
+      "sha256": "2079e8f876f7fd4e648269e54ba8847d2c7e4d9405aaec6f9659d26b1f4f19d7",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-06-max-connections/fixture/spec/gateway-policy.txt",
+      "bytes": 18147,
+      "sha256": "9a4516b495dbb47d12926ec4d60c240927cd098777e643e011a5433e3923fc90",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-06-max-connections/fixture/src/gateway.js",
+      "bytes": 97,
+      "sha256": "6059ede66f042011e0d3bfa9fa864b41ff05302ebfbcd46815fcbde354115dc8",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-06-max-connections/request.md",
+      "bytes": 139,
+      "sha256": "91188f35f1c321e2f5d7a0cc08e622b981fa62b25cac57c66ab7e7a0ce325f43",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-07-partition-count/case.json",
+      "bytes": 429,
+      "sha256": "4be33180fafefc7af30bbde2c3e263464903f3d0fe483e3feae5ad660f59ba32",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-07-partition-count/expected.md",
+      "bytes": 120,
+      "sha256": "68b7d4de2352817f4642f4d91a650d451e0ccb209035879d245c2e101fa61016",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-07-partition-count/fixture/spec/topic-partitions.csv",
+      "bytes": 19865,
+      "sha256": "4e1a0d3d2fe5afb559692e464a829089442fb2a4e8edadc8a63731ceca17fd5b",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-07-partition-count/fixture/src/partitions.js",
+      "bytes": 95,
+      "sha256": "031248d18ed9d7ca451f6dcdd5ce672c59d1ca393996f3d048e533bf3b521635",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-07-partition-count/request.md",
+      "bytes": 164,
+      "sha256": "95fe38b73d02851f8b80086369c0bc860dd43361d837e611fbf7b0b80afafb20",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-08-audit-window/case.json",
+      "bytes": 427,
+      "sha256": "d56f89731ed03ea52a5ff30c9fe2618cbd6e5412ce61ff0d62d455f712440ee9",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-08-audit-window/expected.md",
+      "bytes": 87,
+      "sha256": "bdc430d3d2581d19dfd52676b0c4beb1ad980b8f832a23dfcef4ade5087e7387",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-08-audit-window/fixture/spec/audit-config.json",
+      "bytes": 35371,
+      "sha256": "5fb0eea20749ad61d4480c8ce247d0ee8d16f2e0988732877403034832beb70d",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-08-audit-window/fixture/src/audit.js",
+      "bytes": 104,
+      "sha256": "f02d478a3a8f28fa85de9fd7a3534a80bac0a8bcf5e8f6d2dd4dd487c3f478c6",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-08-audit-window/request.md",
+      "bytes": 141,
+      "sha256": "a69b1f778442e5cef694e9852c872099426ea73ca85526bd15fc1d0a4c69610a",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-09-flush-threshold/case.json",
+      "bytes": 433,
+      "sha256": "5e2b5634a811aff409df2a027337b234d640875221470183c54c2911634b0a0c",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-09-flush-threshold/expected.md",
+      "bytes": 108,
+      "sha256": "2ea13154ddff05e97582e89edfb0dbe0f44c2b8b3121e9f7bb984b13a707788f",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-09-flush-threshold/fixture/spec/flush-log.txt",
+      "bytes": 20755,
+      "sha256": "aa92d1bd52076fceaf0963fa9153ba713d5cdef9e4424701c6c1be8c350a2052",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-09-flush-threshold/fixture/src/flush.js",
+      "bytes": 120,
+      "sha256": "94a025ae1aee77edf5e0cb934a8d42696c532bfb7b413dc40286825139a02d2c",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-09-flush-threshold/request.md",
+      "bytes": 166,
+      "sha256": "599c264457e785446c96d9e05c36cbd470935e42a560d828f46c01f11bd68efd",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-10-pool-size/case.json",
+      "bytes": 418,
+      "sha256": "e80372bf75429ebd66c9578a9b73e389a687a126623c91950529753756bb73d4",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-10-pool-size/expected.md",
+      "bytes": 86,
+      "sha256": "fb0227aff532d29a4ee9089aa5489eb0dc52187c3d862f94c8b7d2670ff77dbc",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-10-pool-size/fixture/spec/pool-table.txt",
+      "bytes": 17965,
+      "sha256": "14cb9fe9d52ec02b033635b87c2951ad5676693184299cac80cc7b9b55661929",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-10-pool-size/fixture/src/pool.js",
+      "bytes": 77,
+      "sha256": "7207267570dfe03d1c6a0e2d05dccec5cec49286fb5716d2e2cdd49ff4044f60",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-10-pool-size/request.md",
+      "bytes": 163,
+      "sha256": "91b1352f24ecc0d48b1536876a237394b0743396e878ff5318addfef8ea09cef",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-11-snapshot-interval/case.json",
+      "bytes": 436,
+      "sha256": "b1f8f8f57a68d2e14929dabb71a05c5656ddddea9a1cc063a85f8a6d01db6d12",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-11-snapshot-interval/expected.md",
+      "bytes": 112,
+      "sha256": "4de3561a4e961513b383be3f99899d9b4b41112753d40d95aaf538af37546903",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-11-snapshot-interval/fixture/spec/snapshot-policy.txt",
+      "bytes": 18152,
+      "sha256": "c2e2a1ca30c34d740c1394fadc6f326c1f9a561c4247aae8796fc6df021779c1",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-11-snapshot-interval/fixture/src/snapshot.js",
+      "bytes": 125,
+      "sha256": "f14940405d29cb52e5d3b0e3d329e749bf5836400ccf42bb9c549d1f8466b929",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-11-snapshot-interval/request.md",
+      "bytes": 137,
+      "sha256": "7f1862d4a7da575126d0214d36b2c18d7edcc3d3a7d6300e4bcac4630835b222",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-12-tenant-quota/case.json",
+      "bytes": 432,
+      "sha256": "d4e0adbe482604744992c8fac00256c1a404e89473d52f9b97833221a19a7c16",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-12-tenant-quota/expected.md",
+      "bytes": 104,
+      "sha256": "5e6dbbdab7b13eb996576e2643624a534c9dd5220a46ee05d8eeaa0d32705ffd",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-12-tenant-quota/fixture/spec/tenant-quota.csv",
+      "bytes": 19867,
+      "sha256": "7cb83b0e9f0ecb6c7c32404d761d4fc7be9dd9f46a2c5171629cb7a334debd15",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-12-tenant-quota/fixture/src/tenant.js",
+      "bytes": 112,
+      "sha256": "836a5b292e5336fe14a48608d65871a366d236906725e98ad70fdfc6eedd6b3e",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-preview-12-tenant-quota/request.md",
+      "bytes": 148,
+      "sha256": "1dd48ada9b7bb57d053e48e14bb8b9934cca4df40bb22725153e44aa5d9bd9de",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-01-fence-tokens/case.json",
+      "bytes": 619,
+      "sha256": "5dcf948672a43a28ec10c66fe1939d86e73a99f48398d69993e2c2dcd812fb5d",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-01-fence-tokens/expected.md",
+      "bytes": 110,
+      "sha256": "37fb832866a918f0cd8a334ffb3c79cf728080c007dc273f1b5653c5431a291b",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-01-fence-tokens/fixture/spec/lease-notes.txt",
+      "bytes": 1478,
+      "sha256": "7b9b75405570af55791829a7a493313a6aa343f5bd311fce971e52a6618dedf6",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-01-fence-tokens/fixture/spec/lease-policy.txt",
+      "bytes": 5409,
+      "sha256": "754f44d26aeec071ce10f758fca1c3795173193967ec8ec6fbe9a7e057ef4070",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-01-fence-tokens/fixture/src/lease.js",
+      "bytes": 86,
+      "sha256": "4b3fc3309f9919f868b8da5b2f866424f4c9c1081cc9dea0c7d42ef97714cfb6",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-01-fence-tokens/request.md",
+      "bytes": 203,
+      "sha256": "ca3462922fb16db52197411bae353eddcc09ea6d3265dddf926594627e640a4b",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-02-batch-window/case.json",
+      "bytes": 626,
+      "sha256": "6db77adb570a3ac38d5595bb448ae5deacc3819ca0b6341d16777497c423bba4",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-02-batch-window/expected.md",
+      "bytes": 106,
+      "sha256": "1fb049dfeb49db2216dd2f9c1a29ec369b5c4ab838153b2a56455cb6b6faae57",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-02-batch-window/fixture/spec/batch-notes.txt",
+      "bytes": 1490,
+      "sha256": "e2dd9215c2b2875a5129dfbea31baf9eb526c91916537dd08beffe619cda07bc",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-02-batch-window/fixture/spec/batch-policy.txt",
+      "bytes": 5429,
+      "sha256": "79e78010e665c7ec7f630da10ba30693cb88d668b9c42d2a1954fe378cff061e",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-02-batch-window/fixture/src/batch.js",
+      "bytes": 110,
+      "sha256": "a24344926bae887e12c98bb26f6813f35bd30c7f11b1e6d710cf9ffe80f0f416",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-02-batch-window/request.md",
+      "bytes": 193,
+      "sha256": "e9337b941f3673ba5b1e6116c2e2efeb21591c5c022f6a47f2584d19e88f6764",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-03-handoff-bytes/case.json",
+      "bytes": 614,
+      "sha256": "ae36e0664ec912c1d08c6f22e403b6099077bce6567095daa26fba5121b7d72a",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-03-handoff-bytes/expected.md",
+      "bytes": 95,
+      "sha256": "9bcc731cba817e0f3c2c1f50539b4394e68396de90f654e8c71e5f9888740535",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-03-handoff-bytes/fixture/spec/handoff-notes.txt",
+      "bytes": 1473,
+      "sha256": "7eb23f13f05911ee4d79d3c9c14811c251718c0418b2f0e2131f4ddd6957abfb",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-03-handoff-bytes/fixture/spec/handoff-policy.txt",
+      "bytes": 5417,
+      "sha256": "1c56cb46db270cd51578b51af3e34873c6a543952bb38fb01ce688e943533a2a",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-03-handoff-bytes/fixture/src/handoff.js",
+      "bytes": 92,
+      "sha256": "a623dc64ed7fdb73567bfd6b539b3206384ed88438074cca5519f556eda84bb5",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-03-handoff-bytes/request.md",
+      "bytes": 190,
+      "sha256": "cb12579df3fccc65bb11a8a14fb2043f7408d6596db8fd04d9da23ddfd72f5c8",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-04-drain-timeout/case.json",
+      "bytes": 620,
+      "sha256": "fc0581f9091972a3feccd7430f697fe889e6abb1d8cfdcec9e3feef268ff2cad",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-04-drain-timeout/expected.md",
+      "bytes": 103,
+      "sha256": "71b351bb91a87b98ebcc7eb19af46c89fc9ff0da7e2a1d705417fffebe2446c5",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-04-drain-timeout/fixture/spec/drain-notes.txt",
+      "bytes": 1482,
+      "sha256": "c76c4dc0f96e08930bbd7853367290f55f52cfc36b0307439c797bdd40bd8612",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-04-drain-timeout/fixture/spec/drain-policy.txt",
+      "bytes": 5425,
+      "sha256": "bcf3f5944c3c8e08065e71dafc25384443ba0cd8eae9eb7e42bab2f792cc8f3c",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-04-drain-timeout/fixture/src/drain.js",
+      "bytes": 113,
+      "sha256": "986921ff7d8ee5fcbb02e3934e4ccf9978a0a068908329eb659a2110b51f94ee",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-04-drain-timeout/request.md",
+      "bytes": 176,
+      "sha256": "5c880547bb21af06fd7cff153f7555b7964e55e74798dc98a6efb5c1452f82eb",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-05-shard-keys/case.json",
+      "bytes": 619,
+      "sha256": "3940240b1f12666124c2b5110ea4fec6b020eaf8782f3281c7a2c1e8b704ce08",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-05-shard-keys/expected.md",
+      "bytes": 99,
+      "sha256": "6411e475f1fa17025b6d38d2254b92e3939e674cabacedd35742e48d65233b5d",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-05-shard-keys/fixture/spec/shard-notes.txt",
+      "bytes": 1483,
+      "sha256": "4af1d7b1178776f777b3b1ade306def2cfa6084c9769741bd3bf46e1c957c7af",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-05-shard-keys/fixture/spec/shard-policy.txt",
+      "bytes": 5407,
+      "sha256": "73174c56a8b10c340aad2389ef12f1452ca912a8d9388488d8879fb84fe4145a",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-05-shard-keys/fixture/src/shard.js",
+      "bytes": 82,
+      "sha256": "dd50a19ca654b79be093de6a3d640fffa534a69d7debcc343b4cfcb8cc5e75b3",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-05-shard-keys/request.md",
+      "bytes": 186,
+      "sha256": "de3f54a6e54a7ede386c6259339a9bb7b3fdd3df4c44d161c607ce82efb3aaaf",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-06-token-budget/case.json",
+      "bytes": 617,
+      "sha256": "b1308159432d76a10082cd2b6e681fd1994063ab5e8f9175d95b3fd8581a3ce4",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-06-token-budget/expected.md",
+      "bytes": 96,
+      "sha256": "c2e0e82cd14f95139355d70aa4032067b9aa42530aea34210e1ba157174337ea",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-06-token-budget/fixture/spec/budget-notes.txt",
+      "bytes": 1485,
+      "sha256": "d2086fc95b4bd50d010ad1f11d211ec1027c36f3309c390f5262a617fc1064b7",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-06-token-budget/fixture/spec/budget-policy.txt",
+      "bytes": 5417,
+      "sha256": "52d89a7edb84749edf8cbe29149fdb265dc41fa4496e907d554a88ff50a0d167",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-06-token-budget/fixture/src/budget.js",
+      "bytes": 90,
+      "sha256": "eb67b3c65b72b92594f69ac9e12dc990b566194817a098819d2400f8067563fe",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-06-token-budget/request.md",
+      "bytes": 178,
+      "sha256": "df01c817daf0bc905388e35c6bb1be96ab5803a737244295927c71d08b6cb8e0",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-07-quantile/case.json",
+      "bytes": 618,
+      "sha256": "c5546af8728c79673075f75ce6be04987258135bbf9a0e89da9e9c2a192df497",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-07-quantile/expected.md",
+      "bytes": 98,
+      "sha256": "bb226fd27edd3b14099d4223db69d46efa4a59efc5c85321235f953814282970",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-07-quantile/fixture/spec/quantile-notes.txt",
+      "bytes": 1484,
+      "sha256": "62444c6b920ad396faaf681bf57265c113466c058298736cf03bd8691734c62f",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-07-quantile/fixture/spec/quantile-policy.txt",
+      "bytes": 5428,
+      "sha256": "287eec52f4e37ae9dc3c6f7f27e1cf4410cceefa97473adbf61ca2125048d485",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-07-quantile/fixture/src/quantile.js",
+      "bytes": 86,
+      "sha256": "5d559959708ee2fa06faff5731568ca35229a4c5b3f489d59ea25071ead7002b",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-07-quantile/request.md",
+      "bytes": 202,
+      "sha256": "da5625298189a39d2e4120714d9b0c09feb2c44cce751232387514a34f2a6fef",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-08-throttle-burst/case.json",
+      "bytes": 623,
+      "sha256": "c94233abd0e8968cd1b753b20af1a6083d3d274d381954c3b4c9c109182bdb88",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-08-throttle-burst/expected.md",
+      "bytes": 106,
+      "sha256": "6cfeffe72468a2c8cba22fdb5d8615f4416a39067d4f59af7501412f9b68b847",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-08-throttle-burst/fixture/spec/throttle-notes.txt",
+      "bytes": 1493,
+      "sha256": "bdfb2d3ff7c6fec8f2f4078a054b0d777ec9edc3937dc70b2d4ab65a06fabed1",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-08-throttle-burst/fixture/spec/throttle-policy.txt",
+      "bytes": 5424,
+      "sha256": "96a93a8e13edb4962b560b8e3588c95d19bf803ca0f23c19c5bfa71e85e56ef8",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-08-throttle-burst/fixture/src/throttle.js",
+      "bytes": 93,
+      "sha256": "8648ebf66d9c0d2c39b321d31c456961b1b3d43d295e8e9da4ffeca9d3feb38a",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-08-throttle-burst/request.md",
+      "bytes": 191,
+      "sha256": "0c04af9ae6736f46fd555e8c1e1b06a2b533259da64215f123aeb2eca525699e",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-09-scrub-interval/case.json",
+      "bytes": 620,
+      "sha256": "ed5fc994aa92b7699e393f63e87e467bcca5e2937682d4f154a9fdf4ddc27bc7",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-09-scrub-interval/expected.md",
+      "bytes": 102,
+      "sha256": "a4f7be7d7c995c9c6ff1fd38d3fd3e23d27b499eaa607ec523b9df90c50d1e39",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-09-scrub-interval/fixture/spec/scrub-notes.txt",
+      "bytes": 1474,
+      "sha256": "cf6bd6661ddf2c547dfe78821ffb72abea9920c6a6caa1d0a157d5b606032a63",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-09-scrub-interval/fixture/spec/scrub-policy.txt",
+      "bytes": 5423,
+      "sha256": "f22131d4fbb8abe5de7bd223847249611b8ab47c3736ba9b8e7e1763debb2e36",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-09-scrub-interval/fixture/src/scrub.js",
+      "bytes": 110,
+      "sha256": "54e049c21c6eb6d172a255178ef36b4250246da07eb7fc6a70736a2a675d407b",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-09-scrub-interval/request.md",
+      "bytes": 193,
+      "sha256": "78eb8a126fb9df7715e2fb4e312cb3f4de0071944ef7cd6923fd6e561e073fe7",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-10-commit-delay/case.json",
+      "bytes": 617,
+      "sha256": "078c4411c0cf3939522c7eb14a96e57b65ccd888becc5b0fce80af0219d281d0",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-10-commit-delay/expected.md",
+      "bytes": 100,
+      "sha256": "91e4e4a511f67f6fbfba03987c71e26449547d766b497f30daed2d5bee6ac788",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-10-commit-delay/fixture/spec/commit-notes.txt",
+      "bytes": 1471,
+      "sha256": "11e4e764021b97d7c6d29deff83ae52f92df47088a9e939f3568a9bfeb59de26",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-10-commit-delay/fixture/spec/commit-policy.txt",
+      "bytes": 5424,
+      "sha256": "e6be0eb77bdde6666e6493aac0e0b134a4f396d6e8d054dc484b27efedfd90c2",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-10-commit-delay/fixture/src/commit.js",
+      "bytes": 95,
+      "sha256": "689c2b1c275a05898b3860bd908e9a48c3ea40686871909adbfdbc8b748feecc",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-evidence/n7e-rehydrate-10-commit-delay/request.md",
+      "bytes": 179,
+      "sha256": "328cc0fe4b95ccff90f933271a9043c7a93126be158d352c11a02bc5a6b62a31",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-01-sample-volume/case.json",
+      "bytes": 474,
+      "sha256": "2b84674013ad959c6399429ca7d7ecf8c0f1ace3fe8db426b43ccd171afc340a",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-01-sample-volume/expected.md",
+      "bytes": 94,
+      "sha256": "28fc6341bbd4c1cc9d0af1fc91f2063512109293d9bf7fb626b201b411f1e9ef",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-01-sample-volume/fixture/lib/sample.js",
+      "bytes": 98,
+      "sha256": "c34cd37ccf569e9bf2e4cfe207d15b9791901808d3f69fd5161465fe187a5c51",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-01-sample-volume/fixture/spec/lab/sample-notes.txt",
+      "bytes": 1492,
+      "sha256": "4c991ff5dfae476602b4b03f634cbd023076318005b3c0ca72858bb03e92ace4",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-01-sample-volume/fixture/spec/lab/sample-policy.txt",
+      "bytes": 5423,
+      "sha256": "03d0e588fb900b4b3e6dbb25b24e9edf69283bc8d35edf4e555fc9f30f885801",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-01-sample-volume/request.md",
+      "bytes": 174,
+      "sha256": "9862c9d80fb038ac65a528688d46e68f8b61898f549e51328d507c5343ee367e",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-02-incubation-minutes/case.json",
+      "bytes": 478,
+      "sha256": "518ed4867066bddb39bdf2be567df1d377de0ee238ab458d0337c3912359a3d0",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-02-incubation-minutes/expected.md",
+      "bytes": 105,
+      "sha256": "e178d5d15d2a8f111676bbefef71046476c9bd8996d402d1bd1b88b50626d9da",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-02-incubation-minutes/fixture/lib/incubate.js",
+      "bytes": 105,
+      "sha256": "193bf8e620e7aba11c1b6cf3e2b3451b04e4b0f35c3431d2aa6d16abd0c9284e",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-02-incubation-minutes/fixture/spec/lab/incubation-notes.txt",
+      "bytes": 1494,
+      "sha256": "7dcff528472d5b125be95c46a7236a2c98ffb445feab16bf362eec9abdfb3814",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-02-incubation-minutes/fixture/spec/lab/incubation-policy.txt",
+      "bytes": 5427,
+      "sha256": "76dfdc530b70d6e397f66eaf3dde823ffe4da1ec8491783c43df1c117d32cd24",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-02-incubation-minutes/request.md",
+      "bytes": 162,
+      "sha256": "2ee303c121d6d93ccce83629d412c175ed7634a398d55341fb8be113303f54fb",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-03-dilution-factor/case.json",
+      "bytes": 474,
+      "sha256": "308841ad352a600f0d01bc89347cc77637357ab5874c6f85467c5f020ef8f86f",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-03-dilution-factor/expected.md",
+      "bytes": 97,
+      "sha256": "05322fd38f27ee86ec7d56db42c3beec331887f563ae0d5172cf0ba3621ab5a8",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-03-dilution-factor/fixture/lib/dilution.js",
+      "bytes": 95,
+      "sha256": "930f6fc09e4d762b4fbb646750d2f77beca7cf7d42427c3be08ae5cc504ab8fb",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-03-dilution-factor/fixture/spec/lab/dilution-notes.txt",
+      "bytes": 1487,
+      "sha256": "03844c4b4b33ea6d1a7c679e2db411505758457541dd0a52dcd6c240f817e2df",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-03-dilution-factor/fixture/spec/lab/dilution-policy.txt",
+      "bytes": 5429,
+      "sha256": "08f4bce415c9481fe377726dd29d4e68f4977242e0b78f5e7e531767a83db300",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-03-dilution-factor/request.md",
+      "bytes": 149,
+      "sha256": "400da8153ae7092c6c65888317443baeff00b18165575c804a6b17585117d5dd",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-04-centrifuge-rpm/case.json",
+      "bytes": 478,
+      "sha256": "517dbec37443bcb9b5a7e1042f9df5ef1ca118f1f97a64178f3f2c4deaa444eb",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-04-centrifuge-rpm/expected.md",
+      "bytes": 99,
+      "sha256": "fc460cbd4e9a14abf95ebedf93e7c56be4a710de19df1aa954be10a9556a1016",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-04-centrifuge-rpm/fixture/lib/centrifuge.js",
+      "bytes": 95,
+      "sha256": "bd8502859f63085d3cfe2bface579ad8ff8c30cc0a1d7c67c1b5a1662308edc3",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-04-centrifuge-rpm/fixture/spec/lab/centrifuge-notes.txt",
+      "bytes": 1494,
+      "sha256": "cec39e93599f67a64210b3a60faff67b7aa543ef3c9d627ce58304624fe3d0d9",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-04-centrifuge-rpm/fixture/spec/lab/centrifuge-policy.txt",
+      "bytes": 5419,
+      "sha256": "08cf957e8bfc8982102f10d8f6e918476a93d7ca404cbf7300ac875f9116a0d3",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-04-centrifuge-rpm/request.md",
+      "bytes": 149,
+      "sha256": "22545e07e3126af3aa85d5bd6a2649e45efcd58515737b0e4949e9ca7f4f6cd5",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-05-pallet-max-cases/case.json",
+      "bytes": 473,
+      "sha256": "32a3379503fc934465ebf18133abbf1fb121cf359d611948a0f33ab39e7e7a0c",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-05-pallet-max-cases/expected.md",
+      "bytes": 99,
+      "sha256": "05e07336bce20180ee858fc9aee083312fd7a4777da018c1e65292b445bdad2e",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-05-pallet-max-cases/fixture/lib/pallet.js",
+      "bytes": 98,
+      "sha256": "a93c2705dfdb98a4cfaf5d2a5a69d89832af97be40dee6fe843f40f7626a0bef",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-05-pallet-max-cases/fixture/spec/registry/pallet-notes.txt",
+      "bytes": 1478,
+      "sha256": "ca0e17798a228b60c07adeed0c93d75e783812c26d04a644f513f81270613ae0",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-05-pallet-max-cases/fixture/spec/registry/pallet-policy.txt",
+      "bytes": 5430,
+      "sha256": "5317f7fb93474ddded8278184260f185f50ecfc75cf0e1261efeafb50b12410b",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-05-pallet-max-cases/request.md",
+      "bytes": 147,
+      "sha256": "1aeb02e85f5e3520a6800391787865eadb5933827f065f35e8f9d3961b46f331",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-06-customs-window/case.json",
+      "bytes": 478,
+      "sha256": "8947df099cbf7f541617da703331bed2cd3c71b9aa03730a633b1e8ab450e852",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-06-customs-window/expected.md",
+      "bytes": 109,
+      "sha256": "c9e585df02603591f3cc7cf055180d65a18454db00a8033f76976aa83790dde9",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-06-customs-window/fixture/lib/customs.js",
+      "bytes": 109,
+      "sha256": "e892b3b30eee6829c0e0f042c843446fd2e5d01a098282cf255ef71f3883ba58",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-06-customs-window/fixture/spec/registry/customs-notes.txt",
+      "bytes": 1465,
+      "sha256": "ff7b365ad1fa44710ff1c267cc2bf23b352ec599219526526b010aec74f74337",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-06-customs-window/fixture/spec/registry/customs-policy.txt",
+      "bytes": 5427,
+      "sha256": "d1d248f9298daed16d2e9b9a9bc55dbda7175bafdb98936754b4322f08f9b405",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-06-customs-window/request.md",
+      "bytes": 158,
+      "sha256": "c62c2f00d288672f6a9b74213f60dbe8af947f40776de2b3c5414669f819fe0b",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-07-cold-chain-ttl/case.json",
+      "bytes": 482,
+      "sha256": "fa2f7c6520a802c1370ac3bee4c06a9e0a8453ce908d34c7a3ecc4d1a7c41b67",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-07-cold-chain-ttl/expected.md",
+      "bytes": 116,
+      "sha256": "bc9a3bf96b4fab5a8b987cd3a23ab93c86e970c2d78812c9ed43f3341de15e55",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-07-cold-chain-ttl/fixture/lib/coldchain.js",
+      "bytes": 116,
+      "sha256": "4964a5e832549e4c43828d464490878f6d935d5be68217ec2e8770917f2ab5a1",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-07-cold-chain-ttl/fixture/spec/registry/coldchain-notes.txt",
+      "bytes": 1493,
+      "sha256": "6e889ef78434422b03a58e9a1f8115f719c2f9cc792715ed87355f19e170e0bf",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-07-cold-chain-ttl/fixture/spec/registry/coldchain-policy.txt",
+      "bytes": 5437,
+      "sha256": "0269bc4a3bf3eb8d4aff27b43eb540c80e82c88aab79c721faee3463262e448a",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-07-cold-chain-ttl/request.md",
+      "bytes": 159,
+      "sha256": "87185bcd4c0871fd2e28486cf27e7f718978aeb2d12dff8d874665eaf850ceb5",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-08-max-route-legs/case.json",
+      "bytes": 469,
+      "sha256": "5a008b94cee673e46d93cfaf0a280f4a4041adb6deb33b64b9e6bd4fecd6686c",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-08-max-route-legs/expected.md",
+      "bytes": 93,
+      "sha256": "fdb4e5ab5ec87bf33d8a2c54df7e46c47aba9eb2a77ea519753ed4d2840a1717",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-08-max-route-legs/fixture/lib/route.js",
+      "bytes": 91,
+      "sha256": "02921713365ba3b03ba8438a28796b3f13b2026131dfec980e904d7270b946f1",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-08-max-route-legs/fixture/spec/registry/route-notes.txt",
+      "bytes": 1452,
+      "sha256": "9e570ffd384ca95d2aa17fe3759fa5f0e55e3a66826f4271c95335c93df1dd05",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-08-max-route-legs/fixture/spec/registry/route-policy.txt",
+      "bytes": 5416,
+      "sha256": "3e83c90463a1705636f2210af374d44ed5265949d48b1b86a39bf428cf09c9bb",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-compact-08-max-route-legs/request.md",
+      "bytes": 139,
+      "sha256": "cb857c8000db2abb098e2bd743861c166d18f172a4a3e9880044b56bc498d770",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-control-01-mean-divisor/case.json",
+      "bytes": 416,
+      "sha256": "0b10be70a0eb29775a3047a0ad73607976dca64cc8b49f3e86db848343bbe136",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-control-01-mean-divisor/expected.md",
+      "bytes": 80,
+      "sha256": "dbcf6d0863f2453e3bc8ca8f795367d5865d045be262f6471343e03e81683d97",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-control-01-mean-divisor/fixture/lib/mean.js",
+      "bytes": 148,
+      "sha256": "5f9ac70c7f7246647fff9615511a008fd6903f3f9e7650c5e7a6d3daba28253e",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-control-01-mean-divisor/request.md",
+      "bytes": 126,
+      "sha256": "5806e1057824239a76bc511b93b59bbec9b01b09c270fc85f95e2b157e9b5b9d",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-control-02-interleave-tail/case.json",
+      "bytes": 571,
+      "sha256": "e04be7689531b079e0498f00e9634ba28bef42a64d239e55ce0fe446bafa023a",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-control-02-interleave-tail/expected.md",
+      "bytes": 90,
+      "sha256": "9af6bc280547ba2e432380d9d54b8438144969732301c43ea2709344039a5655",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-control-02-interleave-tail/fixture/lib/interleave.js",
+      "bytes": 187,
+      "sha256": "24ec5ffc248c3a498cd32351801832e19ab7b82a437c0dc6a77bd78aeddb4d96",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-control-02-interleave-tail/request.md",
+      "bytes": 128,
+      "sha256": "1b94dbc5afb3e81d1259026de4b33edd8812f3eab7f7c6488558135e39b2f8c5",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-control-03-normalize-unit/case.json",
+      "bytes": 480,
+      "sha256": "f2ed60dee2f4f990a214f408c871d371b8e5497cd7e826a8dbd02da465806ac6",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-control-03-normalize-unit/expected.md",
+      "bytes": 73,
+      "sha256": "5421d0ae348b3fcf823eb25dc2e56652f1e9507db734468bc82287e5a13fc1e5",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-control-03-normalize-unit/fixture/lib/normalize.js",
+      "bytes": 112,
+      "sha256": "dbb6a40cbe6ed8697ebdb621c08cc543bbaf6d7ea61648a205469a990f027fac",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-control-03-normalize-unit/request.md",
+      "bytes": 136,
+      "sha256": "e6bb1230a69ae79fbe8a94946d8adc3334862e0e77511ed788a86e8a863c02bc",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-control-04-inclusive-range/case.json",
+      "bytes": 520,
+      "sha256": "c900950b92d5f90c00cd884b35bd769feb51e0e56413ffccb83128044318b91a",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-control-04-inclusive-range/expected.md",
+      "bytes": 70,
+      "sha256": "7e9eab779a282de785f8c74d15e142f17c5caf952f73aabd4eba348ef67a0372",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-control-04-inclusive-range/fixture/lib/range.js",
+      "bytes": 161,
+      "sha256": "46031639d311c92314edc30077ea22b51c79657b5ce96a112014980d9913ef61",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-control-04-inclusive-range/request.md",
+      "bytes": 137,
+      "sha256": "ef27a2db33064f8654dd92318bf7a76a3cb9bee03b3d9597211fd14d7c6b6f3a",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-control-05-changed-threshold/case.json",
+      "bytes": 431,
+      "sha256": "80191bb3895d1141345a53f6b95a609de2280a9072d51dbfd8f7012f293d273d",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-control-05-changed-threshold/expected.md",
+      "bytes": 90,
+      "sha256": "6f375cb1137478eb92594f5202bb997cd0fcbde0c19edd2bfcf51213c8ba2bd3",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-control-05-changed-threshold/fixture/config/threshold.json",
+      "bytes": 16,
+      "sha256": "3547b47b326f8552a1e61e8029411adf60422956386f6ab1f505445fc7be18ed",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-control-05-changed-threshold/fixture/lib/threshold.js",
+      "bytes": 93,
+      "sha256": "df9a1fc92095ac8bc623895be34984bdf9b6cfb3603d0805f01eaebd5142915d",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-control-05-changed-threshold/fixture/setup.js",
+      "bytes": 180,
+      "sha256": "37f46c9827ff27287a26c925686a2400aaafe1b2ec9b45c79a6a5ca8ba5d6ea9",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-control-05-changed-threshold/request.md",
+      "bytes": 154,
+      "sha256": "faaf50fe75911ccdb45743d7a7aa7b982fa62dd48cf38c217fe5a12aa5af9652",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-control-06-changed-shipment-count/case.json",
+      "bytes": 427,
+      "sha256": "929a32e85097cfe8e40905b7ef917b02f68a916bff84a973bd475bed96802875",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-control-06-changed-shipment-count/expected.md",
+      "bytes": 89,
+      "sha256": "77a079a60b1867653fa586c26f17b890e9a9b33e087da379dca636473031345b",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-control-06-changed-shipment-count/fixture/data/shipment.json",
+      "bytes": 12,
+      "sha256": "3108e15dfc911f1a730106ee1e44c941639e0b7add838d095680425e86d086c3",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-control-06-changed-shipment-count/fixture/lib/shipment.js",
+      "bytes": 91,
+      "sha256": "e7cdedf012ac87a21c9cd882b64da274eb893a6a2885aa85d5cc5d811aebd45d",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-control-06-changed-shipment-count/fixture/rotate.js",
+      "bytes": 161,
+      "sha256": "7c049104155ee6c9d67fa375c6f4e3323635b60a875975adc347704eb5354c5d",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-control-06-changed-shipment-count/request.md",
+      "bytes": 139,
+      "sha256": "f323231fad6537ae5d69b5725f0e38fd945bcf80703ebd621142c21da72535c9",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-control-07-failing-median-check/case.json",
+      "bytes": 401,
+      "sha256": "a70371faf72488454d9ce12752cdc8e1d278a31138f6168193bae2085cd98415",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-control-07-failing-median-check/expected.md",
+      "bytes": 40,
+      "sha256": "f4cf26990212ce212a02208ca28e8ab111d9fd17f139806f4909254d09ec856d",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-control-07-failing-median-check/fixture/check.js",
+      "bytes": 260,
+      "sha256": "5ecfb6436cb145a39b7b3d077c1b189f7c94c233757b4b9043dfc54d299ec2d4",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-control-07-failing-median-check/fixture/lib/median.js",
+      "bytes": 107,
+      "sha256": "42cf01b0abbda009a56f305a4734671310b30b84dd265f9940ac280193d510d5",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-control-07-failing-median-check/request.md",
+      "bytes": 133,
+      "sha256": "cb2027865bba62a49e0619a73f6c7358ad5b5613bc577c8f476c30a0c393f19b",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-control-08-failing-rotation-check/case.json",
+      "bytes": 401,
+      "sha256": "a70371faf72488454d9ce12752cdc8e1d278a31138f6168193bae2085cd98415",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-control-08-failing-rotation-check/expected.md",
+      "bytes": 40,
+      "sha256": "f4cf26990212ce212a02208ca28e8ab111d9fd17f139806f4909254d09ec856d",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-control-08-failing-rotation-check/fixture/check.js",
+      "bytes": 245,
+      "sha256": "87489ffcce0371b20b66498ed177bca0475a0a68ec35bc227a26586f9335f99c",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-control-08-failing-rotation-check/fixture/lib/rotate.js",
+      "bytes": 119,
+      "sha256": "1f2372ac02880f7e8900854ef9ddc026af97111e9f4159b07fabf15bea98e034",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-control-08-failing-rotation-check/request.md",
+      "bytes": 134,
+      "sha256": "dfa6abaf0cb2ebce4f8df9b23d46b8d8072f7c8639104e820393d744a4b94828",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-partial-01-overview-and-plasma/case.json",
+      "bytes": 469,
+      "sha256": "4aae8a63f7dba2b205c8eef7d3d356b6126dd60e151b40b50d260fd8c2395c8c",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-partial-01-overview-and-plasma/expected.md",
+      "bytes": 88,
+      "sha256": "d57a255f97f9244246be81832c71fb0e1bf8d23bde710e9597643a8c424b25f5",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-partial-01-overview-and-plasma/fixture/lib/plasma.js",
+      "bytes": 98,
+      "sha256": "bbbe5ddd561360eab0bf654c769e229ef77514c329069a7fd7fe68c474684db9",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-partial-01-overview-and-plasma/fixture/spec/lab/overview.txt",
+      "bytes": 1536,
+      "sha256": "1d158646655ba94857804a3c0523709b24cd4718c3976f4a431f1f99d505848c",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-partial-01-overview-and-plasma/fixture/spec/lab/plasma-limits.txt",
+      "bytes": 5417,
+      "sha256": "78ddfedb144d0a787782386fa28df3b39a4b65710993d76fa50b88d87cd195a1",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-partial-01-overview-and-plasma/request.md",
+      "bytes": 189,
+      "sha256": "f6804114ae466280eb5c5c189d3cc8644a7663cfb7c52df144dd6b50aa90160c",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-partial-02-index-and-container/case.json",
+      "bytes": 469,
+      "sha256": "2000f4197c291a4c6da2d5af7eba499a39431a0778c5a657fe3b916ddb4d9cea",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-partial-02-index-and-container/expected.md",
+      "bytes": 96,
+      "sha256": "3063ae9366116b109d99b8241ad3047a6e450197a73bab6b3ebcff20c2d8353c",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-partial-02-index-and-container/fixture/lib/container.js",
+      "bytes": 89,
+      "sha256": "7a65fe0efb40d66e590fcd671550659c567a8510a8bd3e667c4ca2e1f212c715",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-partial-02-index-and-container/fixture/spec/registry/container-limits.txt",
+      "bytes": 5426,
+      "sha256": "da513b2bd52fdb59553551bda4d714c1923050811bb016f07d85b740696e7424",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-partial-02-index-and-container/fixture/spec/registry/index.txt",
+      "bytes": 1516,
+      "sha256": "ddfb0c216e786b0d14cb2531a181e66a22447b2334046aac7c5888ca62f8d064",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-partial-02-index-and-container/request.md",
+      "bytes": 190,
+      "sha256": "7f92092534facdbd95f8118b9a02ce52b10a95e585d7c58942125ad6824f3936",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-preview-01-analyzer-value-column/case.json",
+      "bytes": 443,
+      "sha256": "ac109feb98f64acdd9059331bcea827f7b1a2d264283904e77b602a4f321c1e1",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-preview-01-analyzer-value-column/expected.md",
+      "bytes": 109,
+      "sha256": "48d3801be5bcf0957244aee1744703970718fbde567033f8a7beca43ed83453b",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-preview-01-analyzer-value-column/fixture/lab/analyzer-table.tsv",
+      "bytes": 19861,
+      "sha256": "d1a83a469218dacc4fbd59abb6d00ee0bb734ece3439ef63263571ed4179a6df",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-preview-01-analyzer-value-column/fixture/lib/analyzer.js",
+      "bytes": 112,
+      "sha256": "57e8e14210fcb637d053aadcf7858e13bddd9458e914c141069be3d6cea0b50b",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-preview-01-analyzer-value-column/request.md",
+      "bytes": 153,
+      "sha256": "1749333f17c151b2a3cf188c66fc72b2ff0bf0efba3300c4915d00b9421ab846",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-preview-02-calibration-offset/case.json",
+      "bytes": 445,
+      "sha256": "f951fd49de4f0414824ee598a3132c2426c05a2dc59db401e9055db71bd497ca",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-preview-02-calibration-offset/expected.md",
+      "bytes": 90,
+      "sha256": "e240a59181aa7b8f7276d6aced9566bbb54dc75a22a397ff812e7610f19a142f",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-preview-02-calibration-offset/fixture/lab/calibration.json",
+      "bytes": 35389,
+      "sha256": "497aa3638a71cb94e3d1888a34a8046148f5eb189fd8fc3a8ad14514f5360111",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-preview-02-calibration-offset/fixture/lib/calibration.js",
+      "bytes": 104,
+      "sha256": "8f80750912e83dd7b9b57ac2d3ad6c2c1dcc4a9646761fdec393be28cfe6fd8a",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-preview-02-calibration-offset/request.md",
+      "bytes": 158,
+      "sha256": "8597b089bba0f9b0d994c5d10fe5b817baf26a23a8f279d165309c612d3945c6",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-preview-03-registry-batch-limit/case.json",
+      "bytes": 444,
+      "sha256": "d0dfd4eabd49c8c68af6de90b1e51e707ac15904ee12db7c913cd17f4f0d3426",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-preview-03-registry-batch-limit/expected.md",
+      "bytes": 88,
+      "sha256": "735b4871890048a5368f03b5ada3be5ba3eea01ee097c441e3cf5d6895838f00",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-preview-03-registry-batch-limit/fixture/lib/registry.js",
+      "bytes": 111,
+      "sha256": "59446d41d9c9782bf16c4d9041c4091952ab80f661b851e6d47dbd61d0c16e1a",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-preview-03-registry-batch-limit/fixture/registry/limits.ini",
+      "bytes": 16858,
+      "sha256": "5dab90532d4fa435aed41cab93654c2a7cedc3106aa1d2be4d5f7499d49a824c",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-preview-03-registry-batch-limit/request.md",
+      "bytes": 146,
+      "sha256": "c8b03e8e5b34dc98b50000ca4414acd2887c53d57f3dec062f0f36dd2db041db",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-preview-04-instrument-cycle/case.json",
+      "bytes": 449,
+      "sha256": "d591312f345d4530c6b4f9023f17b86b5b43e9e5f573654fce69b578aa03e9e9",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-preview-04-instrument-cycle/expected.md",
+      "bytes": 119,
+      "sha256": "e6bd55d1dcea7726c026fe7b224401085699b70327c697f082ec77be7f5318ee",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-preview-04-instrument-cycle/fixture/lab/instrument-log.txt",
+      "bytes": 20754,
+      "sha256": "68bc8ba234af2cceb65d32227becbe3187849c667b04d0c564077dfcf16ef14c",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-preview-04-instrument-cycle/fixture/lib/instrument.js",
+      "bytes": 121,
+      "sha256": "50e3cda494d07973e2853abffd8a97cd2e0802eef9ee8ca914f02dfa4f0d7928",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-preview-04-instrument-cycle/request.md",
+      "bytes": 167,
+      "sha256": "275708a1bcbc4223d31cde5ed691b9499e2aa925bdf426acde4775f9b3dddc91",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-rehydrate-01-assay-threshold/case.json",
+      "bytes": 628,
+      "sha256": "64cbe524e313a5bab2160d60047544748976e28b49a89f91cc44f821256d5c30",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-rehydrate-01-assay-threshold/expected.md",
+      "bytes": 100,
+      "sha256": "86d28d25d6fbac8877ee31d95b5bd276dae2196b3139ee6bda354c0adf0d7c9a",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-rehydrate-01-assay-threshold/fixture/lib/assay.js",
+      "bytes": 103,
+      "sha256": "41c46ec64cce6181996a2585d6c2127313426697a756bd391999e28248330ea2",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-rehydrate-01-assay-threshold/fixture/spec/lab/assay-notes.txt",
+      "bytes": 1477,
+      "sha256": "0f9e2066a38ca9a144b80af93854e3119f30408387cca05433f71c8bc367205e",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-rehydrate-01-assay-threshold/fixture/spec/lab/assay-policy.txt",
+      "bytes": 5423,
+      "sha256": "5b837a7f1ed51a2d019dc2fb41b72d04a465b5a0fb88daccf255fe7965112283",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-rehydrate-01-assay-threshold/request.md",
+      "bytes": 192,
+      "sha256": "d8db4dd17ddf365b2af44118f6078eeb778919a00a225d472f0485b05156e5ed",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-rehydrate-02-consignment-batch/case.json",
+      "bytes": 645,
+      "sha256": "06abe762f7f9d5bbc8a32ca8f81b1a7a5982ee603cb034be483b2d2a4134bbc4",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-rehydrate-02-consignment-batch/expected.md",
+      "bytes": 111,
+      "sha256": "1e3734f732a36c24194800876ca7022e49982d3741c7c03946627aadd54d4da8",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-rehydrate-02-consignment-batch/fixture/lib/consignment.js",
+      "bytes": 102,
+      "sha256": "0e6ca03244a8a3d6afd0aac36e0b8bc898668e8d85841f4f2d876a12ad977e03",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-rehydrate-02-consignment-batch/fixture/spec/registry/consignment-notes.txt",
+      "bytes": 1486,
+      "sha256": "5cc0904066e1236baebad5ac3caba9c2787d3e046dce154540155e683e6919b0",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-rehydrate-02-consignment-batch/fixture/spec/registry/consignment-policy.txt",
+      "bytes": 5431,
+      "sha256": "417c92e241e67e614840a9b9db5c32e0c29c7c08f3ecfa4d6e23ea49d4579c3d",
+      "unchanged": true
+    },
+    {
+      "path": "benchmarks/n7-holdout/n7h-rehydrate-02-consignment-batch/request.md",
+      "bytes": 204,
+      "sha256": "9c461fa56a8e5dbe415348d75179ce528ba646a50477597ef19da019bc9dfc2c",
+      "unchanged": true
+    },
+    {
+      "path": "scripts/research/agent-next6-20261005/freeze-n6-holdout-preregistration.mjs",
+      "bytes": 6582,
+      "sha256": "ef6a26867e2b040357d138c32e8f326f224755e5ac346d5d7119caaa3c73bca2",
+      "unchanged": true
+    },
+    {
+      "path": "scripts/research/agent-next6-20261005/freeze-n6-preregistration.mjs",
+      "bytes": 5124,
+      "sha256": "de9cb851325091b807c9435092b0558a2694d6fb6203d1c1742d6b1ee4f57885",
+      "unchanged": true
+    },
+    {
+      "path": "scripts/research/agent-next6-20261005/generate-n6-cases.mjs",
+      "bytes": 11365,
+      "sha256": "19f15fb9c20f97d873e6a8bfd01c6eb13afc205e0efaa90a33bcbd2b2b5224ae",
+      "unchanged": true
+    },
+    {
+      "path": "scripts/research/agent-next6-20261005/n5-judge.mjs",
+      "bytes": 17032,
+      "sha256": "b44e0896fed70e14130434a3a902b22c531d2fe823d812561f2bafbec720908b",
+      "unchanged": true
+    },
+    {
+      "path": "scripts/research/agent-next6-20261005/n5-paired-campaign.mjs",
+      "bytes": 21661,
+      "sha256": "93d4e1d85b7f7f45d73d9b99559e5eb7f5da98041cb6107a2c963241a14af541",
+      "unchanged": true
+    },
+    {
+      "path": "scripts/research/agent-next6-20261005/n6-case-helpers.mjs",
+      "bytes": 2740,
+      "sha256": "82ef0bdd1f9ee99ed66595bc8680b60de40cdeaf56d8520e1fb84052e7c05e91",
+      "unchanged": true
+    },
+    {
+      "path": "scripts/research/agent-next6-20261005/n6-evidence-cases.mjs",
+      "bytes": 31361,
+      "sha256": "b456d1099f786ccfc7d8ea0f6e492bfb2a25cd340a24657c5fa9ba9b724eccfd",
+      "unchanged": true
+    },
+    {
+      "path": "scripts/research/agent-next6-20261005/n6-holdout-cases.mjs",
+      "bytes": 31077,
+      "sha256": "8932e64de0274ae0cc59f7aebd5c8167e2e1c5354dcbf1272797a4f1fddeec09",
+      "unchanged": true
+    },
+    {
+      "path": "scripts/research/agent-next6-20261005/promote-n5-evidence.mjs",
+      "bytes": 8925,
+      "sha256": "0c32081d48de69037f8294b809c8577ef43b0509b72b9793f957718a380f2297",
+      "unchanged": true
+    }
+  ]
+}

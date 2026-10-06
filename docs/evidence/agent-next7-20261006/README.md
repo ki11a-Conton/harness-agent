@@ -1,6 +1,6 @@
-# N7 证据目录说明 — `context_safe_tool_call_efficiency_v2`（预注册已冻结，未执行）
+# N7 证据目录说明 — `context_safe_tool_call_efficiency_v2`（执行器已验收，真实实验未运行）
 
-本目录是 N7 轮的证据目录。**本轮只做了语料、策略注册与预注册冻结；N7-4 的 campaign 按操作者决定不执行**，因此这里没有任何模型质量、效果或 promotion 结论。
+本目录是 N7 轮的证据目录。语料、策略注册与预注册保持冻结；后续已补齐 N7-4/5/6 的工程执行链，**55 项新增回归、8967 项全仓测试通过（0 失败，12 项旧 skip）**。真实模型实验仍因执行环境不足而 BLOCKED/NOT_RUN，无模型效果或 promotion 结论。详见 [完成报告](execution/acceptance/COMPLETION.md)。
 
 ## 文件
 
@@ -12,6 +12,8 @@
 | `main-preregistration.json` | 主实验预注册（512 logical arm runs） |
 | `holdout-preregistration.json` | 独立 holdout 预注册（192 logical arm runs，对照=运行时解析的 champion） |
 | `N7-PROGRESS.md` | 本轮进度、证据与如实记录（含基线对比与已知副作用） |
+| `execution/README.md` | 独立 N7 prepare/soak/campaign/judge/联合判定/归档入口与运行条件 |
+| `execution/acceptance/` | 工程完成报告、完整压缩测试原件、source/dist/binding 指纹、冻结原件和 skip 来源、SHA256 索引 |
 
 ## 预注册要点
 
@@ -38,6 +40,7 @@ N7 计划文本写作"每实验 512 runs"。算术上 512 = 2 × 64 × 4，是**
 
 ## 未执行与资格限制
 
-- **campaign 未执行**：按操作者决定，不做 N7-4（两个 512/192-run 实验，实测约 9–10 小时）。因此本目录不包含 raw request/tool event/usage，也不包含任何 judged 结果。
-- **promotion 不可能在本机发生**：win32 无 OS 级写隔离后端，所有运行都是 `insecure-local`、`promotionEligible: false`；即使将来全部门限通过，也只能得到"效果已测、隔离资格不足"的结论，除非在强隔离（Linux）环境按同一预注册复跑。
+- **真实 campaign 未执行**：首次交付时操作者决定暂不实测；后续工程链已补齐，但当前缺模型凭据和有效价目，8317 端点不可达。因此没有真实模型 raw request/tool event/usage 或效果判定；工程合成/localhost 测试均明确不作为模型证据。
+- **当前隔离不具备 promotion 资格**：首次 Windows 环境没有 OS 级写隔离；本次 Linux 管理工作区的实际 capability self-test 也失败。只有实际强隔离自测合格、两个真实实验与工程门全部通过后，才可进入既有 champion 流程；显式 insecure-local 实测永久不具备资格。
+- **预算不能自动延长**：原 duration 30 分钟、工具总额 600 保持执行；9–10 小时实测需要在模型结果之前重新预注册预算。环境变化或最终实际执行 SHA 变化后须重新 prepare，不能复用本次 blocked 诊断 binding。
 - v1 候选 `context_safe_tool_call_efficiency_v1` 仍为 `candidate` / **NOT_PROVEN**，其文本与 digest 未被本轮修改，也不因本轮结果被追认。

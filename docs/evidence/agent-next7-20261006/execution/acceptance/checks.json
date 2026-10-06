@@ -1,0 +1,74 @@
+[
+  {
+    "label": "main-dry",
+    "cmd": "node scripts/research/agent-next7-20261006/n7-paired-campaign.mjs --experiment main --dry --out .ci/n7-completion/final-checks/main-dry > .ci/n7-completion/final-checks/main-dry.log 2>&1",
+    "status": "fulfilled",
+    "value": {
+      "chunk_id": "d410d2",
+      "wall_time_seconds": 1.362751471,
+      "exit_code": 0,
+      "original_token_count": 0,
+      "output": ""
+    }
+  },
+  {
+    "label": "holdout-dry",
+    "cmd": "node scripts/research/agent-next7-20261006/n7-paired-campaign.mjs --experiment holdout --dry --out .ci/n7-completion/final-checks/holdout-dry > .ci/n7-completion/final-checks/holdout-dry.log 2>&1",
+    "status": "fulfilled",
+    "value": {
+      "chunk_id": "ffaddd",
+      "wall_time_seconds": 1.132370883,
+      "exit_code": 0,
+      "original_token_count": 0,
+      "output": ""
+    }
+  },
+  {
+    "label": "cases",
+    "cmd": "node scripts/research/agent-next7-20261006/generate-n7-cases.mjs --check > .ci/n7-completion/final-checks/cases.log 2>&1",
+    "status": "fulfilled",
+    "value": {
+      "chunk_id": "ff1e7c",
+      "wall_time_seconds": 0.074873615,
+      "exit_code": 0,
+      "original_token_count": 0,
+      "output": ""
+    }
+  },
+  {
+    "label": "main-prereg",
+    "cmd": "node scripts/research/agent-next7-20261006/freeze-n7-preregistration.mjs --check > .ci/n7-completion/final-checks/main-prereg.log 2>&1",
+    "status": "fulfilled",
+    "value": {
+      "chunk_id": "7e73ec",
+      "wall_time_seconds": 0.475887909,
+      "exit_code": 0,
+      "original_token_count": 0,
+      "output": ""
+    }
+  },
+  {
+    "label": "holdout-prereg",
+    "cmd": "node scripts/research/agent-next7-20261006/freeze-n7-holdout-preregistration.mjs --check > .ci/n7-completion/final-checks/holdout-prereg.log 2>&1",
+    "status": "fulfilled",
+    "value": {
+      "chunk_id": "90506f",
+      "wall_time_seconds": 0.22031053,
+      "exit_code": 0,
+      "original_token_count": 0,
+      "output": ""
+    }
+  },
+  {
+    "label": "docs",
+    "cmd": "corepack pnpm docs:verify > .ci/n7-completion/final-checks/docs.log 2>&1",
+    "status": "fulfilled",
+    "value": {
+      "chunk_id": "3b5973",
+      "wall_time_seconds": 1.335841215,
+      "exit_code": 0,
+      "original_token_count": 0,
+      "output": ""
+    }
+  }
+]

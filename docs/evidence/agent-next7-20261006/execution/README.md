@@ -47,4 +47,4 @@ ITT 使用所有冻结 case/repetition；未完成和无效 arm 视失败。PP �
 
 ## 验收状态
 
-工程实现与真实实验分别记录；本地 HTTP 和合成 outcome 仅证明接线、计量及失败门，不证明 Agent 质量。最终验收数字与环境阻塞详见本目录的完成报告。
+工程实现与真实实验分别记录；本地 HTTP 和合成 outcome 仅证明接线、计量及失败门，不证明 Agent 质量。工程执行链已验收：**55 项新回归通过，全仓 8967 PASS / 0 FAIL / 12 项旧 skip**，实际源码与构建指纹前后一致。最终数字、原件和环境阻塞见 [完成报告](acceptance/COMPLETION.md) 与 [机器可读记录](acceptance/completion.json)。真实模型实验仍为 BLOCKED/NOT_RUN，候选未晋升。
