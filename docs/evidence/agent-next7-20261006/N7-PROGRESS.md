@@ -12,10 +12,10 @@
 | --- | --- | --- |
 | N7-1 写 v2 策略文本并注册 | **DONE** | 下方 §1 |
 | N7-2 建全新评测语料（88 用例） | **DONE** | 下方 §2 |
-| N7-3 预注册（任何模型结果之前） | TODO | 待建 N7 预注册模块，dry-run 必须为 512 logical arm runs/实验 |
-| N7-4 基础设施资格门 + campaign | TODO | 先 24 次调用 soak，再 512 runs/实验 |
-| N7-5 双实验判定 | TODO | 9 条门限（ITT；bite 仅作佐证） |
-| N7-6 证据、发布与回退 | TODO | 不足即保持 candidate / NOT_PROVEN |
+| N7-3 预注册（任何模型结果之前） | **DONE** | 下方 §3 |
+| N7-4 基础设施资格门 + campaign | **不执行（操作者决定）** | 详见 §5：本轮无模型调用，无效果结论 |
+| N7-5 双实验判定 | 未执行（依赖 N7-4） | — |
+| N7-6 证据、发布与回退 | 部分：预注册证据已归档；无 judged 结果可发布 | 见 `README.md` |
 
 ## 1. N7-1 — v2 策略文本与注册（DONE）
 
@@ -53,17 +53,38 @@
 - 回归测试 `packages/evaluation/src/n7-evidence-cases.regressions.test.ts` — 19 tests PASS：组成、加载器、选择边界、无重命名副本、磁盘字节→digest、176 次红/绿执行、条件构造（>16 KiB / case-local 预算）、**git 跟踪**、证明与在线清单一致、holdout 独立性。
 - 作者化脚本：`scripts/research/agent-next7-20261006/`（构建器、两份主集数据、holdout 数据、生成器、判别力证明运行器）。作者化与证明全程 0 模型调用、0 网络。
 
-## 3. 本轮已发现的副作用（如实记录，未修饰）
+## 3. N7-3 预注册（DONE，在任何模型结果之前）
+
+冻结产物：[main-preregistration.json](main-preregistration.json)、[holdout-preregistration.json](holdout-preregistration.json)；口径汇总见 [README.md](README.md)。
+
+| 项目 | 主实验 | 独立 holdout |
+| --- | --- | --- |
+| 候选文本 | v2 `52a80e9c…9333c` | 同左 |
+| 对照臂 | `tool_call_efficiency_v1` `ebddf5eb…9619` | 运行时解析 champion（C0/`null`，arm `ee589c7e…`，validity=QUARANTINED_PENDING_REEVALUATION，applied=true） |
+| 用例 / 重复 | 64 / 4 | 24 / 4 |
+| **logical arm runs** | **512**（AB 128 / BA 128） | **192**（AB 48 / BA 48） |
+| `preregistrationDigest` | `7c7d0b56ce6e22446fc7e1262dbb68b5310d3bd998eeb75c9f5b399c401f5b9b` | `967da1dd37a438cfdbc804c7cf7985fb9a787777c5c7e9bd801f211183055664` |
+| 冻结 seed | 20261007 | 20261008 |
+| dry-run | 512 runs / `paidProviderCalls=0` / `modelQuality=NOT_RUN` | 192 runs / 同左 |
+
+实现方式（不复制、不手改 digest）：把 N6 构建器**按默认值泛化**为 `ContextSafePlanSpec`（`schemaVersion`/`candidateId`/`comparisonArmId`/两臂 guidance 版本与 digest/`gates`/`repetitions`/`expectedCases`/`expectedLogicalRuns`），默认值 `CONTEXT_SAFE_V1_PLAN_SPEC` 与 N6 现值完全一致；N7 侧 [context-safe-tool-call-efficiency-v2-preregistration.ts](../../../packages/evaluation/src/context-safe-tool-call-efficiency-v2-preregistration.ts) 只提供自己的 spec 与额外 fail-closed 校验。
+
+验收证据：
+- [context-safe-tool-call-efficiency-v2-preregistration.test.ts](../../../packages/evaluation/src/context-safe-tool-call-efficiency-v2-preregistration.test.ts) — 13 tests PASS：512/192 与 AB-BA 平衡、dry-run 0 付费调用、已提交产物等于现场重建、绑定 v2 真实文本 digest（并等于 v2 臂的 `promptAdditionsDigest`）、**门限与 N6 逐值相同**、任一可调输入变化即改变 identity（seed/预算/请求档/模型/源码 SHA/用例内容/选择出处/臂 digest/门限）、错误用例数与非 48-hex SHA 与同臂与伪造候选臂 digest 全部 fail-closed、holdout 缺 champion provenance 被拒、主/holdout 用例互不泄漏、产物不含原始端点或凭据形状、且不携带任何模型质量或 promotion 声明。
+- [context-safe-tool-call-efficiency-preregistration.test.ts](../../../packages/evaluation/src/context-safe-tool-call-efficiency-preregistration.test.ts) — 14 tests PASS（含第 10 项新断言：用 v1 默认 spec 重建的 N6 主产物与已提交 N6 产物**逐字节一致**）。
+- 两个冻结脚本 `--check` 均 PASS（可复算、0 付费调用）。
+- 未授权付费 preflight：0 次调用；本轮**从未**读取或写入凭据。
+
+## 4. 本轮已发现的副作用（如实记录，未修饰）
 
 1. **注册新候选会移动"基线臂快照"摘要**：`arm-factory.ts buildSnapshot` 在 baseline 臂上把**每个已注册候选**列为 OFF，因此登记 v2 后 baseline 臂 digest 变化。受影响的既有测试 `context-safe-tool-call-efficiency-preregistration.test.ts` 第 5 项原本断言"已提交 holdout 产物 == 现场重建"。处理方式：**不改写已冻结的 N6 产物**，改为断言"除 baseline 臂快照与由此导出的根身份外，其余字段逐字节一致"，并显式记录冻结值 `74b8465e…6466f` 与现场值不同及其原因；同时断言冻结产物自身 dry-run 仍为 192 logical runs / 0 付费调用。v1 与既有候选的**文本与 digest 未变**（测试第 1 项固定 `ce66f3b0…`）。
 2. **全仓测试基线对比**：全仓 `pnpm test` 有 15 个文件失败。其中 **11 个文件在 `e99cb3f1`（未含本轮改动）上以同样方式失败**（symlink 权限、worker 终止超时、平台 oracle 等环境性问题），另有 2 个文件（`apps/cli/src/cli.test.ts`、`apps/web/src/harness.integration.test.ts`）在并行满载下失败、单独复跑通过（负载波动）。真正由本轮引入并已修复的只有 `candidate-registry.test.ts`（新增登记项需出现在矩阵列表）与上述预注册复算测试。
 3. `pnpm typecheck` 通过；`pnpm docs:verify` ALL CHECKS PASS（含 E2-12、E4-00）。
 
-## 4. 尚未完成（N7-3…N7-6）
+## 5. 未执行与剩余工作
 
-- **N7-3**：v2 预注册模块与冻结（v2 文本 SHA256、64 用例集与独立 holdout、AB/BA、provider/model/请求档/预算硬上限、两臂 digest、冻结 seed、门限不变），`dryRun` 必须精确 **2×64×4 = 512 logical arm runs/实验**、付费 0。
-  - 已核对的实施路线：N6 构建器 `buildContextSafePreregistration(options)` 的参数面（`ContextSafePreregistrationOptions`）已覆盖 subject/provider/cases/suite/evaluation/schedule/budget，N6 专有的只是 schema 常量、`CONTEXT_SAFE_CANDIDATE_ID`/`CONTEXT_SAFE_COMPARISON_ARM_ID` 与 `24 × 4` 调度常量。因此 N7-3 采用**带默认值的泛化**：新增可选 `candidateId`/`comparisonArmId`/`schemaVersion`/`repetitions`，默认值等于 N6 现值 —— 于是 N6 已提交产物的字节与 digest 保持不变（由既有 N6 预注册测试断言），N7 侧再以 v2 文本 digest、64 用例集、4 次重复换取 512 logical runs。**不得**通过复制 N6 常量再手改 digest 的方式绕过。
-- **N7-4**：24 次调用 soak（0 传输失败、0 `model_not_found`、usage 完整）→ 两个 campaign（各 512 runs，约 4–5 小时/实验，合计约 9–10 小时），带熔断与 journal 断点续跑；从绑定的 clean worktree 运行（避免 E2-09 宿主突变哨兵）。
-- **N7-5**：用同一 9 条门限判定（ITT；bite 命中子集仅佐证）。
-- **N7-6**：证据归档与 SHA256 索引；未达门则保持 `candidate` / NOT_PROVEN。
-- **资格限制（不可绕过）**：本机 win32 无 OS 级写隔离后端，所有运行均为 `insecure-local`、`promotionEligible: false`；因此即使在 Windows 上全部门限通过，也只能得出"**效果已测、隔离资格不足**"的结论，除非将来在强隔离环境按同一预注册复跑。
+- **N7-4 不执行（操作者决定：两个实验实测约 9–10 小时，本轮不做）**。因此本轮**没有任何模型调用**：无 soak、无 campaign、无 raw request/tool event/usage 证据，也没有任何效果、质量或成本结论。
+- N7-5（双实验判定）因此未执行；N7-6 只完成了预注册证据归档与 SHA256 索引，没有 judged 结果可发布。
+- 未完成部分若要继续：先跑 24 次调用 soak（0 传输失败、0 `model_not_found`、usage 完整），再在绑定 SHA 的 clean worktree 上跑主实验 512 runs 与 holdout 192 runs（熔断 + journal 断点续跑），然后用与 N5/N6 相同的门限做 ITT 判定（bite 命中子集仅作佐证）。
+- **资格限制（不可绕过）**：本机 win32 无 OS 级写隔离后端，所有运行均为 `insecure-local`、`promotionEligible: false`；即使在 Windows 上全部门限通过，也只能得出"**效果已测、隔离资格不足**"的结论，除非将来在强隔离环境按同一预注册复跑。
+- 候选状态保持不变：`context_safe_tool_call_efficiency_v2` 为 `candidate`，**未测效果 / 未 promotion**；v1 仍为 `candidate` / NOT_PROVEN，其文本与 digest 未被本轮修改。

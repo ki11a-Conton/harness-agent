@@ -89,6 +89,47 @@ export const CONTEXT_SAFE_GATES: Readonly<ContextSafeGates> = Object.freeze({
   usageUnknownIsNotZero: true,
 });
 
+/**
+ * N7 — the frozen identity of ONE plan.
+ *
+ * Everything a plan may legitimately vary lives in this record: the schema
+ * string, the candidate and comparison ids, both guidance identities, the
+ * decision gates, the repetition count and the case/run counts the plan must
+ * reproduce. `buildContextSafePreregistration` and
+ * `dryRunContextSafePreregistration` take a spec whose DEFAULT is the N6 plan
+ * below, so the committed N6 artifacts stay byte-identical, while an N7 plan can
+ * bind the v2 text digest, its own 64-case set and its own 512 logical runs
+ * WITHOUT anybody hand-editing a digest.
+ */
+export interface ContextSafePlanSpec {
+  schemaVersion: string;
+  candidateId: string;
+  comparisonArmId: string;
+  candidateGuidanceVersion: string;
+  candidateGuidanceDigest: string;
+  comparisonGuidanceVersion: string;
+  comparisonGuidanceDigest: string;
+  gates: ContextSafeGates;
+  repetitions: number;
+  expectedCases: number;
+  expectedLogicalRuns: number;
+}
+
+/** The N6 plan, reconstructed from the constants above — the default spec. */
+export const CONTEXT_SAFE_V1_PLAN_SPEC: ContextSafePlanSpec = Object.freeze({
+  schemaVersion: CONTEXT_SAFE_PREREGISTRATION_SCHEMA,
+  candidateId: CONTEXT_SAFE_CANDIDATE_ID,
+  comparisonArmId: CONTEXT_SAFE_COMPARISON_ARM_ID,
+  candidateGuidanceVersion: CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_VERSION,
+  candidateGuidanceDigest: contextSafeToolCallEfficiencyGuidanceDigest(),
+  comparisonGuidanceVersion: TOOL_CALL_EFFICIENCY_GUIDANCE_VERSION,
+  comparisonGuidanceDigest: toolCallEfficiencyGuidanceDigest(),
+  gates: CONTEXT_SAFE_GATES,
+  repetitions: CONTEXT_SAFE_REPETITIONS,
+  expectedCases: CONTEXT_SAFE_MAIN_CASES,
+  expectedLogicalRuns: CONTEXT_SAFE_LOGICAL_RUNS_PER_EXPERIMENT,
+});
+
 export class ContextSafePreregistrationError extends Error {
   readonly code: string;
   constructor(code: string, message: string) {
@@ -243,6 +284,9 @@ export interface ContextSafePreregistrationOptions {
   selectionProvenanceDigest: string;
   evaluation: { scorerDigest: string; judgeId: string; judgeDigest: string };
   schedule: { orderSeed: number };
+  /** N7: the plan's frozen identity. Defaults to the N6 plan, so every existing
+   *  artifact and identity is reproduced byte-for-byte. */
+  planSpec?: ContextSafePlanSpec;
   budget: {
     maxModelCallsPerRun: number;
     maxToolCalls: number;
@@ -364,9 +408,10 @@ export function computeContextSafePreregistrationDigest(a: ContextSafePreregistr
 export function buildContextSafePreregistration(
   opts: ContextSafePreregistrationOptions,
 ): ContextSafePreregistration {
-  const contract = mechanismContractFor(CONTEXT_SAFE_CANDIDATE_ID);
+  const spec = opts.planSpec ?? CONTEXT_SAFE_V1_PLAN_SPEC;
+  const contract = mechanismContractFor(spec.candidateId);
   if (contract === undefined) {
-    throw new ContextSafePreregistrationError("NO_CONTRACT", `no mechanism contract for ${CONTEXT_SAFE_CANDIDATE_ID}`);
+    throw new ContextSafePreregistrationError("NO_CONTRACT", `no mechanism contract for ${spec.candidateId}`);
   }
 
   const role = opts.role ?? "main";
@@ -400,13 +445,13 @@ export function buildContextSafePreregistration(
 
   // Prompt identity comes from the AUTHORITATIVE constants, never the caller.
   const prompt: ContextSafePreregPrompt = {
-    candidateId: CONTEXT_SAFE_CANDIDATE_ID,
-    guidanceVersion: CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_VERSION,
-    guidanceDigest: contextSafeToolCallEfficiencyGuidanceDigest(),
+    candidateId: spec.candidateId,
+    guidanceVersion: spec.candidateGuidanceVersion,
+    guidanceDigest: spec.candidateGuidanceDigest,
     contractDigest: sha256(stableStringify(contract)),
-    comparisonCandidateId: CONTEXT_SAFE_COMPARISON_ARM_ID,
-    comparisonGuidanceVersion: TOOL_CALL_EFFICIENCY_GUIDANCE_VERSION,
-    comparisonGuidanceDigest: toolCallEfficiencyGuidanceDigest(),
+    comparisonCandidateId: spec.comparisonArmId,
+    comparisonGuidanceVersion: spec.comparisonGuidanceVersion,
+    comparisonGuidanceDigest: spec.comparisonGuidanceDigest,
   };
   if (prompt.guidanceDigest === prompt.comparisonGuidanceDigest) {
     throw new ContextSafePreregistrationError("PROMPTS_IDENTICAL", "the two arms would inject identical text — no single-variable experiment");
@@ -442,10 +487,10 @@ export function buildContextSafePreregistration(
       throw new ContextSafePreregistrationError("HOLDOUT_LEAK", `${entry.caseId} is a holdout case — refusing to freeze it into the main plan`);
     }
   }
-  if (cases.length !== CONTEXT_SAFE_MAIN_CASES) {
+  if (cases.length !== spec.expectedCases) {
     throw new ContextSafePreregistrationError(
       "WRONG_CASE_COUNT",
-      `${cases.length} case(s); the frozen main experiment requires exactly ${CONTEXT_SAFE_MAIN_CASES}`,
+      `${cases.length} case(s); the frozen plan requires exactly ${spec.expectedCases}`,
     );
   }
   if (cases.length < contract.minEligibleCases) {
@@ -469,8 +514,8 @@ export function buildContextSafePreregistration(
     scorerDigest: requireNonEmpty(opts.evaluation?.scorerDigest, "evaluation.scorerDigest"),
     judgeId: requireNonEmpty(opts.evaluation?.judgeId, "evaluation.judgeId"),
     judgeDigest: requireNonEmpty(opts.evaluation?.judgeDigest, "evaluation.judgeDigest"),
-    gates: CONTEXT_SAFE_GATES,
-    gatesDigest: sha256(stableStringify(CONTEXT_SAFE_GATES)),
+    gates: spec.gates,
+    gatesDigest: sha256(stableStringify(spec.gates)),
   };
 
   const orderSeed = requireNonNegativeInt(opts.schedule?.orderSeed, "schedule.orderSeed");
@@ -492,14 +537,14 @@ export function buildContextSafePreregistration(
   // Provisional artifact so the schedule derived values come from the SAME
   // paired-plan builder the executor uses.
   const provisional: ContextSafePreregistration = {
-    schemaVersion: CONTEXT_SAFE_PREREGISTRATION_SCHEMA,
+    schemaVersion: spec.schemaVersion,
     subject,
     prompt,
     provider,
     dataset,
     evaluation,
     schedule: {
-      repetitions: CONTEXT_SAFE_REPETITIONS,
+      repetitions: spec.repetitions,
       orderSeed,
       planDigest: "",
       logicalRuns: 0,
@@ -513,7 +558,7 @@ export function buildContextSafePreregistration(
 
   const derived = deriveSchedule(provisional);
   const schedule: ContextSafePreregSchedule = {
-    repetitions: CONTEXT_SAFE_REPETITIONS,
+    repetitions: spec.repetitions,
     orderSeed,
     planDigest: derived.planDigest,
     logicalRuns: derived.logicalRuns,
@@ -521,10 +566,10 @@ export function buildContextSafePreregistration(
     baCount: derived.baCount,
     balanced: derived.balanced,
   };
-  if (derived.logicalRuns !== CONTEXT_SAFE_LOGICAL_RUNS_PER_EXPERIMENT) {
+  if (derived.logicalRuns !== spec.expectedLogicalRuns) {
     throw new ContextSafePreregistrationError(
       "WRONG_LOGICAL_RUNS",
-      `derived ${derived.logicalRuns} logical arm runs, expected ${CONTEXT_SAFE_LOGICAL_RUNS_PER_EXPERIMENT}`,
+      `derived ${derived.logicalRuns} logical arm runs, expected ${spec.expectedLogicalRuns}`,
     );
   }
   if (!derived.balanced || derived.abCount !== derived.baCount) {
@@ -598,21 +643,42 @@ export interface ContextSafeDryRunReport {
  * (ok: false with problems) when any frozen invariant drifted. Never contacts a
  * provider.
  */
-export function dryRunContextSafePreregistration(a: ContextSafePreregistration): ContextSafeDryRunReport {
+export function dryRunContextSafePreregistration(
+  a: ContextSafePreregistration,
+  spec: ContextSafePlanSpec = CONTEXT_SAFE_V1_PLAN_SPEC,
+): ContextSafeDryRunReport {
   const problems: string[] = [];
   const recomputed = computeContextSafePreregistrationDigest(a);
   if (recomputed !== a.preregistrationDigest) {
     problems.push(`preregistrationDigest drifted: recorded ${a.preregistrationDigest}, recomputed ${recomputed}`);
   }
   const derived = deriveSchedule(a);
-  if (derived.logicalRuns !== CONTEXT_SAFE_LOGICAL_RUNS_PER_EXPERIMENT) {
-    problems.push(`logicalRuns ${derived.logicalRuns} !== ${CONTEXT_SAFE_LOGICAL_RUNS_PER_EXPERIMENT}`);
+  if (derived.logicalRuns !== spec.expectedLogicalRuns) {
+    problems.push(`logicalRuns ${derived.logicalRuns} !== ${spec.expectedLogicalRuns}`);
   }
   if (!derived.balanced) problems.push(`AB/BA unbalanced: ab=${derived.abCount}, ba=${derived.baCount}`);
-  if (a.dataset.cases.length !== CONTEXT_SAFE_MAIN_CASES) {
-    problems.push(`cases ${a.dataset.cases.length} !== ${CONTEXT_SAFE_MAIN_CASES}`);
+  if (a.dataset.cases.length !== spec.expectedCases) {
+    problems.push(`cases ${a.dataset.cases.length} !== ${spec.expectedCases}`);
   }
-  if (!CONTEXT_SAFE_REPETITIONS) problems.push("repetitions missing");
+  if (a.schedule.repetitions !== spec.repetitions) {
+    problems.push(`repetitions ${a.schedule.repetitions} !== ${spec.repetitions}`);
+  }
+  // The artifact must be the artifact of THIS spec: a plan frozen for another
+  // candidate/schema can never be dry-run (or reported) as this one.
+  if (a.schemaVersion !== spec.schemaVersion) {
+    problems.push(`schemaVersion ${a.schemaVersion} !== ${spec.schemaVersion}`);
+  }
+  if (a.prompt.candidateId !== spec.candidateId) {
+    problems.push(`candidateId ${a.prompt.candidateId} !== ${spec.candidateId}`);
+  }
+  if (a.prompt.guidanceDigest !== spec.candidateGuidanceDigest) {
+    problems.push(`candidate guidance digest ${a.prompt.guidanceDigest} !== ${spec.candidateGuidanceDigest}`);
+  }
+  if (a.prompt.comparisonGuidanceDigest !== spec.comparisonGuidanceDigest) {
+    problems.push(
+      `comparison guidance digest ${a.prompt.comparisonGuidanceDigest} !== ${spec.comparisonGuidanceDigest}`,
+    );
+  }
   if (a.schedule.logicalRuns !== derived.logicalRuns) {
     problems.push(`recorded logicalRuns ${a.schedule.logicalRuns} !== derived ${derived.logicalRuns}`);
   }

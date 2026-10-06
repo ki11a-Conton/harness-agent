@@ -85,3 +85,4 @@ export * from "./r97-execution-state.js";
 export * from "./r97-campaign-evidence.js";
 export * from "./r97-plan.js";
 export * from "./context-safe-tool-call-efficiency-preregistration.js";
+export * from "./context-safe-tool-call-efficiency-v2-preregistration.js";
