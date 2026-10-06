@@ -74,10 +74,10 @@ const provenance = {
 const options = {
   role: "holdout",
   subject: {
-    candidateSourceSha: "a".repeat(40),
+    candidateSourceSha: "29ba9546bc4c3d515a46058c5cf69046f0e82e57",
     baselineArmDigest: championArm.digest,
     candidateArmDigest: factory.resolveArm(CONTEXT_SAFE_CANDIDATE_ID).digest,
-    runtimeConfigDigest: "b".repeat(64),
+    runtimeConfigDigest: factory.resolveArm(CONTEXT_SAFE_CANDIDATE_ID).digest,
     championProvenance: provenance,
   },
   provider: {

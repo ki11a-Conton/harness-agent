@@ -57,10 +57,10 @@ function frozenOptions(over: Partial<ContextSafePreregistrationOptions> = {}): C
   return {
     subject: {
       // Bound at execution time; the contract only requires a real 40-hex SHA.
-      candidateSourceSha: "a".repeat(40),
+      candidateSourceSha: "29ba9546bc4c3d515a46058c5cf69046f0e82e57",
       baselineArmDigest: factory.resolveArm(CONTEXT_SAFE_COMPARISON_ARM_ID).digest,
       candidateArmDigest: factory.resolveArm(CONTEXT_SAFE_CANDIDATE_ID).digest,
-      runtimeConfigDigest: "b".repeat(64),
+      runtimeConfigDigest: factory.resolveArm(CONTEXT_SAFE_CANDIDATE_ID).digest,
     },
     provider: {
       providerId: "openai",
@@ -278,10 +278,10 @@ function holdoutOptions(over: Partial<ContextSafePreregistrationOptions> = {}): 
   return {
     role: "holdout",
     subject: {
-      candidateSourceSha: "a".repeat(40),
+      candidateSourceSha: "29ba9546bc4c3d515a46058c5cf69046f0e82e57",
       baselineArmDigest: champion.digest,
       candidateArmDigest: getArmFactory().resolveArm(CONTEXT_SAFE_CANDIDATE_ID).digest,
-      runtimeConfigDigest: "b".repeat(64),
+      runtimeConfigDigest: getArmFactory().resolveArm(CONTEXT_SAFE_CANDIDATE_ID).digest,
       championProvenance: champion.provenance,
     },
     provider: {

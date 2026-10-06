@@ -40,10 +40,12 @@ const factory = getArmFactory();
 const options = {
   subject: {
     // Bound to the real tested source at execution time; 40-hex by contract.
-    candidateSourceSha: "a".repeat(40),
+    // The REAL tested source (the commit carrying the provider-parser fix the
+    // approved endpoint requires) and the candidate arm's REAL config digest.
+    candidateSourceSha: "29ba9546bc4c3d515a46058c5cf69046f0e82e57",
     baselineArmDigest: factory.resolveArm(CONTEXT_SAFE_COMPARISON_ARM_ID).digest,
     candidateArmDigest: factory.resolveArm(CONTEXT_SAFE_CANDIDATE_ID).digest,
-    runtimeConfigDigest: "b".repeat(64),
+    runtimeConfigDigest: factory.resolveArm(CONTEXT_SAFE_CANDIDATE_ID).digest,
   },
   provider: {
     // The APPROVED execution configuration (bound before any experiment result).
