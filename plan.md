@@ -8,6 +8,7 @@
 | P2 接线 | registry / arm-factory / mechanism-contract / activation-evidence / 单一提示构建器 / champion 安装与配置 | 全链可解析；激活按本候选版本+digest 钉死（旧注入不算激活）；基线与既有臂身份不受扰动 | DONE |
 | P3 工程验收 | 新回归覆盖文本义务与禁止项、digest 绑定、既有候选冻结、互斥、执行身份扰动、真实 Harness 提示注入 | 测试全 PASS；typecheck 干净；docs:verify ALL PASS；0 模型调用、0 付费 | DONE |
 | P4 证据与状态 | 进度与证据文件记录 digest、测试计数、诚实边界（效果 NOT_RUN） | 证据入库并注明本轮未运行效果实验 | DONE |
+| P5 离线补齐（B 项） | 任务合同、新候选预注册（结果之前冻结）、本机环境差异清单、README 候选登记 | 预注册两件 --check PASS + 12 项回归 PASS；环境差异清单入库；README 候选列表更新 | DONE |
 
 > **P 轮执行完成**：P1–P4 全部完成（离线，0 模型调用）。完成记录与证据 [P-COMPLETION.md](docs/evidence/agent-p-20261006/P-COMPLETION.md)；门文本 SHA256 `7ef38a06…b546`，既有候选 digest 逐字节不变（csafe v1 `ce66f3b0…`、csafe v2 `52a80e9c…`、tool-call `ebddf5eb…`）。验收：新增 7 项回归 + 4 项真实 Harness 集成测试 + 34 项预注册测试通过；typecheck、docs:verify 通过。全仓 `pnpm test`：487 文件 / 8990 用例，8900 PASS、25 FAIL、65 skip —— 25 项失败中 10 个文件在拉取前即已失败（本机环境性），另一项曾因登记新候选移动基线臂快照而使 N7 holdout 预注册报 **`ARM_DIGEST_DRIFT`**（设计内 fail-closed）；已按操作者批准的路径用本轮冻结脚本**重新冻结**该预注册（`967da1dd…` → `7b675621…`）并同步更新 N7 验收记录（`holdout-prereg.log` / `unchanged-originals.json` / `artifact-index.json` / `RAW-MANIFEST.json` 重新自校验通过），该文件 55 项恢复运行，详见证据 §4.1。**效果结论 NOT_RUN**（未运行模型实验，未 promotion）。
 

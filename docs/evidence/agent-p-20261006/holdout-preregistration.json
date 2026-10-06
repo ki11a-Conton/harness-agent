@@ -1,0 +1,253 @@
+{
+  "schemaVersion": "verified-completion-gate-preregistration-v1",
+  "subject": {
+    "candidateSourceSha": "e6fc818c4c6ccf026c63dc73af25d99f462f93f3",
+    "baselineArmDigest": "00d2c92154822622d0d583fe1f2f8fee7c86ab62cb936ac9dcad2b71f33e1fdc",
+    "candidateArmDigest": "ab4c18684d520d061a4a34606d4a8abb43ab4c9d47dfe3455cd0ca3faa371677",
+    "cleanTreePolicy": "require-clean",
+    "runtimeConfigDigest": "ab4c18684d520d061a4a34606d4a8abb43ab4c9d47dfe3455cd0ca3faa371677",
+    "championProvenance": {
+      "source": "docs/evolution/champion-state.json (level=C0, candidateId=null, validity=QUARANTINED_PENDING_REEVALUATION, applied=true)",
+      "level": "C0",
+      "candidateId": null,
+      "stateDigest": "f1ade2a09e2cbeb80da629396a626e6a8a09cee68f8c8d224f9d8521cd8f7cad"
+    }
+  },
+  "prompt": {
+    "candidateId": "verified_completion_gate_v1",
+    "guidanceVersion": "verified-completion-gate:v1",
+    "guidanceDigest": "7ef38a062ad770f47699ebac90f9cfa02c65758c9f92c1a9298bbc744275b546",
+    "contractDigest": "79f7b3739bb4887f7a4474d375b054ebde1bf8c1ffefd882559752f8acaf6292",
+    "comparisonCandidateId": "tool_call_efficiency_v1",
+    "comparisonGuidanceVersion": "tool-call-efficiency:v2",
+    "comparisonGuidanceDigest": "ebddf5eb125cbbe8ed25d7ecb1ea3554809494aea70716adf3a9f62924939619"
+  },
+  "provider": {
+    "providerId": "openai",
+    "modelId": "workbuddy-deepseek-v4.1-flash",
+    "endpointDigest": "4949505a4a395b595d123bdd773ce3ee414c7da71f6fd4371a9ccc2542d2ebc0",
+    "requestProfileDigest": "9046af4fee7de86cf674214b1b379142eeb28e996a94420997d711f2df48b8ad"
+  },
+  "dataset": {
+    "suiteId": "n7-holdout",
+    "suiteVersion": "1.0.0",
+    "caseRoot": "benchmarks/n7-holdout",
+    "holdoutPolicy": "holdout per-case data is never read into an artifact; this plan IS the holdout experiment and never participates in prompt tuning",
+    "cases": [
+      {
+        "caseId": "n7h-compact-01-sample-volume",
+        "suite": "n7-holdout",
+        "condition": "compact-drop",
+        "contentDigest": "ddbb133a4c9dc4e2bb18c55053340d7c94e8c035fabbbd861a0f50e951265aea",
+        "verifierDigest": "e4aec75893746a5ffaf82364a432279336710a322920955855ef95cc48fd6ae0"
+      },
+      {
+        "caseId": "n7h-compact-02-incubation-minutes",
+        "suite": "n7-holdout",
+        "condition": "compact-drop",
+        "contentDigest": "a5976167c09ab1869613af58554c4376f9386ffd2a7d23e4fc0a3423649fec42",
+        "verifierDigest": "e7a3fd0fe4b96c868b4e1a1657c30477c7478de4170118b75b3e634895fee68c"
+      },
+      {
+        "caseId": "n7h-compact-03-dilution-factor",
+        "suite": "n7-holdout",
+        "condition": "compact-drop",
+        "contentDigest": "1c12e47a778ddd8aedfb21529de9516592a0c14e61c768b4846b3f686470e7af",
+        "verifierDigest": "58b0e1e8a41902c477a69f94ac7ee877d01107b697003e18687af7edaf9e377e"
+      },
+      {
+        "caseId": "n7h-compact-04-centrifuge-rpm",
+        "suite": "n7-holdout",
+        "condition": "compact-drop",
+        "contentDigest": "dd691839d85e16766a56740d09ab2a718145e2a8db2effb1034ffaf0e3243182",
+        "verifierDigest": "8113a77768429081f87f10ec427f7360f0f58f314090adaa1f107e1f7a6f7932"
+      },
+      {
+        "caseId": "n7h-compact-05-pallet-max-cases",
+        "suite": "n7-holdout",
+        "condition": "compact-drop",
+        "contentDigest": "760d9af430fe54a77c851573ab36ba90ffe7b431d7d668dd78fa376e232975f7",
+        "verifierDigest": "07d515438c2e9d40d5b8ed9ed50599fbfae2f9c384c7829ad855e3b1850071fa"
+      },
+      {
+        "caseId": "n7h-compact-06-customs-window",
+        "suite": "n7-holdout",
+        "condition": "compact-drop",
+        "contentDigest": "86e6dff179d26dd17bafc98ca954ec2fc81c676ad9f4621579e7640b3ed2a991",
+        "verifierDigest": "329f4701c19b1dac21b34cd82cbed18773fd526f664f55042fe767f3bf8efdc7"
+      },
+      {
+        "caseId": "n7h-compact-07-cold-chain-ttl",
+        "suite": "n7-holdout",
+        "condition": "compact-drop",
+        "contentDigest": "852b2c88c8c0e9a0b15541915c1abfc4a86bd32f0e1491b191fb7d368d7ed6a0",
+        "verifierDigest": "4c76d7c86ae918d5b1e6088c7e9db906484bf72dfac84eb3e5f6548068c5fcb9"
+      },
+      {
+        "caseId": "n7h-compact-08-max-route-legs",
+        "suite": "n7-holdout",
+        "condition": "compact-drop",
+        "contentDigest": "0fef053eacacbe145763408e00497896773d4e3dd789d46c911b294601de6ad9",
+        "verifierDigest": "f4b17c5da1e25d52d8665da87714d4b95be4f91f1805ee38acd79716e85e1a1c"
+      },
+      {
+        "caseId": "n7h-preview-01-analyzer-value-column",
+        "suite": "n7-holdout",
+        "condition": "preview",
+        "contentDigest": "d6b96f57d385d8c0edadfeb274611bce9634c884cebeb42c355e5434aaa777ab",
+        "verifierDigest": "c27b33fca07667e236213999617403bdcb38c166347a6ddfeebcc06a20a10677"
+      },
+      {
+        "caseId": "n7h-preview-02-calibration-offset",
+        "suite": "n7-holdout",
+        "condition": "preview",
+        "contentDigest": "4e69d2258c10b54cee29325cc99504015c19fcc80744f183f5060d1b07145fd9",
+        "verifierDigest": "367ad5fe8ef4c6ec6e13aa3aa35db32fb50a5d56b5d7fbe16c1db5adf0cbf16f"
+      },
+      {
+        "caseId": "n7h-preview-03-registry-batch-limit",
+        "suite": "n7-holdout",
+        "condition": "preview",
+        "contentDigest": "36f6b8cd05b6a166eb883a1d3662b2f37054559b74aa0f3cd35a2f9afc9f36c2",
+        "verifierDigest": "62602c01ac7d33af0046230b6149c95326f0e7567fd21556a4aaa8cb2498eca4"
+      },
+      {
+        "caseId": "n7h-preview-04-instrument-cycle",
+        "suite": "n7-holdout",
+        "condition": "preview",
+        "contentDigest": "ef4a690309f98509fd66642d9f59a432b8d94593c251bf298b40991fdf0fe37e",
+        "verifierDigest": "e9cf69962e1cf795723c96df00e0aa12cf1507a0604e95d8035e23a39b094709"
+      },
+      {
+        "caseId": "n7h-rehydrate-01-assay-threshold",
+        "suite": "n7-holdout",
+        "condition": "rehydrate",
+        "contentDigest": "01c4ed2c04fea02f43de8ebd6884cf619d91d895b4f5c5a45d173c3b8b3af0f3",
+        "verifierDigest": "1277d8fbaecfef5dbc7b37286e712f27b496086bbf7ee8f7e8cf8ee94be1c74f"
+      },
+      {
+        "caseId": "n7h-rehydrate-02-consignment-batch",
+        "suite": "n7-holdout",
+        "condition": "rehydrate",
+        "contentDigest": "6e24bbc819138c16e878942daffa014bd975fae8017feb88808a2ccc985c07fd",
+        "verifierDigest": "65fba713c025680b9a22ca649e51e10543d641a4481ee048c553065b9735f61c"
+      },
+      {
+        "caseId": "n7h-partial-01-overview-and-plasma",
+        "suite": "n7-holdout",
+        "condition": "partial",
+        "contentDigest": "519250f7e8460fcecfce29cf4074610db9a8e683178d749300f555eba9d40f2f",
+        "verifierDigest": "b0dbb5bb88516c884481b79c02749e3f7a57f9919de543ba091a88669606f25d"
+      },
+      {
+        "caseId": "n7h-partial-02-index-and-container",
+        "suite": "n7-holdout",
+        "condition": "partial",
+        "contentDigest": "2157781f338032142043666e57690d2f67c11d8a1573460e051e6e54d33955c4",
+        "verifierDigest": "24b8a0df31dbdb6132df9586d33edc1c5fbcc51237fa70c1dda93f5a7e405349"
+      },
+      {
+        "caseId": "n7h-control-01-mean-divisor",
+        "suite": "n7-holdout",
+        "condition": "visible",
+        "contentDigest": "84f7e3b636e2661a83b4eb4702140fb8797104784c80c4b037215ab0a35c04c7",
+        "verifierDigest": "fe028a8981139a18e86c8262dc5b66090c7443155ed967564aade34e6cb9af8f"
+      },
+      {
+        "caseId": "n7h-control-02-interleave-tail",
+        "suite": "n7-holdout",
+        "condition": "visible",
+        "contentDigest": "2754af753ad7dfc0f22d84a67e824fb1e9488501b01a03da3766d32219f0fb0f",
+        "verifierDigest": "e7ea86a54b2426f86f5f05294f9d584ac7fb1d4ed6e9da0e84301e6a4c5b9838"
+      },
+      {
+        "caseId": "n7h-control-03-normalize-unit",
+        "suite": "n7-holdout",
+        "condition": "visible",
+        "contentDigest": "bf9997d92ed1566f0c0893b2b6e49e2555620fe91e3b54d3845d48fa7f5bd938",
+        "verifierDigest": "ad093c29e05a3bc4dfede71d1239c302f2a6166ae0ce5cc3795d6ba777dcbdff"
+      },
+      {
+        "caseId": "n7h-control-04-inclusive-range",
+        "suite": "n7-holdout",
+        "condition": "visible",
+        "contentDigest": "665af8217095cb81fa9e465d002ce4c03ccaa06336f1d4f1abc75fbdfe5c9d63",
+        "verifierDigest": "d9e9bd098f5fea594378bd259faf5af04659396e1de53c45708dd9ca92dd0de2"
+      },
+      {
+        "caseId": "n7h-control-05-changed-threshold",
+        "suite": "n7-holdout",
+        "condition": "changed",
+        "contentDigest": "a132eeb585108f4b505ec5d63e1ca408c49e7f11820a1d0f73ca01652d83655d",
+        "verifierDigest": "9d5fc408a44559749340c637248617ed4c788ab34c2cc86f81e594f66a750b3c"
+      },
+      {
+        "caseId": "n7h-control-06-changed-shipment-count",
+        "suite": "n7-holdout",
+        "condition": "changed",
+        "contentDigest": "fcb842654924d1832a4cf2165db0b7989a3d9c15a7c6d0c5f62308bd6ea4a2c5",
+        "verifierDigest": "defb274fc85e89a98b24ced6af4e851bd66daea22fbb2d1f77341f4d1b46b852"
+      },
+      {
+        "caseId": "n7h-control-07-failing-median-check",
+        "suite": "n7-holdout",
+        "condition": "diagnostic",
+        "contentDigest": "5384cc46a4c9bd3026ccd4f684c98b19ec4b55af8ade2b42ac2d3de52d4abb80",
+        "verifierDigest": "00101cfeaf1a995401a0a85c1590ee3548d5aa1bcae92c99c4a2c497bd55ada8"
+      },
+      {
+        "caseId": "n7h-control-08-failing-rotation-check",
+        "suite": "n7-holdout",
+        "condition": "diagnostic",
+        "contentDigest": "8ae6f46fc9be808edf34fba0f9aae9af0966cbd6cbed883759bd2507f4ba7776",
+        "verifierDigest": "00101cfeaf1a995401a0a85c1590ee3548d5aa1bcae92c99c4a2c497bd55ada8"
+      }
+    ],
+    "caseSetDigest": "efcfc55862dab7b3cf8a64998f9ad82c5234b8d3ef6bf2a765a50c33a666f0ca",
+    "selectionProvenanceDigest": "7e8e42fd8f21324342f073bb339763864f9767e01d52972822bb343fe48b2a28"
+  },
+  "evaluation": {
+    "verifierDigest": "e8d70616d558ec85d057545d9c958fc0b7c9fb3645b5bf229dc3f78f42a789da",
+    "scorerDigest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "judgeId": "task-verifier",
+    "judgeDigest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "gates": {
+      "missingGroupVerifiedPassRateLiftPp": 5,
+      "pairedBootstrapIterations": 10000,
+      "pairedBootstrapOneSidedLowerBoundMin": 0,
+      "controlSuccessMustNotDecrease": true,
+      "newSecurityViolationsMax": 0,
+      "newFalseCompleteMax": 0,
+      "totalTokensMaxRatioOfBaseline": 1.1,
+      "modelCallAttemptsMaxRatioOfBaseline": 1.1,
+      "unproductiveRepeatedToolCallsMustNotGrow": true,
+      "holdoutOverallPassRateMustNotDecrease": true,
+      "holdoutMissingGroupLiftPp": 5,
+      "baselineZeroUsesAbsoluteNonGrowth": true,
+      "usageUnknownIsNotZero": true
+    },
+    "gatesDigest": "9bd350a420c5d4d881f0376008118c706e764e1a9aa392c9ec05d202ac0566d1"
+  },
+  "schedule": {
+    "repetitions": 4,
+    "orderSeed": 20261010,
+    "planDigest": "58551aad543c4ad2f63efeb94214de00e3ee548e23ecf4e39f0171b5748293f2",
+    "logicalRuns": 192,
+    "abCount": 48,
+    "baCount": 48,
+    "balanced": true
+  },
+  "budget": {
+    "maxModelCallsPerRun": 30,
+    "maxToolCalls": 600,
+    "maxDurationMs": 1800000,
+    "maxInputTokens": 3000000,
+    "maxOutputTokens": 400000,
+    "maxTotalTokens": 4000000,
+    "maxUsdMicros": 100000000000,
+    "pricingUnknownPolicy": "refuse",
+    "campaignWorstCaseModelCalls": 5760
+  },
+  "preregistrationDigest": "c2a674f6afe4b2a6747bb82df07374665899a765c46bcc0684ed15f63e65ab65",
+  "role": "holdout"
+}

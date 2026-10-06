@@ -1,0 +1,526 @@
+{
+  "schemaVersion": "verified-completion-gate-preregistration-v1",
+  "subject": {
+    "candidateSourceSha": "e6fc818c4c6ccf026c63dc73af25d99f462f93f3",
+    "baselineArmDigest": "c31e2d05183bdb696c29ae14474a0a23ab40ea9c6739cb374a5cf3959c56feac",
+    "candidateArmDigest": "ab4c18684d520d061a4a34606d4a8abb43ab4c9d47dfe3455cd0ca3faa371677",
+    "cleanTreePolicy": "require-clean",
+    "runtimeConfigDigest": "ab4c18684d520d061a4a34606d4a8abb43ab4c9d47dfe3455cd0ca3faa371677"
+  },
+  "prompt": {
+    "candidateId": "verified_completion_gate_v1",
+    "guidanceVersion": "verified-completion-gate:v1",
+    "guidanceDigest": "7ef38a062ad770f47699ebac90f9cfa02c65758c9f92c1a9298bbc744275b546",
+    "contractDigest": "79f7b3739bb4887f7a4474d375b054ebde1bf8c1ffefd882559752f8acaf6292",
+    "comparisonCandidateId": "tool_call_efficiency_v1",
+    "comparisonGuidanceVersion": "tool-call-efficiency:v2",
+    "comparisonGuidanceDigest": "ebddf5eb125cbbe8ed25d7ecb1ea3554809494aea70716adf3a9f62924939619"
+  },
+  "provider": {
+    "providerId": "openai",
+    "modelId": "workbuddy-deepseek-v4.1-flash",
+    "endpointDigest": "4949505a4a395b595d123bdd773ce3ee414c7da71f6fd4371a9ccc2542d2ebc0",
+    "requestProfileDigest": "9046af4fee7de86cf674214b1b379142eeb28e996a94420997d711f2df48b8ad"
+  },
+  "dataset": {
+    "suiteId": "n7-evidence",
+    "suiteVersion": "1.0.0",
+    "caseRoot": "benchmarks/n7-evidence",
+    "holdoutPolicy": "holdout per-case data is never read into an artifact; the holdout experiment uses its own suite and never participates in prompt tuning",
+    "cases": [
+      {
+        "caseId": "n7e-compact-01-build-jobs",
+        "suite": "n7-evidence",
+        "condition": "compact-drop",
+        "contentDigest": "cabfa646b0f31e677fefdc007d85986882f66b207ad9ddf020d6e4168f18d89b",
+        "verifierDigest": "7b1c7cfe9d09f07f6668924009d6e9c6db15016d27018783e82226a74c7339bb"
+      },
+      {
+        "caseId": "n7e-compact-02-artifact-ttl",
+        "suite": "n7-evidence",
+        "condition": "compact-drop",
+        "contentDigest": "872037fa70941483b797b139b48e0d52081dad710e51bcb81f539b49a32f6a64",
+        "verifierDigest": "7e6e9187ccfd1e96141396c535abf5ef22e7bf336851bd5201749d75c8c0a0c0"
+      },
+      {
+        "caseId": "n7e-compact-03-probe-interval",
+        "suite": "n7-evidence",
+        "condition": "compact-drop",
+        "contentDigest": "690fdee21cf3d4de5d20985b28ee691adba3f4dc1bd21993596d9df4f9959670",
+        "verifierDigest": "e4f1d8a5c56c8cfb490b1f7d9925b54e4d0f29a1f73bdc978f5f67983017c141"
+      },
+      {
+        "caseId": "n7e-compact-04-canary-share",
+        "suite": "n7-evidence",
+        "condition": "compact-drop",
+        "contentDigest": "f0077d6bd750d88d7793d0a8fe7299b7ba08c54c079e1b1d5870cbee4a95f076",
+        "verifierDigest": "627296a26016e7889a48633c3093e60a1e38b6f2c294e6c8da885a491a7f0374"
+      },
+      {
+        "caseId": "n7e-compact-05-audio-bitrate",
+        "suite": "n7-evidence",
+        "condition": "compact-drop",
+        "contentDigest": "4f357a137c449b9660441b0e9fa248fe02b0aa0c45336a3a599da71646f83592",
+        "verifierDigest": "a0b21cfd56f03bcea7e2025197e76727bd779018d0bead7d116ea7849f96088c"
+      },
+      {
+        "caseId": "n7e-compact-06-frame-rate",
+        "suite": "n7-evidence",
+        "condition": "compact-drop",
+        "contentDigest": "59ed6ca86823c51558b6389ae4c8e2a3eb0a7c1db41bffd336c51edc9c5a6bc9",
+        "verifierDigest": "e9e3872199116934f3167f44b745cd7d18e035567f056d2cef450790e93aea79"
+      },
+      {
+        "caseId": "n7e-compact-07-vat-rate",
+        "suite": "n7-evidence",
+        "condition": "compact-drop",
+        "contentDigest": "4ecc41799101043297445c93719c268649520f8072c21f3069828079e6522a3f",
+        "verifierDigest": "b19f81da09445454a8650a8757fae9d05a0adde435bf5b6ea59e453187885c63"
+      },
+      {
+        "caseId": "n7e-compact-08-invoice-due",
+        "suite": "n7-evidence",
+        "condition": "compact-drop",
+        "contentDigest": "07eba67a6d36ca6d44529234eaf85b207d5712a40dd50d73bf9358671d46b8b5",
+        "verifierDigest": "a5dbac43fcf33ac3d96e31a456ff7d411c24883ab898480142c29c7af748da25"
+      },
+      {
+        "caseId": "n7e-compact-09-storage-quota",
+        "suite": "n7-evidence",
+        "condition": "compact-drop",
+        "contentDigest": "4c3e41b6d6504e0e19f59986a22a9efa07726a97015ac15a2f063484c23fe6df",
+        "verifierDigest": "6458136644f9513af77bd08624138ba627ac41716ea940eefd639cd5270baeb8"
+      },
+      {
+        "caseId": "n7e-compact-10-index-shards",
+        "suite": "n7-evidence",
+        "condition": "compact-drop",
+        "contentDigest": "31a3004e9e65c5779fe93de4c110b832aee8483508cb28cb4b10c585aa8f0e34",
+        "verifierDigest": "e7e0bd0fea8e24081dd4c64ba06a5b4421c6bb2f6e4b26a3d9b104b448c86543"
+      },
+      {
+        "caseId": "n7e-compact-11-scan-window",
+        "suite": "n7-evidence",
+        "condition": "compact-drop",
+        "contentDigest": "9fd2192ab325c56b4d56d00e202e1e39831eab3af194695ec70afbe0769d3373",
+        "verifierDigest": "a7f1026f795cf7f582e53b456bfaa3c735b67f379ad12a329c0d460068d02d97"
+      },
+      {
+        "caseId": "n7e-compact-12-buffer-rows",
+        "suite": "n7-evidence",
+        "condition": "compact-drop",
+        "contentDigest": "a6db2cfba5cb46e63c5b4542ccbf6664c12c9888d84191ffc9348e5f28eebdc9",
+        "verifierDigest": "3294ce6ad242444684021c9f0d4f667aee47394e6920c3814ba008bdec535bca"
+      },
+      {
+        "caseId": "n7e-compact-13-seed-length",
+        "suite": "n7-evidence",
+        "condition": "compact-drop",
+        "contentDigest": "b1f668670ee4bcf554191ac4de2c284840acd4ebfe15f4a5f6b269a4e628e089",
+        "verifierDigest": "cb904850b0cbad79637d3a48c3d566e92bfa40e665511d36f811d2c3fdc201e1"
+      },
+      {
+        "caseId": "n7e-compact-14-label-keys",
+        "suite": "n7-evidence",
+        "condition": "compact-drop",
+        "contentDigest": "3226314ea1095b02b48ab63fe2609071a28ac16d2ffbc715fa576d80d0f95900",
+        "verifierDigest": "d14db7171695b1d180fe05e9bfde048af643870d5aa63f0a19f10c04c8ea4ede"
+      },
+      {
+        "caseId": "n7e-compact-15-replica-count",
+        "suite": "n7-evidence",
+        "condition": "compact-drop",
+        "contentDigest": "716fe8fd58d2badf195d4fc4833f2cbf37b4865ea0b0bca62f016fe2c5ac42cf",
+        "verifierDigest": "71ce1e78a1a0e105d2f02bed2c64423d592863974e13674061dde9f4720d89c3"
+      },
+      {
+        "caseId": "n7e-compact-16-cron-jitter",
+        "suite": "n7-evidence",
+        "condition": "compact-drop",
+        "contentDigest": "a444237316b1dcf819de7e9093dfb929565f9c2dedfc7e9c2a6d2547bca7f0da",
+        "verifierDigest": "58d3d1162b80a41c3736c1a36cb3120bb1e26f6a6d19a1da57ed6aa0b1529ac6"
+      },
+      {
+        "caseId": "n7e-compact-17-alert-threshold",
+        "suite": "n7-evidence",
+        "condition": "compact-drop",
+        "contentDigest": "9451d370dd56df7dfe3b125cdf208a8c75e9812a12885a4008704a052cf07d6e",
+        "verifierDigest": "3b3a932c904116434532555ca5b9f992c50443267accd0f9828a56a834eb8db7"
+      },
+      {
+        "caseId": "n7e-compact-18-upload-chunk",
+        "suite": "n7-evidence",
+        "condition": "compact-drop",
+        "contentDigest": "072a412f8c5dae6a0a7a1743b11115f8615db75e888385b3f2b2cc6b957bc61c",
+        "verifierDigest": "b0f7d7f89e1b6608a3f08c54f0b0d3305e5343e9f6abf269c4725ebbcf3852c0"
+      },
+      {
+        "caseId": "n7e-compact-19-session-ttl",
+        "suite": "n7-evidence",
+        "condition": "compact-drop",
+        "contentDigest": "51eb5ae78a17fa196177b7bb8bf657c24f115927e8b8544259b4bb136cec5ca0",
+        "verifierDigest": "44e9c545d82f0a8cf7570b13a9ad3b4300b859189ae8a32f1ef07d21c3e814cd"
+      },
+      {
+        "caseId": "n7e-compact-20-cache-entries",
+        "suite": "n7-evidence",
+        "condition": "compact-drop",
+        "contentDigest": "ec795ef682a29e0489f3c91929cb265e6beb76a6c151b1a7b64f21fbd4ebedab",
+        "verifierDigest": "d4b3941612c031e5dacbd6f65a77b4549826a3da98ed7adbe8aeb379b73d6cd8"
+      },
+      {
+        "caseId": "n7e-preview-01-ingest-limit",
+        "suite": "n7-evidence",
+        "condition": "preview",
+        "contentDigest": "389c29791dcd7e14a739764d95ed5ee71705aac4a59025b11941001e26873060",
+        "verifierDigest": "92172db7206d92b6f6fbca55e43409d6a39c3ca3b5c4837a4bcf6bee48159c83"
+      },
+      {
+        "caseId": "n7e-preview-02-routing-column",
+        "suite": "n7-evidence",
+        "condition": "preview",
+        "contentDigest": "61f92e19e4f9c0c9352a4e471782b6478cd1468805d6613fe871d9561722f5ce",
+        "verifierDigest": "3ad173ed25e3a4e59a010bb662e9e62354194e370684af365db147442f11671f"
+      },
+      {
+        "caseId": "n7e-preview-03-retention-flag",
+        "suite": "n7-evidence",
+        "condition": "preview",
+        "contentDigest": "f57459b94e7dc103c6fa1d02a280ab761c8115a2c3f9350d47f2158e62e69eeb",
+        "verifierDigest": "cc392d24488cb3901f9dc226b8fb2324c77c695627ec1320cf7014d149a60266"
+      },
+      {
+        "caseId": "n7e-preview-04-checkpoint-interval",
+        "suite": "n7-evidence",
+        "condition": "preview",
+        "contentDigest": "a2b00952fdaff37c7b4add26639b68a2a8b803879f61df34aa7f0cf7045b437b",
+        "verifierDigest": "1fdebe8a6d19285452e2ecb1e99e8e725c0aaf8a735f9ca63688b0eb803e7ab5"
+      },
+      {
+        "caseId": "n7e-preview-05-burst-window",
+        "suite": "n7-evidence",
+        "condition": "preview",
+        "contentDigest": "3075ed9de14eddafcc800be81ea0bd67d7431e12f817869a27e35eeddbaad4cc",
+        "verifierDigest": "b306077effd0eb872f91cabbf05a539bdadfecdb309324679f57f578f43aaa8a"
+      },
+      {
+        "caseId": "n7e-preview-06-max-connections",
+        "suite": "n7-evidence",
+        "condition": "preview",
+        "contentDigest": "002afa111e6cf34f9fffb5bd09d29564b0eac7838367c6560eff55fa8a1852c2",
+        "verifierDigest": "bb50393916a5bc73a684dd03f38f69b7d23b5fb583d31032d1989aa4c6638c72"
+      },
+      {
+        "caseId": "n7e-preview-07-partition-count",
+        "suite": "n7-evidence",
+        "condition": "preview",
+        "contentDigest": "7f8383924593ebfa044b742be9a8095cc1032e9c69328f76518434cce6de7cba",
+        "verifierDigest": "f8801c0976401eaa07ee788e3f7bec35412019392e60a47e48a69a4f4ecb879c"
+      },
+      {
+        "caseId": "n7e-preview-08-audit-window",
+        "suite": "n7-evidence",
+        "condition": "preview",
+        "contentDigest": "91bd07f52a0c1d1476d70f6c2d8a7153f005c385af6f997db3eb0dbe00bf5d7e",
+        "verifierDigest": "9c6ab5a25d4220b135a5b8518f65d0f8c4360e34b4b57571a224ebe90212033a"
+      },
+      {
+        "caseId": "n7e-preview-09-flush-threshold",
+        "suite": "n7-evidence",
+        "condition": "preview",
+        "contentDigest": "6c5133df272f6e15a5b9bd11c3ff5ba9a9d7145bfd664c69766db0b2ae898ae4",
+        "verifierDigest": "481e2273e05dd5d75dec9867dd42f1d00b3de52270e407f23ec7f44f838aea58"
+      },
+      {
+        "caseId": "n7e-preview-10-pool-size",
+        "suite": "n7-evidence",
+        "condition": "preview",
+        "contentDigest": "4437c5e888b61a36c3af4048dc5db0dab805f68df93c79e62f3ee06025740a40",
+        "verifierDigest": "c159fd4045c94786523193ade8dfe70cb612c29e7d68a520212d8450d537caa4"
+      },
+      {
+        "caseId": "n7e-preview-11-snapshot-interval",
+        "suite": "n7-evidence",
+        "condition": "preview",
+        "contentDigest": "9a3271912417a088be8d382ea7b51e3cb5cda614cf626f454334e7056aa517c5",
+        "verifierDigest": "3c8bf72ca25ee38129717dedd4b4fdd0640bc51cac288dcf4120939795819d60"
+      },
+      {
+        "caseId": "n7e-preview-12-tenant-quota",
+        "suite": "n7-evidence",
+        "condition": "preview",
+        "contentDigest": "20e760852048753ccab8722f20f5d4c46efdd4b6f8243cd8db8080db3bb43405",
+        "verifierDigest": "6e6beaf1d8a26423e08ee1c5b774a3c8f8cad039e9628ca7f63e27116ddd7fb3"
+      },
+      {
+        "caseId": "n7e-rehydrate-01-fence-tokens",
+        "suite": "n7-evidence",
+        "condition": "rehydrate",
+        "contentDigest": "c6cfcc1ede708532fda74cd6a3c23c74a741e9fa4ac1acc053f3f7f695df90cf",
+        "verifierDigest": "976c267c5d2bb762f86e9a6b6d249cf639c3ab66644b1cac2ac953f8f6066e5f"
+      },
+      {
+        "caseId": "n7e-rehydrate-02-batch-window",
+        "suite": "n7-evidence",
+        "condition": "rehydrate",
+        "contentDigest": "43a6fb9946aa1656b434e35b1636cace878f24ec327582ed41d4a0933f588df8",
+        "verifierDigest": "75632f383e9bbfe8e32a92aeca9963f9c5b4a5fc101e1534ad992f09d08fb9f7"
+      },
+      {
+        "caseId": "n7e-rehydrate-03-handoff-bytes",
+        "suite": "n7-evidence",
+        "condition": "rehydrate",
+        "contentDigest": "b4f040ad1a6281046a78838327d0547c131f205cb07ec4c66f806f0ac06b6c18",
+        "verifierDigest": "420f9977d39035b76d47f99df1795cf5b4e6dfddf2e0ae34e736ad9687f31ef7"
+      },
+      {
+        "caseId": "n7e-rehydrate-04-drain-timeout",
+        "suite": "n7-evidence",
+        "condition": "rehydrate",
+        "contentDigest": "685e9cf179ab64f9b0852b31f4d86ea3bc8e68d65d51bb1c3967dc8ad88f10bf",
+        "verifierDigest": "ad1c9fd5d286577cd84acdbcb9ba054f31409a9f3456c263ff135d751e8b3ea7"
+      },
+      {
+        "caseId": "n7e-rehydrate-05-shard-keys",
+        "suite": "n7-evidence",
+        "condition": "rehydrate",
+        "contentDigest": "1ca70687851149ca339f915275e0ed3ae587af441c76bc2d5c6e4932541cc1b0",
+        "verifierDigest": "a52c72cce3504b2a9c7de74e248dff47c823bb265916203bb8d6a2e189d8e238"
+      },
+      {
+        "caseId": "n7e-rehydrate-06-token-budget",
+        "suite": "n7-evidence",
+        "condition": "rehydrate",
+        "contentDigest": "02136fe562fe7cb6910de866c2b89846cceb4931d90128c59ffa1db3ea3b3b7e",
+        "verifierDigest": "ad44afab97d0643c237db74d9315f79dd461cd2d4c1d0da13a7fd7e27aaab33b"
+      },
+      {
+        "caseId": "n7e-rehydrate-07-quantile",
+        "suite": "n7-evidence",
+        "condition": "rehydrate",
+        "contentDigest": "131a77356e5fc73f2febb374a4635dc8abf3f2ef1426244885f31a241dd8ae39",
+        "verifierDigest": "00844cc662fa58413c4d67f6a1eed86ac0e6de81555a34d1299012503c9dff6c"
+      },
+      {
+        "caseId": "n7e-rehydrate-08-throttle-burst",
+        "suite": "n7-evidence",
+        "condition": "rehydrate",
+        "contentDigest": "a67f14e290bc4e1c9b6daeaa81d1f1c8815e5486d52964a996fe0959744553ab",
+        "verifierDigest": "144e062c804e2095392a55830c2342233315810b1669a9a95a122e7071a21ba8"
+      },
+      {
+        "caseId": "n7e-rehydrate-09-scrub-interval",
+        "suite": "n7-evidence",
+        "condition": "rehydrate",
+        "contentDigest": "df4223c1e88334edcc0fc2029bc81484a19047542a43881fdd27ed20a05a9636",
+        "verifierDigest": "82ccb0e6759c5750da56dddd82a60345eb0562db19f8fa447a16ea2f959f8921"
+      },
+      {
+        "caseId": "n7e-rehydrate-10-commit-delay",
+        "suite": "n7-evidence",
+        "condition": "rehydrate",
+        "contentDigest": "399c048155c824abbff4a6bc55447598687843bfb9b4c86f914e3f0bf003af31",
+        "verifierDigest": "07cba9ea9b787ad51c57ed4c1618bb4ab58b76b182252b65210b0addca9e680b"
+      },
+      {
+        "caseId": "n7e-partial-01-topology-and-limit",
+        "suite": "n7-evidence",
+        "condition": "partial",
+        "contentDigest": "d8c9debc27d212a0ad8bebe1a3ed85155964dfc8be5c21af598c52310516c3ba",
+        "verifierDigest": "8fb1617e60e1811cc758ecf13337b3cf23ed01ff9268bfc35a64a5a015c88b5d"
+      },
+      {
+        "caseId": "n7e-partial-02-index-and-ceiling",
+        "suite": "n7-evidence",
+        "condition": "partial",
+        "contentDigest": "6a42a9dde1633a0cb41c3822d25b774c33ef1dd1bbe54f25f0876eb88d56694a",
+        "verifierDigest": "1e1aadbe3095ab3fd478ef28681a84a154f8aa2d507d3cf05d6a2fc665348cd4"
+      },
+      {
+        "caseId": "n7e-partial-03-overview-and-ttl",
+        "suite": "n7-evidence",
+        "condition": "partial",
+        "contentDigest": "98305bd73e90c6c0505a1fbed9d5fedb2de02d568efdd707a282c49cb2b60c92",
+        "verifierDigest": "7faed8f2148014bbbdb697eae560583ab7edb920b746f1150346eaa9c18855d8"
+      },
+      {
+        "caseId": "n7e-partial-04-roadmap-and-batch",
+        "suite": "n7-evidence",
+        "condition": "partial",
+        "contentDigest": "d8e3e31d14ae8e3a31d9106ef15fbb5425c1d520bfc8f9c52eae903eafd6e052",
+        "verifierDigest": "e0c220ca07bf1ab8168f8f1e52166984bafef441687127063aecc5346fc5d903"
+      },
+      {
+        "caseId": "n7e-partial-05-dependency-and-pool",
+        "suite": "n7-evidence",
+        "condition": "partial",
+        "contentDigest": "c95240887e6a22b269039d837bb8ded3e56cbb3f2adb94da898d1a2ac85b5672",
+        "verifierDigest": "867a548ef1246f9e26883a02f186037cad1f3bf84176e920fefe4234bafb4d7a"
+      },
+      {
+        "caseId": "n7e-partial-06-operations-and-timeout",
+        "suite": "n7-evidence",
+        "condition": "partial",
+        "contentDigest": "b21b54948e98ae30f27785447918a10f6e7936fc9c7e6608704efe092ce9caf5",
+        "verifierDigest": "235319f51399f547ba432acf8878a7b848b3a1473d3796aafb03b26b0523abb5"
+      },
+      {
+        "caseId": "n7e-control-01-chunk-tail",
+        "suite": "n7-evidence",
+        "condition": "visible",
+        "contentDigest": "c9a63d458d044a07de305a47efbb252781b08f821df46e92788e5a4b383a2c27",
+        "verifierDigest": "7855e6e21ea9fb27e6cf217ac8c8db06316694c0b308ffbf6ddadbd3fed501c7"
+      },
+      {
+        "caseId": "n7e-control-02-clamp-bounds",
+        "suite": "n7-evidence",
+        "condition": "visible",
+        "contentDigest": "33fe6eccf7fbbe4cca9fee6cc34e0e2c20f1ba76df57574ee7a396f6445ee92f",
+        "verifierDigest": "80526eae6d222ff07778513e5c28dd0010227a4f864caf6e2cde9f0a7a2cf6d7"
+      },
+      {
+        "caseId": "n7e-control-03-merge-defaults",
+        "suite": "n7-evidence",
+        "condition": "visible",
+        "contentDigest": "6d9d261e03590b8caf9e8ba9457be77ec2d5f4d82ba74460d1ab83da127ba2a1",
+        "verifierDigest": "0386bc1065c5d0a60c7a8295a05d84dbbf690c6d493f474d84830fa37627a8e5"
+      },
+      {
+        "caseId": "n7e-control-04-unique-order",
+        "suite": "n7-evidence",
+        "condition": "visible",
+        "contentDigest": "ef5be696f871f26879402f70c42e8ad01a2ba90b576f087b4c55335ce92e7e3c",
+        "verifierDigest": "e61392976d1c57567646cb27977d2f9c9f0c889f8db03f3dd545ca5c99f619c6"
+      },
+      {
+        "caseId": "n7e-control-05-format-bytes",
+        "suite": "n7-evidence",
+        "condition": "visible",
+        "contentDigest": "64564175199afe2fa2394af6d92f85e35cf9b111ac85dda3034cf4925410181c",
+        "verifierDigest": "7f60c8763e23613d74e0afb1869bcdde8fb591d77d2ef75838bd0590f5d7259e"
+      },
+      {
+        "caseId": "n7e-control-06-word-count",
+        "suite": "n7-evidence",
+        "condition": "visible",
+        "contentDigest": "344b5ba77babf7b75ca5c1970f300313068c64b0e3dbc05853e1243e644b10bd",
+        "verifierDigest": "1c88988700f2daac6e73a0ebf00cac1bb6d7963a0db2267f5c2bd299a1d8886b"
+      },
+      {
+        "caseId": "n7e-control-07-truncate-suffix",
+        "suite": "n7-evidence",
+        "condition": "visible",
+        "contentDigest": "3dfb6817c1863304b179403871ccc54527171618cc6353d1df130668d4f85638",
+        "verifierDigest": "b520690788da0aa9398d0f6b70556d7db7c11922c9fc7be3b588fddc156d7611"
+      },
+      {
+        "caseId": "n7e-control-08-key-order-equal",
+        "suite": "n7-evidence",
+        "condition": "visible",
+        "contentDigest": "cd5f98930a82e02af0935d92dc2e618b8fa8f8eda213a56ba06f65d9624ec2aa",
+        "verifierDigest": "42ed66fed20dd220b33b6d6e03968565e23885ccc42a1443ff0c3aa09640b5f8"
+      },
+      {
+        "caseId": "n7e-control-09-changed-region",
+        "suite": "n7-evidence",
+        "condition": "changed",
+        "contentDigest": "2f14266f81adf5fdecc424a4c1e28e4e2704386909f51c2d921178229860e411",
+        "verifierDigest": "2b2edb44c2f039288c22a1a39eaf7911cce24dcd86e46f02b784c30757f36f90"
+      },
+      {
+        "caseId": "n7e-control-10-changed-token-ttl",
+        "suite": "n7-evidence",
+        "condition": "changed",
+        "contentDigest": "0b726f66f8abb49c2077821ea46cf98ece94f5fe87bf4febc4840c327c639e92",
+        "verifierDigest": "917e6e002debcd613bbcb0f400a134a10c8ee3e53fe5745598ad930787e7dd62"
+      },
+      {
+        "caseId": "n7e-control-11-changed-shard-map",
+        "suite": "n7-evidence",
+        "condition": "changed",
+        "contentDigest": "86f4f20807728ae8e973ca8b4134bffe14c662e6eb209ac61018855be3f73229",
+        "verifierDigest": "9465e0d8348607554f6749104cea6b7bd6bd44c0be1a9a68f6cbb962a13e1ce1"
+      },
+      {
+        "caseId": "n7e-control-12-changed-retention",
+        "suite": "n7-evidence",
+        "condition": "changed",
+        "contentDigest": "9acec076c5e529ca266f94d4456c4bb41f82b34b1342bce102c05cb32635d547",
+        "verifierDigest": "565534d5f72cff57bf48b3cfb19dd52e89d28214af32d57b73f0fc33a8667f07"
+      },
+      {
+        "caseId": "n7e-control-13-failing-fee-check",
+        "suite": "n7-evidence",
+        "condition": "diagnostic",
+        "contentDigest": "6a3ca1fb81d2222f64bb3764797ea202e8cbd3708be8f62455568bc8287f9e8b",
+        "verifierDigest": "00101cfeaf1a995401a0a85c1590ee3548d5aa1bcae92c99c4a2c497bd55ada8"
+      },
+      {
+        "caseId": "n7e-control-14-failing-ranges-check",
+        "suite": "n7-evidence",
+        "condition": "diagnostic",
+        "contentDigest": "f4e2066ac68fad6fd8a150cd91a3df0a445d33f0dfe6e9af68468b930d169b89",
+        "verifierDigest": "00101cfeaf1a995401a0a85c1590ee3548d5aa1bcae92c99c4a2c497bd55ada8"
+      },
+      {
+        "caseId": "n7e-control-15-failing-checksum-check",
+        "suite": "n7-evidence",
+        "condition": "diagnostic",
+        "contentDigest": "23ec6b36b7ec0cd427c75a6a4186de0f266059f9738987b267bcf8f30a856474",
+        "verifierDigest": "00101cfeaf1a995401a0a85c1590ee3548d5aa1bcae92c99c4a2c497bd55ada8"
+      },
+      {
+        "caseId": "n7e-control-16-failing-template-check",
+        "suite": "n7-evidence",
+        "condition": "diagnostic",
+        "contentDigest": "9471b54c4fef9ee695c3b8c97a914c8e0fe086884de6f83ec97ed9492b555290",
+        "verifierDigest": "00101cfeaf1a995401a0a85c1590ee3548d5aa1bcae92c99c4a2c497bd55ada8"
+      }
+    ],
+    "caseSetDigest": "021da7487af3e3e0bc4c78e5d74f0b9d04be0c331baf129a119b098e9f3af60d",
+    "selectionProvenanceDigest": "03a77f3f060e9040ed9ae61bdff8d7e849e646881aa6922f9c52b3c9bcd08fa1"
+  },
+  "evaluation": {
+    "verifierDigest": "122e561b51ffcb6d3401c5ee25c9a94969134c4a7569139b5881b6bd1ddca8cd",
+    "scorerDigest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "judgeId": "task-verifier",
+    "judgeDigest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "gates": {
+      "missingGroupVerifiedPassRateLiftPp": 5,
+      "pairedBootstrapIterations": 10000,
+      "pairedBootstrapOneSidedLowerBoundMin": 0,
+      "controlSuccessMustNotDecrease": true,
+      "newSecurityViolationsMax": 0,
+      "newFalseCompleteMax": 0,
+      "totalTokensMaxRatioOfBaseline": 1.1,
+      "modelCallAttemptsMaxRatioOfBaseline": 1.1,
+      "unproductiveRepeatedToolCallsMustNotGrow": true,
+      "holdoutOverallPassRateMustNotDecrease": true,
+      "holdoutMissingGroupLiftPp": 5,
+      "baselineZeroUsesAbsoluteNonGrowth": true,
+      "usageUnknownIsNotZero": true
+    },
+    "gatesDigest": "9bd350a420c5d4d881f0376008118c706e764e1a9aa392c9ec05d202ac0566d1"
+  },
+  "schedule": {
+    "repetitions": 4,
+    "orderSeed": 20261009,
+    "planDigest": "847fb3d882d2824c6f9ca6796836ec79a2e8ee5a917e184932a4861d067768bc",
+    "logicalRuns": 512,
+    "abCount": 128,
+    "baCount": 128,
+    "balanced": true
+  },
+  "budget": {
+    "maxModelCallsPerRun": 30,
+    "maxToolCalls": 600,
+    "maxDurationMs": 1800000,
+    "maxInputTokens": 3000000,
+    "maxOutputTokens": 400000,
+    "maxTotalTokens": 4000000,
+    "maxUsdMicros": 100000000000,
+    "pricingUnknownPolicy": "refuse",
+    "campaignWorstCaseModelCalls": 15360
+  },
+  "preregistrationDigest": "14998628ad285a1dcf163b9b1ab27b8a8325ae574e752898fffbda3f3ae1cd73"
+}

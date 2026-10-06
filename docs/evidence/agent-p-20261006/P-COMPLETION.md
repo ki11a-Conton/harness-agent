@@ -62,3 +62,17 @@
 ## 5. 本机环境修复（同轮一并完成）
 
 `.gitattributes` 增加 N7 证据树 LF 规则（`0d5ef35a`）：`docs/evidence/agent-next7-20261006/** text eol=lf`、`**/*.gz -text`、`scripts/research/agent-next7-20261006/* text eol=lf`。修复前实测：索引 33/33 与 LF blob 一致，但工作树仅 23/33（每行差 1 字节），`verifyIndex` 报 `ARTIFACT_DRIFT`；修复后工作树 `verifyIndex` 33 files OK、`RAW-MANIFEST` 28 files OK。`git add --renormalize` 未产生任何内容改动（blob 本就是 LF），故不影响任何已记录摘要。
+
+## 6. 离线补齐（B 项，同轮完成）
+
+1. **任务合同**：[tasks/AGENT-P-20261006.md](../../../tasks/AGENT-P-20261006.md)（范围、交付物、验收、诚实边界）。
+2. **新候选预注册（结果之前冻结）**：
+   - 模块 [verified-completion-gate-preregistration.ts](../../../packages/evaluation/src/verified-completion-gate-preregistration.ts)（复用既有构建器 + 显式 `ContextSafePlanSpec`，默认值仍等于 N6 现值）；
+   - 冻结脚本 `scripts/research/agent-p-20261006/freeze-p-{preregistration,holdout-preregistration}.mjs`，产物 `docs/evidence/agent-p-20261006/{main,holdout}-preregistration.json`；
+   - **主实验**：64 用例（冻结 N7 语料，manifest `03a77f3f…`）× 4 重复 × 2 臂 = **512 logical runs**（AB 128 / BA 128），seed 20261009，`preregistrationDigest = 14998628ad285a1dcf163b9b1ab27b8a8325ae574e752898fffbda3f3ae1cd73`；
+   - **独立 holdout**：24 用例（manifest `7e8e42fd…`）× 4 × 2 = **192 runs**（AB 48 / BA 48），seed 20261010，对照臂 = 运行时解析 champion（C0/`null`，arm `00d2c921…`），`preregistrationDigest = c2a674f6afe4b2a6747bb82df07374665899a765c46bcc0684ed15f63e65ab65`；
+   - 门限与 N6/N7 **逐值相同**；provider/请求档/预算不变；两件 `--check` PASS；dry-run 均 `paidProviderCalls=0`、`modelQuality=NOT_RUN`；
+   - 回归 [verified-completion-gate-preregistration.test.ts](../../../packages/evaluation/src/verified-completion-gate-preregistration.test.ts) **12/12 PASS**（512/192 与 AB-BA 平衡、用例集确为冻结 N7 语料、身份对每个可调输入敏感、门限逐值相同、fail-closed、提交件等于现场重建、N6/N7 产物不受扰动、无凭据/端点/效果声明）。
+   - **记录的联动**：holdout 对照臂是 champion 解析出的 baseline 臂，而 baseline 快照枚举全部已注册候选 —— 因此**将来任何新候选登记都会再次移动该摘要并要求重新冻结**（与 §4.1 同类）。
+3. **本机环境差异清单**：[LOCAL-ENVIRONMENT-DIFFERENCES.md](LOCAL-ENVIRONMENT-DIFFERENCES.md)（并行全仓 32 FAIL/13 文件；串行复跑 30 FAIL/11 文件，其中 2 个文件仅并发下波动；逐项给出类别、串行是否仍失败与建议运行环境；判定标准：Linux CI 全通过即为环境差异，否则升级为缺陷）。
+4. **README 登记**：根 [README.md](../../../README.md) 的 supported candidates 列表补入 `tool_call_efficiency_v1`、`context_safe_tool_call_efficiency_v1/v2`、`verified_completion_gate_v1`、`diagnostic_first_repair_v1`、`path_scoped_instructions_v1`，并说明五个 prompt-guidance 候选共用 `completionGuidance` 槽位（互斥）与"全部 `candidate` / 效果 NOT_RUN，未 promotion"。`CAPABILITY_MATRIX.*` 是能力/配置矩阵（不含候选登记），无需为其重跑。

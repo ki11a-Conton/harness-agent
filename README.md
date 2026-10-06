@@ -341,9 +341,23 @@ node apps/cli/dist/main.js benchmark --suite adversarial --candidate tool_select
 Supported candidates: `adaptive_recovery`, `memory_retrieval`,
 `tool_selector_deferred_schema`, `adaptive_context_policy`,
 `context_pipeline_v5`, `memory_write_learning`, `independent_reviewer`,
-`delegation`, `adaptive_scheduler`. See
+`delegation`, `adaptive_scheduler`, `tool_call_efficiency_v1`,
+`context_safe_tool_call_efficiency_v1`, `context_safe_tool_call_efficiency_v2`,
+`verified_completion_gate_v1`, `diagnostic_first_repair_v1`,
+`path_scoped_instructions_v1`. See
 [`docs/evolution-decisions.md`](./docs/evolution-decisions.md) for the first
 loop's results (all challengers rejected; champion kept).
+
+The prompt-guidance candidates (`tool_call_efficiency_v1`,
+`context_safe_tool_call_efficiency_v1`, `context_safe_tool_call_efficiency_v2`,
+`verified_completion_gate_v1`, `diagnostic_first_repair_v1`) all occupy the SAME
+`completionGuidance` slot and are therefore mutually exclusive; asking for more
+than one is refused rather than silently choosing. `verified_completion_gate_v1`
+requires completion to be an OBSERVED claim (rerun the task's own check after the
+last edit, quote the passing output, never claim success from intent) and targets
+the measured false-complete failure cluster. All four guidance challengers are
+`candidate` / effect **NOT_RUN**: none of them has been promoted, and none may be
+read as a champion.
 
 ## Release gates
 
