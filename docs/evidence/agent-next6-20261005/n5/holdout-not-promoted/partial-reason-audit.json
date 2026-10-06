@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "n6-n5-holdout-partial-reason-audit-v1",
+  "experiment": "holdout",
+  "frozenPreregistrationDigest": "f4833575e139232a0581d631507010b7c0640f190c286194d33645d570d603bd",
+  "campaignStatus": "ok",
+  "finalizedPairs": 83,
+  "partialPairs": 13,
+  "partialArmsAudited": 26,
+  "reasonCounts": {
+    "baseline//network": 6,
+    "baseline//http": 1,
+    "candidate//none": 1,
+    "candidate//network": 8,
+    "baseline//none": 6,
+    "candidate/infrastructure/none": 1,
+    "candidate//http": 3
+  },
+  "httpErrorMessages": {
+    "OpenAI chat completion failed: HTTP 400: {\"error\":{\"message\":\"unknown provider for model workbuddy-deepseek-v4.1-flash\",\"type\":\"invalid_request_error\",\"code\":\"model_not_found\",\"param\":\"model\"}}": 4
+  },
+  "rawBundleFiles": 199,
+  "rawBundleBytes": 50887783.0,
+  "note": "The bundle was NOT promoted as measurement evidence: more than half of the incomplete arms failed for PROXY-SIDE reasons (14 network fetch failed, 4 HTTP 400 model_not_found \"unknown provider for model workbuddy-deepseek-v4.1-flash\"), which is why the declared integrity guard refused it. The judge verdict over the 83 finalized pairs is recorded as-is."
+}

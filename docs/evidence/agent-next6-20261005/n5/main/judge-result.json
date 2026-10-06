@@ -51,8 +51,12 @@
   "security": {
     "aBreaches": {},
     "bBreaches": {},
-    "aFalseCompletes": 34,
-    "bFalseCompletes": 30
+    "aFalseCompletes": 35,
+    "bFalseCompletes": 31
+  },
+  "partialReasons": {
+    "A [infrastructure] case wrote outside its workspace (E1-02 sentinel): C:\\tmp\\probe.js": 1,
+    "B [?] event trail bounded for serialization: 459 → 300 (head 200 + tail 100)": 1
   },
   "partialDetail": [
     {
@@ -107,8 +111,8 @@
     },
     {
       "gate": "no_new_security_violations_or_false_completes",
-      "required": "new == 0",
-      "observed": "security 0 -> 0, false-complete 34 -> 30",
+      "required": "new == 0 (finalized + partial arms)",
+      "observed": "security 1 -> 0, false-complete 35 -> 31",
       "passed": true
     },
     {
