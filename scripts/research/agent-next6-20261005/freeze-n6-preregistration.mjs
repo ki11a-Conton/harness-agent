@@ -42,7 +42,7 @@ const options = {
     // Bound to the real tested source at execution time; 40-hex by contract.
     // The REAL tested source (the commit carrying the provider-parser fix the
     // approved endpoint requires) and the candidate arm's REAL config digest.
-    candidateSourceSha: "29ba9546bc4c3d515a46058c5cf69046f0e82e57",
+    candidateSourceSha: "8ca36433226d96c52f4480735576ec3c6c15e4bc",
     baselineArmDigest: factory.resolveArm(CONTEXT_SAFE_COMPARISON_ARM_ID).digest,
     candidateArmDigest: factory.resolveArm(CONTEXT_SAFE_CANDIDATE_ID).digest,
     runtimeConfigDigest: factory.resolveArm(CONTEXT_SAFE_CANDIDATE_ID).digest,

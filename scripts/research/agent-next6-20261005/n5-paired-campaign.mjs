@@ -99,7 +99,8 @@ const dry = hasFlag("dry");
 const limit = argValue("limit") === undefined ? 0 : Number(argValue("limit"));
 const deadlineMin = argValue("deadline-min") === undefined ? null : Number(argValue("deadline-min"));
 
-const preregText = readFileSync(spec.prereg, "utf8");
+const preregPath = resolve(argValue("prereg", spec.prereg));
+const preregText = readFileSync(preregPath, "utf8");
 const prereg = JSON.parse(preregText);
 const declaredDigest = prereg.preregistrationDigest;
 
@@ -206,7 +207,7 @@ const header = {
   experiment: experimentName,
   smoke: !fullRun,
   frozenPreregistrationDigest: declaredDigest,
-  frozenPreregistrationFile: spec.prereg.replace(REPO, ".").split("\\").join("/"),
+  frozenPreregistrationFile: preregPath.replace(REPO, ".").split("\\").join("/"),
   armMapping: {
     planBaselineArm: { candidate: armCandidate("baseline") ?? null, note: experimentName === "main" ? "the live v2 guidance, NOT C0" : "the RESOLVED champion arm" },
     planCandidateArm: { candidate: armCandidate("candidate") ?? null, note: "the N6 revision" },

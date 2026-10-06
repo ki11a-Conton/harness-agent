@@ -74,7 +74,7 @@ const provenance = {
 const options = {
   role: "holdout",
   subject: {
-    candidateSourceSha: "29ba9546bc4c3d515a46058c5cf69046f0e82e57",
+    candidateSourceSha: "8ca36433226d96c52f4480735576ec3c6c15e4bc",
     baselineArmDigest: championArm.digest,
     candidateArmDigest: factory.resolveArm(CONTEXT_SAFE_CANDIDATE_ID).digest,
     runtimeConfigDigest: factory.resolveArm(CONTEXT_SAFE_CANDIDATE_ID).digest,

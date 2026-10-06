@@ -57,7 +57,7 @@ function frozenOptions(over: Partial<ContextSafePreregistrationOptions> = {}): C
   return {
     subject: {
       // Bound at execution time; the contract only requires a real 40-hex SHA.
-      candidateSourceSha: "29ba9546bc4c3d515a46058c5cf69046f0e82e57",
+      candidateSourceSha: "8ca36433226d96c52f4480735576ec3c6c15e4bc",
       baselineArmDigest: factory.resolveArm(CONTEXT_SAFE_COMPARISON_ARM_ID).digest,
       candidateArmDigest: factory.resolveArm(CONTEXT_SAFE_CANDIDATE_ID).digest,
       runtimeConfigDigest: factory.resolveArm(CONTEXT_SAFE_CANDIDATE_ID).digest,
@@ -278,7 +278,7 @@ function holdoutOptions(over: Partial<ContextSafePreregistrationOptions> = {}): 
   return {
     role: "holdout",
     subject: {
-      candidateSourceSha: "29ba9546bc4c3d515a46058c5cf69046f0e82e57",
+      candidateSourceSha: "8ca36433226d96c52f4480735576ec3c6c15e4bc",
       baselineArmDigest: champion.digest,
       candidateArmDigest: getArmFactory().resolveArm(CONTEXT_SAFE_CANDIDATE_ID).digest,
       runtimeConfigDigest: getArmFactory().resolveArm(CONTEXT_SAFE_CANDIDATE_ID).digest,
