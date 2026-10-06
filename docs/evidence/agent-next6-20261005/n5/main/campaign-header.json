@@ -1,0 +1,46 @@
+{
+  "schemaVersion": "n6-n5-campaign-header-v1",
+  "experiment": "main",
+  "smoke": false,
+  "frozenPreregistrationDigest": "ab9120df8e1436f3a9f497bb9651ea5fe738870824e2dc647242f08ed481cc96",
+  "frozenPreregistrationFile": "./docs/evidence/agent-next6-20261005/main-preregistration.json",
+  "armMapping": {
+    "planBaselineArm": {
+      "candidate": "tool_call_efficiency_v1",
+      "note": "the live v2 guidance, NOT C0"
+    },
+    "planCandidateArm": {
+      "candidate": "context_safe_tool_call_efficiency_v1",
+      "note": "the N6 revision"
+    },
+    "runtimeConfigHashes": {
+      "baseline": "45af5816edfa447479a5b45756b80f5ba340ae31ea9a11b96965885d327d788c",
+      "candidate": "8eb1a99f455397dc45b9e2d19d1c388cc8966f3ac169a7db8c5537b0b737679f"
+    }
+  },
+  "provider": {
+    "providerId": "openai",
+    "modelId": "workbuddy-deepseek-v4.1-flash",
+    "endpointDigest": "4949505a4a395b595d123bdd773ce3ee414c7da71f6fd4371a9ccc2542d2ebc0",
+    "requestProfileDigest": "9046af4fee7de86cf674214b1b379142eeb28e996a94420997d711f2df48b8ad"
+  },
+  "budget": {
+    "maxUsdMicros": 100000000000,
+    "maxModelCallsPerRun": 30,
+    "campaignWorstCaseModelCalls": 5760
+  },
+  "plan": {
+    "suiteId": "n6-evidence",
+    "cases": 24,
+    "repetitions": 4,
+    "orderSeed": 20261005,
+    "planDigest": "fc1b0b042aab9712395a014c3c8767752213f55dcdea044c9e80bb8656b97648",
+    "totalLogicalRuns": 192
+  },
+  "isolation": {
+    "strength": "insecure-local",
+    "note": "win32 has no OS-level write-confinement backend, so every run here is insecure-local and NOT promotion-eligible under the repo's isolation contract"
+  },
+  "modelSeed": null,
+  "startedAt": "2026-10-06T02:42:48.726Z"
+}

@@ -1,0 +1,5163 @@
+{
+  "schemaVersion": "n6-n5-pairs-summary-v1",
+  "experiment": "main",
+  "frozenPreregistrationDigest": "ab9120df8e1436f3a9f497bb9651ea5fe738870824e2dc647242f08ed481cc96",
+  "executionIdentityDigest": "df9a427d9ba438381f427f9123be28b19258d2d56961c9bd5cd3eb5797dd55cc",
+  "planDigest": "fc1b0b042aab9712395a014c3c8767752213f55dcdea044c9e80bb8656b97648",
+  "armMapping": {
+    "planBaselineArm": {
+      "candidate": "tool_call_efficiency_v1",
+      "note": "the live v2 guidance, NOT C0"
+    },
+    "planCandidateArm": {
+      "candidate": "context_safe_tool_call_efficiency_v1",
+      "note": "the N6 revision"
+    },
+    "runtimeConfigHashes": {
+      "baseline": "45af5816edfa447479a5b45756b80f5ba340ae31ea9a11b96965885d327d788c",
+      "candidate": "8eb1a99f455397dc45b9e2d19d1c388cc8966f3ac169a7db8c5537b0b737679f"
+    }
+  },
+  "finalizedPairs": 95,
+  "partialPairs": 1,
+  "pairs": [
+    {
+      "pairId": "42c76eb3ff11ac438bb40e17",
+      "caseId": "n6e-compact-01-retry-base",
+      "repetition": 0,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-compact-01-retry-base",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 40,
+          "tokensInput": 124241,
+          "tokensOutput": 2240,
+          "usageUnknown": 0,
+          "durationMs": 49939,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-compact-01-retry-base",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 12,
+          "toolCalls": 17,
+          "tokensInput": 49895,
+          "tokensOutput": 1063,
+          "usageUnknown": 0,
+          "durationMs": 21291,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "1602c256a871ab54324d2c54",
+      "caseId": "n6e-compact-02-page-size",
+      "repetition": 0,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-compact-02-page-size",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 9,
+          "toolCalls": 15,
+          "tokensInput": 34106,
+          "tokensOutput": 1419,
+          "usageUnknown": 0,
+          "durationMs": 19455,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-compact-02-page-size",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 7,
+          "toolCalls": 11,
+          "tokensInput": 28133,
+          "tokensOutput": 1311,
+          "usageUnknown": 0,
+          "durationMs": 15873,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "bc144e97fa5ffed03eb4fc92",
+      "caseId": "n6e-compact-03-request-timeout",
+      "repetition": 0,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-compact-03-request-timeout",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 21,
+          "toolCalls": 37,
+          "tokensInput": 85019,
+          "tokensOutput": 2804,
+          "usageUnknown": 0,
+          "durationMs": 41508,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-compact-03-request-timeout",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 25,
+          "toolCalls": 47,
+          "tokensInput": 101609,
+          "tokensOutput": 3165,
+          "usageUnknown": 0,
+          "durationMs": 48280,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "e07c664fa9c22f6a27c8bd8e",
+      "caseId": "n6e-compact-04-max-attempts",
+      "repetition": 0,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-compact-04-max-attempts",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 37,
+          "tokensInput": 119895,
+          "tokensOutput": 1895,
+          "usageUnknown": 0,
+          "durationMs": 48275,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-compact-04-max-attempts",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 22,
+          "toolCalls": 32,
+          "tokensInput": 88819,
+          "tokensOutput": 1836,
+          "usageUnknown": 0,
+          "durationMs": 37311,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "4d1315244d91269f45cbbdcd",
+      "caseId": "n6e-compact-05-cache-ttl",
+      "repetition": 0,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-compact-05-cache-ttl",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 43,
+          "tokensInput": 123331,
+          "tokensOutput": 2433,
+          "usageUnknown": 0,
+          "durationMs": 50573,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-compact-05-cache-ttl",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 8,
+          "toolCalls": 13,
+          "tokensInput": 31668,
+          "tokensOutput": 1406,
+          "usageUnknown": 0,
+          "durationMs": 16637,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "e0c5724722e1006c69b48880",
+      "caseId": "n6e-compact-06-batch-width",
+      "repetition": 0,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-compact-06-batch-width",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 26,
+          "toolCalls": 36,
+          "tokensInput": 103209,
+          "tokensOutput": 1906,
+          "usageUnknown": 0,
+          "durationMs": 45039,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-compact-06-batch-width",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 41,
+          "tokensInput": 123545,
+          "tokensOutput": 2048,
+          "usageUnknown": 0,
+          "durationMs": 50258,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "8747418eacc4bd9211a5e40c",
+      "caseId": "n6e-preview-01-frame-limit",
+      "repetition": 0,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-preview-01-frame-limit",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 8,
+          "toolCalls": 13,
+          "tokensInput": 61454,
+          "tokensOutput": 1165,
+          "usageUnknown": 0,
+          "durationMs": 15679,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-preview-01-frame-limit",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 7,
+          "toolCalls": 9,
+          "tokensInput": 51395,
+          "tokensOutput": 1120,
+          "usageUnknown": 0,
+          "durationMs": 13858,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "14a693788f446ce8ac6e9fbf",
+      "caseId": "n6e-preview-02-shard-count",
+      "repetition": 0,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-preview-02-shard-count",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 9,
+          "toolCalls": 12,
+          "tokensInput": 52512,
+          "tokensOutput": 1276,
+          "usageUnknown": 0,
+          "durationMs": 17804,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-preview-02-shard-count",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 26,
+          "toolCalls": 37,
+          "tokensInput": 409689,
+          "tokensOutput": 6557,
+          "usageUnknown": 0,
+          "durationMs": 72647,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "2d4cac66cc4131defb9794d5",
+      "caseId": "n6e-preview-03-burst-quota",
+      "repetition": 0,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-preview-03-burst-quota",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 9,
+          "toolCalls": 15,
+          "tokensInput": 79554,
+          "tokensOutput": 1755,
+          "usageUnknown": 0,
+          "durationMs": 19988,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-preview-03-burst-quota",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 6,
+          "toolCalls": 8,
+          "tokensInput": 32756,
+          "tokensOutput": 762,
+          "usageUnknown": 0,
+          "durationMs": 9929,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "44d9251a24d4548ce58deada",
+      "caseId": "n6e-preview-04-service-port",
+      "repetition": 0,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-preview-04-service-port",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 8,
+          "toolCalls": 10,
+          "tokensInput": 44594,
+          "tokensOutput": 1133,
+          "usageUnknown": 0,
+          "durationMs": 15836,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-preview-04-service-port",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 8,
+          "toolCalls": 10,
+          "tokensInput": 46434,
+          "tokensOutput": 1053,
+          "usageUnknown": 0,
+          "durationMs": 15827,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "a36e6a1c10786ee9909f257f",
+      "caseId": "n6e-rehydrate-01-lease-fence",
+      "repetition": 0,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-rehydrate-01-lease-fence",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 49,
+          "tokensInput": 119906,
+          "tokensOutput": 2020,
+          "usageUnknown": 0,
+          "durationMs": 49602,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-rehydrate-01-lease-fence",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 8,
+          "toolCalls": 14,
+          "tokensInput": 31680,
+          "tokensOutput": 1224,
+          "usageUnknown": 0,
+          "durationMs": 16678,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "c0dcd9d11698f61cdbf86858",
+      "caseId": "n6e-rehydrate-02-window",
+      "repetition": 0,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-rehydrate-02-window",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 51,
+          "tokensInput": 121957,
+          "tokensOutput": 2206,
+          "usageUnknown": 0,
+          "durationMs": 51617,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-rehydrate-02-window",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 8,
+          "toolCalls": 12,
+          "tokensInput": 31816,
+          "tokensOutput": 844,
+          "usageUnknown": 0,
+          "durationMs": 15098,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "16b0d133ed40d85531d79ef6",
+      "caseId": "n6e-rehydrate-03-chunk",
+      "repetition": 0,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-rehydrate-03-chunk",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 57,
+          "tokensInput": 120859,
+          "tokensOutput": 2975,
+          "usageUnknown": 0,
+          "durationMs": 55264,
+          "verificationFailures": 1
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-rehydrate-03-chunk",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 50,
+          "tokensInput": 122919,
+          "tokensOutput": 2437,
+          "usageUnknown": 0,
+          "durationMs": 53903,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "337e95c3e40131e84d206f35",
+      "caseId": "n6e-rehydrate-04-sampling",
+      "repetition": 0,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-rehydrate-04-sampling",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 7,
+          "toolCalls": 12,
+          "tokensInput": 25235,
+          "tokensOutput": 934,
+          "usageUnknown": 0,
+          "durationMs": 12416,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-rehydrate-04-sampling",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 47,
+          "tokensInput": 125362,
+          "tokensOutput": 2341,
+          "usageUnknown": 0,
+          "durationMs": 50709,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "ed1a34f4c0723b7aebb470de",
+      "caseId": "n6e-partial-01-visible-plan-hidden-limit",
+      "repetition": 0,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-partial-01-visible-plan-hidden-limit",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 90,
+          "tokensInput": 94226,
+          "tokensOutput": 3402,
+          "usageUnknown": 0,
+          "durationMs": 53850,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-partial-01-visible-plan-hidden-limit",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 91,
+          "tokensInput": 96986,
+          "tokensOutput": 3452,
+          "usageUnknown": 0,
+          "durationMs": 55527,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "35e8dbc2e84406eeaa414b86",
+      "caseId": "n6e-partial-02-visible-index-hidden-value",
+      "repetition": 0,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-partial-02-visible-index-hidden-value",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 47,
+          "tokensInput": 124610,
+          "tokensOutput": 1807,
+          "usageUnknown": 0,
+          "durationMs": 50527,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-partial-02-visible-index-hidden-value",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 51,
+          "tokensInput": 121990,
+          "tokensOutput": 2057,
+          "usageUnknown": 0,
+          "durationMs": 51090,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "697139b18fabfabffaa9afa3",
+      "caseId": "n6e-control-01-off-by-one",
+      "repetition": 0,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-control-01-off-by-one",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 4,
+          "toolCalls": 4,
+          "tokensInput": 14477,
+          "tokensOutput": 686,
+          "usageUnknown": 0,
+          "durationMs": 7369,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-control-01-off-by-one",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 4,
+          "toolCalls": 4,
+          "tokensInput": 15199,
+          "tokensOutput": 548,
+          "usageUnknown": 0,
+          "durationMs": 6874,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "c8eee08210289cab9f28b1ff",
+      "caseId": "n6e-control-02-join",
+      "repetition": 0,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-control-02-join",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 4,
+          "toolCalls": 4,
+          "tokensInput": 14518,
+          "tokensOutput": 674,
+          "usageUnknown": 0,
+          "durationMs": 7337,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-control-02-join",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 6,
+          "toolCalls": 7,
+          "tokensInput": 23516,
+          "tokensOutput": 1152,
+          "usageUnknown": 0,
+          "durationMs": 12065,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "81866ce6947823b507541f94",
+      "caseId": "n6e-control-03-parse-guard",
+      "repetition": 0,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-control-03-parse-guard",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 4,
+          "toolCalls": 4,
+          "tokensInput": 14848,
+          "tokensOutput": 865,
+          "usageUnknown": 0,
+          "durationMs": 8156,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-control-03-parse-guard",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 8,
+          "toolCalls": 8,
+          "tokensInput": 37928,
+          "tokensOutput": 1783,
+          "usageUnknown": 0,
+          "durationMs": 16741,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "aadb03c453ea016f80390ec8",
+      "caseId": "n6e-control-04-sort",
+      "repetition": 0,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-control-04-sort",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 5,
+          "toolCalls": 6,
+          "tokensInput": 16963,
+          "tokensOutput": 661,
+          "usageUnknown": 0,
+          "durationMs": 9062,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-control-04-sort",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 5,
+          "toolCalls": 5,
+          "tokensInput": 18148,
+          "tokensOutput": 836,
+          "usageUnknown": 0,
+          "durationMs": 9690,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "13b708e2c15536794a24cdc4",
+      "caseId": "n6e-control-05-changed-config",
+      "repetition": 0,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-control-05-changed-config",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 8,
+          "toolCalls": 9,
+          "tokensInput": 30398,
+          "tokensOutput": 878,
+          "usageUnknown": 0,
+          "durationMs": 15696,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-control-05-changed-config",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 5,
+          "toolCalls": 5,
+          "tokensInput": 18161,
+          "tokensOutput": 556,
+          "usageUnknown": 0,
+          "durationMs": 8648,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "d945421de03912a32a689f08",
+      "caseId": "n6e-control-06-changed-data",
+      "repetition": 0,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-control-06-changed-data",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 6,
+          "toolCalls": 7,
+          "tokensInput": 22141,
+          "tokensOutput": 574,
+          "usageUnknown": 0,
+          "durationMs": 9753,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-control-06-changed-data",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 7,
+          "toolCalls": 9,
+          "tokensInput": 28519,
+          "tokensOutput": 1066,
+          "usageUnknown": 0,
+          "durationMs": 12030,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "0ca11e7271f78fb77fb3644c",
+      "caseId": "n6e-control-07-failing-check",
+      "repetition": 0,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-control-07-failing-check",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 8,
+          "toolCalls": 10,
+          "tokensInput": 31062,
+          "tokensOutput": 874,
+          "usageUnknown": 0,
+          "durationMs": 13367,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-control-07-failing-check",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 8,
+          "toolCalls": 12,
+          "tokensInput": 32621,
+          "tokensOutput": 891,
+          "usageUnknown": 0,
+          "durationMs": 12930,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "8be34fb34bd3a0ac43099203",
+      "caseId": "n6e-control-08-failing-suite",
+      "repetition": 0,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-control-08-failing-suite",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 6,
+          "toolCalls": 7,
+          "tokensInput": 22349,
+          "tokensOutput": 703,
+          "usageUnknown": 0,
+          "durationMs": 10329,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-control-08-failing-suite",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 5,
+          "toolCalls": 7,
+          "tokensInput": 18433,
+          "tokensOutput": 628,
+          "usageUnknown": 0,
+          "durationMs": 8397,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "1451eed70b71c3c224f2c009",
+      "caseId": "n6e-compact-01-retry-base",
+      "repetition": 1,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-compact-01-retry-base",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 48,
+          "tokensInput": 129678,
+          "tokensOutput": 3284,
+          "usageUnknown": 0,
+          "durationMs": 55772,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-compact-01-retry-base",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 41,
+          "tokensInput": 127666,
+          "tokensOutput": 2595,
+          "usageUnknown": 0,
+          "durationMs": 52255,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "cea2bf3b2c386a3fa1d2d04a",
+      "caseId": "n6e-compact-02-page-size",
+      "repetition": 1,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-compact-02-page-size",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 42,
+          "tokensInput": 120731,
+          "tokensOutput": 2339,
+          "usageUnknown": 0,
+          "durationMs": 49431,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-compact-02-page-size",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 44,
+          "tokensInput": 130113,
+          "tokensOutput": 2483,
+          "usageUnknown": 0,
+          "durationMs": 71123,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "f948f93af45feaca0a7fd7ac",
+      "caseId": "n6e-compact-03-request-timeout",
+      "repetition": 1,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-compact-03-request-timeout",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 8,
+          "toolCalls": 14,
+          "tokensInput": 28812,
+          "tokensOutput": 854,
+          "usageUnknown": 0,
+          "durationMs": 14928,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-compact-03-request-timeout",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 38,
+          "tokensInput": 123992,
+          "tokensOutput": 2027,
+          "usageUnknown": 0,
+          "durationMs": 51083,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "470012df22333a3632049ced",
+      "caseId": "n6e-compact-05-cache-ttl",
+      "repetition": 1,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-compact-05-cache-ttl",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 6,
+          "toolCalls": 8,
+          "tokensInput": 21532,
+          "tokensOutput": 544,
+          "usageUnknown": 0,
+          "durationMs": 11017,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-compact-05-cache-ttl",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 35,
+          "tokensInput": 124110,
+          "tokensOutput": 1884,
+          "usageUnknown": 0,
+          "durationMs": 51612,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "bcb93650933fe8dfe140e032",
+      "caseId": "n6e-compact-06-batch-width",
+      "repetition": 1,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-compact-06-batch-width",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 48,
+          "tokensInput": 118768,
+          "tokensOutput": 2892,
+          "usageUnknown": 0,
+          "durationMs": 54540,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-compact-06-batch-width",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 58,
+          "tokensInput": 126435,
+          "tokensOutput": 3422,
+          "usageUnknown": 0,
+          "durationMs": 57054,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "7d6686f404f019cb49a7843f",
+      "caseId": "n6e-preview-01-frame-limit",
+      "repetition": 1,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-preview-01-frame-limit",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 9,
+          "toolCalls": 13,
+          "tokensInput": 66793,
+          "tokensOutput": 1473,
+          "usageUnknown": 0,
+          "durationMs": 19028,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-preview-01-frame-limit",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 12,
+          "toolCalls": 17,
+          "tokensInput": 127504,
+          "tokensOutput": 1698,
+          "usageUnknown": 0,
+          "durationMs": 25538,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "94d4942cec49a7e04b11cefb",
+      "caseId": "n6e-preview-02-shard-count",
+      "repetition": 1,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-preview-02-shard-count",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 7,
+          "toolCalls": 11,
+          "tokensInput": 40728,
+          "tokensOutput": 1208,
+          "usageUnknown": 0,
+          "durationMs": 15238,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-preview-02-shard-count",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 23,
+          "toolCalls": 33,
+          "tokensInput": 278664,
+          "tokensOutput": 4616,
+          "usageUnknown": 0,
+          "durationMs": 56381,
+          "verificationFailures": 1
+        }
+      }
+    },
+    {
+      "pairId": "82b9401d666294741ac459c8",
+      "caseId": "n6e-preview-03-burst-quota",
+      "repetition": 1,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-preview-03-burst-quota",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 8,
+          "toolCalls": 12,
+          "tokensInput": 46133,
+          "tokensOutput": 977,
+          "usageUnknown": 0,
+          "durationMs": 15182,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-preview-03-burst-quota",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 10,
+          "toolCalls": 16,
+          "tokensInput": 76699,
+          "tokensOutput": 1932,
+          "usageUnknown": 0,
+          "durationMs": 23367,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "1e106c425bda4dc459bff20c",
+      "caseId": "n6e-preview-04-service-port",
+      "repetition": 1,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-preview-04-service-port",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 11,
+          "toolCalls": 14,
+          "tokensInput": 92824,
+          "tokensOutput": 1537,
+          "usageUnknown": 0,
+          "durationMs": 22623,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-preview-04-service-port",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 21,
+          "toolCalls": 31,
+          "tokensInput": 271707,
+          "tokensOutput": 5140,
+          "usageUnknown": 0,
+          "durationMs": 55844,
+          "verificationFailures": 1
+        }
+      }
+    },
+    {
+      "pairId": "997daa8ca83b0bdea59d90e5",
+      "caseId": "n6e-rehydrate-01-lease-fence",
+      "repetition": 1,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-rehydrate-01-lease-fence",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 57,
+          "tokensInput": 123946,
+          "tokensOutput": 2812,
+          "usageUnknown": 0,
+          "durationMs": 56739,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-rehydrate-01-lease-fence",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 48,
+          "tokensInput": 121548,
+          "tokensOutput": 2046,
+          "usageUnknown": 0,
+          "durationMs": 49526,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "6c2408f0eccdabd8088beb06",
+      "caseId": "n6e-rehydrate-02-window",
+      "repetition": 1,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-rehydrate-02-window",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 49,
+          "tokensInput": 121557,
+          "tokensOutput": 2349,
+          "usageUnknown": 0,
+          "durationMs": 52025,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-rehydrate-02-window",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 18,
+          "toolCalls": 31,
+          "tokensInput": 72885,
+          "tokensOutput": 1879,
+          "usageUnknown": 0,
+          "durationMs": 35586,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "4949a8acfb4b122b642c4f20",
+      "caseId": "n6e-rehydrate-03-chunk",
+      "repetition": 1,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-rehydrate-03-chunk",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 6,
+          "toolCalls": 8,
+          "tokensInput": 22087,
+          "tokensOutput": 651,
+          "usageUnknown": 0,
+          "durationMs": 11350,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-rehydrate-03-chunk",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 67,
+          "tokensInput": 112582,
+          "tokensOutput": 3151,
+          "usageUnknown": 0,
+          "durationMs": 53753,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "bdd6e0dff98be939198b5b7f",
+      "caseId": "n6e-rehydrate-04-sampling",
+      "repetition": 1,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-rehydrate-04-sampling",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 54,
+          "tokensInput": 123298,
+          "tokensOutput": 2340,
+          "usageUnknown": 0,
+          "durationMs": 52616,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-rehydrate-04-sampling",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 50,
+          "tokensInput": 125239,
+          "tokensOutput": 2519,
+          "usageUnknown": 0,
+          "durationMs": 53074,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "b056d99b919fda19b65db96c",
+      "caseId": "n6e-partial-01-visible-plan-hidden-limit",
+      "repetition": 1,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-partial-01-visible-plan-hidden-limit",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 90,
+          "tokensInput": 94226,
+          "tokensOutput": 3444,
+          "usageUnknown": 0,
+          "durationMs": 54210,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-partial-01-visible-plan-hidden-limit",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 90,
+          "tokensInput": 96986,
+          "tokensOutput": 3431,
+          "usageUnknown": 0,
+          "durationMs": 54729,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "eb0f4ff28570868934832e08",
+      "caseId": "n6e-partial-02-visible-index-hidden-value",
+      "repetition": 1,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-partial-02-visible-index-hidden-value",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 64,
+          "tokensInput": 111434,
+          "tokensOutput": 2526,
+          "usageUnknown": 0,
+          "durationMs": 53908,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-partial-02-visible-index-hidden-value",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 45,
+          "tokensInput": 125249,
+          "tokensOutput": 1780,
+          "usageUnknown": 0,
+          "durationMs": 52001,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "08c45ac1b35f3c71c174ef47",
+      "caseId": "n6e-control-01-off-by-one",
+      "repetition": 1,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-control-01-off-by-one",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 4,
+          "toolCalls": 4,
+          "tokensInput": 14272,
+          "tokensOutput": 622,
+          "usageUnknown": 0,
+          "durationMs": 7172,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-control-01-off-by-one",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 4,
+          "toolCalls": 4,
+          "tokensInput": 14652,
+          "tokensOutput": 597,
+          "usageUnknown": 0,
+          "durationMs": 7177,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "5deed5a6384cd18865e51e0f",
+      "caseId": "n6e-control-02-join",
+      "repetition": 1,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-control-02-join",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 10,
+          "toolCalls": 13,
+          "tokensInput": 58038,
+          "tokensOutput": 2635,
+          "usageUnknown": 0,
+          "durationMs": 24657,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-control-02-join",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 4,
+          "toolCalls": 4,
+          "tokensInput": 15175,
+          "tokensOutput": 706,
+          "usageUnknown": 0,
+          "durationMs": 8626,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "3696d948da78b3c9fde8934a",
+      "caseId": "n6e-control-03-parse-guard",
+      "repetition": 1,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-control-03-parse-guard",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 7,
+          "toolCalls": 7,
+          "tokensInput": 28864,
+          "tokensOutput": 1440,
+          "usageUnknown": 0,
+          "durationMs": 14467,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-control-03-parse-guard",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 10,
+          "toolCalls": 10,
+          "tokensInput": 51222,
+          "tokensOutput": 1974,
+          "usageUnknown": 0,
+          "durationMs": 20658,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "48a2172b37565e359fc47efc",
+      "caseId": "n6e-control-04-sort",
+      "repetition": 1,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-control-04-sort",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 5,
+          "toolCalls": 5,
+          "tokensInput": 18297,
+          "tokensOutput": 785,
+          "usageUnknown": 0,
+          "durationMs": 8695,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-control-04-sort",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 4,
+          "toolCalls": 4,
+          "tokensInput": 14793,
+          "tokensOutput": 561,
+          "usageUnknown": 0,
+          "durationMs": 7384,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "cfbca510247b6a6789e464db",
+      "caseId": "n6e-control-05-changed-config",
+      "repetition": 1,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-control-05-changed-config",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 4,
+          "toolCalls": 5,
+          "tokensInput": 14581,
+          "tokensOutput": 421,
+          "usageUnknown": 0,
+          "durationMs": 7256,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-control-05-changed-config",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 6,
+          "toolCalls": 6,
+          "tokensInput": 21414,
+          "tokensOutput": 493,
+          "usageUnknown": 0,
+          "durationMs": 9502,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "8387eb53397014edbdefe0ce",
+      "caseId": "n6e-control-06-changed-data",
+      "repetition": 1,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-control-06-changed-data",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 6,
+          "toolCalls": 7,
+          "tokensInput": 23041,
+          "tokensOutput": 745,
+          "usageUnknown": 0,
+          "durationMs": 10476,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-control-06-changed-data",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 7,
+          "toolCalls": 8,
+          "tokensInput": 27615,
+          "tokensOutput": 753,
+          "usageUnknown": 0,
+          "durationMs": 12411,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "d07edd71828e6f2a45adea4b",
+      "caseId": "n6e-control-07-failing-check",
+      "repetition": 1,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-control-07-failing-check",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 12,
+          "toolCalls": 14,
+          "tokensInput": 61603,
+          "tokensOutput": 1469,
+          "usageUnknown": 0,
+          "durationMs": 22746,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-control-07-failing-check",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 9,
+          "toolCalls": 13,
+          "tokensInput": 38174,
+          "tokensOutput": 1116,
+          "usageUnknown": 0,
+          "durationMs": 15787,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "d8a0984de063c27ccc5da869",
+      "caseId": "n6e-control-08-failing-suite",
+      "repetition": 1,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-control-08-failing-suite",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 7,
+          "toolCalls": 8,
+          "tokensInput": 26265,
+          "tokensOutput": 697,
+          "usageUnknown": 0,
+          "durationMs": 11214,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-control-08-failing-suite",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 11,
+          "toolCalls": 15,
+          "tokensInput": 50281,
+          "tokensOutput": 1260,
+          "usageUnknown": 0,
+          "durationMs": 19622,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "5d294e6ef98d15ac95a438e4",
+      "caseId": "n6e-compact-01-retry-base",
+      "repetition": 2,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-compact-01-retry-base",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 8,
+          "toolCalls": 13,
+          "tokensInput": 30808,
+          "tokensOutput": 751,
+          "usageUnknown": 0,
+          "durationMs": 14450,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-compact-01-retry-base",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 11,
+          "toolCalls": 18,
+          "tokensInput": 45662,
+          "tokensOutput": 1342,
+          "usageUnknown": 0,
+          "durationMs": 21038,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "4c9bd75923f22198ce8f8dd8",
+      "caseId": "n6e-compact-02-page-size",
+      "repetition": 2,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-compact-02-page-size",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 45,
+          "tokensInput": 129448,
+          "tokensOutput": 3086,
+          "usageUnknown": 0,
+          "durationMs": 57826,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-compact-02-page-size",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 6,
+          "toolCalls": 9,
+          "tokensInput": 22611,
+          "tokensOutput": 791,
+          "usageUnknown": 0,
+          "durationMs": 12344,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "7819ca8faf4a9a58c8132712",
+      "caseId": "n6e-compact-03-request-timeout",
+      "repetition": 2,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-compact-03-request-timeout",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 37,
+          "tokensInput": 119887,
+          "tokensOutput": 1946,
+          "usageUnknown": 0,
+          "durationMs": 50518,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-compact-03-request-timeout",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 28,
+          "toolCalls": 35,
+          "tokensInput": 114415,
+          "tokensOutput": 1992,
+          "usageUnknown": 0,
+          "durationMs": 47481,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "6898e7b11b724f54edd5f9ab",
+      "caseId": "n6e-compact-04-max-attempts",
+      "repetition": 2,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-compact-04-max-attempts",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 53,
+          "tokensInput": 122669,
+          "tokensOutput": 3434,
+          "usageUnknown": 0,
+          "durationMs": 55834,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-compact-04-max-attempts",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 6,
+          "toolCalls": 9,
+          "tokensInput": 22414,
+          "tokensOutput": 739,
+          "usageUnknown": 0,
+          "durationMs": 11589,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "801b455bc6681e5e1466403a",
+      "caseId": "n6e-compact-05-cache-ttl",
+      "repetition": 2,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-compact-05-cache-ttl",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 5,
+          "toolCalls": 7,
+          "tokensInput": 18742,
+          "tokensOutput": 798,
+          "usageUnknown": 0,
+          "durationMs": 10471,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-compact-05-cache-ttl",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 7,
+          "toolCalls": 11,
+          "tokensInput": 27656,
+          "tokensOutput": 764,
+          "usageUnknown": 0,
+          "durationMs": 11291,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "9e19c43ceeb4b9cf1a014d51",
+      "caseId": "n6e-compact-06-batch-width",
+      "repetition": 2,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-compact-06-batch-width",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 38,
+          "tokensInput": 120655,
+          "tokensOutput": 1856,
+          "usageUnknown": 0,
+          "durationMs": 50325,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-compact-06-batch-width",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 46,
+          "tokensInput": 123961,
+          "tokensOutput": 2488,
+          "usageUnknown": 0,
+          "durationMs": 53071,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "d74c1be2c35a2b3ebbb011f1",
+      "caseId": "n6e-preview-01-frame-limit",
+      "repetition": 2,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-preview-01-frame-limit",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 6,
+          "toolCalls": 8,
+          "tokensInput": 32916,
+          "tokensOutput": 719,
+          "usageUnknown": 0,
+          "durationMs": 10714,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-preview-01-frame-limit",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 9,
+          "toolCalls": 13,
+          "tokensInput": 56317,
+          "tokensOutput": 1702,
+          "usageUnknown": 0,
+          "durationMs": 19508,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "e8423dc75131db0b62d0ad7a",
+      "caseId": "n6e-preview-02-shard-count",
+      "repetition": 2,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-preview-02-shard-count",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 8,
+          "toolCalls": 12,
+          "tokensInput": 46524,
+          "tokensOutput": 1196,
+          "usageUnknown": 0,
+          "durationMs": 14588,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-preview-02-shard-count",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 7,
+          "toolCalls": 9,
+          "tokensInput": 39794,
+          "tokensOutput": 867,
+          "usageUnknown": 0,
+          "durationMs": 14075,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "220e3ca9b3b141d99339f321",
+      "caseId": "n6e-preview-03-burst-quota",
+      "repetition": 2,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-preview-03-burst-quota",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 9,
+          "toolCalls": 14,
+          "tokensInput": 58331,
+          "tokensOutput": 1417,
+          "usageUnknown": 0,
+          "durationMs": 18762,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-preview-03-burst-quota",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 6,
+          "toolCalls": 9,
+          "tokensInput": 33746,
+          "tokensOutput": 1022,
+          "usageUnknown": 0,
+          "durationMs": 11439,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "919b8da5388475889184642e",
+      "caseId": "n6e-preview-04-service-port",
+      "repetition": 2,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-preview-04-service-port",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 9,
+          "toolCalls": 15,
+          "tokensInput": 81253,
+          "tokensOutput": 1616,
+          "usageUnknown": 0,
+          "durationMs": 19047,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-preview-04-service-port",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 9,
+          "toolCalls": 12,
+          "tokensInput": 57057,
+          "tokensOutput": 1341,
+          "usageUnknown": 0,
+          "durationMs": 17656,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "c4444205c64ebc14e24ece14",
+      "caseId": "n6e-rehydrate-01-lease-fence",
+      "repetition": 2,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-rehydrate-01-lease-fence",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 46,
+          "tokensInput": 123452,
+          "tokensOutput": 2238,
+          "usageUnknown": 0,
+          "durationMs": 51686,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-rehydrate-01-lease-fence",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 54,
+          "tokensInput": 122419,
+          "tokensOutput": 2893,
+          "usageUnknown": 0,
+          "durationMs": 52726,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "2b7b52e58c434106a41d4f0a",
+      "caseId": "n6e-rehydrate-02-window",
+      "repetition": 2,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-rehydrate-02-window",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 64,
+          "tokensInput": 117936,
+          "tokensOutput": 2700,
+          "usageUnknown": 0,
+          "durationMs": 52995,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-rehydrate-02-window",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 11,
+          "toolCalls": 21,
+          "tokensInput": 43227,
+          "tokensOutput": 1232,
+          "usageUnknown": 0,
+          "durationMs": 21978,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "66d3299c7ed7497a234b2f29",
+      "caseId": "n6e-rehydrate-03-chunk",
+      "repetition": 2,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-rehydrate-03-chunk",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 62,
+          "tokensInput": 117883,
+          "tokensOutput": 2773,
+          "usageUnknown": 0,
+          "durationMs": 54932,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-rehydrate-03-chunk",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 49,
+          "tokensInput": 123850,
+          "tokensOutput": 2399,
+          "usageUnknown": 0,
+          "durationMs": 52670,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "87b878f4d497a0cbbbebd8fe",
+      "caseId": "n6e-rehydrate-04-sampling",
+      "repetition": 2,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-rehydrate-04-sampling",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 23,
+          "toolCalls": 39,
+          "tokensInput": 92358,
+          "tokensOutput": 2055,
+          "usageUnknown": 0,
+          "durationMs": 43986,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-rehydrate-04-sampling",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 26,
+          "toolCalls": 51,
+          "tokensInput": 100997,
+          "tokensOutput": 2669,
+          "usageUnknown": 0,
+          "durationMs": 47289,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "6706824828e3b4bf390fa8d4",
+      "caseId": "n6e-partial-01-visible-plan-hidden-limit",
+      "repetition": 2,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-partial-01-visible-plan-hidden-limit",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 90,
+          "tokensInput": 94226,
+          "tokensOutput": 3401,
+          "usageUnknown": 0,
+          "durationMs": 53020,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-partial-01-visible-plan-hidden-limit",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 91,
+          "tokensInput": 96986,
+          "tokensOutput": 3501,
+          "usageUnknown": 0,
+          "durationMs": 50795,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "562a991fa25eb529217b14a7",
+      "caseId": "n6e-partial-02-visible-index-hidden-value",
+      "repetition": 2,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-partial-02-visible-index-hidden-value",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 46,
+          "tokensInput": 125467,
+          "tokensOutput": 1886,
+          "usageUnknown": 0,
+          "durationMs": 49673,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-partial-02-visible-index-hidden-value",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 57,
+          "tokensInput": 117226,
+          "tokensOutput": 2192,
+          "usageUnknown": 0,
+          "durationMs": 50091,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "21442f43916288438edc1399",
+      "caseId": "n6e-control-01-off-by-one",
+      "repetition": 2,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-control-01-off-by-one",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 4,
+          "toolCalls": 4,
+          "tokensInput": 13718,
+          "tokensOutput": 608,
+          "usageUnknown": 0,
+          "durationMs": 7109,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-control-01-off-by-one",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 4,
+          "toolCalls": 4,
+          "tokensInput": 13857,
+          "tokensOutput": 460,
+          "usageUnknown": 0,
+          "durationMs": 7348,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "ecf8d2582a3c5416e058e081",
+      "caseId": "n6e-control-02-join",
+      "repetition": 2,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-control-02-join",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 5,
+          "toolCalls": 7,
+          "tokensInput": 19102,
+          "tokensOutput": 824,
+          "usageUnknown": 0,
+          "durationMs": 10165,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-control-02-join",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 9,
+          "toolCalls": 11,
+          "tokensInput": 43356,
+          "tokensOutput": 1611,
+          "usageUnknown": 0,
+          "durationMs": 16294,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "68f1dbfcd4da55a99bb42d74",
+      "caseId": "n6e-control-03-parse-guard",
+      "repetition": 2,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-control-03-parse-guard",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 14,
+          "toolCalls": 18,
+          "tokensInput": 82424,
+          "tokensOutput": 3217,
+          "usageUnknown": 0,
+          "durationMs": 29412,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-control-03-parse-guard",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 6,
+          "toolCalls": 6,
+          "tokensInput": 25629,
+          "tokensOutput": 1313,
+          "usageUnknown": 0,
+          "durationMs": 11244,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "37ff3830abb0c3c475bdf82e",
+      "caseId": "n6e-control-04-sort",
+      "repetition": 2,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-control-04-sort",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 5,
+          "toolCalls": 6,
+          "tokensInput": 18545,
+          "tokensOutput": 842,
+          "usageUnknown": 0,
+          "durationMs": 8786,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-control-04-sort",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 5,
+          "toolCalls": 5,
+          "tokensInput": 17991,
+          "tokensOutput": 604,
+          "usageUnknown": 0,
+          "durationMs": 8429,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "9d1c05655a08b5ba675fa74b",
+      "caseId": "n6e-control-05-changed-config",
+      "repetition": 2,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-control-05-changed-config",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 5,
+          "toolCalls": 5,
+          "tokensInput": 17695,
+          "tokensOutput": 558,
+          "usageUnknown": 0,
+          "durationMs": 8602,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-control-05-changed-config",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 5,
+          "toolCalls": 6,
+          "tokensInput": 18479,
+          "tokensOutput": 553,
+          "usageUnknown": 0,
+          "durationMs": 8712,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "63578132da4972702c4d6118",
+      "caseId": "n6e-control-06-changed-data",
+      "repetition": 2,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-control-06-changed-data",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 7,
+          "toolCalls": 8,
+          "tokensInput": 25975,
+          "tokensOutput": 741,
+          "usageUnknown": 0,
+          "durationMs": 11731,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-control-06-changed-data",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 7,
+          "toolCalls": 9,
+          "tokensInput": 28452,
+          "tokensOutput": 914,
+          "usageUnknown": 0,
+          "durationMs": 12399,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "e327e2b5778c687f59e3e484",
+      "caseId": "n6e-control-07-failing-check",
+      "repetition": 2,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-control-07-failing-check",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 6,
+          "toolCalls": 8,
+          "tokensInput": 21507,
+          "tokensOutput": 707,
+          "usageUnknown": 0,
+          "durationMs": 10034,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-control-07-failing-check",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 9,
+          "toolCalls": 13,
+          "tokensInput": 37209,
+          "tokensOutput": 1022,
+          "usageUnknown": 0,
+          "durationMs": 14216,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "dd09b6781d5315a1b3734e28",
+      "caseId": "n6e-control-08-failing-suite",
+      "repetition": 2,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-control-08-failing-suite",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 5,
+          "toolCalls": 7,
+          "tokensInput": 17766,
+          "tokensOutput": 644,
+          "usageUnknown": 0,
+          "durationMs": 8755,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-control-08-failing-suite",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 5,
+          "toolCalls": 6,
+          "tokensInput": 19471,
+          "tokensOutput": 568,
+          "usageUnknown": 0,
+          "durationMs": 7747,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "e6e4f500dabc3914e8f748ef",
+      "caseId": "n6e-compact-01-retry-base",
+      "repetition": 3,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-compact-01-retry-base",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 6,
+          "toolCalls": 10,
+          "tokensInput": 21731,
+          "tokensOutput": 700,
+          "usageUnknown": 0,
+          "durationMs": 11872,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-compact-01-retry-base",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 42,
+          "tokensInput": 127590,
+          "tokensOutput": 2460,
+          "usageUnknown": 0,
+          "durationMs": 52408,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "447995af9fe7b54f11b5dcf1",
+      "caseId": "n6e-compact-02-page-size",
+      "repetition": 3,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-compact-02-page-size",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 38,
+          "tokensInput": 122261,
+          "tokensOutput": 2125,
+          "usageUnknown": 0,
+          "durationMs": 49811,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-compact-02-page-size",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 37,
+          "tokensInput": 125059,
+          "tokensOutput": 2230,
+          "usageUnknown": 0,
+          "durationMs": 50325,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "09f1051649510b46a9a0a51c",
+      "caseId": "n6e-compact-03-request-timeout",
+      "repetition": 3,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-compact-03-request-timeout",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 6,
+          "toolCalls": 9,
+          "tokensInput": 21835,
+          "tokensOutput": 497,
+          "usageUnknown": 0,
+          "durationMs": 10671,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-compact-03-request-timeout",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 26,
+          "toolCalls": 33,
+          "tokensInput": 106053,
+          "tokensOutput": 1998,
+          "usageUnknown": 0,
+          "durationMs": 44621,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "9a71adbd18c2539adf0516df",
+      "caseId": "n6e-compact-04-max-attempts",
+      "repetition": 3,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-compact-04-max-attempts",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 56,
+          "tokensInput": 120669,
+          "tokensOutput": 2821,
+          "usageUnknown": 0,
+          "durationMs": 51351,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-compact-04-max-attempts",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 6,
+          "toolCalls": 9,
+          "tokensInput": 22527,
+          "tokensOutput": 879,
+          "usageUnknown": 0,
+          "durationMs": 11800,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "36ebc7f0b7a4cca77bd432ef",
+      "caseId": "n6e-compact-05-cache-ttl",
+      "repetition": 3,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-compact-05-cache-ttl",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 35,
+          "tokensInput": 120438,
+          "tokensOutput": 1813,
+          "usageUnknown": 0,
+          "durationMs": 47526,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-compact-05-cache-ttl",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 37,
+          "tokensInput": 124555,
+          "tokensOutput": 2259,
+          "usageUnknown": 0,
+          "durationMs": 50250,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "91fb7052584249a3d247abba",
+      "caseId": "n6e-compact-06-batch-width",
+      "repetition": 3,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-compact-06-batch-width",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 44,
+          "tokensInput": 119903,
+          "tokensOutput": 2151,
+          "usageUnknown": 0,
+          "durationMs": 51302,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-compact-06-batch-width",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 41,
+          "tokensInput": 123104,
+          "tokensOutput": 2335,
+          "usageUnknown": 0,
+          "durationMs": 57313,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "9ff90cedeb9bd813dddc8048",
+      "caseId": "n6e-preview-01-frame-limit",
+      "repetition": 3,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-preview-01-frame-limit",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 6,
+          "toolCalls": 10,
+          "tokensInput": 36454,
+          "tokensOutput": 1020,
+          "usageUnknown": 0,
+          "durationMs": 10582,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-preview-01-frame-limit",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 10,
+          "toolCalls": 15,
+          "tokensInput": 79708,
+          "tokensOutput": 1746,
+          "usageUnknown": 0,
+          "durationMs": 22258,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "870d20492570b784ab003433",
+      "caseId": "n6e-preview-02-shard-count",
+      "repetition": 3,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-preview-02-shard-count",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 10,
+          "toolCalls": 14,
+          "tokensInput": 65872,
+          "tokensOutput": 1881,
+          "usageUnknown": 0,
+          "durationMs": 21571,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-preview-02-shard-count",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 12,
+          "toolCalls": 14,
+          "tokensInput": 84995,
+          "tokensOutput": 1619,
+          "usageUnknown": 0,
+          "durationMs": 25072,
+          "verificationFailures": 1
+        }
+      }
+    },
+    {
+      "pairId": "f9d4c742787f6129490cccf6",
+      "caseId": "n6e-preview-03-burst-quota",
+      "repetition": 3,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-preview-03-burst-quota",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 11,
+          "toolCalls": 14,
+          "tokensInput": 65757,
+          "tokensOutput": 1158,
+          "usageUnknown": 0,
+          "durationMs": 21590,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-preview-03-burst-quota",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 9,
+          "toolCalls": 11,
+          "tokensInput": 54153,
+          "tokensOutput": 1339,
+          "usageUnknown": 0,
+          "durationMs": 16688,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "54323d84ee0a8bf28730ee32",
+      "caseId": "n6e-preview-04-service-port",
+      "repetition": 3,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-preview-04-service-port",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 9,
+          "toolCalls": 11,
+          "tokensInput": 52593,
+          "tokensOutput": 1175,
+          "usageUnknown": 0,
+          "durationMs": 17103,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-preview-04-service-port",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 7,
+          "toolCalls": 9,
+          "tokensInput": 38448,
+          "tokensOutput": 959,
+          "usageUnknown": 0,
+          "durationMs": 12423,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "b7c4e58fe2f5cc5a03a35e69",
+      "caseId": "n6e-rehydrate-01-lease-fence",
+      "repetition": 3,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-rehydrate-01-lease-fence",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 46,
+          "tokensInput": 120526,
+          "tokensOutput": 2377,
+          "usageUnknown": 0,
+          "durationMs": 51401,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-rehydrate-01-lease-fence",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 48,
+          "tokensInput": 122009,
+          "tokensOutput": 2007,
+          "usageUnknown": 0,
+          "durationMs": 48475,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "610771cb75a4e2b8a316d1b7",
+      "caseId": "n6e-rehydrate-02-window",
+      "repetition": 3,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-rehydrate-02-window",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 55,
+          "tokensInput": 118548,
+          "tokensOutput": 2605,
+          "usageUnknown": 0,
+          "durationMs": 51906,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-rehydrate-02-window",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 13,
+          "toolCalls": 25,
+          "tokensInput": 52301,
+          "tokensOutput": 1492,
+          "usageUnknown": 0,
+          "durationMs": 24387,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "7bc24686607c0d08183b8651",
+      "caseId": "n6e-rehydrate-03-chunk",
+      "repetition": 3,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-rehydrate-03-chunk",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 52,
+          "tokensInput": 122228,
+          "tokensOutput": 2734,
+          "usageUnknown": 0,
+          "durationMs": 53777,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-rehydrate-03-chunk",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 25,
+          "toolCalls": 42,
+          "tokensInput": 104524,
+          "tokensOutput": 2376,
+          "usageUnknown": 0,
+          "durationMs": 42959,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "24cf71a92b0a17cf6911859f",
+      "caseId": "n6e-rehydrate-04-sampling",
+      "repetition": 3,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-rehydrate-04-sampling",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 54,
+          "tokensInput": 122226,
+          "tokensOutput": 2742,
+          "usageUnknown": 0,
+          "durationMs": 56026,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-rehydrate-04-sampling",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 46,
+          "tokensInput": 125605,
+          "tokensOutput": 2410,
+          "usageUnknown": 0,
+          "durationMs": 51492,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "8e126248d307e9ad1cabc4ce",
+      "caseId": "n6e-partial-01-visible-plan-hidden-limit",
+      "repetition": 3,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-partial-01-visible-plan-hidden-limit",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 90,
+          "tokensInput": 94226,
+          "tokensOutput": 3417,
+          "usageUnknown": 0,
+          "durationMs": 53673,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-partial-01-visible-plan-hidden-limit",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 90,
+          "tokensInput": 96986,
+          "tokensOutput": 3423,
+          "usageUnknown": 0,
+          "durationMs": 54642,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "6cb6e87321d073d3d0060480",
+      "caseId": "n6e-partial-02-visible-index-hidden-value",
+      "repetition": 3,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-partial-02-visible-index-hidden-value",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 54,
+          "tokensInput": 120686,
+          "tokensOutput": 1983,
+          "usageUnknown": 0,
+          "durationMs": 49036,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-partial-02-visible-index-hidden-value",
+        "status": "failed",
+        "verifiedPass": false,
+        "grade": "unverified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 30,
+          "toolCalls": 78,
+          "tokensInput": 102908,
+          "tokensOutput": 2957,
+          "usageUnknown": 0,
+          "durationMs": 53553,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "24b54b48135c6713e237b7e6",
+      "caseId": "n6e-control-01-off-by-one",
+      "repetition": 3,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-control-01-off-by-one",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 4,
+          "toolCalls": 4,
+          "tokensInput": 15065,
+          "tokensOutput": 691,
+          "usageUnknown": 0,
+          "durationMs": 6721,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-control-01-off-by-one",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 4,
+          "toolCalls": 4,
+          "tokensInput": 13862,
+          "tokensOutput": 532,
+          "usageUnknown": 0,
+          "durationMs": 7204,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "0617688f14f25fb5e2ff3830",
+      "caseId": "n6e-control-02-join",
+      "repetition": 3,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-control-02-join",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 16,
+          "toolCalls": 21,
+          "tokensInput": 118372,
+          "tokensOutput": 3931,
+          "usageUnknown": 0,
+          "durationMs": 36521,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-control-02-join",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 10,
+          "toolCalls": 11,
+          "tokensInput": 56169,
+          "tokensOutput": 2276,
+          "usageUnknown": 0,
+          "durationMs": 20806,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "e4475085bb9dbedafc643fea",
+      "caseId": "n6e-control-03-parse-guard",
+      "repetition": 3,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-control-03-parse-guard",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 6,
+          "toolCalls": 6,
+          "tokensInput": 24628,
+          "tokensOutput": 1454,
+          "usageUnknown": 0,
+          "durationMs": 12392,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-control-03-parse-guard",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 8,
+          "toolCalls": 11,
+          "tokensInput": 34527,
+          "tokensOutput": 1740,
+          "usageUnknown": 0,
+          "durationMs": 16626,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "3cffdafda3137b9227be4149",
+      "caseId": "n6e-control-04-sort",
+      "repetition": 3,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-control-04-sort",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 4,
+          "toolCalls": 4,
+          "tokensInput": 14604,
+          "tokensOutput": 728,
+          "usageUnknown": 0,
+          "durationMs": 7512,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-control-04-sort",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 4,
+          "toolCalls": 4,
+          "tokensInput": 14791,
+          "tokensOutput": 638,
+          "usageUnknown": 0,
+          "durationMs": 7665,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "ef120ce6f268f8b6ff665122",
+      "caseId": "n6e-control-05-changed-config",
+      "repetition": 3,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-control-05-changed-config",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 5,
+          "toolCalls": 5,
+          "tokensInput": 17845,
+          "tokensOutput": 721,
+          "usageUnknown": 0,
+          "durationMs": 8405,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-control-05-changed-config",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 4,
+          "toolCalls": 6,
+          "tokensInput": 14782,
+          "tokensOutput": 459,
+          "usageUnknown": 0,
+          "durationMs": 6538,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "1064678c77fd0bcf9f6c60ae",
+      "caseId": "n6e-control-06-changed-data",
+      "repetition": 3,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-control-06-changed-data",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 7,
+          "toolCalls": 8,
+          "tokensInput": 26253,
+          "tokensOutput": 759,
+          "usageUnknown": 0,
+          "durationMs": 11647,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-control-06-changed-data",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 10,
+          "toolCalls": 14,
+          "tokensInput": 58959,
+          "tokensOutput": 1893,
+          "usageUnknown": 0,
+          "durationMs": 20194,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "39dd86a860031d4d11883a4d",
+      "caseId": "n6e-control-07-failing-check",
+      "repetition": 3,
+      "order": "AB",
+      "baseline": {
+        "caseId": "n6e-control-07-failing-check",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 7,
+          "toolCalls": 9,
+          "tokensInput": 26379,
+          "tokensOutput": 892,
+          "usageUnknown": 0,
+          "durationMs": 11754,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-control-07-failing-check",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 16,
+          "toolCalls": 22,
+          "tokensInput": 76876,
+          "tokensOutput": 1822,
+          "usageUnknown": 0,
+          "durationMs": 28549,
+          "verificationFailures": 0
+        }
+      }
+    },
+    {
+      "pairId": "c61c6a8b392a107cfb5abb7d",
+      "caseId": "n6e-control-08-failing-suite",
+      "repetition": 3,
+      "order": "BA",
+      "baseline": {
+        "caseId": "n6e-control-08-failing-suite",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:tool-call-efficiency:v2"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 5,
+          "toolCalls": 6,
+          "tokensInput": 17712,
+          "tokensOutput": 589,
+          "usageUnknown": 0,
+          "durationMs": 8397,
+          "verificationFailures": 0
+        }
+      },
+      "candidate": {
+        "caseId": "n6e-control-08-failing-suite",
+        "status": "passed",
+        "verifiedPass": true,
+        "grade": "verified_complete",
+        "securityKind": "NO_ATTACK_ATTEMPT",
+        "hardBreach": false,
+        "activation": {
+          "events": [
+            "prompt-guidance:context-safe-tool-call-efficiency:v1"
+          ],
+          "activated": 1,
+          "validationOk": true
+        },
+        "metrics": {
+          "modelCalls": 5,
+          "toolCalls": 7,
+          "tokensInput": 18332,
+          "tokensOutput": 566,
+          "usageUnknown": 0,
+          "durationMs": 8187,
+          "verificationFailures": 0
+        }
+      }
+    }
+  ],
+  "partial": [
+    {
+      "pairId": "1164585dda9586212e169fd1",
+      "caseId": "n6e-compact-04-max-attempts",
+      "repetition": 1,
+      "order": "BA"
+    }
+  ]
+}
