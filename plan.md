@@ -9,7 +9,7 @@
 | P3 工程验收 | 新回归覆盖文本义务与禁止项、digest 绑定、既有候选冻结、互斥、执行身份扰动、真实 Harness 提示注入 | 测试全 PASS；typecheck 干净；docs:verify ALL PASS；0 模型调用、0 付费 | DONE |
 | P4 证据与状态 | 进度与证据文件记录 digest、测试计数、诚实边界（效果 NOT_RUN） | 证据入库并注明本轮未运行效果实验 | DONE |
 
-> **P 轮完成**：P1–P4 全部完成（离线，0 模型调用）。完成记录与证据 [P-COMPLETION.md](docs/evidence/agent-p-20261006/P-COMPLETION.md)；门文本 SHA256 `7ef38a06…b546`，既有候选 digest 逐字节不变；工程验收 7 项回归 + 4 项真实 Harness 集成测试 + 34 项预注册测试通过，typecheck 与 docs:verify 通过。**效果结论 NOT_RUN**（未运行模型实验，未 promotion）。
+> **P 轮执行完成**：P1–P4 全部完成（离线，0 模型调用）。完成记录与证据 [P-COMPLETION.md](docs/evidence/agent-p-20261006/P-COMPLETION.md)；门文本 SHA256 `7ef38a06…b546`，既有候选 digest 逐字节不变（csafe v1 `ce66f3b0…`、csafe v2 `52a80e9c…`、tool-call `ebddf5eb…`）。验收：新增 7 项回归 + 4 项真实 Harness 集成测试 + 34 项预注册测试通过；typecheck、docs:verify 通过。全仓 `pnpm test`：487 文件 / 8990 用例，8900 PASS、25 FAIL、65 skip —— 25 项失败中 10 个文件在拉取前即已失败（本机环境性），另一项是登记新候选移动基线臂快照、使 N7 holdout 预注册报 **`ARM_DIGEST_DRIFT`** 的**设计内 fail-closed**（该文件 55 项 skip；未改写任何冻结产物，处置方案见证据 §4.1）。**效果结论 NOT_RUN**（未运行模型实验，未 promotion）。
 
 > **当前任务：补齐 N7-4 / N7-5 / N7-6 的执行链**（2026-10-06）。做什么、怎么做、怎么验收见 [plan(20261006-n7-execution-chain).md](plan(20261006-n7-execution-chain).md)，任务合同见 [N7-EXECUTION-20261006.md](tasks/N7-EXECUTION-20261006.md)。当前审查基线 `d92d727689b9a2dc20bd09ea44348403f539def6`；工程补齐与真实模型实验分别验收，当前模型效果仍为 NOT_RUN。
 
