@@ -24,8 +24,8 @@
   },
   "provider": {
     "providerId": "openai",
-    "modelId": "gpt-5",
-    "endpointDigest": "provider-default-endpoint",
+    "modelId": "workbuddy-deepseek-v4.1-flash",
+    "endpointDigest": "4949505a4a395b595d123bdd773ce3ee414c7da71f6fd4371a9ccc2542d2ebc0",
     "requestProfileDigest": "9046af4fee7de86cf674214b1b379142eeb28e996a94420997d711f2df48b8ad"
   },
   "dataset": {
@@ -244,10 +244,10 @@
     "maxInputTokens": 3000000,
     "maxOutputTokens": 400000,
     "maxTotalTokens": 4000000,
-    "maxUsdMicros": null,
+    "maxUsdMicros": 100000000000,
     "pricingUnknownPolicy": "refuse",
     "campaignWorstCaseModelCalls": 5760
   },
-  "preregistrationDigest": "81b1c8831aeafd615b21f635d484bd1d2f4eaa18d01f97fc921dd3d55633dd46",
+  "preregistrationDigest": "ed4b1a7a0929ee6a6c8a1d87493a60039ed1f4fdd94c27f87a0d4931646c9edc",
   "role": "holdout"
 }

@@ -64,7 +64,8 @@ function frozenOptions(over: Partial<ContextSafePreregistrationOptions> = {}): C
     },
     provider: {
       providerId: "openai",
-      modelId: "gpt-5",
+      modelId: "workbuddy-deepseek-v4.1-flash",
+      endpointBaseUrl: "http://127.0.0.1:8317/v1",
       requestProfile: { budgetTokens: 32_000, temperature: null, stallPolicy: "benchmark-default" },
     },
     cases: contextSafeCaseEntriesFromManifest(manifest.cases),
@@ -81,7 +82,7 @@ function frozenOptions(over: Partial<ContextSafePreregistrationOptions> = {}): C
       maxInputTokens: 3_000_000,
       maxOutputTokens: 400_000,
       maxTotalTokens: 4_000_000,
-      maxUsdMicros: null,
+      maxUsdMicros: 100_000_000_000,
     },
     ...over,
   };
@@ -285,7 +286,8 @@ function holdoutOptions(over: Partial<ContextSafePreregistrationOptions> = {}): 
     },
     provider: {
       providerId: "openai",
-      modelId: "gpt-5",
+      modelId: "workbuddy-deepseek-v4.1-flash",
+      endpointBaseUrl: "http://127.0.0.1:8317/v1",
       requestProfile: { budgetTokens: 32_000, temperature: null, stallPolicy: "benchmark-default" },
     },
     cases: contextSafeCaseEntriesFromManifest(holdoutManifest.cases),
@@ -306,7 +308,7 @@ function holdoutOptions(over: Partial<ContextSafePreregistrationOptions> = {}): 
       maxInputTokens: 3_000_000,
       maxOutputTokens: 400_000,
       maxTotalTokens: 4_000_000,
-      maxUsdMicros: null,
+      maxUsdMicros: 100_000_000_000,
     },
     ...over,
   };

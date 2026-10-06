@@ -46,8 +46,12 @@ const options = {
     runtimeConfigDigest: "b".repeat(64),
   },
   provider: {
+    // The APPROVED execution configuration (bound before any experiment result).
+    // The endpoint is stored as a normalized digest inside the artifact, never
+    // as a raw URL, and the credential is never written anywhere.
     providerId: "openai",
-    modelId: "gpt-5",
+    modelId: "workbuddy-deepseek-v4.1-flash",
+    endpointBaseUrl: "http://127.0.0.1:8317/v1",
     requestProfile: { budgetTokens: 32_000, temperature: null, stallPolicy: "benchmark-default" },
   },
   cases: contextSafeCaseEntriesFromManifest(manifest.cases),
@@ -64,7 +68,8 @@ const options = {
     maxInputTokens: 3_000_000,
     maxOutputTokens: 400_000,
     maxTotalTokens: 4_000_000,
-    maxUsdMicros: null,
+    // The operator's hard ceiling (integer USD micros): $100,000.
+    maxUsdMicros: 100_000_000_000,
   },
 };
 
