@@ -53,7 +53,13 @@ export async function main(): Promise<number> {
     throw new Error("no agent registered — cannot start web server");
   }
 
-  const bindings = new SessionBindings();
+  const bindings = new SessionBindings(dir !== undefined && dir.length > 0 ? resolve(dir, "web-session-bindings.json") : undefined);
+  for (const binding of bindings.all()) {
+    if (await harness.store.getSession(binding.sessionId) === undefined) {
+      await harness.close();
+      throw new Error(`Web session binding references a missing session: ${binding.sessionId}`);
+    }
+  }
   const registry = createRuntimeRpc(harness.runtime, {
     sessionService: harness.sessionService,
     sessions: harness.sessions,
@@ -70,6 +76,8 @@ export async function main(): Promise<number> {
     approvalStore: harness.approvalStore,
     events: harness.events,
     sessionDefaults: { agentId, cwd: process.cwd() },
+    route: (from) => bindings.get(from),
+    restoredBindings: bindings.all().map((binding) => ({ ...binding, channelId: adapter.id })),
   });
   await gateway.start();
 

@@ -66,6 +66,9 @@ class HttpError extends Error {
 }
 
 export interface WebServerDeps {
+  /** Exact authorities/origins explicitly trusted for a reverse proxy. */
+  allowedHosts?: readonly string[];
+  allowedOrigins?: readonly string[];
   adapter: WebChannelAdapter;
   bindings: SessionBindings;
   events: EventStore;
@@ -99,6 +102,8 @@ export class WebServer {
   private readonly requestedPort: number;
   private readonly pollDelayMs: number;
   private readonly staticDir: string;
+  private readonly allowedHosts: readonly string[];
+  private readonly allowedOrigins: readonly string[];
 
   /** Static assets are read once and cached in memory (dev no-cache headers). */
   private readonly staticCache = new Map<string, { contentType: string; body: Buffer }>();
@@ -120,6 +125,8 @@ export class WebServer {
     this.requestedPort = deps.port ?? (Number.isInteger(configuredPort) ? configuredPort : 8787);
     this.pollDelayMs = deps.pollDelayMs ?? 150;
     this.staticDir = deps.staticDir ?? join(dirname(fileURLToPath(import.meta.url)), "..", "public");
+    this.allowedHosts = deps.allowedHosts ?? (process.env.HARNESS_WEB_ALLOWED_HOSTS ?? "").split(",").map((v) => v.trim().toLowerCase()).filter(Boolean);
+    this.allowedOrigins = deps.allowedOrigins ?? (process.env.HARNESS_WEB_ALLOWED_ORIGINS ?? "").split(",").map((v) => v.trim()).filter(Boolean);
   }
 
   /** Actual bound port (useful with port 0 in tests). */
@@ -178,6 +185,15 @@ export class WebServer {
   // --- routing -------------------------------------------------------------
 
   private async handleRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    const authority = req.headers.host?.toLowerCase();
+    const localHosts = ["127.0.0.1", "localhost", "[::1]"];
+    if (this.host !== "0.0.0.0" && this.host !== "::") localHosts.push(this.host.includes(":") ? `[${this.host}]` : this.host.toLowerCase());
+    const hosts = new Set([...localHosts.map((host) => `${host}:${this.boundPort}`), ...this.allowedHosts]);
+    if (authority === undefined || !hosts.has(authority)) throw new HttpError(403, "untrusted Host");
+    const origin = req.headers.origin;
+    if ((origin !== undefined && origin !== `http://${authority}` && !this.allowedOrigins.includes(origin)) || req.headers["sec-fetch-site"] === "cross-site") {
+      throw new HttpError(403, "untrusted request origin");
+    }
     const url = new URL(req.url ?? "/", "http://localhost");
     const path = url.pathname;
 
@@ -497,6 +513,7 @@ export class WebServer {
   }
 
   private async readJson(req: IncomingMessage): Promise<Record<string, unknown>> {
+    if (req.headers["content-type"]?.split(";", 1)[0]?.trim().toLowerCase() !== "application/json") throw new HttpError(415, "expected application/json");
     const chunks: Buffer[] = [];
     let size = 0;
     for await (const chunk of req) {

@@ -36,6 +36,8 @@ export interface GatewayDeps {
   events: EventStore;
   /** Existing-session mapping by sender; undefined means "create a new session". */
   route?: (from: string) => SessionId | undefined;
+  /** Trusted persisted sender bindings supplied by the host, never by a channel message. */
+  restoredBindings?: readonly { channelId: string; from: string; sessionId: SessionId }[];
   /** Agent + cwd used when a session must be created for an unknown sender. */
   sessionDefaults?: { agentId: AgentId; cwd: string };
   /** Event-push poll interval (tests use small values). */
@@ -59,6 +61,7 @@ export class Gateway {
   private readonly sessionDefaults?: { agentId: AgentId; cwd: string };
   private readonly pollDelayMs: number;
   private readonly now: () => number;
+  private readonly restoredBindings: NonNullable<GatewayDeps["restoredBindings"]>;
 
   /** `${channelId}:${from}` → bound session id. */
   private readonly sessionByUser = new Map<string, SessionId>();
@@ -82,17 +85,32 @@ export class Gateway {
     this.sessionDefaults = deps.sessionDefaults;
     this.pollDelayMs = deps.pollDelayMs ?? 50;
     this.now = deps.now ?? Date.now;
+    this.restoredBindings = (deps.restoredBindings ?? []).map((binding) => ({ ...binding }));
   }
 
   async start(): Promise<void> {
     if (this.started) {
       throw new Error("gateway already started");
     }
+    const restored = new Map<string, typeof this.restoredBindings[number]>();
+    for (const binding of this.restoredBindings) {
+      const key = this.userKey(binding);
+      if (!this.channels.some((channel) => channel.id === binding.channelId) || restored.has(key)) {
+        throw new Error("invalid or duplicate restored gateway binding");
+      }
+      await this.sessionService.resume(binding.sessionId);
+      restored.set(key, binding);
+    }
+    for (const [key, binding] of restored) {
+      this.sessionByUser.set(key, binding.sessionId);
+      this.recipientBySession.set(binding.sessionId, { channelId: binding.channelId, from: binding.from });
+    }
     this.started = true;
     for (const channel of this.channels) {
       await channel.connect();
       channel.onMessage((msg) => this.handleMessage(msg));
     }
+    for (const binding of restored.values()) this.startPoller(binding.sessionId);
   }
 
   async stop(): Promise<void> {
@@ -364,7 +382,7 @@ export class Gateway {
     }
   }
 
-  private userKey(msg: ChannelMessage): string {
+  private userKey(msg: Pick<ChannelMessage, "channelId" | "from">): string {
     // Channel ids and senders are unrestricted strings. Encode the tuple so
     // embedded separators cannot alias a different channel's session owner.
     return JSON.stringify([msg.channelId, msg.from]);

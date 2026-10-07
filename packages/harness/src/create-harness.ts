@@ -1,5 +1,5 @@
 import { mkdir } from "node:fs/promises";
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { composeStores } from "./compose/compose-stores.js";
 import { composeTools, registerToolLookup } from "./compose/compose-tools.js";
 import { composeMcp } from "./compose/compose-mcp.js";
@@ -92,7 +92,7 @@ import {
   memoryIdsOfBlocks,
   type RetrievedMemoryContext,
 } from "./memory-runtime-bridge.js";
-import { resolveRepositoryIdentity, memoryScopeFor } from "./scope-resolver.js";
+import { resolveRepositoryIdentity, memoryScopeFor, stableHash } from "./scope-resolver.js";
 import { PostTurnReflector, type ReflectionRunResult } from "./reflection-runner.js";
 import { JsonlCandidateStore, type LearningCandidateStore } from "./candidate-store.js";
 import {
@@ -366,14 +366,18 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
     if (memoryDataDir === undefined) {
       throw new Error("memory is enabled but no dataDir (or memory.dbPath) is configured — refusing to write memories into the workspace");
     }
-    memoryStore =
-      config.memory?.dbPath !== undefined
-        ? new SqliteMemoryStore({ dataDir: config.memory.dbPath })
-        : new JsonlMemoryStore({ dataDir: memoryDataDir });
-    // P2-3: the memory scope is derived from the repository identity (git →
-    // repository-scoped, else workspace-scoped), never a bare cwd string.
     const identity = await resolveRepositoryIdentity(cwd);
     const scope = memoryScopeFor(identity, config.memory?.scope);
+    // The scope label alone is not ownership. Separate data physically by its
+    // trusted identity; unowned legacy files remain untouched at the old root.
+    const owner = scope === "global" ? "global" : scope === "workspace" ? `workspace-${stableHash(resolve(cwd))}` : `repository-${identity.id}`;
+    const ownedMemoryDir = join(memoryDataDir, "memory-scopes", owner);
+    memoryStore =
+      config.memory?.dbPath !== undefined
+        ? new SqliteMemoryStore({ dataDir: ownedMemoryDir })
+        : new JsonlMemoryStore({ dataDir: ownedMemoryDir });
+    // P2-3: the memory scope is derived from the repository identity (git →
+    // repository-scoped, else workspace-scoped), never a bare cwd string.
     memoryBridge = new MemoryRuntimeBridge({
       store: memoryStore,
       scope,

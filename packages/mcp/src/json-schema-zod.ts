@@ -33,8 +33,18 @@ function convertNode(node: Record<string, unknown>): ZodType {
       return node.enum !== undefined ? z.enum(node.enum as [string, ...string[]]) : base;
     }
     case "number":
-    case "integer":
-      return z.number();
+    case "integer": {
+      let number = z.number().finite();
+      if (type === "integer") number = number.int();
+      if (typeof node.minimum === "number") number = number.min(node.minimum);
+      if (typeof node.maximum === "number") number = number.max(node.maximum);
+      if (typeof node.exclusiveMinimum === "number") number = number.gt(node.exclusiveMinimum);
+      if (typeof node.exclusiveMaximum === "number") number = number.lt(node.exclusiveMaximum);
+      if (node.exclusiveMinimum === true && typeof node.minimum === "number") number = number.gt(node.minimum);
+      if (node.exclusiveMaximum === true && typeof node.maximum === "number") number = number.lt(node.maximum);
+      if (typeof node.multipleOf === "number" && node.multipleOf > 0) number = number.multipleOf(node.multipleOf);
+      return number;
+    }
     case "boolean":
       return z.boolean();
     case "null":
@@ -56,6 +66,7 @@ function convertNode(node: Record<string, unknown>): ZodType {
           } else {
             shape[name] = z.unknown();
           }
+          if (!requiredSet.has(name)) shape[name] = shape[name]!.optional();
         }
         const objectSchema = z.object(shape);
         // Reject unknown keys when the remote schema does not allow additional
