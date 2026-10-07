@@ -513,7 +513,9 @@ async function runCmd(rest: string[], deps: CommandDeps): Promise<CommandResult>
     };
     const cancel = () => {
       interaction.abort();
-      void deps.rpc.request("session.cancel", { sessionId: session.id, turnId }).catch(() => {});
+      void deps.rpc.request("session.cancel", { sessionId: session.id, turnId }).catch(error => {
+        process.stderr.write(`[degraded] cli.cancel: ${error instanceof Error ? error.message : String(error)}\n`);
+      });
     };
     deps.runHost?.signal?.addEventListener("abort", cancel, { once: true });
     let pendingInteraction: Promise<void> | undefined;

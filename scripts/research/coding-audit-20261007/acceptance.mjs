@@ -23,6 +23,7 @@ export async function runCodingAcceptance(outputDir = '.ci/coding-acceptance') {
       const body = JSON.parse(raw); requests.push({ scenario, stage, path: req.url, body });
       let message;
       if (scenario === 'coding' || scenario === 'web-coding') {
+        if (stage > 0) check('thinking HTTP tool history retains the required reasoning field', body.messages.filter(message => message.role === 'assistant' && message.tool_calls).every(message => typeof message.reasoning_content === 'string'));
         if (stage === 0) message = tool('read_file', { path: 'src/math.cjs', versioned: true });
         else if (stage === 1) {
           check('actual read content reaches HTTP model', JSON.stringify(body.messages).includes('return a - b'));
@@ -34,6 +35,7 @@ export async function runCodingAcceptance(outputDir = '.ci/coding-acceptance') {
           message = tool('edit_file', { path: 'src/math.cjs', oldText: 'return a + b + 1', newText: 'return a + b' });
         } else if (stage === 4) message = tool('exec', { command: 'node', args: ['--test', 'test/math.test.cjs'] });
         else message = text('Fixed addition and verified the test.');
+        message.reasoning_content = 'Scripted local thinking fixture; no external model used.';
       } else if (scenario === 'deny' && stage === 0) message = tool('write_file', { path: 'denied.txt', content: 'must not land' });
       else if (scenario === 'cancel' && stage === 0) message = tool('exec', { command: 'node', args: ['-e', "require('fs').writeFileSync('started.txt','started');setTimeout(()=>{},60000)"] });
       else message = text('Done.');

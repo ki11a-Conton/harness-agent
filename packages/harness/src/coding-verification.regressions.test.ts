@@ -49,6 +49,27 @@ it("C05: a failed verification command's diagnostics reach the next model reques
     expect(seen.slice(1).some(request => request.messages.some(message => message.role === "tool" && message.content.includes("ASSERTION_EXPECTED_42_AT_MATH_LINE_7")))).toBe(true);
   } finally { await h.close(); }
 });
+it("thinking-provider history retains a reasoning field on host verification tool calls", async () => {
+  const cwd = await fixture();
+  await writeFile(join(cwd, "package.json"), JSON.stringify({ scripts: { test: 'node -e "process.exit(8)"' } }));
+  const seen: ModelRequest[] = [];
+  const provider = new ScriptedModelProvider(Array.from({ length: 8 }, () => [
+    { type: "reasoning_delta" as const, text: "Inspect the test result", timestamp: 0 }, ...ScriptedModelProvider.text("done"),
+  ]));
+  const original = provider.createClient.bind(provider);
+  provider.createClient = (model, config) => {
+    const client = original(model, config);
+    return { async *generate(request, signal) { seen.push(request as ModelRequest); yield* client.generate(request, signal); } };
+  };
+  const h = await createHarness({ cwd, profile: "test", model: { providerId: provider.id, modelId: "scripted-model" }, modelProvider: provider, task: { id: "coding", goal: "fix" } });
+  try {
+    const session = await h.runtime.createSession({ agent: h.agents[0]!, cwd }); const turn = await h.runtime.startTurn(session.id, "fix");
+    await h.runtime.runTurn(session.id, turn.id, new AbortController().signal);
+    const calls = seen.slice(1).flatMap(request => request.messages.filter(message => message.role === "assistant" && message.toolCalls !== undefined));
+    expect(calls.length).toBeGreaterThan(0);
+    expect(calls.every(message => message.reasoningContent !== undefined)).toBe(true);
+  } finally { await h.close(); }
+});
 it("C04: changing the project test recipe invalidates the previous passing verification", async () => {
   const cwd = await fixture(); const h = await harness(cwd, 2);
   try {

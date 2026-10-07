@@ -713,11 +713,17 @@ export class AgentRuntime {
         const id = newToolCallId();
         const args = { command: spec.command, ...(spec.args !== undefined ? { args: [...spec.args] } : {}), timeoutMs: 120_000 };
         const call: ToolCall = { id, name: "exec", args };
+        // Thinking APIs require a reasoning field on every assistant tool-call
+        // record in a thinking conversation. A host command has no generated
+        // chain: send an empty field only after this provider actually emitted
+        // reasoning, preserving the plain OpenAI wire shape otherwise.
+        const thinkingConversation = (await this.store.listMessages(ctx.sessionId))
+          .some(message => message.role === "assistant" && message.reasoningContent !== undefined);
         // A host verification command is a real tool execution. Preserve its
         // request/result pair so the next model call can diagnose a failure;
         // never promote captured stdout/stderr into a system instruction.
         await this.store.appendMessage({ id: newMessageId(), sessionId: ctx.sessionId, turnId: ctx.turnId,
-          role: "assistant", content: "", toolCalls: [call], createdAt: this.now() });
+          role: "assistant", content: "", toolCalls: [call], ...(thinkingConversation ? { reasoningContent: "" } : {}), createdAt: this.now() });
         let result: ToolResult;
         try { result = await this.orchestrator.executeBound({
           id, sessionId: ctx.sessionId, turnId: ctx.turnId, agentId: ctx.agent.id,

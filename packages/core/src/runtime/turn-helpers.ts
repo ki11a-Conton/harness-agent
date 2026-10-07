@@ -65,7 +65,7 @@ export function renderToolResult(result: ToolResult): string {
       // for repair. Keep them as structured tool data so the context boundary
       // can redact, inspect and cap them exactly like successful outputs.
       try { return `[${result.status}] ${JSON.stringify({ error: result.error?.message ?? "no error detail", output: result.output })}`; }
-      catch { /* Preserve the existing error fallback for unserializable data. */ }
+      catch { process.stderr.write("[degraded] tool-output.serialize: unserializable output omitted; using error summary\n"); }
     }
     return `[${result.status}] ${result.error?.message ?? "no error detail"}`;
   }
