@@ -128,7 +128,7 @@ describe("R3a model-facing tool output boundary", () => {
     expect(rendered).toContain(`--- output head ---\n${"a".repeat(2000)}\n--- output tail ---\n${"z".repeat(2000)}`);
   });
 
-  it("uses the existing failure and serialization views without changing caller data", async () => {
+  it("preserves failed diagnostics and serialization fallbacks without changing caller data", async () => {
     const outputRedactor = vi.fn((content: string) => ({ content, redacted: 0 }));
     const injectionDetector = vi.fn(() => ({ hasInjection: false, reasons: [] }));
     const { controller, ctx, call } = fixture({ outputRedactor, injectionDetector });
@@ -140,7 +140,7 @@ describe("R3a model-facing tool output boundary", () => {
       [{ status: "success", output: circular }, "[object Object]"],
       [{ status: "success", output: 12n }, "12"],
       [{ status: "success", output: () => "ignored" }, ""],
-      [{ status: "failed", output: { stdout: "not the model view" }, error: { code: "PROCESS_ERROR", message: "exit code 3", retryable: false, safeToRetry: false } }, "[failed] exit code 3"],
+      [{ status: "failed", output: { stdout: "compiler location src/math.ts:7" }, error: { code: "PROCESS_ERROR", message: "exit code 3", retryable: false, safeToRetry: false } }, '[failed] {"error":"exit code 3","output":{"stdout":"compiler location src/math.ts:7"}}'],
       [{ status: "denied" }, "[denied] no error detail"],
     ];
     for (const [result, expected] of cases) {

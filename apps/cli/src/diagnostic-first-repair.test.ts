@@ -159,6 +159,11 @@ function diagnosticFields(request: ModelRequest): boolean {
     && text.includes("DIAG") && text.includes("config.cjs") && /line[^0-9]+1/.test(text)
     && (text.includes("SyntaxError") || (text.includes("expected") && text.includes("8080") && text.includes("actual") && text.includes("3000")));
 }
+function capturedDiagnostics(request: ModelRequest) {
+  const call = request.messages.flatMap(message => message.toolCalls ?? [])
+    .findLast(tool => tool.name === "exec" && tool.args.command === "node capture-diagnostics.cjs");
+  return request.messages.find(message => message.role === "tool" && message.toolCallId === call?.id);
+}
 
 const finished = (outcome: EvalOutcome) => outcome.events.filter((e) => e.type === "verification.completed");
 
@@ -196,8 +201,14 @@ describe("S1 diagnostic_first_repair_v1 experimental strategy", () => {
     expect(candidate.tools[3]!.args).toEqual({ command: "node targeted.cjs" });
     expect(failedView(candidate.requests[1]!)).toMatch(/exit(?:ed with code)? 1/);
     expect(failedView(candidate.requests[1]!)).toContain("verification failed");
-    expect(candidate.requests[1]!.messages.some((m) => m.content.includes("DIAG"))).toBe(false);
-    expect(candidate.requests[2]!.messages.find((m) => m.role === "tool")?.content).toContain("DIAG");
+    // C05 fixes the host boundary for BOTH arms: the failing gate's raw
+    // diagnostic is already available as protected tool data. This scripted
+    // strategy fixture still validates its explicit capture/read/edit/rerun
+    // sequence; it does not claim a real-model improvement over the baseline.
+    expect(candidate.requests[1]!.messages.some((m) => m.role === "tool" && m.content.includes("DIAG"))).toBe(true);
+    expect(trustedSystemView(candidate.requests[1]!)).not.toContain("DIAG");
+    expect(baseline.requests[1]!.messages.some((m) => m.role === "tool" && m.content.includes("DIAG"))).toBe(true);
+    expect(capturedDiagnostics(candidate.requests[2]!)?.content).toContain("DIAG");
     expect(diagnosticFields(candidate.requests[2]!)).toBe(true);
     expect(finished(candidate.outcome)).toHaveLength(1);
     const activation = candidate.outcome.activationEvidenceV2!;
@@ -214,7 +225,7 @@ describe("S1 diagnostic_first_repair_v1 experimental strategy", () => {
     expect(candidate.outcome.status).toBe("passed");
     expect(candidate.outcome.events.some((event) => event.type === "security.secret_redacted")).toBe(true);
     expect(JSON.stringify(candidate.requests)).not.toContain(secret);
-    const diagnostic = candidate.requests[2]!.messages.find((m) => m.role === "tool");
+    const diagnostic = capturedDiagnostics(candidate.requests[2]!);
     expect(diagnostic?.content).toContain("[redacted]");
     expect(candidate.requests.every((r) => !trustedSystemView(r).includes("DIAG"))).toBe(true);
     expect(candidate.requests[2]!.system).toContain("[context trust=semi-trusted source=tool]");
