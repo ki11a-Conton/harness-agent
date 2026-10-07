@@ -109,13 +109,17 @@ function frozenOptions(over: Partial<ContextSafePreregistrationOptions> = {}): C
     schedule: { orderSeed: 20_261_007 },
     budget: {
       maxModelCallsPerRun: 30,
-      maxToolCalls: 600,
+      // AMENDED 2026-10-07 (#2): the campaign-level capacity caps were N5-era values
+      // the N7 design never scaled; campaign #2 died with toolCalls 600/600 and
+      // inputTokens 2,969,213/3,000,000. Only capacity changed — gates, cases, arms,
+      // repetitions, seeds, provider and the call/USD ceilings are untouched.
+      maxToolCalls: 32_000,
       // AMENDED 2026-10-07: the pre-registered campaign duration was extended to 12h
-      // (only this field changed) — see docs/evidence/agent-next7-20261006/BUDGET-AMENDMENT.md.
+      // — see docs/evidence/agent-next7-20261006/BUDGET-AMENDMENT.md.
       maxDurationMs: 43_200_000,
-      maxInputTokens: 3_000_000,
-      maxOutputTokens: 400_000,
-      maxTotalTokens: 4_000_000,
+      maxInputTokens: 80_000_000,
+      maxOutputTokens: 4_000_000,
+      maxTotalTokens: 90_000_000,
       maxUsdMicros: 100_000_000_000,
     },
     ...over,
@@ -181,12 +185,16 @@ function holdoutOptions(): ContextSafePreregistrationOptions {
     schedule: { orderSeed: 20_261_008 },
     budget: {
       maxModelCallsPerRun: 30,
-      maxToolCalls: 600,
+      // AMENDED 2026-10-07 (#2): the campaign-level capacity caps were N5-era values
+      // the N7 design never scaled; campaign #2 died with toolCalls 600/600 and
+      // inputTokens 2,969,213/3,000,000. Only capacity changed — gates, cases, arms,
+      // repetitions, seeds, provider and the call/USD ceilings are untouched.
+      maxToolCalls: 32_000,
       // AMENDED 2026-10-07: same duration amendment as the main plan.
       maxDurationMs: 43_200_000,
-      maxInputTokens: 3_000_000,
-      maxOutputTokens: 400_000,
-      maxTotalTokens: 4_000_000,
+      maxInputTokens: 80_000_000,
+      maxOutputTokens: 4_000_000,
+      maxTotalTokens: 90_000_000,
       maxUsdMicros: 100_000_000_000,
     },
   };

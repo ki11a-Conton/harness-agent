@@ -239,15 +239,15 @@
   },
   "budget": {
     "maxModelCallsPerRun": 30,
-    "maxToolCalls": 600,
+    "maxToolCalls": 32000,
     "maxDurationMs": 43200000,
-    "maxInputTokens": 3000000,
-    "maxOutputTokens": 400000,
-    "maxTotalTokens": 4000000,
+    "maxInputTokens": 80000000,
+    "maxOutputTokens": 4000000,
+    "maxTotalTokens": 90000000,
     "maxUsdMicros": 100000000000,
     "pricingUnknownPolicy": "refuse",
     "campaignWorstCaseModelCalls": 5760
   },
-  "preregistrationDigest": "49fea7303e60db9c6cd91419a2341b8e47d466b6811a9d8600fdfb859818fba5",
+  "preregistrationDigest": "6ef59a6cc2a5687608d25bf182d07aef160f2f4996ac63e4857eeadf122a8258",
   "role": "holdout"
 }

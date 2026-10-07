@@ -55,3 +55,23 @@ archive-n7-evidence main + holdout
 ```
 
 只有当两个实验与工程门全部通过、且诚实标注隔离资格不足时，才报告"效果已测"；任一门未过即如实报告 NOT_PROVEN，并保留失败原件。
+
+## 修订 #2（2026-10-07）：campaign 容量上限
+
+第二次真实 campaign **跑满了 512/512 arms**，但判定为 **`INFRASTRUCTURE_FAILED, 36/256 pairs`** —— campaign 级容量上限仍是 N5 时代的值，从未按 N7 的 512-run 设计放大。
+
+| 上限 | 冻结值 | 失败时已计入 | 新值（本次修订） |
+| --- | --- | --- | --- |
+| `maxToolCalls` | 600 | **600（撞顶）** | **32,000** |
+| `maxInputTokens` | 3,000,000 | **2,969,213（撞顶）** | **80,000,000** |
+| `maxOutputTokens` | 400,000 | 138,890 | **4,000,000** |
+| `maxTotalTokens` | 4,000,000 | 3,108,103 | **90,000,000** |
+| `maxDurationMs` | 43,200,000（修订 #1 已改） | 1,749,017 | 43,200,000（不变） |
+| `maxModelCallsPerRun` / `maxUsdMicros` | 30 / $100,000 | 747 calls / $747 | 不变 |
+
+- 撞顶后的臂以 `TOOL_BUDGET_EXHAUSTED` 与 `MODEL_ERROR: BUDGET_EXHAUSTED: initial cost reservation refused (input-token cap would be exceeded)` 结束 → `terminationReason = model_error` → `isStrictValidArm = false` → **220/256 对判为 `invalid-arm`**（基础设施门限要求完整配对 ≥95%）。
+- 尺寸依据（实测）：最重臂 54 次工具调用、128,724 输入 token、3,096 输出 token；512 arms 需要约 27.6k 工具调用与 65.9M 输入 token，故取 32,000 / 80,000,000 并留余量。
+- 门限、用例集、臂、重复、seed、provider、`maxModelCallsPerRun`、USD 上限**逐值未改**；N6 的值保持原样（N6 产物仍可复算）。
+- 新 digest：主 `d824d5938e45bf5962b476e76fbfc0ce7f4264475d1c8d9d8afd6907f1330b2c`、holdout `6ef59a6cc2a5687608d25bf182d07aef160f2f4996ac63e4857eeadf122a8258`。
+- **偏差声明**：本修订同样发生在已判定为 infrastructure-failed、且无任何效果 verdict 的运行之后；campaign #2 的原件保留但**不用于推断**；修订后重新 prepare／soak 并**从零**开始一场全新 campaign。
+- **附带观察（非本轮结论）**：campaign #2 中两个臂的绝大多数 run 都以 `tool_limit`／`grade: unverified_complete` 结束，即**模型在这些任务上倾向于"未验证就宣称完成"，并且把预算烧在工具循环上**。这正是 P 轮候选 `verified_completion_gate_v1` 所针对的失败簇；但该观察来自一场被判定为基础设施失败的运行，**不得**作为任何效果结论。

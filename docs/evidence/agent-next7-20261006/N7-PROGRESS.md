@@ -63,7 +63,7 @@
 | 对照臂 | `tool_call_efficiency_v1` `ebddf5eb…9619` | 运行时解析 champion（C0/`null`，arm `00d2c921…`，validity=QUARANTINED_PENDING_REEVALUATION，applied=true） |
 | 用例 / 重复 | 64 / 4 | 24 / 4 |
 | **logical arm runs** | **512**（AB 128 / BA 128） | **192**（AB 48 / BA 48） |
-| `preregistrationDigest` | `3aef9df0cfd2d4c2b2200a61a5e5994ca52ca3dc0a6311cea634c7db571c0e7b` | `49fea7303e60db9c6cd91419a2341b8e47d466b6811a9d8600fdfb859818fba5` |
+| `preregistrationDigest` | `d824d5938e45bf5962b476e76fbfc0ce7f4264475d1c8d9d8afd6907f1330b2c` | `6ef59a6cc2a5687608d25bf182d07aef160f2f4996ac63e4857eeadf122a8258` |
 | 冻结 seed | 20261007 | 20261008 |
 | dry-run | 512 runs / `paidProviderCalls=0` / `modelQuality=NOT_RUN` | 192 runs / 同左 |
 
@@ -103,3 +103,5 @@
 > **P 轮重新冻结（2026-10-06）**：登记 `verified_completion_gate_v1` 后，baseline 臂快照（枚举全部已注册候选为 OFF）使 champion 解析出的对照臂摘要移动，故 holdout 预注册按本轮冻结脚本重新冻结：`preregistrationDigest` `967da1dd…5664` → `7b675621…7321`，对照臂 `ee589c7e…` → `00d2c921…`；**24 用例 / 192 runs / 门限 / provider / 预算 / provenance 均不变**，且重新冻结发生在任何 N7 模型结果之前（paid calls = 0）。验收记录（`holdout-prereg.log`、`unchanged-originals.json`、`artifact-index.json`、`RAW-MANIFEST.json`）已同步更新并重新自校验通过。
 
 > **N7 预算修订（2026-10-07）**：实测吞吐约 0.83 分钟/arm，512 arms 需约 7.1 小时，故按操作者批准**只把 `budget.maxDurationMs` 由 30 分钟改为 12 小时**（门限／用例／臂／重复／seed／provider／token·工具·USD 上限均未改），两件预注册重新冻结：主 `7c7d0b56…` → `3aef9df0…`、holdout `7b675621…` → `49fea730…`。修订发生在一次基础设施中断、未做效果判定的运行之后；该运行标记 infrastructure-failed、不用于推断。详见 [BUDGET-AMENDMENT.md](BUDGET-AMENDMENT.md)。
+
+> **N7 容量上限修订（修订 #2，2026-10-07）**：campaign #2 跑满 512/512 arms 但 `INFRASTRUCTURE_FAILED, 36/256 pairs` —— `maxToolCalls` 600、`maxInputTokens` 3,000,000 在约 72 arms 处即撞顶，之后每个 arm 被预算拒绝（`TOOL_BUDGET_EXHAUSTED` / `model_error`）而判 `invalid-arm`。按批准只放大四个容量维度（工具 32,000／输入 80,000,000／输出 4,000,000／总量 90,000,000），门限与设计全部不变；两件预注册重新冻结：主 `3aef9df0…` → `d824d593…`、holdout `49fea730…` → `6ef59a6c…`。详见 [BUDGET-AMENDMENT.md](BUDGET-AMENDMENT.md)。

@@ -1,0 +1,78 @@
+{
+  "schemaVersion": "n7-aborted-runs-summary-v1",
+  "note": "Both runs are infrastructure-failed and are EXCLUDED from inference. They are preserved in the scratch evidence directory; this summary is the committed record. Campaign 1 was killed by a process/session restart and is unresumable (empty attempt index, exhausted absolute campaign deadline). Campaign 2 completed all 512 arms but the campaign-level capacity caps (N5-era values) were exhausted after ~72 arms, after which every arm was refused budget and terminated model_error -> 220/256 pairs invalid-arm.",
+  "sourceOfNumbers": "read back from each run's campaign-header.json, budget/cost-budget.json, requests/, .paired-journal/ and attempts/*/{finalized,partial}-pairs.json",
+  "runs": [
+    {
+      "label": "campaign-1 (killed by process/session restart at 16/512 arms)",
+      "runDir": "./.ci/n7/run-20261006-215646",
+      "executionBindingDigest": "71ed12fd5b3db626caaa326452cf273482752190cbf7d1fdccf28d013482c8a4",
+      "frozenPreregistrationDigest": "7c7d0b56ce6e22446fc7e1262dbb68b5310d3bd998eeb75c9f5b399c401f5b9b",
+      "attempts": [
+        "0001"
+      ],
+      "lastAttempt": "./.ci/n7/run-20261006-215646/main/attempts/0001",
+      "modelCallsRecorded": 411,
+      "journalPairs": 9,
+      "finalizedPairs": 0,
+      "partialPairs": 0,
+      "partialReasonCounts": {},
+      "recordedFilesUnderRunMain": 437,
+      "frozenCaps": {
+        "maxDurationMs": 1800000,
+        "maxInputTokens": 3000000,
+        "maxModelCalls": 15360,
+        "maxOutputTokens": 400000,
+        "maxToolCalls": 600,
+        "maxTotalTokens": 4000000,
+        "maxUsdMicros": 100000000000
+      },
+      "charged": {
+        "durationMs": 797627,
+        "inputTokens": 1690855,
+        "outputTokens": 36159,
+        "toolCalls": 583,
+        "totalTokens": 1727014,
+        "unknownCalls": 0,
+        "usdMicros": 411000000
+      }
+    },
+    {
+      "label": "campaign-2 (completed 512/512 arms, INFRASTRUCTURE_FAILED on campaign caps)",
+      "runDir": "./.ci/n7/run2-20261007-103254",
+      "executionBindingDigest": "b14860b77d6713ffb3b1da6b557ca700e1a8b8ff99728c73f1ddd14c16f2e857",
+      "frozenPreregistrationDigest": "3aef9df0cfd2d4c2b2200a61a5e5994ca52ca3dc0a6311cea634c7db571c0e7b",
+      "attempts": [
+        "0001"
+      ],
+      "lastAttempt": "./.ci/n7/run2-20261007-103254/main/attempts/0001",
+      "modelCallsRecorded": 747,
+      "journalPairs": 256,
+      "finalizedPairs": 36,
+      "partialPairs": 220,
+      "partialReasonCounts": {
+        "invalid-arm": 220
+      },
+      "recordedFilesUnderRunMain": 1275,
+      "frozenCaps": {
+        "maxDurationMs": 43200000,
+        "maxInputTokens": 3000000,
+        "maxModelCalls": 15360,
+        "maxOutputTokens": 400000,
+        "maxToolCalls": 600,
+        "maxTotalTokens": 4000000,
+        "maxUsdMicros": 100000000000
+      },
+      "charged": {
+        "durationMs": 1749017,
+        "inputTokens": 2969213,
+        "outputTokens": 138890,
+        "toolCalls": 600,
+        "totalTokens": 3108103,
+        "unknownCalls": 0,
+        "usdMicros": 747000000
+      }
+    }
+  ],
+  "summarySha256": "a313f6216f894424a7c35060f3174f828000d545da5dad0aadd9464ca5e80dcc"
+}

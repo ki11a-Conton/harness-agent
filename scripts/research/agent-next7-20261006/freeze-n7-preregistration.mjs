@@ -80,16 +80,19 @@ const options = {
   schedule: { orderSeed: 20_261_007 },
   budget: {
     maxModelCallsPerRun: 30,
-    maxToolCalls: 600,
+    // AMENDED 2026-10-07 (#2): the campaign capacity caps were N5-era values the N7
+    // design never scaled; campaign #2 died with toolCalls 600/600 and inputTokens
+    // 2,969,213/3,000,000. Only capacity changed — everything else is untouched.
+    maxToolCalls: 32_000,
     // AMENDED 2026-10-07 (operator-approved): measured throughput is ~0.83 min/arm,
     // so the 512-arm campaign needs ~7.1h; the original 30-minute cap made the frozen
     // campaign unfinishable. ONLY this duration changes — gates, cases, arms,
     // repetitions, seeds and the token/tool/USD caps are untouched. See
     // docs/evidence/agent-next7-20261006/BUDGET-AMENDMENT.md.
     maxDurationMs: 43_200_000,
-    maxInputTokens: 3_000_000,
-    maxOutputTokens: 400_000,
-    maxTotalTokens: 4_000_000,
+    maxInputTokens: 80_000_000,
+    maxOutputTokens: 4_000_000,
+    maxTotalTokens: 90_000_000,
     // The operator's hard ceiling (integer USD micros): $100,000.
     maxUsdMicros: 100_000_000_000,
   },

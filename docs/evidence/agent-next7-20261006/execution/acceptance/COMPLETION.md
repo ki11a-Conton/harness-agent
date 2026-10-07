@@ -85,3 +85,33 @@ P 轮登记新挑战者 `verified_completion_gate_v1` 后，`arm-factory buildSn
 **偏差声明**：本修订发生在一次**已被基础设施中断、且未做任何效果判定**的运行之后；该运行被标记为 infrastructure-failed，其原件保留但**不用于推断**。修订前的 campaign 从未产出任何 verdict。本次为使用已批准的本地研究模式（`insecure-local`，永久 promotion-ineligible）。
 
 本目录随之更新：`main-prereg.log`／`holdout-prereg.log`（按 `checks.json` 记录的同一命令重新生成）、`unchanged-originals.json`（两条条目 + `updatedInLaterRounds`）、`RAW-MANIFEST.json` 与 `artifact-index.json`（重算）。
+
+## 追加记录：N7 campaign 容量上限修订（修订 #2，2026-10-07）
+
+第二次真实 campaign **跑满了 512/512 arms**，但结果是 `INFRASTRUCTURE_FAILED, 36/256 pairs`：**campaign 级容量上限仍是 N5 时代的值，从未按 N7 的 512-run 设计放大**。失败点实测：
+
+| 上限 | 冻结值 | 失败时已计入 | 结果 |
+| --- | --- | --- | --- |
+| `maxToolCalls` | 600 | **600（撞顶）** | 之后每次工具派发被 `TOOL_BUDGET_EXHAUSTED` 拒绝 |
+| `maxInputTokens` | 3,000,000 | **2,969,213（撞顶）** | 之后每次调用被 `MODEL_ERROR: BUDGET_EXHAUSTED` 拒绝 |
+| `maxOutputTokens` | 400,000 | 138,890 | 未撞顶 |
+| `maxTotalTokens` | 4,000,000 | 3,108,103 | 未撞顶（因 input 先撞顶） |
+
+受影响的臂以 `terminationReason = model_error` 结束（→ `isStrictValidArm = false`），因此 **220/256 对判为 `invalid-arm`**，远低于 ≥95% 完整配对的基础设施门限。
+
+按操作者批准的方式修订（**只放大四个容量维度**）：
+
+| 项目 | 旧值 | 新值 |
+| --- | --- | --- |
+| `maxToolCalls` | 600 | **32,000** |
+| `maxInputTokens` | 3,000,000 | **80,000,000** |
+| `maxOutputTokens` | 400,000 | **4,000,000** |
+| `maxTotalTokens` | 4,000,000 | **90,000,000** |
+| 主实验 `preregistrationDigest` | `3aef9df0…0e7b` | `d824d593…0b2c` |
+| holdout `preregistrationDigest` | `49fea730…fba5` | `6ef59a6c…8258` |
+
+**未改动**：8 条门限数值、用例集（64/24）、重复数 4、臂与 AB/BA 平衡、order seed、provider／模型／请求档、`maxModelCallsPerRun`=30、`maxDurationMs`=43,200,000（修订 #1）、`maxUsdMicros`=100,000,000,000、champion provenance。N6 的值保持原样，故 N6 产物仍可复算。
+
+**偏差声明**：本修订同样发生在**已判定为 infrastructure-failed、且无任何效果 verdict** 的运行之后；campaign #2 的原件保留但不用于推断。修订后重新 prepare／soak，并从零开始一场全新 campaign。
+
+本目录随之更新：两件 `*-prereg.log`、`unchanged-originals.json`（两条目 + `updatedInLaterRounds`）、`RAW-MANIFEST.json`、`artifact-index.json`、`BUDGET-AMENDMENT.md`。
