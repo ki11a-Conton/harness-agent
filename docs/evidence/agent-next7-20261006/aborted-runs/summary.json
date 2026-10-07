@@ -1,6 +1,6 @@
 {
   "schemaVersion": "n7-aborted-runs-summary-v1",
-  "note": "Both runs are infrastructure-failed and are EXCLUDED from inference. They are preserved in the scratch evidence directory; this summary is the committed record. Campaign 1 was killed by a process/session restart and is unresumable (empty attempt index, exhausted absolute campaign deadline). Campaign 2 completed all 512 arms but the campaign-level capacity caps (N5-era values) were exhausted after ~72 arms, after which every arm was refused budget and terminated model_error -> 220/256 pairs invalid-arm.",
+  "note": "All three runs are infrastructure-failed and are EXCLUDED from any model-quality inference or promotion claim. They are preserved in the scratch evidence directory; this summary is the committed record. Campaign 1 was killed by a process/session restart and is unresumable (empty attempt index, exhausted absolute campaign deadline). Campaign 2 completed all 512 arms but the campaign-level capacity caps (N5-era values) were exhausted after ~72 arms, after which every arm was refused budget and terminated model_error -> 220/256 pairs invalid-arm. Campaign 3 completed all 512 arms under the amended caps and finalized 255/256 pairs: a single control-case baseline arm was invalidated by the E1-02 out-of-workspace sentinel (status=error, failureCategory=infrastructure, so isStrictValidArm=false), which alone makes the frozen judge's infrastructure_qualified and full_frozen_grid gates fail. Campaign 3 produced the first real judged record of this round and is archived under docs/evidence/agent-next7-20261006/execution/main (verdict NOT_PROVEN); its gate observations are descriptive only. See N7-RESULT-20261007.md for the result record and the three measurement defects this run exposed.",
   "sourceOfNumbers": "read back from each run's campaign-header.json, budget/cost-budget.json, requests/, .paired-journal/ and attempts/*/{finalized,partial}-pairs.json",
   "runs": [
     {
@@ -72,7 +72,44 @@
         "unknownCalls": 0,
         "usdMicros": 747000000
       }
+    },
+    {
+      "label": "campaign-3 (completed 512/512 arms, INFRASTRUCTURE_FAILED on 1 invalid arm; judged NOT_PROVEN and archived)",
+      "runDir": "./.ci/n7/run3-20261007-111347",
+      "executionBindingDigest": "6a882ee3106aacec95b0d2543984f89da952a76444cad6e5789ae21a535bb7a2",
+      "frozenPreregistrationDigest": "d824d5938e45bf5962b476e76fbfc0ce7f4264475d1c8d9d8afd6907f1330b2c",
+      "attempts": [
+        "0001"
+      ],
+      "lastAttempt": "./.ci/n7/run3-20261007-111347/main/attempts/0001",
+      "modelCallsRecorded": 9171,
+      "journalPairs": 256,
+      "finalizedPairs": 255,
+      "partialPairs": 1,
+      "partialReasonCounts": {
+        "invalid-arm": 1
+      },
+      "invalidArmCause": "pair 3ba8b5c09a1ea89596252f45 / n7e-control-01-chunk-tail rep 2, baseline side: the model wrote C:\\tmp\\chunk-test.js outside the session workspace -> E1-02 sentinel -> outcome status=error, failureCategory=infrastructure -> isStrictValidArm=false. The other three repetitions of the same case had a passing baseline, so this is a sporadic model path choice, not a case defect.",
+      "recordedFilesUnderRunMain": 9699,
+      "frozenCaps": {
+        "maxDurationMs": 43200000,
+        "maxInputTokens": 80000000,
+        "maxModelCalls": 15360,
+        "maxOutputTokens": 4000000,
+        "maxToolCalls": 32000,
+        "maxTotalTokens": 90000000,
+        "maxUsdMicros": 100000000000
+      },
+      "charged": {
+        "durationMs": 17756119,
+        "inputTokens": 43148183,
+        "outputTokens": 1066263,
+        "toolCalls": 15420,
+        "totalTokens": 44214446,
+        "unknownCalls": 0,
+        "usdMicros": 9169000000
+      }
     }
   ],
-  "summarySha256": "a313f6216f894424a7c35060f3174f828000d545da5dad0aadd9464ca5e80dcc"
+  "summarySha256": "9f4322fe25e4fbb1ddbcbb4b5cb41be9cfb337c4acfb8bd101a1267a3982d411"
 }

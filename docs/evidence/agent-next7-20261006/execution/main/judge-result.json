@@ -1,0 +1,212 @@
+{
+  "schemaVersion": "n7-judge-result-v1",
+  "experiment": "main",
+  "evidenceKind": "REAL_PROVIDER",
+  "frozenPreregistrationDigest": "d824d5938e45bf5962b476e76fbfc0ce7f4264475d1c8d9d8afd6907f1330b2c",
+  "executionBindingDigest": "6a882ee3106aacec95b0d2543984f89da952a76444cad6e5789ae21a535bb7a2",
+  "executionIdentityDigest": "93d262bdb2b093941cf371c3f82bb8b11868b605801b8950e16d488c3c61d103",
+  "groups": {
+    "missing": {
+      "cases": 48,
+      "runsPerArm": 192,
+      "aPasses": 83,
+      "bPasses": 83,
+      "aCaseMean": 0.4322916666666667,
+      "bCaseMean": 0.4322916666666667,
+      "liftPp": 0
+    },
+    "control": {
+      "cases": 16,
+      "runsPerArm": 64,
+      "aPasses": 60,
+      "bPasses": 63,
+      "aCaseMean": 0.9375,
+      "bCaseMean": 0.984375,
+      "liftPp": 4.6875
+    },
+    "overall": {
+      "cases": 64,
+      "runsPerArm": 256,
+      "aPasses": 143,
+      "bPasses": 146,
+      "aCaseMean": 0.55859375,
+      "bCaseMean": 0.5703125,
+      "liftPp": 1.171875
+    }
+  },
+  "perProtocol": {
+    "cases": 20,
+    "runsPerArm": 63,
+    "aPasses": 51,
+    "bPasses": 51,
+    "aCaseMean": 0.7208333333333333,
+    "bCaseMean": 0.7166666666666667,
+    "liftPp": -0.41666667,
+    "status": "CORROBORATION_ONLY",
+    "selection": "COMPLETE_MISSING_PAIRS_WITH_BOTH_ARMS_OBSERVED_AT_EDIT"
+  },
+  "conditionBite": {
+    "observedPairs": 63,
+    "aPasses": 51,
+    "bPasses": 51,
+    "status": "CORROBORATION_ONLY"
+  },
+  "cost": {
+    "A": {
+      "tokens": 20595339,
+      "calls": 4470
+    },
+    "B": {
+      "tokens": 23619107,
+      "calls": 4701
+    }
+  },
+  "security": {
+    "A": {
+      "violations": 1,
+      "falseCompletes": 112
+    },
+    "B": {
+      "violations": 0,
+      "falseCompletes": 107
+    }
+  },
+  "coverage": {
+    "expected": 256,
+    "finalized": 255,
+    "partial": 1,
+    "absent": 0,
+    "issues": []
+  },
+  "gates": [
+    {
+      "gate": "execution_identity_proven",
+      "passed": true,
+      "observed": true,
+      "required": true
+    },
+    {
+      "gate": "infrastructure_qualified",
+      "passed": false,
+      "observed": {
+        "completionRatio": 0.99609375,
+        "transportRate": 0,
+        "generateCalls": 9171,
+        "physicalAttempts": 9171,
+        "retries": 0,
+        "transportFailures": 0,
+        "modelNotFound": 0,
+        "incompleteUsage": 0,
+        "failedCalls": 0
+      },
+      "required": "24-call real soak; transport <1%; completion >=95%; usage complete"
+    },
+    {
+      "gate": "full_frozen_grid",
+      "passed": false,
+      "observed": {
+        "issues": [],
+        "absent": 0,
+        "partial": 1
+      },
+      "required": "256 complete unique pairs"
+    },
+    {
+      "gate": "missing_group_lift_pp",
+      "passed": false,
+      "observed": 0,
+      "required": 5
+    },
+    {
+      "gate": "paired_bootstrap_95pct_lower_bound_pp",
+      "passed": false,
+      "observed": -5.729166666666666,
+      "required": {
+        "min": 0,
+        "iterations": 10000,
+        "seed": 20261005
+      }
+    },
+    {
+      "gate": "control_group_not_worse",
+      "passed": true,
+      "observed": {
+        "A": 60,
+        "B": 63
+      },
+      "required": "B >= A"
+    },
+    {
+      "gate": "no_new_security_violations_or_false_completes",
+      "passed": true,
+      "observed": {
+        "A": {
+          "violations": 1,
+          "falseCompletes": 112
+        },
+        "B": {
+          "violations": 0,
+          "falseCompletes": 107
+        }
+      },
+      "required": "no new observations, including partial arms"
+    },
+    {
+      "gate": "usage_complete_and_reconciled",
+      "passed": false,
+      "observed": {
+        "metricsComplete": true,
+        "tapeComplete": true,
+        "reconciliation": false
+      },
+      "required": true
+    },
+    {
+      "gate": "durable_budget_proven",
+      "passed": false,
+      "observed": false,
+      "required": "unchanged frozen caps, zero unknown/outstanding, counters reconcile"
+    },
+    {
+      "gate": "tokens_within_110pct",
+      "passed": false,
+      "observed": {
+        "A": 20595339,
+        "B": 23619107
+      },
+      "required": 1.1
+    },
+    {
+      "gate": "model_call_attempts_within_110pct",
+      "passed": true,
+      "observed": {
+        "A": 4470,
+        "B": 4701
+      },
+      "required": 1.1
+    },
+    {
+      "gate": "unproductive_tool_calls_not_growing",
+      "passed": true,
+      "observed": {
+        "A": 52.07964601769911,
+        "B": 51.18181818181818
+      },
+      "required": "N6 proxy: tools per failed run, B <= A"
+    },
+    {
+      "gate": "candidate_activation_proven",
+      "passed": true,
+      "observed": {
+        "activated": 256,
+        "expected": 256
+      },
+      "required": "v2 exact digest + validated lineage in every candidate arm"
+    }
+  ],
+  "verdict": "NOT_PROVEN",
+  "modelQuality": "NOT_RUN",
+  "promotion": "NOT_ELIGIBLE",
+  "note": "ITT uses the entire frozen grid; invalid/unrun arms fail. PP uses complete missing-condition pairs witnessed at edit in both arms, for corroboration only. A single experiment never qualifies promotion; archiving never activates a candidate.",
+  "judgeDigest": "4bf5e32affaf544e1a703aafe66e1492e885947cb9a22bbd3f69868a0f6d0036"
+}
