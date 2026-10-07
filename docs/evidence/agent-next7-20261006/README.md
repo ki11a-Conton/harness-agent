@@ -1,6 +1,6 @@
 # N7 证据目录说明 — `context_safe_tool_call_efficiency_v2`（主实验已实测：NOT_PROVEN）
 
-本目录是 N7 轮的证据目录。语料、策略注册与预注册保持冻结；工程执行链已补齐（**55 项新增回归、8967 项全仓测试通过（0 失败，12 项旧 skip）**，见 [完成报告](execution/acceptance/COMPLETION.md)）。**主实验已于 2026-10-07 真实付费执行**：512/512 arms 跑完、9,171 次模型调用、255/256 pairs 定案，判定 `NOT_PROVEN`（基础设施未合格：1 个作废 arm + 30-call 上限边界的两处对账门限失败；同时描述性 missing 组提升 0.00 pp、token +14.7%）。独立 holdout 未执行，联合判定未执行，**无 promotion、无模型质量推断结论**。结果与三处测量缺陷见 [N7-RESULT-20261007.md](N7-RESULT-20261007.md)，原始判定与原件见 [execution/main/](execution/main/judge-result.json)。
+本目录是 N7 轮的证据目录。语料、策略注册与预注册保持冻结；工程执行链已补齐（**55 项新增回归、8967 项全仓测试通过（0 失败，12 项旧 skip）**，见 [完成报告](execution/acceptance/COMPLETION.md)）。**主实验已于 2026-10-07 真实付费执行**：512/512 arms 跑完、9,171 次模型调用、255/256 pairs 定案，判定 `NOT_PROVEN`（基础设施未合格：1 个作废 arm + 30-call 上限边界的两处对账门限失败；同时描述性 missing 组提升 0.00 pp、token +14.7%）。独立 holdout 未执行，联合判定未执行，**无 promotion、无模型质量推断结论**。结果与五处测量缺陷（D1–D5）见 [N7-RESULT-20261007.md](N7-RESULT-20261007.md)，原始判定与原件见 [execution/main/](execution/main/judge-result.json)。
 
 ## 文件
 
@@ -12,7 +12,7 @@
 | `main-preregistration.json` | 主实验预注册（512 logical arm runs） |
 | `holdout-preregistration.json` | 独立 holdout 预注册（192 logical arm runs，对照=运行时解析的 champion） |
 | `N7-PROGRESS.md` | 本轮进度、证据与如实记录（含基线对比与已知副作用） |
-| `N7-RESULT-20261007.md` | **真实主实验结果记录**：NOT_PROVEN 结论、13 条门限全表、四处测量缺陷（D1–D4）、未执行与未声称清单 |
+| `N7-RESULT-20261007.md` | **真实主实验结果记录**：NOT_PROVEN 结论、13 条门限全表、五处测量缺陷（D1–D5）、未执行与未声称清单 |
 | `aborted-runs/summary.json` | 三次基础设施失败运行的已提交记录（含 run3 的作废 arm 归因与计费口径），均排除于推断之外 |
 | `execution/README.md` | 独立 N7 prepare/soak/campaign/judge/联合判定/归档入口与运行条件 |
 | `execution/main/` | **run3 主实验的判定与原件**：`judge-result.json`（NOT_PROVEN）、`campaign-result.json`、`pairs-summary.json`、binding/identity/header/soak 与 `RAW-MANIFEST.json`、`artifact-index.json` |
