@@ -1,0 +1,17 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: session model identity equals the model used on the HTTP wire
+    at check (file:///workspace/harness-agent-coding-audit-20261007/scripts/research/coding-audit-20261007/acceptance.mjs:14:47)
+    at runCodingAcceptance (file:///workspace/harness-agent-coding-audit-20261007/scripts/research/coding-audit-20261007/acceptance.mjs:108:5)
+    at async file:///workspace/harness-agent-coding-audit-20261007/scripts/research/coding-audit-20261007/acceptance.mjs:121:30 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v24.19.0

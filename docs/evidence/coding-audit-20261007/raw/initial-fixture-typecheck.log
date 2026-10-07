@@ -1,0 +1,6 @@
+$ tsc -b
+apps/cli/src/coding-host.regressions.test.ts(18,24): error TS2339: Property 'close' does not exist on type 'CommandDeps'.
+apps/cli/src/coding-host.regressions.test.ts(48,47): error TS2339: Property 'close' does not exist on type 'CommandDeps'.
+apps/cli/src/coding-host.regressions.test.ts(61,28): error TS2339: Property 'close' does not exist on type 'CommandDeps'.
+apps/web/src/main.ts(9,8): error TS6305: Output file '/workspace/harness-agent-coding-baseline-20261007/apps/cli/dist/index.d.ts' has not been built from source file '/workspace/harness-agent-coding-baseline-20261007/apps/cli/src/index.ts'.
+[ELIFECYCLE] Command failed with exit code 1.

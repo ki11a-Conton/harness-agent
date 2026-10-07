@@ -1,0 +1,2 @@
+$ vitest run packages/gateway/src/transport-conformance.test.ts packages/sdk/src/conformance.test.ts packages/protocol --reporter=json --outputFile=.ci/coding-audit/protocol.json
+JSON report written to /workspace/harness-agent-coding-contracts-20261007/.ci/coding-audit/protocol.json

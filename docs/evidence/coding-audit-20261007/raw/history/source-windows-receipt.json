@@ -1,0 +1,99 @@
+{
+  "schemaVersion": "genuine-windows-acceptance-v1",
+  "platform": "win32",
+  "osType": "Windows_NT",
+  "osRelease": "10.0.26100",
+  "arch": "x64",
+  "nodeVersion": "v22.23.3",
+  "sourceSha": "b099a1aa3d0ff4d08a0f50e87af28fd8c07a632d",
+  "workflowSha": "b099a1aa3d0ff4d08a0f50e87af28fd8c07a632d",
+  "treeClean": true,
+  "runId": "37654137430",
+  "runAttempt": "1",
+  "workflow": "ki11a-Conton/harness-agent/.github/workflows/windows-acceptance.yml@refs/heads/fix/coding-audit-20261007",
+  "job": "native-windows",
+  "rawReportSha256": "d6b3e1276d42549bfc3b2220492c81927e64a1835fbaab355a235a7c8e9fef75",
+  "rawReportBytes": 84468,
+  "outcome": "PASS",
+  "issues": [],
+  "files": 16,
+  "passed": 226,
+  "failed": 0,
+  "skipped": 1,
+  "required": [
+    {
+      "name": "E4-R91: Windows script shims run deterministically (H1) runs a .cmd shim by FULL PATH and delivers its arguments",
+      "observed": [
+        "passed"
+      ]
+    },
+    {
+      "name": "E4-R91: Windows script shims run deterministically (H1) resolves a BARE command name through PATH+PATHEXT (the reg-27 `npx` shape)",
+      "observed": [
+        "passed"
+      ]
+    },
+    {
+      "name": "E4-R91: Windows script shims run deterministically (H1) runs a .ps1 script and transports a dash-leading argument literally",
+      "observed": [
+        "passed"
+      ]
+    },
+    {
+      "name": "E4-R91: Windows script shims run deterministically (H1) REFUSES a .cmd argument containing a cmd metacharacter, so no second command can run",
+      "observed": [
+        "passed"
+      ]
+    },
+    {
+      "name": "E4-R91: Windows script shims run deterministically (H1) still honors cwd, timeout and cancellation through the shim path",
+      "observed": [
+        "passed"
+      ]
+    },
+    {
+      "name": "E4-R91: Windows script shims run deterministically (H1) propagates a real nonzero exit code from a .cmd shim",
+      "observed": [
+        "passed"
+      ]
+    },
+    {
+      "name": "E4-R91: argv launch planning (platform-parameterised) runs a real .cmd shim resolved by BARE NAME through runArgv end-to-end",
+      "observed": [
+        "passed"
+      ]
+    },
+    {
+      "name": "E4-R96 real Windows processes: the cwd boundary holds runs the script under opts.cwd, NOT the parent cwd's same-named namesake",
+      "observed": [
+        "passed"
+      ]
+    },
+    {
+      "name": "E4-R96 real Windows processes: the cwd boundary holds runs a .cmd from a path containing a space and CJK characters",
+      "observed": [
+        "passed"
+      ]
+    },
+    {
+      "name": "E4-R96 real Windows processes: the cwd boundary holds REFUSES a .cmd path with a metacharacter and creates no sentinel",
+      "observed": [
+        "passed"
+      ]
+    },
+    {
+      "name": "Windows native process-tree completion boundary cancel waits for both the child and its real grandchild to terminate",
+      "observed": [
+        "passed"
+      ]
+    },
+    {
+      "name": "Windows native process-tree completion boundary timeout waits for both the child and its real grandchild to terminate",
+      "observed": [
+        "passed"
+      ]
+    }
+  ],
+  "caseRecordsSha256": "3b6a0a49035b8861b4cb179560509aef0d6d76ef490f2f6c8b81da9b97738169",
+  "paidModelExperiment": "NOT_RUN"
+}

@@ -1,0 +1,20 @@
+{
+  "sourceSha": "a19fcabf7bd2ef186574227cf7676f26275aed08",
+  "localHost": {
+    "platform": "linux",
+    "node": "v24.19.0",
+    "pnpm": "11.19.0"
+  },
+  "commands": [
+    "pnpm install --offline --frozen-lockfile --store-dir /workspace/.pnpm-store",
+    "N2_RUN_RELEASE_E2E=1 python3 .ci/coding-audit/run-with-subreaper.py pnpm test --reporter=json --outputFile=.ci/coding-audit/full-suite.json",
+    "pnpm test:security --reporter=json --outputFile=.ci/coding-audit/security.json",
+    "pnpm test:protocol --reporter=json --outputFile=.ci/coding-audit/protocol.json",
+    "pnpm docs:verify",
+    "node scripts/research/coding-audit-20261007/acceptance.mjs .ci/coding-source-final",
+    "python3 scripts/research/web-dsh-20261004/browser.py --repo . --out .ci/coding-ready-browser-final --require-clean",
+    "node --check <each of the 207 git-tracked mjs files>"
+  ],
+  "paidModelCalls": 0,
+  "method": "Native Git and native read-only GitHub HTTPS; GitHub connector not used; token not saved."
+}

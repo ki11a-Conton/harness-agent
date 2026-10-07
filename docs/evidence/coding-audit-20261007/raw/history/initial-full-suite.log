@@ -1,0 +1,57 @@
+{"hostSetup": "linux-child-subreaper", "sourceSha": "5341e11b8dbade4016b246156c61537eaaaedc9e", "treeClean": true}
+$ tsc -b && vitest run --exclude '**/*.perf.test.ts' --exclude '**/*.soak.test.ts' --exclude '**/e3-repro-current-defects.test.ts' --exclude '**/e4-r40-forensics.test.ts' --exclude '**/r97-driver-closed-loop.test.ts' --reporter=json --outputFile=.ci/coding-audit/full-suite.json
+[harness] context budget: model capabilities unknown for stub/m — using conservative fallback 32000
+[degraded] e4-r60 taskkill spawn: spawn taskkill ENOENT
+[degraded] e4-r60 taskkill exit: taskkill exited with 1
+[degraded] e4-r60 taskkill spawn: boom
+[degraded] e4-r60 taskkill exit: taskkill exited with 1
+[degraded] e4-r60 taskkill: sync spawn failure
+[degraded] e4-r60 taskkill spawn: nope
+[degraded] e4-r60 taskkill spawn: injected taskkill failure
+[degraded] e4-r55 evidence root: ENOTDIR: not a directory, mkdir '/tmp/e4-r65-root-MYDqqR/a-file/child'
+[degraded] e4-r55 evidence write child.stdout.txt: EIO: injected write failure for child.stdout.txt
+[degraded] e4-r55 evidence write child.stderr.txt: EACCES: injected write failure for child.stderr.txt
+[degraded] e4-r55 evidence write child-report.json: EIO: injected write failure for child-report.json
+[degraded] e4-r55 evidence write run.json: EIO: injected write failure for run.json
+[degraded] e4-r55 evidence write child.stdout.txt: EIO: injected write failure for child.stdout.txt
+
+R68_SYMLINK_CAPABILITY={"ok":true,"detail":"fs.symlink created a link that lstat reports as a symlink"}
+
+R68_LINK_DIRENT={"isSymbolicLink":true,"isFile":false}
+usage: node scripts/e4/r97-arm-worker.mjs --checkout <arm dir> --case <caseId> --suite <suite> --arm <arm>
+                                                --provider <id> --model <id> [--endpoint <url>]
+                                                --plan-digest <hex> --state <execution state dir> --ledger <ledger dir>
+                                                [--source-sha <40-hex>] [--script-shape write-then-stop|text-only] [--json]
+
+The approved --provider/--model are REQUIRED: a worker that defaulted them would execute a
+different identity than the plan approved (plan T4 怎么做 6).
+usage: node scripts/e4/r97-arm-worker.mjs --checkout <arm dir> --case <caseId> --suite <suite> --arm <arm>
+                                                --provider <id> --model <id> [--endpoint <url>]
+                                                --plan-digest <hex> --state <execution state dir> --ledger <ledger dir>
+                                                [--source-sha <40-hex>] [--script-shape write-then-stop|text-only] [--json]
+
+The approved --provider/--model are REQUIRED: a worker that defaulted them would execute a
+different identity than the plan approved (plan T4 怎么做 6).
+usage: node scripts/e4/r97-arm-worker.mjs --checkout <arm dir> --case <caseId> --suite <suite> --arm <arm>
+                                                --provider <id> --model <id> [--endpoint <url>]
+                                                --plan-digest <hex> --state <execution state dir> --ledger <ledger dir>
+                                                [--source-sha <40-hex>] [--script-shape write-then-stop|text-only] [--json]
+
+The approved --provider/--model are REQUIRED: a worker that defaulted them would execute a
+different identity than the plan approved (plan T4 怎么做 6).
+usage: node scripts/e4/r97-arm-worker.mjs --checkout <arm dir> --case <caseId> --suite <suite> --arm <arm>
+                                                --provider <id> --model <id> [--endpoint <url>]
+                                                --plan-digest <hex> --state <execution state dir> --ledger <ledger dir>
+                                                [--source-sha <40-hex>] [--script-shape write-then-stop|text-only] [--json]
+
+The approved --provider/--model are REQUIRED: a worker that defaulted them would execute a
+different identity than the plan approved (plan T4 怎么做 6).
+[degraded] session session_220e5aa7-21b3-4384-83fc-de59e7223975 durable followup consume failed for fup-1 (prompt remains bound to turn turn_3ebdb046-a0dc-4f98-bd7f-f416a5376941): durable ack down
+[degraded] session session_5774e0e3-2c2b-4f2b-a72c-ca3248b1632c durable followup bind failed for fup-1 (created turn turn_dc889fda-4387-4d9f-bf1f-4d15f63a63df will not execute): bind down
+[degraded] inbox.promotion-identity-missing: session session_8eca2de8-48fb-4a2d-b185-000aad3d9ae0 prompt prompt_e726f6db-4e2d-4a19-af70-f652ee28ac15 is promoted but has no promotedTurnId — recovery-required, not replayed
+[degraded] session session_3ea3cdf0-451e-4c11-8e09-4f2a1e4c4ec6 failed to persist turn turn_d5a86dab-4e20-4b2d-8c76-b2e397a62d42 as cancelled: P38.2-9 simulated updateTurn failure
+[degraded] session session_476ceb01-ec21-4ae7-b004-96259b8d4856 failed to persist turn turn_dffed4da-6de3-4a32-a3cf-d0a042aa3d32 as cancelled: P38.2-9 simulated updateTurn failure
+[degraded] session session_476ceb01-ec21-4ae7-b004-96259b8d4856 failed to emit turn.cancelled for turn_dffed4da-6de3-4a32-a3cf-d0a042aa3d32: P38.2-9 simulated emit failure
+[degraded] session session_4b8a105d-0d8c-44b6-aa01-67e148ce1ab8 failed to persist turn turn_3471cb5f-1ccb-42a2-8c2f-fee91cfea59c as cancelled: P38.2-9 simulated updateTurn failure
+[degraded] session session_22955f4e-66ed-487e-9fc2-2822c67ff77f failed to persist turn turn_c446d1a8-4297-4156-8b56-5b7d4846793c as cancelled: P38.3-8 simulated updateTurn failure
+[ELIFECYCLE] Test failed. See above for more details.

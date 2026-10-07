@@ -1,0 +1,30 @@
+{
+  "sourceSha": "a19fcabf7bd2ef186574227cf7676f26275aed08",
+  "status": "PASS",
+  "controls": [
+    {
+      "name": "changed-bytes",
+      "expectedReason": "BYTE_INTEGRITY",
+      "exitCode": 1,
+      "status": "REJECTED",
+      "stdout": "",
+      "stderr": "Traceback (most recent call last):\n  File \"/workspace/harness-agent-coding-audit-20261007/.ci/coding-audit/evidence-negative-controls/changed-bytes/raw/verify-evidence.py\", line 65, in <module>\n    if __name__=='__main__':main()\n                            ^^^^^^\n  File \"/workspace/harness-agent-coding-audit-20261007/.ci/coding-audit/evidence-negative-controls/changed-bytes/raw/verify-evidence.py\", line 23, in main\n    data=target.read_bytes();require(len(data)==entry['bytes'] and hashlib.sha256(data).hexdigest()==entry['sha256'],'BYTE_INTEGRITY: '+entry['path']);paths.append(entry['path'])\n                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/harness-agent-coding-audit-20261007/.ci/coding-audit/evidence-negative-controls/changed-bytes/raw/verify-evidence.py\", line 8, in require\n    if not condition:raise ValueError(reason)\n                     ^^^^^^^^^^^^^^^^^^^^^^^^\nValueError: BYTE_INTEGRITY: coding/result.json\n"
+    },
+    {
+      "name": "rehash-failed-suite",
+      "expectedReason": "FULL_SUITE_FAILED",
+      "exitCode": 1,
+      "status": "REJECTED",
+      "stdout": "",
+      "stderr": "Traceback (most recent call last):\n  File \"/workspace/harness-agent-coding-audit-20261007/.ci/coding-audit/evidence-negative-controls/rehash-failed-suite/raw/verify-evidence.py\", line 65, in <module>\n    if __name__=='__main__':main()\n                            ^^^^^^\n  File \"/workspace/harness-agent-coding-audit-20261007/.ci/coding-audit/evidence-negative-controls/rehash-failed-suite/raw/verify-evidence.py\", line 28, in main\n    require(full['success'] and full['numFailedTests']==0 and full['numFailedTestSuites']==0 and all(test['status']!='failed' for test in tests),'FULL_SUITE_FAILED')\n  File \"/workspace/harness-agent-coding-audit-20261007/.ci/coding-audit/evidence-negative-controls/rehash-failed-suite/raw/verify-evidence.py\", line 8, in require\n    if not condition:raise ValueError(reason)\n                     ^^^^^^^^^^^^^^^^^^^^^^^^\nValueError: FULL_SUITE_FAILED\n"
+    },
+    {
+      "name": "rehash-windows-sha",
+      "expectedReason": "WINDOWS_IDENTITY",
+      "exitCode": 1,
+      "status": "REJECTED",
+      "stdout": "",
+      "stderr": "Traceback (most recent call last):\n  File \"/workspace/harness-agent-coding-audit-20261007/.ci/coding-audit/evidence-negative-controls/rehash-windows-sha/raw/verify-evidence.py\", line 65, in <module>\n    if __name__=='__main__':main()\n                            ^^^^^^\n  File \"/workspace/harness-agent-coding-audit-20261007/.ci/coding-audit/evidence-negative-controls/rehash-windows-sha/raw/verify-evidence.py\", line 41, in main\n    require(receipt['sourceSha']==receipt['workflowSha']==SOURCE and receipt['platform']=='win32' and receipt['osType']=='Windows_NT' and receipt['treeClean'] and receipt['outcome']=='PASS','WINDOWS_IDENTITY')\n  File \"/workspace/harness-agent-coding-audit-20261007/.ci/coding-audit/evidence-negative-controls/rehash-windows-sha/raw/verify-evidence.py\", line 8, in require\n    if not condition:raise ValueError(reason)\n                     ^^^^^^^^^^^^^^^^^^^^^^^^\nValueError: WINDOWS_IDENTITY\n"
+    }
+  ]
+}

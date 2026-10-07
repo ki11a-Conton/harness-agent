@@ -1,0 +1,56 @@
+{
+  "coding": {
+    "code": 0,
+    "signal": null,
+    "stdout": "run started: session session_2e15aae8-59b5-460b-9056-d80c7d2d57f2 turn turn_2c9c3440-c369-4e2f-a0c5-8fd45e1b4224\nrun: session session_2e15aae8-59b5-460b-9056-d80c7d2d57f2 turn turn_2c9c3440-c369-4e2f-a0c5-8fd45e1b4224\nstatus: completed\nsummary: Fixed addition and verified the test.\nfiles changed: src/math.cjs, src/math.cjs\ntests: passed\nverification: passed\nremaining issues: (none)\ntool calls: 4\niterations: 4\n",
+    "stderr": "approval approval_44bd181a-1117-4722-9ca9-ef8bde9ed487: \"edit\" \"src/math.cjs\"\nreason: \"edit_file: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\napproval approval_10fe6574-8af8-40bb-99df-508d1bcd4316: \"exec\" \"node --test test/math.test.cjs\"\nreason: \"exec: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\napproval approval_c466840f-4444-43ff-a6f7-6d629f6d6726: \"edit\" \"src/math.cjs\"\nreason: \"edit_file: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\napproval approval_18752c88-ff08-4a23-82c9-1630ad27b368: \"exec\" \"node \\\"--test\\\" \\\"test/math.test.cjs\\\"\"\nreason: \"exec: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\napproval approval_1de714a4-34a7-4258-be55-c24f51153d1b: \"exec\" \"node --test test/math.test.cjs\"\nreason: \"exec: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\n"
+  },
+  "independentTest": {
+    "code": 0,
+    "signal": null,
+    "stdout": "✔ EXPECTED_SUM_42 (0.657149ms)\nℹ tests 1\nℹ suites 0\nℹ pass 1\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 54.552646\n",
+    "stderr": ""
+  },
+  "diff": {
+    "code": 0,
+    "signal": null,
+    "stdout": "diff --git a/src/math.cjs b/src/math.cjs\nindex a3e5af1..dabc726 100644\n--- a/src/math.cjs\n+++ b/src/math.cjs\n@@ -1 +1 @@\n-module.exports.add = (a, b) => { return a - b; };\n+module.exports.add = (a, b) => { return a + b; };\n",
+    "stderr": ""
+  },
+  "deny": {
+    "code": 0,
+    "signal": null,
+    "stdout": "run started: session session_19726c25-4afc-4342-a0b7-a6d3e5fa4202 turn turn_27407a0a-261a-439e-b2a5-74a0e901dbbc\nrun: session session_19726c25-4afc-4342-a0b7-a6d3e5fa4202 turn turn_27407a0a-261a-439e-b2a5-74a0e901dbbc\nstatus: completed\nsummary: Done.\nfiles changed: (none)\ntests: no verification gate configured\nverification: no verification gate configured\nremaining issues: (none)\ntool calls: 1\niterations: 1\n",
+    "stderr": "approval approval_57f239a6-5087-43ee-beba-07b36ed02dbd: \"edit\" \"denied.txt\"\nreason: \"write_file: rule 'anon' (ask) matched\"\nallow/deny> denied (enter exactly allow to authorize one call)\n"
+  },
+  "failedVerification": {
+    "code": 1,
+    "signal": null,
+    "stdout": "run started: session session_e848b6f3-fb75-4c3d-91d5-04898db6cc30 turn turn_b2cecb37-27a4-410a-b26b-65fec86ff8f0\nrun: session session_e848b6f3-fb75-4c3d-91d5-04898db6cc30 turn turn_b2cecb37-27a4-410a-b26b-65fec86ff8f0\nstatus: failed\nsummary: Done.\nfiles changed: (none)\ntests: failed: command: node -e \"process.exit(17)\": exited with code 17\nverification: failed: command: node -e \"process.exit(17)\": exited with code 17\nremaining issues: failed: VERIFICATION_FAILED — command: node -e \"process.exit(17)\": exited with code 17\ntool calls: 0\niterations: 0\n",
+    "stderr": "approval approval_2ca1ce8f-76b5-46f3-99c3-9a2c3e62766f: \"exec\" \"node -e \\\"process.exit(17)\\\"\"\nreason: \"exec: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\napproval approval_ab9cee35-1c30-4476-9d73-8a659b8b9263: \"exec\" \"node -e \\\"process.exit(17)\\\"\"\nreason: \"exec: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\napproval approval_169397f5-454f-46fc-ad86-d3e2825b0937: \"exec\" \"node -e \\\"process.exit(17)\\\"\"\nreason: \"exec: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\n"
+  },
+  "cancel": {
+    "code": 1,
+    "signal": null,
+    "stdout": "run started: session session_2a89d262-ecdf-42d1-903b-e81ca2f5facc turn turn_643485e6-5dbd-484f-8a59-23134574c66e\nrun: session session_2a89d262-ecdf-42d1-903b-e81ca2f5facc turn turn_643485e6-5dbd-484f-8a59-23134574c66e\nstatus: cancelled\nsummary: (no assistant text)\nfiles changed: (none)\ntests: no verification gate configured\nverification: no verification gate configured\nremaining issues: cancelled\ntool calls: 1\niterations: 1\n",
+    "stderr": "approval approval_ed80e2ca-8cd8-476f-8c58-88f61e6b1529: \"exec\" \"node \\\"-e\\\" \\\"require('fs').writeFileSync('started.txt','started');setTimeout(()=>{},60000)\\\"\"\nreason: \"exec: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\n"
+  },
+  "invalidRoot": {
+    "code": 1,
+    "signal": null,
+    "stdout": "agent run: invalid project directory \"/tmp/harness-real-coding-ZN9N7P/absent\"\n",
+    "stderr": ""
+  },
+  "resume": {
+    "code": 0,
+    "signal": null,
+    "stdout": "session session_2e15aae8-59b5-460b-9056-d80c7d2d57f2: agent=agent_539a0906-d6b6-430c-9c6f-8b865f92d580 status=active cwd=/tmp/harness-real-coding-ZN9N7P/project with space\n",
+    "stderr": ""
+  },
+  "trace": {
+    "code": 0,
+    "signal": null,
+    "stdout": "trace: exported episode to /workspace/harness-agent-coding-audit-20261007/.ci/coding-model-identity-red/episode (10 files)\ntrace: session session_2e15aae8-59b5-460b-9056-d80c7d2d57f2\ntrace: files: task.json, session.json, events.jsonl, context.json, tool-calls.jsonl, permissions.jsonl, artifacts.json, verification.json, metrics.json, summary.json\n",
+    "stderr": ""
+  }
+}

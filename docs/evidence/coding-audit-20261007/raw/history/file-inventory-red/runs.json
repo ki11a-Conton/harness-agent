@@ -1,0 +1,8 @@
+{
+  "coding": {
+    "code": 0,
+    "signal": null,
+    "stdout": "run started: session session_3182423c-687d-452e-84d9-fe0a9c4449ae turn turn_1a96af0a-fa03-40ed-a2cf-4a335c8fb223\nrun: session session_3182423c-687d-452e-84d9-fe0a9c4449ae turn turn_1a96af0a-fa03-40ed-a2cf-4a335c8fb223\nstatus: completed\ngrade: verified_complete\ntermination: verified_complete\nsummary: Fixed addition and verified the test.\nfiles changed: src/math.cjs, src/math.cjs\ntests: passed\nverification: passed\nremaining issues: (none)\ntool calls: 4\niterations: 4\n",
+    "stderr": "[harness] context budget: model capabilities unknown for openai/coding-fixture-model — using conservative fallback 32000\napproval approval_c80247bc-44f6-43d8-b1b9-cde503b25e71: \"edit\" \"src/math.cjs\"\nreason: \"edit_file: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\napproval approval_1ed3d2a0-d632-4a30-b77a-78f80f93d119: \"exec\" \"node --test test/math.test.cjs\"\nreason: \"exec: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\napproval approval_5e620bbc-8aa7-43a0-b787-7a1f46ae3738: \"edit\" \"src/math.cjs\"\nreason: \"edit_file: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\napproval approval_9a9c073f-11d9-428a-997a-06297da29ecf: \"exec\" \"node \\\"--test\\\" \\\"test/math.test.cjs\\\"\"\nreason: \"exec: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\napproval approval_70be2d00-957f-471b-94e0-1b4a15503812: \"exec\" \"node --test test/math.test.cjs\"\nreason: \"exec: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\n"
+  }
+}

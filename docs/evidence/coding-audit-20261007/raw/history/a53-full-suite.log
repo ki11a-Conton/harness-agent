@@ -1,0 +1,469 @@
+{"hostSetup": "linux-child-subreaper", "sourceSha": "a53b2b8aaa27bc94a6c26a444a97e1ab37946ee8", "treeClean": true}
+$ tsc -b && vitest run --exclude '**/*.perf.test.ts' --exclude '**/*.soak.test.ts' --exclude '**/e3-repro-current-defects.test.ts' --exclude '**/e4-r40-forensics.test.ts' --exclude '**/r97-driver-closed-loop.test.ts' --reporter=json --outputFile=.ci/coding-audit/full-suite.json
+usage: node scripts/e4/r97-arm-worker.mjs --checkout <arm dir> --case <caseId> --suite <suite> --arm <arm>
+                                                --provider <id> --model <id> [--endpoint <url>]
+                                                --plan-digest <hex> --state <execution state dir> --ledger <ledger dir>
+                                                [--source-sha <40-hex>] [--script-shape write-then-stop|text-only] [--json]
+
+The approved --provider/--model are REQUIRED: a worker that defaulted them would execute a
+different identity than the plan approved (plan T4 怎么做 6).
+usage: node scripts/e4/r97-arm-worker.mjs --checkout <arm dir> --case <caseId> --suite <suite> --arm <arm>
+                                                --provider <id> --model <id> [--endpoint <url>]
+                                                --plan-digest <hex> --state <execution state dir> --ledger <ledger dir>
+                                                [--source-sha <40-hex>] [--script-shape write-then-stop|text-only] [--json]
+
+The approved --provider/--model are REQUIRED: a worker that defaulted them would execute a
+different identity than the plan approved (plan T4 怎么做 6).
+usage: node scripts/e4/r97-arm-worker.mjs --checkout <arm dir> --case <caseId> --suite <suite> --arm <arm>
+                                                --provider <id> --model <id> [--endpoint <url>]
+                                                --plan-digest <hex> --state <execution state dir> --ledger <ledger dir>
+                                                [--source-sha <40-hex>] [--script-shape write-then-stop|text-only] [--json]
+
+The approved --provider/--model are REQUIRED: a worker that defaulted them would execute a
+different identity than the plan approved (plan T4 怎么做 6).
+usage: node scripts/e4/r97-arm-worker.mjs --checkout <arm dir> --case <caseId> --suite <suite> --arm <arm>
+                                                --provider <id> --model <id> [--endpoint <url>]
+                                                --plan-digest <hex> --state <execution state dir> --ledger <ledger dir>
+                                                [--source-sha <40-hex>] [--script-shape write-then-stop|text-only] [--json]
+
+The approved --provider/--model are REQUIRED: a worker that defaulted them would execute a
+different identity than the plan approved (plan T4 怎么做 6).
+[harness] context budget: model capabilities unknown for stub/m — using conservative fallback 32000
+[degraded] e4-r60 taskkill spawn: spawn taskkill ENOENT
+[degraded] e4-r60 taskkill exit: taskkill exited with 1
+[degraded] e4-r60 taskkill spawn: boom
+[degraded] e4-r60 taskkill exit: taskkill exited with 1
+[degraded] e4-r60 taskkill: sync spawn failure
+[degraded] e4-r60 taskkill spawn: nope
+[degraded] e4-r60 taskkill spawn: injected taskkill failure
+[degraded] e4-r55 evidence root: ENOTDIR: not a directory, mkdir '/tmp/e4-r65-root-aP1ICY/a-file/child'
+[degraded] e4-r55 evidence write child.stdout.txt: EIO: injected write failure for child.stdout.txt
+[degraded] e4-r55 evidence write child.stderr.txt: EACCES: injected write failure for child.stderr.txt
+[degraded] e4-r55 evidence write child-report.json: EIO: injected write failure for child-report.json
+[degraded] e4-r55 evidence write run.json: EIO: injected write failure for run.json
+[degraded] e4-r55 evidence write child.stdout.txt: EIO: injected write failure for child.stdout.txt
+
+R68_SYMLINK_CAPABILITY={"ok":true,"detail":"fs.symlink created a link that lstat reports as a symlink"}
+
+R68_LINK_DIRENT={"isSymbolicLink":true,"isFile":false}
+[n2-e2e] identity root prepared: 32 ms
+[n2-arm:baseline] build copied + links created: 58 ms
+[n2-arm:baseline] closure digest computed: 157 ms
+[n2-arm:baseline] git tree committed: 764 ms
+[n2-arm:candidate] build copied + links created: 66 ms
+[n2-arm:candidate] closure digest computed: 154 ms
+[n2-arm:candidate] git tree committed: 812 ms
+[n2-e2e] two real arm checkouts prepared: 1611 ms
+[n2-e2e] prereg build finished: 1868 ms
+[n2-e2e] prereg run finished: 16462 ms
+[n2-e2e] cleanup completed: 205 ms
+[harness] context budget: model capabilities unknown for scripted/m — using conservative fallback 32000
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+[degraded] observation-evidence unreadable row: ObservationEvidence invalid: evidenceDigest does not recompute over the row body
+[degraded] observation-evidence unreadable row: ObservationEvidence invalid: testedSourceSha must be a 40-hex git sha (got null)
+[degraded] observation-evidence: row runId "old-run" != requested run "new-run" (rows copied from another run are diagnostic only) — dropped
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:41873
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:46733
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:46231
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:45945
+[harness] context budget: model capabilities unknown for web-cancellation-probe/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:41399
+[harness] context budget: model capabilities unknown for web-queued-followup-stop-probe/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:34569
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/custom-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[prereg] trusted-build mode: baseline @ 7817f77f9960 closure 473ddff35857… network sandbox=none
+[prereg] trusted-build mode: baseline @ c68948cfa1fd closure 6aab2834f8f3… network sandbox=none
+[web] listening on http://127.0.0.1:42151
+[web] listening on http://127.0.0.1:46735
+[web] listening on http://127.0.0.1:42127
+[web] listening on http://127.0.0.1:39793
+[web] listening on http://127.0.0.1:37225
+[web] listening on http://127.0.0.1:46083
+[web] listening on http://127.0.0.1:33735
+[web] listening on http://127.0.0.1:39247
+[web] listening on http://127.0.0.1:43321
+[web] listening on http://127.0.0.1:34247
+[web] listening on http://127.0.0.1:40891
+[web] listening on http://127.0.0.1:45181
+[web] listening on http://127.0.0.1:37317
+[web] listening on http://127.0.0.1:36775
+[web] listening on http://127.0.0.1:37569
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[degraded] prereg observer refused case holdout/ho-esc-01: not a readable benchmarks case directory
+[degraded] prereg observer refused case ../outside/esc-01: not a readable benchmarks case directory
+[skill denied] detection=injection target=/tmp/ar-skill-admission-bsoSsZ/skills/blocked-injection/SKILL.md reasons=dismiss-previous-instructions,dismiss-all-instructions,override-own-instructions,extract-system-prompt
+[skill denied] detection=secret target=/tmp/ar-skill-admission-PNI1Sa/skills/blocked-secret/SKILL.md reasons=openai-key
+[skill denied] detection=required-tools target=/tmp/ar-skill-admission-zzezkY/skills/blocked-tools/SKILL.md reasons=required tool not allowed by host policy: unavailable_tool
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-Yc4lNq/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-WDshD5/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-0zGiUg/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-WKEeZN/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-9bXTt1/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-HkG1UZ/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-OUM6rJ/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-Dawnaz/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-QOEgCv/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-UYrIP7/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-CevFGH/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-AjHYa8/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-j4jXw4/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-lkjN3l/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-Z9fTY5/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-7NhtIo/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-J8mcey/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-FC2sej/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-Hgw0ov/package.json'
+[n2-arm:baseline] build copied + links created: 1 ms
+[n2-arm:baseline] closure digest computed: 2 ms
+[n2-arm:baseline] git tree committed: 23 ms
+[n2-arm:candidate] build copied + links created: 1 ms
+[n2-arm:candidate] closure digest computed: 1 ms
+[n2-arm:candidate] git tree committed: 23 ms
+[n2-arm:baseline] build copied + links created: 0 ms
+[n2-arm:baseline] closure digest computed: 1 ms
+[n2-arm:baseline] git tree committed: 22 ms
+[n2-arm:candidate] build copied + links created: 0 ms
+[n2-arm:candidate] closure digest computed: 0 ms
+[n2-arm:candidate] git tree committed: 22 ms
+[skill denied] detection=required-tools target=/tmp/ar-task-skills-D4Seao/skills/danger/SKILL.md reasons=required tool not allowed by host policy: ungranted-tool
+[skill denied] detection=injection target=/tmp/ar-task-skills-D4Seao/skills/hostile/SKILL.md reasons=dismiss-previous-instructions,dismiss-all-instructions,override-own-instructions,extract-system-prompt
+[harness] context budget: model capabilities unknown for fake/unknown-window — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for openai/coding-model-selected-by-user — using conservative fallback 32000
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[skill denied] detection=required-tools target=/tmp/ar-skill-revision-YHHyGV/skills/lint/SKILL.md reasons=required tool not allowed by host policy: exec_command
+[skill denied] detection=injection target=/tmp/ar-skill-revision-X9S2mX/skills/lint/SKILL.md reasons=dismiss-previous-instructions,dismiss-all-instructions,override-own-instructions
+[skill denied] detection=secret target=/tmp/ar-skill-revision-0S2JVt/skills/lint/SKILL.md reasons=openai-key
+[prereg] trusted-build mode: baseline @ e07191f2a552 closure 278587dce214… network sandbox=none
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] openai.reader.cancel: response cleanup failed
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[degraded] path-scoped-discovery.close: instruction handle cleanup failed
+[degraded] prereg observer refused case regression/reg-01: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/reg-02: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/reg-06: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/reg-08: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/adv-03: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/adv-07: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/st-02: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/st-05: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/reg-01: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/reg-02: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/reg-06: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/reg-08: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/adv-03: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/adv-07: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/st-02: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/st-05: not a readable benchmarks case directory
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[degraded] memory-store.corrupt-line: Expected property name or '}' in JSON at position 1 (line 1 column 2)
+[degraded] memory-store.corrupt-line: Expected property name or '}' in JSON at position 1 (line 1 column 2)
+[degraded] memory.search: FTS unavailable or query rejected; using literal search
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] sqlite-store.close-journal-mode: database is locked
+[degraded] migrate.append: duplicate event id: event_7ffc46a5-0c8c-49b3-a070-fe7edeeabe8c
+[degraded] migrate.append: duplicate event id: event_21c9a9c3-f448-4bdd-96f1-bec44c4a5ab4
+[degraded] session session_b58a58cd-39a9-40bb-9f14-6685a28c2805 failed to persist recovery record for turn_c4ba6ebd-885f-4dc2-abdb-fbab9e972fbf: store down
+[degraded] session session_b58a58cd-39a9-40bb-9f14-6685a28c2805 recovery lease failed for turn_c4ba6ebd-885f-4dc2-abdb-fbab9e972fbf: store down
+[degraded] session session_c48be800-c25b-4d75-8559-68c043f5a4d0 recovery lease failed for turn_75efdfc4-6e9a-473d-a9d8-a5e7721f9fa8: recovery CAS conflict for turn_75efdfc4-6e9a-473d-a9d8-a5e7721f9fa8: expected version 1, stored 2
+[degraded] session session_99c11ce1-2876-470a-bccc-7e70839b1fcb terminal recovery ACK failed for turn_83925166-77c7-42d6-a12c-8eab57beb18e: review terminal ACK failure — entering pending-commit (reconcile), queue frozen
+[degraded] session session_905351d5-5977-48f2-b047-2877ee7dad12 terminal recovery ACK failed for turn_fc3290f9-5c17-4376-95ad-b400d4499104: review terminal ACK failure — entering pending-commit (reconcile), queue frozen
+[degraded] session session_e5da96b2-6ca7-4953-98aa-fb7827ddf9e4 terminal recovery ACK failed for turn_bcc97bbe-4813-487c-b765-e6f23996c8e7: review terminal ACK failure — entering pending-commit (reconcile), queue frozen
+[degraded] session session_230db2d7-1f91-4a4b-8ceb-701d8e6fd803 terminal recovery ACK failed for turn_9dce0f0d-557f-43de-b910-cf8ec2eaffab: compound terminal/marker write outage — entering pending-commit (reconcile), queue frozen
+[degraded] session session_230db2d7-1f91-4a4b-8ceb-701d8e6fd803 failed to persist recovery record for turn_9dce0f0d-557f-43de-b910-cf8ec2eaffab: compound terminal/marker write outage
+[degraded] session session_3e5d9456-3514-44d0-aca7-e1a923bb0bd9 terminal recovery ACK failed for turn_1b02e9e4-5014-477d-8d79-f2f74a12368e: compound terminal/marker write outage — entering pending-commit (reconcile), queue frozen
+[degraded] session session_3e5d9456-3514-44d0-aca7-e1a923bb0bd9 failed to persist recovery record for turn_1b02e9e4-5014-477d-8d79-f2f74a12368e: compound terminal/marker write outage
+[degraded] session session_43d751b6-6a72-4944-9aee-3e152e6fabac terminal recovery ACK failed for turn_fcfc9ec7-03e5-473e-a60a-1c4ceb460d64: compound terminal/marker write outage — entering pending-commit (reconcile), queue frozen
+[degraded] session session_43d751b6-6a72-4944-9aee-3e152e6fabac failed to persist recovery record for turn_fcfc9ec7-03e5-473e-a60a-1c4ceb460d64: compound terminal/marker write outage
+[degraded] session session_fc460a3a-3b6f-4a76-b44a-6c697f84da01 failed to persist recovery record for turn_acc2a2f2-fd02-48a7-8255-1503d47ad5d7: whole recovery store write outage
+[degraded] session session_fc460a3a-3b6f-4a76-b44a-6c697f84da01 recovery lease failed for turn_acc2a2f2-fd02-48a7-8255-1503d47ad5d7: whole recovery store write outage
+[degraded] session session_b895f27a-5132-40f2-a465-b394c4ae5849 recovery lease failed for turn_4dcaa6da-f264-44bf-a0a6-0180032fd059: recovery store temporarily refuses the lease write
+[degraded] session session_44148ad9-8069-412c-b512-2cc5f62c9359 recovery lease failed for turn_4a5d7e07-0c69-4061-8943-18cfbd72e98d: recovery store temporarily refuses the lease write
+[degraded] session session_c2281924-7364-4cb9-b855-bef1494bd26d recovery attempt-intent persist failed for turn_69502502-a073-4626-8063-dd931db5d31a — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_841003de-3fd2-433e-a22e-abfc732951df recovery lease failed for turn_5a45227f-30a2-4227-83f5-90e5af6d3cfc: recovery CAS conflict for turn_5a45227f-30a2-4227-83f5-90e5af6d3cfc: expected version 0, stored 1
+[degraded] session session_daa0c0b2-d7dc-4a1d-952f-80097d39e5e7 recovery lease failed for turn_07b42ebc-de31-4d2a-a507-1919bd818a3e: recovery store temporarily refuses the lease write
+[degraded] session session_a3701d41-6c37-44be-bf10-582dfcc40333 recovery lease failed for turn_288dc494-3075-4d98-8f37-7ad3d0969cd3: recovery store temporarily refuses the lease write
+[degraded] session session_a3701d41-6c37-44be-bf10-582dfcc40333 recovery lease failed for turn_288dc494-3075-4d98-8f37-7ad3d0969cd3: recovery store temporarily refuses the lease write
+[degraded] session session_a3701d41-6c37-44be-bf10-582dfcc40333 recovery lease failed for turn_288dc494-3075-4d98-8f37-7ad3d0969cd3: recovery store temporarily refuses the lease write
+[degraded] session session_a3701d41-6c37-44be-bf10-582dfcc40333 recovery lease failed for turn_288dc494-3075-4d98-8f37-7ad3d0969cd3: recovery store temporarily refuses the lease write
+[degraded] session session_a3701d41-6c37-44be-bf10-582dfcc40333 recovery lease failed for turn_288dc494-3075-4d98-8f37-7ad3d0969cd3: recovery store temporarily refuses the lease write
+[degraded] session session_a3701d41-6c37-44be-bf10-582dfcc40333 recovery lease failed for turn_288dc494-3075-4d98-8f37-7ad3d0969cd3: recovery store temporarily refuses the lease write
+[degraded] session session_34e9a297-009a-475c-a5c8-a81154bc361c recovery attempt-intent persist failed for turn_1cb95b32-5348-46fd-91ea-422af880c5e5 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_34e9a297-009a-475c-a5c8-a81154bc361c release lease read failed for turn_1cb95b32-5348-46fd-91ea-422af880c5e5: recovery read outage
+[degraded] session session_a6f59168-84e1-4364-99e3-84c7305192df recovery attempt-intent persist failed for turn_9ef35c42-cdf9-42ce-917e-6e7f7d96f87a — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_a6f59168-84e1-4364-99e3-84c7305192df recovery attempt-intent persist failed for turn_9ef35c42-cdf9-42ce-917e-6e7f7d96f87a — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_a6f59168-84e1-4364-99e3-84c7305192df recovery attempt-intent persist failed for turn_9ef35c42-cdf9-42ce-917e-6e7f7d96f87a — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_a6f59168-84e1-4364-99e3-84c7305192df recovery attempt-intent persist failed for turn_9ef35c42-cdf9-42ce-917e-6e7f7d96f87a — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_a6f59168-84e1-4364-99e3-84c7305192df recovery attempt-intent persist failed for turn_9ef35c42-cdf9-42ce-917e-6e7f7d96f87a — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_a6f59168-84e1-4364-99e3-84c7305192df recovery attempt-intent persist failed for turn_9ef35c42-cdf9-42ce-917e-6e7f7d96f87a — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_a6f59168-84e1-4364-99e3-84c7305192df recovery attempt-intent persist failed for turn_9ef35c42-cdf9-42ce-917e-6e7f7d96f87a — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_c8dc2220-c162-480b-ac84-5f4346ffcac4 recovery attempt-intent persist failed for turn_e246d2f4-846e-44ea-8bc5-26bada70592f — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_c8dc2220-c162-480b-ac84-5f4346ffcac4 release lease read failed for turn_e246d2f4-846e-44ea-8bc5-26bada70592f: recovery read outage
+[degraded] session session_c8dc2220-c162-480b-ac84-5f4346ffcac4 recovery record load failed for turn_e246d2f4-846e-44ea-8bc5-26bada70592f: recovery read outage
+[degraded] session session_0c92cb97-cc36-4031-b468-d392631ddf81 recovery attempt-intent persist failed for turn_dec37a28-be8c-47cb-8ce7-83a37210214f — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_0c92cb97-cc36-4031-b468-d392631ddf81 release lease read failed for turn_dec37a28-be8c-47cb-8ce7-83a37210214f: recovery read outage
+[degraded] session session_4f729083-f03f-432d-a2c7-bae09c212e4a recovery discovery: durable read failed — session store temporarily unavailable
+[degraded] session session_ccbb2fe7-0bc5-47f4-96b4-e718e6eeb33a recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_ccbb2fe7-0bc5-47f4-96b4-e718e6eeb33a recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_ccbb2fe7-0bc5-47f4-96b4-e718e6eeb33a recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_ccbb2fe7-0bc5-47f4-96b4-e718e6eeb33a recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_ccbb2fe7-0bc5-47f4-96b4-e718e6eeb33a recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_ccbb2fe7-0bc5-47f4-96b4-e718e6eeb33a recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_ccbb2fe7-0bc5-47f4-96b4-e718e6eeb33a recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_6e70529d-5a6e-4425-9ed4-f234c17bd785 recovery discovery: durable read failed — session store unavailable for turn turn_d9799706-9265-4f79-b6b4-395f4eeda50c
+[degraded] session session_2a4b05de-d733-47e5-9981-7d93de22c09f recovery discovery: durable read failed — session store temporarily unavailable
+[degraded] session session_3ebffae9-30b9-43b9-95cf-33fe88d16beb terminal recovery ACK failed for turn_461df209-9a73-4d5f-ac48-794245486a83: compound terminal/marker write outage — entering pending-commit (reconcile), queue frozen
+[degraded] session session_3ebffae9-30b9-43b9-95cf-33fe88d16beb failed to persist recovery record for turn_461df209-9a73-4d5f-ac48-794245486a83: compound terminal/marker write outage
+[degraded] session session_3ebffae9-30b9-43b9-95cf-33fe88d16beb recovery discovery: durable read failed — recovery store lookup outage
+[degraded] session session_e12f1059-8680-455b-acd1-f8e2ae1a347d recovery discovery: durable read failed — session store temporarily unavailable
+r101-mutation: --only definitely-not-a-mutation matches no mutation
+[degraded] memory.search: FTS unavailable or query rejected; using literal search
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] session session_20644ad5-ae16-4e83-a3fb-e311ccc69f96 durable followup consume failed for fup-1 (prompt remains bound to turn turn_1f5050f0-50b9-4ef1-a08d-d247cdac598a): durable ack down
+[degraded] session session_c896bfe1-5ef4-4658-aec8-bae224cd5b50 durable followup bind failed for fup-1 (created turn turn_54884f11-de0d-4633-aa9f-333b548ab9e7 will not execute): bind down
+[degraded] inbox.promotion-identity-missing: session session_6e4b06e2-a267-4e04-a3b9-d2b1b3bcb0f8 prompt prompt_c891a362-fc3d-434a-84db-aef0b15b377b is promoted but has no promotedTurnId — recovery-required, not replayed
+[degraded] session session_562f4b24-f185-431f-84bd-e6a7849ac0f2 failed to persist turn turn_d9779238-328f-4ec7-8d36-be2b4576571b as cancelled: P38.2-9 simulated updateTurn failure
+[degraded] session session_a1532c7c-1a3a-4f5f-bb41-30c3d9dfb61d failed to persist turn turn_ef0bd5e9-8638-4307-b6af-350861dc3477 as cancelled: P38.2-9 simulated updateTurn failure
+[degraded] session session_a1532c7c-1a3a-4f5f-bb41-30c3d9dfb61d failed to emit turn.cancelled for turn_ef0bd5e9-8638-4307-b6af-350861dc3477: P38.2-9 simulated emit failure
+[degraded] session session_a8fdc6d9-85e7-4bb2-a51c-9bb086fee3ce failed to persist turn turn_a2af2364-42e4-48c1-a76b-2fc2c56df639 as cancelled: P38.2-9 simulated updateTurn failure
+[degraded] session session_7aaea829-6fd2-4a3f-a302-f0152115d259 failed to persist turn turn_0eaaf2a5-f030-49ab-8bce-1d8e0db2bf7d as cancelled: P38.3-8 simulated updateTurn failure
+r101-closed-loop: nothing to do — pass --all, or one or more of --setup-only --acceptance --suite --matrix --identity
+r101-closed-loop: the baseline arm has no built CLI at /workspace/harness-agent-coding-audit-20261007/.ci/definitely-not-prepared/baseline/apps/cli/dist/main.js — run --setup-only first (a missing arm is a setup failure, never a skip)
+[degraded] path-scoped-discovery.close: instruction handle cleanup failed
+[degraded] openai.reader.cancel: response cleanup failed
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[degraded] durable-recovery-store.release-lock (ownership changed, not deleting /tmp/e4-08-rec-FOLDV9/recovery/t10.json.lock): lock token "9999 newer-owner" != mine
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any of the parent directories): .git
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] inbox.corrupt-line: Expected property name or '}' in JSON at position 1 (line 1 column 2)
+[degraded] skill-store.corrupt-line: Expected property name or '}' in JSON at position 1 (line 1 column 2)
+[degraded] reflection.events.list: boom
+[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath '/tmp/e2-07-3TD1v8/runs/candidate.json'
+[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath '/tmp/e2-07-3TD1v8/runs/baseline.json'
+[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath '/tmp/e2-07-3TD1v8/runs/baseline.json'
+[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath '/tmp/e2-07-3TD1v8/runs/candidate.json'
+[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath '/tmp/e2-07-3TD1v8/runs/candidate.json'
+[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath '/tmp/e2-07-3TD1v8/runs/baseline.json'
+[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath '/tmp/e2-07-jUCXPP/decision.json'
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[degraded] discovery.close: instruction handle cleanup failed
+[degraded] ask-user-store.corrupt-line: Unexpected token 'o', "not-json" is not valid JSON
+[degraded] session session_ee1ed326-1c84-4b9b-b8bc-a91c10cf09f0 durable followup consume failed for fup-1 (prompt remains bound to turn turn_ad535eee-157a-4236-8f44-ccb46ffb0699): injected consume failure
+[degraded] session session_755d7567-6cd3-43c1-a201-88ca0769defa durable followup bind failed for fup-1 (created turn turn_765fbcb6-052a-424f-be38-346f49e68d12 will not execute): injected bind failure
+[degraded] candidate-store.corrupt-line: Unexpected token 'o', "not-json" is not valid JSON
+JSON report written to /workspace/harness-agent-coding-audit-20261007/.ci/coding-audit/full-suite.json
