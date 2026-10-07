@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "source-audit-metadata-correction-v1",
+  "auditSourceSha": "7203a01bf83e8ebe25e0971bb65a7bdeac6d9311",
+  "issue": "D02",
+  "correctedPaths": [
+    "packages/evaluation/src/mechanism-guidance.ts",
+    "docs/evidence/agent-next7-20261006/main-preregistration.json",
+    "docs/evidence/agent-next7-20261006/holdout-preregistration.json"
+  ],
+  "historicalPackage": "docs/evidence/source-audit-fixes-20261007/historical/n7-acceptance-before-metadata-correction",
+  "originalUnchangedSha256": "ffaed7c1aa5d5ab864001013d188718551e36195099be6f119dca3e21765fdf9",
+  "meaning": "unchanged compares the complete recorded file to baseline; earlier candidate text stability is a separate assertion. This amendment changes metadata only and does not re-run or re-attribute historical test results."
+}

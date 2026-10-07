@@ -1,0 +1,62 @@
+[
+  {
+    "file": "apps/cli/src/n2-release-cli-forward.test.ts",
+    "test": "N2 (d) — the release CLI runs a real offline content task end to end build → validate → run over one identity, with a real tool dispatch and the frozen verifier passing",
+    "status": "skipped"
+  },
+  {
+    "file": "apps/cli/src/n5-pair-setup.test.ts",
+    "test": "S5/N5 — the generator reproduces a HAND-MADE baseline commit byte-for-byte SKIPS the byte-exact self-proof where the historical objects are absent (naming why)",
+    "status": "skipped"
+  },
+  {
+    "file": "packages/tools/src/process/executor.test.ts",
+    "test": "E4-R91: Windows script shims run deterministically (H1) runs a .cmd shim by FULL PATH and delivers its arguments",
+    "status": "skipped"
+  },
+  {
+    "file": "packages/tools/src/process/executor.test.ts",
+    "test": "E4-R91: Windows script shims run deterministically (H1) resolves a BARE command name through PATH+PATHEXT (the reg-27 `npx` shape)",
+    "status": "skipped"
+  },
+  {
+    "file": "packages/tools/src/process/executor.test.ts",
+    "test": "E4-R91: Windows script shims run deterministically (H1) runs a .ps1 script and transports a dash-leading argument literally",
+    "status": "skipped"
+  },
+  {
+    "file": "packages/tools/src/process/executor.test.ts",
+    "test": "E4-R91: Windows script shims run deterministically (H1) REFUSES a .cmd argument containing a cmd metacharacter, so no second command can run",
+    "status": "skipped"
+  },
+  {
+    "file": "packages/tools/src/process/executor.test.ts",
+    "test": "E4-R91: Windows script shims run deterministically (H1) still honors cwd, timeout and cancellation through the shim path",
+    "status": "skipped"
+  },
+  {
+    "file": "packages/tools/src/process/executor.test.ts",
+    "test": "E4-R91: Windows script shims run deterministically (H1) propagates a real nonzero exit code from a .cmd shim",
+    "status": "skipped"
+  },
+  {
+    "file": "packages/tools/src/process/executor.test.ts",
+    "test": "E4-R91: argv launch planning (platform-parameterised) runs a real .cmd shim resolved by BARE NAME through runArgv end-to-end",
+    "status": "skipped"
+  },
+  {
+    "file": "packages/tools/src/process/r96-windows-execution-boundary.test.ts",
+    "test": "E4-R96 real Windows processes: the cwd boundary holds runs the script under opts.cwd, NOT the parent cwd's same-named namesake",
+    "status": "skipped"
+  },
+  {
+    "file": "packages/tools/src/process/r96-windows-execution-boundary.test.ts",
+    "test": "E4-R96 real Windows processes: the cwd boundary holds runs a .cmd from a path containing a space and CJK characters",
+    "status": "skipped"
+  },
+  {
+    "file": "packages/tools/src/process/r96-windows-execution-boundary.test.ts",
+    "test": "E4-R96 real Windows processes: the cwd boundary holds REFUSES a .cmd path with a metacharacter and creates no sentinel",
+    "status": "skipped"
+  }
+]

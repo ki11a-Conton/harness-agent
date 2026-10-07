@@ -1,0 +1,33 @@
+{
+  "sourceSha": "7203a01bf83e8ebe25e0971bb65a7bdeac6d9311",
+  "paidProviderCalls": 0,
+  "kind": "native-http-production-web-reproduction",
+  "records": [
+    {
+      "id": "B14-web-host-origin-boundary",
+      "confirmed": true,
+      "observed": {
+        "foreignHostReadStatus": 200,
+        "foreignHostSessionCount": 1,
+        "crossOriginTextPlainPostStatus": 200,
+        "crossOriginMessagePersisted": true,
+        "note": "native HTTP reproduction of accepted Host/Origin; no browser DNS exploit claimed"
+      }
+    },
+    {
+      "id": "B15-web-restart-session-binding-lost",
+      "confirmed": true,
+      "observed": {
+        "beforeSessionId": "session_175a47b0-ac5e-402b-9d7d-c2d97082bd06",
+        "beforeMessageCount": 1,
+        "persistedSessionFiles": 2,
+        "afterRestartHistory": {
+          "sessionId": null,
+          "messages": []
+        },
+        "afterRestartSessionList": [],
+        "newSessionIdForSameFrom": "session_83c14c9c-db0d-4409-b84d-fed8de5a5f7e"
+      }
+    }
+  ]
+}

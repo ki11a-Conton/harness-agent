@@ -1,6 +1,6 @@
 # AGENT-CONTEXT-MEMORY-20261004
 
-UI U1–U4 已验收后执行 agent 默认指令与记忆优化。实施前规格：[plan(20261004-065049).md](../plan(20261004-065049).md)。基线17aa6c7。
+UI U1–U4 已验收后执行 agent 默认指令与记忆优化。实施前规格：[plan(20261004-065049).md](https://github.com/ki11a-Conton/harness-agent/blob/936a2a21c06736cffe1bf899a380cbc87bba46be/plan(20261004-065049).md)。基线17aa6c7。
 
 依赖任务：P3/CTX-001、P3/CTX-002、P7/MEMORY-001；只修复 audit-context/report.json 和 audit-memory/baseline.json 所示确定性读取/身份/召回反例。符合 AGENTS Runtime Freeze correctness/security/performance 例外。Core不改；指纹在 Harness composition 适配，ContextPipeline raw discovery 保留。默认层级顺序不改。
 

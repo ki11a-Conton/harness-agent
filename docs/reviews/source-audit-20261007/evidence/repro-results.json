@@ -1,0 +1,240 @@
+{
+  "sourceSha": "7203a01bf83e8ebe25e0971bb65a7bdeac6d9311",
+  "kind": "baseline-defect-reproduction",
+  "paidProviderCalls": 0,
+  "records": [
+    {
+      "id": "B01-scoped-entry-budget",
+      "confirmed": true,
+      "observed": {
+        "maxEntries": 20,
+        "actualEntries": 55,
+        "blocks": 4
+      }
+    },
+    {
+      "id": "B02-scoped-constraint-truncation",
+      "confirmed": true,
+      "observed": {
+        "original": "DO NOT DELETE protected-marker",
+        "forwarded": "# Goal\nD"
+      }
+    },
+    {
+      "id": "B03-added-file-overwrite",
+      "confirmed": true,
+      "observed": {
+        "parentBefore": "parent",
+        "parentAfter": "child",
+        "result": {
+          "applied": [
+            "new.txt"
+          ],
+          "conflicts": [],
+          "skipped": []
+        }
+      }
+    },
+    {
+      "id": "B04-binary-patch-corruption",
+      "confirmed": true,
+      "observed": {
+        "expectedHex": "00fffe8041",
+        "actualHex": "00efbfbdefbfbdefbfbd41",
+        "recordedHash": "c32faad327e9fbcd91a8068d2fb554587a2fce3b202d14223fa78d99ddd13d0f",
+        "actualHash": "5c9e33488cdd2eb94396c11e5a7cf7e7f36ac8d559008a5b87989b089b425fbc"
+      }
+    },
+    {
+      "id": "B05-executable-mode-lost",
+      "confirmed": true,
+      "observed": {
+        "parentMode": "755",
+        "childMode": "600"
+      }
+    },
+    {
+      "id": "B06-physical-conflict-false-metadata",
+      "confirmed": true,
+      "observed": {
+        "physical": {
+          "applied": [],
+          "conflicts": [
+            {
+              "path": "a.txt",
+              "detail": "parent modified this path while the child was running"
+            }
+          ],
+          "skipped": []
+        },
+        "parentFilesChanged": [
+          "a.txt"
+        ],
+        "claimedMerged": [
+          "a.txt"
+        ]
+      }
+    },
+    {
+      "id": "B07-memory-session-filter-ignored",
+      "confirmed": true,
+      "observed": {
+        "matchingChildCount": 1,
+        "returnedRoot": true,
+        "error": "max active children 1 reached (current 1 running/waiting)"
+      }
+    },
+    {
+      "id": "B08-scheduler-reservation-leak",
+      "confirmed": true,
+      "observed": {
+        "before": {
+          "allocated": 100,
+          "remaining": 80
+        },
+        "after": {
+          "allocated": 100,
+          "remaining": 70
+        },
+        "runningOrQueued": 0
+      }
+    },
+    {
+      "id": "B09-delegator-initialization-resource-leak",
+      "confirmed": true,
+      "observed": {
+        "schedulerEntries": [
+          {
+            "state": "running",
+            "parentSessionId": "session_37c785f8-a872-4de2-b220-f5cd0aa4e5ca"
+          }
+        ],
+        "workspaceDisposed": false,
+        "sandboxRootStillAdmitted": true,
+        "childStatus": "active"
+      }
+    },
+    {
+      "id": "B10-failed-test-reported-passed",
+      "confirmed": true,
+      "observed": {
+        "childStatus": "success",
+        "workingFailures": [
+          "exec: exit code 1"
+        ],
+        "reportedTest": {
+          "description": "npm test",
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "B11-mcp-optional-field-rejected",
+      "confirmed": true,
+      "observed": {
+        "validJsonSchemaInput": {
+          "name": "sample"
+        },
+        "zodIssues": [
+          {
+            "code": "invalid_type",
+            "expected": "number",
+            "received": "undefined",
+            "path": [
+              "count"
+            ],
+            "message": "Required"
+          }
+        ]
+      }
+    },
+    {
+      "id": "B12-mcp-integer-constraint-ignored",
+      "confirmed": true,
+      "observed": {
+        "invalidJsonSchemaInput": {
+          "count": 0.5
+        },
+        "accepted": true
+      }
+    },
+    {
+      "id": "B13-crashed-campaign-unresumable",
+      "confirmed": true,
+      "observed": {
+        "firstResumeOperation": "verifyIndex(attemptDir)",
+        "errorCode": "ENOENT",
+        "missing": "artifact-index.json",
+        "scope": "same validator invoked by actual resume; no model calls"
+      }
+    },
+    {
+      "id": "B16-verification-command-bypasses-sandbox",
+      "confirmed": true,
+      "observed": {
+        "requestedConfinement": "strong",
+        "filesystemPolicy": "read-only",
+        "execPermission": "deny",
+        "outsideFileCreated": true,
+        "toolStartedEvents": 0,
+        "turnStatus": "completed",
+        "terminationReason": "verified_complete"
+      }
+    },
+    {
+      "id": "B17-approval-persist-failure-still-allows",
+      "confirmed": true,
+      "observed": {
+        "resolveError": "EISDIR",
+        "waiterDecision": "allow",
+        "durableDecisionCount": 0,
+        "durablePendingCount": 1,
+        "livePendingCount": 0
+      }
+    },
+    {
+      "id": "B18-repository-memory-cross-contamination",
+      "confirmed": true,
+      "observed": {
+        "sourceRepository": "project-a",
+        "queryRepository": "project-b",
+        "sharedDataDirectory": true,
+        "foreignRepositoryMemoryReturned": true
+      }
+    },
+    {
+      "id": "B19-cancel-during-verification-is-completed",
+      "confirmed": true,
+      "observed": {
+        "signalAborted": true,
+        "commandExecutedAfterAbort": true,
+        "turnStatus": "completed",
+        "terminationReason": "verified_complete"
+      }
+    },
+    {
+      "id": "B20-baseline-identity-depends-on-inactive-candidate",
+      "confirmed": true,
+      "observed": {
+        "currentDigest": "00d2c92154822622d0d583fe1f2f8fee7c86ab62cb936ac9dcad2b71f33e1fdc",
+        "digestWithoutUninstalledGate": "ee589c7e2361c8b79edade3d365bfd9e29a2778792eb650e295bf58d523d7895",
+        "installedGuidanceDigest": null,
+        "baselineConfigUnchanged": true,
+        "inactiveGateChangesIdentity": true,
+        "note": "remove only the newly registered OFF activation from the real resolved snapshot"
+      }
+    },
+    {
+      "id": "B21-memory-store-drops-frozen-tool-policy",
+      "confirmed": true,
+      "observed": {
+        "requestedChildToolAllow": [
+          "read_file"
+        ],
+        "executedDisallowedExec": 1,
+        "childStatus": "success",
+        "note": "real AgentRuntime + real exported MemSessionStore; orchestrator capture has no side effect"
+      }
+    }
+  ]
+}

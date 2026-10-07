@@ -1,0 +1,213 @@
+{
+  "schemaVersion": "harness-source-audit-v1",
+  "reviewedSourceSha": "7203a01bf83e8ebe25e0971bb65a7bdeac6d9311",
+  "remoteMainShaAtFinalCheck": "7203a01bf83e8ebe25e0971bb65a7bdeac6d9311",
+  "generatedAt": "2026-10-07T06:32:58.197114+00:00",
+  "environment": {
+    "platform": "Linux x86_64",
+    "node": "v24.19.0",
+    "pnpm": "11.21.0"
+  },
+  "counts": {
+    "confirmedCodeDefects": 21,
+    "P1CodeDefects": 11,
+    "P2CodeDefects": 10,
+    "uniqueDevelopmentDependencyAdvisories": 2,
+    "documentationFindings": 2
+  },
+  "codeDefects": [
+    {
+      "id": "B01",
+      "priority": "P2",
+      "reproduced": true,
+      "fixed": false
+    },
+    {
+      "id": "B02",
+      "priority": "P2",
+      "reproduced": true,
+      "fixed": false
+    },
+    {
+      "id": "B03",
+      "priority": "P1",
+      "reproduced": true,
+      "fixed": false
+    },
+    {
+      "id": "B04",
+      "priority": "P1",
+      "reproduced": true,
+      "fixed": false
+    },
+    {
+      "id": "B05",
+      "priority": "P2",
+      "reproduced": true,
+      "fixed": false
+    },
+    {
+      "id": "B06",
+      "priority": "P2",
+      "reproduced": true,
+      "fixed": false
+    },
+    {
+      "id": "B07",
+      "priority": "P2",
+      "reproduced": true,
+      "fixed": false
+    },
+    {
+      "id": "B08",
+      "priority": "P2",
+      "reproduced": true,
+      "fixed": false
+    },
+    {
+      "id": "B09",
+      "priority": "P1",
+      "reproduced": true,
+      "fixed": false
+    },
+    {
+      "id": "B10",
+      "priority": "P1",
+      "reproduced": true,
+      "fixed": false
+    },
+    {
+      "id": "B11",
+      "priority": "P2",
+      "reproduced": true,
+      "fixed": false
+    },
+    {
+      "id": "B12",
+      "priority": "P2",
+      "reproduced": true,
+      "fixed": false
+    },
+    {
+      "id": "B13",
+      "priority": "P1",
+      "reproduced": true,
+      "fixed": false
+    },
+    {
+      "id": "B14",
+      "priority": "P1",
+      "reproduced": true,
+      "fixed": false
+    },
+    {
+      "id": "B15",
+      "priority": "P1",
+      "reproduced": true,
+      "fixed": false
+    },
+    {
+      "id": "B16",
+      "priority": "P1",
+      "reproduced": true,
+      "fixed": false
+    },
+    {
+      "id": "B17",
+      "priority": "P1",
+      "reproduced": true,
+      "fixed": false
+    },
+    {
+      "id": "B18",
+      "priority": "P2",
+      "reproduced": true,
+      "fixed": false
+    },
+    {
+      "id": "B19",
+      "priority": "P1",
+      "reproduced": true,
+      "fixed": false
+    },
+    {
+      "id": "B20",
+      "priority": "P2",
+      "reproduced": true,
+      "fixed": false
+    },
+    {
+      "id": "B21",
+      "priority": "P1",
+      "reproduced": true,
+      "fixed": false
+    }
+  ],
+  "tests": [
+    {
+      "name": "full-tests",
+      "passed": 8990,
+      "failed": 0,
+      "skipped": 12,
+      "testFiles": 488
+    },
+    {
+      "name": "perf-tests",
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0,
+      "testFiles": 2
+    },
+    {
+      "name": "store-soak-tests",
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "testFiles": 1
+    },
+    {
+      "name": "historical-defects-tests",
+      "passed": 14,
+      "failed": 1,
+      "skipped": 0,
+      "testFiles": 2
+    },
+    {
+      "name": "r97-driver-tests",
+      "passed": 73,
+      "failed": 4,
+      "skipped": 0,
+      "testFiles": 1
+    },
+    {
+      "name": "r97-driver-with-arms-tests",
+      "passed": 77,
+      "failed": 0,
+      "skipped": 0,
+      "testFiles": 1
+    },
+    {
+      "name": "n2-release-e2e-tests",
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "testFiles": 1
+    }
+  ],
+  "paidProviderCalls": 0,
+  "runtimeCodeModified": false,
+  "planFilesModified": false,
+  "notVerified": [
+    "real-Windows-processes",
+    "browser-render-and-click-flows",
+    "browser-DNS-rebinding-exploit",
+    "paid-model-quality-campaign",
+    "post-fix-acceptance"
+  ],
+  "notes": [
+    "R97 initial four failures were missing arm setup; same tests pass after independently built fixed revisions.",
+    "R40 contains one deliberate failure and one successful bundle verification.",
+    "N2 default skipped end-to-end check was subsequently enabled and passed.",
+    "N5 skipped branch is mutually exclusive with the historical-object proof that actually passed."
+  ]
+}

@@ -60,28 +60,19 @@
       "path": "packages/evaluation/src/mechanism-guidance.ts",
       "bytes": 19780,
       "sha256": "2d9816c5f5f5fc259dcd4eff7614717bd9851d7aca34ab6855cad10d3f6b01c7",
-      "unchanged": false,
-      "baselineSha256": "74360b106b61f7583b7ffd216a66e02ae8d62b18e2847acb5ad5ba1ee9ad3554",
-      "baselineBytes": 17206,
-      "comparison": "whole-file repository blob against the stated baseline"
+      "unchanged": true
     },
     {
       "path": "docs/evidence/agent-next7-20261006/main-preregistration.json",
       "bytes": 23942,
       "sha256": "fb1da6030a6ffcedc800a8c19b47a38d1dd210b7afde46f062505b9eb6578e03",
-      "unchanged": false,
-      "baselineSha256": "48942df92df8265952b0aa5e9ff9e6feb7ea91762011bd8c8abd90074504b19f",
-      "baselineBytes": 23936,
-      "comparison": "whole-file repository blob against the stated baseline"
+      "unchanged": true
     },
     {
       "path": "docs/evidence/agent-next7-20261006/holdout-preregistration.json",
       "bytes": 11507,
       "sha256": "32cc2bb52567ab84566acbc391dda54c3b7b391357c603a81416759575e2e0e3",
-      "unchanged": false,
-      "baselineSha256": "eddff1aff1a5f8171b878dcc1c28c4b32aa52b5fcae59123a10bc24e8e8a1a3a",
-      "baselineBytes": 11501,
-      "comparison": "whole-file repository blob against the stated baseline"
+      "unchanged": true
     },
     {
       "path": "plan(20261006-144930).md",
@@ -3029,18 +3020,5 @@
       "sha256": "0c32081d48de69037f8294b809c8577ef43b0509b72b9793f957718a380f2297",
       "unchanged": true
     }
-  ],
-  "metadataCorrection": {
-    "schemaVersion": "source-audit-metadata-correction-v1",
-    "auditSourceSha": "7203a01bf83e8ebe25e0971bb65a7bdeac6d9311",
-    "issue": "D02",
-    "correctedPaths": [
-      "packages/evaluation/src/mechanism-guidance.ts",
-      "docs/evidence/agent-next7-20261006/main-preregistration.json",
-      "docs/evidence/agent-next7-20261006/holdout-preregistration.json"
-    ],
-    "historicalPackage": "docs/evidence/source-audit-fixes-20261007/historical/n7-acceptance-before-metadata-correction",
-    "originalUnchangedSha256": "ffaed7c1aa5d5ab864001013d188718551e36195099be6f119dca3e21765fdf9",
-    "meaning": "unchanged compares the complete recorded file to baseline; earlier candidate text stability is a separate assertion. This amendment changes metadata only and does not re-run or re-attribute historical test results."
-  }
+  ]
 }
