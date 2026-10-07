@@ -2,7 +2,7 @@
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { createServer, request as httpRequest } from 'node:http';
-import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, rename, stat, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -177,8 +177,6 @@ const inspector = createServer((req, res) => {
 });
 await new Promise(resolve => inspector.listen(0, '127.0.0.1', resolve));
 const ready = { base: `http://127.0.0.1:${proxy.address().port}`, backend: `http://127.0.0.1:${address.port}`, transportControl: `http://127.0.0.1:${transportControl.address().port}`, inspector: `http://127.0.0.1:${inspector.address().port}/snapshot`, cwd, ...provenance };
-await writeFile(join(out, 'ready.json'), JSON.stringify(ready, null, 2) + '\n');
-console.log(JSON.stringify({ ready: true, ...ready }));
 let stopping = false;
 async function stop() {
   if (stopping) return; stopping = true;
@@ -192,3 +190,8 @@ async function stop() {
 }
 process.once('SIGTERM', () => void stop());
 process.once('SIGINT', () => void stop());
+// Publish only a complete JSON record, after graceful shutdown is installed.
+// Observing an async writeFile's newly opened empty file is not readiness.
+await writeFile(join(out, 'ready.json.tmp'), JSON.stringify(ready, null, 2) + '\n');
+await rename(join(out, 'ready.json.tmp'), join(out, 'ready.json'));
+console.log(JSON.stringify({ ready: true, ...ready }));
