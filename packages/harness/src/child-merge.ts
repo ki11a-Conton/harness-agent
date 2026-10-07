@@ -32,11 +32,13 @@ export async function applyChildResult(
 ): Promise<ChildMergeResult> {
   const empty: ApplyPatchResult = { applied: [], conflicts: [], skipped: [] };
   const physical =
-    result.workspacePatch !== undefined && result.workspacePatch.entries.length > 0
+    result.status === "success" && result.workspacePatch !== undefined && result.workspacePatch.entries.length > 0
       ? await manager.apply(parentRoot, result.workspacePatch)
       : empty;
 
-  const metadata = mergeChildCompletion(parent, result);
+  const metadata = mergeChildCompletion(parent, result.workspacePatch === undefined
+    ? result
+    : { ...result, changedArtifacts: [] });
 
   // Reconciliation: the physical result is authoritative for the workspace.
   for (const conflict of physical.conflicts) {

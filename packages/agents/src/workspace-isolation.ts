@@ -18,9 +18,14 @@ export interface WorkspacePatchEntry {
   contentHash?: string;
   /** New file content (added/modified, within the size cap). */
   content?: string;
+  /** Binary-safe wire representation; omitted means legacy UTF-8. */
+  contentEncoding?: "utf8" | "base64";
+  /** Ordinary permission bits only (no setuid/setgid/sticky). */
+  mode?: number;
+  parentBaselineMode?: number;
   /** Parent's content hash at child start — the P3-5 conflict baseline.
    *  Present for added/modified/deleted entries in isolated-copy mode. */
-  parentBaselineHash?: string;
+  parentBaselineHash?: string | null;
   /** Why an entry was skipped (oversized / unreadable). */
   detail?: string;
 }

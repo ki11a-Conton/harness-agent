@@ -1,4 +1,5 @@
 import type { ContextBlock, WorkingState } from "@ar/contracts";
+import { AgentError, errorInfo } from "@ar/contracts";
 import type { DelegationResult, SubagentFinding, TestRunRef } from "./delegation.js";
 
 /**
@@ -62,13 +63,26 @@ export function scopedContextFromWorkingState(
   const include = opts.include ?? new Set(DEFAULT_SCOPE);
   const maxChars = opts.maxBlockChars ?? MAX_CONTEXT_BLOCK_CHARS;
   const maxEntries = opts.maxEntries ?? MAX_SCOPED_ENTRIES;
+  if (!Number.isSafeInteger(maxChars) || maxChars < 1 || !Number.isSafeInteger(maxEntries) || maxEntries < 1) {
+    throw new RangeError("scoped context budgets must be positive safe integers");
+  }
   const blocks: ContextBlock[] = [];
   let used = 0;
-  const push = (title: string, entries: string[]): void => {
-    if (used >= maxEntries || entries.length === 0) return;
-    const taken = entries.slice(0, maxEntries - used);
-    let content = `# ${title}\n${taken.join("\n")}`;
-    if (content.length > maxChars) content = content.slice(0, maxChars);
+  const push = (title: string, entries: string[], authoritative = false): void => {
+    if (entries.length === 0) return;
+    const header = `# ${title}\n`;
+    if (authoritative && (entries.length > maxEntries - used || header.length + entries.join("\n").length > maxChars)) {
+      throw new AgentError(errorInfo("RESOURCE_LIMIT", `scoped context cannot carry the complete ${title}; increase the budget or provide an explicit retrievable reference`));
+    }
+    const taken: string[] = [];
+    let content = header;
+    for (const entry of entries) {
+      const next = (taken.length > 0 ? "\n" : "") + entry;
+      if (used + taken.length >= maxEntries || content.length + next.length > maxChars) break;
+      taken.push(entry);
+      content += next;
+    }
+    if (taken.length === 0) return;
     blocks.push({
       id: `scoped:${blocks.length}`,
       source: "system",
@@ -76,7 +90,7 @@ export function scopedContextFromWorkingState(
       priority: 100,
       tokens: Math.ceil(content.length / 4),
       content,
-      compressible: true,
+      compressible: !authoritative,
       ephemeral: false,
       category: "working-state",
       // P14-5: runtime-owned working state (goal/constraints/decisions) is
@@ -84,10 +98,10 @@ export function scopedContextFromWorkingState(
       instructional: true,
       persistable: false,
     });
-    used += 1;
+    used += taken.length;
   };
-  if (include.has("goal") && state.goal !== "") push("Goal", [state.goal]);
-  if (include.has("constraints")) push("Constraints", state.constraints);
+  if (include.has("goal") && state.goal !== "") push("Goal", [state.goal], true);
+  if (include.has("constraints")) push("Constraints", state.constraints, true);
   if (include.has("plan")) push("Plan", state.plan);
   if (include.has("decisions")) push("Decisions", state.decisions);
   if (include.has("importantFacts")) push("Important facts", state.importantFacts);

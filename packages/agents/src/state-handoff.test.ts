@@ -54,7 +54,7 @@ describe("P1-9 scopedContextFromWorkingState", () => {
     for (const block of blocks) {
       expect(block.source).toBe("system");
       expect(block.trust).toBe("trusted");
-      expect(block.compressible).toBe(true);
+      expect(block.compressible).toBe(!block.content.startsWith("# Goal"));
       expect(block.ephemeral).toBe(false);
       expect(block.tokens).toBeGreaterThan(0);
       expect(block.id.startsWith("scoped:")).toBe(true);

@@ -265,54 +265,33 @@ export class Delegator {
       token?.release();
       throw new AgentError(errorInfo("INTERNAL_ERROR", `failed to create child session: ${describe(err)}`, { cause: err }));
     }
-    // P3-10: attribute the child's per-call usage to its tree root.
-    if (this.scheduler !== undefined && token !== undefined) {
-      this.scheduler.bindSession(child.id, token.rootSessionId);
-    }
-
-    // P3-4: a write-capable child runs in an isolated workspace copy — never
-    // the parent root directly. The child session's cwd is repointed to the
-    // isolated root before any turn starts (no turn has run yet, so this is
-    // safe); its changes return as a workspacePatch (P3-5).
     let workspace: ChildWorkspaceHandle | undefined;
-    if (req.writable === true && this.workspaceManager !== undefined) {
-      try {
-        workspace = await this.workspaceManager.create({
-          parentRoot: parent.cwd,
-          childSessionId: child.id,
-          writable: true,
-        });
-        await this.store.updateSession({ ...child, cwd: workspace.root });
-        // P3-6: admit the isolated root into the child session's sandbox so
-        // its own workspace is writable (and nothing outside it is).
-        this.onChildWorkspace?.(child.id, workspace.root);
-      } catch (err) {
-        // P14-3: failed isolation must not leave a live orphan — the never-run
-        // child session is marked cancelled (best-effort; the isolation failure
-        // is the error surfaced) and the scheduler session binding is dropped
-        // before the slot releases, so no token/root accounting leaks.
-        try {
-          await this.store.updateSession({ ...child, status: "cancelled" });
-        } catch (cleanupErr) {
-          // P14-6: store cleanup must not mask the isolation failure — but it
-          // is reported on the non-fatal channel, never silent.
-          this.nonFatal.report("delegator.cleanup:mark-cancelled", cleanupErr);
-        }
-        this.scheduler?.unbindSession(child.id);
-        token?.release();
-        throw new AgentError(
-          errorInfo("INTERNAL_ERROR", `failed to isolate child workspace: ${describe(err)}`, { cause: err }),
-        );
+    let phase = "isolate child workspace";
+    try {
+      if (this.scheduler !== undefined && token !== undefined) {
+        this.scheduler.bindSession(child.id, token.rootSessionId);
       }
+      if (req.writable === true && this.workspaceManager !== undefined) {
+        workspace = await this.workspaceManager.create({ parentRoot: parent.cwd, childSessionId: child.id, writable: true });
+        await this.store.updateSession({ ...child, cwd: workspace.root });
+        this.onChildWorkspace?.(child.id, workspace.root);
+      }
+      phase = "initialize child context";
+      await this.seedContext(child.id, req.context);
+      await this.emit(parent.id, "subagent.started", { childSessionId: child.id, agentId, goal: req.goal, timeoutMs: limits.timeoutMs });
+    } catch (err) {
+      try { await this.store.updateSession({ ...child, status: "cancelled" }); }
+      catch (cleanupErr) { this.nonFatal.report("delegator.cleanup:mark-cancelled", cleanupErr); }
+      this.scheduler?.unbindSession(child.id);
+      token?.release(0);
+      if (workspace !== undefined) {
+        try { await workspace.dispose(); }
+        catch (cleanupErr) { this.nonFatal.report("delegator.cleanup:workspace.dispose", cleanupErr); }
+        try { this.onChildWorkspaceDisposed?.(child.id); }
+        catch (cleanupErr) { this.nonFatal.report("delegator.cleanup:workspace.revoke", cleanupErr); }
+      }
+      throw new AgentError(errorInfo("INTERNAL_ERROR", `failed to ${phase}: ${describe(err)}`, { cause: err }));
     }
-
-    await this.seedContext(child.id, req.context);
-    await this.emit(parent.id, "subagent.started", {
-      childSessionId: child.id,
-      agentId,
-      goal: req.goal,
-      timeoutMs: limits.timeoutMs,
-    });
 
     const startedAt = this.now();
     const internal = new AbortController();
@@ -715,18 +694,27 @@ export class Delegator {
   ): Promise<TestRunRef[]> {
     const runs: TestRunRef[] = [];
     const messages = await this.store.listMessages(childId);
-    const state = outcome?.state;
-    if (state !== undefined) {
-      for (const command of state.testsRun) {
-        const source = messages.find(
-          (message) => message.role === "tool" && message.content.includes(command),
-        );
+    const commands = new Set(outcome?.state?.testsRun ?? []);
+    const events = await this.events?.list(childId) ?? [];
+    const observedCommands = new Set<string>();
+    for (const message of messages) {
+      if (message.role !== "assistant") continue;
+      for (const call of message.toolCalls ?? []) {
+        const command = call.args.command;
+        if (typeof command !== "string" || !commands.has(command)) continue;
+        observedCommands.add(command);
+        const terminal = events.filter((e) => e.payload.toolCallId === call.id && (e.type === "tool.completed" || e.type === "tool.failed")).at(-1);
+        const result = messages.find((m) => m.role === "tool" && m.toolCallId === call.id);
         runs.push({
           description: command,
-          passed: true,
-          ...(source !== undefined ? { sourceRef: `message:${source.id}` } : {}),
+          passed: terminal?.type === "tool.completed" && (terminal.payload.status === undefined || terminal.payload.status === "success"),
+          ...(terminal !== undefined ? { sourceRef: `event:${terminal.id}` } : result !== undefined ? { sourceRef: `message:${result.id}` } : {}),
         });
       }
+    }
+    // A legacy working-state entry with no observed call is unknown, not green.
+    for (const command of commands) {
+      if (!observedCommands.has(command)) runs.push({ description: command, passed: false });
     }
     for (const event of await this.collectVerificationEvents(childId)) {
       runs.push({

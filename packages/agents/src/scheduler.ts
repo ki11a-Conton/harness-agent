@@ -210,7 +210,6 @@ export class AgentExecutionScheduler {
           ),
         );
       }
-      account.toolReserved += reserve;
     }
 
     // P0-11: tree token budget. A request with a tokenBudget allocation
@@ -229,8 +228,12 @@ export class AgentExecutionScheduler {
           ),
         );
       }
-      account.tokenReserved += tokenReserve;
     }
+
+    // Commit reservations only after every budget dimension has admitted the
+    // request. A token refusal must not consume the tool pool.
+    if (account?.budget.maxToolCalls !== undefined) account.toolReserved += reserve;
+    if (account?.budget.maxTokens !== undefined) account.tokenReserved += tokenReserve;
 
     const controller = new AbortController();
     const entry: SchedulerEntry = {

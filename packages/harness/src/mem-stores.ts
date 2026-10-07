@@ -19,6 +19,7 @@ export class MemSessionStore implements SessionStore {
   sessions = new Map<string, Session>();
   turns = new Map<string, Turn>();
   messages: Message[] = [];
+  private readonly snapshots = new Map<SessionId, Record<string, unknown>>();
 
   async createSession(session: Session): Promise<void> {
     this.sessions.set(session.id, session);
@@ -29,8 +30,10 @@ export class MemSessionStore implements SessionStore {
   async updateSession(session: Session): Promise<void> {
     this.sessions.set(session.id, session);
   }
-  async listSessions(): Promise<Session[]> {
-    return [...this.sessions.values()];
+  async listSessions(opts: Parameters<SessionStore["listSessions"]>[0] = {}): Promise<Session[]> {
+    return [...this.sessions.values()].filter((s) =>
+      (opts.parentId === undefined || s.parentId === opts.parentId) &&
+      (opts.status === undefined || s.status === opts.status));
   }
   async createTurn(turn: Turn): Promise<void> {
     this.turns.set(turn.id, turn);
@@ -53,9 +56,12 @@ export class MemSessionStore implements SessionStore {
   async listMessagesByTurn(sessionId: SessionId, turnId: TurnId): Promise<Message[]> {
     return this.messages.filter((m) => m.sessionId === sessionId && m.turnId === turnId);
   }
-  async saveStateSnapshot(_sessionId: SessionId, _snapshot: Record<string, unknown>): Promise<void> {}
-  async loadStateSnapshot(): Promise<Record<string, unknown> | undefined> {
-    return undefined;
+  async saveStateSnapshot(sessionId: SessionId, snapshot: Record<string, unknown>): Promise<void> {
+    this.snapshots.set(sessionId, structuredClone(snapshot));
+  }
+  async loadStateSnapshot(sessionId: SessionId): Promise<Record<string, unknown> | undefined> {
+    const snapshot = this.snapshots.get(sessionId);
+    return snapshot === undefined ? undefined : structuredClone(snapshot);
   }
 }
 
