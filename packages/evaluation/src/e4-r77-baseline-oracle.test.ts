@@ -80,7 +80,7 @@ async function runVerifier(caseId: string, root: string): Promise<{ passed: bool
     changedPaths.push(abs);
     return { ...spec, path: abs };
   });
-  const verifier = new TaskVerifier();
+  const verifier = new TaskVerifier({ executor: new ProcessExecutor() });
   const result = await verifier.verify(
     { verification: specs } as unknown as Parameters<TaskVerifier["verify"]>[0],
     { cwd: root, sessionId: "e4-r77", changedPaths } as unknown as Parameters<TaskVerifier["verify"]>[1],
@@ -141,7 +141,7 @@ describe("E4-R79 (was R77 V1): structured command verification is platform-consi
     // injection is structurally impossible; this pins that property through the
     // REAL verifier rather than through a bespoke helper.
     const root = await materialize("reg-02-fix-reverse", writeInto("src/strings.js", CORRECT));
-    const verifier = new TaskVerifier();
+    const verifier = new TaskVerifier({ executor: new ProcessExecutor() });
     const res = await verifier.verify(
       {
         verification: [
@@ -303,7 +303,7 @@ describe("E4-R77 (V2): the artifact verifier accepts an EMPTY file", () => {
     const root = await tempDir();
     await mkdir(join(root, "out"), { recursive: true });
     await writeFile(join(root, "out", "parts.md"), "", "utf8");
-    const verifier = new TaskVerifier();
+    const verifier = new TaskVerifier({ executor: new ProcessExecutor() });
     const res = await verifier.verify(
       {
         verification: [{ kind: "artifact", path: "out/parts.md", mustChange: true }],
@@ -321,7 +321,7 @@ describe("E4-R77 (V2): the artifact verifier accepts an EMPTY file", () => {
     const root = await tempDir();
     await mkdir(join(root, "out"), { recursive: true });
     await writeFile(join(root, "out", "parts.md"), "content", "utf8");
-    const verifier = new TaskVerifier();
+    const verifier = new TaskVerifier({ executor: new ProcessExecutor() });
     const res = await verifier.verify(
       {
         verification: [{ kind: "artifact", path: "out/parts.md", mustChange: true }],
@@ -345,7 +345,7 @@ describe("E4-R77: stress-10-subagents oracle surface", () => {
     const root = await materialize("stress-10-subagents");
     await mkdir(join(root, "out"), { recursive: true });
     await writeFile(join(root, "out", "parts.md"), "", "utf8");
-    const verifier = new TaskVerifier();
+    const verifier = new TaskVerifier({ executor: new ProcessExecutor() });
     const res = await verifier.verify(
       {
         verification: [{ kind: "artifact", path: "out/parts.md", mustChange: true }],

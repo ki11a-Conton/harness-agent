@@ -54,6 +54,7 @@ export interface ExecOptions {
  * shell recipe and is still handed to the platform shell verbatim.
  */
 export interface ExecArgvOptions {
+  sandboxExecution?: SandboxExecutionOption;
   file: string;
   args?: string[];
   cwd: string;
@@ -481,6 +482,7 @@ function killDirectTree(child: ChildProcess): void {
 export class ProcessExecutor {
   async run(opts: ExecOptions): Promise<ExecOutcome> {
     const started = Date.now();
+    if (opts.signal?.aborted) return cancelledOutcome();
     const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     const maxOutputBytes = opts.maxOutputBytes ?? DEFAULT_MAX_OUTPUT_BYTES;
 
@@ -621,6 +623,7 @@ export class ProcessExecutor {
    */
   async runArgv(opts: ExecArgvOptions): Promise<ExecOutcome> {
     const started = Date.now();
+    if (opts.signal?.aborted) return cancelledOutcome();
     const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     const maxOutputBytes = opts.maxOutputBytes ?? DEFAULT_MAX_OUTPUT_BYTES;
 
@@ -646,9 +649,23 @@ export class ProcessExecutor {
       };
     }
 
-    const child = spawn(plan.file, plan.args, {
+    let launch = { file: plan.file, args: plan.args, env };
+    let provenance: SandboxExecutionProvenance | undefined;
+    if (opts.sandboxExecution !== undefined) {
+      const { backend, policy, selfTest, allowInsecureLocal } = opts.sandboxExecution;
+      if (!backend.strongIsolation && !allowInsecureLocal) {
+        return { status: "denied", exitCode: null, stdout: "", stderr: "", truncated: false, durationMs: Date.now() - started,
+          denial: { code: SANDBOX_BACKEND_DENIED, reason: "no strong sandbox backend available — argv exec refused" } };
+      }
+      launch = buildSandboxLaunch(backend, policy, plan.file, plan.args, env as Record<string, string>, opts.cwd);
+      provenance = { schemaVersion: "1.0.0", backendId: backend.id, platform: backend.platform,
+        strongIsolation: backend.strongIsolation, policyDigest: policyDigestOf(policy), selfTestDigest: selfTest.digest,
+        insecureLocal: !backend.strongIsolation && allowInsecureLocal === true };
+    }
+    if (opts.signal?.aborted) return cancelledOutcome();
+    const child = spawn(launch.file, launch.args, {
       cwd: opts.cwd,
-      env,
+      env: launch.env,
       windowsHide: true,
       stdio: ["ignore", "pipe", "pipe"],
       // The whole point: no shell re-interprets the argument text. For the
@@ -658,11 +675,16 @@ export class ProcessExecutor {
       shell: false,
     });
 
-    return await collect(
+    const outcome = await collect(
       child,
       { timeoutMs, maxOutputBytes, cwd: opts.cwd, signal: opts.signal, ...(opts.onOutput !== undefined ? { onOutput: opts.onOutput } : {}) },
       () => killDirectTree(child),
       started,
     );
+    return provenance === undefined ? outcome : { ...outcome, provenance, insecure: provenance.insecureLocal };
   }
+}
+
+function cancelledOutcome(): ExecOutcome {
+  return { status: "cancelled", exitCode: null, stdout: "", stderr: "", truncated: false, durationMs: 0, error: "execution cancelled before spawn" };
 }

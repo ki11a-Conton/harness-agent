@@ -33,21 +33,24 @@ export interface TaskVerifierDeps {
 /**
  * TaskVerifier (VS-001): executes the verification specs of a TaskSpec.
  *
- * - command    → runs the command; pass = exit code 0 (uses ProcessExecutor)
+ * - command    → authorized execution; pass = successful exit code 0
  * - artifact   → pass = file exists (and, for mustChange, appeared in changedPaths)
  * - requirement→ cannot be verified automatically; fails closed until a model
  *                reviewer is wired (documented limitation, no fake passes).
  *
- * The verifier is a pure service: no permission/sandbox short-circuits here;
- * commands are expected to arrive pre-authorized from the agent runtime.
+ * Runtime supplies context.executeCommand through its orchestrator. A trusted
+ * standalone caller must explicitly supply deps.executor; there is no implicit
+ * process executor. Runtime authorization takes precedence over that adapter.
  */
 export class TaskVerifier implements Verifier {
-  private readonly executor: ProcessExecutor;
+  private readonly executor?: ProcessExecutor;
 
   private readonly onStep?: TaskVerifierDeps["onStep"];
 
   constructor(deps: TaskVerifierDeps = {}) {
-    this.executor = deps.executor ?? new ProcessExecutor();
+    // A primitive executor is an explicit trusted standalone adapter. Runtime
+    // commands always use context.executeCommand, even when one was supplied.
+    this.executor = deps.executor;
     this.onStep = deps.onStep;
   }
 
@@ -83,6 +86,7 @@ export class TaskVerifier implements Verifier {
       description: spec.description ?? spec.kind,
       sessionId: context.sessionId,
     });
+    context.signal?.throwIfAborted();
     const check = await (() => {
       switch (spec.kind) {
         case "command":
@@ -173,6 +177,17 @@ export class TaskVerifier implements Verifier {
   ): Promise<VerificationResult["checks"][number]> {
     const description = spec.description ?? `command: ${spec.command}`;
     try {
+      context.signal?.throwIfAborted();
+      if (context.executeCommand !== undefined) {
+        const result = await context.executeCommand(spec);
+        const passed = result.status === "success" && result.output?.exitCode === 0 && context.signal?.aborted !== true;
+        return {
+          id: `command:${spec.command}`, kind: "command" as const, description, passed,
+          ...(result.output !== undefined ? { evidence: { type: "test" as const, description: `exit code ${result.output.exitCode} in ${result.output.durationMs}ms`, source: spec.command, timestamp: Date.now() } } : {}),
+          ...(!passed ? { error: this.err("VERIFICATION_FAILED", result.error?.message ?? `command ${result.status}; no successful exit observed`) } : {}),
+        };
+      }
+      if (this.executor === undefined) throw new Error("verification command has no authorized execution adapter");
       // E4-R79 (F79-2): EXECUTABLE + ARGV when the spec carries `args`.
       //
       // The previous behaviour assembled `command` + shell-quoted `args` into a
@@ -196,12 +211,14 @@ export class TaskVerifier implements Verifier {
               cwd: context.cwd,
               timeoutMs: 120_000,
               maxOutputBytes: 1_048_576,
+              signal: context.signal,
             })
           : await this.executor.run({
               command: spec.command,
               cwd: context.cwd,
               timeoutMs: 120_000,
               maxOutputBytes: 1_048_576,
+              signal: context.signal,
             });
       return {
         id: `command:${spec.command}`,
@@ -291,4 +308,3 @@ function changedPathsContain(changedPaths: string[], abs: string, cwd: string): 
 function normalize(p: string): string {
   return p.split(sep).join("/").toLowerCase();
 }
-

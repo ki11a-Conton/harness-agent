@@ -30,6 +30,8 @@ import { AgentError, errorInfo } from "@ar/contracts";
  * the same code path (uniform coverage) instead of special-casing callers.
  */
 export interface RuntimeVerifierOptions {
+  signal?: AbortSignal;
+  executeCommand?: VerificationContext["executeCommand"];
   cwd: string;
   runStartedAt: number;
   /** Paths the agent touched during the run (collected by the runtime). */
@@ -70,6 +72,8 @@ export class RuntimeVerifier {
     const transcript = renderTranscript(messages, { maxChars: maxTranscriptChars, messageTruncate });
 
     const context: VerificationContext = {
+      ...(opts.signal !== undefined ? { signal: opts.signal } : {}),
+      ...(opts.executeCommand !== undefined ? { executeCommand: opts.executeCommand } : {}),
       sessionId,
       ...(turnId !== undefined ? { turnId } : {}),
       cwd: opts.cwd,

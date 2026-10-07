@@ -227,94 +227,19 @@ export const OFFLINE_MODEL_ID = "offline-scripted-model";
 // ---------------------------------------------------------------------------
 
 /**
- * N2 (F30-4) — the VERSION of the scripted content task table.
- *
- * Bumped when the target, the bytes or the mapping changes, so an artifact/report
- * can state WHICH task script produced a forward run instead of implying that
- * every `offline-scripted-content-v1` run wrote the same thing.
- */
-export const OFFLINE_CONTENT_SCRIPT_VERSION = "offline-scripted-task-v1";
-
-/**
- * N2 (F30-4) — THE TASK THE SCRIPT WRITES, AND WHY IT IS A REAL FROZEN CASE.
- *
- * The previous table wrote `offline-forward-proof.txt` with a self-invented
- * marker. No frozen verifier reads that file, so "the offline profile can drive a
- * content task" could never be measured — the proof stopped at "a tool REQUEST
- * was emitted" (see the honest NOT_PROVEN note the Phase D test had to carry).
- *
- * The table now writes the file the FROZEN, NON-HOLDOUT case
- * `regression/reg-22-api-stub` requires, so the case's OWN committed verifier
- * command decides PASS/FAIL. That is what makes a full
- * `runtime → tool dispatch → verifier` forward run measurable on the release
- * entry point instead of inferred.
- *
- * WHY THIS CASE (each is a measured property of the committed case):
- *   1. it is in the committed frozen selection
- *      (`docs/evidence/tool-call-efficiency-case-selection.json`) and NOT in
- *      `benchmarks/holdout`;
- *   2. its fixture is ONE file (`server.js`) the scripted model can write
- *      EXACTLY, so the script needs NEITHER more turns NOR a fabricated verdict;
- *   3. its verifier is a REAL behavioural check — it loads the written file,
- *      binds an ephemeral LOOPBACK port, requests `GET /health` and requires 200
- *      plus `{"ok":true}` — so only a correct write passes it;
- *   4. it is CommonJS over Node built-ins, so it depends neither on ESM syntax
- *      detection nor on a `node --test <dir>` argument form whose behaviour
- *      differs between Node 22 (CI) and Node 24 (measured locally): the same
- *      bytes decide the same way on both.
- *
- * It binds a loopback socket on an ephemeral port and nothing else: no external
- * endpoint, no credential, no billed request.
- *
- * The case itself is NOT modified: nothing under `benchmarks/` changes.
- *
- * Repository-fixed: never read from an artifact or the environment.
+ * Built-in offline content task, version 2. The frozen CSV oracle needs no
+ * network and exercises a real write followed by command verification. The
+ * previous HTTP task depended on an implicit verification executor bypassing
+ * the benchmark network-deny policy. That policy is preserved, and the HTTP
+ * case now has an explicit refusal regression. No benchmark case bytes change.
+ * The wrong control is the frozen fixture's original untrimmed implementation.
  */
 export const OFFLINE_CONTENT_TASK = Object.freeze({
-  /** The suite the target case lives in (also the `benchmarks/` subdirectory). */
   suite: "regression",
-  /** The frozen case this scripted task serves. */
-  caseId: "reg-22-api-stub",
-  /**
-   * The path the scripted model asks `write_file` to write, relative to the
-   * case's workspace. It is the SAME file the case fixture ships (`server.js`),
-   * so the run is a real edit of real fixture bytes — not a new demo file.
-   */
-  outputPath: "server.js",
-  /** The exact bytes it writes. The verifier's "correct content" is this. */
-  content: [
-    "const http = require('http');",
-    "",
-    "const server = http.createServer((req, res) => {",
-    "  if (req.url === '/health') {",
-    "    res.writeHead(200, { 'content-type': 'application/json' });",
-    "    res.end(JSON.stringify({ ok: true }));",
-    "    return;",
-    "  }",
-    "  res.writeHead(404);",
-    "  res.end();",
-    "});",
-    "",
-    "module.exports = server;",
-    "",
-  ].join("\n"),
-  /**
-   * The one-dimension-wrong control: the fixture's OWN (unfixed) bytes, which
-   * answer 404 for every path. Derived from the passing positive by removing
-   * exactly the `/health` branch, so the case's own verifier really fails and the
-   * derived negative cannot be vacuous.
-   */
-  wrongContent: [
-    "const http = require('http');",
-    "",
-    "const server = http.createServer((req, res) => {",
-    "  res.writeHead(404);",
-    "  res.end();",
-    "});",
-    "",
-    "module.exports = server;",
-    "",
-  ].join("\n"),
+  caseId: "reg-12-csv-parse",
+  outputPath: "src/csv.js",
+  content: "export function parse_csv(line) { return line.split(',').map((field) => field.trim()); }\n",
+  wrongContent: "export function parse_csv(line) { return line.split(','); }\n",
 });
 
 /**

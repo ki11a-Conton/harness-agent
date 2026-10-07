@@ -1,5 +1,6 @@
 import type { AgentErrorInfo } from "./errors.js";
 import type { SessionId, TurnId } from "./ids.js";
+import type { ToolResult } from "./tool.js";
 
 export type EvidenceType = "file" | "command" | "test" | "diff" | "http" | "review";
 
@@ -79,6 +80,11 @@ export interface TaskSpec {
 
 /** Narrow, dependency-free view of run state handed to Verifiers. */
 export interface VerificationContext {
+  /** The turn's cancellation boundary, shared with command execution. */
+  signal?: AbortSignal;
+  /** Host-owned execution boundary: authorization, sandbox, approval and
+   * campaign budgets apply to verification commands just as to model tools. */
+  executeCommand?: (spec: Extract<VerificationSpec, { kind: "command" }>) => Promise<ToolResult<{ exitCode: number | null; durationMs: number }>>;
   sessionId: SessionId;
   turnId?: TurnId;
   cwd: string;

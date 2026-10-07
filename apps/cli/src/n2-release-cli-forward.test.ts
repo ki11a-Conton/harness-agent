@@ -20,9 +20,9 @@
  *     naming the tool), not merely an emitted tool-call request;
  *   - the FROZEN case's OWN verifier passed on the file the tool wrote
  *     (`verifiedCompletion: true` in `verifier.json`) — the case is
- *     `regression/reg-22-api-stub`, whose verification binds a loopback socket
- *     and requires `GET /health` → 200 + `{"ok":true}`, so only a correct write
- *     can pass it;
+ *     `regression/reg-12-csv-parse`, whose command oracle needs no network
+ *     and requires the real CSV parser to trim all three fields correctly;
+ *     the frozen HTTP oracle remains covered by a network-denial regression;
  *   - BOTH arms reached the script's first step (each arm's own evidence shows the
  *     write happened), which is the whole point of the per-conversation cursor.
  *

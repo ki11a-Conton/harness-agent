@@ -9,6 +9,8 @@ import { realpath, stat } from "node:fs/promises";
 
 export interface ExecInput {
   command: string;
+  /** Present only for a structured executable + argv request; never shell parsed. */
+  args?: string[];
   cwd?: string;
   env?: Record<string, string>;
   timeoutMs?: number;
@@ -118,6 +120,7 @@ export const execTool: ToolDefinition<ExecInput, ExecOutput> = {
   description: "Run a command in the workspace shell and capture its output.",
   inputSchema: z.object({
     command: z.string().min(1),
+    args: z.array(z.string()).optional(),
     cwd: z.string().optional(),
     env: z.record(z.string()).optional(),
     timeoutMs: z.number().int().positive().max(10 * 60 * 1000).optional(),
@@ -176,7 +179,7 @@ export const execTool: ToolDefinition<ExecInput, ExecOutput> = {
       }
     }
 
-    const outcome = await new ProcessExecutor().run({
+    const execution = {
       command: input.command,
       cwd,
       env: input.env,
@@ -187,7 +190,11 @@ export const execTool: ToolDefinition<ExecInput, ExecOutput> = {
       ...(sandboxPrepared?.ok === true
         ? { sandboxExecution: sandboxPrepared.sandboxExecution }
         : {}),
-    });
+    };
+    const executor = new ProcessExecutor();
+    const outcome = input.args !== undefined
+      ? await executor.runArgv({ ...execution, file: input.command, args: input.args })
+      : await executor.run(execution);
 
     const base = {
       exitCode: outcome.exitCode,

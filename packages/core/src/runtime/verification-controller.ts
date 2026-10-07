@@ -6,7 +6,7 @@
  * only `this.<field>` → `this.deps.<field>` changed.
  */
 
-import type { CompletionEvidence, SessionStore, TaskSpec, VerificationSpec, Verifier } from "@ar/contracts";
+import type { CompletionEvidence, SessionStore, TaskSpec, VerificationSpec, Verifier, VerificationContext } from "@ar/contracts";
 import { RuntimeVerifier } from "../verification/runtime-verifier.js";
 import type { TurnContext } from "./turn-helpers.js";
 
@@ -21,6 +21,7 @@ export interface VerificationGateResult {
 }
 
 export interface VerificationControllerDeps {
+  executeCommand?: (ctx: TurnContext, spec: Extract<VerificationSpec, { kind: "command" }>) => ReturnType<NonNullable<VerificationContext["executeCommand"]>>;
   task?: TaskSpec;
   verifier?: Verifier;
   store: SessionStore;
@@ -92,6 +93,8 @@ export class VerificationController {
       turnId,
       this.deps.store,
       {
+        signal: ctx.signal,
+        ...(this.deps.executeCommand !== undefined ? { executeCommand: (spec: Extract<VerificationSpec, { kind: "command" }>) => this.deps.executeCommand!(ctx, spec) } : {}),
         cwd: session.cwd,
         runStartedAt: this.deps.now(),
         changedPaths: changed,

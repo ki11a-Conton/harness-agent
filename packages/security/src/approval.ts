@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { closeSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import type {
   AgentId,
@@ -19,6 +19,8 @@ export type { PendingApproval };
 
 interface PendingEntry {
   request: ApprovalRequest;
+  preview(value: ApprovalDecisionValue, decidedBy?: string): ApprovalDecision;
+  commit(prepared: ApprovalDecision): ApprovalDecision;
   /** Idempotent: first call settles; later calls return the existing decision. */
   settle(value: ApprovalDecisionValue, decidedBy?: string): ApprovalDecision;
   wait(signal: AbortSignal): Promise<ApprovalDecision>;
@@ -32,18 +34,25 @@ function createPendingEntry(request: ApprovalRequest, now: () => number, timer: 
     resolveWait = resolve;
   });
 
-  function settle(value: ApprovalDecisionValue, decidedBy?: string): ApprovalDecision {
+  function preview(value: ApprovalDecisionValue, decidedBy?: string): ApprovalDecision {
     if (settled && decision !== undefined) return decision;
     const expired = now() > request.expiresAt;
-    decision = {
+    return {
       id: request.id,
       value: expired && value === "allow" ? "expired" : value,
       decidedAt: now(),
       ...(decidedBy !== undefined ? { decidedBy } : {}),
     };
+  }
+  function commit(prepared: ApprovalDecision): ApprovalDecision {
+    if (settled && decision !== undefined) return decision;
+    decision = prepared;
     settled = true;
     resolveWait(decision);
     return decision;
+  }
+  function settle(value: ApprovalDecisionValue, decidedBy?: string): ApprovalDecision {
+    return commit(preview(value, decidedBy));
   }
 
   function wait(signal: AbortSignal): Promise<ApprovalDecision> {
@@ -61,7 +70,7 @@ function createPendingEntry(request: ApprovalRequest, now: () => number, timer: 
     });
   }
 
-  return { request, settle, wait };
+  return { request, settle, wait, preview, commit };
 }
 
 export class InMemoryApprovalStore implements ApprovalStore {
@@ -91,9 +100,19 @@ export class InMemoryApprovalStore implements ApprovalStore {
 
   /** Returns the final decision (may be "expired" if already past expiresAt). */
   resolve(id: ApprovalId, value: ApprovalDecisionValue, decidedBy?: string): ApprovalDecision {
+    return this.commitResolution(id, this.prepareResolution(id, value, decidedBy));
+  }
+
+  prepareResolution(id: ApprovalId, value: ApprovalDecisionValue, decidedBy?: string): ApprovalDecision {
     const entry = this.pending.get(id);
     if (!entry) throw new Error(`unknown or already-resolved approval: ${id}`);
-    const d = entry.settle(value, decidedBy);
+    return entry.preview(value, decidedBy);
+  }
+
+  commitResolution(id: ApprovalId, prepared: ApprovalDecision): ApprovalDecision {
+    const entry = this.pending.get(id);
+    if (!entry) throw new Error(`unknown or already-resolved approval: ${id}`);
+    const d = entry.commit(prepared);
     this.record(entry, d);
     this.pending.delete(id);
     return d;
@@ -231,32 +250,32 @@ export class DurableApprovalStore implements ApprovalStore {
 
   /** Full stop: append the pending request to durable state and start waiting. */
   create(request: ApprovalRequest): PendingEntry {
+    if (this.pending.has(request.id)) throw new Error(`approval already exists: ${request.id}`);
+    this.persist({ version: 1, pending: [...this.pending.values(), request], decisions: this.decisions });
     const entry = this.inner.create(request);
     this.pending.set(request.id, request);
-    this.persist();
     return entry;
   }
 
   resolve(id: ApprovalId, value: ApprovalDecisionValue, decidedBy?: string): ApprovalDecision {
     const request = this.pending.get(id);
-    const d = this.inner.resolve(id, value, decidedBy);
-    if (request !== undefined) {
-      this.decisions.push(approvalDecisionRecord(request, d));
-      this.pending.delete(id);
-      this.persist();
-    }
-    return d;
+    if (request === undefined) throw new Error(`unknown or already-resolved approval: ${id}`);
+    const prepared = this.inner.prepareResolution(id, value, decidedBy);
+    const nextDecisions = [...this.decisions, approvalDecisionRecord(request, prepared)];
+    this.persist({ version: 1, pending: [...this.pending.values()].filter((r) => r.id !== id), decisions: nextDecisions });
+    // Persist before publishing an allow decision or changing live pending
+    // state. A filesystem failure leaves the original waiter and request intact.
+    this.decisions = nextDecisions;
+    this.pending.delete(id);
+    return this.inner.commitResolution(id, prepared);
   }
 
   cancelAll(sessionId: SessionId): void {
     const toCancel = [...this.pending.values()].filter((r) => r.sessionId === sessionId);
     if (toCancel.length === 0) return;
     for (const r of toCancel) {
-      const d = this.inner.resolve(r.id, "cancelled");
-      this.decisions.push(approvalDecisionRecord(r, d));
-      this.pending.delete(r.id);
+      this.resolve(r.id, "cancelled");
     }
-    this.persist();
   }
 
   listPending(sessionId?: SessionId): ApprovalRequest[] {
@@ -272,20 +291,29 @@ export class DurableApprovalStore implements ApprovalStore {
     );
   }
 
-  private persist(): void {
-    const data: DurableApprovalFile = {
+  private persist(data: DurableApprovalFile = {
       version: 1,
       pending: [...this.pending.values()],
       decisions: this.decisions,
-    };
+    }): void {
     // P1-3: atomic write — write a temp sibling then rename over the target,
     // so a crash mid-write never leaves a truncated store. Parent dir is
     // created first (the store owns the file path).
     const dir = dirname(this.filePath);
     mkdirSync(dir, { recursive: true });
     const tmp = `${this.filePath}.tmp`;
-    writeFileSync(tmp, JSON.stringify(data), "utf8");
+    const fd = openSync(tmp, "w", 0o600);
+    try {
+      writeFileSync(fd, JSON.stringify(data), "utf8");
+      fsyncSync(fd);
+    } finally {
+      closeSync(fd);
+    }
     renameSync(tmp, this.filePath);
+    if (process.platform !== "win32") {
+      const directory = openSync(dir, "r");
+      try { fsyncSync(directory); } finally { closeSync(directory); }
+    }
   }
 }
 

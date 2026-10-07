@@ -6,6 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { TaskSpec, VerificationContext } from "@ar/contracts";
 import { newSessionId } from "@ar/contracts";
 import { TaskVerifier } from "./task-verifier.js";
+import { ProcessExecutor } from "../process/executor.js";
 
 let ws = "";
 
@@ -28,7 +29,7 @@ function task(specs: TaskSpec["verification"]): TaskSpec {
 
 describe("TaskVerifier (VS-001)", () => {
   it("passes when a command exits 0", async () => {
-    const v = new TaskVerifier();
+    const v = new TaskVerifier({ executor: new ProcessExecutor() });
     const r = await v.verify(task([{ kind: "command", command: `${JSON.stringify(NODE)} -e "process.exit(0)"` }]), context());
     expect(r.passed).toBe(true);
     expect(r.checks[0]?.passed).toBe(true);
@@ -37,7 +38,7 @@ describe("TaskVerifier (VS-001)", () => {
   });
 
   it("fails when a command exits non-zero", async () => {
-    const v = new TaskVerifier();
+    const v = new TaskVerifier({ executor: new ProcessExecutor() });
     const r = await v.verify(task([{ kind: "command", command: `${JSON.stringify(NODE)} -e "process.exit(1)"` }]), context());
     expect(r.passed).toBe(false);
     expect(r.checks[0]?.error?.code).toBe("VERIFICATION_FAILED");
@@ -45,21 +46,21 @@ describe("TaskVerifier (VS-001)", () => {
   });
 
   it("passes when an artifact exists", async () => {
-    const v = new TaskVerifier();
+    const v = new TaskVerifier({ executor: new ProcessExecutor() });
     const r = await v.verify(task([{ kind: "artifact", path: "out.txt" }]), context());
     expect(r.passed).toBe(true);
     expect(r.checks[0]?.evidence?.type).toBe("file");
   });
 
   it("fails when an artifact is missing", async () => {
-    const v = new TaskVerifier();
+    const v = new TaskVerifier({ executor: new ProcessExecutor() });
     const r = await v.verify(task([{ kind: "artifact", path: "missing.txt" }]), context());
     expect(r.passed).toBe(false);
     expect(r.checks[0]?.error).toBeDefined();
   });
 
   it("mustChange requires the path in changedPaths", async () => {
-    const v = new TaskVerifier();
+    const v = new TaskVerifier({ executor: new ProcessExecutor() });
     const ok = await v.verify(task([{ kind: "artifact", path: "out.txt", mustChange: true }]), context({ changedPaths: [join(ws, "out.txt")] }));
     expect(ok.passed).toBe(true);
     const bad = await v.verify(task([{ kind: "artifact", path: "out.txt", mustChange: true }]), context({ changedPaths: [] }));
@@ -67,21 +68,21 @@ describe("TaskVerifier (VS-001)", () => {
   });
 
   it("requirement checks fail closed until a reviewer is wired", async () => {
-    const v = new TaskVerifier();
+    const v = new TaskVerifier({ executor: new ProcessExecutor() });
     const r = await v.verify(task([{ kind: "requirement", statement: "must be fast" }]), context());
     expect(r.passed).toBe(false);
     expect(r.checks[0]?.error?.code).toBe("VERIFICATION_FAILED");
   });
 
   it("level 0 and passed=false when no specs", async () => {
-    const v = new TaskVerifier();
+    const v = new TaskVerifier({ executor: new ProcessExecutor() });
     const r = await v.verify(task([]), context());
     expect(r.passed).toBe(false);
     expect(r.level).toBe(0);
   });
 
   it("mixed specs: one failure fails the run", async () => {
-    const v = new TaskVerifier();
+    const v = new TaskVerifier({ executor: new ProcessExecutor() });
     const r = await v.verify(
       task([
         { kind: "command", command: `${JSON.stringify(NODE)} -e "process.exit(0)"` },
@@ -94,7 +95,7 @@ describe("TaskVerifier (VS-001)", () => {
   });
 
   it("P1-14 diff: passes when the expected change set is exact", async () => {
-    const v = new TaskVerifier();
+    const v = new TaskVerifier({ executor: new ProcessExecutor() });
     const r = await v.verify(
       task([
         {
@@ -110,7 +111,7 @@ describe("TaskVerifier (VS-001)", () => {
   });
 
   it("P1-14 diff: reports missing expected changes as structured failure", async () => {
-    const v = new TaskVerifier();
+    const v = new TaskVerifier({ executor: new ProcessExecutor() });
     const r = await v.verify(
       task([{ kind: "diff", expectedPaths: ["src/a.ts", "src/b.ts"] }]),
       context({ changedPaths: [join(ws, "src/a.ts")] }),
@@ -123,7 +124,7 @@ describe("TaskVerifier (VS-001)", () => {
   });
 
   it("P1-14 diff: unexpected destructive edits fail the gate", async () => {
-    const v = new TaskVerifier();
+    const v = new TaskVerifier({ executor: new ProcessExecutor() });
     const r = await v.verify(
       task([{ kind: "diff", mustNotChange: ["deploy.conf", "credentials.json"] }]),
       context({ changedPaths: [join(ws, "deploy.conf")] }),
@@ -138,7 +139,7 @@ describe("TaskVerifier (VS-001)", () => {
     const victim = join(ws, "victim.txt");
     writeFileSync(victim, "v1");
     rmSync(victim);
-    const v = new TaskVerifier();
+    const v = new TaskVerifier({ executor: new ProcessExecutor() });
     const r = await v.verify(
       task([{ kind: "diff", forbidDeletions: true, description: "no deletions" }]),
       context({ baselineFiles: ["out.txt", "victim.txt"], changedPaths: [] }),
@@ -151,7 +152,7 @@ describe("TaskVerifier (VS-001)", () => {
   });
 
   it("P1-16 diff: generated-junk / format-explosion paths are forbidden by glob", async () => {
-    const v = new TaskVerifier();
+    const v = new TaskVerifier({ executor: new ProcessExecutor() });
     const r = await v.verify(
       task([{ kind: "diff", forbidPatterns: ["**/dist/**", "*.min.js"], description: "no junk" }]),
       context({ changedPaths: [join(ws, "src/a.ts"), join(ws, "dist/bundle.min.js")] }),
@@ -163,7 +164,7 @@ describe("TaskVerifier (VS-001)", () => {
   });
 
   it("P1-16 diff: maxFiles flags a large accidental rewrite", async () => {
-    const v = new TaskVerifier();
+    const v = new TaskVerifier({ executor: new ProcessExecutor() });
     const r = await v.verify(
       task([{ kind: "diff", maxFiles: 2, description: "small diff" }]),
       context({ changedPaths: [join(ws, "a.ts"), join(ws, "b.ts"), join(ws, "c.ts")] }),
@@ -175,7 +176,7 @@ describe("TaskVerifier (VS-001)", () => {
   });
 
   it("P1-16 diff: deletion/glob/maxFiles all satisfied passes", async () => {
-    const v = new TaskVerifier();
+    const v = new TaskVerifier({ executor: new ProcessExecutor() });
     const r = await v.verify(
       task([
         { kind: "diff", forbidDeletions: true, forbidPatterns: ["**/dist/**"], maxFiles: 5 },
@@ -309,7 +310,7 @@ describe("E4-R79: TaskVerifier command spec dispatch", () => {
   });
 
   it("reports the real nonzero exit code through the argv path", async () => {
-    const v = new TaskVerifier();
+    const v = new TaskVerifier({ executor: new ProcessExecutor() });
     const r = await v.verify(task([{ kind: "command", command: NODE, args: ["-e", "process.exit(5)"] }]), context());
     expect(r.passed).toBe(false);
     expect(r.checks[0]?.evidence?.description).toContain("exit code 5");

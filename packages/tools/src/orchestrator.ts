@@ -422,7 +422,10 @@ export class ToolOrchestrator {
   private classify(tool: ToolDefinition, args: Record<string, unknown>): SanitizedCall {
     const m = tool.metadata;
     if (m.process) {
-      const cmd = this.str(args.command ?? args.cmd) ?? "";
+      const program = this.str(args.command ?? args.cmd) ?? "";
+      const cmd = Array.isArray(args.args)
+        ? [program.includes(" ") ? JSON.stringify(program) : program, ...args.args.map((a) => JSON.stringify(a))].join(" ")
+        : program;
       // P2-25: surface dependency-install / remote-code-execution as their OWN
       // permission resource, so they are NOT gated like a generic command.
       const sc = classifySupplyChain(cmd);

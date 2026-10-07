@@ -45,6 +45,7 @@ import {
   newArtifactId,
   newEventId,
   newMessageId,
+  newToolCallId,
   newSessionId,
   newTurnId,
   newWorkingState,
@@ -97,6 +98,7 @@ import {
   buildResumePrompt,
   classifyUnknownOutcome,
   DEFAULT_RUNTIME_TOOL_SEMANTICS,
+  defaultSandboxPolicy,
   isContextOverflowError,
   isEffectiveAgentConfig,
   rethrowIfKill,
@@ -700,6 +702,33 @@ export class AgentRuntime {
     });
     // Q-1: verification gate delegated to the extracted controller.
     this.verificationController = new VerificationController({
+      executeCommand: async (ctx, spec) => {
+        if (!isToolAllowedByPolicy(ctx.agent.tools, "exec")) {
+          return { status: "denied", error: errorInfo("PERMISSION_DENIED", "verification exec is excluded by the session tool policy") };
+        }
+        const definition = this.toolRegistry?.get("exec");
+        if (definition === undefined) {
+          return { status: "denied", error: errorInfo("TOOL_SCHEMA_ERROR", "verification requires a registered exec tool") };
+        }
+        const id = newToolCallId();
+        const args = { command: spec.command, ...(spec.args !== undefined ? { args: [...spec.args] } : {}), timeoutMs: 120_000 };
+        const result = await this.orchestrator.executeBound({
+          id, sessionId: ctx.sessionId, turnId: ctx.turnId, agentId: ctx.agent.id,
+          call: { id, name: "exec", args },
+          binding: {
+            name: "exec", spec: { name: "exec", description: definition.description, inputSchema: { type: "object" } },
+            definition: { ...definition, execute: (input, context) => context.sandboxPolicy.filesystem.mode === "read-only"
+              ? Promise.resolve({ status: "denied", error: errorInfo("SANDBOX_DENIED", "verification process cannot run in a read-only workspace") })
+              : definition.execute(input, context) },
+            semantics: this.semanticsOf("exec"), provenance: { kind: "builtin" },
+          },
+        }, {
+          sessionId: ctx.sessionId, turnId: ctx.turnId, agentId: ctx.agent.id,
+          cwd: ctx.session.cwd, signal: ctx.signal,
+          permissions: ctx.agent.permissions, sandboxPolicy: this.sandboxPolicy ?? defaultSandboxPolicy(),
+        });
+        return result as ToolResult<{ exitCode: number | null; durationMs: number }>;
+      },
       task: this.task,
       verifier: this.verifier,
       store: this.store,

@@ -309,6 +309,9 @@ export class ModelCallController {
       await this.deps.failAt("verification.started", { sessionId, turnId });
       const verificationStartedAt = this.deps.now();
       const gate = await this.deps.runVerificationGate(ctx);
+      if (signal.aborted) {
+        return { action: "finish", outcome: await this.deps.finishTurn(ctx, "cancelled", state, working, undefined, "cancelled", toolLedger) };
+      }
       if (gate !== undefined) {
         // P1-3: after a verification gate (passed or failed) is a
         // checkpoint safety boundary.
@@ -347,6 +350,9 @@ export class ModelCallController {
             "verification_failed",
             toolLedger,
           ) };
+        }
+        if (signal.aborted) {
+          return { action: "finish", outcome: await this.deps.finishTurn(ctx, "cancelled", state, working, undefined, "cancelled", toolLedger) };
         }
         await this.deps.emit(sessionId, "verification.completed", { passed: true, durationMs: this.deps.now() - verificationStartedAt }, turnId);
         state.terminate("completed");

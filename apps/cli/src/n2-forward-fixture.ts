@@ -48,7 +48,10 @@ import {
 } from "@ar/evaluation";
 
 /** The one frozen, non-holdout case the N2 forward run must complete. */
-export const N2_FORWARD_CASE = Object.freeze({ suite: "regression", caseId: "reg-22-api-stub" });
+// Command verification now obeys the frozen network-deny policy. Use an
+// already-selected, non-network oracle for the positive release-chain fixture;
+// the unchanged HTTP case has a separate refusal regression.
+export const N2_FORWARD_CASE = Object.freeze({ suite: "regression", caseId: "reg-12-csv-parse" });
 
 const REPO_ROOT = process.cwd();
 
