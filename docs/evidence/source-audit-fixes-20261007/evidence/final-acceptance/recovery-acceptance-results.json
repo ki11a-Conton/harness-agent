@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "source-audit-recovery-acceptance-v1",
+  "paidProviderCalls": 0,
+  "modelCalls": 0,
+  "evidenceKind": "OFFLINE_FAULT_INJECTION",
+  "records": [
+    {
+      "id": "committed",
+      "passed": true,
+      "deadOwnerLockReclaimed": true,
+      "committed": 1,
+      "remaining": 15359,
+      "grantReset": false,
+      "fabricatedCompletion": false
+    },
+    {
+      "id": "unknown",
+      "passed": true,
+      "unknownCalls": 1,
+      "refundedCalls": 0,
+      "newDispatches": 0
+    },
+    {
+      "id": "tampered",
+      "passed": true,
+      "refusedBeforeBudgetMutation": true
+    }
+  ]
+}

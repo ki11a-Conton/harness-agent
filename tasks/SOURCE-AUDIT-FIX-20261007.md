@@ -20,3 +20,7 @@ Acceptance-tool compatibility: authorize the browser fixture's fixed verifier
 through an explicit host rule, trust only its own loopback proxy, and repair
 optional perf/soak commands that previously selected zero test files. This does
 not change production permissions, benchmark case bytes or quality thresholds.
+
+Status: completed. Full suite: 9,030 passed, 0 failed, 12 conditional skips;
+real Chromium: 27 cases / 77 assertions. Evidence and compatibility notes are
+in docs/evidence/source-audit-fixes-20261007/COMPLETION.md. No paid model calls.

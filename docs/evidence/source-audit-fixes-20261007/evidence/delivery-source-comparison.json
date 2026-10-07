@@ -1,0 +1,23 @@
+{
+  "fullTestSourceSha": "e40ba599293076c123132a8635b65ae9fa29ba8a",
+  "toolingSourceSha": "503b7060d1d395f96b8542c6961e3ba16fa92107",
+  "changedFiles": [
+    "package.json",
+    "scripts/research/web-dsh-20261004/README.md",
+    "scripts/research/web-dsh-20261004/fixture.mjs",
+    "tasks/SOURCE-AUDIT-FIX-20261007.md"
+  ],
+  "changedPackageScripts": {
+    "test:perf": {
+      "before": "vitest run '**/*.perf.test.ts'",
+      "after": "vitest run .perf.test.ts"
+    },
+    "test:soak": {
+      "before": "vitest run '**/*.soak.test.ts'",
+      "after": "vitest run .soak.test.ts"
+    }
+  },
+  "allRuntimeUiAgentAndDependencySourceBytesUnchanged": true,
+  "fullTestCommandUnchanged": true,
+  "boundary": "Full-suite evidence belongs to the stated source SHA. Later changes update optional acceptance entry points and documentation; those entry points are separately re-executed."
+}

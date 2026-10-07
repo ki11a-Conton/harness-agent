@@ -1,0 +1,454 @@
+{
+  "schema": "web-dsh-browser.v1",
+  "status": "FAILED",
+  "mode": "candidate",
+  "requireCleanSource": true,
+  "scope": "Real Chromium; production cases use actual Harness/Gateway/WebServer/PermissionEngine/SandboxManager/TaskVerifier with scripted provider; controlled-protocol cases replace browser fetch/EventSource only and do not prove model quality.",
+  "source": {
+    "base": "http://127.0.0.1:44549",
+    "backend": "http://127.0.0.1:43779",
+    "transportControl": "http://127.0.0.1:37243",
+    "inspector": "http://127.0.0.1:32793/snapshot",
+    "cwd": "/workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/final-browser/fixture/workspace",
+    "sourceSha": "e40ba599293076c123132a8635b65ae9fa29ba8a",
+    "trackedDirty": false,
+    "fingerprints": {
+      "apps/web/src/server.ts": "021969bb7f8500b3deb9668f40502fa5329ab3305b82afb71f82670232732dc9",
+      "apps/web/src/adapter.ts": "6ed06e0638b57e5247342675d691b0cf0de4116c22d3f571317e3974ba0ef4b3",
+      "apps/web/src/bindings.ts": "e0a879f956da9132b620a9c61fddfbf79a6ea80c05e4cdebfe555939496fa7cb",
+      "packages/gateway/src/gateway.ts": "431f6533e8208c64ba0520af05f2baffc8be2493207e3e886b66691995b64dbe",
+      "packages/harness/src/create-harness.ts": "bb663815855c594769fce5837653b266b6e75b93ad0ea26b2f8733dac9eac558",
+      "apps/web/dist/server.js": "5b71cc63d85f7836851e7d65e50ca33d1ff8840f90dc87e7a485ff637a9a1599",
+      "apps/web/dist/adapter.js": "f1aa8a86f5b79f7163a86cfaec50c71860c7983e75a2f65946f9fac2bd2fd529",
+      "apps/web/dist/bindings.js": "bd94e855f3fd52c96cfb9caee3c5183bd6b069899ea071555fa4572df826d135",
+      "packages/gateway/dist/gateway.js": "2e63ef92fa3bee1a1719b1c781637a78bf1dbccf4db2b9ec67c488550f3d413d",
+      "packages/harness/dist/create-harness.js": "50c81a963b202590e5a322cd533d1d40cc2d5819f135b0185abf97f26d3d791a",
+      "static/app.js": "0c26fef5dc2bd6179c6da7cb202f36bbadfbeac2d78df2a2fde488ee320a2da0",
+      "static/index.html": "7987bd0b38de59ff679cd052a0069afb4d00132a027ad78633e78116a6971cf5",
+      "static/style.css": "60f6e63348d1a58e65e093c37dc847f065f1f7c2c56455d22f6eec90d695453f",
+      "static/vendor/deepseek/LICENSE": "ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be",
+      "static/vendor/deepseek/base.css": "03704b5ac0e86d9d875c4fa5c985a7dfe5d56e20dc28a8d8221626aaf7aa482a",
+      "static/vendor/deepseek/corner-shape.css": "d94f82e1332b6d37e8345aafe1b6b4129faed65891edd3861c00b88940ec4d3f",
+      "static/vendor/deepseek/design-platform.css": "809b20ae477324fdf5181a2d338655a19919cabbf1b0e60adc149908462c5a66",
+      "static/vendor/deepseek/focus.css": "f7398e7730415592ab1e81cec36f8c5e23065becd06c050f0129a6fa44d247e8",
+      "static/vendor/deepseek/gradient-shadow-text.css": "a32d784be999def56673b5f86bebd250f401cda1c861adc4c1ea0ebb1ce36ad6",
+      "static/vendor/deepseek/scrollbar.css": "673450184fe82a679b5759a7f93ceab17895b9f12e1196f7efb281304afd8398",
+      "static/vendor/deepseek/source-manifest.json": "16844150e74b11c61aa9e6f8745d46c3944406bbccc264eced91eb7796b6597a"
+    },
+    "node": "v24.19.0",
+    "fixtureSha256": "43c67ed9ce854d040c20ae0f420119ea1ed37bf10b48fe0cb5b9d6a21ede9276",
+    "staticDir": "/workspace/harness-agent-audit-20261007/apps/web/public",
+    "paidCalls": 0,
+    "realModelQuality": "NOT_RUN",
+    "promotion": "NOT_RUN"
+  },
+  "probeSha256": {
+    "browser.py": "632bcc49aa1a2d917cb0afeb03791782b3d221b2eae4a944e928bccb35e80b2c",
+    "protocol-control.js": "058610e9c1519fb43833538b997484eeb6995f9f2a72e617dd3b3ae527fed0a3",
+    "fixture.mjs": "43c67ed9ce854d040c20ae0f420119ea1ed37bf10b48fe0cb5b9d6a21ede9276"
+  },
+  "cleanup": {
+    "graceful": true,
+    "exitCode": 0,
+    "forcedKill": false,
+    "runtimeSnapshotReadable": true,
+    "finalSourceSha": "e40ba599293076c123132a8635b65ae9fa29ba8a",
+    "changedFingerprints": []
+  },
+  "chromium": "151.0.7922.173",
+  "viewportDesktop": [
+    1440,
+    900
+  ],
+  "viewportMobile": [
+    390,
+    844
+  ],
+  "paidCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "promotion": "NOT_RUN",
+  "caseCount": 27,
+  "assertCount": 64,
+  "passed": 20,
+  "failed": 7,
+  "browserErrorCount": 0,
+  "receipts": [
+    {
+      "name": "consecutive-assistants-and-id-replay",
+      "group": "controlled-protocol",
+      "passed": true,
+      "observed": {
+        "assistantRows": [
+          "hHarnessCONTROL_REPLY_ONE复制回复",
+          "hHarnessCONTROL_REPLY_TWO复制回复"
+        ],
+        "inputFrames": 3,
+        "uniqueMessageIds": 2
+      },
+      "assertCount": 1
+    },
+    {
+      "name": "slow-a-history-cannot-pollute-b",
+      "group": "controlled-protocol",
+      "passed": true,
+      "observed": {
+        "visibleText": "B_ONLY_HISTORY",
+        "activeFrom": "browser-control-B-123"
+      },
+      "assertCount": 1
+    },
+    {
+      "name": "xss-is-text",
+      "group": "controlled-protocol",
+      "passed": true,
+      "observed": {
+        "payload": "<img src=x onerror=\"window.__XSS_EXECUTED=1\"><script>window.__XSS_EXECUTED=2</script>",
+        "literalText": "B_ONLY_HISTORY\n<img src=x onerror=\"window.__XSS_EXECUTED=1\"><script>window.__XSS_EXECUTED=2</script>\nh\nHarness\n<img src=x onerror=\"window.__XSS_EXECUTED=1\"><script>window.__XSS_EXECUTED=2</script>\n复制回复",
+        "injectedElements": 0,
+        "executionMarker": null
+      },
+      "assertCount": 1
+    },
+    {
+      "name": "closed-sse-callback-cannot-pollute-new-session",
+      "group": "controlled-protocol",
+      "passed": true,
+      "observed": {
+        "oldStreamClosed": true,
+        "oldTextVisible": false,
+        "cancelDisabled": true
+      },
+      "assertCount": 2
+    },
+    {
+      "name": "old-post-error-cannot-pollute-new-session",
+      "group": "controlled-protocol",
+      "passed": true,
+      "observed": {
+        "lateResponseStatus": 400,
+        "activeText": "A_ONLY_HISTORY",
+        "posts": [
+          {
+            "path": "/api/messages",
+            "body": {
+              "from": "browser-control-B-123",
+              "text": "OLD_POST_INPUT"
+            }
+          }
+        ]
+      },
+      "assertCount": 1
+    },
+    {
+      "name": "ime-enter-does-not-send-and-enter-sends-once",
+      "group": "controlled-protocol",
+      "passed": true,
+      "observed": {
+        "posts": [
+          {
+            "path": "/api/messages",
+            "body": {
+              "from": "browser-control-B-123",
+              "text": "输入法正在组合"
+            }
+          }
+        ],
+        "composingPostCount": 0,
+        "shiftEnterPostCount": 0
+      },
+      "assertCount": 3
+    },
+    {
+      "name": "empty-assistant-tool-calls-do-not-create-chat-bubbles",
+      "group": "controlled-protocol",
+      "passed": true,
+      "observed": {
+        "emptyToolCallRecords": 1,
+        "nonemptyReplies": 1,
+        "emptyLiveFrames": 1,
+        "toolResultVisible": true
+      },
+      "assertCount": 3
+    },
+    {
+      "name": "history-and-live-id-replay-does-not-duplicate",
+      "group": "controlled-protocol",
+      "passed": true,
+      "observed": {
+        "frames": 2,
+        "historyRecords": 1,
+        "rendered": 1
+      },
+      "assertCount": 2
+    },
+    {
+      "name": "history-before-live-id-replay-does-not-duplicate",
+      "group": "controlled-protocol",
+      "passed": true,
+      "observed": {
+        "historyRecords": 1,
+        "liveFramesAfterHistory": 2,
+        "rendered": 1
+      },
+      "assertCount": 1
+    },
+    {
+      "name": "hello-handshake-precedes-history-and-preserves-buffered-message",
+      "group": "controlled-protocol",
+      "passed": true,
+      "observed": {
+        "historyRequests": [
+          {
+            "from": "browser-control-B-123",
+            "helloFrames": 1
+          },
+          {
+            "from": "browser-control-A-123",
+            "helloFrames": 2
+          }
+        ],
+        "helloFrames": [
+          0,
+          1
+        ],
+        "bufferedMessageCount": 1
+      },
+      "assertCount": 2
+    },
+    {
+      "name": "historical-and-expired-approvals-are-readonly",
+      "group": "controlled-protocol",
+      "passed": true,
+      "observed": {
+        "cards": 2,
+        "actionableButtons": 0,
+        "commands": 0
+      },
+      "assertCount": 3
+    },
+    {
+      "name": "resolved-approval-replay-is-idempotent",
+      "group": "controlled-protocol",
+      "passed": true,
+      "observed": {
+        "createdFrames": 2,
+        "resolvedFrames": 2,
+        "cards": 1,
+        "results": 1,
+        "actionableButtons": 0
+      },
+      "assertCount": 2
+    },
+    {
+      "name": "reconnect-hello-merges-missed-history-without-duplicates",
+      "group": "controlled-protocol",
+      "passed": true,
+      "observed": {
+        "helloFrames": [
+          0,
+          0
+        ],
+        "historyRequests": [
+          {
+            "from": "browser-control-B-123",
+            "helloFrames": 1
+          },
+          {
+            "from": "browser-control-B-123",
+            "helloFrames": 2
+          }
+        ],
+        "knownUserCount": 1,
+        "knownAssistantCount": 1,
+        "missedAssistantCount": 1
+      },
+      "assertCount": 2
+    },
+    {
+      "name": "desktop-1440x900-layout",
+      "group": "production-stack",
+      "passed": true,
+      "observed": {
+        "viewport": 1440,
+        "document": 1440
+      },
+      "assertCount": 2
+    },
+    {
+      "name": "vendored-assets-local-200-without-cdn",
+      "group": "production-stack",
+      "passed": true,
+      "observed": {
+        "localHttpStatuses": {
+          "/": 200,
+          "/app.js": 200,
+          "/style.css": 200,
+          "/vendor/deepseek/LICENSE": 200,
+          "/vendor/deepseek/source-manifest.json": 200,
+          "/vendor/deepseek/base.css": 200,
+          "/vendor/deepseek/corner-shape.css": 200,
+          "/vendor/deepseek/design-platform.css": 200,
+          "/vendor/deepseek/focus.css": 200,
+          "/vendor/deepseek/scrollbar.css": 200,
+          "/vendor/deepseek/gradient-shadow-text.css": 200
+        },
+        "loadedStylesheets": [
+          "/vendor/deepseek/base.css",
+          "/vendor/deepseek/design-platform.css",
+          "/vendor/deepseek/gradient-shadow-text.css",
+          "/vendor/deepseek/scrollbar.css",
+          "/vendor/deepseek/focus.css",
+          "/vendor/deepseek/corner-shape.css",
+          "/style.css"
+        ],
+        "externalResourceCount": 0
+      },
+      "assertCount": 13
+    },
+    {
+      "name": "theme-and-sidebar",
+      "group": "production-stack",
+      "passed": true,
+      "observed": {
+        "lightComputedBackground": "rgb(255, 255, 255)",
+        "darkComputedBackground": "rgb(21, 21, 23)",
+        "darkThemeSurvivedRefresh": true,
+        "expandedSidebarBox": {
+          "x": 0,
+          "y": 0,
+          "width": 264,
+          "height": 900
+        },
+        "collapsedSidebarBox": {
+          "x": 0,
+          "y": 0,
+          "width": 25,
+          "height": 900
+        },
+        "collapsedSidebarVisibility": "hidden",
+        "mainCollapsedBox": {
+          "x": 0,
+          "y": 0,
+          "width": 1440,
+          "height": 900
+        },
+        "collapsedAppClass": "sidebar-collapsed"
+      },
+      "assertCount": 4
+    },
+    {
+      "name": "two-production-replies-and-verification",
+      "group": "production-stack",
+      "passed": false,
+      "observed": {
+        "error": "production inspector predicate timed out",
+        "traceback": "Traceback (most recent call last):\n  File \"/workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/browser-probe/browser.py\", line 63, in run_case\n    observed = function()\n               ^^^^^^^^^^\n  File \"/workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/browser-probe/browser.py\", line 389, in two_replies\n    normal_turn('BROWSER_FIRST')\n  File \"/workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/browser-probe/browser.py\", line 337, in normal_turn\n    wait_snapshot(lambda data: any(event['type'] == 'turn.completed' for record in data['records'] for event in record['events']))\n  File \"/workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/browser-probe/browser.py\", line 88, in wait_snapshot\n    raise AssertionError('production inspector predicate timed out')\nAssertionError: production inspector predicate timed out\n"
+      },
+      "assertCount": 0
+    },
+    {
+      "name": "refresh-restores-production-history",
+      "group": "production-stack",
+      "passed": false,
+      "observed": {
+        "error": "Locator.wait_for: Error: strict mode violation: get_by_text(\"HARNESS_REPLY:BROWSER_FIRST\", exact=True) resolved to 3 elements:\n    1) <div class=\"bubble assistant-bubble\">HARNESS_REPLY:BROWSER_FIRST</div> aka get_by_text(\"HARNESS_REPLY:BROWSER_FIRST\").first\n    2) <div class=\"bubble assistant-bubble\">HARNESS_REPLY:BROWSER_FIRST</div> aka get_by_text(\"HARNESS_REPLY:BROWSER_FIRST\").nth(1)\n    3) <div class=\"bubble assistant-bubble\">HARNESS_REPLY:BROWSER_FIRST</div> aka get_by_text(\"HARNESS_REPLY:BROWSER_FIRST\").nth(2)\n\nCall log:\n  - waiting for get_by_text(\"HARNESS_REPLY:BROWSER_FIRST\", exact=True) to be visible\n",
+        "traceback": "Traceback (most recent call last):\n  File \"/workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/browser-probe/browser.py\", line 63, in run_case\n    observed = function()\n               ^^^^^^^^^^\n  File \"/workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/browser-probe/browser.py\", line 402, in refresh_history\n    page.get_by_text('HARNESS_REPLY:BROWSER_FIRST', exact=True).wait_for()\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/sync_api/_generated.py\", line 20539, in wait_for\n    self._sync(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_sync_base.py\", line 115, in _sync\n    return task.result()\n           ^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_locator.py\", line 748, in wait_for\n    await self._frame.wait_for_selector(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_frame.py\", line 394, in wait_for_selector\n    await self._channel.send(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_connection.py\", line 76, in send\n    return await self._connection.wrap_api_call(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_connection.py\", line 632, in wrap_api_call\n    raise rewrite_error(error, f\"{parsed_st['apiName']}: {error}\") from None\nplaywright._impl._errors.Error: Locator.wait_for: Error: strict mode violation: get_by_text(\"HARNESS_REPLY:BROWSER_FIRST\", exact=True) resolved to 3 elements:\n    1) <div class=\"bubble assistant-bubble\">HARNESS_REPLY:BROWSER_FIRST</div> aka get_by_text(\"HARNESS_REPLY:BROWSER_FIRST\").first\n    2) <div class=\"bubble assistant-bubble\">HARNESS_REPLY:BROWSER_FIRST</div> aka get_by_text(\"HARNESS_REPLY:BROWSER_FIRST\").nth(1)\n    3) <div class=\"bubble assistant-bubble\">HARNESS_REPLY:BROWSER_FIRST</div> aka get_by_text(\"HARNESS_REPLY:BROWSER_FIRST\").nth(2)\n\nCall log:\n  - waiting for get_by_text(\"HARNESS_REPLY:BROWSER_FIRST\", exact=True) to be visible\n\n"
+      },
+      "assertCount": 0
+    },
+    {
+      "name": "copy-production-assistant-reply",
+      "group": "production-stack",
+      "passed": false,
+      "observed": {
+        "error": "Locator.click: Error: strict mode violation: locator(\".assistant-row\").filter(has_text=\"HARNESS_REPLY:BROWSER_FIRST\").locator(\".message-actions .copy-button\") resolved to 3 elements:\n    1) <button type=\"button\" class=\"copy-button\">复制回复</button> aka get_by_role(\"button\", name=\"复制回复\").first\n    2) <button type=\"button\" class=\"copy-button\">复制回复</button> aka get_by_role(\"button\", name=\"复制回复\").nth(1)\n    3) <button type=\"button\" class=\"copy-button\">复制回复</button> aka get_by_role(\"button\", name=\"复制回复\").nth(2)\n\nCall log:\n  - waiting for locator(\".assistant-row\").filter(has_text=\"HARNESS_REPLY:BROWSER_FIRST\").locator(\".message-actions .copy-button\")\n",
+        "traceback": "Traceback (most recent call last):\n  File \"/workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/browser-probe/browser.py\", line 63, in run_case\n    observed = function()\n               ^^^^^^^^^^\n  File \"/workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/browser-probe/browser.py\", line 411, in copy_reply\n    page.locator('.assistant-row').filter(has_text='HARNESS_REPLY:BROWSER_FIRST').locator('.message-actions .copy-button').click()\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/sync_api/_generated.py\", line 17876, in click\n    self._sync(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_sync_base.py\", line 115, in _sync\n    return task.result()\n           ^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_locator.py\", line 165, in click\n    return await self._frame._click(self._selector, strict=True, **params)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_frame.py\", line 593, in _click\n    await self._channel.send(\"click\", self._timeout, locals_to_params(locals()))\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_connection.py\", line 76, in send\n    return await self._connection.wrap_api_call(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_connection.py\", line 632, in wrap_api_call\n    raise rewrite_error(error, f\"{parsed_st['apiName']}: {error}\") from None\nplaywright._impl._errors.Error: Locator.click: Error: strict mode violation: locator(\".assistant-row\").filter(has_text=\"HARNESS_REPLY:BROWSER_FIRST\").locator(\".message-actions .copy-button\") resolved to 3 elements:\n    1) <button type=\"button\" class=\"copy-button\">复制回复</button> aka get_by_role(\"button\", name=\"复制回复\").first\n    2) <button type=\"button\" class=\"copy-button\">复制回复</button> aka get_by_role(\"button\", name=\"复制回复\").nth(1)\n    3) <button type=\"button\" class=\"copy-button\">复制回复</button> aka get_by_role(\"button\", name=\"复制回复\").nth(2)\n\nCall log:\n  - waiting for locator(\".assistant-row\").filter(has_text=\"HARNESS_REPLY:BROWSER_FIRST\").locator(\".message-actions .copy-button\")\n\n"
+      },
+      "assertCount": 0
+    },
+    {
+      "name": "real-approval-allow-write",
+      "group": "production-stack",
+      "passed": true,
+      "observed": {
+        "approvalId": "approval_b936c786-6934-4a42-8763-3fcce03d9131",
+        "fileBytes": 21,
+        "toolName": "write_file"
+      },
+      "assertCount": 4
+    },
+    {
+      "name": "real-approval-deny-write",
+      "group": "production-stack",
+      "passed": true,
+      "observed": {
+        "approvalId": "approval_e93be77a-1ed6-44ca-ac29-2b903b488f17",
+        "fileAbsent": true,
+        "foreignDeliveryAckStatus": 200,
+        "foreignPreservedPending": true,
+        "foreignHumanEventCount": 0
+      },
+      "assertCount": 4
+    },
+    {
+      "name": "real-sandbox-denies-approved-outside-write",
+      "group": "production-stack",
+      "passed": false,
+      "observed": {
+        "error": "Locator.wait_for: Error: strict mode violation: get_by_text(\"HARNESS_REPLY:[sandbox-deny]\", exact=True) resolved to 3 elements:\n    1) <div class=\"bubble assistant-bubble\">HARNESS_REPLY:[sandbox-deny]</div> aka get_by_text(\"HARNESS_REPLY:[sandbox-deny]\").first\n    2) <div class=\"bubble assistant-bubble\">HARNESS_REPLY:[sandbox-deny]</div> aka get_by_text(\"HARNESS_REPLY:[sandbox-deny]\").nth(1)\n    3) <div class=\"bubble assistant-bubble\">HARNESS_REPLY:[sandbox-deny]</div> aka get_by_text(\"HARNESS_REPLY:[sandbox-deny]\").nth(2)\n\nCall log:\n  - waiting for get_by_text(\"HARNESS_REPLY:[sandbox-deny]\", exact=True) to be visible\n",
+        "traceback": "Traceback (most recent call last):\n  File \"/workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/browser-probe/browser.py\", line 63, in run_case\n    observed = function()\n               ^^^^^^^^^^\n  File \"/workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/browser-probe/browser.py\", line 457, in sandbox_deny\n    page.get_by_text('HARNESS_REPLY:[sandbox-deny]', exact=True).wait_for(timeout=15000)\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/sync_api/_generated.py\", line 20539, in wait_for\n    self._sync(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_sync_base.py\", line 115, in _sync\n    return task.result()\n           ^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_locator.py\", line 748, in wait_for\n    await self._frame.wait_for_selector(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_frame.py\", line 394, in wait_for_selector\n    await self._channel.send(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_connection.py\", line 76, in send\n    return await self._connection.wrap_api_call(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_connection.py\", line 632, in wrap_api_call\n    raise rewrite_error(error, f\"{parsed_st['apiName']}: {error}\") from None\nplaywright._impl._errors.Error: Locator.wait_for: Error: strict mode violation: get_by_text(\"HARNESS_REPLY:[sandbox-deny]\", exact=True) resolved to 3 elements:\n    1) <div class=\"bubble assistant-bubble\">HARNESS_REPLY:[sandbox-deny]</div> aka get_by_text(\"HARNESS_REPLY:[sandbox-deny]\").first\n    2) <div class=\"bubble assistant-bubble\">HARNESS_REPLY:[sandbox-deny]</div> aka get_by_text(\"HARNESS_REPLY:[sandbox-deny]\").nth(1)\n    3) <div class=\"bubble assistant-bubble\">HARNESS_REPLY:[sandbox-deny]</div> aka get_by_text(\"HARNESS_REPLY:[sandbox-deny]\").nth(2)\n\nCall log:\n  - waiting for get_by_text(\"HARNESS_REPLY:[sandbox-deny]\", exact=True) to be visible\n\n"
+      },
+      "assertCount": 0
+    },
+    {
+      "name": "cancel-real-blocked-turn",
+      "group": "production-stack",
+      "passed": true,
+      "observed": {
+        "cancelledTurns": 1,
+        "providerAbortObserved": true
+      },
+      "assertCount": 1
+    },
+    {
+      "name": "real-sse-socket-outage-reconnect-restores-reply",
+      "group": "production-network-control",
+      "passed": false,
+      "observed": {
+        "error": "Locator.wait_for: Error: strict mode violation: get_by_text(\"HARNESS_REPLY:[disconnect-complete]\", exact=True) resolved to 2 elements:\n    1) <div class=\"bubble assistant-bubble\">HARNESS_REPLY:[disconnect-complete]</div> aka get_by_text(\"HARNESS_REPLY:[disconnect-\").first\n    2) <div class=\"bubble assistant-bubble\">HARNESS_REPLY:[disconnect-complete]</div> aka get_by_text(\"HARNESS_REPLY:[disconnect-\").nth(1)\n\nCall log:\n  - waiting for get_by_text(\"HARNESS_REPLY:[disconnect-complete]\", exact=True) to be visible\n",
+        "traceback": "Traceback (most recent call last):\n  File \"/workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/browser-probe/browser.py\", line 63, in run_case\n    observed = function()\n               ^^^^^^^^^^\n  File \"/workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/browser-probe/browser.py\", line 491, in reconnect_production\n    page.get_by_text('HARNESS_REPLY:[disconnect-complete]', exact=True).wait_for(timeout=20000)\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/sync_api/_generated.py\", line 20539, in wait_for\n    self._sync(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_sync_base.py\", line 115, in _sync\n    return task.result()\n           ^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_locator.py\", line 748, in wait_for\n    await self._frame.wait_for_selector(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_frame.py\", line 394, in wait_for_selector\n    await self._channel.send(\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_connection.py\", line 76, in send\n    return await self._connection.wrap_api_call(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/playwright/_impl/_connection.py\", line 632, in wrap_api_call\n    raise rewrite_error(error, f\"{parsed_st['apiName']}: {error}\") from None\nplaywright._impl._errors.Error: Locator.wait_for: Error: strict mode violation: get_by_text(\"HARNESS_REPLY:[disconnect-complete]\", exact=True) resolved to 2 elements:\n    1) <div class=\"bubble assistant-bubble\">HARNESS_REPLY:[disconnect-complete]</div> aka get_by_text(\"HARNESS_REPLY:[disconnect-\").first\n    2) <div class=\"bubble assistant-bubble\">HARNESS_REPLY:[disconnect-complete]</div> aka get_by_text(\"HARNESS_REPLY:[disconnect-\").nth(1)\n\nCall log:\n  - waiting for get_by_text(\"HARNESS_REPLY:[disconnect-complete]\", exact=True) to be visible\n\n"
+      },
+      "assertCount": 2
+    },
+    {
+      "name": "new-session-isolation",
+      "group": "production-stack",
+      "passed": false,
+      "observed": {
+        "error": "production inspector predicate timed out",
+        "traceback": "Traceback (most recent call last):\n  File \"/workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/browser-probe/browser.py\", line 63, in run_case\n    observed = function()\n               ^^^^^^^^^^\n  File \"/workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/browser-probe/browser.py\", line 506, in new_session\n    normal_turn('NEW_SESSION')\n  File \"/workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/browser-probe/browser.py\", line 337, in normal_turn\n    wait_snapshot(lambda data: any(event['type'] == 'turn.completed' for record in data['records'] for event in record['events']))\n  File \"/workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/browser-probe/browser.py\", line 88, in wait_snapshot\n    raise AssertionError('production inspector predicate timed out')\nAssertionError: production inspector predicate timed out\n"
+      },
+      "assertCount": 1
+    },
+    {
+      "name": "mobile-390x844-layout-and-drawer",
+      "group": "production-stack",
+      "passed": true,
+      "observed": {
+        "viewport": 390,
+        "document": 390
+      },
+      "assertCount": 3
+    },
+    {
+      "name": "real-verification-exit7-prevents-completion",
+      "group": "production-stack",
+      "passed": false,
+      "observed": {
+        "error": "verification marker was not written by actual approved tool",
+        "traceback": "Traceback (most recent call last):\n  File \"/workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/browser-probe/browser.py\", line 63, in run_case\n    observed = function()\n               ^^^^^^^^^^\n  File \"/workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/browser-probe/browser.py\", line 542, in verification_failure\n    expect(current['files']['fail-verification.flag'] is not None, 'verification marker was not written by actual approved tool')\n  File \"/workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/browser-probe/browser.py\", line 57, in expect\n    raise AssertionError(message)\nAssertionError: verification marker was not written by actual approved tool\n"
+      },
+      "assertCount": 2
+    }
+  ]
+}

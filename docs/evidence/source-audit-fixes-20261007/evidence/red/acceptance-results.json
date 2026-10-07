@@ -1,0 +1,102 @@
+{
+  "sourceSha": "7203a01bf83e8ebe25e0971bb65a7bdeac6d9311",
+  "kind": "post-fix-acceptance",
+  "paidProviderCalls": 0,
+  "records": [
+    {
+      "id": "B01-scoped-entry-budget",
+      "passed": false,
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n38 !== 20\n\n    at file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:48:12\n    at check (file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:29:32)\n    at file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:45:9"
+    },
+    {
+      "id": "B02-scoped-constraint-truncation",
+      "passed": false,
+      "error": "AssertionError [ERR_ASSERTION]: Missing expected exception.\n    at file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:51:71\n    at check (file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:29:32)\n    at file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:50:9"
+    },
+    {
+      "id": "B03-added-file-overwrite",
+      "passed": false,
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n'child' !== 'parent'\n\n    at file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:57:12\n    at async check (file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:29:26)\n    at async file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:53:3"
+    },
+    {
+      "id": "B04-binary-patch-corruption",
+      "passed": false,
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:\n+ actual - expected\n\n+ Buffer(11) [Uint8Array] [\n- Buffer(5) [Uint8Array] [\n    0,\n+   239,\n+   191,\n+   189,\n+   239,\n+   191,\n+   189,\n+   239,\n+   191,\n+   189,\n-   255,\n-   254,\n-   128,\n    65\n  ]\n\n    at file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:62:67\n    at async check (file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:29:26)\n    at async file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:59:3"
+    },
+    {
+      "id": "B05-executable-mode-lost",
+      "passed": false,
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n384 !== 493\n\n    at file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:69:12\n    at async check (file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:29:26)\n    at async file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:65:3"
+    },
+    {
+      "id": "B06-physical-conflict-false-metadata",
+      "passed": false,
+      "error": "AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:\n\n  assert(!state.filesChanged.includes('a.txt'))\n\n    at file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:75:50\n    at async check (file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:29:26)\n    at async file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:71:3"
+    },
+    {
+      "id": "B07-memory-session-filter-ignored",
+      "passed": false,
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n1 !== 0\n\n    at file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:80:75\n    at async check (file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:29:26)\n    at async file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:78:3"
+    },
+    {
+      "id": "B08-scheduler-reservation-leak",
+      "passed": false,
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n80 !== 70\n\n    at file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:88:66\n    at async check (file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:29:26)\n    at async file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:84:3"
+    },
+    {
+      "id": "B09-delegator-initialization-resource-leak",
+      "passed": false,
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n1 !== 0\n\n    at file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:98:49\n    at async check (file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:29:26)\n    at async file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:91:3"
+    },
+    {
+      "id": "B10-failed-test-reported-passed",
+      "passed": false,
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\ntrue !== false\n\n    at file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:107:163\n    at async check (file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:29:26)\n    at async file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:102:3"
+    },
+    {
+      "id": "B11-mcp-optional-field-rejected",
+      "passed": false,
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\nfalse !== true\n\n    at file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:112:79\n    at check (file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:29:32)\n    at file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:110:9"
+    },
+    {
+      "id": "B12-mcp-integer-constraint-ignored",
+      "passed": false,
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\ntrue !== false\n\n    at file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:116:12\n    at check (file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:29:32)\n    at file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:114:9"
+    },
+    {
+      "id": "B13-crashed-campaign-unresumable",
+      "passed": false,
+      "error": "Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/agent-next7-20261006/attempt-checkpoint.mjs' imported from /workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs\n    at finalizeResolution (node:internal/modules/esm/resolve:271:11)\n    at moduleResolve (node:internal/modules/esm/resolve:865:10)\n    at defaultResolve (node:internal/modules/esm/resolve:992:11)\n    at #cachedDefaultResolve (node:internal/modules/esm/loader:701:20)\n    at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:721:38)\n    at ModuleLoader.resolveSync (node:internal/modules/esm/loader:759:56)\n    at #resolve (node:internal/modules/esm/loader:683:17)\n    at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:603:35)\n    at node:internal/modules/esm/loader:632:32\n    at TracingChannel.tracePromise (node:diagnostics_channel:362:14)"
+    },
+    {
+      "id": "B16-verification-command-bypasses-sandbox",
+      "passed": false,
+      "error": "AssertionError [ERR_ASSERTION]: Missing expected rejection.\n    at async file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:132:208\n    at async check (file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:29:26)\n    at async file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:124:3"
+    },
+    {
+      "id": "B17-approval-persist-failure-still-allows",
+      "passed": false,
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n0 !== 1\n\n    at file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:141:130\n    at async check (file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:29:26)\n    at async file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:137:3"
+    },
+    {
+      "id": "B18-repository-memory-cross-contamination",
+      "passed": false,
+      "error": "AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:\n\n  assert(!result.items.some(i=>i.memory.id===id))\n\n    at file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:149:186\n    at async check (file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:29:26)\n    at async file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:143:3"
+    },
+    {
+      "id": "B19-cancel-during-verification-is-completed",
+      "passed": false,
+      "error": "AssertionError [ERR_ASSERTION]: Missing expected rejection.\n    at async file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:155:247\n    at async check (file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:29:26)\n    at async file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:151:3"
+    },
+    {
+      "id": "B20-baseline-identity-depends-on-inactive-candidate",
+      "passed": false,
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n+ actual - expected\n\n+ '00d2c92154822622d0d583fe1f2f8fee7c86ab62cb936ac9dcad2b71f33e1fdc'\n- 'ee589c7e2361c8b79edade3d365bfd9e29a2778792eb650e295bf58d523d7895'\n\n    at file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:160:12\n    at check (file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:29:32)\n    at file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:157:9"
+    },
+    {
+      "id": "B21-memory-store-drops-frozen-tool-policy",
+      "passed": false,
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n1 !== 0\n\n    at file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:167:12\n    at async check (file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:29:26)\n    at async file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/acceptance.mjs:162:3"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "sourceSha": "7203a01bf83e8ebe25e0971bb65a7bdeac6d9311",
+  "paidProviderCalls": 0,
+  "kind": "post-fix-production-web-acceptance",
+  "records": [
+    {
+      "id": "B14-web-host-origin-boundary",
+      "passed": false,
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n200 !== 403\n\n    at file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/web-acceptance.mjs:41:109\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async check (file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/web-acceptance.mjs:17:75)\n    at async file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/web-acceptance.mjs:40:3"
+    },
+    {
+      "id": "B15-web-restart-session-binding-lost",
+      "passed": false,
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n+ actual - expected\n\n+ null\n- 'session_04fc9ee3-e626-4383-85ac-0c06a29e06af'\n\n    at file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/web-acceptance.mjs:49:10\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async check (file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/web-acceptance.mjs:17:75)\n    at async file:///workspace/harness-agent-audit-20261007/.ci/source-fix-20261007/pre-fix-source/scripts/research/source-audit-20261007/web-acceptance.mjs:47:3"
+    }
+  ]
+}

@@ -1,0 +1,223 @@
+{
+  "sourceSha": "e40ba599293076c123132a8635b65ae9fa29ba8a",
+  "kind": "post-fix-acceptance",
+  "paidProviderCalls": 0,
+  "records": [
+    {
+      "id": "B01-scoped-entry-budget",
+      "passed": true,
+      "observed": {
+        "maxEntries": 20,
+        "actualEntries": 20,
+        "blocks": 2
+      }
+    },
+    {
+      "id": "B02-scoped-constraint-truncation",
+      "passed": true,
+      "observed": {
+        "original": "DO NOT DELETE protected-marker",
+        "forwarded": "# Goal\nDO NOT DELETE protected-marker",
+        "oversizeRejected": true
+      }
+    },
+    {
+      "id": "B03-added-file-overwrite",
+      "passed": true,
+      "observed": {
+        "parentBefore": "parent",
+        "parentAfter": "parent",
+        "result": {
+          "applied": [],
+          "conflicts": [
+            {
+              "path": "new.txt",
+              "detail": "parent added this path while the child was running"
+            }
+          ],
+          "skipped": []
+        }
+      }
+    },
+    {
+      "id": "B04-binary-patch-corruption",
+      "passed": true,
+      "observed": {
+        "expectedHex": "00fffe8041",
+        "actualHex": "00fffe8041",
+        "recordedHash": "c32faad327e9fbcd91a8068d2fb554587a2fce3b202d14223fa78d99ddd13d0f",
+        "actualHash": "c32faad327e9fbcd91a8068d2fb554587a2fce3b202d14223fa78d99ddd13d0f"
+      }
+    },
+    {
+      "id": "B05-executable-mode-lost",
+      "passed": true,
+      "observed": {
+        "parentMode": "755",
+        "childMode": "755"
+      }
+    },
+    {
+      "id": "B06-physical-conflict-false-metadata",
+      "passed": true,
+      "observed": {
+        "physical": {
+          "applied": [],
+          "conflicts": [
+            {
+              "path": "a.txt",
+              "detail": "parent modified this path while the child was running"
+            }
+          ],
+          "skipped": []
+        },
+        "parentFilesChanged": [],
+        "claimedMerged": []
+      }
+    },
+    {
+      "id": "B07-memory-session-filter-ignored",
+      "passed": true,
+      "observed": {
+        "matchingChildCount": 0,
+        "childStatus": "success"
+      }
+    },
+    {
+      "id": "B08-scheduler-reservation-leak",
+      "passed": true,
+      "observed": {
+        "before": {
+          "allocated": 100,
+          "remaining": 80
+        },
+        "after": {
+          "allocated": 100,
+          "remaining": 80
+        },
+        "runningOrQueued": 0
+      }
+    },
+    {
+      "id": "B09-delegator-initialization-resource-leak",
+      "passed": true,
+      "observed": {
+        "schedulerEntries": [],
+        "workspaceDisposed": true,
+        "sandboxRootStillAdmitted": false,
+        "childStatus": "cancelled"
+      }
+    },
+    {
+      "id": "B10-failed-test-reported-passed",
+      "passed": true,
+      "observed": {
+        "childStatus": "success",
+        "workingFailures": [
+          "exec: exit code 1"
+        ],
+        "reportedTest": {
+          "description": "npm test",
+          "passed": false,
+          "sourceRef": "event:event_479213fc-2771-4781-b1e2-a4bf1d57343f"
+        }
+      }
+    },
+    {
+      "id": "B11-mcp-optional-field-rejected",
+      "passed": true,
+      "observed": {
+        "validJsonSchemaInput": {
+          "name": "sample"
+        },
+        "accepted": true
+      }
+    },
+    {
+      "id": "B12-mcp-integer-constraint-ignored",
+      "passed": true,
+      "observed": {
+        "invalidJsonSchemaInput": {
+          "count": 0.5
+        },
+        "accepted": false
+      }
+    },
+    {
+      "id": "B13-crashed-campaign-unresumable",
+      "passed": true,
+      "observed": {
+        "openAttemptRecovered": true,
+        "tamperingRejected": true,
+        "sealedWithoutFakeCompletion": true
+      }
+    },
+    {
+      "id": "B16-verification-command-bypasses-sandbox",
+      "passed": true,
+      "observed": {
+        "requestedConfinement": "strong",
+        "filesystemPolicy": "read-only",
+        "execPermission": "deny",
+        "outsideFileCreated": false,
+        "toolStartedEvents": 0,
+        "turnStatus": "failed",
+        "terminationReason": "model_error"
+      }
+    },
+    {
+      "id": "B17-approval-persist-failure-still-allows",
+      "passed": true,
+      "observed": {
+        "persistFailureDidNotRelease": true,
+        "pendingPreserved": true,
+        "retryDurablyGranted": true
+      }
+    },
+    {
+      "id": "B18-repository-memory-cross-contamination",
+      "passed": true,
+      "observed": {
+        "sourceRepository": "project-a",
+        "queryRepository": "project-b",
+        "sharedDataDirectory": true,
+        "foreignRepositoryMemoryReturned": false
+      }
+    },
+    {
+      "id": "B19-cancel-during-verification-is-completed",
+      "passed": true,
+      "observed": {
+        "signalAborted": true,
+        "commandExecutedAfterAbort": false,
+        "turnStatus": "cancelled",
+        "terminationReason": "cancelled"
+      }
+    },
+    {
+      "id": "B20-baseline-identity-depends-on-inactive-candidate",
+      "passed": true,
+      "observed": {
+        "currentDigest": "d6e4a42519047ef0d390a6101638b9be77ae1e0ec01410ae23a455c4bd784ecf",
+        "digestWithoutUninstalledGate": "d6e4a42519047ef0d390a6101638b9be77ae1e0ec01410ae23a455c4bd784ecf",
+        "installedGuidanceDigest": null,
+        "baselineConfigUnchanged": true,
+        "inactiveGateChangesIdentity": false,
+        "note": "remove only the newly registered OFF activation from the real resolved snapshot"
+      }
+    },
+    {
+      "id": "B21-memory-store-drops-frozen-tool-policy",
+      "passed": true,
+      "observed": {
+        "requestedChildToolAllow": [
+          "read_file"
+        ],
+        "executedDisallowedExec": 0,
+        "frozenSessionSnapshotRetained": true,
+        "childStatus": "success",
+        "note": "real AgentRuntime + real exported MemSessionStore; orchestrator capture has no side effect"
+      }
+    }
+  ]
+}
