@@ -299,19 +299,25 @@ describe("P0-3: web host on the production harness composition root", () => {
       expect((await stack.rpc.invoke("session.status", { sessionId })) as { activeTurn?: { turnId: string } }).toMatchObject({ activeTurn: { turnId: followupTurn.id } });
 
       const actor = await stack.harness.sessions.load(session.id);
+      const active = actor.activeTurn;
+      expect(active?.turn.id).toBe(followupTurn.id);
       let settlement: unknown = "pending";
-      void actor.activeTurn?.outcome.then(
+      void active!.outcome.then(
         (outcome) => { settlement = { status: outcome.status, error: outcome.error }; },
         (error: unknown) => { settlement = { rejected: error instanceof Error ? error.message : String(error) }; },
       );
       expect((await post("/api/commands", USER, "cancel")).status).toBe(200);
-      // Abort acknowledgement precedes durable terminal persistence. Loaded
-      // Windows CI needs time for that real disk write; keep the same terminal
-      // and sender-ownership assertions within a bounded integration deadline.
-      const deadline = Date.now() + 5_000;
-      while (Date.now() < deadline) {
-        if ((await stack.harness.store.getTurn(followupTurn.id))?.status === "cancelled") break;
-        await new Promise((resolve) => setTimeout(resolve, 10));
+      // A persisted cancelled Turn precedes its terminal event and durability
+      // fence. Await the actor's actual outcome before checking ALL of them;
+      // observing the intermediate status alone is not a completion barrier.
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        const outcome = await Promise.race([active!.outcome, new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error(`follow-up cancellation did not settle: ${JSON.stringify({ settlement, actor: actor.status() })}`)), 10_000);
+        })]);
+        expect(outcome.status).toBe("cancelled");
+      } finally {
+        clearTimeout(timer);
       }
       expect(observedFollowupAbort).toBe(true);
       expect((await stack.harness.store.getTurn(followupTurn.id))?.status, JSON.stringify({ settlement, actor: actor.status(), abortObserved: observedFollowupAbort,
