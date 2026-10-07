@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { receiptFromReport } from './windows-acceptance-report.mjs';
+import { receiptFromReport, annotationPackets } from './windows-acceptance-report.mjs';
+import { gunzipSync } from 'node:zlib';
 
 const host = { platform: 'win32', osType: 'Windows_NT', sourceSha: 'a'.repeat(40), workflowSha: 'a'.repeat(40), treeClean: true };
 const report = { success: true, numFailedTests: 0, numFailedTestSuites: 0, numPassedTests: 1, numTotalTests: 1,
@@ -24,4 +25,11 @@ test('parser refuses Linux, dirty trees, source drift, duplicate required cases 
   assert.equal(receiptFromReport(duplicate, host, ['required native case']).receipt.outcome, 'FAIL');
   const counts = { ...report, numPassedTests: 2 };
   assert(receiptFromReport(counts, host, ['required native case']).receipt.issues.includes('REPORT_COUNTS_MISMATCH'));
+});
+test('annotation packets reconstruct Unicode final states without per-step or message truncation', () => {
+  const files = Array.from({ length: 13 }, (_, file) => ({ file: `packages/test-${file}.ts`, assertions: Array.from({ length: 40 }, (_, test) => ({ name: `中文 assertion ${file}:${test}`, status: 'passed', durationMs: file * test })) }));
+  const packets = annotationPackets(files);
+  assert(packets.length <= 9); assert(packets.every(packet => JSON.stringify(packet).length < 3000));
+  const decoded = gunzipSync(Buffer.from(packets.map(packet => packet.data).join(''), 'base64')).toString();
+  assert.deepEqual(JSON.parse(decoded), files);
 });

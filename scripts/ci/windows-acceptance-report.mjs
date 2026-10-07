@@ -4,11 +4,13 @@ import { createHash } from 'node:crypto';
 import { release, type, arch } from 'node:os';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { gzipSync } from 'node:zlib';
 
 export function receiptFromReport(report, host, requiredNames) {
   const files = (report.testResults ?? []).map(file => ({
-    file: file.name.replace(/\\/g, '/').split('/harness-agent/').at(-1),
-    assertions: (file.assertionResults ?? []).map(test => ({ name: test.fullName, status: test.status, durationMs: test.duration ?? null })),
+    file: file.name.replace(/\\/g, '/').slice(file.name.replace(/\\/g, '/').lastIndexOf('/harness-agent/') + '/harness-agent/'.length),
+    assertions: (file.assertionResults ?? []).map(test => ({ name: test.fullName, status: test.status, durationMs: test.duration ?? null,
+      ...(test.status === 'failed' ? { failureMessages: test.failureMessages ?? [] } : {}) })),
   }));
   const assertions = files.flatMap(file => file.assertions);
   const required = requiredNames.map(name => ({ name, observed: assertions.filter(test => test.name === name).map(test => test.status) }));
@@ -31,6 +33,15 @@ export function receiptFromReport(report, host, requiredNames) {
   return { receipt, files };
 }
 
+export function annotationPackets(files) {
+  const encoded = gzipSync(Buffer.from(JSON.stringify(files))).toString('base64');
+  const total = Math.ceil(encoded.length / 2500);
+  // GitHub limits a step to ten notices and truncates large messages. Keep
+  // the receipt plus all lossless case-record packets within both limits.
+  if (total > 9) throw new Error('case records exceed the public annotation budget');
+  return Array.from({ length: total }, (_, index) => ({ encoding: 'gzip+base64', index, total, data: encoded.slice(index * 2500, (index + 1) * 2500) }));
+}
+
 function main() {
   const input = process.argv[2]; const output = process.argv[3];
   if (!input || !output) throw new Error('usage: node windows-acceptance-report.mjs <vitest.json> <receipt.json>');
@@ -50,7 +61,7 @@ function main() {
   // Public check annotations preserve the structured final states even when
   // authenticated Azure artifact/log downloads are unavailable to a reviewer.
   console.log(`::notice title=Windows acceptance receipt::${escape(JSON.stringify(receipt))}`);
-  for (let i = 0; i < files.length; i++) console.log(`::notice title=Windows case records ${i + 1}/${files.length}::${escape(JSON.stringify(files[i]))}`);
+  for (const packet of annotationPackets(files)) console.log(`::notice title=Windows case records chunk ${packet.index + 1}/${packet.total}::${escape(JSON.stringify(packet))}`);
   if (receipt.outcome !== 'PASS') process.exitCode = 1;
 }
 

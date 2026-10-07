@@ -298,6 +298,12 @@ describe("P0-3: web host on the production harness composition root", () => {
       expect(stack.bindings.get("web-foreign-sender")).toBeUndefined();
       expect((await stack.rpc.invoke("session.status", { sessionId })) as { activeTurn?: { turnId: string } }).toMatchObject({ activeTurn: { turnId: followupTurn.id } });
 
+      const actor = await stack.harness.sessions.load(session.id);
+      let settlement: unknown = "pending";
+      void actor.activeTurn?.outcome.then(
+        (outcome) => { settlement = { status: outcome.status, error: outcome.error }; },
+        (error: unknown) => { settlement = { rejected: error instanceof Error ? error.message : String(error) }; },
+      );
       expect((await post("/api/commands", USER, "cancel")).status).toBe(200);
       // Abort acknowledgement precedes durable terminal persistence. Loaded
       // Windows CI needs time for that real disk write; keep the same terminal
@@ -308,7 +314,8 @@ describe("P0-3: web host on the production harness composition root", () => {
         await new Promise((resolve) => setTimeout(resolve, 10));
       }
       expect(observedFollowupAbort).toBe(true);
-      expect((await stack.harness.store.getTurn(followupTurn.id))?.status).toBe("cancelled");
+      expect((await stack.harness.store.getTurn(followupTurn.id))?.status, JSON.stringify({ settlement, actor: actor.status(), abortObserved: observedFollowupAbort,
+        events: (await stack.harness.events.list(session.id)).map(event => ({ type: event.type, turnId: event.turnId, payload: event.payload })) })).toBe("cancelled");
       expect((await stack.harness.store.getTurn(firstTurn.id))?.status).toBe("completed");
       const events = await stack.harness.events.list(session.id);
       expect(events.filter((event) => event.type === "turn.cancelled").map((event) => event.turnId)).toEqual([followupTurn.id]);
