@@ -139,13 +139,21 @@ describe("opt-in scoped instruction hard read boundaries", () => {
     expect((await scoped(root).discover(root)).map(doc => doc.content)).toEqual(["nested regular control"]);
   });
   it("rejects a real parent-directory replacement after reading despite an unchanged descriptor revision", async () => {
-    const root = await fixture(); let replaced = false;
+    const root = await fixture(); let replaced = false; let renameRefused: string | undefined;
     decorate(root, handle => {
       const read = handle.read.bind(handle);
       handle.read = (async (...args: unknown[]) => {
         const result = await (read as (...args: unknown[]) => ReturnType<typeof handle.read>)(...args);
         if (!replaced) {
-          replaced = true; await fs.rename(join(root, "nested"), join(root, "old-nested"));
+          replaced = true;
+          try { await fs.rename(join(root, "nested"), join(root, "old-nested")); }
+          catch (error) {
+            const code = (error as NodeJS.ErrnoException).code;
+            // NTFS may prohibit renaming a directory with an open descendant.
+            // That is an OS refusal, not a successful replacement race.
+            if (process.platform === "win32" && ["EPERM", "EACCES", "EBUSY"].includes(code ?? "")) renameRefused = code;
+            throw error;
+          }
           await fs.mkdir(join(root, "nested")); await fs.writeFile(join(root, "nested/AGENTS.md"), "replacement regular document");
           await fs.writeFile(join(root, "nested/file.ts"), "replacement target");
         }
@@ -156,7 +164,12 @@ describe("opt-in scoped instruction hard read boundaries", () => {
     expect((await adapter.discover(root)).map(doc => doc.content)).toEqual(["root regular control"]);
     expect(replaced).toBe(true);
     vi.restoreAllMocks(); syncBuiltinESMExports();
-    expect((await adapter.discover(root)).map(doc => doc.content)).toEqual(["root regular control", "replacement regular document"]);
+    if (renameRefused !== undefined) {
+      console.info(`Windows native parent rename refused (${renameRefused}); failed capture omitted, original document unchanged`);
+      await expect(fs.stat(join(root, "old-nested"))).rejects.toMatchObject({ code: "ENOENT" });
+      expect(await fs.readFile(join(root, "nested/AGENTS.md"), "utf8")).toBe("nested regular control");
+    }
+    expect((await adapter.discover(root)).map(doc => doc.content)).toEqual(["root regular control", renameRefused === undefined ? "replacement regular document" : "nested regular control"]);
   });
   it("handles a real regular-to-FIFO race with a guarded nonblocking native open", async () => {
     const root = await fixture(); const original = fs.open; let guarded = false; let nonregular = false;

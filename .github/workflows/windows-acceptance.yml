@@ -1,0 +1,63 @@
+name: genuine Windows acceptance
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/windows-acceptance.yml'
+      - 'scripts/ci/windows-acceptance-report*'
+      - 'packages/**'
+      - 'apps/**'
+      - 'scripts/research/source-audit-20261007/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'vitest.config.ts'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-acceptance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native-windows:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    env:
+      OPENAI_API_KEY: ''
+      RUN_PAID_BENCHMARKS: ''
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.21.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - name: Frozen install and real build
+        run: |
+          pnpm install --frozen-lockfile
+          if ($LASTEXITCODE -ne 0) { throw 'frozen install failed' }
+          pnpm typecheck
+          if ($LASTEXITCODE -ne 0) { throw 'typecheck failed' }
+      - name: Check the acceptance report parser
+        run: node --test scripts/ci/windows-acceptance-report.test.mjs
+      - name: Execute native process and production boundary regressions
+        run: |
+          New-Item -ItemType Directory -Force .ci/windows-acceptance | Out-Null
+          pnpm exec vitest run packages/tools/src/process/executor.test.ts packages/tools/src/process/r96-windows-execution-boundary.test.ts packages/tools/src/process/windows-cancellation.regressions.test.ts packages/tools/src/verification/task-verifier.test.ts packages/tools/src/symbol-scope.regressions.test.ts packages/context/src/scoped-instruction-read.regressions.test.ts packages/harness/src/source-audit-boundaries.regressions.test.ts packages/harness/src/source-audit-fixes.regressions.test.ts packages/harness/src/source-audit-memory.regressions.test.ts packages/harness/src/source-audit-recovery.regressions.test.ts apps/web/src/harness.integration.test.ts apps/web/src/source-audit-restoration.regressions.test.ts apps/cli/src/source-audit-verification.regressions.test.ts --reporter=default --reporter=json --outputFile=.ci/windows-acceptance/results.json
+          if ($LASTEXITCODE -ne 0) { throw 'Windows regression tests failed' }
+      - name: Publish final-state receipt and all case records
+        if: always()
+        run: node scripts/ci/windows-acceptance-report.mjs .ci/windows-acceptance/results.json .ci/windows-acceptance/receipt.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-windows-${{ github.sha }}-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: .ci/windows-acceptance/
+          if-no-files-found: error

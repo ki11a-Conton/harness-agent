@@ -157,7 +157,8 @@ describe("symbol search: actual approved scope, mixed languages and isolated cac
     const [a, b] = await Promise.all([run({ symbol: "TsOnly", path: "ts" }), run({ symbol: "PrefixOnly", path: "tsx" })]);
     expect(output(a).hits.map((h) => h.file)).toEqual(["ts/a.ts"]);
     expect(output(b).hits.map((h) => h.file)).toEqual(["tsx/a.ts"]);
-    expect(paths().every((p) => p === join(root, "ts") || p.startsWith(`${join(root, "ts")}/`) || p === join(root, "tsx") || p.startsWith(`${join(root, "tsx")}/`))).toBe(true);
+    expect(paths().every((p) => [join(root, "ts"), join(root, "tsx")].some((scope) =>
+      p === scope || p.startsWith(`${scope}/`) || p.startsWith(`${scope}\\`))), paths().join("\n")).toBe(true);
     expect(readFile).toHaveBeenCalledTimes(3);
   });
   it("updates scoped edits, additions and removals before the next query", async () => {

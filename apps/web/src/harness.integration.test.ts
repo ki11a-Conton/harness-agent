@@ -237,7 +237,7 @@ describe("P0-3: web host on the production harness composition root", () => {
     }
   });
 
-  it("U4 stops the active queued follow-up through HTTP without cancelling another sender's session", { timeout: 10_000 }, async () => {
+  it("U4 stops the active queued follow-up through HTTP without cancelling another sender's session", { timeout: 30_000 }, async () => {
     let firstEntered!: () => void;
     let releaseFirst!: () => void;
     let followupEntered!: () => void;
@@ -299,7 +299,10 @@ describe("P0-3: web host on the production harness composition root", () => {
       expect((await stack.rpc.invoke("session.status", { sessionId })) as { activeTurn?: { turnId: string } }).toMatchObject({ activeTurn: { turnId: followupTurn.id } });
 
       expect((await post("/api/commands", USER, "cancel")).status).toBe(200);
-      const deadline = Date.now() + 1_000;
+      // Abort acknowledgement precedes durable terminal persistence. Loaded
+      // Windows CI needs time for that real disk write; keep the same terminal
+      // and sender-ownership assertions within a bounded integration deadline.
+      const deadline = Date.now() + 5_000;
       while (Date.now() < deadline) {
         if ((await stack.harness.store.getTurn(followupTurn.id))?.status === "cancelled") break;
         await new Promise((resolve) => setTimeout(resolve, 10));
@@ -317,7 +320,7 @@ describe("P0-3: web host on the production harness composition root", () => {
         await stack.rpc.invoke("session.cancel", { sessionId, turnId: followupTurnId });
         // The actor acknowledges the durable inbox after its turn outcome.
         // Wait for that write before afterEach removes the temporary directory.
-        const deadline = Date.now() + 1_000;
+        const deadline = Date.now() + 5_000;
         while (Date.now() < deadline) {
           const records = (await readFile(join(dataDir, "inbox.jsonl"), "utf8")).trim().split("\n").map((line) => JSON.parse(line) as { prompt: { promotedTurnId?: string; status: string } });
           if (records.some(({ prompt }) => prompt.promotedTurnId === followupTurnId && prompt.status === "consumed")) break;

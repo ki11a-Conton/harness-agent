@@ -360,7 +360,7 @@ interface CollectedExec {
 function collect(
   child: ChildProcess,
   opts: CollectedExec,
-  killTree: () => void,
+  killTree: () => void | Promise<void>,
   started: number,
 ): Promise<ExecOutcome> {
   const streams = {
@@ -403,32 +403,37 @@ function collect(
 
   return new Promise<ExecOutcome>((resolve) => {
     let forced: { status: "timeout" | "cancelled"; error: string } | undefined;
+    let terminating = false;
 
     const done = (status: ExecStatus, exitCode: number | null, error?: string) => {
-      if (forced !== undefined) {
-        const o = finish(forced.status, null, forced.error);
-        if (settled) {
-          clearTimeout(timer);
-          for (const l of listeners) l();
-          resolve(o);
-        }
-        return;
-      }
-      const o = finish(status, exitCode, error);
-      if (settled) {
-        clearTimeout(timer);
-        for (const l of listeners) l();
-        resolve(o);
+      if (settled || terminating) return;
+      const o = forced === undefined ? finish(status, exitCode, error) : finish(forced.status, null, forced.error);
+      clearTimeout(timer);
+      for (const l of listeners) l();
+      resolve(o);
+    };
+
+    const terminate = async (status: "timeout" | "cancelled", error: string) => {
+      if (settled || forced !== undefined) return;
+      forced = { status, error };
+      terminating = true;
+      clearTimeout(timer);
+      try {
+        // taskkill is asynchronous. Its successful completion, rather than
+        // starting it, is the Windows process-tree termination boundary.
+        await killTree();
+        terminating = false;
+        done(status, null, error);
+      } catch (err) {
+        terminating = false;
+        forced = undefined;
+        done("error", null, `process-tree termination failed: ${err instanceof Error ? err.message : String(err)}`);
       }
     };
 
     const timer =
       opts.timeoutMs > 0
-        ? setTimeout(() => {
-            killTree();
-            forced = { status: "timeout", error: `timed out after ${opts.timeoutMs}ms` };
-            done("timeout", null);
-          }, opts.timeoutMs)
+        ? setTimeout(() => { void terminate("timeout", `timed out after ${opts.timeoutMs}ms`); }, opts.timeoutMs)
         : undefined;
 
     child.on("error", (err) => {
@@ -450,9 +455,7 @@ function collect(
     });
 
     const abortHandler = () => {
-      killTree();
-      forced = { status: "cancelled", error: "cancelled by caller" };
-      done("cancelled", null);
+      void terminate("cancelled", "cancelled by caller");
     };
     opts.signal?.addEventListener("abort", abortHandler, { once: true });
     listeners.push(() => opts.signal?.removeEventListener("abort", abortHandler));
@@ -465,15 +468,32 @@ const DEFAULT_TIMEOUT_MS = 60_000;
 const DEFAULT_MAX_OUTPUT_BYTES = 1_048_576;
 
 /** Kill a directly-spawned (shell-less) child and its descendants. */
-function killDirectTree(child: ChildProcess): void {
+function killDirectTree(child: ChildProcess): void | Promise<void> {
   if (!child.pid) return;
   if (process.platform === "win32") {
-    try {
-      const killer = spawn("taskkill", ["/pid", String(child.pid), "/t", "/f"]);
-      killer.unref();
-    } catch {
-      child.kill();
-    }
+    return new Promise<void>((resolve, reject) => {
+      const killer = spawn("taskkill", ["/pid", String(child.pid), "/t", "/f"], {
+        windowsHide: true, stdio: "ignore",
+      });
+      const timer = setTimeout(() => {
+        killer.kill("SIGKILL");
+        child.kill("SIGKILL");
+        reject(new Error("taskkill did not finish within 10000ms"));
+      }, 10_000);
+      killer.once("error", () => {
+        clearTimeout(timer);
+        child.kill("SIGKILL");
+        reject(new Error("could not start taskkill"));
+      });
+      killer.once("close", (code) => {
+        clearTimeout(timer);
+        if (code === 0 || child.exitCode !== null || child.signalCode !== null) resolve();
+        else {
+          child.kill("SIGKILL");
+          reject(new Error(`taskkill exited with code ${code ?? "unknown"}`));
+        }
+      });
+    });
   } else {
     child.kill("SIGKILL");
   }
@@ -535,19 +555,7 @@ export class ProcessExecutor {
       // Spawn the sandboxed process.
       const child = spawn(launch.file, launch.args, spawnOpts);
 
-      const killTree = () => {
-        if (!child.pid) return;
-        if (isCmd) {
-          try {
-            const killer = spawn("taskkill", ["/pid", String(child.pid), "/t", "/f"]);
-            killer.unref();
-          } catch {
-            child.kill();
-          }
-        } else {
-          child.kill("SIGKILL");
-        }
-      };
+      const killTree = () => killDirectTree(child);
 
       const collected = await collect(
         child,
@@ -591,19 +599,7 @@ export class ProcessExecutor {
       process.stdout.write(`EXEC_DBG_PLATFORM ${process.platform} ComSpec=${process.env.ComSpec}\n`);
     }
 
-    const killTree = () => {
-      if (!child.pid) return;
-      if (isCmd) {
-        try {
-          const killer = spawn("taskkill", ["/pid", String(child.pid), "/t", "/f"]);
-          killer.unref();
-        } catch {
-          child.kill();
-        }
-      } else {
-        child.kill("SIGKILL");
-      }
-    };
+    const killTree = () => killDirectTree(child);
 
     return collect(child, { timeoutMs, maxOutputBytes, cwd: opts.cwd, signal: opts.signal, ...(opts.onOutput !== undefined ? { onOutput: opts.onOutput } : {}) }, killTree, started);
   }
