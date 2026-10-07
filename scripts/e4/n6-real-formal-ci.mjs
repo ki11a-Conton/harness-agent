@@ -121,7 +121,15 @@ async function main() {
     commands.push({ label, command, argv, exitCode: code });
     write(join(outDir, "commands.json"), commands);
     process.stdout.write(`${label}: exit ${code}\n`);
-    if (code !== 0) throw new Error(`N6_COMMAND_FAILED: ${label} (see ${outDir}/${label}.log)`);
+    if (code !== 0) {
+      // Preserve the original failure while making its actual phase/assertions
+      // available through check annotations when artifact/log downloads fail.
+      spawnSync(process.execPath, ["scripts/e4/r97-ci-diagnostics.mjs", "--label", `n6/${label}`, "--log", join(outDir, `${label}.log`)], {
+        cwd: ROOT, env: process.env, stdio: "inherit", timeout: 30_000,
+      });
+      process.stdout.write(`::error::N6_COMMAND_FAILED: ${label}; exit=${code}; raw log=${label}.log\n`);
+      throw new Error(`N6_COMMAND_FAILED: ${label} (see ${outDir}/${label}.log)`);
+    }
     return code;
   }
   // Fail an incomplete pinned build before spending minutes on full suites.
