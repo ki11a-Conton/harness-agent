@@ -9,7 +9,7 @@
 | R2-02 P1 | completed在结算前交付；结算失败仍是committed且所谓“冻结”未持久化；崩溃窗口可能已扣费但缺明细 | 完成事件在结算后交付；费用和归属同事务；故障持久化冻结，未完成ledger标unknown，恢复也拒绝新发送 | 在completed处停止消费即已落盘；超界、不足费用、重开后拒绝、ledger/journal对账 |
 | R2-03 P1 | 仅final result携带usage时费用为0；没有usage也被记成MEASURED零费用 | 合并final usage；缺usage按预留上界标UNKNOWN，不能用于MEASURED结论 | final-only真实包装；无usage上界记录；N3明确给出合成usage |
 | R2-04 P2 | 取usage快照最大值而非最后值，与累计快照合同及Runtime计量不一致 | 最终累计快照覆盖已有值 | 100/50→42/7，费用49，非150 |
-| R2-05 P1 | 负数/坏预算状态可重开；不完整reserve生成NaN；外部可修改view/journal引用；打开后换caps未经验证 | 校验计数/预留合计及每次读取的身份/caps；完整维度；深复制只读视图 | 负数、缺维度、换caps拒绝；改返回对象不改变权威状态 |
+| R2-05 P1 | 负数/坏预算状态可重开；数组预留表丢失string-key预留；不完整reserve生成NaN；外部可修改view/journal引用；打开后换caps未经验证 | 校验对象预留表、计数/预留合计及每次读取的身份/caps；完整维度；深复制只读视图 | 数组、负数、缺维度、换caps拒绝；改返回对象不改变权威状态 |
 | R2-06 P1 | tool.requested路径被当成真实写入；POLICY_DENIED且文件不存在仍标ESCAPE/infrastructure | 成功写入才进入changedPaths；保留尝试和拒绝事实 | 真实runOneCase三种arm拒绝外部文件：CONTAINED、文件不存在、无infrastructure误判；原有真实逃逸正例仍通过 |
 | R2-07 P1 | opt-in v1 baseline安全证据标candidate，256份历史记录受影响；事实缺rep/attempt且judge不拒错标签 | 使用实际arm/rep/attempt；judge校验外层arm与安全事实身份 | baseline-v1、C0、candidate-v2逐条一致；错arm拒绝 |
 | R2-08 P1 | 缺toolCallId被补成虚构ID；不同调用/规则/身份的尝试与拒绝也可判CONTAINED | 保留缺失ID，按真实关联判INVALID | 无ID/关联不匹配反例；有效拒绝及真实逃逸原回归 |
@@ -24,6 +24,10 @@
 另补formal失败公开诊断，保留原退出码；通过原生GitHub Actions取回既有失败包，未重跑付费实验。
 基线反例：4文件28项，**18 failed / 10 passed**；另实际node --check复现归档语法错误。
 回归结果、最终源码SHA、完整Linux/浏览器/Windows证据会在 [COMPLETION.md](COMPLETION.md) 汇总。
+
+固定源码 `1360479` 的首次完整验收发现本轮 R2-02 改动使已有耗时变异锚点失效：Linux 9064 passed / 5 failed / 13 skipped，两平台 CI 同样拒绝。
+随结算调用更新唯一锚点，保留原来的“耗时计量为零”破坏条件及检测测试；实际运行变异门禁验明破坏行为确实被抓住。
+数组预留表追加反例在修复前为 9 passed / 1 failed，0 provider calls；单独记录，不混算进最初基线18个失败反例。
 
 ## 原件与限制
 

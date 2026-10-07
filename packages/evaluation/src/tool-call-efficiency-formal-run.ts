@@ -974,6 +974,11 @@ export const FORMAL_PER_CALL_OUTPUT_TOKEN_CEILING = 32_000;
 
 function validateCostState(file: CostBudgetFile): void {
   if (file === null || typeof file !== "object" || !file.charged || !file.caps) throw new Error("cost budget invalid state");
+  // JSON arrays discard string-keyed properties: accepting one here can lose
+  // an acknowledged reservation on the next atomic write.
+  if (!file.reservations || typeof file.reservations !== "object" || Array.isArray(file.reservations)) {
+    throw new Error("cost budget invalid reservation map");
+  }
   for (const [key, value] of Object.entries(file.charged)) {
     if (!Number.isSafeInteger(value) || value < 0) throw new Error(`cost budget invalid charged.${key}`);
   }

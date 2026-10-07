@@ -99,4 +99,12 @@ describe("source audit: durable provider accounting", () => {
     raw.caps.maxInputTokens++; await writeFile(path, JSON.stringify(raw));
     await expect(s.cost.reserve({ inputTokens: 1, outputTokens: 1, toolCalls: 0, durationMs: 1, usdMicros: 1 })).rejects.toThrow("invalid identity");
   });
+  it("rejects an array reservation map before JSON serialization can lose a granted reservation", async () => {
+    const s = await setup([]), path = join(s.root, "cost-budget.json");
+    const raw = JSON.parse(await readFile(path, "utf8")); raw.reservations = [];
+    await writeFile(path, JSON.stringify(raw));
+    await expect(CostBudget.open(s.root, s.artifact, { allowCreate: false })).rejects.toThrow("invalid reservation map");
+    await expect(s.cost.reserve({ inputTokens: 1, outputTokens: 1, toolCalls: 0, durationMs: 1, usdMicros: 1 })).rejects.toThrow("invalid reservation map");
+    expect(s.sends()).toBe(0);
+  });
 });
