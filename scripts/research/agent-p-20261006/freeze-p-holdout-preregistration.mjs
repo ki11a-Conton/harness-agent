@@ -89,7 +89,8 @@ const options = {
   role: "holdout",
   subject: {
     candidateSourceSha: "e6fc818c4c6ccf026c63dc73af25d99f462f93f3",
-    baselineArmDigest: championArm.digest,
+    // The committed v1 artifact retains its historical inventory identity.
+    baselineArmDigest: championArm.legacyDigest ?? championArm.digest,
     candidateArmDigest: factory.resolveArm(VERIFIED_COMPLETION_GATE_CANDIDATE_ID).digest,
     runtimeConfigDigest: factory.resolveArm(VERIFIED_COMPLETION_GATE_CANDIDATE_ID).digest,
     championProvenance: provenance,

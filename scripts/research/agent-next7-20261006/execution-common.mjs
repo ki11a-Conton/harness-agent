@@ -126,7 +126,10 @@ export async function loadExperiment(role) {
     assert((JSON.parse(state).candidateId ?? null) === candidates.baseline, "CHAMPION_DRIFT");
   }
   const arms = Object.fromEntries(Object.entries(candidates).map(([name, id]) => [name, ev.getArmFactory().resolveArm(id)]));
-  assert(arms.baseline.digest === prereg.subject.baselineArmDigest && arms.candidate.digest === prereg.subject.candidateArmDigest, "ARM_DIGEST_DRIFT");
+  // Frozen v1 inputs are validated against their original full-inventory hash.
+  // New binding/identity facts below always use the active-mechanism digest.
+  assert((arms.baseline.legacyDigest ?? arms.baseline.digest) === prereg.subject.baselineArmDigest &&
+    (arms.candidate.legacyDigest ?? arms.candidate.digest) === prereg.subject.candidateArmDigest, "ARM_DIGEST_DRIFT");
   assert(arms.candidate.promptAdditionsDigest === prereg.prompt.guidanceDigest, "GUIDANCE_DRIFT");
   const runtimeConfigHashes = Object.fromEntries(Object.entries(candidates).map(([name, candidate]) =>
     [name, ev.computeRuntimeConfigHash(cli.runtimeConfigForHash({ suite: "regression", candidate: candidate ?? undefined }, PROFILE.budgetTokens))]));
@@ -135,7 +138,7 @@ export async function loadExperiment(role) {
   assert(plan.planDigest === prereg.schedule.planDigest && plan.totalLogicalRuns === prereg.schedule.logicalRuns, "PLAN_DRIFT");
   const facts = { role, frozenPreregistrationDigest: prereg.preregistrationDigest,
     frozenPreregistrationFileSha256: sha256(readFileSync(preregPath)), frozenSourceSha: prereg.subject.candidateSourceSha,
-    candidates, armDigests: { baseline: arms.baseline.digest, candidate: arms.candidate.digest }, runtimeConfigHashes,
+    armDigestFormat: "active-mechanisms-v2", candidates, armDigests: { baseline: arms.baseline.digest, candidate: arms.candidate.digest }, runtimeConfigHashes,
     caseFingerprints: Object.fromEntries(cases.map(c => [c.id, cli.caseFingerprintFor(c)])),
     planDigest: plan.planDigest, logicalRuns: plan.totalLogicalRuns, expectedPairs: plan.pairs.length };
   return { prereg, manifest, cases, plan, facts };

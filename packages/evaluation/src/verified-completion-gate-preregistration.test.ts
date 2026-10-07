@@ -137,7 +137,7 @@ function resolvedChampion(): {
   };
   const candidateId = state.candidateId ?? null;
   return {
-    digest: getArmFactory().resolveArm(candidateId).digest,
+    digest: getArmFactory().resolveArm(candidateId).legacyDigest ?? getArmFactory().resolveArm(candidateId).digest,
     provenance: {
       source:
         `docs/evolution/champion-state.json (level=${state.level}, ` +

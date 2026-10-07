@@ -7,6 +7,7 @@ import { arg, assert, campaignFiles, dependencies, digest, executionIdentity, fl
 import { openBudgets, realProvider, withModelCallCap } from "./execution-budget.mjs";
 import { infrastructureCounts, observedProvider, soakVerdict } from "./provider-observation.mjs";
 import { conditionProbe } from "./condition-probe.mjs";
+import { recordCheckpoint, sealRecoveredAttempt, startAttempt, validateResumeAttempts } from "./attempt-checkpoint.mjs";
 
 export function validateSoak(soak, binding) {
   assert(soak.schemaVersion === "n7-soak-result-v1" && soak.evidenceKind === "REAL_PROVIDER" && soak.status === "QUALIFIED", "REAL_SOAK_REQUIRED");
@@ -68,13 +69,10 @@ async function run() {
   // Reuse the existing lock implementation in the campaign root. The call/cost
   // ledger uses its own budget directory, so nested per-call locking is safe.
   await ev.withR97CampaignLock(out, async () => {
+  let openAttempt;
   if (resume) {
     assert(stable(readJson(join(out, "campaign-header.json"))) === stable(header), "RESUME_IDENTITY_DRIFT");
-    // Verify the preceding attempt's immutable index before opening its budgets.
-    for (const name of readdirSync(join(out, "attempts"))) verifyIndex(join(out, "attempts", name));
-    const latest = readdirSync(join(out, "attempts")).sort().at(-1);
-    assert(latest !== undefined, "RESUME_EVIDENCE_MISSING");
-    verifyCampaignRaw(out, join(out, "attempts", latest));
+    openAttempt = validateResumeAttempts(out, header);
   } else {
     writeJson(join(out, "campaign-header.json"), header);
     writeJson(join(out, "execution-binding.json"), binding);
@@ -83,8 +81,10 @@ async function run() {
     mkdirSync(join(out, "requests"));
     mkdirSync(join(out, "attempts"));
   }
-  const attemptDir = freshDirectory(join(out, "attempts", String(readdirSync(join(out, "attempts")).length + 1).padStart(4, "0")));
   const budgets = await openBudgets(out, binding, prereg, campaignDigest, { resume });
+  if (openAttempt !== undefined) sealRecoveredAttempt(out, openAttempt, header);
+  const attemptDir = freshDirectory(join(out, "attempts", String(readdirSync(join(out, "attempts")).length + 1).padStart(4, "0")));
+  startAttempt(out, attemptDir, header);
   const previousRecords = readdirSync(join(out, "requests")).sort().map(name => readJson(join(out, "requests", name)));
   const observed = observedProvider(await realProvider(binding), { initialRecords: previousRecords, secrets: [process.env.OPENAI_API_KEY],
     scope: () => budgets.costBudget.currentJournalScope(), record: r => writeJson(join(out, "requests", `${String(r.requestId).padStart(7, "0")}.json`), r) });
@@ -105,6 +105,7 @@ async function run() {
         } finally { budgets.costBudget.bindJournalScope(null); }
       },
       onArmCompleted({ logicalRuns }) {
+        recordCheckpoint(out, attemptDir);
         if (logicalRuns % 8 === 0) process.stdout.write(`N7 ${role} ${logicalRuns}/${plan.totalLogicalRuns} arms\n`);
         const last = observed.records.at(-1), counts = infrastructureCounts(observed.records);
         assert(counts.modelNotFound === 0, "MODEL_NOT_FOUND");

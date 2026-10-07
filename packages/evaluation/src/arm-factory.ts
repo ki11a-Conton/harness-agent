@@ -87,6 +87,9 @@ export interface ResolvedArmSnapshot {
   declaredDeltaPaths: string[];
   /** sha256 over the canonical snapshot (stable, no secrets/abs paths). */
   digest: string;
+  /** Historical full-inventory identity, only for validating frozen v1 input.
+   * New execution identities use digest (active mechanisms only). */
+  legacyDigest?: string;
 }
 
 export interface ArmComparison {
@@ -487,12 +490,15 @@ function buildSnapshot(input: {
   // Compact content-addressed digest (sha256 over the canonical snapshot),
   // NOT the raw stable string — consumers get a short, comparable token.
   const digest = computeSnapshotDigest(experimentBase);
-  return { ...experimentBase, digest };
+  const legacyDigest = createHash("sha256").update(stableStringify(experimentBase), "utf8").digest("hex");
+  return { ...experimentBase, digest, legacyDigest };
 }
 
 /** sha256 (hex) over the canonical snapshot (stable key order). */
 export function computeSnapshotDigest(snapshot: Omit<ResolvedArmSnapshot, "digest">): string {
-  return createHash("sha256").update(stableStringify(snapshot), "utf8").digest("hex");
+  const { legacyDigest: _legacy, ...execution } = snapshot;
+  const active = { ...execution, mechanisms: { ...snapshot.mechanisms, activations: snapshot.mechanisms.activations.filter((m) => m.on) } };
+  return createHash("sha256").update(stableStringify(active), "utf8").digest("hex");
 }
 
 export function createArmFactory(): ArmFactory {
