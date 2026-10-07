@@ -13,9 +13,9 @@
 | N7-1 写 v2 策略文本并注册 | **DONE** | 下方 §1 |
 | N7-2 建全新评测语料（88 用例） | **DONE** | 下方 §2 |
 | N7-3 预注册（任何模型结果之前） | **DONE** | 下方 §3 |
-| N7-4 基础设施资格门 + campaign | **执行工具已验收；真实实验 BLOCKED_ENVIRONMENT** | §6；模型凭据/价目缺失、端点不可达、隔离自测未通过 |
-| N7-5 双实验判定 | **判定器及联合入口已验收；真实效果 NOT_RUN** | 完整 ITT、实测命中 PP 与双实验资格，55 项新回归通过 |
-| N7-6 证据、发布与回退 | **工程原件已归档、工具提交并按授权发布；未 promotion** | [完成报告](execution/acceptance/COMPLETION.md)；无真实 campaign 原件可归档 |
+| N7-4 基础设施资格门 + campaign | **真实 campaign 已执行（3 次尝试）；run3 完成 512/512 arms，1 个作废 arm → INFRASTRUCTURE_FAILED** | §6、§7 |
+| N7-5 双实验判定 | **主实验判定已执行 → NOT_PROVEN；holdout 未跑，联合判定未执行** | §7；[结果记录](N7-RESULT-20261007.md) |
+| N7-6 证据、发布与回退 | **主实验失败归档已发布（`execution/main/`）；未 promotion** | §7；[结果记录](N7-RESULT-20261007.md)；[完成报告](execution/acceptance/COMPLETION.md) |
 
 ## 1. N7-1 — v2 策略文本与注册（DONE）
 
@@ -105,3 +105,19 @@
 > **N7 预算修订（2026-10-07）**：实测吞吐约 0.83 分钟/arm，512 arms 需约 7.1 小时，故按操作者批准**只把 `budget.maxDurationMs` 由 30 分钟改为 12 小时**（门限／用例／臂／重复／seed／provider／token·工具·USD 上限均未改），两件预注册重新冻结：主 `7c7d0b56…` → `3aef9df0…`、holdout `7b675621…` → `49fea730…`。修订发生在一次基础设施中断、未做效果判定的运行之后；该运行标记 infrastructure-failed、不用于推断。详见 [BUDGET-AMENDMENT.md](BUDGET-AMENDMENT.md)。
 
 > **N7 容量上限修订（修订 #2，2026-10-07）**：campaign #2 跑满 512/512 arms 但 `INFRASTRUCTURE_FAILED, 36/256 pairs` —— `maxToolCalls` 600、`maxInputTokens` 3,000,000 在约 72 arms 处即撞顶，之后每个 arm 被预算拒绝（`TOOL_BUDGET_EXHAUSTED` / `model_error`）而判 `invalid-arm`。按批准只放大四个容量维度（工具 32,000／输入 80,000,000／输出 4,000,000／总量 90,000,000），门限与设计全部不变；两件预注册重新冻结：主 `3aef9df0…` → `d824d593…`、holdout `49fea730…` → `6ef59a6c…`。详见 [BUDGET-AMENDMENT.md](BUDGET-AMENDMENT.md)。
+
+## 7. 真实执行结果（2026-10-07）— 主实验 NOT_PROVEN
+
+本轮共三次真实 campaign 尝试，全部标记为基础设施失败、均不作为模型质量推断依据；已提交记录见 [aborted-runs/summary.json](aborted-runs/summary.json)（含 run3 的作废 arm 归因与计费口径）：
+
+| 尝试 | 结果 | 说明 |
+| --- | --- | --- |
+| run1 `run-20261006-215646` | 16/512 arms 被会话重启打断 | 不可续跑（attempt 索引为空），0 定案 |
+| run2 `run2-20261007-103254` | 512/512 arms，`INFRASTRUCTURE_FAILED, 36/256 pairs` | N5 期容量上限（工具 600／输入 3M）在 ~72 arms 撞顶 → 220 个 `invalid-arm` |
+| **run3 `run3-20261007-111347`** | **512/512 arms，`INFRASTRUCTURE_FAILED, 255/256 pairs`；判定 `NOT_PROVEN`** | 有效容量下跑完；1 个作废 arm（E1-02 越界写）+ 两处对账门限失败；**已归档并发布** |
+
+run3 关键事实：执行 binding `6a882ee3…`、冻结主预注册 `d824d593…`、7.1 小时、9,171 次模型调用（0 传输失败／0 重试／0 usage 缺失）、43.15M input / 1.07M output tokens、声明上界计费 9,169,000,000 µ$（硬上限的 9.2%）、工具 15,420/32,000。判定 13 条门限 **6 PASS / 7 FAIL**：`candidate_activation_proven`（256/256 候选臂激活证据）等 6 条通过；`infrastructure_qualified`、`full_frozen_grid`、`missing_group_lift_pp`（**+0.00 pp**，要求 ≥ +5 pp）、`paired_bootstrap_95pct_lower_bound_pp`（**−5.73 pp**）、`usage_complete_and_reconciled`、`durable_budget_proven`、`tokens_within_110pct`（**+14.7%**，上限 +10%）失败。描述性数字（不作推断）：整体 143 → 146、控制组 60 → 63、missing 组 83 → 83，两臂假完成率均约 42%。
+
+本场暴露 **5 处测量缺陷**（仅记录，修复计划待操作者批准后另写）：**D1** campaign 合格线（≥95%）与 judge 的 `full_frozen_grid`（0 作废）不自洽，且 `--resume` 会跳过已进 journal 的作废 arm、无法自愈；**D2** 30 次/run 调用上限边界上 tape 比 arm metrics 多记 65,659 tokens（2 个 candidate arm），使 `reconciliation` 与两条门限必失败；**D3** 模型在工作区外写临时文件被归类为 `failureCategory=infrastructure`，直接作废整场测量而非按行为计分；**D4** 已提交的归档复算入口 `scripts/research/agent-next7-20261006/verify-n7-archive.mjs` 存在语法错误（缺一个 `)`，`node --check` 可复现），即该入口从未被任何测试或流程执行过；**D5** `facts` 属于执行身份，并行工作流的提交 `b39cb1c9` 只新增一个 `armDigestFormat` 字段就使归档无法在原地严格复算（严格复算必须固定到记录的 `sourceSha=7203a01b`），兼容口径重算仍与归档判定逐字段相同。
+
+**未执行**：独立 holdout（192 runs）、N7-5 联合判定、任何 promotion 动作。候选 `context_safe_tool_call_efficiency_v2` 仍为 `candidate` / NOT_PROVEN，champion 未改动。完整结论、门限全表、缺陷细节与复算方式见 [N7-RESULT-20261007.md](N7-RESULT-20261007.md)。
