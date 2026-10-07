@@ -114,7 +114,12 @@ const options = {
   budget: {
     maxModelCallsPerRun: 30,
     maxToolCalls: 600,
-    maxDurationMs: 1_800_000,
+    // AMENDED 2026-10-07 (operator-approved): measured throughput is ~0.83 min/arm,
+    // so the 512-arm campaign needs ~7.1h; the original 30-minute cap made the frozen
+    // campaign unfinishable. ONLY this duration changes — gates, cases, arms,
+    // repetitions, seeds and the token/tool/USD caps are untouched. See
+    // docs/evidence/agent-next7-20261006/BUDGET-AMENDMENT.md.
+    maxDurationMs: 43_200_000,
     maxInputTokens: 3_000_000,
     maxOutputTokens: 400_000,
     maxTotalTokens: 4_000_000,

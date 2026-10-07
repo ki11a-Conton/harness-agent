@@ -110,7 +110,9 @@ function frozenOptions(over: Partial<ContextSafePreregistrationOptions> = {}): C
     budget: {
       maxModelCallsPerRun: 30,
       maxToolCalls: 600,
-      maxDurationMs: 1_800_000,
+      // AMENDED 2026-10-07: the pre-registered campaign duration was extended to 12h
+      // (only this field changed) — see docs/evidence/agent-next7-20261006/BUDGET-AMENDMENT.md.
+      maxDurationMs: 43_200_000,
       maxInputTokens: 3_000_000,
       maxOutputTokens: 400_000,
       maxTotalTokens: 4_000_000,
@@ -180,7 +182,8 @@ function holdoutOptions(): ContextSafePreregistrationOptions {
     budget: {
       maxModelCallsPerRun: 30,
       maxToolCalls: 600,
-      maxDurationMs: 1_800_000,
+      // AMENDED 2026-10-07: same duration amendment as the main plan.
+      maxDurationMs: 43_200_000,
       maxInputTokens: 3_000_000,
       maxOutputTokens: 400_000,
       maxTotalTokens: 4_000_000,

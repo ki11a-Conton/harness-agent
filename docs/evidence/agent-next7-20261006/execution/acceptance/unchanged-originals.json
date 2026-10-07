@@ -17,6 +17,24 @@
       "previousSha256": "eddff1aff1a5f8171b878dcc1c28c4b32aa52b5fcae59123a10bc24e8e8a1a3a",
       "bytes": 11501,
       "sha256": "e9fe9b50f2c83c554d929a76f2a8bed8204d47eadf838669148494aeebeb476f"
+    },
+    {
+      "path": "docs/evidence/agent-next7-20261006/main-preregistration.json",
+      "reason": "budget amendment 2026-10-07 (operator-approved): ONLY maxDurationMs changed, 1_800_000 -> 43_200_000, because the measured throughput (~0.83 min/arm) makes a 512-arm campaign need ~7.1h; gates, cases, arms, repetitions, seeds and token/tool/USD caps are untouched",
+      "previousBytes": 23936,
+      "previousSha256": "48942df92df8265952b0aa5e9ff9e6feb7ea91762011bd8c8abd90074504b19f",
+      "bytes": 23937,
+      "sha256": "056fd1ac39d50d9b43aaa06011d5c42cf62d6f8340b2d8be1bf145a94aacaa51",
+      "convention": "repository blob bytes (LF)"
+    },
+    {
+      "path": "docs/evidence/agent-next7-20261006/holdout-preregistration.json",
+      "reason": "same budget amendment as the main plan (shared duration dimension)",
+      "previousBytes": 11501,
+      "previousSha256": "e9fe9b50f2c83c554d929a76f2a8bed8204d47eadf838669148494aeebeb476f",
+      "bytes": 11502,
+      "sha256": "30555b27bb981339cb9cce087f949d8ae00edf429e5db205642ef50d9e979c6f",
+      "convention": "repository blob bytes (LF)"
     }
   ],
   "files": [
@@ -28,14 +46,14 @@
     },
     {
       "path": "docs/evidence/agent-next7-20261006/main-preregistration.json",
-      "bytes": 23936,
-      "sha256": "48942df92df8265952b0aa5e9ff9e6feb7ea91762011bd8c8abd90074504b19f",
+      "bytes": 23937,
+      "sha256": "056fd1ac39d50d9b43aaa06011d5c42cf62d6f8340b2d8be1bf145a94aacaa51",
       "unchanged": true
     },
     {
       "path": "docs/evidence/agent-next7-20261006/holdout-preregistration.json",
-      "bytes": 11501,
-      "sha256": "e9fe9b50f2c83c554d929a76f2a8bed8204d47eadf838669148494aeebeb476f",
+      "bytes": 11502,
+      "sha256": "30555b27bb981339cb9cce087f949d8ae00edf429e5db205642ef50d9e979c6f",
       "unchanged": true
     },
     {

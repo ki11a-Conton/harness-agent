@@ -74,7 +74,7 @@ const N7_HOLDOUT_MANIFEST_DIGEST = "7e8e42fd8f21324342f073bb339763864f9767e01d52
 
 /** Frozen digests of the earlier rounds: the P plan must not move them. */
 const N6_PREREG_DIGEST = "ab9120df8e1436f3a9f497bb9651ea5fe738870824e2dc647242f08ed481cc96";
-const N7_PREREG_DIGEST = "7c7d0b56ce6e22446fc7e1262dbb68b5310d3bd998eeb75c9f5b399c401f5b9b";
+const N7_PREREG_DIGEST = "3aef9df0cfd2d4c2b2200a61a5e5994ca52ca3dc0a6311cea634c7db571c0e7b";
 
 interface ManifestShape {
   suite: { id: string; version: string; caseRoot: string };

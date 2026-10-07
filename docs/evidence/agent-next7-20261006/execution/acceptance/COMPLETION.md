@@ -67,3 +67,21 @@ P 轮登记新挑战者 `verified_completion_gate_v1` 后，`arm-factory buildSn
 不变项：24 用例 / 4 重复 / **192 logical arm runs**（AB 48 / BA 48）、门限逐值相同、provider 与请求档相同、预算上限 $100,000、champion provenance 相同（level=C0、candidateId=null、validity=QUARANTINED_PENDING_REEVALUATION）。重新冻结发生在**任何 N7 模型结果之前**（soak / campaign / judge 均未运行，`paid calls = 0`）。
 
 本目录随之更新：`holdout-prereg.log`（按 `checks.json` 记录的同一命令重新生成）、`unchanged-originals.json`（两条条目更新，并新增 `updatedInLaterRounds` 说明旧值与原因）、`artifact-index.json` 与 `RAW-MANIFEST.json`（索引与原件字节重算）。本文件其余结论不变；唯一被 P 轮移动的既有原件是策略文件 `packages/evaluation/src/mechanism-guidance.ts`（新增门文本，既有候选文本与 digest 未变）。
+
+## 追加记录：N7 预算修订（仅 maxDurationMs，2026-10-07）
+
+第一次真实 campaign 在 16/512 arms 时被基础设施中断（会话/机器重启），且**不可续跑**：其 attempt 目录没有不可变索引（resume 报 `n7[ENOENT]`），并且首次打开时创建的绝对 campaign deadline 已耗尽（`deadlineSource: created`、`charged.durationMs = 797,627`／上限 1,800,000）。实测吞吐为 **2.1 秒/次调用、约 0.83 分钟/arm**，512 arms 需要约 **7.1 小时**，而预注册的 campaign 时长是 **30 分钟** —— 冻结的 campaign 在算术上不可能跑完。
+
+按操作者批准的方式修订（**只改一个维度**）：
+
+| 项目 | 旧值 | 新值 |
+| --- | --- | --- |
+| `budget.maxDurationMs` | 1,800,000（30 分钟） | **43,200,000（12 小时）** |
+| 主实验 `preregistrationDigest` | `7c7d0b56…5b9b` | `3aef9df0…0e7b` |
+| holdout `preregistrationDigest` | `7b675621…7321` | `49fea730…fba5` |
+
+**未改动**：8 条门限数值、用例集（64 / 24）、重复数（4）、臂与 AB/BA 平衡、order seed（20261007 / 20261008）、provider／模型／请求档、`maxModelCallsPerRun`=30、`maxToolCalls`=600、token 上限、`maxUsdMicros`=100,000,000,000、champion provenance。
+
+**偏差声明**：本修订发生在一次**已被基础设施中断、且未做任何效果判定**的运行之后；该运行被标记为 infrastructure-failed，其原件保留但**不用于推断**。修订前的 campaign 从未产出任何 verdict。本次为使用已批准的本地研究模式（`insecure-local`，永久 promotion-ineligible）。
+
+本目录随之更新：`main-prereg.log`／`holdout-prereg.log`（按 `checks.json` 记录的同一命令重新生成）、`unchanged-originals.json`（两条条目 + `updatedInLaterRounds`）、`RAW-MANIFEST.json` 与 `artifact-index.json`（重算）。

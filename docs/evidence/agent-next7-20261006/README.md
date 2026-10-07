@@ -24,7 +24,7 @@
 | 用例 | 64（缺失 48 + 控制 16） | 24（缺失 16 + 控制 8） |
 | 重复 | 4 | 4 |
 | logical arm runs | **512**（AB 128 / BA 128） | **192**（AB 48 / BA 48） |
-| `preregistrationDigest` | `7c7d0b56ce6e22446fc7e1262dbb68b5310d3bd998eeb75c9f5b399c401f5b9b` | `7b675621258c1c63a3c7f429c71b4b274c571d3b2684c31b1d7fb98ec7e97321` |
+| `preregistrationDigest` | `3aef9df0cfd2d4c2b2200a61a5e5994ca52ca3dc0a6311cea634c7db571c0e7b` | `49fea7303e60db9c6cd91419a2341b8e47d466b6811a9d8600fdfb859818fba5` |
 | 用例集摘要 | `03a77f3f…08fa1` | `7e8e42fd…b2a28` |
 | 冻结 seed（orderSeed） | 20261007 | 20261008 |
 | provider / model | `openai` / `workbuddy-deepseek-v4.1-flash`（端点仅以摘要入库，凭据不落盘） | 同左 |
@@ -46,3 +46,5 @@ N7 计划文本写作"每实验 512 runs"。算术上 512 = 2 × 64 × 4，是**
 - v1 候选 `context_safe_tool_call_efficiency_v1` 仍为 `candidate` / **NOT_PROVEN**，其文本与 digest 未被本轮修改，也不因本轮结果被追认。
 
 > **P 轮重新冻结（2026-10-06）**：登记 `verified_completion_gate_v1` 后，baseline 臂快照（枚举全部已注册候选为 OFF）使 champion 解析出的对照臂摘要移动，故 holdout 预注册按本轮冻结脚本重新冻结：`preregistrationDigest` `967da1dd…5664` → `7b675621…7321`，对照臂 `ee589c7e…` → `00d2c921…`；**24 用例 / 192 runs / 门限 / provider / 预算 / provenance 均不变**，且重新冻结发生在任何 N7 模型结果之前（paid calls = 0）。验收记录（`holdout-prereg.log`、`unchanged-originals.json`、`artifact-index.json`、`RAW-MANIFEST.json`）已同步更新并重新自校验通过。
+
+> **N7 预算修订（2026-10-07）**：实测吞吐约 0.83 分钟/arm，512 arms 需约 7.1 小时，故按操作者批准**只把 `budget.maxDurationMs` 由 30 分钟改为 12 小时**（门限／用例／臂／重复／seed／provider／token·工具·USD 上限均未改），两件预注册重新冻结：主 `7c7d0b56…` → `3aef9df0…`、holdout `7b675621…` → `49fea730…`。修订发生在一次基础设施中断、未做效果判定的运行之后；该运行标记 infrastructure-failed、不用于推断。详见 [BUDGET-AMENDMENT.md](BUDGET-AMENDMENT.md)。
