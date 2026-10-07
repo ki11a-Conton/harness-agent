@@ -74,3 +74,8 @@ absolute `/workspace` path component was mistaken for the fixture workspace.
 Its original index and raw outputs are retained. A separate
 `baseline-index-correction.json` hashes those original files and the immediately
 preserved executed-probe snapshot; no baseline result is rewritten or rerun.
+
+The fixture host explicitly authorizes its Node verification command with a
+process permission pattern. File writes still require the real UI approval.
+The loopback fault proxy is an explicit trusted Host/Origin of this fixture;
+production request checks remain active.

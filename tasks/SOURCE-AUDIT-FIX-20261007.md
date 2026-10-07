@@ -15,3 +15,8 @@ run relevant integration/security tests, typecheck and the full suite; exercise
 real files, persistence failures, Web restart and verification cancellation.
 Report Windows, browser and paid-provider checks separately when not executed.
 Record results and remaining limitations in a completion receipt.
+
+Acceptance-tool compatibility: authorize the browser fixture's fixed verifier
+through an explicit host rule, trust only its own loopback proxy, and repair
+optional perf/soak commands that previously selected zero test files. This does
+not change production permissions, benchmark case bytes or quality thresholds.

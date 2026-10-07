@@ -59,14 +59,14 @@ const harness = await createHarness({
     completionPolicy: { requiresVerification: true },
     verification: [{ kind: 'command', command: process.execPath, args: ['-e', "console.log('WEB_VERIFICATION_EXECUTED');process.exit(require('node:fs').existsSync('fail-verification.flag')?7:0)"], description: 'Actual offline child-process acceptance gate; real marker created only by approved write_file makes it fail' }] },
 });
+// Trusted test host authorizes command verification; file-edit approvals remain interactive.
+harness.agents[0].permissions = { ...harness.agents[0].permissions, rules: [{ action: 'exec', resource: 'command', pattern: process.execPath + ' "-e" *', effect: 'allow' }, ...harness.agents[0].permissions.rules] };
 const bindings = new SessionBindings();
 const registry = createRuntimeRpc(harness.runtime, { sessionService: harness.sessionService, sessions: harness.sessions, approvalStore: harness.approvalStore, events: harness.events });
 const tracking = new TrackingRegistry(registry, session => bindings.onSessionCreated(session));
 const adapter = new WebChannelAdapter();
 const gateway = new Gateway({ rpc: tracking, channels: [adapter], sessionService: harness.sessionService, approvalStore: harness.approvalStore, events: harness.events, sessionDefaults: { agentId: harness.agents[0].id, cwd }, pollDelayMs: 10 });
 await gateway.start();
-const server = new WebServer({ adapter, bindings, events: harness.events, store: harness.store, approvalStore: harness.approvalStore, host: '127.0.0.1', port: 0, pollDelayMs: 10, staticDir });
-const address = await server.start();
 // Transparent loopback transport. Faults affect real SSE sockets only; all
 // frames still originate from WebServer and no application data is fabricated.
 const heldStreams = new Set();
@@ -118,6 +118,10 @@ const proxy = createServer((req, res) => {
   forward();
 });
 await new Promise(resolve => proxy.listen(0, '127.0.0.1', resolve));
+// Explicitly authorize this test-owned reverse proxy, preserving production checks.
+const server = new WebServer({ adapter, bindings, events: harness.events, store: harness.store, approvalStore: harness.approvalStore, host: '127.0.0.1', port: 0, allowedHosts: ['127.0.0.1:' + proxy.address().port], allowedOrigins: ['http://127.0.0.1:' + proxy.address().port], pollDelayMs: 10, staticDir });
+const address = await server.start();
+
 // Separate, explicitly named fault controller. Inspector below stays read-only.
 const transportControl = createServer((req, res) => {
   const url = new URL(req.url ?? '/', 'http://localhost');
