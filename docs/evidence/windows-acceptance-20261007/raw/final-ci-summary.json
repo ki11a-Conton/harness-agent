@@ -1,0 +1,926 @@
+{
+  "schemaVersion": "windows-ci-completion-v1",
+  "sourceSha": "0cf4549f4f040b8abc983cafc4fcac4805041dab",
+  "runId": 37611869402,
+  "runAttempt": 1,
+  "outcome": "PASS",
+  "jobCount": 10,
+  "jobs": [
+    {
+      "id": 112761081280,
+      "name": "offline cold-start (ubuntu)",
+      "conclusion": "success",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runnerName": "GitHub Actions 1000002121",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the repository (into a path containing a space)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Set up pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Set up Node",
+          "conclusion": "success"
+        },
+        {
+          "name": "Assert the tested HEAD is the workflow SHA",
+          "conclusion": "success"
+        },
+        {
+          "name": "Assert this is a genuine cold start (no node_modules, no dist)",
+          "conclusion": "success"
+        },
+        {
+          "name": "README step 1 \u2014 install (frozen lockfile)",
+          "conclusion": "success"
+        },
+        {
+          "name": "README step 2 \u2014 build",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify the workflow itself cannot authorize a paid run",
+          "conclusion": "success"
+        },
+        {
+          "name": "README step 3 \u2014 doctor",
+          "conclusion": "success"
+        },
+        {
+          "name": "README step 4 \u2014 single adversarial case with the stub provider",
+          "conclusion": "success"
+        },
+        {
+          "name": "README step 5 \u2014 frozen baseline plan (dry-run, no key, 0 provider calls)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Machine-check the artifacts (not just exit codes)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Linux oracle \u2014 the REAL TaskVerifier on the frozen baseline",
+          "conclusion": "success"
+        },
+        {
+          "name": "Write the reduced cold-start evidence bundle",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload cold-start evidence (E4-R82)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Set up Node",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Set up pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the repository (into a path containing a space)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 112761081435,
+      "name": "install \u00b7 typecheck \u00b7 test \u00b7 build \u00b7 benchmark-smoke \u00b7 audit (ubuntu-latest, ubuntu)",
+      "conclusion": "success",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runnerName": "GitHub Actions 1000002120",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the repository",
+          "conclusion": "success"
+        },
+        {
+          "name": "Set up pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Set up Node",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies (frozen lockfile)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Typecheck",
+          "conclusion": "success"
+        },
+        {
+          "name": "Unit and integration tests",
+          "conclusion": "success"
+        },
+        {
+          "name": "Publish failing test names to the public job summary",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Build",
+          "conclusion": "success"
+        },
+        {
+          "name": "Strict usage audit of the named run (E4-R24 independent stage)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload observation evidence (E4-R24)",
+          "conclusion": "success"
+        },
+        {
+          "name": "N7 \u2014 N0 behavioural gate (12 counterexamples, all GREEN) + legacy R97 cases (14)",
+          "conclusion": "success"
+        },
+        {
+          "name": "N7 \u2014 documentation smoke (approval template, read-only build input, portable links)",
+          "conclusion": "success"
+        },
+        {
+          "name": "R7 \u2014 F6/F3 readiness classification + F5-pricing counterexamples (37 tests, all GREEN)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Benchmark smoke (stub/fake provider \u2014 no paid model)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload benchmark smoke report (P12-5)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Campaign evidence chain \u2014 synthetic fixture validates (E4-R84)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Campaign failure triage \u2014 offline, deterministic digest (E4-R85)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Stall-gate fix \u2014 structured evidence is observable (E4-R86)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Zero-call replay A/B over frozen cases, digest-bound (E4-R87 Phase A)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Incomplete/foreign evidence is refused by the A/B gate (E4-R88)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Evidence-grade correction \u2014 executed identity, emulated baseline, raw-byte audit (E4-R90)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Windows script-shim determinism \u2014 real launches, no injection (E4-R91)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Campaign runner self-check \u2014 offline, 0 provider calls (E4-R84)",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Campaign runner interruption-recovery contract (E4-R94)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Campaign runner authorization/identity/argv contract (E4-R89)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload campaign evidence fixture report (E4-R84)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload test report (P12-5)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload e4-09 diagnostic bundles (E4-R40, failure only)",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Upload R55 parent-verifier diagnostics (E4-R60, failure only)",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Generate gate execution evidence (P38.2-4/10, E4-R09 unified V2)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Generate capability matrix (P12-5, P38.2-11 real wiring evidence)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload capability matrix (P12-5, P38.2-11)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload gate evidence (P38.2-10)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Set up Node",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Set up pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the repository",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 112761081545,
+      "name": "real formal offline (ubuntu)",
+      "conclusion": "success",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runnerName": "GitHub Actions 1000002123",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run pnpm/action-setup@v4",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Build the driver",
+          "conclusion": "success"
+        },
+        {
+          "name": "Real formal + release CLI + measured readiness (zero paid requests)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload formal leg and raw bundles (including failures)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Run pnpm/action-setup@v4",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 112761081577,
+      "name": "r97-r98 closed loop (windows-latest)",
+      "conclusion": "success",
+      "labels": [
+        "windows-latest"
+      ],
+      "runnerName": "GitHub Actions 1000002122",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the repository",
+          "conclusion": "success"
+        },
+        {
+          "name": "Set up pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Set up Node",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies (frozen lockfile)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Build the tested revision",
+          "conclusion": "success"
+        },
+        {
+          "name": "A7a \u2014 release-CLI POS-REFUSE + 0-provider certification (real selection/observer/executor + fake transport, 0 external requests)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run the offline closed loop (setup -> acceptance -> suite -> matrix -> identity)",
+          "conclusion": "success"
+        },
+        {
+          "name": "N5 \u2014 run the offline pre-registration closed loop (0 provider calls)",
+          "conclusion": "success"
+        },
+        {
+          "name": "N7 \u2014 separated readiness levels (no single overall PASS)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload CI readiness artifact",
+          "conclusion": "success"
+        },
+        {
+          "name": "Publish the closed-loop phase + failing tests to the public summary",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Prove the suite CATCHES the thirty anti-cheat mutations (T6's five + A7's fourteen + N2's one + N5's five + S0's two + S7's three)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload the closed-loop evidence (E4-R101)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Set up Node",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Set up pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the repository",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 112761081647,
+      "name": "r97-r98 closed loop (ubuntu-latest)",
+      "conclusion": "success",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runnerName": "GitHub Actions 1000002124",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the repository",
+          "conclusion": "success"
+        },
+        {
+          "name": "Set up pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Set up Node",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies (frozen lockfile)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Build the tested revision",
+          "conclusion": "success"
+        },
+        {
+          "name": "A7a \u2014 release-CLI POS-REFUSE + 0-provider certification (real selection/observer/executor + fake transport, 0 external requests)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run the offline closed loop (setup -> acceptance -> suite -> matrix -> identity)",
+          "conclusion": "success"
+        },
+        {
+          "name": "N5 \u2014 run the offline pre-registration closed loop (0 provider calls)",
+          "conclusion": "success"
+        },
+        {
+          "name": "N7 \u2014 separated readiness levels (no single overall PASS)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload CI readiness artifact",
+          "conclusion": "success"
+        },
+        {
+          "name": "Publish the closed-loop phase + failing tests to the public summary",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Prove the suite CATCHES the thirty anti-cheat mutations (T6's five + A7's fourteen + N2's one + N5's five + S0's two + S7's three)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload the closed-loop evidence (E4-R101)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Set up Node",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Set up pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the repository",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 112761081708,
+      "name": "install \u00b7 typecheck \u00b7 test \u00b7 build \u00b7 benchmark-smoke \u00b7 audit (windows-latest, windows)",
+      "conclusion": "success",
+      "labels": [
+        "windows-latest"
+      ],
+      "runnerName": "GitHub Actions 1000002126",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the repository",
+          "conclusion": "success"
+        },
+        {
+          "name": "Set up pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Set up Node",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies (frozen lockfile)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Typecheck",
+          "conclusion": "success"
+        },
+        {
+          "name": "Unit and integration tests",
+          "conclusion": "success"
+        },
+        {
+          "name": "Publish failing test names to the public job summary",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Build",
+          "conclusion": "success"
+        },
+        {
+          "name": "Strict usage audit of the named run (E4-R24 independent stage)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload observation evidence (E4-R24)",
+          "conclusion": "success"
+        },
+        {
+          "name": "N7 \u2014 N0 behavioural gate (12 counterexamples, all GREEN) + legacy R97 cases (14)",
+          "conclusion": "success"
+        },
+        {
+          "name": "N7 \u2014 documentation smoke (approval template, read-only build input, portable links)",
+          "conclusion": "success"
+        },
+        {
+          "name": "R7 \u2014 F6/F3 readiness classification + F5-pricing counterexamples (37 tests, all GREEN)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Benchmark smoke (stub/fake provider \u2014 no paid model)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload benchmark smoke report (P12-5)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Campaign evidence chain \u2014 synthetic fixture validates (E4-R84)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Campaign failure triage \u2014 offline, deterministic digest (E4-R85)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Stall-gate fix \u2014 structured evidence is observable (E4-R86)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Zero-call replay A/B over frozen cases, digest-bound (E4-R87 Phase A)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Incomplete/foreign evidence is refused by the A/B gate (E4-R88)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Evidence-grade correction \u2014 executed identity, emulated baseline, raw-byte audit (E4-R90)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Windows script-shim determinism \u2014 real launches, no injection (E4-R91)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Campaign runner self-check \u2014 offline, 0 provider calls (E4-R84)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Campaign runner interruption-recovery contract (E4-R94)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Campaign runner authorization/identity/argv contract (E4-R89)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload campaign evidence fixture report (E4-R84)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload test report (P12-5)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload e4-09 diagnostic bundles (E4-R40, failure only)",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Upload R55 parent-verifier diagnostics (E4-R60, failure only)",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Generate gate execution evidence (P38.2-4/10, E4-R09 unified V2)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Generate capability matrix (P12-5, P38.2-11 real wiring evidence)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload capability matrix (P12-5, P38.2-11)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload gate evidence (P38.2-10)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Set up Node",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Set up pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the repository",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 112761081866,
+      "name": "coverage gate (ubuntu)",
+      "conclusion": "success",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runnerName": "GitHub Actions 1000002125",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the repository",
+          "conclusion": "success"
+        },
+        {
+          "name": "Set up pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Set up Node",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies (frozen lockfile)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Coverage gate (thresholds fail the job)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload coverage summary (P20-4)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Generate coverage gate evidence (P38-12, E4-R09 V2)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload coverage gate evidence (P38-12)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Set up Node",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Set up pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the repository",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 112761082220,
+      "name": "real formal offline (windows)",
+      "conclusion": "success",
+      "labels": [
+        "windows-latest"
+      ],
+      "runnerName": "GitHub Actions 1000002127",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run pnpm/action-setup@v4",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Build the driver",
+          "conclusion": "success"
+        },
+        {
+          "name": "Real formal + release CLI + measured readiness (zero paid requests)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload formal leg and raw bundles (including failures)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Run pnpm/action-setup@v4",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 112770476695,
+      "name": "dual-platform acceptance (same SHA)",
+      "conclusion": "success",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runnerName": "GitHub Actions 1000002129",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the repository",
+          "conclusion": "success"
+        },
+        {
+          "name": "Set up pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Set up Node",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies (frozen lockfile)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Build (the verifier needs packages/evaluation/dist)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Download ubuntu readiness leg",
+          "conclusion": "success"
+        },
+        {
+          "name": "Download windows readiness leg",
+          "conclusion": "success"
+        },
+        {
+          "name": "Show what each leg actually downloaded",
+          "conclusion": "success"
+        },
+        {
+          "name": "Reduce both legs to one same-SHA verdict",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload dual-platform verdict (always)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Fail job when the two legs are not one acceptance unit (S7)",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Post Set up Node",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Set up pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the repository",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 112770476753,
+      "name": "release attestation (P38-12)",
+      "conclusion": "success",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runnerName": "GitHub Actions 1000002128",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the repository",
+          "conclusion": "success"
+        },
+        {
+          "name": "Set up pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Set up Node",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies (frozen lockfile)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Build CLI (release:verify runs from dist)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Download linux gate evidence",
+          "conclusion": "success"
+        },
+        {
+          "name": "Download windows gate evidence",
+          "conclusion": "success"
+        },
+        {
+          "name": "Download coverage gate evidence",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify evidence SHA and derive release verdict (P38.2-13 / P38.3-7)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload release attestation (P38.2-13)",
+          "conclusion": "success"
+        },
+        {
+          "name": "Fail job when release not ready (P38.3-7)",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Post Set up Node",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Set up pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the repository",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    }
+  ],
+  "paidModelExperiment": "NOT_RUN",
+  "rawCloudLogsDownloaded": false
+}

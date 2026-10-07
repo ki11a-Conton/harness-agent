@@ -1,0 +1,137 @@
+{
+  "total_count": 1,
+  "jobs": [
+    {
+      "id": 112760760987,
+      "run_id": 37611869373,
+      "workflow_name": "genuine Windows acceptance",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/runs/37611869373",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOT8gONs8AAAAaQRCqmw",
+      "head_sha": "0cf4549f4f040b8abc983cafc4fcac4805041dab",
+      "url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/jobs/112760760987",
+      "html_url": "https://github.com/ki11a-Conton/harness-agent/actions/runs/37611869373/job/112760760987",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-07T11:06:41Z",
+      "started_at": "2026-10-07T11:06:43Z",
+      "completed_at": "2026-10-07T11:07:30Z",
+      "name": "native-windows",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-07T11:06:44Z",
+          "completed_at": "2026-10-07T11:06:45Z"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-07T11:06:45Z",
+          "completed_at": "2026-10-07T11:06:52Z"
+        },
+        {
+          "name": "Run pnpm/action-setup@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-07T11:06:52Z",
+          "completed_at": "2026-10-07T11:06:55Z"
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-07T11:06:55Z",
+          "completed_at": "2026-10-07T11:07:03Z"
+        },
+        {
+          "name": "Frozen install and real build",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-07T11:07:03Z",
+          "completed_at": "2026-10-07T11:07:11Z"
+        },
+        {
+          "name": "Check the acceptance report parser",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-10-07T11:07:11Z",
+          "completed_at": "2026-10-07T11:07:11Z"
+        },
+        {
+          "name": "Execute native process and production boundary regressions",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-10-07T11:07:11Z",
+          "completed_at": "2026-10-07T11:07:25Z"
+        },
+        {
+          "name": "Publish final-state receipt and all case records",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-10-07T11:07:25Z",
+          "completed_at": "2026-10-07T11:07:26Z"
+        },
+        {
+          "name": "Run actions/upload-artifact@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-10-07T11:07:26Z",
+          "completed_at": "2026-10-07T11:07:27Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 16,
+          "started_at": "2026-10-07T11:07:27Z",
+          "completed_at": "2026-10-07T11:07:27Z"
+        },
+        {
+          "name": "Post Run pnpm/action-setup@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 17,
+          "started_at": "2026-10-07T11:07:27Z",
+          "completed_at": "2026-10-07T11:07:27Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 18,
+          "started_at": "2026-10-07T11:07:27Z",
+          "completed_at": "2026-10-07T11:07:29Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 19,
+          "started_at": "2026-10-07T11:07:29Z",
+          "completed_at": "2026-10-07T11:07:29Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/check-runs/112760760987",
+      "labels": [
+        "windows-latest"
+      ],
+      "runner_id": 1000002118,
+      "runner_name": "GitHub Actions 1000002118",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    }
+  ]
+}

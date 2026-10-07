@@ -1,0 +1,48 @@
+{
+  "sourceSha": "0cf4549f4f040b8abc983cafc4fcac4805041dab",
+  "outcome": "PASS",
+  "controls": [
+    {
+      "case": "valid",
+      "exitCode": 0,
+      "expectedAccepted": true,
+      "outcome": "PASS"
+    },
+    {
+      "case": "missing_packet",
+      "exitCode": 1,
+      "expectedAccepted": false,
+      "outcome": "PASS"
+    },
+    {
+      "case": "duplicate_packet",
+      "exitCode": 1,
+      "expectedAccepted": false,
+      "outcome": "PASS"
+    },
+    {
+      "case": "foreign_sha",
+      "exitCode": 1,
+      "expectedAccepted": false,
+      "outcome": "PASS"
+    },
+    {
+      "case": "bad_count",
+      "exitCode": 1,
+      "expectedAccepted": false,
+      "outcome": "PASS"
+    },
+    {
+      "case": "required_skipped",
+      "exitCode": 1,
+      "expectedAccepted": false,
+      "outcome": "PASS"
+    },
+    {
+      "case": "changed_derived_archive",
+      "exitCode": 1,
+      "expectedAccepted": false,
+      "outcome": "PASS"
+    }
+  ]
+}

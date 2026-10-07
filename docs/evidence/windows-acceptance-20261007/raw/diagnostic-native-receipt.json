@@ -1,0 +1,1071 @@
+{
+  "schemaVersion": "genuine-windows-acceptance-v1",
+  "platform": "win32",
+  "osType": "Windows_NT",
+  "osRelease": "10.0.26100",
+  "arch": "x64",
+  "nodeVersion": "v22.23.3",
+  "sourceSha": "1db2b71e08a6e8325267c235b30c57e265b980c5",
+  "workflowSha": "1db2b71e08a6e8325267c235b30c57e265b980c5",
+  "treeClean": true,
+  "runId": "37611380915",
+  "runAttempt": "1",
+  "workflow": "ki11a-Conton/harness-agent/.github/workflows/windows-acceptance.yml@refs/heads/main",
+  "job": "native-windows",
+  "rawReportSha256": "79e545b78b58a9f99797ae309db6dda28005ff23171b6344a7538980dd85bb3d",
+  "rawReportBytes": 66058,
+  "outcome": "FAIL",
+  "issues": [
+    "TEST_SUITE_NOT_PASSED"
+  ],
+  "files": 13,
+  "passed": 178,
+  "failed": 1,
+  "skipped": 1,
+  "required": [
+    {
+      "name": "E4-R91: Windows script shims run deterministically (H1) runs a .cmd shim by FULL PATH and delivers its arguments",
+      "observed": [
+        "passed"
+      ]
+    },
+    {
+      "name": "E4-R91: Windows script shims run deterministically (H1) resolves a BARE command name through PATH+PATHEXT (the reg-27 `npx` shape)",
+      "observed": [
+        "passed"
+      ]
+    },
+    {
+      "name": "E4-R91: Windows script shims run deterministically (H1) runs a .ps1 script and transports a dash-leading argument literally",
+      "observed": [
+        "passed"
+      ]
+    },
+    {
+      "name": "E4-R91: Windows script shims run deterministically (H1) REFUSES a .cmd argument containing a cmd metacharacter, so no second command can run",
+      "observed": [
+        "passed"
+      ]
+    },
+    {
+      "name": "E4-R91: Windows script shims run deterministically (H1) still honors cwd, timeout and cancellation through the shim path",
+      "observed": [
+        "passed"
+      ]
+    },
+    {
+      "name": "E4-R91: Windows script shims run deterministically (H1) propagates a real nonzero exit code from a .cmd shim",
+      "observed": [
+        "passed"
+      ]
+    },
+    {
+      "name": "E4-R91: argv launch planning (platform-parameterised) runs a real .cmd shim resolved by BARE NAME through runArgv end-to-end",
+      "observed": [
+        "passed"
+      ]
+    },
+    {
+      "name": "E4-R96 real Windows processes: the cwd boundary holds runs the script under opts.cwd, NOT the parent cwd's same-named namesake",
+      "observed": [
+        "passed"
+      ]
+    },
+    {
+      "name": "E4-R96 real Windows processes: the cwd boundary holds runs a .cmd from a path containing a space and CJK characters",
+      "observed": [
+        "passed"
+      ]
+    },
+    {
+      "name": "E4-R96 real Windows processes: the cwd boundary holds REFUSES a .cmd path with a metacharacter and creates no sentinel",
+      "observed": [
+        "passed"
+      ]
+    },
+    {
+      "name": "Windows native process-tree completion boundary cancel waits for both the child and its real grandchild to terminate",
+      "observed": [
+        "passed"
+      ]
+    },
+    {
+      "name": "Windows native process-tree completion boundary timeout waits for both the child and its real grandchild to terminate",
+      "observed": [
+        "passed"
+      ]
+    }
+  ],
+  "caseRecordsSha256": "463decf7d76e23a382f1ded949380fea111d79fa830719f590aeda6fc5f38c6b",
+  "paidModelExperiment": "NOT_RUN",
+  "caseRecords": [
+    {
+      "file": "apps/cli/src/source-audit-verification.regressions.test.ts",
+      "assertions": [
+        {
+          "name": "B16: the unchanged HTTP oracle is denied by the benchmark network policy instead of falsely verified",
+          "status": "passed",
+          "durationMs": 609.3679
+        }
+      ]
+    },
+    {
+      "file": "apps/web/src/harness.integration.test.ts",
+      "assertions": [
+        {
+          "name": "P0-3: web host on the production harness composition root wires the interactive profile with the full tool set and durable stores when a dataDir is set",
+          "status": "passed",
+          "durationMs": 48.3724000000002
+        },
+        {
+          "name": "P0-3: web host on the production harness composition root uses in-memory stores without a dataDir (checkpoint absent)",
+          "status": "passed",
+          "durationMs": 7.4617000000007465
+        },
+        {
+          "name": "P0-3: web host on the production harness composition root serves a full turn end-to-end through the harness runtime",
+          "status": "passed",
+          "durationMs": 621.3378000000002
+        },
+        {
+          "name": "P0-3: web host on the production harness composition root creates a session and routes it through bindings for a new sender",
+          "status": "passed",
+          "durationMs": 513.7734
+        },
+        {
+          "name": "P0-3: web host on the production harness composition root U3 cancels a genuinely blocked production turn through HTTP and Gateway",
+          "status": "passed",
+          "durationMs": 439.1080000000002
+        },
+        {
+          "name": "P0-3: web host on the production harness composition root U4 stops the active queued follow-up through HTTP without cancelling another sender's session",
+          "status": "failed",
+          "durationMs": 1435.9738000000007,
+          "failureMessages": [
+            "AssertionError: expected [] to deeply equal [ Array(1) ]\n    at D:/a/harness-agent/harness-agent/apps/web/src/harness.integration.test.ts:321:102\n    at file:///D:/a/harness-agent/harness-agent/node_modules/.pnpm/@vitest+runner@4.1.11/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "apps/web/src/source-audit-restoration.regressions.test.ts",
+      "assertions": [
+        {
+          "name": "B15: a restored sender can approve and cancel before sending another chat message",
+          "status": "passed",
+          "durationMs": 93.33789999999999
+        }
+      ]
+    },
+    {
+      "file": "packages/context/src/scoped-instruction-read.regressions.test.ts",
+      "assertions": [
+        {
+          "name": "opt-in scoped instruction hard read boundaries omits malformed UTF-8 ff at cap 1, retaining a regular control",
+          "status": "passed",
+          "durationMs": 31.534400000000005
+        },
+        {
+          "name": "opt-in scoped instruction hard read boundaries omits malformed UTF-8 ff at cap 3, retaining a regular control",
+          "status": "passed",
+          "durationMs": 21.011000000000024
+        },
+        {
+          "name": "opt-in scoped instruction hard read boundaries omits malformed UTF-8 ff at cap 100, retaining a regular control",
+          "status": "passed",
+          "durationMs": 20.65930000000003
+        },
+        {
+          "name": "opt-in scoped instruction hard read boundaries omits malformed UTF-8 e228a1 at cap 1, retaining a regular control",
+          "status": "passed",
+          "durationMs": 20.29230000000001
+        },
+        {
+          "name": "opt-in scoped instruction hard read boundaries omits malformed UTF-8 e228a1 at cap 3, retaining a regular control",
+          "status": "passed",
+          "durationMs": 21.03589999999997
+        },
+        {
+          "name": "opt-in scoped instruction hard read boundaries omits malformed UTF-8 e228a1 at cap 100, retaining a regular control",
+          "status": "passed",
+          "durationMs": 18.970000000000027
+        },
+        {
+          "name": "opt-in scoped instruction hard read boundaries omits malformed UTF-8 e282 at cap 1, retaining a regular control",
+          "status": "passed",
+          "durationMs": 18.118400000000065
+        },
+        {
+          "name": "opt-in scoped instruction hard read boundaries omits malformed UTF-8 e282 at cap 3, retaining a regular control",
+          "status": "passed",
+          "durationMs": 18.343900000000076
+        },
+        {
+          "name": "opt-in scoped instruction hard read boundaries omits malformed UTF-8 e282 at cap 100, retaining a regular control",
+          "status": "passed",
+          "durationMs": 18.181799999999953
+        },
+        {
+          "name": "opt-in scoped instruction hard read boundaries omits malformed UTF-8 eda080 at cap 1, retaining a regular control",
+          "status": "passed",
+          "durationMs": 23.732700000000023
+        },
+        {
+          "name": "opt-in scoped instruction hard read boundaries omits malformed UTF-8 eda080 at cap 3, retaining a regular control",
+          "status": "passed",
+          "durationMs": 19.882000000000062
+        },
+        {
+          "name": "opt-in scoped instruction hard read boundaries omits malformed UTF-8 eda080 at cap 100, retaining a regular control",
+          "status": "passed",
+          "durationMs": 15.867500000000064
+        },
+        {
+          "name": "opt-in scoped instruction hard read boundaries omits a malformed truncated prefix rather than expanding replacement bytes",
+          "status": "passed",
+          "durationMs": 21.826900000000023
+        },
+        {
+          "name": "opt-in scoped instruction hard read boundaries preserves valid UTF-8 truncation and its existing marker within cap 0",
+          "status": "passed",
+          "durationMs": 16.543700000000058
+        },
+        {
+          "name": "opt-in scoped instruction hard read boundaries preserves valid UTF-8 truncation and its existing marker within cap 1",
+          "status": "passed",
+          "durationMs": 23.193500000000085
+        },
+        {
+          "name": "opt-in scoped instruction hard read boundaries preserves valid UTF-8 truncation and its existing marker within cap 2",
+          "status": "passed",
+          "durationMs": 23.2663
+        },
+        {
+          "name": "opt-in scoped instruction hard read boundaries preserves valid UTF-8 truncation and its existing marker within cap 3",
+          "status": "passed",
+          "durationMs": 19.92070000000001
+        },
+        {
+          "name": "opt-in scoped instruction hard read boundaries preserves valid UTF-8 truncation and its existing marker within cap 4",
+          "status": "passed",
+          "durationMs": 17.283900000000017
+        },
+        {
+          "name": "opt-in scoped instruction hard read boundaries preserves valid UTF-8 truncation and its existing marker within cap 8",
+          "status": "passed",
+          "durationMs": 14.754599999999982
+        },
+        {
+          "name": "opt-in scoped instruction hard read boundaries preserves valid UTF-8 truncation and its existing marker within cap 17",
+          "status": "passed",
+          "durationMs": 15.642299999999977
+        },
+        {
+          "name": "opt-in scoped instruction hard read boundaries preserves valid UTF-8 truncation and its existing marker within cap 24",
+          "status": "passed",
+          "durationMs": 14.95429999999999
+        },
+        {
+          "name": "opt-in scoped instruction hard read boundaries preserves valid UTF-8 truncation and its existing marker within cap 64",
+          "status": "passed",
+          "durationMs": 15.2118999999999
+        },
+        {
+          "name": "opt-in scoped instruction hard read boundaries preserves the literal BOM in valid capture with cap 100",
+          "status": "passed",
+          "durationMs": 12.7346
+        },
+        {
+          "name": "opt-in scoped instruction hard read boundaries preserves the literal BOM in valid capture with cap 18",
+          "status": "passed",
+          "durationMs": 12.933999999999969
+        },
+        {
+          "name": "opt-in scoped instruction hard read boundaries accepts a genuinely empty regular file",
+          "status": "passed",
+          "durationMs": 22.51209999999992
+        },
+        {
+          "name": "opt-in scoped instruction hard read boundaries accumulates short reads with allocation and actual capture bounded by cap plus four",
+          "status": "passed",
+          "durationMs": 15.136099999999942
+        },
+        {
+          "name": "opt-in scoped instruction hard read boundaries omits a zero premature EOF capture and does not cache it",
+          "status": "passed",
+          "durationMs": 21.50980000000004
+        },
+        {
+          "name": "opt-in scoped instruction hard read boundaries omits a partial premature EOF capture and does not cache it",
+          "status": "passed",
+          "durationMs": 23.164499999999975
+        },
+        {
+          "name": "opt-in scoped instruction hard read boundaries continues to other documents after an actual descriptor closes and reports EIO",
+          "status": "passed",
+          "durationMs": 13.05989999999997
+        },
+        {
+          "name": "opt-in scoped instruction hard read boundaries isolates read failure and retries a failed capture instead of caching it",
+          "status": "passed",
+          "durationMs": 16.584699999999998
+        },
+        {
+          "name": "opt-in scoped instruction hard read boundaries rejects a nonregular opened descriptor even when its numeric revision matches",
+          "status": "passed",
+          "durationMs": 11.668600000000083
+        },
+        {
+          "name": "opt-in scoped instruction hard read boundaries rejects a pathname revision changed after open but before capture",
+          "status": "passed",
+          "durationMs": 11.846400000000017
+        },
+        {
+          "name": "opt-in scoped instruction hard read boundaries rejects a real parent-directory replacement after reading despite an unchanged descriptor revision",
+          "status": "passed",
+          "durationMs": 22.404600000000073
+        },
+        {
+          "name": "opt-in scoped instruction hard read boundaries handles a real regular-to-FIFO race with a guarded nonblocking native open",
+          "status": "passed",
+          "durationMs": 13.835799999999836
+        }
+      ]
+    },
+    {
+      "file": "packages/harness/src/source-audit-boundaries.regressions.test.ts",
+      "assertions": [
+        {
+          "name": "B01/B02: protected constraints fail explicitly instead of being omitted or cut",
+          "status": "passed",
+          "durationMs": 6.810499999999934
+        },
+        {
+          "name": "B21: snapshot writes and reads cannot mutate the frozen policy by reference",
+          "status": "passed",
+          "durationMs": 2.2696999999999434
+        },
+        {
+          "name": "B04: a tampered payload hash cannot mutate the parent's file",
+          "status": "passed",
+          "durationMs": 17.468599999999924
+        },
+        {
+          "name": "B05: chmod-only changes propagate and concurrent parent chmod conflicts",
+          "status": "skipped",
+          "durationMs": null
+        },
+        {
+          "name": "B16: a standalone verifier without an authorized command adapter fails closed",
+          "status": "passed",
+          "durationMs": 4.958399999999983
+        },
+        {
+          "name": "B16: an authorized structured command runs, and metacharacter argv remains inert",
+          "status": "passed",
+          "durationMs": 143.07719999999995
+        },
+        {
+          "name": "B19: cancellation during a real verification process reaps it and emits one cancelled terminal",
+          "status": "passed",
+          "durationMs": 279.8792000000001
+        },
+        {
+          "name": "B19: an already aborted primitive never spawns an argv child",
+          "status": "passed",
+          "durationMs": 2.1907000000001062
+        },
+        {
+          "name": "B16: verification independently honors the read-only execution boundary",
+          "status": "passed",
+          "durationMs": 16.11310000000003
+        },
+        {
+          "name": "B16: verification independently honors the strong execution boundary",
+          "status": "passed",
+          "durationMs": 13.443499999999858
+        },
+        {
+          "name": "B16: verification independently honors the budget execution boundary",
+          "status": "passed",
+          "durationMs": 12.606999999999971
+        },
+        {
+          "name": "B16: verification independently honors the deadline execution boundary",
+          "status": "passed",
+          "durationMs": 13.003900000000158
+        }
+      ]
+    },
+    {
+      "file": "packages/harness/src/source-audit-fixes.regressions.test.ts",
+      "assertions": [
+        {
+          "name": "B01: the audit's real counterexample now observes the required behavior",
+          "status": "passed",
+          "durationMs": 1.5050000000001091
+        },
+        {
+          "name": "B02: the audit's real counterexample now observes the required behavior",
+          "status": "passed",
+          "durationMs": 0.30500000000029104
+        },
+        {
+          "name": "B03: the audit's real counterexample now observes the required behavior",
+          "status": "passed",
+          "durationMs": 0.26410000000032596
+        },
+        {
+          "name": "B04: the audit's real counterexample now observes the required behavior",
+          "status": "passed",
+          "durationMs": 0.4227000000000771
+        },
+        {
+          "name": "B05: the audit's real counterexample now observes the required behavior",
+          "status": "passed",
+          "durationMs": 0.19509999999991123
+        },
+        {
+          "name": "B06: the audit's real counterexample now observes the required behavior",
+          "status": "passed",
+          "durationMs": 0.18260000000009313
+        },
+        {
+          "name": "B07: the audit's real counterexample now observes the required behavior",
+          "status": "passed",
+          "durationMs": 0.19210000000020955
+        },
+        {
+          "name": "B08: the audit's real counterexample now observes the required behavior",
+          "status": "passed",
+          "durationMs": 0.24539999999979045
+        },
+        {
+          "name": "B09: the audit's real counterexample now observes the required behavior",
+          "status": "passed",
+          "durationMs": 0.5565999999998894
+        },
+        {
+          "name": "B10: the audit's real counterexample now observes the required behavior",
+          "status": "passed",
+          "durationMs": 0.26419999999961874
+        },
+        {
+          "name": "B11: the audit's real counterexample now observes the required behavior",
+          "status": "passed",
+          "durationMs": 0.20520000000033178
+        },
+        {
+          "name": "B12: the audit's real counterexample now observes the required behavior",
+          "status": "passed",
+          "durationMs": 0.1087999999999738
+        },
+        {
+          "name": "B13: the audit's real counterexample now observes the required behavior",
+          "status": "passed",
+          "durationMs": 0.09320000000025175
+        },
+        {
+          "name": "B14: the audit's real counterexample now observes the required behavior",
+          "status": "passed",
+          "durationMs": 0.08479999999963184
+        },
+        {
+          "name": "B15: the audit's real counterexample now observes the required behavior",
+          "status": "passed",
+          "durationMs": 0.08359999999993306
+        },
+        {
+          "name": "B16: the audit's real counterexample now observes the required behavior",
+          "status": "passed",
+          "durationMs": 0.1327000000001135
+        },
+        {
+          "name": "B17: the audit's real counterexample now observes the required behavior",
+          "status": "passed",
+          "durationMs": 0.09979999999995925
+        },
+        {
+          "name": "B18: the audit's real counterexample now observes the required behavior",
+          "status": "passed",
+          "durationMs": 0.0871000000006461
+        },
+        {
+          "name": "B19: the audit's real counterexample now observes the required behavior",
+          "status": "passed",
+          "durationMs": 0.08109999999942374
+        },
+        {
+          "name": "B20: the audit's real counterexample now observes the required behavior",
+          "status": "passed",
+          "durationMs": 0.08169999999972788
+        },
+        {
+          "name": "B21: the audit's real counterexample now observes the required behavior",
+          "status": "passed",
+          "durationMs": 0.07909999999992579
+        }
+      ]
+    },
+    {
+      "file": "packages/harness/src/source-audit-memory.regressions.test.ts",
+      "assertions": [
+        {
+          "name": "B18: jsonl isolates repositories, preserves same-repo reuse and explicit global sharing",
+          "status": "passed",
+          "durationMs": 1075.7638
+        },
+        {
+          "name": "B18: sqlite isolates repositories, preserves same-repo reuse and explicit global sharing",
+          "status": "passed",
+          "durationMs": 1686.4774
+        }
+      ]
+    },
+    {
+      "file": "packages/harness/src/source-audit-recovery.regressions.test.ts",
+      "assertions": [
+        {
+          "name": "B13: real killed process recovery handles committed without resetting grants or adopting unknown dispatch",
+          "status": "passed",
+          "durationMs": 1.9597999999996318
+        },
+        {
+          "name": "B13: real killed process recovery handles unknown without resetting grants or adopting unknown dispatch",
+          "status": "passed",
+          "durationMs": 0.22020000000020445
+        },
+        {
+          "name": "B13: real killed process recovery handles tampered without resetting grants or adopting unknown dispatch",
+          "status": "passed",
+          "durationMs": 0.2925000000000182
+        }
+      ]
+    },
+    {
+      "file": "packages/tools/src/symbol-scope.regressions.test.ts",
+      "assertions": [
+        {
+          "name": "symbol search: actual approved scope, mixed languages and isolated caches only lists, stats and reads the selected TS directory on a cold query",
+          "status": "passed",
+          "durationMs": 30.850000000000023
+        },
+        {
+          "name": "symbol search: actual approved scope, mixed languages and isolated caches only stats and reads the selected TS file rather than its siblings",
+          "status": "passed",
+          "durationMs": 13.875900000000001
+        },
+        {
+          "name": "symbol search: actual approved scope, mixed languages and isolated caches uses the existing fallback for a Python-only directory in a mixed repository",
+          "status": "passed",
+          "durationMs": 16.273900000000026
+        },
+        {
+          "name": "symbol search: actual approved scope, mixed languages and isolated caches uses the existing fallback for a selected Python file",
+          "status": "passed",
+          "durationMs": 41.10329999999999
+        },
+        {
+          "name": "symbol search: actual approved scope, mixed languages and isolated caches recovers Python when the root's TS/JS index has no query hit",
+          "status": "passed",
+          "durationMs": 24.51049999999998
+        },
+        {
+          "name": "symbol search: actual approved scope, mixed languages and isolated caches retains indexed hits as the priority without merging Python definitions",
+          "status": "passed",
+          "durationMs": 29.340900000000033
+        },
+        {
+          "name": "symbol search: actual approved scope, mixed languages and isolated caches gives identical root-relative hits for absolute and relative TS scope ts",
+          "status": "passed",
+          "durationMs": 20.666500000000042
+        },
+        {
+          "name": "symbol search: actual approved scope, mixed languages and isolated caches gives identical root-relative hits for absolute and relative TS scope ts/a.ts",
+          "status": "passed",
+          "durationMs": 18.311900000000037
+        },
+        {
+          "name": "symbol search: actual approved scope, mixed languages and isolated caches gives identical root-relative hits for absolute and relative Python scope py",
+          "status": "passed",
+          "durationMs": 21.533800000000042
+        },
+        {
+          "name": "symbol search: actual approved scope, mixed languages and isolated caches gives identical root-relative hits for absolute and relative Python scope py/logic.py",
+          "status": "passed",
+          "durationMs": 41.0643
+        },
+        {
+          "name": "symbol search: actual approved scope, mixed languages and isolated caches normalizes aliases and retains directory boundaries",
+          "status": "passed",
+          "durationMs": 42.817999999999984
+        },
+        {
+          "name": "symbol search: actual approved scope, mixed languages and isolated caches reuses unchanged scoped contents on warm validation without accessing other scopes",
+          "status": "passed",
+          "durationMs": 16.59820000000002
+        },
+        {
+          "name": "symbol search: actual approved scope, mixed languages and isolated caches keeps root and selected-scope caches isolated across root -> file -> directory queries",
+          "status": "passed",
+          "durationMs": 19.138400000000047
+        },
+        {
+          "name": "symbol search: actual approved scope, mixed languages and isolated caches coalesces concurrent queries of the same normalized scope",
+          "status": "passed",
+          "durationMs": 27.037599999999998
+        },
+        {
+          "name": "symbol search: actual approved scope, mixed languages and isolated caches does not share a flight or cached file set between concurrent different scopes",
+          "status": "passed",
+          "durationMs": 15.01679999999999
+        },
+        {
+          "name": "symbol search: actual approved scope, mixed languages and isolated caches updates scoped edits, additions and removals before the next query",
+          "status": "passed",
+          "durationMs": 40.11450000000002
+        },
+        {
+          "name": "symbol search: actual approved scope, mixed languages and isolated caches preserves maxResults for indexed and fallback queries",
+          "status": "passed",
+          "durationMs": 18.102800000000002
+        },
+        {
+          "name": "symbol search: actual approved scope, mixed languages and isolated caches skips discovered symlinks and VCS/dependency/generated paths",
+          "status": "passed",
+          "durationMs": 35.73110000000008
+        },
+        {
+          "name": "symbol search: actual approved scope, mixed languages and isolated caches retains a trusted root alias while refusing selected directory symlinks",
+          "status": "passed",
+          "durationMs": 18.730499999999893
+        },
+        {
+          "name": "symbol search: actual approved scope, mixed languages and isolated caches refuses a selected file reached through a directory symlink",
+          "status": "passed",
+          "durationMs": 18.967499999999973
+        },
+        {
+          "name": "symbol search: actual approved scope, mixed languages and isolated caches never reads other paths when permission only allows the requested directory",
+          "status": "passed",
+          "durationMs": 13.923399999999901
+        },
+        {
+          "name": "symbol search: actual approved scope, mixed languages and isolated caches keeps permission denial and outside-sandbox rejection before all source IO",
+          "status": "passed",
+          "durationMs": 12.5150000000001
+        },
+        {
+          "name": "symbol search: actual approved scope, mixed languages and isolated caches returns no stale scoped contents after the selected file vanishes",
+          "status": "passed",
+          "durationMs": 16.73259999999982
+        }
+      ]
+    },
+    {
+      "file": "packages/tools/src/process/executor.test.ts",
+      "assertions": [
+        {
+          "name": "ProcessExecutor (EXEC-001) runs a command to success and captures stdout",
+          "status": "passed",
+          "durationMs": 109.89429999999993
+        },
+        {
+          "name": "ProcessExecutor (EXEC-001) reports failed status on nonzero exit",
+          "status": "passed",
+          "durationMs": 107.22929999999997
+        },
+        {
+          "name": "ProcessExecutor (EXEC-001) captures stderr separately",
+          "status": "passed",
+          "durationMs": 109.4421000000001
+        },
+        {
+          "name": "ProcessExecutor (EXEC-001) streams chunks through onOutput",
+          "status": "passed",
+          "durationMs": 92.39779999999996
+        },
+        {
+          "name": "ProcessExecutor (EXEC-001) times out and reports PROCESS_TIMEOUT",
+          "status": "passed",
+          "durationMs": 375.4514999999999
+        },
+        {
+          "name": "ProcessExecutor (EXEC-001) kills the process tree on timeout (no orphan)",
+          "status": "passed",
+          "durationMs": 400.3713
+        },
+        {
+          "name": "ProcessExecutor (EXEC-001) returns cancelled when the signal aborts",
+          "status": "passed",
+          "durationMs": 239.64869999999996
+        },
+        {
+          "name": "ProcessExecutor (EXEC-001) truncates oversized output",
+          "status": "passed",
+          "durationMs": 97.5555000000004
+        },
+        {
+          "name": "ProcessExecutor (EXEC-001) honors cwd and env",
+          "status": "passed",
+          "durationMs": 100.76099999999997
+        },
+        {
+          "name": "E4-R79: ProcessExecutor argv execution (shell:false, no re-interpretation) delivers every argument verbatim, including shell metacharacters",
+          "status": "passed",
+          "durationMs": 94.0935000000004
+        },
+        {
+          "name": "E4-R79: ProcessExecutor argv execution (shell:false, no re-interpretation) does not let a metacharacter argument run a second command",
+          "status": "passed",
+          "durationMs": 90.91539999999986
+        },
+        {
+          "name": "E4-R79: ProcessExecutor argv execution (shell:false, no re-interpretation) reports a real nonzero exit code from the argv path",
+          "status": "passed",
+          "durationMs": 79.15290000000005
+        },
+        {
+          "name": "E4-R79: ProcessExecutor argv execution (shell:false, no re-interpretation) reports error status when the executable does not exist",
+          "status": "passed",
+          "durationMs": 3.2279999999996107
+        },
+        {
+          "name": "E4-R79: ProcessExecutor argv execution (shell:false, no re-interpretation) honors timeout, cancellation, output cap and env on the argv path",
+          "status": "passed",
+          "durationMs": 744.8268000000003
+        },
+        {
+          "name": "E4-R79: ProcessExecutor argv execution (shell:false, no re-interpretation) rejects a run() call that provides neither a command string nor argv",
+          "status": "passed",
+          "durationMs": 2.686899999999696
+        },
+        {
+          "name": "E4-R91: Windows script shims run deterministically (H1) runs a .cmd shim by FULL PATH and delivers its arguments",
+          "status": "passed",
+          "durationMs": 33.798699999999826
+        },
+        {
+          "name": "E4-R91: Windows script shims run deterministically (H1) resolves a BARE command name through PATH+PATHEXT (the reg-27 `npx` shape)",
+          "status": "passed",
+          "durationMs": 61.69529999999986
+        },
+        {
+          "name": "E4-R91: Windows script shims run deterministically (H1) runs a .ps1 script and transports a dash-leading argument literally",
+          "status": "passed",
+          "durationMs": 608.1305000000002
+        },
+        {
+          "name": "E4-R91: Windows script shims run deterministically (H1) REFUSES a .cmd argument containing a cmd metacharacter, so no second command can run",
+          "status": "passed",
+          "durationMs": 2.104699999999866
+        },
+        {
+          "name": "E4-R91: Windows script shims run deterministically (H1) still honors cwd, timeout and cancellation through the shim path",
+          "status": "passed",
+          "durationMs": 855.5646999999999
+        },
+        {
+          "name": "E4-R91: Windows script shims run deterministically (H1) propagates a real nonzero exit code from a .cmd shim",
+          "status": "passed",
+          "durationMs": 35.49290000000019
+        },
+        {
+          "name": "E4-R91: argv launch planning (platform-parameterised) POSIX passes the file through untouched (the kernel handles shebangs)",
+          "status": "passed",
+          "durationMs": 0.49429999999938445
+        },
+        {
+          "name": "E4-R91: argv launch planning (platform-parameterised) win32 routes a .cmd/.bat shim through cmd.exe with SEPARATE argv",
+          "status": "passed",
+          "durationMs": 2.507499999999709
+        },
+        {
+          "name": "E4-R91: argv launch planning (platform-parameterised) win32 resolves a BARE name through PATH+PATHEXT and prefers .exe order",
+          "status": "passed",
+          "durationMs": 3.6117000000003827
+        },
+        {
+          "name": "E4-R91: argv launch planning (platform-parameterised) win32 FAILS CLOSED when a .cmd argument carries a cmd metacharacter",
+          "status": "passed",
+          "durationMs": 4.3846999999996115
+        },
+        {
+          "name": "E4-R91: argv launch planning (platform-parameterised) win32 FAILS CLOSED for an unsupported script type instead of guessing",
+          "status": "passed",
+          "durationMs": 2.105399999999463
+        },
+        {
+          "name": "E4-R91: argv launch planning (platform-parameterised) win32 routes .ps1 through PowerShell with -File and separate argv",
+          "status": "passed",
+          "durationMs": 2.522299999999632
+        },
+        {
+          "name": "E4-R91: argv launch planning (platform-parameterised) an unresolvable win32 name is still spawned directly, so the real ENOENT surfaces",
+          "status": "passed",
+          "durationMs": 0.45790000000033615
+        },
+        {
+          "name": "E4-R91: argv launch planning (platform-parameterised) resolves PATH case-insensitively, so an env SPREAD does not lose it",
+          "status": "passed",
+          "durationMs": 3.423200000000179
+        },
+        {
+          "name": "E4-R91: argv launch planning (platform-parameterised) runs a real .cmd shim resolved by BARE NAME through runArgv end-to-end",
+          "status": "passed",
+          "durationMs": 38.573199999999815
+        }
+      ]
+    },
+    {
+      "file": "packages/tools/src/process/r96-windows-execution-boundary.test.ts",
+      "assertions": [
+        {
+          "name": "E4-R96 G1: resolution and spawn agree on ONE cwd resolves a RELATIVE script path against the execution cwd, not the parent's",
+          "status": "passed",
+          "durationMs": 9.6570999999999
+        },
+        {
+          "name": "E4-R96 G1: resolution and spawn agree on ONE cwd resolves a backslash relative path too",
+          "status": "passed",
+          "durationMs": 2.873100000000022
+        },
+        {
+          "name": "E4-R96 G1: resolution and spawn agree on ONE cwd returns null for a relative path that does not exist under the execution cwd",
+          "status": "passed",
+          "durationMs": 1.045699999999897
+        },
+        {
+          "name": "E4-R96 G1: resolution and spawn agree on ONE cwd still returns an ABSOLUTE existing path unchanged",
+          "status": "passed",
+          "durationMs": 2.865099999999984
+        },
+        {
+          "name": "E4-R96 G1: resolution and spawn agree on ONE cwd does NOT add an implicit cwd search for a BARE name",
+          "status": "passed",
+          "durationMs": 2.810699999999997
+        },
+        {
+          "name": "E4-R96 G1: resolution and spawn agree on ONE cwd resolves a RELATIVE PATH entry against the execution cwd",
+          "status": "passed",
+          "durationMs": 3.057800000000043
+        },
+        {
+          "name": "E4-R96 G1: resolution and spawn agree on ONE cwd planArgvLaunch threads the execution cwd into resolution",
+          "status": "passed",
+          "durationMs": 5.3670000000000755
+        },
+        {
+          "name": "E4-R96 G2: the resolved SCRIPT PATH is inside the execution boundary refuses a resolved .cmd path carrying a cmd metacharacter",
+          "status": "passed",
+          "durationMs": 20.054700000000025
+        },
+        {
+          "name": "E4-R96 G2: the resolved SCRIPT PATH is inside the execution boundary still ACCEPTS a .cmd path with a space or non-ASCII characters (measured safe)",
+          "status": "passed",
+          "durationMs": 10.537199999999984
+        },
+        {
+          "name": "E4-R96 G2: the resolved SCRIPT PATH is inside the execution boundary keeps the ARGUMENT metacharacter refusal, so the R79/R91 boundary is unchanged",
+          "status": "passed",
+          "durationMs": 4.5668000000000575
+        },
+        {
+          "name": "E4-R96 G2: the resolved SCRIPT PATH is inside the execution boundary ACCEPTS a .ps1 path carrying a cmd metacharacter — measured safe via -File",
+          "status": "passed",
+          "durationMs": 11.622600000000034
+        },
+        {
+          "name": "E4-R96 G2: the resolved SCRIPT PATH is inside the execution boundary still refuses a METACHARACTER ARGUMENT for the .ps1 route's own safety",
+          "status": "passed",
+          "durationMs": 2.3670999999999367
+        },
+        {
+          "name": "E4-R96 G2: the resolved SCRIPT PATH is inside the execution boundary POSIX is unaffected: a path is passed through untouched whatever it holds",
+          "status": "passed",
+          "durationMs": 2.932299999999941
+        },
+        {
+          "name": "E4-R96 G3: a refusal names the reason, never the secret does not echo an argument that carries a credential",
+          "status": "passed",
+          "durationMs": 2.125
+        },
+        {
+          "name": "E4-R96 G3: a refusal names the reason, never the secret does not echo ANY argument when a DIFFERENT argument is the offender",
+          "status": "passed",
+          "durationMs": 2.681500000000028
+        },
+        {
+          "name": "E4-R96 G3: a refusal names the reason, never the secret does not echo an argument when the SCRIPT PATH is the offender",
+          "status": "passed",
+          "durationMs": 3.3006000000000313
+        },
+        {
+          "name": "E4-R96 G3: a refusal names the reason, never the secret never echoes a secret through runArgv's error either",
+          "status": "passed",
+          "durationMs": 4.700399999999945
+        },
+        {
+          "name": "E4-R96 interpreter selection and the execution-policy statement routes .ps1 through PowerShell with an explicit, non-interactive argv",
+          "status": "passed",
+          "durationMs": 2.2291000000000167
+        },
+        {
+          "name": "E4-R96 interpreter selection and the execution-policy statement still fails closed for an unsupported script type",
+          "status": "passed",
+          "durationMs": 2.3360000000000127
+        },
+        {
+          "name": "E4-R96 interpreter selection and the execution-policy statement never claims Bypass overrides an OS or organisational policy",
+          "status": "passed",
+          "durationMs": 0.9764999999999873
+        },
+        {
+          "name": "E4-R96 interpreter selection and the execution-policy statement keeps shell:false on every route — the boundary the R79 fix established",
+          "status": "passed",
+          "durationMs": 0.7806999999999107
+        },
+        {
+          "name": "E4-R96 interpreter selection and the execution-policy statement states the PATH/ComSpec trust scope explicitly instead of implying a sandbox",
+          "status": "passed",
+          "durationMs": 0.8321000000000822
+        },
+        {
+          "name": "E4-R96 real Windows processes: the cwd boundary holds runs the script under opts.cwd, NOT the parent cwd's same-named namesake",
+          "status": "passed",
+          "durationMs": 50.22569999999996
+        },
+        {
+          "name": "E4-R96 real Windows processes: the cwd boundary holds runs a .cmd from a path containing a space and CJK characters",
+          "status": "passed",
+          "durationMs": 49.81280000000004
+        },
+        {
+          "name": "E4-R96 real Windows processes: the cwd boundary holds REFUSES a .cmd path with a metacharacter and creates no sentinel",
+          "status": "passed",
+          "durationMs": 4.283900000000017
+        }
+      ]
+    },
+    {
+      "file": "packages/tools/src/process/windows-cancellation.regressions.test.ts",
+      "assertions": [
+        {
+          "name": "Windows native process-tree completion boundary cancel waits for both the child and its real grandchild to terminate",
+          "status": "passed",
+          "durationMs": 374.1969
+        },
+        {
+          "name": "Windows native process-tree completion boundary timeout waits for both the child and its real grandchild to terminate",
+          "status": "passed",
+          "durationMs": 8201.514700000002
+        }
+      ]
+    },
+    {
+      "file": "packages/tools/src/verification/task-verifier.test.ts",
+      "assertions": [
+        {
+          "name": "TaskVerifier (VS-001) passes when a command exits 0",
+          "status": "passed",
+          "durationMs": 125.8553
+        },
+        {
+          "name": "TaskVerifier (VS-001) fails when a command exits non-zero",
+          "status": "passed",
+          "durationMs": 91.75459999999998
+        },
+        {
+          "name": "TaskVerifier (VS-001) passes when an artifact exists",
+          "status": "passed",
+          "durationMs": 1.1623999999999342
+        },
+        {
+          "name": "TaskVerifier (VS-001) fails when an artifact is missing",
+          "status": "passed",
+          "durationMs": 0.5952000000000908
+        },
+        {
+          "name": "TaskVerifier (VS-001) mustChange requires the path in changedPaths",
+          "status": "passed",
+          "durationMs": 0.8102000000000089
+        },
+        {
+          "name": "TaskVerifier (VS-001) requirement checks fail closed until a reviewer is wired",
+          "status": "passed",
+          "durationMs": 0.322400000000016
+        },
+        {
+          "name": "TaskVerifier (VS-001) level 0 and passed=false when no specs",
+          "status": "passed",
+          "durationMs": 0.2436999999999898
+        },
+        {
+          "name": "TaskVerifier (VS-001) mixed specs: one failure fails the run",
+          "status": "passed",
+          "durationMs": 77.79629999999997
+        },
+        {
+          "name": "TaskVerifier (VS-001) P1-14 diff: passes when the expected change set is exact",
+          "status": "passed",
+          "durationMs": 1.3163999999999305
+        },
+        {
+          "name": "TaskVerifier (VS-001) P1-14 diff: reports missing expected changes as structured failure",
+          "status": "passed",
+          "durationMs": 0.5764000000000351
+        },
+        {
+          "name": "TaskVerifier (VS-001) P1-14 diff: unexpected destructive edits fail the gate",
+          "status": "passed",
+          "durationMs": 0.44260000000008404
+        },
+        {
+          "name": "TaskVerifier (VS-001) P1-16 diff: unexpected file deletion fails when a baseline file vanishes",
+          "status": "passed",
+          "durationMs": 19.829500000000053
+        },
+        {
+          "name": "TaskVerifier (VS-001) P1-16 diff: generated-junk / format-explosion paths are forbidden by glob",
+          "status": "passed",
+          "durationMs": 1.1616999999999962
+        },
+        {
+          "name": "TaskVerifier (VS-001) P1-16 diff: maxFiles flags a large accidental rewrite",
+          "status": "passed",
+          "durationMs": 0.42619999999999436
+        },
+        {
+          "name": "TaskVerifier (VS-001) P1-16 diff: deletion/glob/maxFiles all satisfied passes",
+          "status": "passed",
+          "durationMs": 0.5511999999999944
+        },
+        {
+          "name": "P8-2: incremental verification evidence emits step_started + step_completed with stable refs and outcome",
+          "status": "passed",
+          "durationMs": 5.687400000000025
+        },
+        {
+          "name": "E4-R79: TaskVerifier command spec dispatch delivers argv byte-for-byte and never executes a metacharacter",
+          "status": "passed",
+          "durationMs": 1.540399999999977
+        },
+        {
+          "name": "E4-R79: TaskVerifier command spec dispatch keeps the legacy command string on the shell path (no args field)",
+          "status": "passed",
+          "durationMs": 0.4434999999999718
+        },
+        {
+          "name": "E4-R79: TaskVerifier command spec dispatch treats an EMPTY args array as the argv contract, not as a shell recipe",
+          "status": "passed",
+          "durationMs": 0.39990000000000236
+        },
+        {
+          "name": "E4-R79: TaskVerifier command spec dispatch reports the real nonzero exit code through the argv path",
+          "status": "passed",
+          "durationMs": 69.56499999999994
+        }
+      ]
+    }
+  ]
+}

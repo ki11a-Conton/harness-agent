@@ -192,7 +192,7 @@ typechecks before testing for the same reason.
 
 ```bash
 node apps/cli/dist/main.js doctor                      # env + store wiring report
-node apps/cli/dist/main.js run                         # run an interactive turn
+node apps/cli/dist/main.js run . "Explain the project structure"  # one task in the current directory
 node apps/cli/dist/main.js benchmark --suite adversarial --limit 1 --allow-stub  # smoke (no API key)
 node apps/cli/dist/main.js benchmark --suite adversarial --dry-run    # plan digest (0 provider calls)
 node apps/cli/dist/main.js audit --strict              # capability audit (release truth axes)
@@ -201,6 +201,9 @@ node apps/cli/dist/main.js release verify              # release verdict from re
 node apps/cli/dist/main.js release gate <gate>         # one gate + durable V2 evidence
 node apps/cli/dist/main.js docs:verify                 # documentation truth checks
 ```
+
+`run <cwd> <text>` submits one task and prints its outcome. For ongoing chat,
+follow-up messages, approvals and cancellation, use the [Web console](docs/web-ui.md).
 
 ### Offline smoke (no API key, no network)
 

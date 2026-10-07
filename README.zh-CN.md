@@ -172,7 +172,7 @@ git -C "<repo>" worktree remove --force "$env:TEMP\clean-run"
 
 ```bash
 node apps/cli/dist/main.js doctor                      # 环境与存储接线报告
-node apps/cli/dist/main.js run                         # 运行一轮交互对话
+node apps/cli/dist/main.js run . "说明项目结构"          # 在当前目录执行一个任务
 node apps/cli/dist/main.js benchmark --suite adversarial --limit 1 --allow-stub  # 冒烟（无需 API key）
 node apps/cli/dist/main.js benchmark --suite adversarial --dry-run    # 计划摘要（0 次 provider 调用）
 node apps/cli/dist/main.js audit --strict              # 能力审计（发布真值轴）
@@ -181,6 +181,9 @@ node apps/cli/dist/main.js release verify              # 从真实证据推导�
 node apps/cli/dist/main.js release gate <gate>         # 单个门禁 + 持久化 V2 证据
 node apps/cli/dist/main.js docs:verify                 # 文档真实性检查
 ```
+
+`run <cwd> <text>` 提交一个任务并输出回合结果。连续聊天、追加消息、权限审批和停止任务
+请使用 [Web 控制台](docs/web-ui.md)。
 
 ## 使用真实模型
 

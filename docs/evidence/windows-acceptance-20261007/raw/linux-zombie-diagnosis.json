@@ -1,0 +1,23 @@
+{
+  "kind": "HOST_CONTAINER_INIT_DIAGNOSTIC",
+  "sourceSha": "0cf4549f4f040b8abc983cafc4fcac4805041dab",
+  "processes": [
+    {
+      "pid": 1320,
+      "status": {
+        "Name": "MainThread",
+        "State": "Z (zombie)",
+        "PPid": "1"
+      }
+    },
+    {
+      "pid": 4552,
+      "status": {
+        "Name": "MainThread",
+        "State": "Z (zombie)",
+        "PPid": "1"
+      }
+    }
+  ],
+  "resolution": "Linux acceptance launched under a real child subreaper; no tests or Runtime kill paths changed; not Windows evidence"
+}

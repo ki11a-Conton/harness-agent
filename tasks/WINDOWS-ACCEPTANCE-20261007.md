@@ -32,6 +32,27 @@ returned cancellation/timeout boundary. Structured public check annotations bind
 every final case state to the genuine host and exact workflow SHA; their hashes
 allow receipt verification when Azure artifact downloads are unavailable.
 
-Status: in progress. Local focused regressions: 154 passed, 0 failed, with
-Windows-native cases explicitly skipped. Acceptance-report parser: 3 passed.
-The changes must pass real Windows before this task is complete.
+Windows execution acceptance: PASS at
+`0cf4549f4f040b8abc983cafc4fcac4805041dab`, genuine Windows run
+`37611869373`, job `112760760987`. All ten pre-existing Windows-native tests and
+both new child/grandchild completion checks executed and passed: 179 passed,
+0 failed, 1 POSIX-only skip, 13 files. Acceptance-report parser: 4 passed.
+The same source's standard Windows CI install, typecheck, full unit/integration
+test step, build and strict usage audit passed in run `37611869402`.
+That CI run finally passed all ten jobs, including both main verify jobs,
+both formal offline legs, both R97/R98 closed loops, coverage, cold-start,
+dual-platform acceptance and release attestation.
+
+Local clean-source full acceptance: 9,032 passed, 0 failed, 14 explicit skips;
+security: 2,135 passed. The Linux container needed a real child subreaper to
+supply normal orphan reaping; no test assertions or Runtime kill paths were
+changed for that host setup. Source SHA remained unchanged for the whole run.
+
+Evidence is archived in
+[Windows acceptance completion](../docs/evidence/windows-acceptance-20261007/COMPLETION.md).
+Public native-run annotations preserve all final case states losslessly and
+their digest was independently verified. GitHub artifact digest metadata is
+recorded; direct Azure raw-log/ZIP downloads are blocked by the workspace proxy,
+so their original bytes are not claimed to have been independently downloaded
+or hash-verified. Formal/readiness/release results are reported separately in
+the completion report. No paid-model quality verdict follows from these checks.

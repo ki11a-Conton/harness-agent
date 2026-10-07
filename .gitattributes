@@ -151,3 +151,6 @@ scripts/research/agent-next5-20261005/* text eol=lf
 docs/evidence/agent-next7-20261006/** text eol=lf
 docs/evidence/agent-next7-20261006/**/*.gz -text
 scripts/research/agent-next7-20261006/* text eol=lf
+
+# Native Windows receipts and host diagnostics are hashed over original bytes.
+docs/evidence/windows-acceptance-20261007/raw/** -text
