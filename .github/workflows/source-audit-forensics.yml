@@ -1,0 +1,28 @@
+name: source audit historical failure forensics
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/source-audit-forensics.yml'
+      - 'scripts/ci/formal-failure-forensics.mjs'
+permissions:
+  contents: read
+  actions: read
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Recover the exact failed Windows formal bundle
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: '37615393968'
+          name: n6-real-formal-windows-latest-21fa7436b1abdcbc0dcd4f8a300f171b1a35f8e0-37615393968-attempt-1
+          path: .ci/historical-formal-failure
+      - name: Publish original command receipt and failure excerpt
+        run: node scripts/ci/formal-failure-forensics.mjs .ci/historical-formal-failure
