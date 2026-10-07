@@ -1,0 +1,67 @@
+{
+  "schemaVersion": "n7-archive-corrections-v1",
+  "evidenceKind": "READ_ONLY_RECOMPUTATION_OF_PUBLISHED_SUMMARIES",
+  "historicalSourceSha": "7203a01bf83e8ebe25e0971bb65a7bdeac6d9311",
+  "inputs": [
+    {
+      "path": "docs/evidence/agent-next7-20261006/execution/main/pairs-summary.json",
+      "bytes": 1262837,
+      "sha256": "c1f5bd4d967147b5101b90ef1a0bb82bcd6df6767dc6fb0af05ae252f2901358"
+    },
+    {
+      "path": "docs/evidence/agent-next7-20261006/execution/main/campaign-result.json",
+      "bytes": 7742417,
+      "sha256": "11d65a89c6d4c03043e9232425015b9f72032de683ea70414d6de356f73ecb5f"
+    },
+    {
+      "path": "docs/evidence/agent-next7-20261006/execution/main/execution-binding.json",
+      "bytes": 922278,
+      "sha256": "dab0f754c3d7bb88a8857ab078f1172960a7851a046fb861520ffc16ea2b3f50"
+    }
+  ],
+  "finalized": {
+    "pairs": 255,
+    "passes": {
+      "baseline": 143,
+      "candidate": 145
+    }
+  },
+  "fullGrid": {
+    "pairs": 256,
+    "passes": {
+      "baseline": 143,
+      "candidate": 146
+    }
+  },
+  "ledgerCommitted": 9171,
+  "costJournalEntries": 9169,
+  "chargedUsdMicros": 9169000000,
+  "usdKind": "OPERATOR_DECLARED_UPPER_BOUND_NOT_INVOICE",
+  "missingJournalAttempts": [
+    {
+      "armRunId": "3b15d3f7b4981a6c251f5a77-candidate",
+      "caseId": "n7e-preview-02-routing-column",
+      "repetition": 0,
+      "arm": "candidate",
+      "attempts": 30,
+      "metricCalls": 29,
+      "journalCalls": 29,
+      "status": "failed",
+      "grade": "unverified_complete"
+    },
+    {
+      "armRunId": "a180156a64de8e10a8bd0059-candidate",
+      "caseId": "n7e-preview-02-routing-column",
+      "repetition": 2,
+      "arm": "candidate",
+      "attempts": 30,
+      "metricCalls": 29,
+      "journalCalls": 29,
+      "status": "passed",
+      "grade": "verified_complete"
+    }
+  ],
+  "baselineMislabelledSafetyRecords": 256,
+  "paidCallsThisReview": 0,
+  "historicalTapeReplayed": false
+}

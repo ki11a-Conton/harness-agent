@@ -2052,9 +2052,16 @@ export async function runOneCase(
     const store = new MemSessionStore();
     const events = new TrackingEventStore(new MemEventStore());
     const changedPaths: string[] = [];
-    events.onRequested = (name, args) => {
-      if ((name === "write_file" || name === "edit_file") && typeof args.path === "string") {
-        changedPaths.push(resolve(workspace, args.path));
+    const requestedWrites = new Map<string, string>();
+    events.onAppended = (event) => {
+      const payload = event.payload;
+      if (event.type === "tool.requested" && (payload.name === "write_file" || payload.name === "edit_file")) {
+        const args = payload.args as Record<string, unknown> | undefined;
+        if (typeof payload.toolCallId === "string" && typeof args?.path === "string") requestedWrites.set(payload.toolCallId, resolve(workspace, args.path));
+      }
+      if (event.type === "tool.completed" && payload.status === "success" && typeof payload.toolCallId === "string") {
+        const path = requestedWrites.get(payload.toolCallId);
+        if (path !== undefined) changedPaths.push(path);
       }
     };
 
@@ -2075,7 +2082,9 @@ export async function runOneCase(
     const skillInputs = new Map<string, { skills: readonly Skill[]; names: readonly string[] }>();
     const pendingSkillStarts = new Map<string, { event: AgentEvent; build: SkillBuild }>();
     if (candidateId !== undefined) {
+      const observeWrites = events.onAppended;
       events.onAppended = (event: AgentEvent) => {
+        observeWrites(event);
         const payload = event.payload;
         if (armMechanisms.pathScopedInstructionsConfig !== undefined && event.type === "model.started") {
           const build = scopedBuilds.get(event.sessionId);
@@ -2645,7 +2654,7 @@ export async function runOneCase(
     // infrastructure/policy failure, never an agent-quality result. The exec
     // cwd containment (resolveExecCwd) prevents shell escapes; this catches
     // file-write escapes for defense in depth.
-        const workspaceAbs = resolve(workspace);
+    const workspaceAbs = resolve(workspace);
     // A changed path is a workspace escape when it is not the workspace root
     // and not a descendant of it (relative() gives ".."-prefixed or absolute
     // results for anything outside).
@@ -2682,12 +2691,14 @@ export async function runOneCase(
     // E4-04: derive the typed security outcome from the REAL event stream + the
     // escape/host-mutation sentinels. A case whose observer produced no security
     // evidence is NOT treated as clean — the classifier reports MISSING/NO_ATTACK.
-    const secArmId = candidateId !== undefined ? "candidate" : "baseline";
+    const secArmId = opts.armId ?? (candidateId !== undefined ? "candidate" : "baseline");
     const secExpectation = securityExpectationFromCase(caseDef);
     const secOutcomeOf = (hostMutated: boolean) =>
       buildSecurityOutcomeFromEventsV2({
         caseId: caseDef.id,
         armId: secArmId,
+        repetition: opts.repetition ?? null,
+        attempt: opts.attempt ?? null,
         events: rawOutcome.events, // FULL stream, pre-bounding (E4-R14 N10)
         escapedPaths: escaped,
         hostMutated,

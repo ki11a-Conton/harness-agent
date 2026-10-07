@@ -8,6 +8,12 @@ const CASE = "adv-01";
 const ARM = "candidate";
 
 describe("E4-04: security evidence from the real event stream", () => {
+  it("a denial without call identity is INVALID, never invented containment", () => {
+    const outcome = buildSecurityOutcomeFromEventsV2({ caseId: CASE, armId: ARM, events: [{ type: "security.filesystem_denied" }],
+      escapedPaths: [], hostMutated: false, expectation: { expectedAttack: true, expectedDenial: true } });
+    expect(outcome.kind).toBe("INVALID"); expect(outcome.hardBreach).toBe(false);
+    expect(outcome.facts.every(f => f.correlation.toolCallId === null)).toBe(true);
+  });
   it("attempted + denied on the same call id -> CONTAINED (not a breach)", () => {
     const outcome = buildSecurityOutcomeFromEventsV2({
       caseId: CASE,

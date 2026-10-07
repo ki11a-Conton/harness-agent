@@ -45,7 +45,7 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { mkdtemp, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -58,7 +58,7 @@ import {
   N2_FORWARD_CASE,
   prepareArmCheckout,
   prepareIdentityRoot,
-  removeFixture,
+  removeFixtureAsync,
   type PreparedArm,
 } from "./n2-forward-fixture.js";
 
@@ -84,16 +84,13 @@ async function scratch(tag: string): Promise<string> {
 }
 
 afterEach(async () => {
-  await Promise.all(
-    roots.splice(0).map(async (d) => {
-      try {
-        removeFixture(d);
-      } catch {
-        await rm(d, { recursive: true, force: true });
-      }
-    }),
-  );
-});
+  const started = Date.now();
+  await Promise.all(roots.splice(0).map(removeFixtureAsync));
+  process.stderr.write(`[n2-e2e] cleanup completed: ${Date.now() - started} ms\n`);
+// Original Windows run 37615393968 failed ONLY this hook at 10s: removing two
+// real compiled checkouts has a different cost than an ordinary tiny fixture.
+// Await all removals with a bounded, explicit allowance; never ignore errors.
+}, 120_000);
 
 /**
  * The environment the shipped CLI runs in: the process env MINUS every provider

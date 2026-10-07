@@ -8,6 +8,10 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 export const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 export const EVIDENCE = join(REPO, "docs/evidence/agent-next7-20261006");
 export const PROFILE = Object.freeze({ budgetTokens: 32000, temperature: null, stallPolicy: "benchmark-default" });
+// Several frozen cases explicitly allow 64k of input context. A 32k/32k
+// reservation cannot cover them. This is an admission bound, not extra budget.
+export const TOKEN_ENVELOPE = Object.freeze({ inputTokens: 64000, outputTokens: 32000 });
+export const REQUIRED_TOKEN_CEILING = TOKEN_ENVELOPE.inputTokens + TOKEN_ENVELOPE.outputTokens;
 export const REQUEST_POLICY = Object.freeze({ maxProviderRetries: 2, retryDelayMs: 200, requestTimeoutMs: 120000 });
 export const BOOTSTRAP_SEED = 20261005; // retain the original N6 statistical seed
 export const SOAK_CALLS = 24;
@@ -114,6 +118,7 @@ export async function loadExperiment(role) {
   assert(byId.size === prereg.dataset.cases.length && loaded.length === byId.size, "CASE_COUNT_DRIFT");
   const cases = prereg.dataset.cases.map(c => {
     assert(byId.has(c.caseId), "CASE_MISSING");
+    assert((byId.get(c.caseId).contextBudgetTokens ?? PROFILE.budgetTokens) <= TOKEN_ENVELOPE.inputTokens, "REQUEST_ENVELOPE_DRIFT");
     assert(caseContentDigest(join(REPO, prereg.dataset.caseRoot, c.caseId)) === c.contentDigest, "CASE_CONTENT_DRIFT");
     return byId.get(c.caseId);
   });
@@ -174,11 +179,11 @@ export async function environmentFacts({ allowInsecure = false, env = process.en
     promotionEligible: report.ok && report.strongIsolation && !allowInsecure,
     contractDigest: digest({ backendId: report.backendId, ok: report.ok, probes: report.selfTest.probes.map(p => ({ id: p.id, prevented: p.prevented })) }),
     selfTest: report.selfTest };
-  const resolved = pricing.resolvePricingBasis("openai", { modelId, endpointBaseUrl: endpoint, requiredTokenCeiling: 64000 }, env, Date.now(), "injected");
+  const resolved = pricing.resolvePricingBasis("openai", { modelId, endpointBaseUrl: endpoint, requiredTokenCeiling: REQUIRED_TOKEN_CEILING }, env, Date.now(), "injected");
   const price = resolved.ok ? { pricingDigest: resolved.basis.pricingDigest, amountUsdMicros: resolved.basis.usdMicrosPerCall,
     basisDigest: resolved.basis.pricingDigest, sourceKind: resolved.basis.sourceKind, currency: resolved.basis.currency,
     issuedAtMs: Date.parse(resolved.basis.validity.issuedAt), expiresAtMs: Date.parse(resolved.basis.validity.expiresAt),
-    coveredTokenCeiling: resolved.basis.coverage.coveredTokenCeiling, requiredTokenCeiling: 64000 } : null;
+    coveredTokenCeiling: resolved.basis.coverage.coveredTokenCeiling, requiredTokenCeiling: REQUIRED_TOKEN_CEILING } : null;
   return { provider: { providerId: "openai", modelId, endpointDigest: prereg.provider.endpointDigest, fullEndpointDigest: sha256(endpoint), profile: PROFILE, requestPolicy: REQUEST_POLICY },
     pricing: price, isolation, credentialPresent: Boolean(env.OPENAI_API_KEY?.trim()) };
 }

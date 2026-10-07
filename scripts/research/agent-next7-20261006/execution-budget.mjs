@@ -1,6 +1,6 @@
 /** Reuse the existing durable call, cost, retry and tool admission machinery. */
 import { join } from "node:path";
-import { assert, dependencies, endpointOf } from "./execution-common.mjs";
+import { assert, dependencies, endpointOf, TOKEN_ENVELOPE } from "./execution-common.mjs";
 
 export async function openBudgets(out, binding, prereg, campaignDigest, { resume = false, soak = false } = {}) {
   const { evaluation: ev } = await dependencies();
@@ -17,7 +17,7 @@ export async function openBudgets(out, binding, prereg, campaignDigest, { resume
   const deadlineAtMs = costBudget.deadlineAtMs();
   const toolBudget = ev.createDurableToolDispatchBudget({ costBudget, deadlineAtMs, journal: { dir, campaignDigest } });
   const wrap = (provider, arm) => ev.createFormalBudgetedProvider({ provider, ledger, costBudget, arm,
-    usdMicrosPerCall: binding.pricing.amountUsdMicros, pricingGuard: binding.pricing, deadlineAtMs });
+    usdMicrosPerCall: binding.pricing.amountUsdMicros, pricingGuard: binding.pricing, tokenEnvelope: TOKEN_ENVELOPE, deadlineAtMs });
   return { ledger, costBudget, toolBudget, deadlineAtMs, wrap };
 }
 export function withModelCallCap(provider, cap) {

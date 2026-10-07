@@ -1478,7 +1478,7 @@ jobs:
   # verdict with `pnpm release:verify`. It never hard-codes PASS.
   release-attestation:
     name: release attestation (P38-12)
-    needs: [verify, coverage]
+    needs: [verify, coverage, dual-platform-acceptance]
     if: success()
     runs-on: ubuntu-latest
     steps:

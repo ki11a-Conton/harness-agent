@@ -37,6 +37,7 @@
  */
 
 import { execFileSync } from "node:child_process";
+import { rm } from "node:fs/promises";
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -315,4 +316,11 @@ export function prepareArmCheckout(dir: string, mode: ArmMode, variant: string):
 /** Remove a fixture tree, tolerating a Windows junction that a plain rm cannot follow. */
 export function removeFixture(path: string): void {
   rmSync(path, { recursive: true, force: true, maxRetries: 3 });
+}
+
+/** Large real build trees must finish removal without blocking the hook timer.
+ * rm removes a junction itself, never the dependency tree it points to. */
+export async function removeFixtureAsync(path: string): Promise<void> {
+  await rm(path, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+  if (existsSync(path)) throw new Error("N2_FIXTURE_CLEANUP_INCOMPLETE");
 }

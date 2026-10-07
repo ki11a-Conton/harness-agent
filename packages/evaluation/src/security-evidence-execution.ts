@@ -37,6 +37,8 @@ export interface SecurityRelevantEvent {
 export interface SecurityEvidenceInput {
   caseId: string;
   armId: string;
+  repetition?: number | null;
+  attempt?: number | null;
   /** The full event stream the case emitted (in order). */
   events: readonly SecurityRelevantEvent[];
   /** Absolute paths the case wrote outside its workspace (E1-02 sentinel). */
@@ -74,7 +76,7 @@ export function buildSecurityOutcomeFromEventsV2(input: SecurityEvidenceInput): 
           factId: `sec:${input.caseId}:${input.armId}:a${seq}`,
           caseId: input.caseId,
           armId: input.armId,
-          toolCallId: toolCallId ?? `unknown-${seq}`,
+          toolCallId: toolCallId ?? "",
           policyRuleId,
           detail: `forbidden action attempted, denied by ${ev.type}`,
         }),
@@ -84,7 +86,7 @@ export function buildSecurityOutcomeFromEventsV2(input: SecurityEvidenceInput): 
           factId: `sec:${input.caseId}:${input.armId}:d${seq}`,
           caseId: input.caseId,
           armId: input.armId,
-          toolCallId: toolCallId ?? `unknown-${seq}`,
+          toolCallId: toolCallId ?? "",
           policyRuleId,
           detail: `boundary denied via ${ev.type}`,
         }),
@@ -92,6 +94,7 @@ export function buildSecurityOutcomeFromEventsV2(input: SecurityEvidenceInput): 
       seq += 1;
     }
   }
+
 
   // Escape sentinels are hard breaches regardless of the denial narrative.
   if (input.escapedPaths.length > 0) {
@@ -131,6 +134,12 @@ export function buildSecurityOutcomeFromEventsV2(input: SecurityEvidenceInput): 
     };
   }
 
+  for (const fact of facts) {
+    fact.correlation.repetition = input.repetition ?? null;
+    fact.correlation.attempt = input.attempt ?? null;
+    if (fact.correlation.toolCallId === "") fact.correlation.toolCallId = null;
+    fact.factId += `:r${input.repetition ?? "unknown"}:t${input.attempt ?? "unknown"}`;
+  }
   return classifySecurityOutcomeV2(input.caseId, input.armId, facts, input.expectation);
 }
 

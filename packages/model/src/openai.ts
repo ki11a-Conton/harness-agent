@@ -379,6 +379,19 @@ async function* streamChatCompletion(
     stream_options: { include_usage: true },
   };
 
+  if (request.maxTokens !== undefined) {
+    if (!Number.isSafeInteger(request.maxTokens) || request.maxTokens < 1) {
+      throw new AgentError(errorInfo("MODEL_ERROR", "maxTokens must be a positive safe integer", { retryable: false, safeToRetry: false, provider: { kind: "protocol" } }));
+    }
+    body.max_tokens = request.maxTokens;
+  }
+  if (request.temperature !== undefined) {
+    if (!Number.isFinite(request.temperature) || request.temperature < 0 || request.temperature > 2) {
+      throw new AgentError(errorInfo("MODEL_ERROR", "temperature must be between 0 and 2", { retryable: false, safeToRetry: false, provider: { kind: "protocol" } }));
+    }
+    body.temperature = request.temperature;
+  }
+
   // P2-43: an illegal advertised function name fails closed locally. The
   // diagnostic bundle is attached so a real-world 11133 can be correlated with
   // the exact request structure without retaining any content.

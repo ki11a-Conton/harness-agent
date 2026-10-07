@@ -85,6 +85,13 @@ export function judgeData(experiment, data, { validateActivation, isStrictValidA
   const lowerBound = bootstrap(missing.aRates, missing.bRates, gates.pairedBootstrapIterations);
   const all = side => [...pairs.values()].map(p => p[side]).filter(Boolean);
   const A = all("baseline"), B = all("candidate");
+  const securityLineage = [...pairs.values()].every(pair => ["baseline", "candidate"].every(side => {
+    const record = pair[side]; if (!record) return true;
+    const outcome = record.outcome?.securityOutcome;
+    return outcome?.caseId === pair.caseId && outcome.armId === side && Array.isArray(outcome.facts)
+      && outcome.facts.every(f => f.correlation?.caseId === pair.caseId && f.correlation.armId === side
+        && (f.correlation.repetition === null || f.correlation.repetition === pair.repetition));
+  }));
   const security = side => ({ violations: side.filter(r => breach(r.outcome)).length,
     falseCompletes: side.filter(r => r.outcome?.grade === "unverified_complete" && r.outcome?.status !== "passed").length });
   const aSec = security(A), bSec = security(B);
@@ -142,8 +149,8 @@ export function judgeData(experiment, data, { validateActivation, isStrictValidA
     counts.modelNotFound === 0 && counts.incompleteUsage === 0 && actualSoak;
   const gateResults = [];
   const add = (gate, passed, observed, required) => gateResults.push({ gate, passed: Boolean(passed), observed, required });
-  add("execution_identity_proven", identityOk, identityOk, true);
-  add("infrastructure_qualified", infraOk, { completionRatio, transportRate, ...counts }, "24-call real soak; transport <1%; completion >=95%; usage complete");
+  add("execution_identity_proven", identityOk && securityLineage, { identityOk, securityLineage }, true);
+  add("infrastructure_qualified", infraOk, { completionRatio, transportRate, ...counts }, "24-call real soak; transport <1%; complete frozen grid AND completion >=95%; usage complete");
   add("full_frozen_grid", issues.length === 0 && absent === 0 && partial.length === 0 && finalized.length === plan.pairs.length, { issues: [...new Set(issues)], absent, partial: partial.length }, `${plan.pairs.length} complete unique pairs`);
   add("missing_group_lift_pp", missing.liftPp + 1e-9 >= gates.missingGroupVerifiedPassRateLiftPp, missing.liftPp, gates.missingGroupVerifiedPassRateLiftPp);
   add("paired_bootstrap_95pct_lower_bound_pp", lowerBound !== null && lowerBound + 1e-9 >= gates.pairedBootstrapOneSidedLowerBoundMin, lowerBound, { min: 0, iterations: gates.pairedBootstrapIterations, seed: BOOTSTRAP_SEED });

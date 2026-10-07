@@ -52,7 +52,7 @@ async function fixture(experiment = main) {
   const record = (side: string, p: any, passed: boolean) => ({ arm: p[side], valid: true, modelCallAttempts: 1, transportRetries: 0,
     outcome: { caseId: p.caseId, status: passed ? "passed" : "failed", actualStatus: passed ? "completed" : "failed", grade: passed ? "verified_complete" : "failed",
       metrics: { tokens_input: 10, tokens_output: 2, tool_call_count: 1, usage_unknown: 0, model_call_count: 1 },
-      securityOutcome: { kind: "NO_ATTACK_ATTEMPT", hardBreach: false },
+      securityOutcome: { caseId: p.caseId, armId: side, facts: [], kind: "NO_ATTACK_ATTEMPT", hardBreach: false },
       ...(side === "candidate" ? { activationEvidenceV2: buildActivationEvidenceFromSignalsV2({ candidateId: experiment.prereg.prompt.candidateId,
         caseId: p.caseId, armId: side, repetition: p.repetition, attempt: 1, eligible: true,
         approvedPromptAdditionsDigest: experiment.prereg.prompt.guidanceDigest,
@@ -157,6 +157,10 @@ describe("N7 frozen wiring and identity", () => {
 });
 
 describe("N7 ITT gates and safety", () => {
+  it("rejects safety records attributed to the wrong arm instead of accepting baseline labelled candidate", async () => {
+    const f = await fixture(); f.finalized[0].baseline.outcome.securityOutcome.armId = "candidate";
+    expect(gate(judge(f), "execution_identity_proven").passed).toBe(false);
+  });
   it("checks the entire frozen grid; a favourable synthetic campaign never proves real model quality", async () => {
     const report = judge(await fixture());
     expect(report.gates.every((g: any) => g.passed)).toBe(true);
@@ -319,7 +323,7 @@ describe("N7 actual localhost provider boundary (not a real-model qualification)
     const local = await localhost("retry"), root = temporary();
     vi.stubEnv("R97_CAMPAIGN_CLAIMS_DIR", join(root, "claims"));
     const f = await fixture(); f.binding.pricing = { amountUsdMicros: 1, basisDigest: "a".repeat(64), sourceKind: "operator_declared", currency: "USD",
-      issuedAtMs: Date.now() - 10000, expiresAtMs: Date.now() + 60000, coveredTokenCeiling: 64000, requiredTokenCeiling: 64000 };
+      issuedAtMs: Date.now() - 10000, expiresAtMs: Date.now() + 60000, coveredTokenCeiling: support.REQUIRED_TOKEN_CEILING, requiredTokenCeiling: support.REQUIRED_TOKEN_CEILING };
     const prereg = { ...main.prereg, budget: { ...main.prereg.budget, campaignWorstCaseModelCalls: 1 } };
     const budgets = await budgetModule.openBudgets(root, f.binding, prereg, f.header.campaignDigest);
     budgets.costBudget.bindJournalScope({ campaignDigest: f.header.campaignDigest, armRunId: "offline", arm: "candidate", caseId: "offline", repetition: 0 });
@@ -408,6 +412,12 @@ describe("N7 evidence and condition witnesses", () => {
     expect(archiveProcess.status, archiveProcess.stderr).toBe(0);
     const verified = await evidence.verifyArchive("main", archive, raw, out);
     expect(verified.modelQuality).toBe("NOT_RUN"); expect(verified.promotion).toBe("NOT_ELIGIBLE");
+    // Exercise the actual command, including portable extraction with no raw
+    // roots supplied; importing its helper never catches entrypoint syntax bugs.
+    const verify = spawnSync(process.execPath, [join(SCRIPTS, "verify-n7-archive.mjs"), "--archive", archive], { cwd: REPO, encoding: "utf8" });
+    expect(verify.status, verify.stderr).toBe(0); expect(verify.stdout).toContain("SYNTHETIC_CHECK_ONLY");
+    const unavailable = spawnSync(process.execPath, [join(SCRIPTS, "verify-n7-archive.mjs"), "--archive", archive, "--historical-source"], { cwd: REPO, encoding: "utf8" });
+    expect(unavailable.status).toBe(1); expect(unavailable.stderr).toContain("HISTORICAL_SOURCE_MISSING");
     const manifest = support.readJson(join(archive, "RAW-MANIFEST.json"));
     expect(new Set(manifest.files.map((file: any) => file.path)).size).toBe(manifest.files.length);
     const holdoutRaw = join(root, "holdout"), jointOut = join(root, "joint");

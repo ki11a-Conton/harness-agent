@@ -712,6 +712,9 @@ function scriptedProvider(): ModelProvider {
             type: "completed",
             result: {
               finishReason: "tool_calls",
+              // Explicit synthetic usage; absence must now remain UNKNOWN and
+              // can never establish MEASURED request/dispatch reconciliation.
+              usage: { inputTokens: 0, outputTokens: 0 },
               toolCalls: [
                 { id: "call-first.txt", name: "write_file", args: {} },
                 { id: "call-second.txt", name: "write_file", args: {} },

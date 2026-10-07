@@ -107,5 +107,7 @@ describe("N6 real-formal evidence adapter (synthetic test bytes, no experiment)"
     expect(dual).toContain("needs.verify.result != 'success'");
     expect(dual).toContain("--windows .ci/dual/windows/ci-readiness.json");
     expect(dual).toContain("--ubuntu .ci/dual/ubuntu/ci-readiness.json");
+    const attestation = ci.slice(ci.indexOf("  release-attestation:"), ci.indexOf("  real-formal-offline:"));
+    expect(attestation).toContain("needs: [verify, coverage, dual-platform-acceptance]");
   });
 });

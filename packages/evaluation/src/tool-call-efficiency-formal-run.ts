@@ -825,6 +825,8 @@ export interface CostBudgetFile {
   reserved: CostReservationDelta;
   /** Outstanding reservations by id, so each can be released/settled exactly. */
   reservations: Record<string, CostReservationDelta>;
+  /** Durable settlement fault: never resume sending against an unproven bill. */
+  settlementFailure?: { reservationId: string; reason: string; atMs: number };
   /**
    * N7/F3 — per-request/per-attempt/per-arm attribution. ABSENT on a ledger
    * written before this field existed (a legacy ledger): such a ledger is still
@@ -970,6 +972,27 @@ const ZERO_RESERVATION: CostReservationDelta = { inputTokens: 0, outputTokens: 0
 export const FORMAL_PER_CALL_INPUT_TOKEN_CEILING = 32_000;
 export const FORMAL_PER_CALL_OUTPUT_TOKEN_CEILING = 32_000;
 
+function validateCostState(file: CostBudgetFile): void {
+  if (file === null || typeof file !== "object" || !file.charged || !file.caps) throw new Error("cost budget invalid state");
+  for (const [key, value] of Object.entries(file.charged)) {
+    if (!Number.isSafeInteger(value) || value < 0) throw new Error(`cost budget invalid charged.${key}`);
+  }
+  for (const key of ["inputTokens", "outputTokens", "totalTokens", "toolCalls", "durationMs", "usdMicros", "unknownCalls"] as const) {
+    if (!Number.isSafeInteger(file.charged[key]) || file.charged[key] < 0) throw new Error(`cost budget invalid charged.${key}`);
+  }
+  if (file.charged.totalTokens !== file.charged.inputTokens + file.charged.outputTokens) throw new Error("cost budget invalid totalTokens");
+  const totals = { ...ZERO_RESERVATION };
+  for (const held of Object.values(file.reservations ?? {})) {
+    for (const key of Object.keys(totals) as (keyof CostReservationDelta)[]) {
+      if (!Number.isSafeInteger(held?.[key]) || held[key] < 0) throw new Error(`cost budget invalid reservation.${key}`);
+      totals[key] += held[key];
+    }
+  }
+  for (const key of Object.keys(totals) as (keyof CostReservationDelta)[]) {
+    if (!Number.isSafeInteger(file.reserved?.[key]) || file.reserved[key] !== totals[key]) throw new Error(`cost budget invalid reserved.${key}`);
+  }
+}
+
 /**
  * Absolute cap on one call's WALL-CLOCK reservation.
  *
@@ -1019,6 +1042,15 @@ export class CostBudget {
   private journalScope: CostJournalScope | null = null;
 
   private constructor(private readonly dir: string, private file: CostBudgetFile) {}
+
+  private async readState(): Promise<CostBudgetFile> {
+    const file = JSON.parse(await readFile(join(this.dir, COST_BUDGET_FILENAME), "utf8")) as CostBudgetFile;
+    if (file?.schemaVersion !== TOOL_CALL_EFFICIENCY_COST_BUDGET_SCHEMA || file.preregistrationDigest !== this.file.preregistrationDigest
+      || stableStringify(file.caps) !== stableStringify(this.file.caps)) throw new Error("cost budget invalid identity or caps");
+    file.reserved = { ...ZERO_RESERVATION, ...(file.reserved ?? {}) }; file.reservations ??= {};
+    validateCostState(file);
+    return file;
+  }
 
   static async open(
     dir: string,
@@ -1091,6 +1123,7 @@ export class CostBudget {
       }
       parsed.reserved = { ...ZERO_RESERVATION, ...(parsed.reserved ?? {}) };
       parsed.reservations = parsed.reservations ?? {};
+      validateCostState(parsed);
       // R3/F4 — the deadline is REUSED, never re-created: a resume keeps whatever
       // is left. A legacy file that predates the field is treated as ALREADY
       // EXPIRED (never as a fresh window) and the migration is persisted so the
@@ -1119,18 +1152,20 @@ export class CostBudget {
     // A dimension is exhausted when charged+reserved is at/over its cap.
     const at = (charged: number, reserved: number, max: number): boolean => charged + reserved >= max;
     const exhaustedDimensions: string[] = [];
+    if (this.file.settlementFailure) exhaustedDimensions.push("settlementFailure");
     if (at(c.inputTokens, r.inputTokens, caps.maxInputTokens)) exhaustedDimensions.push("inputTokens");
     if (at(c.outputTokens, r.outputTokens, caps.maxOutputTokens)) exhaustedDimensions.push("outputTokens");
     if (at(c.totalTokens, r.inputTokens + r.outputTokens, caps.maxTotalTokens)) exhaustedDimensions.push("totalTokens");
     if (at(c.toolCalls, r.toolCalls, caps.maxToolCalls)) exhaustedDimensions.push("toolCalls");
     if (at(c.durationMs, r.durationMs, caps.maxDurationMs)) exhaustedDimensions.push("durationMs");
     if (caps.maxUsdMicros !== null && at(c.usdMicros, r.usdMicros, caps.maxUsdMicros)) exhaustedDimensions.push("usdMicros");
-    return { ...this.file, exhausted: exhaustedDimensions.length > 0, exhaustedDimensions };
+    return { ...structuredClone(this.file), exhausted: exhaustedDimensions.length > 0, exhaustedDimensions };
   }
 
   /** True when a call may NOT leave: any dimension is already at/over cap. */
   cannotAffordMore(): { refused: boolean; reason: string } {
     const v = this.view();
+    if (v.settlementFailure) return { refused: true, reason: "campaign frozen after a cost settlement failure" };
     if (v.exhausted) return { refused: true, reason: `${v.exhaustedDimensions.join(", ")} at cap` };
     return { refused: false, reason: "" };
   }
@@ -1180,14 +1215,13 @@ export class CostBudget {
    * Without a bound scope this REFUSES: an unattributable billed attempt must not
    * silently vanish from the per-arm comparison.
    */
-  async recordJournalAttempt(attempt: CostJournalAttempt): Promise<CostJournalEntry> {
-    const scope = this.journalScope;
+  private makeJournalEntry(attempt: CostJournalAttempt, scope = this.journalScope): CostJournalEntry {
     if (scope === null) {
       throw new Error("cost journal: no arm-run scope is bound — refusing to record an unattributable billed attempt");
     }
     const problems = costJournalEntryProblems(attempt);
     if (problems.length > 0) throw new Error(`cost journal: ${problems.join("; ")}`);
-    const entry: CostJournalEntry = {
+    return {
       schemaVersion: TOOL_CALL_EFFICIENCY_COST_JOURNAL_SCHEMA,
       campaignDigest: scope.campaignDigest,
       armRunId: scope.armRunId,
@@ -1207,8 +1241,9 @@ export class CostBudget {
       outcomeUnknown: attempt.outcomeUnknown === true,
       loggedAt: Date.now(),
     };
-    await withR97CampaignLock(this.dir, async () => {
-      const file = JSON.parse(await readFile(join(this.dir, COST_BUDGET_FILENAME), "utf8")) as CostBudgetFile;
+  }
+
+  private appendJournalEntry(file: CostBudgetFile, entry: CostJournalEntry): void {
       if (file.preregistrationDigest !== entry.campaignDigest) {
         throw new Error(
           "cost journal: the bound scope's campaign digest is not this ledger's pre-registration — refusing a cross-campaign attribution",
@@ -1238,15 +1273,31 @@ export class CostBudget {
       }
       journal.entries.push(entry);
       file.journal = journal;
+  }
+
+  async recordJournalAttempt(attempt: CostJournalAttempt): Promise<CostJournalEntry> {
+    const entry = this.makeJournalEntry(attempt);
+    await withR97CampaignLock(this.dir, async () => {
+      const file = await this.readState();
+      this.appendJournalEntry(file, entry);
       await writeAtomic(join(this.dir, COST_BUDGET_FILENAME), file);
       this.file = file;
     });
     return entry;
   }
 
+  async freezeSettlement(reservationId: string, reason: string): Promise<void> {
+    await withR97CampaignLock(this.dir, async () => {
+      const file = await this.readState();
+      file.settlementFailure ??= { reservationId, reason, atMs: Date.now() };
+      await writeAtomic(join(this.dir, COST_BUDGET_FILENAME), file);
+      this.file = file;
+    });
+  }
+
   /** The journal as currently persisted (raw entries, in write order). */
   journalEntries(): CostJournalEntry[] {
-    return [...(this.file.journal?.entries ?? [])];
+    return structuredClone(this.file.journal?.entries ?? []);
   }
 
   /**
@@ -1264,13 +1315,16 @@ export class CostBudget {
    * the call is then never dispatched. Durable and same-lock.
    */
   async reserve(delta: CostReservationDelta): Promise<{ ok: true; id: string } | { ok: false; reason: string }> {
-    for (const [k, v] of Object.entries(delta)) {
+    for (const k of Object.keys(ZERO_RESERVATION) as (keyof CostReservationDelta)[]) {
+      const v = delta[k];
       if (!Number.isSafeInteger(v) || v < 0) return { ok: false, reason: `reservation ${k} must be a non-negative safe integer` };
     }
     return withR97CampaignLock(this.dir, async () => {
-      const file = JSON.parse(await readFile(join(this.dir, COST_BUDGET_FILENAME), "utf8")) as CostBudgetFile;
+      const file = await this.readState();
       file.reserved = { ...ZERO_RESERVATION, ...(file.reserved ?? {}) };
       file.reservations = file.reservations ?? {};
+      validateCostState(file);
+      if (file.settlementFailure) return { ok: false as const, reason: "campaign frozen after a cost settlement failure" };
       const c = file.charged;
       const r = file.reserved;
       const caps = file.caps;
@@ -1324,7 +1378,7 @@ export class CostBudget {
    *     cap. An unknown outcome must charge the reserved upper bound (never a
    *     refund).
    */
-  async settle(id: string, actual: { inputTokens?: number; outputTokens?: number; toolCalls?: number; durationMs?: number; usdMicros?: number; unknown?: boolean }): Promise<CostBudgetView> {
+  async settle(id: string, actual: { inputTokens?: number; outputTokens?: number; toolCalls?: number; durationMs?: number; usdMicros?: number; unknown?: boolean }, attribution?: { attempt: CostJournalAttempt; scope: CostJournalScope }): Promise<CostBudgetView> {
     // Static validation is done OUTSIDE the lock: a malformed call must never
     // take the campaign lock, and a NaN/negative can never enter the ledger.
     const dims = ["inputTokens", "outputTokens", "toolCalls", "durationMs", "usdMicros"] as const;
@@ -1336,9 +1390,10 @@ export class CostBudget {
       }
     }
     return withR97CampaignLock(this.dir, async () => {
-      const file = JSON.parse(await readFile(join(this.dir, COST_BUDGET_FILENAME), "utf8")) as CostBudgetFile;
+      const file = await this.readState();
       file.reserved = { ...ZERO_RESERVATION, ...(file.reserved ?? {}) };
       file.reservations = file.reservations ?? {};
+      validateCostState(file);
       const held = file.reservations[id];
       if (held === undefined) {
         // A settle for an id nobody reserved would otherwise be charged with a
@@ -1377,6 +1432,13 @@ export class CostBudget {
       file.charged.durationMs += actual.durationMs ?? 0;
       file.charged.usdMicros += actual.usdMicros ?? 0;
       if (actual.unknown === true) file.charged.unknownCalls += 1;
+      if (attribution) {
+        const entry = this.makeJournalEntry(attribution.attempt, attribution.scope);
+        if (entry.costReservationId !== id || entry.chargedTotalTokens !== inputTokens + outputTokens || entry.outcomeUnknown !== (actual.unknown === true)) {
+          throw new Error("cost journal invalid settlement attribution");
+        }
+        this.appendJournalEntry(file, entry);
+      }
       await writeAtomic(join(this.dir, COST_BUDGET_FILENAME), file);
       this.file = file;
       return this.view();
@@ -1406,7 +1468,8 @@ export class CostBudget {
       }
     }
     return withR97CampaignLock(this.dir, async () => {
-      const file = JSON.parse(await readFile(join(this.dir, COST_BUDGET_FILENAME), "utf8")) as CostBudgetFile;
+      const file = await this.readState();
+      if (file.settlementFailure) throw new Error("cost budget campaign frozen after a settlement failure");
       file.reserved = { ...ZERO_RESERVATION, ...(file.reserved ?? {}) };
       file.reservations = file.reservations ?? {};
       const c = file.charged;
@@ -1815,6 +1878,8 @@ export function createFormalBudgetedProvider(opts: {
   costBudget: CostBudget;
   arm: string;
   usdMicrosPerCall: number | null;
+  /** Actual authorized request bounds; never confuse a context budget with 32k. */
+  tokenEnvelope?: { inputTokens: number; outputTokens: number };
   /**
    * R3/F4 — the campaign's ONE durable deadline. Every physical send (the initial
    * request AND every retry) is refused once it has passed, so no HTTP request
@@ -1836,6 +1901,10 @@ export function createFormalBudgetedProvider(opts: {
   const deadlineAtMs = opts.deadlineAtMs ?? null;
   const deadlinePassed = (): boolean => deadlineAtMs !== null && clock() >= deadlineAtMs;
   const pricingGuard = opts.pricingGuard ?? null;
+  const envelope = opts.tokenEnvelope ?? { inputTokens: FORMAL_PER_CALL_INPUT_TOKEN_CEILING, outputTokens: FORMAL_PER_CALL_OUTPUT_TOKEN_CEILING };
+  for (const value of Object.values(envelope)) {
+    if (!Number.isSafeInteger(value) || value < 1) throw new Error("invalid formal token envelope");
+  }
   /**
    * N4/F30-5 — THE PRE-SEND PRICE GATE. Called at every reserve/send boundary.
    * A refusal is a `PRICING_*` error, which is NOT a provider error: it must
@@ -1844,6 +1913,9 @@ export function createFormalBudgetedProvider(opts: {
    */
   const pricingRefusal = (where: string): string | null => {
     if (pricingGuard === null) return null;
+    if (pricingGuard.coveredTokenCeiling !== null && pricingGuard.coveredTokenCeiling < envelope.inputTokens + envelope.outputTokens) {
+      return `${PRICING_COVERAGE_INSUFFICIENT}: price does not cover the effective request envelope (${where})`;
+    }
     const reason = checkPricingExecutionGuard(pricingGuard, clock());
     return reason === null ? null : `${reason} (${where})`;
   };
@@ -1892,8 +1964,8 @@ export function createFormalBudgetedProvider(opts: {
           // real second HTTP request that may be billed, so it must fit the frozen
           // budget on EVERY dimension before it leaves.
           const costDeltaForAttempt = (): CostReservationDelta => ({
-            inputTokens: FORMAL_PER_CALL_INPUT_TOKEN_CEILING,
-            outputTokens: FORMAL_PER_CALL_OUTPUT_TOKEN_CEILING,
+            inputTokens: envelope.inputTokens,
+            outputTokens: envelope.outputTokens,
             toolCalls: 0,
             durationMs: perCallDurationMsCeiling(opts.costBudget.view().caps),
             usdMicros: usdCeiling,
@@ -1913,7 +1985,7 @@ export function createFormalBudgetedProvider(opts: {
            * tokens; an attempt whose real usage was never observed contributes its
            * CONSERVATIVE bound, flagged `outcomeUnknown`, never as consumption.
            */
-          const recordAttempt = async (entry: {
+          const settleAttempt = async (actual: Parameters<CostBudget["settle"]>[1], entry: {
             attemptId: number;
             reservationId: string;
             costReservationId: string;
@@ -1924,8 +1996,9 @@ export function createFormalBudgetedProvider(opts: {
             reservedOutputTokens: number | null;
             outcomeUnknown: boolean;
           }): Promise<void> => {
-            if (journalScope === null || journalRequestId === null) return;
-            await opts.costBudget.recordJournalAttempt({ requestId: journalRequestId, ...entry });
+            await opts.costBudget.settle(entry.costReservationId, actual,
+              journalScope === null || journalRequestId === null ? undefined
+                : { scope: journalScope, attempt: { requestId: journalRequestId, ...entry } });
           };
 
           // N4/F30-5 — THE PRICE GATE, before ANY reservation for the initial
@@ -1968,6 +2041,8 @@ export function createFormalBudgetedProvider(opts: {
           let completed = false;
           let inputTokens = 0;
           let outputTokens = 0;
+          let measuredUsage = false;
+          let completion: Extract<ModelEvent, { type: "completed" }> | undefined;
           let usdMicros = 0;
           let retries = 0;
           let settleStarted = false;
@@ -1991,18 +2066,18 @@ export function createFormalBudgetedProvider(opts: {
               for (const id of costReservationIds) await opts.costBudget.release(id);
               return;
             }
-            if (!completed) {
-              await opts.ledger.markUnknown(reservationId);
+            if (!completed || !measuredUsage) {
+              if (completed) await opts.ledger.commit(reservationId, 1, retries);
+              else await opts.ledger.markUnknown(reservationId);
               stats.unknownCalls += 1;
               // A dispatched call whose outcome nobody saw may already be
               // billed: settle at the RESERVED upper bound (never a refund).
               for (let i = 0; i < costReservationIds.length; i += 1) {
                 const id = costReservationIds[i]!;
-                await opts.costBudget.settle(id, { ...delta, unknown: true });
                 // N7/F3 — the attempt WAS dispatched; its real usage is unknown, so
                 // its cost is the conservative reservation. It is recorded as such
                 // and can therefore never be read as measured consumption.
-                await recordAttempt({
+                await settleAttempt({ ...delta, unknown: true }, {
                   attemptId: i,
                   reservationId: attemptLedgerIds[i]!,
                   costReservationId: id,
@@ -2016,23 +2091,25 @@ export function createFormalBudgetedProvider(opts: {
               }
               return;
             }
-            await opts.ledger.commit(reservationId, 1, retries);
             const chargedMicros = Math.max(usdMicros, usdCeiling);
-            // R3/F4 — STATE MACHINE: a failure between `ledger.commit` and the cost
-            // settlement must NOT leave "model ledger committed / cost unsettled"
-            // silently behind. It is recorded as `unknown` and the campaign STOPS.
-            let view: CostBudgetView;
+            // Settle cost+attribution BEFORE committing the model reservation.
+            // Failure leaves a durable fault and an unknown billable unit.
             try {
-              view = await opts.costBudget.settle(primary, {
+              await settleAttempt({
                 inputTokens,
                 outputTokens,
                 durationMs,
                 usdMicros: chargedMicros,
+              }, {
+                attemptId: 0, reservationId, costReservationId: primary, basis: "MEASURED",
+                inputTokens, outputTokens, reservedInputTokens: null, reservedOutputTokens: null, outcomeUnknown: false,
               });
             } catch (err) {
+              await opts.ledger.markUnknown(reservationId);
+              await opts.costBudget.freezeSettlement(primary, err instanceof Error ? err.message : String(err));
               stats.unknownCalls += 1;
               throw new Error(
-                `E4-R3: BUDGET_STATE_REJECTED: the model ledger committed reservation ${reservationId} but its cost settlement failed (${err instanceof Error ? err.message : String(err)}); recorded as unknown and stopping rather than continuing with an unsettled charge`,
+                `E4-R3: BUDGET_STATE_REJECTED: cost settlement failed (${err instanceof Error ? err.message : String(err)}); reservation ${reservationId} recorded as unknown and campaign durably frozen`,
               );
             }
             // N7/F3 — the initial send completed and its usage WAS observed: this
@@ -2041,21 +2118,10 @@ export function createFormalBudgetedProvider(opts: {
             // both required here and neither replaces the other — the settlement is
             // guarded (R3), and the guarded-successful attempt is then attributed
             // to its arm (R2).
-            await recordAttempt({
-              attemptId: 0,
-              reservationId: attemptLedgerIds[0]!,
-              costReservationId: primary,
-              basis: "MEASURED",
-              inputTokens,
-              outputTokens,
-              reservedInputTokens: null,
-              reservedOutputTokens: null,
-              outcomeUnknown: false,
-            });
+            await opts.ledger.commit(reservationId, 1, retries);
             stats.chargedInputTokens += inputTokens;
             stats.chargedOutputTokens += outputTokens;
             stats.chargedUsdMicros += chargedMicros;
-            void view;
             // R3/F4 — the TOOL dimension is NO LONGER charged here. This path used
             // to `charge` the tool calls the model DECLARED in its response, i.e.
             // an after-the-fact tally that could throw AFTER the ledger commit and
@@ -2070,8 +2136,7 @@ export function createFormalBudgetedProvider(opts: {
             // RESERVED_UPPER_BOUND attempt (a bound, not consumption).
             for (let i = 0; i < extraAttempts.length; i += 1) {
               const id = extraAttempts[i]!;
-              await opts.costBudget.settle(id, { ...delta, unknown: true });
-              await recordAttempt({
+              await settleAttempt({ ...delta, unknown: true }, {
                 attemptId: i + 1,
                 reservationId: attemptLedgerIds[i + 1]!,
                 costReservationId: id,
@@ -2130,7 +2195,8 @@ export function createFormalBudgetedProvider(opts: {
                 `E4-R3: ${TOOL_DISPATCH_DEADLINE_EXCEEDED}: the campaign deadline (${new Date(deadlineAtMs ?? 0).toISOString()}) passed before this request was sent — refusing to send after the deadline`,
               );
             }
-            const stream = inner.generate(request, midStreamAbort.signal);
+            if (signal.aborted) throw new Error("formal request cancelled before dispatch");
+            const stream = inner.generate({ ...request, maxTokens: Math.min(request.maxTokens ?? envelope.outputTokens, envelope.outputTokens) }, midStreamAbort.signal);
             entered = true;
             for await (const ev of stream) {
               // R3/F4 — the deadline fired while this stream was in flight (or the
@@ -2187,13 +2253,22 @@ export function createFormalBudgetedProvider(opts: {
                 attemptLedgerIds.push(retryReservation.reservationId);
                 stats.logicalCalls += 1;
               } else if (ev.type === "usage") {
-                inputTokens = Math.max(inputTokens, ev.usage.inputTokens);
-                outputTokens = Math.max(outputTokens, ev.usage.outputTokens);
+                measuredUsage = Number.isSafeInteger(ev.usage.inputTokens) && ev.usage.inputTokens >= 0 && Number.isSafeInteger(ev.usage.outputTokens) && ev.usage.outputTokens >= 0;
+                inputTokens = ev.usage.inputTokens;
+                outputTokens = ev.usage.outputTokens;
                 if (typeof ev.usage.estimatedCostUsd === "number" && ev.usage.estimatedCostUsd > 0) {
                   usdMicros = Math.round(ev.usage.estimatedCostUsd * 1_000_000);
                 }
               } else if (ev.type === "completed") {
                 completed = true;
+                completion = ev;
+                if (ev.result.usage) {
+                  const usage = ev.result.usage;
+                  measuredUsage = Number.isSafeInteger(usage.inputTokens) && usage.inputTokens >= 0 && Number.isSafeInteger(usage.outputTokens) && usage.outputTokens >= 0;
+                  inputTokens = usage.inputTokens;
+                  outputTokens = usage.outputTokens;
+                  if (typeof usage.estimatedCostUsd === "number" && usage.estimatedCostUsd > 0) usdMicros = Math.max(usdMicros, Math.round(usage.estimatedCostUsd * 1_000_000));
+                }
                 // R3/F4 — "how many tools the model DECLARED" is a DIAGNOSTIC. It is
                 // recorded here and NEVER charged to the tool dimension: the real
                 // dispatch point reserves and charges one unit per ACTUAL dispatch,
@@ -2205,7 +2280,7 @@ export function createFormalBudgetedProvider(opts: {
                   stats.declaredToolCalls += declared.length;
                 }
               }
-              yield ev;
+              if (ev.type !== "completed") yield ev;
             }
             // The stream ENDED. If the deadline fired while it was in flight the
             // abort is the cause, and a truncated response must not be reported as
@@ -2219,8 +2294,15 @@ export function createFormalBudgetedProvider(opts: {
           } finally {
             if (deadlineTimer !== null) clearTimeout(deadlineTimer);
             signal.removeEventListener("abort", onCallerAbort);
-            await settle();
+            try { await settle(); }
+            catch (err) {
+              await opts.costBudget.freezeSettlement(costReservationId, err instanceof Error ? err.message : String(err));
+              throw err;
+            }
           }
+          // A consumer may stop as soon as completion arrives. All accounting
+          // must therefore be durable BEFORE this event becomes observable.
+          if (completion) yield completion;
         },
       };
     },
