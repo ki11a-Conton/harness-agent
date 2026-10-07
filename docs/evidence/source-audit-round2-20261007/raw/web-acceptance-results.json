@@ -1,0 +1,49 @@
+{
+  "sourceSha": "3ca4795d665b2c9e426c1debad3815aa77c85b70",
+  "paidProviderCalls": 0,
+  "kind": "post-fix-production-web-acceptance",
+  "records": [
+    {
+      "id": "B14-web-host-origin-boundary",
+      "passed": true,
+      "observed": {
+        "foreignHostReadStatus": 403,
+        "foreignHostSessionCount": 0,
+        "crossOriginTextPlainPostStatus": 403,
+        "crossOriginMessagePersisted": false,
+        "note": "native HTTP reproduction of accepted Host/Origin; no browser DNS exploit claimed"
+      }
+    },
+    {
+      "id": "B15-web-restart-session-binding-lost",
+      "passed": true,
+      "observed": {
+        "beforeSessionId": "session_a5589ae1-8666-4ce3-805a-14ead8331b41",
+        "beforeMessageCount": 1,
+        "persistedSessionFiles": 1,
+        "afterRestartHistory": {
+          "sessionId": "session_a5589ae1-8666-4ce3-805a-14ead8331b41",
+          "messages": [
+            {
+              "id": "message_d3e7b288-a387-4f1e-b001-df65fde73afd",
+              "sessionId": "session_a5589ae1-8666-4ce3-805a-14ead8331b41",
+              "turnId": "turn_d9705f9b-484e-439e-b92c-b60020713a51",
+              "role": "user",
+              "content": "audit persistence message",
+              "createdAt": 1791380617233
+            }
+          ]
+        },
+        "afterRestartSessionList": [
+          {
+            "from": "audit-session-20261007",
+            "sessionId": "session_a5589ae1-8666-4ce3-805a-14ead8331b41",
+            "createdAt": 1791380617222,
+            "firstText": "audit persistence message"
+          }
+        ],
+        "newSessionIdForSameFrom": "session_a5589ae1-8666-4ce3-805a-14ead8331b41"
+      }
+    }
+  ]
+}

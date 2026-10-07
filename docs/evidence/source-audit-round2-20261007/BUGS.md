@@ -23,7 +23,8 @@
 
 另补formal失败公开诊断，保留原退出码；通过原生GitHub Actions取回既有失败包，未重跑付费实验。
 基线反例：4文件28项，**18 failed / 10 passed**；另实际node --check复现归档语法错误。
-回归结果、最终源码SHA、完整Linux/浏览器/Windows证据会在 [COMPLETION.md](COMPLETION.md) 汇总。
+修复源码 `3ca4795d665b2c9e426c1debad3815aa77c85b70` 已完成验收：Linux 9070 passed / 0 failed / 13 skipped；浏览器27场景77断言；真实Windows179 passed / 0 failed / 1 POSIX skip；CI 10/10 jobs成功。
+完整Linux/浏览器/Windows原始证据及离线校验方法见 [COMPLETION.md](COMPLETION.md)。
 
 固定源码 `1360479` 的首次完整验收发现本轮 R2-02 改动使已有耗时变异锚点失效：Linux 9064 passed / 5 failed / 13 skipped，两平台 CI 同样拒绝。
 随结算调用更新唯一锚点，保留原来的“耗时计量为零”破坏条件及检测测试；实际运行变异门禁验明破坏行为确实被抓住。

@@ -1,0 +1,28 @@
+{
+  "sourceSha": "21fa7436b1abdcbc0dcd4f8a300f171b1a35f8e0",
+  "scope": "counterexamples, not a full baseline build/release acceptance",
+  "testedImplementations": "baseline TypeScript modules loaded by Vitest",
+  "dependencies": "shared node_modules and prebuilt workspace dependency dist symlinks; not an independent clean baseline build",
+  "files": [
+    {
+      "path": "apps/cli/src/source-audit-safety.regressions.test.ts",
+      "bytes": 1860,
+      "sha256": "31e3a381f4e831ff383d1c241a5258637e042b5ac4a5a7f3ae768f40b64318f8"
+    },
+    {
+      "path": "packages/evaluation/src/security-evidence-execution.test.ts",
+      "bytes": 4787,
+      "sha256": "8aab81297dfb9b6a230bd8ab9208a4a3bfbcd39753599958c4977d2630ef9188"
+    },
+    {
+      "path": "packages/evaluation/src/source-audit-budget.regressions.test.ts",
+      "bytes": 7132,
+      "sha256": "6963b60c29c67d348bf37ee5ab12d0fd9e70496b901c97da60c6f3b533ad29b0"
+    },
+    {
+      "path": "packages/model/src/source-audit-request.regressions.test.ts",
+      "bytes": 1737,
+      "sha256": "e1e92cc4b2eaa3279328f7df9adf13c2ba97c81472f15e8d4fd68f80ae520985"
+    }
+  ]
+}

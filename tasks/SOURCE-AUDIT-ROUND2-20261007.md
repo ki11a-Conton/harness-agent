@@ -24,3 +24,8 @@
 实际执行归档 CLI，覆盖完整原件、缺失、篡改、历史 SHA、路径逃逸和损坏压缩包反例。
 在 docs/evidence/source-audit-round2-20261007/ 中保存问题清单和可核验结果。
 源码和工作树身份在全量测试期间固定；缺失历史原件或不可下载的日志明确记录，不能伪造通过。
+
+## 完成
+
+15类确认问题已修复；源码 `3ca4795d665b2c9e426c1debad3815aa77c85b70` 的 Linux 全量9070项、浏览器27场景、真实Windows及10/10 CI均通过。
+[问题清单](../docs/evidence/source-audit-round2-20261007/BUGS.md)、[完整验收与限制](../docs/evidence/source-audit-round2-20261007/COMPLETION.md)、原始证据及离线校验脚本已归档；旧付费原件、门限、champion和原工作区未提交文件保留。

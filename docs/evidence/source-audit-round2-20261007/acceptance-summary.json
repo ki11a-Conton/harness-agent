@@ -1,0 +1,203 @@
+{
+  "schemaVersion": "source-audit-round2-v1",
+  "baselineSha": "21fa7436b1abdcbc0dcd4f8a300f171b1a35f8e0",
+  "testedSourceSha": "3ca4795d665b2c9e426c1debad3815aa77c85b70",
+  "linux": {
+    "files": 500,
+    "passed": 9070,
+    "failed": 0,
+    "skipped": 13,
+    "sourceHeldClean": true,
+    "N2_RUN_RELEASE_E2E": "1",
+    "hostSetup": "Linux child subreaper supplies normal init orphan reaping"
+  },
+  "byModule": {
+    "apps/cli": {
+      "files": 85,
+      "passed": 1122,
+      "failed": 0,
+      "skipped": 1
+    },
+    "apps/web": {
+      "files": 3,
+      "passed": 23,
+      "failed": 0,
+      "skipped": 0
+    },
+    "packages/agents": {
+      "files": 6,
+      "passed": 106,
+      "failed": 0,
+      "skipped": 0
+    },
+    "packages/checkpoint": {
+      "files": 1,
+      "passed": 12,
+      "failed": 0,
+      "skipped": 0
+    },
+    "packages/context": {
+      "files": 16,
+      "passed": 301,
+      "failed": 0,
+      "skipped": 0
+    },
+    "packages/contracts": {
+      "files": 14,
+      "passed": 214,
+      "failed": 0,
+      "skipped": 0
+    },
+    "packages/core": {
+      "files": 55,
+      "passed": 807,
+      "failed": 0,
+      "skipped": 0
+    },
+    "packages/evaluation": {
+      "files": 137,
+      "passed": 2161,
+      "failed": 0,
+      "skipped": 0
+    },
+    "packages/events": {
+      "files": 1,
+      "passed": 28,
+      "failed": 0,
+      "skipped": 0
+    },
+    "packages/gateway": {
+      "files": 4,
+      "passed": 95,
+      "failed": 0,
+      "skipped": 0
+    },
+    "packages/harness": {
+      "files": 46,
+      "passed": 389,
+      "failed": 0,
+      "skipped": 0
+    },
+    "packages/learning": {
+      "files": 7,
+      "passed": 86,
+      "failed": 0,
+      "skipped": 0
+    },
+    "packages/mcp": {
+      "files": 8,
+      "passed": 96,
+      "failed": 0,
+      "skipped": 0
+    },
+    "packages/memory": {
+      "files": 17,
+      "passed": 382,
+      "failed": 0,
+      "skipped": 0
+    },
+    "packages/model": {
+      "files": 12,
+      "passed": 182,
+      "failed": 0,
+      "skipped": 0
+    },
+    "packages/observability": {
+      "files": 5,
+      "passed": 56,
+      "failed": 0,
+      "skipped": 0
+    },
+    "packages/orchestration": {
+      "files": 3,
+      "passed": 29,
+      "failed": 0,
+      "skipped": 0
+    },
+    "packages/plugins": {
+      "files": 3,
+      "passed": 50,
+      "failed": 0,
+      "skipped": 0
+    },
+    "packages/protocol": {
+      "files": 5,
+      "passed": 29,
+      "failed": 0,
+      "skipped": 0
+    },
+    "packages/sdk": {
+      "files": 3,
+      "passed": 25,
+      "failed": 0,
+      "skipped": 0
+    },
+    "packages/security": {
+      "files": 18,
+      "passed": 2123,
+      "failed": 0,
+      "skipped": 0
+    },
+    "packages/session": {
+      "files": 6,
+      "passed": 69,
+      "failed": 0,
+      "skipped": 0
+    },
+    "packages/skills": {
+      "files": 8,
+      "passed": 92,
+      "failed": 0,
+      "skipped": 0
+    },
+    "packages/store": {
+      "files": 1,
+      "passed": 15,
+      "failed": 0,
+      "skipped": 0
+    },
+    "packages/store-integrity": {
+      "files": 1,
+      "passed": 11,
+      "failed": 0,
+      "skipped": 0
+    },
+    "packages/tools": {
+      "files": 35,
+      "passed": 567,
+      "failed": 0,
+      "skipped": 12
+    }
+  },
+  "earlierTargetedSecurityAndProtocolSourceSha": "13604790076284099f7c15f17127a7626e4a6b00",
+  "security": {
+    "files": 19,
+    "passed": 2135,
+    "failed": 0
+  },
+  "protocol": {
+    "passed": 52,
+    "failed": 0
+  },
+  "browser": {
+    "cases": 27,
+    "assertions": 77,
+    "failed": 0
+  },
+  "windows": {
+    "runId": 37630733658,
+    "passed": 179,
+    "failed": 0,
+    "skipped": 1,
+    "requiredNativePassed": 12
+  },
+  "ci": {
+    "runId": 37630733777,
+    "successJobs": 10
+  },
+  "paidModelExperiment": "NOT_RUN",
+  "promotion": "NOT_RUN",
+  "gateThresholds": "UNCHANGED",
+  "historicalN7Raw": "ABSENT_FROM_PUBLIC_REPOSITORY: strict paid replay remains blocked",
+  "rawWindowsVitestAndZip": "RUNNER_OR_GITHUB_METADATA_ONLY_NOT_DOWNLOADED; public complete case packets retrieved and hash-verified"
+}

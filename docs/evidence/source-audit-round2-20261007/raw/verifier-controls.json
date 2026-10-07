@@ -1,0 +1,23 @@
+{
+  "outcome": "PASS",
+  "controls": [
+    {
+      "control": "changed-native-case-bytes",
+      "outcome": "EXPECTED_REJECTION",
+      "exitCode": 1,
+      "indexUpdated": false
+    },
+    {
+      "control": "missing-public-native-packet-with-consistent-index",
+      "outcome": "EXPECTED_REJECTION",
+      "exitCode": 1,
+      "indexUpdated": true
+    },
+    {
+      "control": "wrong-source-with-consistent-index",
+      "outcome": "EXPECTED_REJECTION",
+      "exitCode": 1,
+      "indexUpdated": true
+    }
+  ]
+}
