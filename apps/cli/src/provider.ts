@@ -34,6 +34,14 @@ export const DEFAULT_REAL_MODEL_ID = "gpt-4o-mini";
  */
 export const REAL_PROVIDER_ID = "openai";
 
+/** Interactive hosts must report the same model identity the provider uses.
+ * Formal campaigns retain their separately frozen execution identity. */
+export function resolveInteractiveModelRef(provider: ModelProvider, override?: ModelRef): ModelRef {
+  if (override !== undefined) return override;
+  return { providerId: provider.id, modelId: provider.id === STUB_PROVIDER_ID ? STUB_MODEL_ID
+    : provider.id === REAL_PROVIDER_ID ? process.env.OPENAI_MODEL || DEFAULT_REAL_MODEL_ID : DEFAULT_REAL_MODEL_ID };
+}
+
 /** The provider id the environment currently implies, if any. */
 export function envProviderId(): string {
   return (process.env.OPENAI_MODEL ?? "") !== "" || process.env.OPENAI_API_KEY ? REAL_PROVIDER_ID : STUB_PROVIDER_ID;

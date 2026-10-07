@@ -42,9 +42,10 @@ export class CommandDiscoveryService {
   }
 
   /** Discover once per workspace root; subsequent calls are cache hits. */
-  async maybeDiscover(cwd: string): Promise<CommandHints | undefined> {
+  async maybeDiscover(cwd: string, opts: { refresh?: boolean } = {}): Promise<CommandHints | undefined> {
     const cached = this.hintsByRoot.get(cwd);
-    if (cached !== undefined) return cached;
+    if (cached !== undefined && !opts.refresh) return cached;
+    if (opts.refresh) this.hintsByRoot.delete(cwd);
     let result;
     try {
       result = await discoverCommands(cwd);
@@ -61,7 +62,8 @@ export class CommandDiscoveryService {
     };
     this.hintsByRoot.set(cwd, hints);
     // P14-6: persistence is best-effort — a failure is reported, never silent.
-    await this.persist(hints).catch((err) =>
+    await (cached !== undefined && JSON.stringify(cached.commands) === JSON.stringify(hints.commands)
+      ? Promise.resolve() : this.persist(hints)).catch((err) =>
       process.stderr.write(`[degraded] command-discovery.persist: ${err instanceof Error ? err.message : String(err)}\n`),
     );
     return hints;

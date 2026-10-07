@@ -12,6 +12,8 @@ node apps/web/dist/main.js
 
 执行真实模型任务需要配置有效的 `OPENAI_API_KEY`，并按服务配置 `OPENAI_BASE_URL`、`OPENAI_MODEL`。未配置 key 时页面仍能打开，但发送后回合会明确报告模型未配置，不能完成任务。界面“已连接”表示 Web/SSE 连接就绪；发送接口 HTTP 200 表示消息已接收，实际结果以回合完成、失败或取消状态为准。模型配置目前通过环境变量设置，界面没有模型选择或设置按钮。
 
+需要强制编程验收时，启动前设置 `HARNESS_VERIFY_COMMAND`（例如 `npm test`）。它对该服务的每个回合生效，执行仍通过现有审批按钮、权限和沙箱；失败输出会传回模型进行有界修复，未通过不能报告 verified complete。未设置时完成等级为 unverified，模型说“完成”不构成测试通过证据。该变量是宿主显式配置，不会根据模型文字猜测验收命令。
+
 界面复用 DeepSeek Harness 的 MIT 主题源码，并移植其侧栏、聊天列、空状态和输入卡片呈现，使用本项目真实 Gateway/RPC 与 HTTP/SSE。来源、冻结提交、文件哈希与完整许可证位于 [source-manifest.json](../apps/web/public/vendor/deepseek/source-manifest.json) 和 [LICENSE](../apps/web/public/vendor/deepseek/LICENSE)。启动不需要上游仓库或远程资源。
 
 支持新建与切换会话、历史消息、浅/深主题、手机侧栏、代码块与回复复制、工具和验收状态、权限审批与取消。Enter 发送，Shift+Enter 换行，中文输入法确认候选时不发送；运行中追加消息沿现有 Gateway followup 队列处理。

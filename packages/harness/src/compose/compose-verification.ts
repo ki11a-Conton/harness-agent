@@ -38,7 +38,9 @@ export function composeVerification(
   const verificationPlanner =
     config.verification?.planner ??
     createVerificationPlanner({
-      commands: () => commandDiscovery.maybeDiscover(config.cwd),
+      // Verification must reflect this session's current checkout. A cached
+      // passing recipe is not evidence after a manifest or test command edit.
+      commands: (cwd) => commandDiscovery.maybeDiscover(cwd, { refresh: true }),
     });
   const verifier =
     config.verification?.verifier ??

@@ -1,6 +1,7 @@
 import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
-import type { ModelProvider, ModelRef, PermissionPolicy } from "@ar/contracts";
+import { stat } from "node:fs/promises";
+import type { ModelProvider, PermissionPolicy, TaskSpec } from "@ar/contracts";
 import { defaultSandboxPolicy } from "@ar/harness";
 import { createHarnessWithChampion } from "./champion-application.js";
 import { createRuntimeRpc, InMemoryTransport } from "@ar/gateway";
@@ -11,6 +12,7 @@ import {
 } from "@ar/tools";
 import type { CommandDeps } from "./commands.js";
 import { runCommand } from "./commands.js";
+import { createTerminalRunHost } from "./terminal-run-host.js";
 import { preregCmd, type PreregCommandDeps, type PreregResolvedSelection } from "./prereg-command.js";
 import { createProductionPreregRunner } from "./prereg-production-runner.js";
 import {
@@ -26,8 +28,8 @@ import {
   OFFLINE_PROVIDER_ID,
   resolveOfflineProfileCapability,
   resolveModelProvider,
+  resolveInteractiveModelRef,
   DEFAULT_REAL_MODEL_ID,
-  STUB_PROVIDER_ID,
   type OfflineProfileId,
 } from "./provider.js";
 
@@ -66,6 +68,9 @@ export const DEFAULT_SYSTEM_PROMPT = [
 export const DEFAULT_MODEL_ID = DEFAULT_REAL_MODEL_ID;
 
 export interface DefaultDepsOptions {
+  /** Explicit project root; never change the process-global cwd. */
+  cwd?: string;
+  task?: TaskSpec;
   /** Enables persistent stores (JSONL session/event, durable approval +
    *  checkpoint) under dataDir; when absent, in-memory stores are used
    *  (doctor reports WARNING). */
@@ -105,12 +110,31 @@ export async function main(argv: string[]): Promise<number> {
     return writeLines(result.lines, result.exitCode);
   }
 
-  const deps = await createDefaultDeps({ ...(dir !== undefined && dir.length > 0 ? { dataDir: dir } : {}) });
-  const result = await runCommand(args, deps);
-  for (const line of result.lines) {
-    process.stdout.write(`${line}\n`);
+  let cwd: string | undefined; let task: TaskSpec | undefined;
+  if (args[0] === "run") {
+    if (args.length !== 3 && !(args.length === 5 && args[3] === "--verify" && args[4]?.trim())) {
+      return writeLines(["agent run: expected <cwd> <text> [--verify <command>]"], 1);
+    }
+    cwd = resolve(args[1]!);
+    try { if (!(await stat(cwd)).isDirectory()) throw new Error("not a directory"); }
+    catch { return writeLines([`agent run: invalid project directory ${JSON.stringify(cwd)}`], 1); }
+    args[1] = cwd;
+    if (args[3] === "--verify") {
+      task = { id: "cli-coding", goal: args[2]!, verification: [{ kind: "command", command: args[4]! }] };
+      args.splice(3);
+    }
   }
-  return result.exitCode;
+  const deps = await createDefaultDeps({ ...(cwd !== undefined ? { cwd } : {}), ...(task !== undefined ? { task } : {}),
+    ...(dir !== undefined && dir.length > 0 ? { dataDir: resolve(dir) } : {}) });
+  const host = args[0] === "run" ? createTerminalRunHost() : undefined;
+  if (host !== undefined) deps.runHost = host;
+  try {
+    const result = await runCommand(args, deps);
+    return writeLines(result.lines, result.exitCode);
+  } finally {
+    host?.close();
+    await deps.close?.();
+  }
 }
 
 /** Commands dispatchable without the interactive host (no provider/harness). */
@@ -348,8 +372,9 @@ export function extractDataDirFlag(argv: string[]): { args: string[]; dataDir?: 
  * → approval → sandbox).
  */
 export async function createDefaultDeps(options: DefaultDepsOptions = {}): Promise<CommandDeps> {
+  const cwd = resolve(options.cwd ?? process.cwd());
   const dataDir = options.dataDir;
-  const modelProvider = options.provider ?? (await resolveModelProvider()).provider;
+  const modelProvider = options.provider ?? (await resolveModelProvider({ modelId: options.model?.modelId ?? (process.env.OPENAI_MODEL || DEFAULT_MODEL_ID) })).provider;
   const memoryEnabled = options.memory === true || process.env.HARNESS_MEMORY === "1";
   if (memoryEnabled && dataDir === undefined) {
     throw new Error("memory is enabled but no dataDir is configured (--data-dir or HARNESS_DATA_DIR) — refusing to write memories into the workspace");
@@ -361,11 +386,12 @@ export async function createDefaultDeps(options: DefaultDepsOptions = {}): Promi
   const championStartup = await createHarnessWithChampion({
     runtimeEntrypoint: "cli",
     baseConfig: {
-      cwd: process.cwd(),
+      cwd,
+      ...(options.task !== undefined ? { task: options.task } : {}),
       ...(dataDir !== undefined ? { dataDir } : {}),
       profile: "interactive",
       modelProvider,
-      model: defaultModelRef(modelProvider, options.model),
+      model: resolveInteractiveModelRef(modelProvider, options.model),
       ...(memoryEnabled ? { featureFlags: { memory: true, learning: true } } : {}),
     },
     sourceSha: process.env.GIT_SHA ?? null,
@@ -383,6 +409,7 @@ export async function createDefaultDeps(options: DefaultDepsOptions = {}): Promi
   const { client, server } = InMemoryTransport.pair();
   server.connect(registry);
   return {
+    close: () => harness.close(),
     rpc: client,
     store: harness.store,
     events: harness.events,
@@ -398,7 +425,7 @@ export async function createDefaultDeps(options: DefaultDepsOptions = {}): Promi
       modelProvider,
       sandboxPolicy: defaultSandboxPolicy(),
       permissions: harness.agents[0]!.permissions,
-      workspaceRoot: process.cwd(),
+      workspaceRoot: cwd,
       toolRegistry: harness.registry,
       skills: undefined,
       plugins: undefined,
@@ -408,17 +435,6 @@ export async function createDefaultDeps(options: DefaultDepsOptions = {}): Promi
       contextBudgetFallback: harness.context.budgetFallback,
       contextBudgetMaxTokens: harness.context.budget.maxTokens,
     },
-  };
-}
-
-function defaultModelRef(
-  provider: ModelProvider,
-  model?: { providerId: string; modelId: string },
-): ModelRef {
-  if (model !== undefined) return model;
-  return {
-    providerId: provider.id,
-    modelId: provider.id === STUB_PROVIDER_ID ? "stub-model" : DEFAULT_MODEL_ID,
   };
 }
 

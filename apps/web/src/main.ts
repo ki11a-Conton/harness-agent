@@ -5,7 +5,7 @@ import {
   createHarnessWithChampion,
   DEFAULT_MODEL_ID,
   resolveModelProvider,
-  STUB_PROVIDER_ID,
+  resolveInteractiveModelRef,
 } from "@ar/cli";
 import { createRuntimeRpc, Gateway } from "@ar/gateway";
 import type { AgentSummary } from "@ar/gateway";
@@ -27,7 +27,8 @@ export async function main(): Promise<number> {
   const dir = process.env.HARNESS_DATA_DIR;
   // E3-01: resolveModelProvider now returns a BillingProvider — unwrap the
   // provider for harness wiring.
-  const provider = (await resolveModelProvider()).provider;
+  const provider = (await resolveModelProvider({ modelId: process.env.OPENAI_MODEL || DEFAULT_MODEL_ID })).provider;
+  const verificationCommand = process.env.HARNESS_VERIFY_COMMAND?.trim();
   // E4-07: Web uses the same production champion application path as CLI.
   // The shared path resolves the pending champion profile, passes it through
   // the real createHarness, verifies the final normalized configuration, and
@@ -39,10 +40,9 @@ export async function main(): Promise<number> {
       ...(dir !== undefined && dir.length > 0 ? { dataDir: dir } : {}),
       profile: "interactive",
       modelProvider: provider,
-      model: {
-        providerId: provider.id,
-        modelId: provider.id === STUB_PROVIDER_ID ? "stub-model" : DEFAULT_MODEL_ID,
-      },
+      model: resolveInteractiveModelRef(provider),
+      ...(verificationCommand ? { task: { id: "web-coding", goal: "Complete the user task and pass the configured project check",
+        verification: [{ kind: "command" as const, command: verificationCommand }] } } : {}),
     },
     sourceSha: process.env.GIT_SHA ?? null,
   });

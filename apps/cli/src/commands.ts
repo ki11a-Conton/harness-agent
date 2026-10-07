@@ -3,6 +3,7 @@ import type {
   ApprovalDecision,
   ApprovalId,
   ApprovalStore,
+  ApprovalRequest,
   EventStore,
   MemoryStore,
   Session,
@@ -65,6 +66,13 @@ export interface CommandDeps {
   preregRunner?: import("./prereg-command.js").PreregRunnerAdapter;
   /** Injectable clock for the formal run gate (tests). */
   preregNow?: () => number;
+  /** CLI interaction is host-owned; all decisions still go through RPC. */
+  runHost?: {
+    started?(sessionId: string, turnId: string): void;
+    approve(request: ApprovalRequest, signal: AbortSignal): Promise<"allow" | "deny">;
+    signal?: AbortSignal;
+  };
+  close?(): Promise<void>;
 }
 
 export interface CommandResult {
@@ -75,7 +83,7 @@ export interface CommandResult {
 export const USAGE = `usage: agent <command> [args]
 
 commands:
-  run <cwd> <text>                  create a session, run a turn, print the structured outcome (plan §173)
+  run <cwd> <text> [--verify <command>]  run with live approval; optionally require a real verification command
   resume <sessionId>                print session state
   cancel <sessionId> <turnId>       cancel a running turn
   approve <approvalId> <allow|deny> resolve a pending approval
@@ -478,16 +486,59 @@ async function runCmd(rest: string[], deps: CommandDeps): Promise<CommandResult>
       sessionId: session.id,
       text,
     })) as { turnId: string };
-    const outcome = (await deps.rpc.request("session.run", {
-      sessionId: session.id,
-      turnId,
-    })) as TurnOutcome;
+    deps.runHost?.started?.(session.id, turnId);
+    const interaction = new AbortController();
+    const handled = new Set<string>();
+    let polling = false;
+    const approvePending = async () => {
+      if (polling || interaction.signal.aborted || deps.runHost === undefined) return;
+      polling = true;
+      try {
+        for (const request of deps.approvalStore.listPending(session.id)) {
+          if (interaction.signal.aborted) break;
+          if (handled.has(request.id)) continue;
+          handled.add(request.id);
+          const approvalSignal = AbortSignal.any([interaction.signal, AbortSignal.timeout(Math.max(0, Math.min(2_147_483_647, request.expiresAt - Date.now())))]);
+          const value = await deps.runHost.approve(request, approvalSignal);
+          if (interaction.signal.aborted) break;
+          if (approvalSignal.aborted || !deps.approvalStore.listPending(session.id).some(pending => pending.id === request.id)) continue;
+          await deps.rpc.request("session.approve", { approvalId: request.id, value, decidedBy: "cli" });
+        }
+      } catch (error) {
+        // A failed interaction never authorizes an operation. Cancel the turn
+        // instead of leaving an invisible approval waiter until expiration.
+        interaction.abort(error);
+        await deps.rpc.request("session.cancel", { sessionId: session.id, turnId });
+      } finally { polling = false; }
+    };
+    const cancel = () => {
+      interaction.abort();
+      void deps.rpc.request("session.cancel", { sessionId: session.id, turnId }).catch(() => {});
+    };
+    deps.runHost?.signal?.addEventListener("abort", cancel, { once: true });
+    let pendingInteraction: Promise<void> | undefined;
+    const timer = deps.runHost === undefined ? undefined : setInterval(() => {
+      if (!polling) pendingInteraction = approvePending();
+    }, 25);
+    let outcome: TurnOutcome;
+    try {
+      if (deps.runHost?.signal?.aborted) {
+        cancel();
+        return { exitCode: 1, lines: ["agent run: cancelled before execution"] };
+      }
+      outcome = (await deps.rpc.request("session.run", { sessionId: session.id, turnId })) as TurnOutcome;
+    } finally {
+      if (timer !== undefined) clearInterval(timer);
+      interaction.abort();
+      deps.runHost?.signal?.removeEventListener("abort", cancel);
+      await pendingInteraction;
+    }
 
     const events = await deps.events.list(session.id);
     const messages = await deps.store.listMessages(session.id);
     const summary = [...messages]
       .reverse()
-      .find((m) => m.role === "assistant")?.content ?? "(no assistant text)";
+      .find((m) => m.role === "assistant" && m.toolCalls === undefined)?.content ?? "(no assistant text)";
     const files = outcome.state?.filesChanged ?? [];
     const verification = verificationLine(events);
     const issues =
@@ -500,6 +551,8 @@ async function runCmd(rest: string[], deps: CommandDeps): Promise<CommandResult>
       lines: [
         `run: session ${session.id} turn ${turnId}`,
         `status: ${outcome.status}`,
+        `grade: ${outcome.grade ?? "ungraded"}`,
+        `termination: ${outcome.terminationReason ?? "unknown"}`,
         `summary: ${summary}`,
         `files changed: ${files.length === 0 ? "(none)" : files.join(", ")}`,
         `tests: ${verification}`,

@@ -28,6 +28,7 @@ export type {
 export {
   billingClassForProvider,
   resolveModelProvider,
+  resolveInteractiveModelRef,
   STUB_PROVIDER_ID,
   stubProvider,
 } from "./provider.js";

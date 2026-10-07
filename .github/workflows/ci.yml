@@ -103,6 +103,9 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      - name: Real CLI and Web coding acceptance (scripted local HTTP, no paid calls)
+        run: node scripts/research/coding-audit-20261007/acceptance.mjs .ci/coding-acceptance
+
       - name: Unit and integration tests
         # bash on both runners (Git Bash ships with windows-latest); the single
         # command propagates its exit code while the log is kept for P12-5.

@@ -202,8 +202,20 @@ node apps/cli/dist/main.js release gate <gate>         # one gate + durable V2 e
 node apps/cli/dist/main.js docs:verify                 # documentation truth checks
 ```
 
-`run <cwd> <text>` submits one task and prints its outcome. For ongoing chat,
-follow-up messages, approvals and cancellation, use the [Web console](docs/web-ui.md).
+`run <cwd> <text>` uses the specified project root, shows the active session/turn,
+and prompts for each write or command (`allow` authorizes one operation; anything
+else, including EOF, denies it). Ctrl-C cancels the running turn.
+For coding tasks, require an actual project check:
+
+```bash
+node /path/to/harness-agent/apps/cli/dist/main.js --data-dir /path/to/sessions run /path/to/project "Fix the failing tests" --verify "npm test"
+```
+
+The verification command uses the same approval and sandbox gates as model tools.
+A failure feeds protected compiler/test output back to the model for bounded
+repair attempts. Only a passing gate produces `grade: verified_complete`; without
+`--verify`, completion is explicitly unverified. For ongoing chat and follow-up
+messages, use the [Web console](docs/web-ui.md).
 
 ### Offline smoke (no API key, no network)
 

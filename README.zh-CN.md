@@ -182,8 +182,9 @@ node apps/cli/dist/main.js release gate <gate>         # 单个门禁 + 持久�
 node apps/cli/dist/main.js docs:verify                 # 文档真实性检查
 ```
 
-`run <cwd> <text>` 提交一个任务并输出回合结果。连续聊天、追加消息、权限审批和停止任务
-请使用 [Web 控制台](docs/web-ui.md)。
+`run <cwd> <text>` 使用指定项目目录，运行时显示 session/turn，写文件或执行命令会逐项提示审批；输入 `allow` 允许本次操作，其余输入和 EOF 均拒绝，Ctrl-C 取消当前回合。
+编程任务可用 `run /项目目录 "修复失败测试" --verify "npm test"` 要求真实验收。验收命令同样经过权限和沙箱；失败诊断以受保护工具输出传回模型，进行有界修复。通过才输出 `grade: verified_complete`，没有配置验收时明确为 unverified。
+连续聊天和追加消息请使用 [Web 控制台](docs/web-ui.md)。
 
 ## 使用真实模型
 

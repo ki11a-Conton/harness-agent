@@ -712,7 +712,14 @@ export class AgentRuntime {
         }
         const id = newToolCallId();
         const args = { command: spec.command, ...(spec.args !== undefined ? { args: [...spec.args] } : {}), timeoutMs: 120_000 };
-        const result = await this.orchestrator.executeBound({
+        const call: ToolCall = { id, name: "exec", args };
+        // A host verification command is a real tool execution. Preserve its
+        // request/result pair so the next model call can diagnose a failure;
+        // never promote captured stdout/stderr into a system instruction.
+        await this.store.appendMessage({ id: newMessageId(), sessionId: ctx.sessionId, turnId: ctx.turnId,
+          role: "assistant", content: "", toolCalls: [call], createdAt: this.now() });
+        let result: ToolResult;
+        try { result = await this.orchestrator.executeBound({
           id, sessionId: ctx.sessionId, turnId: ctx.turnId, agentId: ctx.agent.id,
           call: { id, name: "exec", args },
           binding: {
@@ -726,7 +733,13 @@ export class AgentRuntime {
           sessionId: ctx.sessionId, turnId: ctx.turnId, agentId: ctx.agent.id,
           cwd: ctx.session.cwd, signal: ctx.signal,
           permissions: ctx.agent.permissions, sandboxPolicy: this.sandboxPolicy ?? defaultSandboxPolicy(),
-        });
+        }); } catch (error) {
+          rethrowIfKill(error);
+          result = { status: "failed", error: errorInfo("INTERNAL_ERROR", error instanceof Error ? error.message : String(error)) };
+        }
+        const content = await this.contextController.renderToolResultForContext(ctx, call, result);
+        await this.store.appendMessage({ id: newMessageId(), sessionId: ctx.sessionId, turnId: ctx.turnId,
+          role: "tool", content, toolCallId: id, createdAt: this.now() });
         return result as ToolResult<{ exitCode: number | null; durationMs: number }>;
       },
       task: this.task,

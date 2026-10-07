@@ -15,14 +15,14 @@ import type { CommandHints } from "./command-discovery-service.js";
 
 export interface VerificationPlannerDeps {
   /** Lazy command-hints source (the harness CommandDiscoveryService). */
-  commands?: (() => Promise<CommandHints | undefined>) | CommandHints;
+  commands?: ((cwd: string) => Promise<CommandHints | undefined>) | CommandHints;
 }
 
 export function createVerificationPlanner(
   deps: VerificationPlannerDeps = {},
 ): (input: { task: TaskSpec; changedPaths: string[]; cwd: string }) => Promise<VerificationSpec[]> {
   return async ({ changedPaths, cwd }) => {
-    const hints = typeof deps.commands === "function" ? await deps.commands() : deps.commands;
+    const hints = typeof deps.commands === "function" ? await deps.commands(cwd) : deps.commands;
     const plan = buildVerificationPlan({
       root: cwd,
       filesChanged: changedPaths,

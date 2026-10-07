@@ -60,6 +60,13 @@ export interface TurnContext {
  *  dump for structured values, or an empty string for undefined/null. */
 export function renderToolResult(result: ToolResult): string {
   if (result.status !== "success") {
+    if (result.output !== undefined && result.output !== null) {
+      // Failed processes still produce the compiler/test diagnostics needed
+      // for repair. Keep them as structured tool data so the context boundary
+      // can redact, inspect and cap them exactly like successful outputs.
+      try { return `[${result.status}] ${JSON.stringify({ error: result.error?.message ?? "no error detail", output: result.output })}`; }
+      catch { /* Preserve the existing error fallback for unserializable data. */ }
+    }
     return `[${result.status}] ${result.error?.message ?? "no error detail"}`;
   }
   const out = result.output;
@@ -140,7 +147,7 @@ export function updateWorkingState(
 ): void {
   if (semantics.sideEffectScope === "filesystem" && typeof call.args.path === "string") {
     if (result.status === "success") {
-      working.filesChanged.push(call.args.path);
+      if (!working.filesChanged.includes(call.args.path)) working.filesChanged.push(call.args.path);
       working.completed.push(`modified ${call.args.path}`);
     }
   } else if (semantics.sideEffectScope === "process" && typeof call.args.command === "string") {
