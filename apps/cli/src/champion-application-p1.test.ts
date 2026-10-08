@@ -20,6 +20,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ScriptedModelProvider } from "@ar/model";
+import { createCodingPromptPolicy } from "@ar/harness";
 import {
   applyPromotion,
   createInitialChampionState,
@@ -66,6 +67,30 @@ async function writePendingState(candidateId: string): Promise<ChampionState> {
   const next = applyPromotion(c0, candidateId, {}, "runs/evidence.json");
   await writeChampionStateFileCas(next, championStateDigest(c0), statePath);
   return next;
+}
+
+for (const runtimeEntrypoint of ["cli", "web"] as const) {
+  it(`P07: ${runtimeEntrypoint} coding challenger does not attest an unmeasured champion combination`, async () => {
+    await writePendingState("tool_call_efficiency_v1");
+    const before = await readChampionStateFile(statePath);
+    const policy = createCodingPromptPolicy();
+    const outcome = await createHarnessWithChampion({
+      runtimeEntrypoint,
+      baseConfig: { ...baseConfig(), agentPromptPolicy: policy },
+      stateFilePath: statePath,
+    });
+    try {
+      expect(outcome.status).toBe("agentPromptChallenger");
+      expect(outcome.proof).toBeNull();
+      expect(outcome.harness.agents[0]!.systemPrompt).toBe(policy.primary);
+      expect(outcome.harness.config.completionGuidance).toBeUndefined();
+      expect(await readChampionStateFile(statePath)).toEqual(before);
+    } finally { await outcome.harness.close(); }
+    // Leaving the challenger restores the existing champion application path.
+    const legacy = await createHarnessWithChampion({ runtimeEntrypoint, baseConfig: baseConfig(), stateFilePath: statePath });
+    try { expect(legacy.status).toBe("applied"); expect(legacy.proof).not.toBeNull(); }
+    finally { await legacy.harness.close(); }
+  });
 }
 
 describe("P1 — tool_call_efficiency_v1 is really installed at production startup", () => {

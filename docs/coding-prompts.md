@@ -20,6 +20,8 @@ SDK：`createHarness({ ...config, agentPromptPolicy: createCodingPromptPolicy() 
 
 `agent config explain agentPromptPolicy.primary` 可检查实际编译内容、来源与 `session_frozen` 生命周期。完整三角色正文进入既有配置指纹，而非只保存 `coding-v1` 标签。同版本正文变化也拒绝旧会话恢复。要试验新版请建立新会话/数据目录；恢复既有 legacy 会话时继续用 legacy 和原配置。不能静默修改旧会话的指纹来“升级”。
 
+CLI/Web 显式启用新策略时，共享启动器返回 `agentPromptChallenger`，以该策略独立运行，不自动叠加现有冠军或生成 AppliedProof。原冠军状态保留，legacy 启动仍通过原应用门禁。SDK 手动传入 `completionGuidance` 的精确拼接能力保留，但该组合的质量必须另行评估，不能沿用旧冠军证明。
+
 ## 做了哪些移植
 
 源码读取于工作区聚合快照 `HARNESS-SRC-FORK@1a46ea13de9a3f5e6987c5dd0319b2000fe49c92`；这是收集仓库的 SHA，不冒充各上游仓库的独立 revision。DeepSeek 来源为 `deepseek-harness@5badb15009ae1756c3afe0ae0cef1faafc290ccc`。

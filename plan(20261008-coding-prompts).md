@@ -12,6 +12,7 @@
 | P04 | 复制其他 agent 的完整提示词会带入不存在的工具及平台假设 | 复用适合本项目的开源设计 | pi 的条件工具片段与去重；Codex 的保护用户改动；OpenCode 的行动闭环；Hermes 的真实结果与依赖顺序 | 工具白名单与渲染测试；结构化 exec/cwd 实测；记录许可证、来源及未采纳设计 |
 | P05 | 新提示词如果只记录版本名，会允许同版本正文改变后静默恢复旧会话 | 记录实际正文、冻结会话策略 | 在既有 HarnessConfig/配置指纹中保存三角色编译后的正文；沿用现有 drift 拒绝 | 同版本改正文拒绝恢复；相同正文允许恢复；旧会话用 legacy 恢复 |
 | P06 | 提示词工程测试不能证明真实模型能力达到 Codex/Claude Code 水平 | 分开工程验收与真实模型效果 | 新策略通过 `HARNESS_AGENT_PROMPT=coding-v1` 显式开启；默认 legacy 与冻结 N7/champion 实验保持原文；用户线下 paired eval 后决定推广 | 全量单测、security/protocol、HTTP coding 验收通过；真实模型状态保持 NOT_PROVEN，不伪造提升 |
+| P07 | 组合反例：显式新正文与旧冠军自动叠加仍会生成 AppliedProof，证明未评估的组合 | 隔离 challenger 的冠军应用 | 共享 CLI/Web startup 对显式 Agent 策略走独立 createHarness；不自动叠加旧冠军、不写 AppliedProof；原冠军状态供 legacy 正常应用 | 两条实际 startup RED→GREEN；新策略 proof=null、状态文件未变；切回 legacy 后原冠军仍正常应用 |
 
 ## 源码分析结论
 

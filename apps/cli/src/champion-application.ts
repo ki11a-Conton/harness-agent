@@ -53,6 +53,7 @@ export interface ChampionStartupOutcome {
     | "baseline"           // no champion above C0 — plain production harness
     | "applied"            // champion applied and proven by this startup
     | "alreadyApplied"     // champion already proven; live config re-verified
+    | "agentPromptChallenger" // explicit, unmeasured Agent policy; no champion proof
     | "applicationFailed"  // config did not match — fell back to the baseline
     | "profileRejected"    // state invalid/quarantined — baseline, claim kept
     | "stateUnreadable";   // no usable state file — baseline
@@ -269,6 +270,15 @@ export async function createHarnessWithChampion(
   const now = (opts.now ?? (() => new Date()))();
   const processId = opts.processId ?? `pid-${process.pid}-${now.getTime()}`;
   const base = opts.baseConfig;
+
+  // A champion's evidence measured the legacy base prompt. Installing its
+  // suffix/flags on a different Agent policy would attest an unmeasured
+  // combination. Run the explicit challenger independently; preserve the
+  // champion state so legacy startup can still apply it by the existing gate.
+  if (base.agentPromptPolicy !== undefined) {
+    return { harness: await create(base), status: "agentPromptChallenger",
+      reason: "Explicit Agent prompt challenger runs independently of the measured champion; real paired evidence is required for promotion.", proof: null };
+  }
 
   const read = await readChampionStateFile(opts.stateFilePath);
   if (read instanceof Error) {
