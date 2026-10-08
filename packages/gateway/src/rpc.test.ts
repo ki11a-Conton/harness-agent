@@ -21,7 +21,7 @@ import type {
   TurnId,
 } from "@ar/contracts";
 import { AgentError, eventSinkFromStore, newAgentId, newApprovalId, newSkillId } from "@ar/contracts";
-import type { TurnOutcome } from "@ar/core";
+import type { SessionRuntimeStatus, TurnOutcome } from "@ar/core";
 import { AgentRuntime, DefaultLoadedSessionManager } from "@ar/core";
 import { ScriptedModelProvider } from "@ar/model";
 import { SessionService } from "@ar/session";
@@ -388,18 +388,65 @@ describe("createRuntimeRpc session lifecycle", () => {
   });
 
   it("session.followup queues a follow-up turn and surfaces it in session.status", async () => {
-    const { registry } = makeRpc();
+    const provider = new BlockingProvider(ScriptedModelProvider.text("followup done"));
+    const { registry, store, sessions } = makeRpc({ provider });
     const session = await createSession(registry);
-    const res = (await registry.invoke("session.followup", {
-      sessionId: session.id,
-      text: "later",
-    })) as { admitted: string };
-    expect(res.admitted).toBe("followup");
-    const status = (await registry.invoke("session.status", {
-      sessionId: session.id,
-    })) as { queuedFollowups: number; loaded: boolean };
-    expect(status.loaded).toBe(true);
-    expect(status.queuedFollowups).toBe(1);
+    const { turnId } = await sendTurn(registry, session.id, "original coding task");
+    const firstRun = registry.invoke("session.run", { sessionId: session.id, turnId });
+    try {
+      await provider.blocked;
+      const res = (await registry.invoke("session.followup", {
+        sessionId: session.id,
+        text: "later",
+      })) as { admitted: string };
+      expect(res.admitted).toBe("followup");
+      const status = (await registry.invoke("session.status", { sessionId: session.id })) as SessionRuntimeStatus;
+      expect(status.loaded).toBe(true);
+      expect(status.activeTurn?.turnId).toBe(turnId);
+      expect(status.queuedFollowups).toBe(1);
+      expect((await store.listMessagesByTurn(session.id, turnId as TurnId)).some(message => message.content === "later")).toBe(false);
+
+      await registry.invoke("session.cancel", { sessionId: session.id, turnId });
+      expect(((await firstRun) as TurnOutcome).status).toBe("cancelled");
+      // Observe the actual new turn and queue drain, rather than treating an
+      // idle queue as a fixture that should remain parked indefinitely.
+      await expect.poll(async () => {
+        const turns = await store.listTurns(session.id);
+        const followup = turns.find(turn => turn.id !== turnId);
+        const current = (await registry.invoke("session.status", { sessionId: session.id })) as SessionRuntimeStatus;
+        return { followupStatus: followup?.status, pending: current.queuedFollowups, active: current.activeTurn?.turnId };
+      }, { timeout: 5_000 }).toEqual({ followupStatus: "completed", pending: 0, active: undefined });
+      const turns = await store.listTurns(session.id);
+      expect(turns).toHaveLength(2);
+      const followup = turns.find(turn => turn.id !== turnId)!;
+      expect((await store.listMessagesByTurn(session.id, followup.id)).map(message => ({ role: message.role, content: message.content }))).toEqual([
+        { role: "user", content: "later" },
+        { role: "assistant", content: "followup done" },
+      ]);
+      expect((await store.listMessagesByTurn(session.id, turnId as TurnId)).filter(message => message.role === "user").map(message => message.content)).toEqual(["original coding task"]);
+    } finally {
+      await registry.invoke("session.cancel", { sessionId: session.id, turnId });
+      await firstRun;
+      await sessions.close();
+    }
+  });
+
+  it("session.followup on an idle actor automatically runs its own turn", async () => {
+    const { registry, store, sessions } = makeRpc({ provider: new ScriptedModelProvider([ScriptedModelProvider.text("idle followup done")]) });
+    const session = await createSession(registry);
+    try {
+      expect(await registry.invoke("session.followup", { sessionId: session.id, text: "start from idle" })).toMatchObject({ admitted: "followup" });
+      await expect.poll(async () => {
+        const turns = await store.listTurns(session.id);
+        const status = (await registry.invoke("session.status", { sessionId: session.id })) as SessionRuntimeStatus;
+        return { turns: turns.length, completed: turns[0]?.status, pending: status.queuedFollowups, active: status.activeTurn?.turnId };
+      }, { timeout: 5_000 }).toEqual({ turns: 1, completed: "completed", pending: 0, active: undefined });
+      const [turn] = await store.listTurns(session.id);
+      expect((await store.listMessagesByTurn(session.id, turn!.id)).map(message => ({ role: message.role, content: message.content }))).toEqual([
+        { role: "user", content: "start from idle" },
+        { role: "assistant", content: "idle followup done" },
+      ]);
+    } finally { await sessions.close(); }
   });
 
   it("session.interrupt reports not_running when no turn is active", async () => {

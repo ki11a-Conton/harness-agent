@@ -337,7 +337,9 @@ export function isContextOverflowError(info: ReturnType<typeof errorInfo>): bool
   if (info.provider?.kind === "rate_limit" || [401, 403, 429].includes(info.provider?.status ?? 0)) return false;
   const haystack = `${info.code} ${info.message}`;
   if (/rate limit|too many requests|throttl|invalid (?:authentication )?token|unsupported parameter/i.test(haystack)) return false;
-  return info.provider?.status === 413 || CONTEXT_OVERFLOW_PATTERNS.some(pattern => pattern.test(haystack));
+  // A typed contract error needs no provider-specific message. Keep the
+  // exclusions above authoritative when contradictory metadata is supplied.
+  return info.code === "CONTEXT_OVERFLOW" || info.provider?.status === 413 || CONTEXT_OVERFLOW_PATTERNS.some(pattern => pattern.test(haystack));
 }
 
 /** LOOP-001: tool result rendered as a compressible context block so the

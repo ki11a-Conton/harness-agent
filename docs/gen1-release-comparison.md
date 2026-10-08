@@ -73,3 +73,9 @@ node scripts/release/portable-smoke.mjs --archive /tmp/harness-gen1-assets/harne
 `portable-smoke.mjs` 校验实际 archive 与发布 checksum，在仓库外解包，去掉 Node 注入环境，验证 `--version` 和 doctor，再用解包后的实际应用驱动既有本地 HTTP 编码验收：CLI/Web、审批、文件修改、命令、失败验证后的修复、历史/事件、重启与后续任务。最后实际篡改 Web 文件确认拒绝，再恢复并重新校验。receipt 包含实际 source SHA、archive hash、平台、断言、零付费调用和 `realModelQuality=NOT_PROVEN`。
 
 上述独立安装 gate 加入 `gen1-acceptance.yml` 的真实 Ubuntu/Windows matrix。两个构建腿通过后，额外的原生 Windows 消费腿下载 Ubuntu 构建的同一个 tar.gz，不安装 pnpm、不重建，直接执行独立编码/doctor/篡改反例并记录实际 archive hash。正式发布选择该 Ubuntu archive，避免把不同平台各自构建的字节当作同一资产已验收。它是第一代分发验收；全量/安全/协议/coverage/既有 release attestation 和真实模型质量分别报告，不相互替代。
+
+### 固定源码首轮发现的分发闭包问题
+
+根 `tsconfig.references` 不是完整 workspace 清单；首次不可变构建在打包时缺 `@ar/store`/`@ar/orchestration` 而拒绝。现在依据实际 pnpm workspace inventory 枚举所有包、显式构建并校验完整依赖闭包。两个新反例由8 PASS/2 FAIL转为10 PASS；固定隔离提交的cleanroom包含26包/1621文件，doctor0错误，真实编码50断言/19请求和篡改拒绝通过。该预验不替代主交付新SHA。Windows自动换行fixture的期望改为Git blob，资产字节规则不变。
+
+本地Actions原件下载域被代理拒绝，CI可把精确源码的原件导出到已存在的私有draft，使用原生GitHub HTTP。只准备资产、不发布；完整三腿安装与同archive hash通过才写候选包，失败只写证据bundle。全量/Windows/coverage/release attestation依然单独判定，draft里的文件存在不等于可发布。

@@ -69,3 +69,11 @@ new OpenAICompatibleProvider({
 以下差距仍存在，不能宣传为已经集成所有来源 agent 的功能：Anthropic Messages/原生 thinking block、OpenAI Responses/订阅 OAuth、多模态附件、自动 provider model 目录、可选择 thinking effort、使用实际 tokenizer/usage 校准的自适应预算、可选 LLM summarizer。这些是协议或策略扩展，需要各自真实 endpoint 配对验收；离线 fixture 只证明工程协议路径，不证明模型任务质量。
 
 第一代全面检查至少覆盖：全部 `packages/model`、本页新增回归、`provider-termination`、`turn-helpers.protocol`、`runtime`、`step-snapshot`、`world-snapshot`、CLI/Web coding host 与 benchmark provider identity、安全/协议全套，以及真实 Windows 的取消和工具调用路径。
+
+## 固定源码 CI 补验：保留结构化 overflow 合同
+
+真实 Linux/Windows CI 和本地全量检查发现两项 `active-user-context.test.ts` 失败：provider 明确发送 `errorInfo("CONTEXT_OVERFLOW", "context full")`，精确文本模式未识别这个正式 ErrorCode，导致 reactive compact 未发生、turn 失败。这是本轮精确分类遗漏结构化合同的回归，不是模型任务质量失败。修复在既有认证、rate-limit kind/status、参数错误排除之后直接识别 `info.code === "CONTEXT_OVERFLOW"`；没有扩宽 context/token 文本 regex，没有新增 provider kind 或改变 unsafe partial-stream 重放规则。
+
+隔离补修工作区基于 `0fe418975b225fb7e7d2ea2d17031f7b0d54542f`。最小 RED 为 2 文件、58 项中 6 FAIL/52 PASS，包含 CI 两项 user-anchor/reactive-tail 失败和四项结构化合同失败；修复后同组 58 PASS/0 FAIL/0 SKIP。新增 12 项覆盖 typed code 的空/普通消息、HTTP 400、矛盾的 401/403/429/rate-limit/参数错误排除、非 typed 的 context-full 不误判，以及最多一次改变上下文的恢复。
+
+原 M1–M5 模型/Runtime/协议/身份组加 active-user-context 的补验为 **24 文件、416 PASS/0 FAIL/0 SKIP**；`pnpm exec tsc -b packages/core` 通过。原件为 `/tmp/gen1-typed-overflow-red.{json,log}`、`/tmp/gen1-typed-overflow-green.{json,log}`、`/tmp/gen1-typed-overflow-model-green.{json,log}`、`/tmp/gen1-typed-overflow-typecheck.log`。这些是补修工作树的定向证据；最终新提交的全量和远端双平台 CI 仍需重新执行，不将此前失败记录改写成 PASS。

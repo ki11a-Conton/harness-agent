@@ -146,3 +146,18 @@ dataDir lease 保护同机、同 network namespace 的 CLI/Web 产品入口，�
 以下能力尚未集成：Anthropic Messages/原生 thinking、OpenAI Responses/订阅 OAuth、多模态、自动模型目录与 effort 控制、actual usage/tokenizer 校准预算、可选模型摘要；完整 TUI、任意消息树 fork/rollback、PTY/后台 stdin、完整 LSP、所有外部记忆供应商。它们是后续能力，不应伪装成本轮已修 bug 或已交付优势。
 
 最终验收还需在同一个明确 clean source SHA 产出全量 typecheck/build/tests、安全/协议/覆盖率与既有 release 门、实际 CLI/Web/Chromium、真实 Windows、portable archive 构建与仓库外消费，以及远端 CI 收据。阶段性 Linux PASS、Windows 分支的静态代码或 SKIP、已写发布脚本都不能替代这些证据。付费真实模型编码质量、费用及与参考 agent 的成功率比较仍为 `NOT_PROVEN`，由独立模型实验验证。
+
+## 固定源码首轮验收后的补修
+
+`b9c5b05` 的完整 Linux 测试实际得到 9268 PASS / 3 FAIL / 14 pending，525 个文件；原始结果保留，不作为通过凭据。远端双平台 full/formal 也暴露同三失败。
+
+| 问题 | 修复与复验 |
+| --- | --- |
+| 精确文本 overflow 规则漏掉正式 `CONTEXT_OVERFLOW` 错误码，两个 reactive tail 回归失败 | 先保留认证/限流/参数排除，再识别该正式 code；最小 RED 6 FAIL/52 PASS → 58 PASS，原模型组+active context 24文件416 PASS；不恢复宽泛 token 正则 |
+| 旧 RPC fixture 把 idle followup 当永不执行的队列预填，和自动唤醒的新合同冲突 | 用确定 running gate 验证 queued=1，取消首轮后验证真实下一 turn 完成/pending=0及消息身份；新增idle自推进；相关15文件266 PASS，生产行为不回退 |
+| 打包器依赖根 tsconfig references，漏掉间接 `@ar/store`/`@ar/orchestration`，独立包无法产出 | 按实际pnpm workspace inventory枚举、校验闭包并fresh-build全部包；RED8 PASS/2 FAIL → portable10 PASS；隔离固定提交预验1621文件、doctor0error、50编码断言/19请求及篡改拒绝均通过 |
+| 新打包 fixture 假定磁盘CRLF等于Git blob，Windows autoCRLF会归一化 | fixture显式启用autoCRLF，期望绑定真实固定Git blob；原raw-byte打包规则不变，同反例10 PASS |
+
+GitHub Actions 原件下载的储存域在本环境由代理拒绝；原生 Release 资产下载已实际验证可用。新增受限CI导出只向本任务现有的私有draft写入准确源码的证据，失败也保存原件，绝不创建/发布或覆盖Release。安装资产须三腿真实通过且Linux包在Windows消费的hash相同才可准备；完整CI与发布仍由主交付另验。每个阶段保存原始stdout/stderr/hash，不能用定义文件或失败日志冒充成功。
+
+这些补验是中间开发结果，后续仍须以新clean源码重新完成G7。真实模型质量仍NOT_PROVEN。

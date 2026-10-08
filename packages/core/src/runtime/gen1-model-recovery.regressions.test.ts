@@ -47,6 +47,24 @@ describe("GEN1: context overflow classification", () => {
   it("excludes rate limiting even if the response says too many tokens", () => {
     expect(isContextOverflowError(errorInfo("MODEL_ERROR", "Too many tokens; context limit exceeded, rate limit", { provider: { kind: "rate_limit", status: 429 } }))).toBe(false);
   });
+  it.each(["context full", ""])("recognizes the structured CONTEXT_OVERFLOW code without a message pattern: %j", message => {
+    expect(isContextOverflowError(errorInfo("CONTEXT_OVERFLOW", message))).toBe(true);
+  });
+  it("recognizes structured overflow from an ordinary HTTP 400 provider failure", () => {
+    expect(isContextOverflowError(errorInfo("CONTEXT_OVERFLOW", "context full", { provider: { kind: "http", status: 400 } }))).toBe(true);
+  });
+  it.each([401, 403, 429])("does not compact contradictory structured overflow with HTTP %i", status => {
+    expect(isContextOverflowError(errorInfo("CONTEXT_OVERFLOW", "context full", { provider: { kind: "http", status } }))).toBe(false);
+  });
+  it("keeps the rate-limit kind exclusion when a provider supplies a contradictory overflow code", () => {
+    expect(isContextOverflowError(errorInfo("CONTEXT_OVERFLOW", "context full", { provider: { kind: "rate_limit" } }))).toBe(false);
+  });
+  it.each(["Invalid authentication token", "Unsupported parameter: max_tokens", "tokens per minute rate limit exceeded"])("keeps structured overflow exclusions for %s", message => {
+    expect(isContextOverflowError(errorInfo("CONTEXT_OVERFLOW", message))).toBe(false);
+  });
+  it("does not guess overflow from an untyped context-full message", () => {
+    expect(isContextOverflowError(errorInfo("MODEL_ERROR", "context full"))).toBe(false);
+  });
 });
 
 describe("GEN1: retry contracts are respected by Runtime", () => {
@@ -56,6 +74,11 @@ describe("GEN1: retry contracts are respected by Runtime", () => {
   });
   it("allows one changed-context retry for a confirmed overflow", () => {
     expect(decideModelRetry(errorInfo("MODEL_ERROR", "context_length_exceeded", { retryable: false, safeToRetry: false }), false, retry, 1).action).toBe("compact-and-retry");
+  });
+  it("allows exactly one changed-context retry for a structured overflow, without ordinary unsafe replay", () => {
+    const typedOverflow = errorInfo("CONTEXT_OVERFLOW", "context full", { retryable: false, safeToRetry: false });
+    expect(decideModelRetry(typedOverflow, false, retry, 1).action).toBe("compact-and-retry");
+    expect(decideModelRetry(typedOverflow, true, retry, 2).action).toBe("fail");
   });
   it("still retries a declared safe pre-stream network failure", () => {
     expect(decideModelRetry(errorInfo("MODEL_ERROR", "connection refused", { retryable: true, safeToRetry: true }), false, retry, 1).action).toBe("retry");
