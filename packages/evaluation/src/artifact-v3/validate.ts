@@ -21,6 +21,10 @@
  *   MISSING_REQUIRED_FIELD     — grade/termination/verification removed
  *   LEGACY_NOT_PROMOTION_ELIGIBLE — legacy artifact, never promotion
  *   EMPTY_ARTIFACT             — 0 cases in a classified artifact
+ *   UNSUPPORTED_BREACH_CLAIM   — M15: an artifact carries an ESCAPE/hardBreach
+ *                                verdict with no checkable effect evidence (the
+ *                                N7 defect: an unsupported causal assertion in
+ *                                an archive invalidated a 512-arm measurement)
  */
 
 import { readFile } from "node:fs/promises";
@@ -28,6 +32,10 @@ import { ArtifactSchemaError, classifyArtifact, findEventRecordViolations, findR
 import type { ExperimentArtifactV3 } from "./types.js";
 import { discoverArtifactFiles } from "./loader.js";
 import { computeContentDigestV3, deriveSummaryV3 } from "./writer.js";
+import {
+  validateSecurityOutcomeConsistencyV2,
+  type SecurityOutcomeConsistencyReport,
+} from "../security-outcome-v2.js";
 
 /** Stable validation reason codes. */
 export type ValidationReasonCode =
@@ -42,7 +50,9 @@ export type ValidationReasonCode =
   | "EMPTY_ARTIFACT"
   | "DANGLING_REF"
   | "DUPLICATE_EVENT"
-  | "EVENT_RECORDS_INVALID";
+  | "EVENT_RECORDS_INVALID"
+  /** M15: an artifact asserts a breach that no checkable effect evidence backs. */
+  | "UNSUPPORTED_BREACH_CLAIM";
 
 export interface ArtifactValidationCheck {
   code: ValidationReasonCode;
@@ -62,9 +72,105 @@ export interface DirectoryValidationResult {
 }
 
 /**
+ * M15 — per-artifact result of the breach-claim consistency check.
+ *
+ * WHY THIS LOOKS AT THE RAW `securityOutcome` OBJECT
+ * --------------------------------------------------
+ * `SecurityOutcomeV3` is a LOSSY projection: it keeps `kind` ("escaped", …) and
+ * a prose `detail`, and carries NO effect-evidence field. The M15 evidence
+ * (`evidenceClass` + `effectEvidence`) lives on the `SecurityOutcomeV2` that the
+ * runner produced. So the check reads the V2-shaped record when the artifact
+ * preserves one, and otherwise falls back to the V3 record treated as
+ * evidence-less.
+ *
+ * CONSEQUENCE (stated honestly, not hidden): a V3 record with
+ * `kind: "escaped"` and no V2 evidence alongside it is an UNSUPPORTED breach
+ * claim — its kind asserts a breach the archive cannot substantiate. That is
+ * exactly the N7 shape.
+ */
+export interface BreachClaimConsistency {
+  ok: boolean;
+  /** One entry per failing security outcome. */
+  violations: string[];
+  /** The V3 caseIds whose claim could not be substantiated. */
+  unsupportedCaseIds: string[];
+  /** Per-case reports, for callers that want the full detail. */
+  reports: Array<{ caseId: string; report: SecurityOutcomeConsistencyReport }>;
+}
+
+/** The V2-shaped fields a preserved security record may carry (M15). */
+interface PreservedSecurityRecord {
+  kind?: unknown;
+  hardBreach?: unknown;
+  facts?: unknown;
+  evidenceClass?: unknown;
+  effectEvidence?: unknown;
+  /** The V3 `detail` may embed the V2 kind/fact types as prose. */
+  detail?: unknown;
+  caseId?: unknown;
+}
+
+/** True when a V3 record's `kind` asserts a breach. */
+function assertsBreachKind(kind: unknown): boolean {
+  return kind === "escaped" || kind === "ESCAPE" || kind === "ESCAPE_UNPROVEN";
+}
+
+/**
+ * M15 — check every security outcome in an artifact for a breach claim that no
+ * checkable effect evidence supports. PURE: reads, never mutates, never throws.
+ */
+export function checkBreachClaimConsistency(artifact: ExperimentArtifactV3): BreachClaimConsistency {
+  const violations: string[] = [];
+  const unsupportedCaseIds: string[] = [];
+  const reports: Array<{ caseId: string; report: SecurityOutcomeConsistencyReport }> = [];
+
+  const records = Array.isArray(artifact.securityOutcomes) ? artifact.securityOutcomes : [];
+  for (const record of records) {
+    const raw = record as unknown as PreservedSecurityRecord;
+    const caseId = typeof raw.caseId === "string" ? raw.caseId : "<unknown-case>";
+
+    // Prefer a V2-shaped record when the artifact preserved one (it can carry
+    // real evidence). A V3-only record has no evidence fields by construction.
+    const candidate = raw as unknown as Record<string, unknown>;
+    const isV2Shaped = Array.isArray(raw.facts) && raw.facts.length > 0;
+    const report = isV2Shaped
+      ? validateSecurityOutcomeConsistencyV2({
+          kind: raw.kind,
+          hardBreach: raw.hardBreach,
+          facts: raw.facts,
+        })
+      : // No V2 record: the V3 `kind` is the only claim present. It cannot be
+        // substantiated without effect evidence, so it is unsupported when it
+        // asserts a breach.
+        assertsBreachKind(candidate.kind)
+        ? {
+            ok: false,
+            violations: [
+              `breach claim is unsupported: security outcome for ${caseId} asserts kind "${String(candidate.kind)}" ` +
+                `but carries no effect evidence (no evidenceClass "effect" with a non-empty effectEvidence path set) — N7 defect`,
+            ],
+            effectEvidence: [] as string[],
+          }
+        : { ok: true, violations: [] as string[], effectEvidence: [] as string[] };
+
+    reports.push({ caseId, report });
+    if (!report.ok) {
+      unsupportedCaseIds.push(caseId);
+      for (const v of report.violations) violations.push(`${caseId}: ${v}`);
+    }
+  }
+
+  return { ok: violations.length === 0, violations, unsupportedCaseIds, reports };
+}
+
+/**
  * Validate a single parsed V3 artifact (cross-field checks).
  * Caller is responsible for providing the raw parsed object (from
  * parseExperimentArtifactV3 or from the writer).
+ *
+ * Every check is ALWAYS emitted, with `passed: true` or `passed: false` — the
+ * established style of this function (callers count checks as well as read
+ * codes, so a conditionally-absent check would be a silent API change).
  */
 export function validateArtifactV3(artifact: ExperimentArtifactV3): ArtifactValidationCheck[] {
   const checks: ArtifactValidationCheck[] = [];
@@ -176,6 +282,28 @@ export function validateArtifactV3(artifact: ExperimentArtifactV3): ArtifactVali
     checks.push({ code: "EVENT_RECORDS_INVALID", passed: false, detail: erViolations.join("; ") });
   } else {
     checks.push({ code: "EVENT_RECORDS_INVALID", passed: true, detail: "event records intact (or absent)" });
+  }
+
+  // 9. M15: every breach claim must be backed by checkable effect evidence. An
+  //    archive that carries an ESCAPE verdict with nothing to verify is exactly
+  //    how the N7 assertion travelled as fact and invalidated a 512-arm
+  //    measurement. Emitted unconditionally, in this function's style.
+  const breachConsistency = checkBreachClaimConsistency(artifact);
+  if (breachConsistency.ok) {
+    checks.push({
+      code: "UNSUPPORTED_BREACH_CLAIM",
+      passed: true,
+      detail:
+        artifact.securityOutcomes.length === 0
+          ? "no security outcomes to substantiate"
+          : `all ${artifact.securityOutcomes.length} security outcome claim(s) are evidence-supported`,
+    });
+  } else {
+    checks.push({
+      code: "UNSUPPORTED_BREACH_CLAIM",
+      passed: false,
+      detail: breachConsistency.violations.join("; "),
+    });
   }
 
   return checks;
