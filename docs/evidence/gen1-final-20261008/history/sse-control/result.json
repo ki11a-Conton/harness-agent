@@ -1,0 +1,50 @@
+{
+  "status": "PASS",
+  "scope": "Controlled scheduling executes the actual original snippet and actual fixed wait helpers; it does not substitute for real HTTP or native OS acceptance.",
+  "cases": [
+    {
+      "name": "RED: actual original two-tab snippet rejects reply frames before later terminal frames",
+      "passed": true
+    },
+    {
+      "name": "GREEN: actual fixed helper gates both tabs until the matching completion arrives on each",
+      "passed": true
+    },
+    {
+      "name": "restart rejects replayed old completion and requires a new terminal on the original session",
+      "passed": true
+    },
+    {
+      "name": "mismatched two-tab terminal ids are rejected",
+      "passed": true
+    },
+    {
+      "name": "stream error, failed/cancelled turn and noncompleted status remain failures",
+      "passed": true
+    },
+    {
+      "name": "missing terminal keeps the original fixed 15000ms deadline and fails without retry",
+      "passed": true
+    }
+  ],
+  "originalCi": [
+    {
+      "platform": "ubuntu",
+      "sourceSha": "bec526b7929419e5c4090b9f9e444e415d4e8ddc",
+      "node": "v22.23.3",
+      "assertionCount": 18,
+      "requestCount": 12,
+      "sha256": "f42e7019da49666b3b017e85417750f3df3967208593c5b23940fb82a03ee26c"
+    },
+    {
+      "platform": "windows",
+      "sourceSha": "bec526b7929419e5c4090b9f9e444e415d4e8ddc",
+      "node": "v22.23.3",
+      "assertionCount": 17,
+      "requestCount": 10,
+      "sha256": "d4f8fe2f9ad5f65ea517c94a6dbf938be9cd04c79479bd8123d01af73dffff8a"
+    }
+  ],
+  "scriptSha256": "6ad7912d43b7fcf5d7578f26f4d8fa42f6a1afd10808771227717e2f500ffa94",
+  "paidModelCalls": 0
+}

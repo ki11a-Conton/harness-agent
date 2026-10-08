@@ -1,0 +1,7 @@
+{
+  "code": 0,
+  "signal": null,
+  "stdout": "you: repair addition\nagent: Corrected addition; the configured verification must pass.\nyou: follow-up check\nagent: Follow-up completed using the existing conversation.\nchat: session session_1b7787cd-a8e0-4888-8268-bb41659a36ac\nproject: /tmp/harness-gen1-interaction-os5WrJ/coding project Unicode-中文\ndata: /tmp/harness-gen1-interaction-os5WrJ/chat data\n/help for commands; /quit exits. Ctrl-C cancels the current turn; the session is kept.\nyou> run started: session session_1b7787cd-a8e0-4888-8268-bb41659a36ac turn turn_920cdd56-1bb7-4c6d-b47a-8a54c5c82405\n[thinking]\nrun: session session_1b7787cd-a8e0-4888-8268-bb41659a36ac turn turn_920cdd56-1bb7-4c6d-b47a-8a54c5c82405\nstatus: completed\ngrade: verified_complete\ntermination: verified_complete\nsummary: Resumed third task on the original session.\nfiles changed: (none)\ntests: passed\nverification: passed\nremaining issues: (none)\ntool calls: 0\niterations: 0\nyou> chat closed: session session_1b7787cd-a8e0-4888-8268-bb41659a36ac; resume with agent chat \"/tmp/harness-gen1-interaction-os5WrJ/coding project Unicode-中文\" --resume session_1b7787cd-a8e0-4888-8268-bb41659a36ac\n",
+  "stderr": "[harness] context budget: model capabilities unknown for openai/gen1-fixture-model — using conservative fallback 32000\napproval approval_8ce4e152-045b-4feb-ba8f-64203050b638: \"exec\" \"node verify.cjs\"\nreason: \"exec: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\n",
+  "approvalCount": 1
+}

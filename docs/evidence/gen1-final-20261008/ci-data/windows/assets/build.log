@@ -1,0 +1,27 @@
+Scope: all 27 workspace projects
+[WARN] There are cyclic workspace dependencies: C:\Users\runneradmin\AppData\Local\Temp\harness-portable-build-KT45VD\source\packages\evaluation, C:\Users\runneradmin\AppData\Local\Temp\harness-portable-build-KT45VD\source\packages\observability
+✓ Lockfile passes supply-chain policies (verified 43s ago)
+Lockfile is up to date, resolution step is skipped
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Packages: +69
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 69, reused 0, downloaded 15, added 0
+Progress: resolved 69, reused 0, downloaded 22, added 0
+Packages are hard linked from the content-addressable store to the virtual store.
+  Content-addressable store is at: C:\Users\runneradmin\setup-pnpm\node_modules\.bin\store\v11
+  Virtual store is at:             node_modules/.pnpm
+Progress: resolved 69, reused 0, downloaded 33, added 1
+Progress: resolved 69, reused 0, downloaded 66, added 4
+Progress: resolved 69, reused 0, downloaded 69, added 42
+Progress: resolved 69, reused 0, downloaded 69, added 67
+Progress: resolved 69, reused 0, downloaded 69, added 69, done
+[WARN] Failed to create bin at C:\Users\runneradmin\AppData\Local\Temp\harness-portable-build-KT45VD\source\apps\web\node_modules\.bin\agent. ENOENT: no such file or directory, stat 'C:\Users\runneradmin\AppData\Local\Temp\harness-portable-build-KT45VD\source\apps\cli\dist\main.js.EXE'
+
+devDependencies:
++ @types/node 26.2.0
++ @vitest/coverage-v8 4.1.11
++ typescript 7.0.2
++ vitest 4.1.11
+
+Done in 7.8s using pnpm v11.21.0
+

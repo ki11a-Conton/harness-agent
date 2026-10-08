@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "kind": "fixed-source-command-result",
+  "cleanSource": "c5bbe61fef101a8c9eb10edab673be8b2e0935e3",
+  "command": [
+    "pnpm",
+    "test:security",
+    "--reporter=json",
+    "--outputFile=.ci/gen1-fixed-security-final-c5bbe61/vitest.json"
+  ],
+  "startedAt": "2026-10-08T07:00:57.313971+00:00",
+  "durationSeconds": 25.623,
+  "exitCode": 0,
+  "headBefore": "c5bbe61fef101a8c9eb10edab673be8b2e0935e3",
+  "headAfter": "c5bbe61fef101a8c9eb10edab673be8b2e0935e3",
+  "workingTreeBefore": "",
+  "workingTreeAfter": "",
+  "sourceVerifiedClean": true,
+  "outputFiles": [
+    {
+      "path": ".ci/gen1-fixed-security-final-c5bbe61/run.log",
+      "sha256": "5f1e9bdc133d1961472ee41501fd05eac447b752ab704fd719f997a5ee61928c",
+      "bytes": 276
+    },
+    {
+      "path": ".ci/gen1-fixed-security-final-c5bbe61/vitest.json",
+      "sha256": "4442f4b1d4629120accf22f33a86fbbd42d5fa426637e7fde1ba2812908d7e58",
+      "bytes": 617725
+    }
+  ],
+  "vitestSummary": {
+    "success": true,
+    "numTotalTestSuites": 82,
+    "numTotalTests": 2143,
+    "numPassedTests": 2143,
+    "numFailedTests": 0,
+    "numPendingTests": 0,
+    "testResultFiles": 20
+  }
+}

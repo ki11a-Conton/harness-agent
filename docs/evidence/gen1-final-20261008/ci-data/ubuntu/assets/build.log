@@ -1,0 +1,21 @@
+Scope: all 27 workspace projects
+[WARN] There are cyclic workspace dependencies: /tmp/harness-portable-build-7sCRdG/source/packages/evaluation, /tmp/harness-portable-build-7sCRdG/source/packages/observability
+✓ Lockfile passes supply-chain policies (verified 19s ago)
+Lockfile is up to date, resolution step is skipped
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Packages: +69
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Packages are hard linked from the content-addressable store to the virtual store.
+  Content-addressable store is at: /home/runner/setup-pnpm/node_modules/.bin/store/v11
+  Virtual store is at:             node_modules/.pnpm
+Progress: resolved 69, reused 69, downloaded 0, added 69, done
+[WARN] Failed to create bin at /tmp/harness-portable-build-7sCRdG/source/apps/web/node_modules/.bin/agent. ENOENT: no such file or directory, open '/tmp/harness-portable-build-7sCRdG/source/apps/cli/dist/main.js'
+
+devDependencies:
++ @types/node 26.2.0
++ @vitest/coverage-v8 4.1.11
++ typescript 7.0.2
++ vitest 4.1.11
+
+Done in 534ms using pnpm v11.21.0
+

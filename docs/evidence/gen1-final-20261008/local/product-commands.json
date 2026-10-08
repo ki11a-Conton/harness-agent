@@ -1,0 +1,58 @@
+{
+  "sourceSha": "c5bbe61fef101a8c9eb10edab673be8b2e0935e3",
+  "trackedDirtyAtEnd": false,
+  "repository": "/workspace/harness-agent-gen1-ssefix",
+  "recordedAtUtc": "2026-10-08T07:01:42.743660+00:00",
+  "commands": [
+    {
+      "command": "node scripts/research/gen1-20261008/interaction-acceptance.mjs --out .ci/gen1-interaction-final-c5bbe61",
+      "exitCode": 0,
+      "receipt": ".ci/gen1-interaction-final-c5bbe61/result.json",
+      "sha256": "e983dd844c3f6ddfa37b32c1d205519442228de8dd650d7e594580e4c816fee2",
+      "summary": {
+        "status": "PASS",
+        "sourceSha": "c5bbe61fef101a8c9eb10edab673be8b2e0935e3",
+        "platform": "linux",
+        "node": "v24.19.0",
+        "paidModelCalls": 0,
+        "assertionCount": 24,
+        "requestCount": 13
+      },
+      "caseCount": 24
+    },
+    {
+      "command": "node scripts/research/gen1-20261008/host-lease-acceptance.mjs --out .ci/gen1-host-lease-final-c5bbe61",
+      "exitCode": 0,
+      "receipt": ".ci/gen1-host-lease-final-c5bbe61/result.json",
+      "sha256": "c0f3267889f7002f006723fc79f99e3c2fd36dbef50881a9d411d9e8aaf8fb3f",
+      "summary": {
+        "status": "PASS",
+        "sourceSha": "c5bbe61fef101a8c9eb10edab673be8b2e0935e3",
+        "platform": "linux",
+        "node": "v24.19.0",
+        "paidModelCalls": 0
+      },
+      "caseCount": 3
+    },
+    {
+      "command": "python3 scripts/research/web-dsh-20261004/browser.py --repo /workspace/harness-agent-gen1-ssefix --mode candidate --require-clean --out /workspace/harness-agent-gen1-ssefix/.ci/gen1-browser-final-c5bbe61",
+      "exitCode": 0,
+      "receipt": ".ci/gen1-browser-final-c5bbe61/browser-result.json",
+      "sha256": "517a408e8fb858f3adcf03992d8ce3c51994cee5af6e91a6aefdc2656a775690",
+      "summary": {
+        "status": "PASS",
+        "requireCleanSource": true,
+        "chromium": "151.0.7922.173",
+        "paidCalls": 0,
+        "caseCount": 29,
+        "assertCount": 82,
+        "passed": 29,
+        "failed": 0,
+        "browserErrorCount": 0
+      },
+      "caseCount": 29
+    }
+  ],
+  "paidModelCalls": 0,
+  "realModelQuality": "NOT_PROVEN"
+}

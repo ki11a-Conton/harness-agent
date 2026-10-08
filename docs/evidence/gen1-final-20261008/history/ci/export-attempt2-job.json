@@ -1,0 +1,116 @@
+{
+  "id": 113192504024,
+  "run_id": 37740743372,
+  "workflow_name": "first-generation installed acceptance",
+  "head_branch": "validation/gen1-20261008-c5bbe61",
+  "run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/runs/37740743372",
+  "run_attempt": 2,
+  "node_id": "CR_kwDOT8gONs8AAAAaWsyK2A",
+  "head_sha": "c5bbe61fef101a8c9eb10edab673be8b2e0935e3",
+  "url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/jobs/113192504024",
+  "html_url": "https://github.com/ki11a-Conton/harness-agent/actions/runs/37740743372/job/113192504024",
+  "status": "completed",
+  "conclusion": "failure",
+  "created_at": "2026-10-08T07:05:41Z",
+  "started_at": "2026-10-08T07:05:43Z",
+  "completed_at": "2026-10-08T07:05:56Z",
+  "name": "export-existing-draft",
+  "steps": [
+    {
+      "name": "Set up job",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 1,
+      "started_at": "2026-10-08T07:05:44Z",
+      "completed_at": "2026-10-08T07:05:46Z"
+    },
+    {
+      "name": "Run actions/checkout@v4",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 2,
+      "started_at": "2026-10-08T07:05:46Z",
+      "completed_at": "2026-10-08T07:05:49Z"
+    },
+    {
+      "name": "Run actions/setup-node@v4",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 3,
+      "started_at": "2026-10-08T07:05:49Z",
+      "completed_at": "2026-10-08T07:05:50Z"
+    },
+    {
+      "name": "Verify bounded draft exporter controls without network",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 4,
+      "started_at": "2026-10-08T07:05:50Z",
+      "completed_at": "2026-10-08T07:05:50Z"
+    },
+    {
+      "name": "Download exact-source Ubuntu evidence",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 5,
+      "started_at": "2026-10-08T07:05:50Z",
+      "completed_at": "2026-10-08T07:05:52Z"
+    },
+    {
+      "name": "Download exact-source Windows evidence",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 6,
+      "started_at": "2026-10-08T07:05:52Z",
+      "completed_at": "2026-10-08T07:05:53Z"
+    },
+    {
+      "name": "Download identical-byte native Windows evidence",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 7,
+      "started_at": "2026-10-08T07:05:53Z",
+      "completed_at": "2026-10-08T07:05:54Z"
+    },
+    {
+      "name": "Export evidence to the existing exact-source draft only",
+      "status": "completed",
+      "conclusion": "failure",
+      "number": 8,
+      "started_at": "2026-10-08T07:05:54Z",
+      "completed_at": "2026-10-08T07:05:55Z"
+    },
+    {
+      "name": "Post Run actions/setup-node@v4",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 15,
+      "started_at": "2026-10-08T07:05:55Z",
+      "completed_at": "2026-10-08T07:05:55Z"
+    },
+    {
+      "name": "Post Run actions/checkout@v4",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 16,
+      "started_at": "2026-10-08T07:05:55Z",
+      "completed_at": "2026-10-08T07:05:55Z"
+    },
+    {
+      "name": "Complete job",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 17,
+      "started_at": "2026-10-08T07:05:55Z",
+      "completed_at": "2026-10-08T07:05:55Z"
+    }
+  ],
+  "check_run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/check-runs/113192504024",
+  "labels": [
+    "ubuntu-latest"
+  ],
+  "runner_id": 1000002328,
+  "runner_name": "GitHub Actions 1000002328",
+  "runner_group_id": 0,
+  "runner_group_name": "GitHub Actions"
+}

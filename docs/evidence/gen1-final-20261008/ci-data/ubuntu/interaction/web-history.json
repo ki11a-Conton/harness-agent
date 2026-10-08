@@ -1,0 +1,73 @@
+{
+  "before": {
+    "sessionId": "session_c193441f-0b7b-4a43-b09e-c16f9b06aa54",
+    "messages": [
+      {
+        "id": "message_eeddea78-af70-474e-9248-b767ec9fd108",
+        "sessionId": "session_c193441f-0b7b-4a43-b09e-c16f9b06aa54",
+        "turnId": "turn_ac8f6fcf-4efd-455a-987a-9ffb72304e63",
+        "role": "user",
+        "content": "web first task",
+        "createdAt": 1791442810915
+      },
+      {
+        "id": "message_643b6a3d-f193-433e-857c-dd1f69c56c22",
+        "sessionId": "session_c193441f-0b7b-4a43-b09e-c16f9b06aa54",
+        "turnId": "turn_ac8f6fcf-4efd-455a-987a-9ffb72304e63",
+        "role": "assistant",
+        "content": "Web first task completed.",
+        "reasoningContent": "Local scripted fixture; no paid provider.",
+        "createdAt": 1791442810942
+      }
+    ]
+  },
+  "sessions": {
+    "sessions": [
+      {
+        "from": "gen1-web-session",
+        "sessionId": "session_c193441f-0b7b-4a43-b09e-c16f9b06aa54",
+        "createdAt": 1791442810904,
+        "firstText": "web first task"
+      }
+    ]
+  },
+  "after": {
+    "sessionId": "session_c193441f-0b7b-4a43-b09e-c16f9b06aa54",
+    "messages": [
+      {
+        "id": "message_eeddea78-af70-474e-9248-b767ec9fd108",
+        "sessionId": "session_c193441f-0b7b-4a43-b09e-c16f9b06aa54",
+        "turnId": "turn_ac8f6fcf-4efd-455a-987a-9ffb72304e63",
+        "role": "user",
+        "content": "web first task",
+        "createdAt": 1791442810915
+      },
+      {
+        "id": "message_643b6a3d-f193-433e-857c-dd1f69c56c22",
+        "sessionId": "session_c193441f-0b7b-4a43-b09e-c16f9b06aa54",
+        "turnId": "turn_ac8f6fcf-4efd-455a-987a-9ffb72304e63",
+        "role": "assistant",
+        "content": "Web first task completed.",
+        "reasoningContent": "Local scripted fixture; no paid provider.",
+        "createdAt": 1791442810942
+      },
+      {
+        "id": "message_0ed3d43d-19ba-4af5-be89-c64118715c62",
+        "sessionId": "session_c193441f-0b7b-4a43-b09e-c16f9b06aa54",
+        "turnId": "turn_de789b70-12c7-4aff-8089-2667aef72b82",
+        "role": "user",
+        "content": "web second task",
+        "createdAt": 1791442815292
+      },
+      {
+        "id": "message_277d2702-0a08-4a7e-94bc-6ac394bad474",
+        "sessionId": "session_c193441f-0b7b-4a43-b09e-c16f9b06aa54",
+        "turnId": "turn_de789b70-12c7-4aff-8089-2667aef72b82",
+        "role": "assistant",
+        "content": "Web resumed task completed.",
+        "reasoningContent": "Local scripted fixture; no paid provider.",
+        "createdAt": 1791442815320
+      }
+    ]
+  }
+}

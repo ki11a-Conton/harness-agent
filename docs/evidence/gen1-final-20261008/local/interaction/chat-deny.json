@@ -1,0 +1,7 @@
+{
+  "code": 0,
+  "signal": null,
+  "stdout": "chat: session session_9404d5fe-67cd-4f48-9e29-e57e53b5053e\nproject: /tmp/harness-gen1-interaction-os5WrJ/coding project Unicode-中文\ndata: /tmp/harness-gen1-interaction-os5WrJ/deny data\n/help for commands; /quit exits. Ctrl-C cancels the current turn; the session is kept.\nyou> run started: session session_9404d5fe-67cd-4f48-9e29-e57e53b5053e turn turn_afdb809d-9653-4809-b6c9-9be82ffada7c\n[thinking]\n[tool] \"write_file\"\nrun: session session_9404d5fe-67cd-4f48-9e29-e57e53b5053e turn turn_afdb809d-9653-4809-b6c9-9be82ffada7c\nstatus: completed\ngrade: unverified_complete\ntermination: model_stopped\nsummary: The requested write was denied.\nfiles changed: (none)\ntests: no verification gate configured\nverification: no verification gate configured\nremaining issues: (none)\ntool calls: 1\niterations: 1\nyou> chat closed: session session_9404d5fe-67cd-4f48-9e29-e57e53b5053e; resume with agent chat \"/tmp/harness-gen1-interaction-os5WrJ/coding project Unicode-中文\" --resume session_9404d5fe-67cd-4f48-9e29-e57e53b5053e\n",
+  "stderr": "[harness] context budget: model capabilities unknown for openai/gen1-fixture-model — using conservative fallback 32000\napproval approval_b0e7c812-1d41-4042-9421-ebcb46c326c6: \"edit\" \"deny-must-not-exist.txt\"\nreason: \"write_file: rule 'anon' (ask) matched\"\nallow/deny> denied (enter exactly allow to authorize one call)\n",
+  "approvalCount": 1
+}

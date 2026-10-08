@@ -1,0 +1,1519 @@
+{
+  "schema": "harness-gen1-final-acceptance-v1",
+  "testedSourceSha": "c5bbe61fef101a8c9eb10edab673be8b2e0935e3",
+  "testedSourceTree": "603f7cc88a3ac8b3897c296b70eef4df1133132b",
+  "releaseVersion": "1.9.0",
+  "archiveSha256": "f7006e6c22655d35576bbb800870bda792cfb0df4834fc9405dd55f30e9a278b",
+  "paidModelCalls": 0,
+  "realModelQuality": "NOT_PROVEN",
+  "files": [
+    {
+      "path": "local/full/result.json",
+      "bytes": 1332,
+      "sha256": "83af87c455c9200696daa1b2817394684a0bda50482a588ea727d138ac1aeca6",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-full-final-c5bbe61/result.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/full/run.log",
+      "bytes": 111386,
+      "sha256": "4043c9e1e0147014b8ab11e8e962f5cf32c2f70eb7ccc52c149a2bd586cdc677",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-full-final-c5bbe61/run.log",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/full/vitest.json.gz",
+      "bytes": 386861,
+      "sha256": "46ad96584aeef617a46a7ce38d1f21d3fbf018c1bbebc742153dbc4d2c29397a",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-full-final-c5bbe61/vitest.json",
+      "provenance": "fixed-source",
+      "compression": "gzip",
+      "uncompressedBytes": 3344305,
+      "uncompressedSha256": "cf2e4405e2f4d91c3d0bafde01a9a85c405781b29503a0ac4b1a3e706f1a70ce"
+    },
+    {
+      "path": "local/security/result.json",
+      "bytes": 1169,
+      "sha256": "b865f1dfa4573b59742bfcca22d31bfbfe4d5226ce6208171776816175a6be59",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-fixed-security-final-c5bbe61/result.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/security/run.log",
+      "bytes": 276,
+      "sha256": "5f1e9bdc133d1961472ee41501fd05eac447b752ab704fd719f997a5ee61928c",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-fixed-security-final-c5bbe61/run.log",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/security/vitest.json.gz",
+      "bytes": 43388,
+      "sha256": "6c2dbdc263888730374d8535e6a4be994db385f64411b4879d7f57c1d42579ab",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-fixed-security-final-c5bbe61/vitest.json",
+      "provenance": "fixed-source",
+      "compression": "gzip",
+      "uncompressedBytes": 617725,
+      "uncompressedSha256": "4442f4b1d4629120accf22f33a86fbbd42d5fa426637e7fde1ba2812908d7e58"
+    },
+    {
+      "path": "local/protocol/result.json",
+      "bytes": 1163,
+      "sha256": "2631f71ed7a0000570d884fc9d6903559c48950e5877396924779349e87c0955",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-fixed-protocol-final-c5bbe61/result.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/protocol/run.log",
+      "bytes": 308,
+      "sha256": "2d67c71617ecf017557d328f75513126aa3b81f880a3b2af53ef9ec80b6de1e7",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-fixed-protocol-final-c5bbe61/run.log",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/protocol/vitest.json.gz",
+      "bytes": 2747,
+      "sha256": "182c2b3a45aae4dd3925b22c1809dd436891953d775cfb8df6002be52d929511",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-fixed-protocol-final-c5bbe61/vitest.json",
+      "provenance": "fixed-source",
+      "compression": "gzip",
+      "uncompressedBytes": 17760,
+      "uncompressedSha256": "81e67888e8423626b357460b61760418e0a1ab1affdff86a513561f49ac8b8b1"
+    },
+    {
+      "path": "local/docs/result.json",
+      "bytes": 675,
+      "sha256": "9351bb6d2912a8b8543e1f0ecebebd03a613c65be42785e4e53d228ed182aa59",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-fixed-docs-final-c5bbe61/result.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/docs/run.log",
+      "bytes": 1734,
+      "sha256": "b0e25785f19af3447910f3d6faab89f77d94c1a8e5b7582230481580a3f6f0ff",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-fixed-docs-final-c5bbe61/run.log",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/evidence/result.json",
+      "bytes": 717,
+      "sha256": "a1802cd4b5537cda04119e617c0e2f45c89727f143bbcbfa65d87e27baf28e80",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-fixed-evidence-final-c5bbe61/result.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/evidence/run.log",
+      "bytes": 154,
+      "sha256": "0df14d88fbf2488bb43125d3a4667cb091a9566e305c66194b8bfb60c9f7d76c",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-fixed-evidence-final-c5bbe61/run.log",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/git-evidence/result.json",
+      "bytes": 23108,
+      "sha256": "338c22e65f690540914b037baa7136fb9aed5e198478bc72da0e35f6444d7872",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-fixed-git-evidence-final-c5bbe61/result.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/root-git-evidence/result.json",
+      "bytes": 478,
+      "sha256": "0bf784be6f5b111ce2ccf6d08b9eca3682ea88465d3bc3c3d9b43b476869ef25",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-evidence-git-final-c5bbe61/result.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/interaction/chat-cancel.json",
+      "bytes": 2126,
+      "sha256": "5b0d919b1bba90dfbb64a6b39fbd0456e0db8fca22b80fe0f136b0a4d15d2d79",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-interaction-final-c5bbe61/chat-cancel.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/interaction/chat-coding.json",
+      "bytes": 2268,
+      "sha256": "2b1ea5a128d06c240743ca19876dda7c8946a1e28d6d56ba21485c17c4445f4b",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-interaction-final-c5bbe61/chat-coding.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/interaction/chat-deny.json",
+      "bytes": 1462,
+      "sha256": "669a28e2d3c2008d7ab43e60a19119ffb9891439549e8192a5a2fb7867b4c47b",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-interaction-final-c5bbe61/chat-deny.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/interaction/chat-eof.json",
+      "bytes": 1472,
+      "sha256": "9b284fe44461b74186e08ce681102290734fd872064eedea7939fdee1b4f4ea3",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-interaction-final-c5bbe61/chat-eof.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/interaction/chat-resume.json",
+      "bytes": 1532,
+      "sha256": "3fada5962dfcbaf16a7075f0e9c581ea16e44d4a5037396de6e31f85d0f463f6",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-interaction-final-c5bbe61/chat-resume.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/interaction/flags-and-help.json",
+      "bytes": 3748,
+      "sha256": "bc186a41c19a5f5b0db9c7847e9d2cb44334edf259fc19ac1d88d9c1e8c584bd",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-interaction-final-c5bbe61/flags-and-help.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/interaction/requests.json",
+      "bytes": 332845,
+      "sha256": "aa3dd47ba57ac1b8c327d3c0993d7291bcba0f960c88cad520c741422727bb73",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-interaction-final-c5bbe61/requests.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/interaction/result.json",
+      "bytes": 3704,
+      "sha256": "e983dd844c3f6ddfa37b32c1d205519442228de8dd650d7e594580e4c816fee2",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-interaction-final-c5bbe61/result.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/interaction/web-frames.json",
+      "bytes": 22534,
+      "sha256": "f66d67b8b9417120cab0429b592d623abb195fda21fc257ac7e16eb97f1b642c",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-interaction-final-c5bbe61/web-frames.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/interaction/web-history.json",
+      "bytes": 2568,
+      "sha256": "7a17db925a485cdb325d6d4dca131e0f902f4c1cc8b4b70199da2ecebd0ee154",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-interaction-final-c5bbe61/web-history.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/interaction/web-logs.json",
+      "bytes": 413,
+      "sha256": "b72e547b516ff35d0897d9846a4665d97ff059a974b09def45a01b59b229e4d1",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-interaction-final-c5bbe61/web-logs.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/interaction/web-turns.json",
+      "bytes": 431,
+      "sha256": "ee6962f5e0207469142107a2e18f5bd2640358beb10b39ea817463f13452f2e9",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-interaction-final-c5bbe61/web-turns.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/interaction/wrong-policy.json",
+      "bytes": 352,
+      "sha256": "c96c005408ab9becd7223c90846bf0da23583f7bc2765de44289d029a07ef243",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-interaction-final-c5bbe61/wrong-policy.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/interaction/wrong-project.json",
+      "bytes": 354,
+      "sha256": "733f593b65878ef799fc74cbf875397dd8493c655772bc0968f1f27d5c25ddf2",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-interaction-final-c5bbe61/wrong-project.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/host-lease/result.json",
+      "bytes": 571,
+      "sha256": "c0f3267889f7002f006723fc79f99e3c2fd36dbef50881a9d411d9e8aaf8fb3f",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-host-lease-final-c5bbe61/result.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/distributed/coding/coding-run.json",
+      "bytes": 1551,
+      "sha256": "bc5d20938dbac81177f7ed0a1431d111bfa55c865c46355644207d2039fc0160",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-distributed-final-c5bbe61/coding/coding-run.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/distributed/coding/episode/artifacts.json",
+      "bytes": 364,
+      "sha256": "55f15d2f646444d6ffcde7933ca17a79f5b841422105de675509a0fde71ce090",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-distributed-final-c5bbe61/coding/episode/artifacts.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/distributed/coding/episode/context.json",
+      "bytes": 2122,
+      "sha256": "2ed2d5b26d730d257613ea6ed0b578f1ea6cd86c54bcc891ea2c01ef4f336ce5",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-distributed-final-c5bbe61/coding/episode/context.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/distributed/coding/episode/events.jsonl",
+      "bytes": 55493,
+      "sha256": "a710cb525baf28ee6ec323556e2001f37917b8280ff0d0828a143d2c124e618e",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-distributed-final-c5bbe61/coding/episode/events.jsonl",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/distributed/coding/episode/metrics.json",
+      "bytes": 304,
+      "sha256": "0230125d5ca7e11f4d57c86fb943433b712307fcd758eb813028c8211245389a",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-distributed-final-c5bbe61/coding/episode/metrics.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/distributed/coding/episode/permissions.jsonl",
+      "bytes": 2815,
+      "sha256": "7ae868f4431089bcdcfbf3b34256c333a486b29a99817b47b0b936a7e4c8553f",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-distributed-final-c5bbe61/coding/episode/permissions.jsonl",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/distributed/coding/episode/session.json",
+      "bytes": 303,
+      "sha256": "8d4c9dc75d396e083428667e940ad5f08b6862a824b3cdd6b480bd5042031c85",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-distributed-final-c5bbe61/coding/episode/session.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/distributed/coding/episode/summary.json",
+      "bytes": 895,
+      "sha256": "fd1138d77b8eef36f53d26ef1efff5319747db041ece23129ad0a662b4709c0c",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-distributed-final-c5bbe61/coding/episode/summary.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/distributed/coding/episode/task.json",
+      "bytes": 3,
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-distributed-final-c5bbe61/coding/episode/task.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/distributed/coding/episode/tool-calls.jsonl",
+      "bytes": 5585,
+      "sha256": "d9532731275c523a12b42350db046d8be15454ea6d643ac1e6cad46b3f84eb9a",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-distributed-final-c5bbe61/coding/episode/tool-calls.jsonl",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/distributed/coding/episode/verification.json",
+      "bytes": 83,
+      "sha256": "7e151c370a075c8183cfa75cd20bf2af2f5ffc9037bc5a17a722818d98ee9228",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-distributed-final-c5bbe61/coding/episode/verification.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/distributed/coding/requests.json",
+      "bytes": 518792,
+      "sha256": "6799b358e043352cf39b1550d607085fd099d867ed1e5c2a9cae4cca91971245",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-distributed-final-c5bbe61/coding/requests.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/distributed/coding/result.json",
+      "bytes": 3377,
+      "sha256": "61e2282e04e1bb3873ff94590b328e39dd2b6151c3943e46096998e2c65316ea",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-distributed-final-c5bbe61/coding/result.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/distributed/coding/runs.json",
+      "bytes": 8315,
+      "sha256": "7c1a59c15b52300b914997239a5df9473031a4bd2a640aefe40494c31cda112b",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-distributed-final-c5bbe61/coding/runs.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/distributed/coding/web-frames.json",
+      "bytes": 181216,
+      "sha256": "e0f6897fa0b2460c3a23adf96c1cb388166e9341323793ae3a6cc5d3a8e394f2",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-distributed-final-c5bbe61/coding/web-frames.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/distributed/coding/web-process.log",
+      "bytes": 394,
+      "sha256": "0f7243b09da4fb3d876d8fa12aaabd24ebe64d77ed4d01a37665c1b42889c549",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-distributed-final-c5bbe61/coding/web-process.log",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/distributed/doctor.log",
+      "bytes": 840,
+      "sha256": "df2a7564aea1477a8eb16a4dfcb1c5bf5bcb83a7191bbd24c0f420e10c170a88",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-distributed-final-c5bbe61/doctor.log",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/distributed/result.json",
+      "bytes": 727,
+      "sha256": "145d4287bdfd0d12afeb70822ac0796793290b44508fa437e7f729ab897193d1",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-distributed-final-c5bbe61/result.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/distributed/version.log",
+      "bytes": 68,
+      "sha256": "71113f6e98cb3cefc2be9e37017a347a8641fb01fd5afbbaf777ce54adf1d7e1",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-distributed-final-c5bbe61/version.log",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/node/run.tap",
+      "bytes": 2881,
+      "sha256": "8a4b8d6b1349b15fbff7edcbaa483a2c3602653c6f4961f95c2fba387dfe6240",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-node-final-c5bbe61.tap",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/node/result.json",
+      "bytes": 570,
+      "sha256": "2e3002a0dc49bf40f52531b3b30c0ee19292f50374a4c49a03b857459e210e9d",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-node-final-c5bbe61-result.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/product-commands.json",
+      "bytes": 2119,
+      "sha256": "d0ae67e2c2f096e02a51f06114bdbf8aae241a4a62a563dc47a94c67d94db55b",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-final-c5bbe61-command-receipt.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/browser/browser-errors.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-browser-final-c5bbe61/browser-errors.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/browser/browser-requests.json",
+      "bytes": 22109,
+      "sha256": "e595117556522e8f3a759640d5bc8afd8d891e64bdd7d28fa0db65a10b479168",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-browser-final-c5bbe61/browser-requests.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/browser/browser-responses.json",
+      "bytes": 21708,
+      "sha256": "e2ab6342566da7dab28164a82c105e3bab9e779c9341bd616baa150498411326",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-browser-final-c5bbe61/browser-responses.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/browser/browser-result.json",
+      "bytes": 18935,
+      "sha256": "517a408e8fb858f3adcf03992d8ce3c51994cee5af6e91a6aefdc2656a775690",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-browser-final-c5bbe61/browser-result.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/browser/desktop-chat.png",
+      "bytes": 54219,
+      "sha256": "cc65e438b1456060af81fdaef3b8a7744dfc7b2414af6224541cb6324201c9c3",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-browser-final-c5bbe61/desktop-chat.png",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/browser/desktop-dark.png",
+      "bytes": 49498,
+      "sha256": "88606ff9d1e050eba7fe8d890858ddcaab17611e73ec2bf70ffe6e8a5ee5f587",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-browser-final-c5bbe61/desktop-dark.png",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/browser/desktop-light.png",
+      "bytes": 48657,
+      "sha256": "04e4ebbe49ffcada97160555981b20f70bc3c65d30ba1439f976ed9b346d5130",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-browser-final-c5bbe61/desktop-light.png",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/browser/fixture/ready.json",
+      "bytes": 2862,
+      "sha256": "0f9b1e6651f50be679669812654d3199463352651c0abd588be3ddeb73a2fb43",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-browser-final-c5bbe61/fixture/ready.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/browser/fixture/runtime-snapshot.json",
+      "bytes": 218550,
+      "sha256": "c2d6376170e9de5c3f4e41fdbd653d62a147ca9e8ae7ce83820080833b78490a",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-browser-final-c5bbe61/fixture/runtime-snapshot.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/browser/fixture.log",
+      "bytes": 2731,
+      "sha256": "2198c279d555d337f9f7b8db4d59eb23d050a105f95c556cdd8f2965a975c2b4",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-browser-final-c5bbe61/fixture.log",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/browser/gen1-empty-browser-restored.png",
+      "bytes": 83555,
+      "sha256": "3f1185e8ba88c771830fa7e26872487813889bc5d486d3820cf2245cda0287bb",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-browser-final-c5bbe61/gen1-empty-browser-restored.png",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/browser/mobile-chat.png",
+      "bytes": 34966,
+      "sha256": "2cbe2e188fbbcdaae9655adde0f3bebf3daf1c641178c251a1962cb288596936",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-browser-final-c5bbe61/mobile-chat.png",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/browser/mobile-sidebar.png",
+      "bytes": 25061,
+      "sha256": "4254efcdd7ab475a0026924bace1450ad9a95989248ea8254b330874008ae3e9",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-browser-final-c5bbe61/mobile-sidebar.png",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/browser/network-errors.json",
+      "bytes": 339,
+      "sha256": "2b0fec6865a70502d238d4da91cc3a07e60b3b6b035affc0130701dec4c59749",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-browser-final-c5bbe61/network-errors.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/browser/production-observed-snapshot.json",
+      "bytes": 218550,
+      "sha256": "c2d6376170e9de5c3f4e41fdbd653d62a147ca9e8ae7ce83820080833b78490a",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-browser-final-c5bbe61/production-observed-snapshot.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "local/browser/artifact-index.json",
+      "bytes": 2406,
+      "sha256": "9081c8507aa3933d647a85f87198daa423f593dcfe93287f096e205a1e4083a4",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-browser-final-c5bbe61/artifact-index.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "history/sse-control/reproducer.mjs",
+      "bytes": 7016,
+      "sha256": "3ac97949f008222ec9949530d3002dd571877b22f31d1696fcc56a773633cca7",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-sse-race-control/reproducer.mjs",
+      "provenance": "history"
+    },
+    {
+      "path": "history/sse-control/result.json",
+      "bytes": 1650,
+      "sha256": "8f2c12111470dc78e83892d1ce30a60d00c3f239b61e9125d33853920537c953",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-sse-race-control/result.json",
+      "provenance": "history"
+    },
+    {
+      "path": "history/sse-control/ubuntu-original-ci-red.json",
+      "bytes": 2901,
+      "sha256": "f42e7019da49666b3b017e85417750f3df3967208593c5b23940fb82a03ee26c",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-sse-race-control/ubuntu-original-ci-red.json",
+      "provenance": "history"
+    },
+    {
+      "path": "history/sse-control/windows-original-ci-red.json",
+      "bytes": 2828,
+      "sha256": "d4f8fe2f9ad5f65ea517c94a6dbf938be9cd04c79479bd8123d01af73dffff8a",
+      "originalPath": "/workspace/harness-agent-gen1-ssefix/.ci/gen1-sse-race-control/windows-original-ci-red.json",
+      "provenance": "history"
+    },
+    {
+      "path": "history/canonical/gen1-canonical-merged-node.tap",
+      "bytes": 2884,
+      "sha256": "759f50d3aef823e53a90369c7c9a1a5e4b187167d436d6e00f1cdf1803c879b9",
+      "originalPath": "/tmp/gen1-canonical-merged-node.tap",
+      "provenance": "history"
+    },
+    {
+      "path": "history/canonical/gen1-canonical-merged-typecheck.log",
+      "bytes": 9,
+      "sha256": "faeaa94bcf7012d86f91ca647580449f56a263fb7eaf572c54789764f60a9b8f",
+      "originalPath": "/tmp/gen1-canonical-merged-typecheck.log",
+      "provenance": "history"
+    },
+    {
+      "path": "history/canonical/gen1-portable-canonical-red.tap",
+      "bytes": 4747,
+      "sha256": "3f8cf5700e67d1e36c1ae3876d975e08c496e5ae6cbf78ec7f8ba680c498cd02",
+      "originalPath": "/tmp/gen1-portable-canonical-red.tap",
+      "provenance": "history"
+    },
+    {
+      "path": "history/canonical/gen1-portable-canonical-green.tap",
+      "bytes": 3342,
+      "sha256": "f1c1a9d1e5767eb5486c917ca34043b3f0d1b32a16a34e1d116d41bcad307bc2",
+      "originalPath": "/tmp/gen1-portable-canonical-green.tap",
+      "provenance": "history"
+    },
+    {
+      "path": "history/ci/gen1-ci-bundle-97928f1.tar.gz",
+      "bytes": 2249875,
+      "sha256": "119cdeda3e8e62d9bfd2dfb9d599c1b8ff2897448088b1799abf6794047b4176",
+      "originalPath": "/tmp/gen1-ci-bundle-97928f1.tar.gz",
+      "provenance": "history"
+    },
+    {
+      "path": "history/ci/gen1-ci-bundle-bec526b.tar.gz",
+      "bytes": 32037,
+      "sha256": "7eb9fdbf5881b0fed9c1b3f70f2ef2b9e746d2cb69fe1bdbc4c320d510617325",
+      "originalPath": "/tmp/gen1-ci-bundle-bec526b.tar.gz",
+      "provenance": "history"
+    },
+    {
+      "path": "history/ci/gen1-ci-bundle-c5bbe61-attempt1.tar.gz",
+      "bytes": 4549272,
+      "sha256": "94b8abc4ab994c2b73d7b8def7ce4562984e0883c7e90bb03d1e803b704dfdd9",
+      "originalPath": "/tmp/gen1-ci-bundle-c5bbe61-attempt1.tar.gz",
+      "provenance": "history"
+    },
+    {
+      "path": "reviews/gen1-ci-final-c5bbe61-independent-review.json",
+      "bytes": 1540,
+      "sha256": "806e9f2c67b12099fd40ec7f9eea0a063bbf31ee0b8083c4bab0b352efe03eb5",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-independent-review.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "reviews/gen1-portable-final-c5bbe61-manifest.json",
+      "bytes": 3190,
+      "sha256": "46e52193fb7952e5d2bb4ba30702231e2c19bcae06f9d183d3c1e8ad6807607d",
+      "originalPath": "/tmp/gen1-portable-final-c5bbe61-manifest.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "release/SHA256SUMS",
+      "bytes": 102,
+      "sha256": "f5723abb0476f8f93d01c4f1cde1a8a542f34fb5d6ecc0f2ede137bd4db1ce90",
+      "originalPath": "/tmp/gen1-release-final-c5bbe61/SHA256SUMS",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "release/BUILD-RECEIPT.json",
+      "bytes": 1093,
+      "sha256": "77266be1bc4e6bb12555650050ca5cb7485e4af1a07196fe92ee94f10d1bffdf",
+      "originalPath": "/tmp/gen1-release-final-c5bbe61/BUILD-RECEIPT.json",
+      "provenance": "fixed-source"
+    },
+    {
+      "path": "release/gen1-ci-bundle-c5bbe61fef101a8c9eb10edab673be8b2e0935e3.tar.gz",
+      "bytes": 4549271,
+      "sha256": "5389fb83589a09de2bbb033c1a7617133dcce448c19a59748a01e2454eb8531c",
+      "originalPath": "/tmp/gen1-release-final-c5bbe61/gen1-ci-bundle-c5bbe61fef101a8c9eb10edab673be8b2e0935e3.tar.gz",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/actual-product-host-ownership.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/actual-product-host-ownership.stderr.log",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/actual-product-host-ownership.stdout.log",
+      "bytes": 453,
+      "sha256": "bfce54ae03485a579ae711e31b8b0722104568cdc6f56d3c88fe5f049ac9bef3",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/actual-product-host-ownership.stdout.log",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/assets/BUILD-RECEIPT.json",
+      "bytes": 1093,
+      "sha256": "77266be1bc4e6bb12555650050ca5cb7485e4af1a07196fe92ee94f10d1bffdf",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/assets/BUILD-RECEIPT.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/assets/build.log",
+      "bytes": 1097,
+      "sha256": "07d944284e4d79adac45d93376d58b10022ecdf4dcb7cf50f19af14dcdef6aad",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/assets/build.log",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/assets/SHA256SUMS",
+      "bytes": 102,
+      "sha256": "f5723abb0476f8f93d01c4f1cde1a8a542f34fb5d6ecc0f2ede137bd4db1ce90",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/assets/SHA256SUMS",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/fixed-source-portable-build.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/fixed-source-portable-build.stderr.log",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/fixed-source-portable-build.stdout.log",
+      "bytes": 214,
+      "sha256": "d02f16cee20105311887a235154b9a77d1dc696dc086bb51ccbd22f1fd2a64e3",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/fixed-source-portable-build.stdout.log",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/host-lease/result.json",
+      "bytes": 571,
+      "sha256": "4f0fb0f32f6f09a646e385e86af4bc1dc52dcf437eb75d85570cae1ee6970ee0",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/host-lease/result.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/installed/coding/coding-run.json",
+      "bytes": 1721,
+      "sha256": "d774723baeddd3b4f4fb3545612fe317baa7827cc7cd52cac27262df458dd119",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/installed/coding/coding-run.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/installed/coding/episode/artifacts.json",
+      "bytes": 363,
+      "sha256": "7a3575c2b5bb3606bd724418a09d6c83d8c31627dc1b9d4bba14ace4c9f139c8",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/installed/coding/episode/artifacts.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/installed/coding/episode/context.json",
+      "bytes": 2123,
+      "sha256": "ff63326598e93d7f22e7e49d077f4cfebfea39ccb594d06964a84ef41ed69696",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/installed/coding/episode/context.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/installed/coding/episode/events.jsonl",
+      "bytes": 64546,
+      "sha256": "e54537a719b8a86d09ac6f7f41dc9c73d9d2b9756e80923e8469f68028ee5184",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/installed/coding/episode/events.jsonl",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/installed/coding/episode/metrics.json",
+      "bytes": 304,
+      "sha256": "0f5cf99fb96ecafd3d2323805c13adaa716e730b47d81e179fcad374a76ad9b5",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/installed/coding/episode/metrics.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/installed/coding/episode/permissions.jsonl",
+      "bytes": 2815,
+      "sha256": "60237edbb75de3226002968b9e2ef9cda0038af64d8a8687c8d5beaa87a18fe1",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/installed/coding/episode/permissions.jsonl",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/installed/coding/episode/session.json",
+      "bytes": 303,
+      "sha256": "f45fea6e7b0313a439b4c77768ae96dd187399b521f10faaf6dcd484bacc78b5",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/installed/coding/episode/session.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/installed/coding/episode/summary.json",
+      "bytes": 895,
+      "sha256": "558687c5025127fa651e05535b05d5ed5d2e6024d26613c10cedc6988a31c59a",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/installed/coding/episode/summary.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/installed/coding/episode/task.json",
+      "bytes": 3,
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/installed/coding/episode/task.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/installed/coding/episode/tool-calls.jsonl",
+      "bytes": 5730,
+      "sha256": "1579efd4d9285272a6ed389e17df45a3073fab5f8afde0580f62fb5ba366ef20",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/installed/coding/episode/tool-calls.jsonl",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/installed/coding/episode/verification.json",
+      "bytes": 82,
+      "sha256": "d38c1bb7c9601e5c3fcf7cc1ce7ac6b1f88b5df3d658224513844ea94de2c8c6",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/installed/coding/episode/verification.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/installed/coding/requests.json",
+      "bytes": 519683,
+      "sha256": "4c3df6ad2b7d2b322729a4658342445ec03ffa7dd131fd673ec9593083aa0fc4",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/installed/coding/requests.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/installed/coding/result.json",
+      "bytes": 3377,
+      "sha256": "cc4bc9040eb16f18af541cff9008649fc6e8e2462d46439d2edc12d802860419",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/installed/coding/result.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/installed/coding/runs.json",
+      "bytes": 9656,
+      "sha256": "7c94a1fffbe61f5f164e070d6ab844b84a851ae2a68462374a2bcfda5af18830",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/installed/coding/runs.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/installed/coding/web-frames.json",
+      "bytes": 213335,
+      "sha256": "9a90d0743ab9d54419222028eafdc6ab9de17887d1d0c1693fb9daf232f4745a",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/installed/coding/web-frames.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/installed/coding/web-process.log",
+      "bytes": 730,
+      "sha256": "a186ff3bafb6c869803fa94f1ccd8a8680da5d3223f071cc2e3c3ca6c88002b5",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/installed/coding/web-process.log",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/installed/doctor.log",
+      "bytes": 840,
+      "sha256": "95ea8481865c9b1e952244a223a814cb5a5e9a6cd6ea274d28561b55ce337719",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/installed/doctor.log",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/installed/result.json",
+      "bytes": 727,
+      "sha256": "758699b95724eacda7984f8873879ad8d1c558fb12fdd17593d98984fa01a93c",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/installed/result.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/installed/version.log",
+      "bytes": 68,
+      "sha256": "71113f6e98cb3cefc2be9e37017a347a8641fb01fd5afbbaf777ce54adf1d7e1",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/installed/version.log",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/installed-coding-and-tamper-controls.stderr.log",
+      "bytes": 168,
+      "sha256": "1910d3f6be0fd2928556ea98c20889ff0d726f76cca63a4167ead7af522f9d58",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/installed-coding-and-tamper-controls.stderr.log",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/installed-coding-and-tamper-controls.stdout.log",
+      "bytes": 2081,
+      "sha256": "dd551fd0cdb42acd6f6296e44da869279bc6b1b9238c617c305bdcb2802b3172",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/installed-coding-and-tamper-controls.stdout.log",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/interaction/chat-cancel.json",
+      "bytes": 2262,
+      "sha256": "b5b9d141e8ffc795463a3a53d2e1dbb76b31c8d848bb8a6ae3f61bb91c770a8e",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/interaction/chat-cancel.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/interaction/chat-coding.json",
+      "bytes": 2438,
+      "sha256": "885ee129aadedcae08f564a068941846af5bddcef1a12e2820f6b2b9a9911871",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/interaction/chat-coding.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/interaction/chat-deny.json",
+      "bytes": 1644,
+      "sha256": "d6e611a1a8337d3164da38b0c91b4fbf9fcbf2782564f492cfc99263e8971c2d",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/interaction/chat-deny.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/interaction/chat-eof.json",
+      "bytes": 1630,
+      "sha256": "32c4d0c5a30e349c509460ea9b4279ab87ec433fd4ac1b78f1f65485990538c2",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/interaction/chat-eof.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/interaction/chat-resume.json",
+      "bytes": 1702,
+      "sha256": "4d136744efa4281a47867a4b861314ba1e8d3483a5cc9938f20013e5f0fb5b78",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/interaction/chat-resume.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/interaction/flags-and-help.json",
+      "bytes": 4088,
+      "sha256": "3240eb15fc54ccb253c6194782c7d1521296fb8e5850abececda9bd88f249875",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/interaction/flags-and-help.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/interaction/requests.json",
+      "bytes": 332823,
+      "sha256": "716e22c9363d595fc4f8d6c6092a012ba720f322c875530ac3ef325dca447eb2",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/interaction/requests.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/interaction/result.json",
+      "bytes": 3704,
+      "sha256": "19858c8f1efcae9ef2d8ec1760a4e88ef95c6654e0544b6f5e753c89071f0eae",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/interaction/result.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/interaction/web-frames.json",
+      "bytes": 22534,
+      "sha256": "1b0b2fe06b767bde7bc551af5c61ac517b28f374bbaeb7f52edbba671d741bdd",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/interaction/web-frames.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/interaction/web-history.json",
+      "bytes": 2568,
+      "sha256": "edf955ff328dfa2e8f9c7fa5551eee9776d9b18698a9edd4285fff9eb471f7d8",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/interaction/web-history.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/interaction/web-logs.json",
+      "bytes": 753,
+      "sha256": "a4b7abf0232f2bee34b02db4467c1feaaa5bed52c003d4fa166c187e35d26d1a",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/interaction/web-logs.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/interaction/web-turns.json",
+      "bytes": 431,
+      "sha256": "1c05391c8f9441a6e61e2be19a1171120996452356c63104ca4b4c7bab55ac7f",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/interaction/web-turns.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/interaction/wrong-policy.json",
+      "bytes": 522,
+      "sha256": "3b7432d640923be3bc763533a1f644612cc8e4888ec107c9e1ae76d9ad15a9a8",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/interaction/wrong-policy.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/interaction/wrong-project.json",
+      "bytes": 524,
+      "sha256": "9b1c33094236597cc89764d05e64821f5b8f9d7a5f675bc7f2e56ad86fc88d13",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/interaction/wrong-project.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/portable-unit-security.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/portable-unit-security.stderr.log",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/portable-unit-security.stdout.log",
+      "bytes": 3340,
+      "sha256": "285f6adb298cd953e2b7e3a40bf1246fb845333df1b99557d6faf5e6d8681b5e",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/portable-unit-security.stdout.log",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/real-multi-turn-interaction.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/real-multi-turn-interaction.stderr.log",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/real-multi-turn-interaction.stdout.log",
+      "bytes": 2884,
+      "sha256": "3d6c09454567f8d18df8102c0756ad12328f0d6b41d90a6787001df41b2331a3",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/real-multi-turn-interaction.stdout.log",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/ubuntu/result.json",
+      "bytes": 4194,
+      "sha256": "82676e44da13b57b0e3e8d4dc2b2ac3a936135d2aa63a0472ac11dbca9ad1fa2",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/ubuntu/result.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/actual-product-host-ownership.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/actual-product-host-ownership.stderr.log",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/actual-product-host-ownership.stdout.log",
+      "bytes": 453,
+      "sha256": "691d9ddf4a8ba1b7f5fe25c835cf89aaf18bddcece04aed4eef0512911eba5c2",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/actual-product-host-ownership.stdout.log",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/assets/BUILD-RECEIPT.json",
+      "bytes": 1093,
+      "sha256": "dc6c9c9308f66605a71dca15e7420238405f9b771c7af605e3ba30d8a7433a1a",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/assets/BUILD-RECEIPT.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/assets/build.log",
+      "bytes": 1586,
+      "sha256": "79682fe20a75da231fc87dbb8bf058c7c0144e52075e36a942f9fd2fa077522c",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/assets/build.log",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/assets/SHA256SUMS",
+      "bytes": 102,
+      "sha256": "16c8d948cc77f5b3d788fde710908b1a346b094b2b6da66ad5b4edbfbc91523b",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/assets/SHA256SUMS",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/fixed-source-portable-build.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/fixed-source-portable-build.stderr.log",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/fixed-source-portable-build.stdout.log",
+      "bytes": 208,
+      "sha256": "a653a51b9da941e791f56c80a361f3eedeeec5d41c4d7f178d5a14eaa8409e33",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/fixed-source-portable-build.stdout.log",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/host-lease/result.json",
+      "bytes": 571,
+      "sha256": "dbfc181533af2fc8f7fac1b390f0c80e335c5e6fc103f7ba12bb49de433200e1",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/host-lease/result.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/installed/coding/coding-run.json",
+      "bytes": 3071,
+      "sha256": "f1534e98fe35af74601360ddb5f5ee6a3036350e371a15a32cd49da9e2328854",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/installed/coding/coding-run.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/installed/coding/episode/artifacts.json",
+      "bytes": 406,
+      "sha256": "6bf1ea4926311eb63f4461a24de412cc7cdfddc9f5c7cd89089633301bf0709f",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/installed/coding/episode/artifacts.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/installed/coding/episode/context.json",
+      "bytes": 2123,
+      "sha256": "77641eeb8bf8c6b6e4990886d516969eadfd2cf588cd333526fb052792c68460",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/installed/coding/episode/context.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/installed/coding/episode/events.jsonl",
+      "bytes": 66436,
+      "sha256": "e598dc69b6c020231c7552164fbcc2629e8b11bd1f2811f4f8ac18ba0dec1321",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/installed/coding/episode/events.jsonl",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/installed/coding/episode/metrics.json",
+      "bytes": 305,
+      "sha256": "f84e8537975a78f4002e20fe5fa5c2db619ea2f4c337abd5621b113fbe2e4a7f",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/installed/coding/episode/metrics.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/installed/coding/episode/permissions.jsonl",
+      "bytes": 2815,
+      "sha256": "5a04e7bd9eabc179de2ea28ad879061ae8494f1af7dff3fd2ebaecee1bcd6524",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/installed/coding/episode/permissions.jsonl",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/installed/coding/episode/session.json",
+      "bytes": 342,
+      "sha256": "ff50d5d3666bba8e136d4e60f8189188f01c6a9ee7f0ea9b53a3a585ccf5ca88",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/installed/coding/episode/session.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/installed/coding/episode/summary.json",
+      "bytes": 937,
+      "sha256": "0a808e3fb43f3810854c16de48395d3536acef802962e5fc158c498ccc3d9ea0",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/installed/coding/episode/summary.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/installed/coding/episode/task.json",
+      "bytes": 3,
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/installed/coding/episode/task.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/installed/coding/episode/tool-calls.jsonl",
+      "bytes": 6067,
+      "sha256": "f6f1c8735682ed7096ad1717a679ac8ec8acd710de53c86da71691a8057f985e",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/installed/coding/episode/tool-calls.jsonl",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/installed/coding/episode/verification.json",
+      "bytes": 83,
+      "sha256": "8dece667f652a3f61cc7490f8b4fe1c7579018a0de0a24de6d5ba00179637b0b",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/installed/coding/episode/verification.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/installed/coding/requests.json",
+      "bytes": 498856,
+      "sha256": "e8695644a9553467154f261fbda9aa3b3a5cd4034b3e1f8309558c1b63fb2fd3",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/installed/coding/requests.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/installed/coding/result.json",
+      "bytes": 3426,
+      "sha256": "508af67fe1dfd3102c3f4cb95e4e3c085b8568e4f59143f5f921f317da1685da",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/installed/coding/result.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/installed/coding/runs.json",
+      "bytes": 10081,
+      "sha256": "1bbb66a73a3f862ad2834b18e6c42f92c81ef68483780b8ebbb0b757a6814b34",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/installed/coding/runs.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/installed/coding/web-frames.json",
+      "bytes": 214116,
+      "sha256": "6a1d185e2a43d15e1447217962a9a0d4df8aab1adebc38d3dab37155f4096761",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/installed/coding/web-frames.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/installed/coding/web-process.log",
+      "bytes": 2516,
+      "sha256": "a18b630acfe079d8cc1a5d36bba4be53ff8e9788bf5ad09a01c8f90276d378b4",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/installed/coding/web-process.log",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/installed/doctor.log",
+      "bytes": 897,
+      "sha256": "c1223c60f2ab815a2126f8e09b918cef868394c52f97d7ebd74d54e361eab014",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/installed/doctor.log",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/installed/result.json",
+      "bytes": 727,
+      "sha256": "ebf0a5951608493b5fd00f75f06aab9b10a63b1844ad663b23684b2ae3b28fb5",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/installed/result.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/installed/version.log",
+      "bytes": 68,
+      "sha256": "71113f6e98cb3cefc2be9e37017a347a8641fb01fd5afbbaf777ce54adf1d7e1",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/installed/version.log",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/installed-coding-and-tamper-controls.stderr.log",
+      "bytes": 168,
+      "sha256": "c766a0ad482a956063b742ddb837e4ab05dcc4492810e241eda72e12da70e5f3",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/installed-coding-and-tamper-controls.stderr.log",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/installed-coding-and-tamper-controls.stdout.log",
+      "bytes": 2125,
+      "sha256": "16741e81c586b36f97d94ea9f39b609cfcb124b675db25417271fbcde87fdc4f",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/installed-coding-and-tamper-controls.stdout.log",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/interaction/chat-coding.json",
+      "bytes": 3997,
+      "sha256": "2286e0c5af2f832ee454c6e387bc12f039ff79b8d39de74161f5e9b5974ad744",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/interaction/chat-coding.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/interaction/chat-deny.json",
+      "bytes": 2377,
+      "sha256": "c3632cd76d5209a08da7b0964459a3297f976212f28b7f8bcc57e909901a6f78",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/interaction/chat-deny.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/interaction/chat-eof.json",
+      "bytes": 2376,
+      "sha256": "21a2e4c2f322244f909824fbe2b082d4527cd64fd2ba79aff92be79955c3a0f2",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/interaction/chat-eof.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/interaction/chat-resume.json",
+      "bytes": 2436,
+      "sha256": "7cd3fe2fd9da01a7a10049ca8bfa83d808b0f5803b0d1ef3c4b35e9d0302aef4",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/interaction/chat-resume.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/interaction/flags-and-help.json",
+      "bytes": 4088,
+      "sha256": "eec243e0cfb6b7a9684bc9a29c0372d0e4ac2cd6b4e1add4d4842dbf6e3f4d63",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/interaction/flags-and-help.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/interaction/requests.json",
+      "bytes": 283228,
+      "sha256": "ebefff20b93a49948ab7d0dfdc980905454a2f7e25ad15e555d19ae83112db4b",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/interaction/requests.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/interaction/result.json",
+      "bytes": 3655,
+      "sha256": "62df63b41005506c6e270efc27eea79ed172bbdb1ee61d71bb374914945cf71f",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/interaction/result.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/interaction/web-frames.json",
+      "bytes": 22534,
+      "sha256": "6bf751b258b437e4b80e00a5b0829ff02327f3adf6bbf4eeb9cdba8ed22ab319",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/interaction/web-frames.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/interaction/web-history.json",
+      "bytes": 2568,
+      "sha256": "bc05a1a9982f8d11f64de625291017b11996f1b9203e3212dd972ef92fc7aa2d",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/interaction/web-history.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/interaction/web-logs.json",
+      "bytes": 1662,
+      "sha256": "cf198a687d6f8c63441fd05a390a9516e9cd207c483aa88c4e7931c45f85ee0b",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/interaction/web-logs.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/interaction/web-turns.json",
+      "bytes": 431,
+      "sha256": "22242f1945fc706d22498f264c4068c7eb68ba210aaccd78cd3078b4482522c8",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/interaction/web-turns.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/interaction/wrong-policy.json",
+      "bytes": 522,
+      "sha256": "6c4d91e078b02630045a40e8b7fa6fc613ebc87a2dd662cc50ade5bf49186d74",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/interaction/wrong-policy.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/interaction/wrong-project.json",
+      "bytes": 577,
+      "sha256": "3e5f6954e64f558deedcdd512ea67fe2fba53ba5c183a3cdacd1f8b3b204d955",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/interaction/wrong-project.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/portable-unit-security.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/portable-unit-security.stderr.log",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/portable-unit-security.stdout.log",
+      "bytes": 3321,
+      "sha256": "77ebc7fd68cd2c2685007463d1dd2c21d4cf6616a008ca8f5592df56e23795a1",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/portable-unit-security.stdout.log",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/real-multi-turn-interaction.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/real-multi-turn-interaction.stderr.log",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/real-multi-turn-interaction.stdout.log",
+      "bytes": 2858,
+      "sha256": "23a80004252f03a951286927ad1827284102b091d980622293853d53f2f0e4cf",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/real-multi-turn-interaction.stdout.log",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/windows/result.json",
+      "bytes": 4220,
+      "sha256": "2ac3c6eceac593365914a7cb6dea8a203b89d3995a48f1eabc0777a36ccdccd8",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/windows/result.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/same-archive-windows/coding/coding-run.json",
+      "bytes": 3071,
+      "sha256": "a3411f871d93cbbe51857695ec8bec52074c14d2b993e14f48a825787b1944a1",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/same-archive-windows/coding/coding-run.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/same-archive-windows/coding/episode/artifacts.json",
+      "bytes": 406,
+      "sha256": "13c66c5876174b3a2cdbdb0c962090d64b929c02e72382dc708c151a5daf6faa",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/same-archive-windows/coding/episode/artifacts.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/same-archive-windows/coding/episode/context.json",
+      "bytes": 2123,
+      "sha256": "cfbd96ae5fda2ab8900f8fa21bd54291411b647b6775356fd6f70af13ba14711",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/same-archive-windows/coding/episode/context.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/same-archive-windows/coding/episode/events.jsonl",
+      "bytes": 62967,
+      "sha256": "eec3d34c50641e302e7a3f357b34dabf56012ff7da6e7e87b91f79745305065e",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/same-archive-windows/coding/episode/events.jsonl",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/same-archive-windows/coding/episode/metrics.json",
+      "bytes": 305,
+      "sha256": "7bd5640237710035971308df53ff82df1e988092034d661397db6472bbd8187f",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/same-archive-windows/coding/episode/metrics.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/same-archive-windows/coding/episode/permissions.jsonl",
+      "bytes": 2815,
+      "sha256": "1f108341f46bb47117b330e334122fa10d33ce078aedaccf40d3a900504b0179",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/same-archive-windows/coding/episode/permissions.jsonl",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/same-archive-windows/coding/episode/session.json",
+      "bytes": 342,
+      "sha256": "b3b3de4c61a29981d80dd409e0fadf555523fa94c2de029adcfb13f213c529bc",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/same-archive-windows/coding/episode/session.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/same-archive-windows/coding/episode/summary.json",
+      "bytes": 937,
+      "sha256": "d294bf9d97595da69b50472d9cb3372b2ec4eddfcd668017bf08e237f75581b1",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/same-archive-windows/coding/episode/summary.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/same-archive-windows/coding/episode/task.json",
+      "bytes": 3,
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/same-archive-windows/coding/episode/task.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/same-archive-windows/coding/episode/tool-calls.jsonl",
+      "bytes": 6068,
+      "sha256": "79d675dbeccae506d9dcaceffe684bd23341937c40302588b81ec95b5ec75d98",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/same-archive-windows/coding/episode/tool-calls.jsonl",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/same-archive-windows/coding/episode/verification.json",
+      "bytes": 83,
+      "sha256": "e32a9cfb861a7a8b2653643360bb6bf6dce5c9b3f9cdcb1473fad397f15683ad",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/same-archive-windows/coding/episode/verification.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/same-archive-windows/coding/requests.json",
+      "bytes": 498848,
+      "sha256": "3d0362c0e0b38ba6eec641b7fbb4f60136ac78aaaaa9331d0c514209eb3305a3",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/same-archive-windows/coding/requests.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/same-archive-windows/coding/result.json",
+      "bytes": 3426,
+      "sha256": "508af67fe1dfd3102c3f4cb95e4e3c085b8568e4f59143f5f921f317da1685da",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/same-archive-windows/coding/result.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/same-archive-windows/coding/runs.json",
+      "bytes": 10084,
+      "sha256": "f67463a5436349c374111f0fbf74bba101aa8911b9fda56313366ed5aea2db3e",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/same-archive-windows/coding/runs.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/same-archive-windows/coding/web-frames.json",
+      "bytes": 206400,
+      "sha256": "01713b36f98503bdb31c4f31e7dc8b2fee5211333f552b527fe335b3f2735cd8",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/same-archive-windows/coding/web-frames.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/same-archive-windows/coding/web-process.log",
+      "bytes": 2516,
+      "sha256": "3771f81b6ba963a6a63261deeb8df54e933880115039b46c192b0bbe7a014a5a",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/same-archive-windows/coding/web-process.log",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/same-archive-windows/doctor.log",
+      "bytes": 897,
+      "sha256": "95c3567ac25acab3a05b4e43748357a639513a1aa66595514aa406568aeea69e",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/same-archive-windows/doctor.log",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/same-archive-windows/result.json",
+      "bytes": 727,
+      "sha256": "d81064ecf8c6e3e24fa9f1398a56b938daee6f8bd0ffc2b583c93defb1bae952",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/same-archive-windows/result.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/same-archive-windows/version.log",
+      "bytes": 68,
+      "sha256": "71113f6e98cb3cefc2be9e37017a347a8641fb01fd5afbbaf777ce54adf1d7e1",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/same-archive-windows/version.log",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci-data/export-receipt.json",
+      "bytes": 20683,
+      "sha256": "9b90a2cd213c8e9b691b80daf598d9bbdee8ca04688aa3580b8d472ab9901f23",
+      "originalPath": "/tmp/gen1-ci-final-c5bbe61-attempt3/gen1-ci-bundle/export-receipt.json",
+      "provenance": "ci-source"
+    },
+    {
+      "path": "ci/main-run.json",
+      "bytes": 14402,
+      "sha256": "5ca5c6719764b876890d90ea3978a1040e38ce2ac69117385da08b355c994fff",
+      "originalPath": "/tmp/gen1-final-main-run-c5bbe61.json",
+      "provenance": "api-source"
+    },
+    {
+      "path": "ci/installed-run.json",
+      "bytes": 14521,
+      "sha256": "120648793d4ce619031951590215419ddafe1cd14dda3c6cfef2673358965bf2",
+      "originalPath": "/tmp/gen1-final-installed-run-c5bbe61.json",
+      "provenance": "api-source"
+    },
+    {
+      "path": "ci/native-windows-run.json",
+      "bytes": 14414,
+      "sha256": "dde6f5f4916e0380a03b99d32a0f1de370967e1624001672e0eb17e9fd054e93",
+      "originalPath": "/tmp/gen1-final-native-windows-run-c5bbe61.json",
+      "provenance": "api-source"
+    },
+    {
+      "path": "ci/main-jobs.json",
+      "bytes": 67942,
+      "sha256": "ad197f86a38057554430c645f06aff1d1cecbdd898fa23faa697a6cd7f2ee303",
+      "originalPath": "/tmp/gen1-final-main-jobs-c5bbe61.json",
+      "provenance": "api-source"
+    },
+    {
+      "path": "ci/installed-jobs.json",
+      "bytes": 16341,
+      "sha256": "504abd0a8a9cf344c1320bf569fffcb9ac05ade2ee733fc60b47958a77b624bb",
+      "originalPath": "/tmp/gen1-final-installed-jobs-c5bbe61.json",
+      "provenance": "api-source"
+    },
+    {
+      "path": "ci/native-windows-jobs.json",
+      "bytes": 5182,
+      "sha256": "d93c18eb047a79d69ec8765016c5608e21568a2da8b686194bd86799628e6efd",
+      "originalPath": "/tmp/gen1-final-native-windows-jobs-c5bbe61.json",
+      "provenance": "api-source"
+    },
+    {
+      "path": "history/ci/gen1-ci-bundle-bcea726.tar.gz",
+      "bytes": 4550434,
+      "sha256": "37885028a05668ed41a4bc8eb3479166100abd678c78b5f4982807b2c50a45f4",
+      "originalPath": "/tmp/gen1-ci-bundle-bcea726.tar.gz",
+      "provenance": "history"
+    },
+    {
+      "path": "history/ci/export-attempt1-annotations.json",
+      "bytes": 1502,
+      "sha256": "dcbf0f9c186af6f7581519bd8391f8cd3858b1a8bcc641c2f5ee1177885191c0",
+      "originalPath": "/tmp/gen1-final-export-initial-annotations-c5bbe61.json",
+      "provenance": "history"
+    },
+    {
+      "path": "history/ci/export-attempt2-job.json",
+      "bytes": 3635,
+      "sha256": "bcd6d877b377d7611388d4537d753585e7d8d7b4b22e8047284b93873e906bf6",
+      "originalPath": "/tmp/gen1-export-attempt2-job-c5bbe61.json",
+      "provenance": "history"
+    },
+    {
+      "path": "history/ci/export-attempt2-run.json",
+      "bytes": 14543,
+      "sha256": "d01da7ff462f0b1ce9eaf2835c83a144860a95a9bce695821d5914cc2edb86db",
+      "originalPath": "/tmp/gen1-export-attempt2-run-c5bbe61.json",
+      "provenance": "history"
+    },
+    {
+      "path": ".gitattributes",
+      "bytes": 164,
+      "sha256": "e689fba7f1e207853869c5efbc673d5c0e63f60dffca3d0327ee2d183d080601",
+      "originalPath": "/tmp/gen1-final-evidence-stage/.gitattributes",
+      "provenance": "archive-tool"
+    },
+    {
+      "path": "verify.mjs",
+      "bytes": 28986,
+      "sha256": "09a4467f77bb289b9ac30710f930e83969a1529fc9c54bf74c357d23319872aa",
+      "originalPath": "/tmp/gen1-final-evidence-verify.mjs",
+      "provenance": "archive-tool"
+    },
+    {
+      "path": "README.md",
+      "bytes": 3669,
+      "sha256": "ea027b1884bb22bcdad9bae85b276d960e8bc582c4b1e317089773700ab66c44",
+      "originalPath": "/tmp/gen1-final-evidence-verifier-README.md",
+      "provenance": "archive-tool"
+    },
+    {
+      "path": "reviews/final-evidence-independent-review.json",
+      "bytes": 7869,
+      "sha256": "2c935d10b7a7775318652917bafcbb6c6a9b87214336344c30f3df5d1b6707dc",
+      "originalPath": "/tmp/gen1-final-evidence-independent-review/result.json",
+      "provenance": "archive-tool"
+    },
+    {
+      "path": "reviews/negative-controls.py",
+      "bytes": 7142,
+      "sha256": "7fef991dd3ce0ebd7552f8f57757a8b8d501e15c873d5c7f1eb42c884c297c8d",
+      "originalPath": "/tmp/gen1-final-evidence-negative-controls.py",
+      "provenance": "archive-tool"
+    }
+  ],
+  "status": "ACCEPTED_NOT_RELEASED"
+}

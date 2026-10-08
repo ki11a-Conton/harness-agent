@@ -1,0 +1,94 @@
+TAP version 13
+# Subtest: portable enumerates the actual workspace, including indirect and unreferenced packages
+ok 1 - portable enumerates the actual workspace, including indirect and unreferenced packages
+  ---
+  duration_ms: 632.916219
+  type: 'test'
+  ...
+# Subtest: workspace identity accepts a root alias and excludes the physical workspace root
+ok 2 - workspace identity accepts a root alias and excludes the physical workspace root
+  ---
+  duration_ms: 495.208153
+  type: 'test'
+  ...
+# Subtest: workspace inventory rejects packages physically outside the pinned source
+ok 3 - workspace inventory rejects packages physically outside the pinned source
+  ---
+  duration_ms: 531.761195
+  type: 'test'
+  ...
+# Subtest: linked production workspace dependencies cannot enter the portable payload
+ok 4 - linked production workspace dependencies cannot enter the portable payload
+  ---
+  duration_ms: 517.214491
+  type: 'test'
+  ...
+# Subtest: portable rejects missing production workspace dependencies and duplicate package names
+ok 5 - portable rejects missing production workspace dependencies and duplicate package names
+  ---
+  duration_ms: 998.345289
+  type: 'test'
+  ...
+# Subtest: package-local adapted-source licenses and root notices ship byte for byte
+ok 6 - package-local adapted-source licenses and root notices ship byte for byte
+  ---
+  duration_ms: 4.904172
+  type: 'test'
+  ...
+# Subtest: archive round trip preserves exact binary bytes with deterministic output
+ok 7 - archive round trip preserves exact binary bytes with deterministic output
+  ---
+  duration_ms: 7.882123
+  type: 'test'
+  ...
+# Subtest: traversal, absolute paths, Windows separators and duplicate case paths are rejected
+ok 8 - traversal, absolute paths, Windows separators and duplicate case paths are rejected
+  ---
+  duration_ms: 0.535046
+  type: 'test'
+  ...
+# Subtest: bad tar checksums, symlink entries and missing terminators are rejected before writes
+ok 9 - bad tar checksums, symlink entries and missing terminators are rejected before writes
+  ---
+  duration_ms: 2.61108
+  type: 'test'
+  ...
+# Subtest: extraction never overwrites an existing consumer directory
+ok 10 - extraction never overwrites an existing consumer directory
+  ---
+  duration_ms: 1.548561
+  type: 'test'
+  ...
+# Subtest: extraction still rejects a link destination and links in its parent path before file writes
+ok 11 - extraction still rejects a link destination and links in its parent path before file writes
+  ---
+  duration_ms: 3.504695
+  type: 'test'
+  ...
+# Subtest: manifest binds every file, exact version and source, and rejects extra files
+ok 12 - manifest binds every file, exact version and source, and rejects extra files
+  ---
+  duration_ms: 10.770621
+  type: 'test'
+  ...
+# Subtest: duplicate manifest paths and parent directory links cannot stand in for payload files
+ok 13 - duplicate manifest paths and parent directory links cannot stand in for payload files
+  ---
+  duration_ms: 4.733004
+  type: 'test'
+  ...
+# Subtest: snapshot uses pinned Git blobs and ignores stale dist or untracked ignored source
+ok 14 - snapshot uses pinned Git blobs and ignores stale dist or untracked ignored source
+  ---
+  duration_ms: 613.496867
+  type: 'test'
+  ...
+1..14
+# tests 14
+# suites 0
+# pass 14
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3927.076417

@@ -1,0 +1,110 @@
+{
+  "coding": {
+    "code": 0,
+    "signal": null,
+    "stdout": "run started: session session_9bc2e72f-0efa-4335-a63d-da48b2d45f16 turn turn_b28ce64f-4636-4f23-95a1-f7c2b3045dc7\nrun: session session_9bc2e72f-0efa-4335-a63d-da48b2d45f16 turn turn_b28ce64f-4636-4f23-95a1-f7c2b3045dc7\nstatus: completed\ngrade: verified_complete\ntermination: verified_complete\nsummary: Fixed addition and verified the test.\nfiles changed: src/math.cjs\ntests: passed\nverification: passed\nremaining issues: (none)\ntool calls: 4\niterations: 4\n",
+    "stderr": "(node:7256) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for openai/coding-fixture-model — using conservative fallback 32000\n[degraded] store-integrity.syncDir: EPERM: operation not permitted, fsync\n[degraded] store-integrity.syncDir: EPERM: operation not permitted, fsync\n[degraded] store-integrity.syncDir: EPERM: operation not permitted, fsync\n[degraded] store-integrity.syncDir: EPERM: operation not permitted, fsync\n[degraded] store-integrity.syncDir: EPERM: operation not permitted, fsync\n[degraded] store-integrity.syncDir: EPERM: operation not permitted, fsync\napproval approval_cafb69e5-1352-4f62-aa7a-d60246c2e43c: \"edit\" \"src/math.cjs\"\nreason: \"edit_file: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\n[degraded] store-integrity.syncDir: EPERM: operation not permitted, fsync\n[degraded] store-integrity.syncDir: EPERM: operation not permitted, fsync\napproval approval_ac7e0091-bdd6-49c5-8de6-35e81991f97d: \"exec\" \"node --test test/math.test.cjs\"\nreason: \"exec: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\n[degraded] store-integrity.syncDir: EPERM: operation not permitted, fsync\n[degraded] store-integrity.syncDir: EPERM: operation not permitted, fsync\napproval approval_0ac1e0f5-3c18-4577-a257-b1f018441a18: \"edit\" \"src/math.cjs\"\nreason: \"edit_file: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\n[degraded] store-integrity.syncDir: EPERM: operation not permitted, fsync\n[degraded] store-integrity.syncDir: EPERM: operation not permitted, fsync\napproval approval_197536f8-a572-4195-a2ed-e9783f8eb01f: \"exec\" \"node \\\"--test\\\" \\\"test/math.test.cjs\\\"\"\nreason: \"exec: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\n[degraded] store-integrity.syncDir: EPERM: operation not permitted, fsync\n[degraded] store-integrity.syncDir: EPERM: operation not permitted, fsync\napproval approval_6c92e04f-0e85-46fe-8291-e90d609a0f84: \"exec\" \"node --test test/math.test.cjs\"\nreason: \"exec: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\n[degraded] store-integrity.syncDir: EPERM: operation not permitted, fsync\n[degraded] store-integrity.syncDir: EPERM: operation not permitted, fsync\n[degraded] store-integrity.syncDir: EPERM: operation not permitted, fsync\n[degraded] store-integrity.syncDir: EPERM: operation not permitted, fsync\n"
+  },
+  "independentTest": {
+    "code": 0,
+    "signal": null,
+    "stdout": "TAP version 13\n# Subtest: EXPECTED_SUM_42\nok 1 - EXPECTED_SUM_42\n  ---\n  duration_ms: 0.6263\n  type: 'test'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 64.03\n",
+    "stderr": ""
+  },
+  "diff": {
+    "code": 0,
+    "signal": null,
+    "stdout": "diff --git a/src/math.cjs b/src/math.cjs\nindex a3e5af1..dabc726 100644\n--- a/src/math.cjs\n+++ b/src/math.cjs\n@@ -1 +1 @@\n-module.exports.add = (a, b) => { return a - b; };\n+module.exports.add = (a, b) => { return a + b; };\n",
+    "stderr": "warning: in the working copy of 'src/math.cjs', LF will be replaced by CRLF the next time Git touches it\n"
+  },
+  "deny": {
+    "code": 0,
+    "signal": null,
+    "stdout": "run started: session session_03cb42c6-2290-4942-8e44-2609f6414fb2 turn turn_ce7b4a9f-bf03-4303-9911-984cb0a409f4\nrun: session session_03cb42c6-2290-4942-8e44-2609f6414fb2 turn turn_ce7b4a9f-bf03-4303-9911-984cb0a409f4\nstatus: completed\ngrade: unverified_complete\ntermination: model_stopped\nsummary: Done.\nfiles changed: (none)\ntests: no verification gate configured\nverification: no verification gate configured\nremaining issues: (none)\ntool calls: 1\niterations: 1\n",
+    "stderr": "(node:1120) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for openai/coding-fixture-model — using conservative fallback 32000\napproval approval_4611ed74-df10-4b01-a3c0-18455f626234: \"edit\" \"denied.txt\"\nreason: \"write_file: rule 'anon' (ask) matched\"\nallow/deny> denied (enter exactly allow to authorize one call)\n"
+  },
+  "failedVerification": {
+    "code": 1,
+    "signal": null,
+    "stdout": "run started: session session_44875a5e-c8fd-4f30-8a61-cc632284fa56 turn turn_a9842849-8066-4968-9677-2dc20dedc642\nrun: session session_44875a5e-c8fd-4f30-8a61-cc632284fa56 turn turn_a9842849-8066-4968-9677-2dc20dedc642\nstatus: failed\ngrade: verification_failed\ntermination: verification_failed\nsummary: Done.\nfiles changed: (none)\ntests: failed: command: node -e \"process.exit(17)\": exited with code 17\nverification: failed: command: node -e \"process.exit(17)\": exited with code 17\nremaining issues: failed: VERIFICATION_FAILED — command: node -e \"process.exit(17)\": exited with code 17\ntool calls: 0\niterations: 0\n",
+    "stderr": "(node:4872) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for openai/coding-fixture-model — using conservative fallback 32000\napproval approval_06c3dff3-c027-47b3-bbcd-52be6a3f1a1e: \"exec\" \"node -e \\\"process.exit(17)\\\"\"\nreason: \"exec: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\napproval approval_3d7dd9e2-3934-4472-940f-d51c39044a9e: \"exec\" \"node -e \\\"process.exit(17)\\\"\"\nreason: \"exec: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\napproval approval_6aa0cb80-2a99-4a52-90ff-62fac2426927: \"exec\" \"node -e \\\"process.exit(17)\\\"\"\nreason: \"exec: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\n"
+  },
+  "invalidRoot": {
+    "code": 1,
+    "signal": null,
+    "stdout": "agent run: invalid project directory \"C:\\\\Users\\\\RUNNER~1\\\\AppData\\\\Local\\\\Temp\\\\harness-real-coding-mvNrnD\\\\absent\"\n",
+    "stderr": "(node:7256) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  "resume": {
+    "code": 0,
+    "signal": null,
+    "stdout": "session session_9bc2e72f-0efa-4335-a63d-da48b2d45f16: agent=agent_3a74f447-821e-4ed3-ac6f-86a91604e30c status=active cwd=C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\harness-real-coding-mvNrnD\\project with space\n",
+    "stderr": "(node:8912) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for openai/coding-fixture-model — using conservative fallback 32000\n"
+  },
+  "trace": {
+    "code": 0,
+    "signal": null,
+    "stdout": "trace: exported episode to D:\\a\\harness-agent\\harness-agent\\.ci\\same-archive-windows\\coding\\episode (10 files)\ntrace: session session_9bc2e72f-0efa-4335-a63d-da48b2d45f16\ntrace: files: task.json, session.json, events.jsonl, context.json, tool-calls.jsonl, permissions.jsonl, artifacts.json, verification.json, metrics.json, summary.json\n",
+    "stderr": "(node:3452) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for openai/coding-fixture-model — using conservative fallback 32000\n"
+  },
+  "webCoding": {
+    "approvals": 5,
+    "event": {
+      "id": "event_2a49f3e7-dd78-4d82-9ebc-d559185ec85d",
+      "sessionId": "session_f123bd10-b734-45f3-a96a-9e0e8dcba264",
+      "turnId": "turn_cd404764-cb42-4019-8c7f-54a8b86afa26",
+      "timestamp": 1791442975942,
+      "type": "turn.completed",
+      "payload": {
+        "turnId": "turn_cd404764-cb42-4019-8c7f-54a8b86afa26",
+        "status": "completed",
+        "statusDetail": "completed",
+        "terminationReason": "verified_complete",
+        "grade": "verified_complete",
+        "completionEvidence": {
+          "passedSteps": 1,
+          "totalSteps": 1
+        }
+      },
+      "sequence": 143,
+      "schemaVersion": 1
+    }
+  },
+  "webIndependentTest": {
+    "code": 0,
+    "signal": null,
+    "stdout": "TAP version 13\n# Subtest: EXPECTED_SUM_42\nok 1 - EXPECTED_SUM_42\n  ---\n  duration_ms: 0.7167\n  type: 'test'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 66.884\n",
+    "stderr": ""
+  },
+  "webShutdown": {
+    "code": null,
+    "signal": "SIGTERM"
+  },
+  "webFollowup": {
+    "approvals": 1,
+    "event": {
+      "id": "event_b27614c9-7c61-4b2b-a588-91f3a7250607",
+      "sessionId": "session_f123bd10-b734-45f3-a96a-9e0e8dcba264",
+      "turnId": "turn_1d5e906f-90b9-46ea-acd0-55effad2626a",
+      "timestamp": 1791442977280,
+      "type": "turn.completed",
+      "payload": {
+        "turnId": "turn_1d5e906f-90b9-46ea-acd0-55effad2626a",
+        "status": "completed",
+        "statusDetail": "completed",
+        "terminationReason": "verified_complete",
+        "grade": "verified_complete",
+        "completionEvidence": {
+          "passedSteps": 1,
+          "totalSteps": 1
+        }
+      },
+      "sequence": 169,
+      "schemaVersion": 1
+    }
+  },
+  "webFinalShutdown": {
+    "code": null,
+    "signal": "SIGTERM"
+  }
+}

@@ -1,0 +1,125 @@
+{
+  "status": "PASS",
+  "sourceSha": "c5bbe61fef101a8c9eb10edab673be8b2e0935e3",
+  "platform": "linux",
+  "node": "v22.23.3",
+  "steps": [
+    {
+      "name": "portable unit/security",
+      "argv": [
+        "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+        "--test",
+        "scripts/release/portable.test.mjs"
+      ],
+      "exitCode": 0,
+      "error": null,
+      "stdoutLog": {
+        "path": ".ci/gen1/portable-unit-security.stdout.log",
+        "bytes": 3340,
+        "sha256": "285f6adb298cd953e2b7e3a40bf1246fb845333df1b99557d6faf5e6d8681b5e"
+      },
+      "stderrLog": {
+        "path": ".ci/gen1/portable-unit-security.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "name": "real multi-turn interaction",
+      "argv": [
+        "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+        "scripts/research/gen1-20261008/interaction-acceptance.mjs",
+        "--out",
+        "/home/runner/work/harness-agent/harness-agent/.ci/gen1/interaction"
+      ],
+      "exitCode": 0,
+      "error": null,
+      "stdoutLog": {
+        "path": ".ci/gen1/real-multi-turn-interaction.stdout.log",
+        "bytes": 2884,
+        "sha256": "3d6c09454567f8d18df8102c0756ad12328f0d6b41d90a6787001df41b2331a3"
+      },
+      "stderrLog": {
+        "path": ".ci/gen1/real-multi-turn-interaction.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "name": "actual product host ownership",
+      "argv": [
+        "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+        "scripts/research/gen1-20261008/host-lease-acceptance.mjs",
+        "--out",
+        "/home/runner/work/harness-agent/harness-agent/.ci/gen1/host-lease"
+      ],
+      "exitCode": 0,
+      "error": null,
+      "stdoutLog": {
+        "path": ".ci/gen1/actual-product-host-ownership.stdout.log",
+        "bytes": 453,
+        "sha256": "bfce54ae03485a579ae711e31b8b0722104568cdc6f56d3c88fe5f049ac9bef3"
+      },
+      "stderrLog": {
+        "path": ".ci/gen1/actual-product-host-ownership.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "name": "fixed-source portable build",
+      "argv": [
+        "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+        "scripts/release/portable.mjs",
+        "build",
+        "--out",
+        "/home/runner/work/harness-agent/harness-agent/.ci/gen1/assets",
+        "--version",
+        "1.9.0",
+        "--source-sha",
+        "c5bbe61fef101a8c9eb10edab673be8b2e0935e3"
+      ],
+      "exitCode": 0,
+      "error": null,
+      "stdoutLog": {
+        "path": ".ci/gen1/fixed-source-portable-build.stdout.log",
+        "bytes": 214,
+        "sha256": "d02f16cee20105311887a235154b9a77d1dc696dc086bb51ccbd22f1fd2a64e3"
+      },
+      "stderrLog": {
+        "path": ".ci/gen1/fixed-source-portable-build.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "name": "installed coding and tamper controls",
+      "argv": [
+        "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+        "scripts/release/portable-smoke.mjs",
+        "--archive",
+        "/home/runner/work/harness-agent/harness-agent/.ci/gen1/assets/harness-agent-1.9.0-portable.tar.gz",
+        "--out",
+        "/home/runner/work/harness-agent/harness-agent/.ci/gen1/installed",
+        "--version",
+        "1.9.0",
+        "--source-sha",
+        "c5bbe61fef101a8c9eb10edab673be8b2e0935e3"
+      ],
+      "exitCode": 0,
+      "error": null,
+      "stdoutLog": {
+        "path": ".ci/gen1/installed-coding-and-tamper-controls.stdout.log",
+        "bytes": 2081,
+        "sha256": "dd551fd0cdb42acd6f6296e44da869279bc6b1b9238c617c305bdcb2802b3172"
+      },
+      "stderrLog": {
+        "path": ".ci/gen1/installed-coding-and-tamper-controls.stderr.log",
+        "bytes": 168,
+        "sha256": "1910d3f6be0fd2928556ea98c20889ff0d726f76cca63a4167ead7af522f9d58"
+      }
+    }
+  ],
+  "paidModelCalls": 0,
+  "realModelQuality": "NOT_PROVEN"
+}

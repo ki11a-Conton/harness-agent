@@ -1,0 +1,132 @@
+{
+  "status": "PASS",
+  "sourceSha": "c5bbe61fef101a8c9eb10edab673be8b2e0935e3",
+  "platform": "win32",
+  "node": "v22.23.3",
+  "provider": "local-scripted-http",
+  "paidModelCalls": 0,
+  "realModelQuality": "NOT_PROVEN",
+  "cases": [
+    {
+      "name": "versioned native file content and sha reach the HTTP provider",
+      "passed": true
+    },
+    {
+      "name": "second chat turn includes first task and completed assistant reply",
+      "passed": true
+    },
+    {
+      "name": "real CLI completes two turns in one live chat process",
+      "passed": true
+    },
+    {
+      "name": "both CLI turns share one durable session id",
+      "passed": true
+    },
+    {
+      "name": "native edit and both verification commands received individual approval",
+      "passed": true
+    },
+    {
+      "name": "CLI reports real successful verification on both turns",
+      "passed": true
+    },
+    {
+      "name": "native conditional edit fixes the actual project file",
+      "passed": true
+    },
+    {
+      "name": "independent test succeeds outside the agent",
+      "passed": true
+    },
+    {
+      "name": "fresh CLI resumes with both earlier user turns and assistant history",
+      "passed": true
+    },
+    {
+      "name": "fresh CLI continues the same session and third turn",
+      "passed": true
+    },
+    {
+      "name": "cross-project resume fails without a provider request",
+      "passed": true
+    },
+    {
+      "name": "incompatible prompt policy fails without a provider request",
+      "passed": true
+    },
+    {
+      "name": "missing data-dir fails before provider while help works without constructing one",
+      "passed": true
+    },
+    {
+      "name": "deny denial reaches model as tool result",
+      "passed": true
+    },
+    {
+      "name": "deny cannot authorize native writes",
+      "passed": true
+    },
+    {
+      "name": "eof denial reaches model as tool result",
+      "passed": true
+    },
+    {
+      "name": "eof cannot authorize native writes",
+      "passed": true
+    },
+    {
+      "name": "two real SSE tabs receive the same completed Web turn",
+      "passed": true,
+      "detail": {
+        "turnId": "turn_5e542dbc-6d6a-47aa-99a3-00b104193bf0",
+        "sessionId": "session_4bbd11a3-f00a-4ad2-91bd-bcae00a7b8e2",
+        "completionEventId": "event_81ec9359-65fa-4d98-88ee-cb5bda65fd1c"
+      }
+    },
+    {
+      "name": "Web history stores its actual user/assistant conversation",
+      "passed": true
+    },
+    {
+      "name": "a new browser can discover persistent backend conversations after restart",
+      "passed": true
+    },
+    {
+      "name": "restarted Web retains earlier conversation in the actual model request",
+      "passed": true
+    },
+    {
+      "name": "restarted Web sends the follow-up on the original session",
+      "passed": true,
+      "detail": {
+        "turnId": "turn_280bbe4d-bede-4783-a9b4-5ec4700ec18b",
+        "sessionId": "session_4bbd11a3-f00a-4ad2-91bd-bcae00a7b8e2",
+        "completionEventId": "event_68aaf1e5-8f90-4938-b119-7c8685e6f6a0"
+      }
+    },
+    {
+      "name": "all actual HTTP requests use the configured model and selected coding policy",
+      "passed": true
+    }
+  ],
+  "assertionCount": 23,
+  "requestCount": 11,
+  "artifacts": [
+    "chat-coding.json",
+    "chat-resume.json",
+    "wrong-project.json",
+    "wrong-policy.json",
+    "flags-and-help.json",
+    "chat-deny.json",
+    "chat-eof.json",
+    "web-frames.json",
+    "web-logs.json",
+    "web-turns.json",
+    "web-history.json",
+    "requests.json"
+  ],
+  "skips": [
+    "POSIX SIGINT-to-handler behavior; native Windows cancellation is covered by the Windows gate"
+  ]
+}

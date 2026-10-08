@@ -1,0 +1,38 @@
+✔ exact-source two platforms and same distributed bytes only prepare four existing draft assets (57.945704ms)
+✔ refuses non-exact existing draft {"draft":false} (6.405661ms)
+✔ refuses non-exact existing draft {"target_commitish":"main"} (3.059204ms)
+✔ refuses non-exact existing draft {"target_commitish":"cccccccccccccccccccccccccccccccccccccccc"} (2.944292ms)
+✔ refuses non-exact existing draft {"tag_name":"v2.0.0"} (7.207283ms)
+✔ main and mismatched repository cannot execute the authorized export (0.735117ms)
+✔ failed stages archive diagnostics but never formal assets (7.667951ms)
+✔ fake PASS with missing stages archive diagnostics but never formal assets (11.828704ms)
+✔ wrong source archive diagnostics but never formal assets (9.87019ms)
+✔ same-source Windows receipt with different archive hash refuses formal bytes (10.483359ms)
+✔ failed-only evidence is exportable without an archive or successful installed receipt (2.638982ms)
+✔ existing differently hashed asset is never overwritten or deleted (6.345711ms)
+✔ input symlinks are rejected before release writes (5.787571ms)
+✔ oversized sparse files fail admission without reading or upload (8.040522ms)
+✔ identical existing asset digests are verified and reused without another upload (19.724638ms)
+✔ publication between bundle and formal asset is detected and cannot upload formal files (10.586564ms)
+✔ portable enumerates the actual workspace, including indirect and unreferenced packages (493.054146ms)
+✔ workspace identity accepts a root alias and excludes the physical workspace root (460.619093ms)
+✔ workspace inventory rejects packages physically outside the pinned source (456.503583ms)
+✔ linked production workspace dependencies cannot enter the portable payload (448.34595ms)
+✔ portable rejects missing production workspace dependencies and duplicate package names (965.705954ms)
+✔ package-local adapted-source licenses and root notices ship byte for byte (7.058314ms)
+✔ archive round trip preserves exact binary bytes with deterministic output (9.7997ms)
+✔ traversal, absolute paths, Windows separators and duplicate case paths are rejected (0.640244ms)
+✔ bad tar checksums, symlink entries and missing terminators are rejected before writes (5.18874ms)
+✔ extraction never overwrites an existing consumer directory (1.952299ms)
+✔ extraction still rejects a link destination and links in its parent path before file writes (2.368364ms)
+✔ manifest binds every file, exact version and source, and rejects extra files (15.149131ms)
+✔ duplicate manifest paths and parent directory links cannot stand in for payload files (7.767841ms)
+✔ snapshot uses pinned Git blobs and ignores stale dist or untracked ignored source (522.792766ms)
+ℹ tests 30
+ℹ suites 0
+ℹ pass 30
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3709.29772

@@ -1,0 +1,246 @@
+{
+  "schema": "harness-gen1-final-independent-evidence-review-v1",
+  "status": "PASS",
+  "testedSourceSha": "c5bbe61fef101a8c9eb10edab673be8b2e0935e3",
+  "sourceArchive": "/tmp/gen1-final-evidence-stage",
+  "helper": "/tmp/gen1-final-evidence-verify.mjs",
+  "helperDigest": {
+    "bytes": 28986,
+    "sha256": "09a4467f77bb289b9ac30710f930e83969a1529fc9c54bf74c357d23319872aa"
+  },
+  "officialPortableDigest": {
+    "bytes": 2176092,
+    "sha256": "f7006e6c22655d35576bbb800870bda792cfb0df4834fc9405dd55f30e9a278b"
+  },
+  "controls": 24,
+  "positiveControls": 1,
+  "negativeControls": 23,
+  "durationSeconds": 5.788,
+  "writeScope": "temporary directories only; source archive and tracked repository unchanged",
+  "sourceAndCiMutationsReboundManifestHashes": true,
+  "paidModelCalls": 0,
+  "realModelQuality": "NOT_PROVEN",
+  "limitations": [
+    "Offline supplied API snapshots are hash-consistent evidence, not remote cryptographic signatures.",
+    "Engineering acceptance does not establish real paid-model coding quality or parity with reference agents.",
+    "This review executes the read-only archive verifier and controlled mutations; it does not rerun product test suites."
+  ],
+  "cases": [
+    {
+      "case": "positive-actual-final-source",
+      "expectedExit": 0,
+      "actualExit": 0,
+      "passed": true,
+      "outerManifestRebound": false,
+      "stdout": "{\n  \"status\": \"PASS\",\n  \"scope\": \"fixed-source engineering acceptance; no paid-model quality claim\",\n  \"testedSourceSha\": \"c5bbe61fef101a8c9eb10edab673be8b2e0935e3\",\n  \"testedSourceTree\": \"603f7cc88a3ac8b3897c296b70eef4df1133132b\",\n  \"archiveSha256\": \"f7006e6c22655d35576bbb800870bda792cfb0df4834fc9405dd55f30e9a278b\",\n  \"releaseStatus\": \"ACCEPTED_NOT_RELEASED\",\n  \"files\": 210,\n  \"localFull\": {\n    \"passed\": 9284,\n    \"pending\": 14\n  },\n  \"security\": 2143,\n  \"protocol\": 52,\n  \"browser\": {\n    \"cases\": 29,\n    \"assertions\": 82\n  },\n  \"ci\": {\n    \"mainJobs\": 10,\n    \"installedJobs\": 4,\n    \"nativeWindowsJobs\": 1,\n    \"installedRun\": 37740743372,\n    \"installedAttempt\": 3\n  },\n  \"paidModelCalls\": 0,\n  \"realModelQuality\": \"NOT_PROVEN\"\n}\n",
+      "stderr": ""
+    },
+    {
+      "case": "manifest-unknown-schema",
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true,
+      "outerManifestRebound": false,
+      "stdout": "",
+      "stderr": "FAIL: unknown final evidence schema\n"
+    },
+    {
+      "case": "manifest-wrong-hash",
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true,
+      "outerManifestRebound": false,
+      "stdout": "",
+      "stderr": "FAIL: file hash/length mismatch: local/full/result.json\n"
+    },
+    {
+      "case": "raw-file-tamper",
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true,
+      "outerManifestRebound": false,
+      "stdout": "",
+      "stderr": "FAIL: file hash/length mismatch: local/docs/run.log\n"
+    },
+    {
+      "case": "path-traversal",
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true,
+      "outerManifestRebound": false,
+      "stdout": "",
+      "stderr": "FAIL: invalid manifest entry: ../outside\n"
+    },
+    {
+      "case": "path-case-duplicate",
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true,
+      "outerManifestRebound": false,
+      "stdout": "",
+      "stderr": "FAIL: invalid manifest entry: LOCAL/FULL/RESULT.JSON\n"
+    },
+    {
+      "case": "file-symlink",
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true,
+      "outerManifestRebound": false,
+      "stdout": "",
+      "stderr": "FAIL: archive symlink: local/docs/run.log\n"
+    },
+    {
+      "case": "unregistered-extra-file",
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true,
+      "outerManifestRebound": false,
+      "stdout": "",
+      "stderr": "FAIL: unmanifested/nonregular file: not-in-manifest.txt\n"
+    },
+    {
+      "case": "source-wrong-ci-sha",
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true,
+      "outerManifestRebound": true,
+      "stdout": "",
+      "stderr": "FAIL: CI_main_NOT_COMPLETED_SUCCESS\n"
+    },
+    {
+      "case": "source-wrong-ci-tree",
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true,
+      "outerManifestRebound": true,
+      "stdout": "",
+      "stderr": "FAIL: CI_main_NOT_COMPLETED_SUCCESS\n"
+    },
+    {
+      "case": "source-wrong-ci-repository",
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true,
+      "outerManifestRebound": true,
+      "stdout": "",
+      "stderr": "FAIL: CI_main_NOT_COMPLETED_SUCCESS\n"
+    },
+    {
+      "case": "ci-unfinished-run",
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true,
+      "outerManifestRebound": true,
+      "stdout": "",
+      "stderr": "FAIL: CI_main_NOT_COMPLETED_SUCCESS\n"
+    },
+    {
+      "case": "ci-failed-run",
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true,
+      "outerManifestRebound": true,
+      "stdout": "",
+      "stderr": "FAIL: CI_main_NOT_COMPLETED_SUCCESS\n"
+    },
+    {
+      "case": "ci-cancelled-run",
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true,
+      "outerManifestRebound": true,
+      "stdout": "",
+      "stderr": "FAIL: CI_main_NOT_COMPLETED_SUCCESS\n"
+    },
+    {
+      "case": "ci-missing-job",
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true,
+      "outerManifestRebound": true,
+      "stdout": "",
+      "stderr": "FAIL: CI_main_JOB_SET_INCOMPLETE\n"
+    },
+    {
+      "case": "job-failed",
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true,
+      "outerManifestRebound": true,
+      "stdout": "",
+      "stderr": "FAIL: CI_main_JOB_NOT_SUCCESS\n"
+    },
+    {
+      "case": "job-foreign-run",
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true,
+      "outerManifestRebound": true,
+      "stdout": "",
+      "stderr": "FAIL: CI_main_JOB_NOT_SUCCESS\n"
+    },
+    {
+      "case": "job-foreign-attempt",
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true,
+      "outerManifestRebound": true,
+      "stdout": "",
+      "stderr": "FAIL: CI_main_JOB_NOT_SUCCESS\n"
+    },
+    {
+      "case": "job-replace-required-dual",
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true,
+      "outerManifestRebound": true,
+      "stdout": "",
+      "stderr": "FAIL: main CI required job set differs from tested workflow\n"
+    },
+    {
+      "case": "job-skipped-dual-reducer",
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true,
+      "outerManifestRebound": true,
+      "stdout": "",
+      "stderr": "FAIL: mandatory main workflow step absent/skipped: dual-platform acceptance (same SHA)\n"
+    },
+    {
+      "case": "job-skipped-release-attestation-reducer",
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true,
+      "outerManifestRebound": true,
+      "stdout": "",
+      "stderr": "FAIL: mandatory main workflow step absent/skipped: release attestation (P38-12)\n"
+    },
+    {
+      "case": "job-skipped-native-boundary",
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true,
+      "outerManifestRebound": true,
+      "stdout": "",
+      "stderr": "FAIL: native Windows mandatory boundary gate absent/skipped\n"
+    },
+    {
+      "case": "manifest-false-paid-quality",
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true,
+      "outerManifestRebound": false,
+      "stdout": "",
+      "stderr": "FAIL: wrong final source/distribution/quality identity\n"
+    },
+    {
+      "case": "optional-portable-tamper",
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true,
+      "outerManifestRebound": false,
+      "stdout": "",
+      "stderr": "FAIL: optional portable archive differs from published candidate bytes\n"
+    }
+  ]
+}

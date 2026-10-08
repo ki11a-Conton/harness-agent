@@ -1,0 +1,23 @@
+{
+  "status": "PASS",
+  "sourceSha": "c5bbe61fef101a8c9eb10edab673be8b2e0935e3",
+  "platform": "win32",
+  "node": "v22.23.3",
+  "cases": [
+    {
+      "name": "real CLI refuses a Web-owned directory before loading mutable stores",
+      "passed": true,
+      "exitCode": 1
+    },
+    {
+      "name": "OS releases product ownership after owner process crash",
+      "passed": true
+    },
+    {
+      "name": "failed Web startup closes resources and releases directory ownership",
+      "passed": true
+    }
+  ],
+  "paidModelCalls": 0,
+  "realModelQuality": "NOT_PROVEN"
+}

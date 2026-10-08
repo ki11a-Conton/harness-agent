@@ -1,0 +1,47 @@
+{
+  "status": "PASS",
+  "sourceSha": "c5bbe61fef101a8c9eb10edab673be8b2e0935e3",
+  "sourceTree": "603f7cc88a3ac8b3897c296b70eef4df1133132b",
+  "runId": "37740743372",
+  "runAttempt": "1",
+  "exportedFiles": 116,
+  "allFileBytesAndHashesVerified": true,
+  "archiveSha256": "f7006e6c22655d35576bbb800870bda792cfb0df4834fc9405dd55f30e9a278b",
+  "archiveBytes": 2176092,
+  "formalArchive": "ubuntu/assets/harness-agent-1.9.0-portable.tar.gz",
+  "sourceTreeClean": true,
+  "nativeWindowsIdenticalArchiveProven": true,
+  "windowsRebuiltArchiveSelected": false,
+  "consumers": [
+    {
+      "name": "ubuntu/installed",
+      "platform": "linux",
+      "archiveSha256": "f7006e6c22655d35576bbb800870bda792cfb0df4834fc9405dd55f30e9a278b",
+      "codingAssertions": 50,
+      "requests": 19,
+      "status": "PASS"
+    },
+    {
+      "name": "same-archive-windows",
+      "platform": "win32",
+      "archiveSha256": "f7006e6c22655d35576bbb800870bda792cfb0df4834fc9405dd55f30e9a278b",
+      "codingAssertions": 49,
+      "requests": 18,
+      "status": "PASS"
+    },
+    {
+      "name": "windows/installed",
+      "platform": "win32",
+      "archiveSha256": "ab8025626a0ec0f25275d01422c43f81373c8bb7b011dfdaad485e33060c1fe0",
+      "codingAssertions": 49,
+      "requests": 18,
+      "status": "PASS"
+    }
+  ],
+  "files": 1621,
+  "licenseFiles": 10,
+  "pinnedSourceNoticeBytesVerified": 7,
+  "actualSelectedPromptSha256": "12233460b23efefc95a2f32812badbcacaf08f16a9de1a8acf9ba3acb5152f1e",
+  "paidModelCalls": 0,
+  "realModelQuality": "NOT_PROVEN"
+}

@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "kind": "fixed-source-command-result",
+  "sourceSha": "c5bbe61fef101a8c9eb10edab673be8b2e0935e3",
+  "cleanSource": "c5bbe61fef101a8c9eb10edab673be8b2e0935e3",
+  "command": [
+    "python3",
+    "scripts/research/agent-context-memory-20261004/subreaper.py",
+    "pnpm",
+    "test",
+    "--reporter=default",
+    "--reporter=json",
+    "--outputFile=/workspace/harness-agent-gen1-ssefix/.ci/gen1-full-final-c5bbe61/vitest.json"
+  ],
+  "startedAt": "2026-10-08T06:59:31.404086+00:00",
+  "durationSeconds": 847.243,
+  "exitCode": 0,
+  "headBefore": "c5bbe61fef101a8c9eb10edab673be8b2e0935e3",
+  "headAfter": "c5bbe61fef101a8c9eb10edab673be8b2e0935e3",
+  "workingTreeBefore": "",
+  "workingTreeAfter": "",
+  "sourceVerifiedClean": true,
+  "outputFiles": [
+    {
+      "path": "run.log",
+      "bytes": 111386,
+      "sha256": "4043c9e1e0147014b8ab11e8e962f5cf32c2f70eb7ccc52c149a2bd586cdc677"
+    },
+    {
+      "path": "vitest.json",
+      "bytes": 3344305,
+      "sha256": "cf2e4405e2f4d91c3d0bafde01a9a85c405781b29503a0ac4b1a3e706f1a70ce"
+    }
+  ],
+  "vitestSummary": {
+    "success": true,
+    "numTotalTests": 9298,
+    "numPassedTests": 9284,
+    "numFailedTests": 0,
+    "numPendingTests": 14
+  },
+  "testResultFiles": 525,
+  "paidModelCalls": 0,
+  "realModelQuality": "NOT_PROVEN",
+  "status": "PASS"
+}

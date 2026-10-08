@@ -2,7 +2,7 @@
 
 审查基线：`22d97d860cfa1001df578b1193b3bc4c8ee1bce1`。本页汇总 2026-10-08 独立工作区中的实现审查和交叉复审，记录可复现的触发、修复及已有原始输出。它是本轮发现清单，不是“已证明不存在任何 bug”的声明。
 
-下文的 GREEN 是对应子任务工作树上的定向验收，存在重叠测试，不能相加冒充全量结果。部分 receipt 的 `sourceSha` 仍是上述 HEAD，执行时含未提交修改；它们不证明基线通过，也不替代最终固定源码。**本文编写时，最终固定提交的全量门、真实 Windows、独立安装包和远端双平台 CI 证据尚未产出。** 保留失败和中间记录，不将已经安排的验收写成 PASS。
+下文的 GREEN 是对应子任务工作树上的定向验收，存在重叠测试，不能相加冒充全量结果。部分 receipt 的 `sourceSha` 仍是上述 HEAD，执行时含未提交修改；它们不证明基线通过，也不替代最终固定源码。本表保留当时的开发回归身份与失败，不把局部结果改写成基线或最终固定源码通过。后续固定源码 `c5bbe61fef101a8c9eb10edab673be8b2e0935e3` 已完成全量、原生Windows、独立同包安装及完整双平台CI；实际命令、退出码、原件及许可边界见[最终工程验收](gen1-final-acceptance.md)。公开发布仍是最后交付动作。
 
 ## 阅读入口与来源
 
@@ -74,13 +74,13 @@ fork 当前是同 agent/cwd 的已结束、协议有效历史分支，不是任�
 | I4 已修复 | 缺值、空值、重复 `--data-dir` 静默失去持久化或吞 flag；help 被无效配置阻断 | provider 构造前严格解析，help 提前执行 | E-INTERACTION |
 | I5 已修复 | 新浏览器或清空 localStorage 无法发现已有后端会话 | 合并真实 `/api/sessions`，保留本地草稿和选中项，遵守既有侧栏上限 | E-INTERACTION；E-BROWSER-RED 中该独立 case 已通过 |
 | I6 已修复 | 同 session 两 tab 相互关闭 SSE，重连循环 | 按连接/sender 维护多个 sink；close 仅注销当前 sink；两个真实 SSE 均收到同一 turn 回复 | E-INTERACTION |
-| I7 已修复 | SSE 初始化 await history cursor 时客户端关闭，之后仍注册死连接 | 第一次 await 前安装 close 跟踪；读完 cursor 再核对关闭态 | [交互报告](gen1-interaction-comparison.md) 的真实 HTTP 延迟/关闭回归；完整固定源码复验待产出 |
+| I7 已修复 | SSE 初始化 await history cursor 时客户端关闭，之后仍注册死连接 | 第一次 await 前安装 close 跟踪；读完 cursor 再核对关闭态 | [交互报告](gen1-interaction-comparison.md) 的真实 HTTP 延迟/关闭回归；最终[固定源码24断言](evidence/gen1-final-20261008/local/interaction/result.json)和安装CI通过 |
 | I8 产品入口已防护；SDK 有限制 | 两个真实 Harness/SQLite host 同 dataDir，各写一个审批，最终只剩 B；A 内存仍 pending | CLI/Web 加载 stores 前获得 canonical dataDir 的本机排他 lease；真实 contender 拒绝且不写，正常/崩溃后 OS 释放 | E-HOST |
 | I9 已修复 | Web 部分启动失败后资源和 dataDir 所有权未释放 | 失败 startup cleanup 关闭资源并释放 lease；原占用目录可由下一 host 使用 | E-HOST |
 
 持续 `agent chat`、单 stdin 队列、每次审批串行消费和退出 resume 指令也是本轮第一代能力补齐；不将原本只有一次性 run 的能力缺口包装成已经复现过的双 readline 事故。仍沿既有 ToolOrchestrator/PermissionEngine/SandboxManager/Verification 执行副作用。
 
-dataDir lease 保护同机、同 network namespace 的 CLI/Web 产品入口，哈希碰撞/已有端口服务均 fail closed，不切随机端口逃避排他。SDK/embedder 必须自行保证同目录单 host 生命周期；SQLite 事务不保护另一个 JSON 审批/候选/恢复 snapshot。跨机器/NFS/不同 network namespace 不在该防护范围，使用独立目录。局部 lease 测试的 Windows case alias 在 Linux 是 SKIP，不能称真实 Windows 已通过。
+dataDir lease 保护同机、同 network namespace 的 CLI/Web 产品入口，哈希碰撞/已有端口服务均 fail closed，不切随机端口逃避排他。SDK/embedder 必须自行保证同目录单 host 生命周期；SQLite 事务不保护另一个 JSON 审批/候选/恢复 snapshot。跨机器/NFS/不同 network namespace 不在该防护范围，使用独立目录。局部 lease 测试的 Windows case alias 在 Linux 是 SKIP；最终真实Windows另由[原生CI](https://github.com/ki11a-Conton/harness-agent/actions/runs/37740745991)及[Windows宿主原件](evidence/gen1-final-20261008/ci-data/windows/host-lease/result.json)验收，不把Linux SKIP当Windows证据。
 
 ## 持久性、预算与迁移
 
@@ -106,28 +106,28 @@ dataDir lease 保护同机、同 network namespace 的 CLI/Web 产品入口，�
 | R3 已修复 | stress 同样将含名字的失败判为 produced | 相同失败优先语义 | E-RELEASE |
 | R4 已修复 | 仅拷贝 CI workflow 就声称双平台 ci-results 已 produced | workflow 仅归档定义，produced=false；实际 CI/固定源码 evidence 另验 | E-RELEASE |
 
-新增 portable 构建/完整性/仓库外消费脚本解决独立分发能力缺口；**尚无本轮最终安装包成功证据**。它必须由明确完整 clean source SHA 重新构建，从 Git blobs 和冻结依赖得到实际字节；不能沿用 dirty workspace 的 dist。版本化 archive、manifest/checksum、安装隔离与 tamper 检查、Node 版本和许可条件见发布报告，不把脚本存在当作发布完成。
+新增 portable 构建/完整性/仓库外消费脚本解决独立分发能力缺口。最终包从clean源码c5的Git blobs和冻结依赖fresh-build得到，已完成Ubuntu、Windows自建和Ubuntu同archive在Windows消费三腿安装，以及实际CI字节再次本地独立消费。正式候选archive的SHA256为 `f7006e6c22655d35576bbb800870bda792cfb0df4834fc9405dd55f30e9a278b`；doctor0、无workspace links、两层篡改拒绝。原件见[最终验收](gen1-final-acceptance.md)，版本化manifest、Node与许可条件见[发布报告](gen1-release-comparison.md)。候选资产尚未公开发布。
 
 ## 原始证据索引
 
-`/tmp` 为本轮暂存位置；`.ci` 是工作区持久证据目录。总体归档仍需保存原件、hash 与实际运行源码身份，不改写 RED 为 PASS。
+以下保留开发时的原件路径及结果；已交付原件见[90件原始开发归档](evidence/gen1-20261008/manifest.json)，其路径映射及哈希由manifest记录。其余原路径只说明当时观察位置，不把路径本身当作仓库已交付的文件。最终固定源码另见[验收档案](evidence/gen1-final-20261008/README.md)，不改写历史RED为PASS，也不改变开发归档的 `fixedSource: null`。
 
 | 标签 | 已存在原件与观察 |
 | --- | --- |
 | E-MODEL | `/tmp/gen1-model-red.{json,log}`：15 FAIL/10 PASS；`/tmp/gen1-model-green-final.{json,log}`：23 文件、380 PASS/0 FAIL/0 SKIP（M1–M5 相关组） |
 | E-REASONING | `/tmp/gen1-reasoning-red.{json,log}`：14 FAIL/5 PASS，基线原始 blob 的一次性 fixture；GREEN 包含在 E-MODEL，URL fallback 小修另有 `/tmp/gen1-reasoning-final-smallfix.{json,log}` 19 PASS |
 | E-SKILLS | `/tmp/gen1-skills-stream-red-final.{json,log}`：2 FAIL/22 PASS；`/tmp/gen1-skills-stream-green.{json,log}`：5 文件、119 PASS/0 FAIL/0 SKIP；mapper 另有 `/tmp/gen1-model-projection-green.{json,log}` 9 PASS |
-| E-SESSION | [`.ci/gen1-session/index.json`](../.ci/gen1-session/index.json) 指向 public-session、gateway-resume-fork-list、idempotency、fork-integrity 的独立 RED；[`acceptance-green.json`](../.ci/gen1-session/acceptance-green.json)：26 文件、287 PASS/0 FAIL/0 SKIP |
-| E-SDK | [实际 SDK 答案 RED](../.ci/gen1-session/actual-sdk-final-answer-red.json)、[实际文本 delta RED](../.ci/gen1-session/actual-text-delta-red.json) → [`sdk-final-green.json`](../.ci/gen1-session/sdk-final-green.json)：2 个真实 Harness/AppServer/SDK case PASS，包含 partial failure、错误身份、reasoning 不泄漏 |
-| E-PROVIDER-IDENTITY | [原 stateful 现场](../.ci/gen1-session/stateful-provider-restart.json)、[首批 3 FAIL/3 PASS](../.ci/gen1-session/provider-config-identity-red.json)、[严格声明 4 FAIL/6 SKIP](../.ci/gen1-session/provider-identity-validation-red.json)、[程序型数组 1 FAIL/10 SKIP](../.ci/gen1-session/provider-array-subclass-red.json) 均保留；最终 [`provider-config-identity-eleven-green.json`](../.ci/gen1-session/provider-config-identity-eleven-green.json) 11/11 PASS；[`provider-config-identity-freeze-green.json`](../.ci/gen1-session/provider-config-identity-freeze-green.json) 21 文件、191 PASS/0 FAIL/0 SKIP；[最终 typecheck 日志](../.ci/gen1-session/provider-config-identity-freeze-typecheck-pass.log) |
+| E-SESSION | [`.ci/gen1-session/index.json`](evidence/gen1-20261008/regressions/session/index.json) 指向 public-session、gateway-resume-fork-list、idempotency、fork-integrity 的独立 RED；[`acceptance-green.json`](evidence/gen1-20261008/regressions/session/acceptance-green.json)：26 文件、287 PASS/0 FAIL/0 SKIP |
+| E-SDK | [实际 SDK 答案 RED](evidence/gen1-20261008/regressions/session/actual-sdk-final-answer-red.json)、[实际文本 delta RED](evidence/gen1-20261008/regressions/session/actual-text-delta-red.json) → [`sdk-final-green.json`](evidence/gen1-20261008/regressions/session/sdk-final-green.json)：2 个真实 Harness/AppServer/SDK case PASS，包含 partial failure、错误身份、reasoning 不泄漏 |
+| E-PROVIDER-IDENTITY | [原 stateful 现场](evidence/gen1-20261008/regressions/session/stateful-provider-restart.json)、[首批 3 FAIL/3 PASS](evidence/gen1-20261008/regressions/session/provider-config-identity-red.json)、[严格声明 4 FAIL/6 SKIP](evidence/gen1-20261008/regressions/session/provider-identity-validation-red.json)、[程序型数组 1 FAIL/10 SKIP](evidence/gen1-20261008/regressions/session/provider-array-subclass-red.json) 均保留；最终 [`provider-config-identity-eleven-green.json`](evidence/gen1-20261008/regressions/session/provider-config-identity-eleven-green.json) 11/11 PASS；[`provider-config-identity-freeze-green.json`](evidence/gen1-20261008/regressions/session/provider-config-identity-freeze-green.json) 21 文件、191 PASS/0 FAIL/0 SKIP；最终 typecheck 日志（开发时原路径：`.ci/gen1-session/provider-config-identity-freeze-typecheck-pass.log`） |
 | E-ACTOR | `/tmp/gen1-followup-wakeup-red.json`：6 FAIL/1 PASS；`/tmp/gen1-followup-uncertain-red.json`：单选反例 1 FAIL/7 SKIP；`/tmp/gen1-followup-final-green.json`：6 文件、102 PASS/0 FAIL/0 SKIP，含新增 8 项确定性交错与已有恢复/竞争 |
 | E-TOOLS | `/tmp/gen1-text-tools-red.log`：初始 6/6 FAIL；`/tmp/gen1-tools-final-v4.{json,log}`：12 文件、224 PASS/0 FAIL/0 SKIP；`/tmp/gen1-tools-typecheck-final.log` |
 | E-REGEX | `/tmp/gen1-grep-red-probe-20261008.mjs`、`/tmp/gen1-grep-redos-red.json`、`/tmp/gen1-grep-redos-green.json`，真实子进程 dist/timeout/abort，不依靠 mock timer 掩盖主线程冻结 |
 | E-SYMBOL | `/tmp/gen1-symbol-redos-probe.{mjs,json}`、`/tmp/gen1-symbol-redos-green.json`，来自独立复审的 native 阻塞现场 |
 | E-INDEX | `/tmp/gen1-index-symbol-redos-probe.mjs`、`/tmp/gen1-index-symbol-redos-{red,green}.json`；`/tmp/gen1-index-export-redos-probe.mjs`、`/tmp/gen1-index-export-redos-{red,green}.json` |
-| E-INTERACTION | [`local-final/result.json`](../.ci/gen1-interaction-local-final/result.json)：Linux 实际 CLI/Web 子进程、loopback HTTP provider、native 工具/审批/验证/重启/取消/SSE，24 断言 PASS、0 付费调用；同行 assets 有真实请求/stdout/stderr/history。定向单元与 HTTP 反例源码/命令见交互报告 |
-| E-BROWSER-RED | [真实 Chromium 首轮结果](../.ci/gen1-web-browser/browser-result.json) 保留 **FAILED**：deny、blocked cancel、socket outage case 未运行到预期，发现 Actor late-admission/lost-wake。修复后[工作树补验](../.ci/gen1-web-browser-postactor/browser-result.json) 为 29/29 case PASS，0 浏览器错误；它仍含未提交源码，不替代最终 fixed-source 浏览器验收 |
-| E-HOST | `/tmp/gen1-data-dir-host-probe.{mjs,json}`：两个真实 Harness 的 durablePending 只剩 B；`/tmp/gen1-data-dir-lease-green.json`：5 PASS/1 Windows-platform SKIP；[`gen1-host-lease-first/result.json`](../.ci/gen1-host-lease-first/result.json)：Linux CLI 写前拒绝、崩溃释放、失败 Web startup 释放三 case PASS |
+| E-INTERACTION | `local-final/result.json`（开发时原路径：`.ci/gen1-interaction-local-final/result.json`）：Linux 实际 CLI/Web 子进程、loopback HTTP provider、native 工具/审批/验证/重启/取消/SSE，24 断言 PASS、0 付费调用；同行 assets 有真实请求/stdout/stderr/history。定向单元与 HTTP 反例源码/命令见交互报告 |
+| E-BROWSER-RED | 真实 Chromium 首轮结果（开发时原路径：`.ci/gen1-web-browser/browser-result.json`） 保留 **FAILED**：deny、blocked cancel、socket outage case 未运行到预期，发现 Actor late-admission/lost-wake。修复后工作树补验（开发时原路径：`.ci/gen1-web-browser-postactor/browser-result.json`） 为 29/29 case PASS，0 浏览器错误；它仍含未提交源码，不替代最终 fixed-source 浏览器验收 |
+| E-HOST | `/tmp/gen1-data-dir-host-probe.{mjs,json}`：两个真实 Harness 的 durablePending 只剩 B；`/tmp/gen1-data-dir-lease-green.json`：5 PASS/1 Windows-platform SKIP；`gen1-host-lease-first/result.json`（开发时原路径：`.ci/gen1-host-lease-first/result.json`）：Linux CLI 写前拒绝、崩溃释放、失败 Web startup 释放三 case PASS |
 | E-PERSISTENCE | `/tmp/gen1-independent-red.{json,log}`：13 FAIL/1 PASS → `/tmp/gen1-independent-green.{json,log}`：14 PASS；最终 `/tmp/gen1-persistence-release-final-green.{json,log}`：7 文件、60 PASS/0 FAIL/0 SKIP |
 | E-ASK | `/tmp/gen1-ask-mutations-red.{json,log}`：3 新 FAIL、2 已修加载 PASS；最终 E-PERSISTENCE 含三个原生持久化失败/重试回归 |
 | E-BUDGET | `/tmp/gen1-budget-bootstrap-red.{json,log}`：1 FAIL；`/tmp/gen1-budget-bootstrap-probe.{mjs,json}` 保留双预算现场；最终 `/tmp/gen1-budget-all-final-green.{json,log}`：9 文件、110 PASS/0 FAIL/0 SKIP |
@@ -137,15 +137,15 @@ dataDir lease 保护同机、同 network namespace 的 CLI/Web 产品入口，�
 | E-RELEASE | `/tmp/gen1-release-audit-red/result.json`：4 个实际 produced=true 假阳性；`/tmp/gen1-release-artifacts-green.json`：6 PASS/0 FAIL/0 SKIP |
 | 安全/静态局部组 | `/tmp/gen1-audit-security-full.{json,log}`：20 文件、2143 PASS/0 FAIL/0 SKIP；`/tmp/gen1-audit-no-silent-catch-final.{json,log}`：4 PASS。它们仍不是最终固定源码的全量 release attestation |
 
-## 尚未关闭与尚未证明
+## 恢复身份合同与尚未证明的能力
 
-**M9/G11 已通过显式可选稳定身份方案修复，未知 provider 仍保守比较。** [原真实复现](../.ci/gen1-session/stateful-provider-restart.json) 的同实例重建误报及[中间失败记录](../.ci/gen1-session/stateful-provider-intermediate.json) 保留为历史 RED，不能覆盖成新 PASS。最终 11 直接反例与 21 文件 191 项组验证原实例执行/重建、真实脚本或 unknown endpoint 改变仍拒绝、普通 provider 旧 hash 不变、冻结值与 hash 保持同一捕获数据。独立只读 native dist 复核再次确认：自定义继承 iterator 的数组拒绝声明且回退；unknown 字段保留；原 snapshot 不被外部数组 mutation 改写，真实配置变化产生不同 fingerprint。
+**M9/G11 已通过显式可选稳定身份方案修复，未知 provider 仍保守比较。** [原真实复现](evidence/gen1-20261008/regressions/session/stateful-provider-restart.json) 的同实例重建误报及[中间失败记录](evidence/gen1-20261008/regressions/session/stateful-provider-intermediate.json) 保留为历史 RED，不能覆盖成新 PASS。最终 11 直接反例与 21 文件 191 项组验证原实例执行/重建、真实脚本或 unknown endpoint 改变仍拒绝、普通 provider 旧 hash 不变、冻结值与 hash 保持同一捕获数据。独立只读 native dist 复核再次确认：自定义继承 iterator 的数组拒绝声明且回退；unknown 字段保留；原 snapshot 不被外部数组 mutation 改写，真实配置变化产生不同 fingerprint。
 
 这个方案不按 id/类名自动删除运行字段：自定义 provider 必须声明全部影响执行的配置与必要实现版本，返回 plain stable JSON；未声明或程序型脚本保留原 fail-closed fallback，仍可能因运行字段变化拒绝同实例恢复，可以按相同构造配置重建对象或明确实现身份合同。早期 Scripted 会话的旧字段格式不自动豁免/重置冻结基线，出现 drift 时建立新会话。原执行 provider 没有被 identity record 替换，也没有为测试放宽未知实现的身份门。
 
 以下能力尚未集成：Anthropic Messages/原生 thinking、OpenAI Responses/订阅 OAuth、多模态、自动模型目录与 effort 控制、actual usage/tokenizer 校准预算、可选模型摘要；完整 TUI、任意消息树 fork/rollback、PTY/后台 stdin、完整 LSP、所有外部记忆供应商。它们是后续能力，不应伪装成本轮已修 bug 或已交付优势。
 
-最终验收还需在同一个明确 clean source SHA 产出全量 typecheck/build/tests、安全/协议/覆盖率与既有 release 门、实际 CLI/Web/Chromium、真实 Windows、portable archive 构建与仓库外消费，以及远端 CI 收据。阶段性 Linux PASS、Windows 分支的静态代码或 SKIP、已写发布脚本都不能替代这些证据。付费真实模型编码质量、费用及与参考 agent 的成功率比较仍为 `NOT_PROVEN`，由独立模型实验验证。
+最终clean源码c5已产出全量9284 PASS / 0 FAIL / 14 pending、安全2143、协议52、实际CLI/Web24断言、Chromium29cases/82断言、原生Windows及同archive消费原件。完整CI run37740692345的10jobs全部SUCCESS，包含coverage、sameSHA双平台与P38-12 attestation；阶段性Linux结果、Windows静态代码/SKIP和脚本定义没有被用来替代这些证据。[最终验收](gen1-final-acceptance.md)单独绑定准确源码、命令和终态。付费真实模型编码质量、费用及与参考 agent 的成功率比较仍为 `NOT_PROVEN`，由独立模型实验验证。
 
 ## 固定源码首轮验收后的补修
 
@@ -160,4 +160,18 @@ dataDir lease 保护同机、同 network namespace 的 CLI/Web 产品入口，�
 
 GitHub Actions 原件下载的储存域在本环境由代理拒绝；原生 Release 资产下载已实际验证可用。新增受限CI导出只向本任务现有的私有draft写入准确源码的证据，失败也保存原件，绝不创建/发布或覆盖Release。安装资产须三腿真实通过且Linux包在Windows消费的hash相同才可准备；完整CI与发布仍由主交付另验。每个阶段保存原始stdout/stderr/hash，不能用定义文件或失败日志冒充成功。
 
-这些补验是中间开发结果，后续仍须以新clean源码重新完成G7。真实模型质量仍NOT_PROVEN。
+以上保留中间开发结果和原始失败；后续已由clean源码c5重新完成G7的必要工程验收，公开发布仍待最后动作。真实模型质量仍NOT_PROVEN。
+
+
+## 干净交付验收新增问题与修复
+
+| 编号 | 真实问题 | 解决与实际验收 |
+| --- | --- | --- |
+| M2 补充 | b9精确文本规则漏正式CONTEXT_OVERFLOW错误码，两个active-context回归失败 | 保留auth/rate/unsupported参数排除后识别正式code；RED6 FAIL→58 PASS，模型24文件416 PASS；最终全量9284 PASS包含原两个回归 |
+| R5 | portable将根tsconfig references当workspace inventory，遗漏store/orchestration导致独立包无法产出 | 实际pnpm枚举、完整闭包检查及fresh构建26包；RED8 PASS/2 FAIL→14 portable PASS，CI双平台安装及同bytes消费通过 |
+| R6 | 原生Windows短路径临时别名与realpath直接比较，合法根误报越界/解包拒绝 | 只在受信任创建/发现边界统一规范路径；原native5 PASS/5 FAIL→14 PASS，Linux别名负控也验证；extractArchive安全规则未放宽 |
+| R7 | 历史manifest90件有20原始.log被Git忽略，原tree校验假定它们已交付；新worktree缺文件 | 原件哈希匹配后显式提交20个文件；独立仅Git blobs还原92件并校验90件PASS；归档最终使用原字节属性，原RED和schema不改 |
+
+以下为验收fixture补修，不能伪称新的产品功能或另计模型效果：RPC原fixture预填idle队列不符合自动执行合同，改实际running gate并验证新turn/真实消息与pending0；CRLF fixture以Git blob为期望，保留产品raw-byte构建；SSE脚本原先等text就立即assert稍后terminal，改等待同turn/session/event ID，restart排除旧重放事件，保持原15秒期限及失败断言，受控6/6与真实双平台交互均通过。
+
+49条初审记录、上述验收新增缺陷及fixture补修已实现；最终测试源码与证据见[最终验收](gen1-final-acceptance.md)。这里记录已发现并解决的问题，不声称不存在未知bug。真实模型质量仍NOT_PROVEN。
