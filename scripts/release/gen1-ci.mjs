@@ -2,6 +2,7 @@
 // One cross-platform entry: every stage uses the fixed workflow source and
 // real exits. A failed interaction/build/installed run prevents a PASS receipt.
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 
@@ -11,9 +12,21 @@ if (source.status !== 0 || !/^[a-f0-9]{40}$/.test(sha) || sha !== process.env.GI
 const directory = resolve('.ci/gen1');
 await mkdir(directory, { recursive: true });
 const steps = [];
-function run(name, script, args = []) {
+async function run(name, script, args = []) {
   const result = spawnSync(process.execPath, [script, ...args], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, windowsHide: true });
-  steps.push({ name, argv: [process.execPath, script, ...args], exitCode: result.status, error: result.error?.message ?? null });
+  // Preserve the complete UTF-8 capture before recording or throwing a failure.
+  // These are CI diagnostics only; the subprocess/maxBuffer contract is unchanged.
+  const stage = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(stage)) throw new Error('GEN1_UNSAFE_STAGE_NAME');
+  const stdout = Buffer.from(result.stdout ?? '', 'utf8');
+  const stderr = Buffer.from(result.stderr ?? '', 'utf8');
+  const stdoutName = `${stage}.stdout.log`; const stderrName = `${stage}.stderr.log`;
+  await writeFile(join(directory, stdoutName), stdout);
+  await writeFile(join(directory, stderrName), stderr);
+  const logRecord = (filename, bytes) => ({ path: `.ci/gen1/${filename}`, bytes: bytes.length,
+    sha256: createHash('sha256').update(bytes).digest('hex') });
+  steps.push({ name, argv: [process.execPath, script, ...args], exitCode: result.status, error: result.error?.message ?? null,
+    stdoutLog: logRecord(stdoutName, stdout), stderrLog: logRecord(stderrName, stderr) });
   process.stdout.write(result.stdout ?? ''); process.stderr.write(result.stderr ?? '');
   if (result.error || result.status !== 0) {
     const detail = result.error?.message ?? `exit=${result.status}; signal=${result.signal ?? 'none'}`;
@@ -23,11 +36,11 @@ function run(name, script, args = []) {
   }
 }
 try {
-  run('portable unit/security', '--test', ['scripts/release/portable.test.mjs']);
-  run('real multi-turn interaction', 'scripts/research/gen1-20261008/interaction-acceptance.mjs', ['--out', join(directory, 'interaction')]);
-  run('actual product host ownership', 'scripts/research/gen1-20261008/host-lease-acceptance.mjs', ['--out', join(directory, 'host-lease')]);
-  run('fixed-source portable build', 'scripts/release/portable.mjs', ['build', '--out', join(directory, 'assets'), '--version', '1.9.0', '--source-sha', sha]);
-  run('installed coding and tamper controls', 'scripts/release/portable-smoke.mjs', ['--archive', join(directory, 'assets/harness-agent-1.9.0-portable.tar.gz'), '--out', join(directory, 'installed'), '--version', '1.9.0', '--source-sha', sha]);
+  await run('portable unit/security', '--test', ['scripts/release/portable.test.mjs']);
+  await run('real multi-turn interaction', 'scripts/research/gen1-20261008/interaction-acceptance.mjs', ['--out', join(directory, 'interaction')]);
+  await run('actual product host ownership', 'scripts/research/gen1-20261008/host-lease-acceptance.mjs', ['--out', join(directory, 'host-lease')]);
+  await run('fixed-source portable build', 'scripts/release/portable.mjs', ['build', '--out', join(directory, 'assets'), '--version', '1.9.0', '--source-sha', sha]);
+  await run('installed coding and tamper controls', 'scripts/release/portable-smoke.mjs', ['--archive', join(directory, 'assets/harness-agent-1.9.0-portable.tar.gz'), '--out', join(directory, 'installed'), '--version', '1.9.0', '--source-sha', sha]);
   await writeFile(join(directory, 'result.json'), JSON.stringify({ status: 'PASS', sourceSha: sha, platform: process.platform,
     node: process.version, steps, paidModelCalls: 0, realModelQuality: 'NOT_PROVEN' }, null, 2) + '\n');
 } catch (error) {
