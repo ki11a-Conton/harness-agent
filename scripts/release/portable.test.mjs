@@ -5,12 +5,40 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { gunzipSync, gzipSync } from 'node:zlib';
 import { digest, extractArchive, makeArchive, safePath, verifyPortable } from './portable-lib.mjs';
-import { copyPackageNotices, run, sourceSnapshot } from './portable.mjs';
+import { copyPackageNotices, run, sourceSnapshot, workspacePackages } from './portable.mjs';
 
 async function temporary(body) {
   const directory = await mkdtemp(join(tmpdir(), 'harness-portable-test-'));
   try { await body(directory); } finally { await rm(directory, { recursive: true, force: true }); }
 }
+async function workspaceFixture(dir) {
+  await writeFile(join(dir, 'package.json'), JSON.stringify({ name: 'portable-fixture', version: '1.0.0', private: true }));
+  await writeFile(join(dir, 'pnpm-workspace.yaml'), 'packages:\n  - "apps/*"\n  - "packages/*"\n');
+  await writeFile(join(dir, 'tsconfig.json'), JSON.stringify({ references: [{ path: './apps/cli' }] }));
+  for (const [path, metadata] of [
+    ['apps/cli', { name: '@ar/cli', version: '0.1.0', dependencies: { '@ar/store': 'workspace:*' } }],
+    ['packages/store', { name: '@ar/store', version: '0.1.0', dependencies: { '@ar/contracts': 'workspace:*' } }],
+    ['packages/contracts', { name: '@ar/contracts', version: '0.1.0' }],
+    ['packages/orchestration', { name: '@ar/orchestration', version: '0.1.0', dependencies: { '@ar/contracts': 'workspace:*' } }],
+  ]) {
+    await mkdir(join(dir, path), { recursive: true });
+    await writeFile(join(dir, path, 'package.json'), JSON.stringify(metadata));
+    await writeFile(join(dir, path, 'tsconfig.json'), JSON.stringify({ compilerOptions: { composite: true }, files: [] }));
+  }
+}
+test('portable enumerates the actual workspace, including indirect and unreferenced packages', async () => temporary(async dir => {
+  await workspaceFixture(dir);
+  const packages = await workspacePackages(dir);
+  assert.deepEqual(packages.map(pkg => pkg.metadata.name).sort(), ['@ar/cli', '@ar/contracts', '@ar/orchestration', '@ar/store']);
+  assert.ok(packages.every(pkg => pkg.directory.startsWith(dir)));
+}));
+test('portable rejects missing production workspace dependencies and duplicate package names', async () => temporary(async dir => {
+  await workspaceFixture(dir);
+  await writeFile(join(dir, 'apps/cli/package.json'), JSON.stringify({ name: '@ar/cli', version: '0.1.0', dependencies: { '@ar/missing': 'workspace:*' } }));
+  await assert.rejects(workspacePackages(dir), /unresolved workspace dependency.*@ar\/missing/);
+  await writeFile(join(dir, 'apps/cli/package.json'), JSON.stringify({ name: '@ar/store', version: '0.1.0' }));
+  await assert.rejects(workspacePackages(dir), /duplicate workspace package.*@ar\/store/);
+}));
 test('package-local adapted-source licenses and root notices ship byte for byte', async () => temporary(async dir => {
   const source = join(dir, 'source'); const target = join(dir, 'installed'); await mkdir(join(source, 'licenses'), { recursive: true });
   const mit = Buffer.from('MIT License\r\nCopyright (c) 2026 DeepSeek\r\n');
@@ -73,6 +101,9 @@ test('duplicate manifest paths and parent directory links cannot stand in for pa
 }));
 test('snapshot uses pinned Git blobs and ignores stale dist or untracked ignored source', async () => temporary(async dir => {
   const repo = join(dir, 'repo'); await mkdir(join(repo, 'packages/a/src'), { recursive: true });
+  await workspaceFixture(repo);
+  await mkdir(join(repo, 'packages/store/licenses'), { recursive: true });
+  await writeFile(join(repo, 'packages/store/licenses/NOTICE.txt'), 'indirect package attribution\r\n');
   await writeFile(join(repo, 'packages/a/src/index.ts'), 'export const pinned = true;\n');
   await writeFile(join(repo, '.gitignore'), '**/dist/\n**/ignored.ts\n');
   run('git', ['init'], { cwd: repo }); run('git', ['add', '.'], { cwd: repo });
@@ -82,6 +113,8 @@ test('snapshot uses pinned Git blobs and ignores stale dist or untracked ignored
   await writeFile(join(repo, 'packages/a/src/ignored.ts'), 'ignored injected source');
   const snapshot = join(dir, 'snapshot'); await sourceSnapshot(repo, sourceSha, snapshot);
   assert.equal(await readFile(join(snapshot, 'packages/a/src/index.ts'), 'utf8'), 'export const pinned = true;\n');
+  assert.deepEqual((await workspacePackages(snapshot)).map(pkg => pkg.metadata.name), ['@ar/cli', '@ar/contracts', '@ar/orchestration', '@ar/store']);
+  assert.equal(await readFile(join(snapshot, 'packages/store/licenses/NOTICE.txt'), 'utf8'), 'indirect package attribution\r\n');
   await assert.rejects(readFile(join(snapshot, 'packages/a/dist/index.js')), /ENOENT/);
   await assert.rejects(readFile(join(snapshot, 'packages/a/src/ignored.ts')), /ENOENT/);
   await writeFile(join(repo, 'packages/a/src/index.ts'), 'dirty');

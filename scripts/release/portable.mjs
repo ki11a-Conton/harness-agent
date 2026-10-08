@@ -4,7 +4,7 @@
 import { spawnSync } from 'node:child_process';
 import { cp, mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
-import { delimiter, dirname, join, resolve } from 'node:path';
+import { delimiter, dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
@@ -77,13 +77,34 @@ export async function copyPackageNotices(directory, target) {
     await cp(join(directory, entry.name), join(target, entry.name));
   }
 }
-async function workspacePackages(snapshot) {
-  const root = JSON.parse(await readFile(join(snapshot, 'tsconfig.json'), 'utf8'));
-  return Promise.all(root.references.map(async ref => {
-    const directory = resolve(snapshot, ref.path);
+export async function workspacePackages(snapshot) {
+  // TypeScript's root references are a build entry list, not the workspace
+  // inventory: indirect @ar/store and unlisted @ar/orchestration still need
+  // complete manifests and freshly compiled distribution files.
+  const inventory = JSON.parse(pnpm(['-r', 'list', '--depth', '-1', '--json'], snapshot));
+  if (!Array.isArray(inventory)) throw new Error('invalid pnpm workspace inventory');
+  const root = await realpath(snapshot);
+  const packages = await Promise.all(inventory.filter(pkg => resolve(pkg.path) !== resolve(snapshot)).map(async pkg => {
+    const directory = await realpath(pkg.path);
+    const inside = relative(root, directory);
+    if (!inside || inside === '..' || inside.startsWith(`..${process.platform === 'win32' ? '\\' : '/'}`) || isAbsolute(inside)) throw new Error('workspace package is outside pinned source');
     const metadata = JSON.parse(await readFile(join(directory, 'package.json'), 'utf8'));
+    safePath(metadata.name);
+    if (typeof metadata.version !== 'string' || !metadata.version) throw new Error(`workspace package version missing: ${metadata.name}`);
+    await readFile(join(directory, 'tsconfig.json'));
     return { directory, metadata };
   }));
+  const names = new Set();
+  for (const { metadata } of packages) {
+    if (names.has(metadata.name)) throw new Error(`duplicate workspace package: ${metadata.name}`);
+    names.add(metadata.name);
+  }
+  for (const { metadata } of packages) {
+    for (const [name, range] of Object.entries(metadata.dependencies ?? {})) {
+      if ((name.startsWith('@ar/') || String(range).startsWith('workspace:')) && !names.has(name)) throw new Error(`unresolved workspace dependency for ${metadata.name}: ${name}`);
+    }
+  }
+  return packages.sort((a, b) => a.metadata.name.localeCompare(b.metadata.name, 'en'));
 }
 
 export async function buildPortable({ repo, out, version, sourceSha, offline = false, storeDir }) {
@@ -96,8 +117,8 @@ export async function buildPortable({ repo, out, version, sourceSha, offline = f
     // No dist or node_modules is read from the caller's checkout. Git snapshot
     // and a fresh frozen-lockfile install make stale build output impossible.
     const installLog = pnpm(['install', '--frozen-lockfile', '--ignore-scripts', ...(offline ? ['--offline'] : []), ...(storeDir ? ['--store-dir', storeDir] : [])], snapshot);
-    const buildLog = pnpm(['exec', 'tsc', '-b', '--force'], snapshot);
     const packages = await workspacePackages(snapshot);
+    const buildLog = pnpm(['exec', 'tsc', '-b', '--force', ...packages.map(pkg => pkg.directory)], snapshot);
     const versions = Object.fromEntries(packages.map(pkg => [pkg.metadata.name, pkg.metadata.version]));
     const external = new Map();
     async function copyExternal(name, from) {
