@@ -15,7 +15,12 @@ function run(name, script, args = []) {
   const result = spawnSync(process.execPath, [script, ...args], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, windowsHide: true });
   steps.push({ name, argv: [process.execPath, script, ...args], exitCode: result.status, error: result.error?.message ?? null });
   process.stdout.write(result.stdout ?? ''); process.stderr.write(result.stderr ?? '');
-  if (result.error || result.status !== 0) throw new Error(`GEN1_STAGE_FAILED: ${name}`);
+  if (result.error || result.status !== 0) {
+    const detail = result.error?.message ?? `exit=${result.status}; signal=${result.signal ?? 'none'}`;
+    const annotation = `${name}: ${detail}`.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
+    console.error(`::error title=Gen1 stage failure::${annotation}`);
+    throw new Error(`GEN1_STAGE_FAILED: ${name}: ${detail}`);
+  }
 }
 try {
   run('portable unit/security', '--test', ['scripts/release/portable.test.mjs']);

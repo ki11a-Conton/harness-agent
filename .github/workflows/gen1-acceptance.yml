@@ -87,3 +87,41 @@ jobs:
           name: gen1-same-archive-windows-${{ github.sha }}-${{ github.run_id }}
           path: .ci/same-archive-windows/
           if-no-files-found: error
+
+  export-existing-draft:
+    # Authorized private draft preparation only; this job cannot publish.
+    needs: [installed, same-archive-on-windows]
+    if: ${{ always() && startsWith(github.ref, 'refs/heads/validation/gen1-') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify bounded draft exporter controls without network
+        run: node --test scripts/release/gen1-export-draft.test.mjs
+      - name: Download exact-source Ubuntu evidence
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: gen1-ubuntu-latest-${{ github.sha }}-${{ github.run_id }}
+          path: .ci/gen1-export/ubuntu
+      - name: Download exact-source Windows evidence
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: gen1-windows-latest-${{ github.sha }}-${{ github.run_id }}
+          path: .ci/gen1-export/windows
+      - name: Download identical-byte native Windows evidence
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: gen1-same-archive-windows-${{ github.sha }}-${{ github.run_id }}
+          path: .ci/gen1-export/same-archive-windows
+      - name: Export evidence to the existing exact-source draft only
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/release/gen1-export-draft.mjs
