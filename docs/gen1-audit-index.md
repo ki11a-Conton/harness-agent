@@ -2,7 +2,7 @@
 
 审查基线：`22d97d860cfa1001df578b1193b3bc4c8ee1bce1`。本页汇总 2026-10-08 独立工作区中的实现审查和交叉复审，记录可复现的触发、修复及已有原始输出。它是本轮发现清单，不是“已证明不存在任何 bug”的声明。
 
-下文的 GREEN 是对应子任务工作树上的定向验收，存在重叠测试，不能相加冒充全量结果。部分 receipt 的 `sourceSha` 仍是上述 HEAD，执行时含未提交修改；它们不证明基线通过，也不替代最终固定源码。本表保留当时的开发回归身份与失败，不把局部结果改写成基线或最终固定源码通过。后续固定源码 `c5bbe61fef101a8c9eb10edab673be8b2e0935e3` 已完成全量、原生Windows、独立同包安装及完整双平台CI；实际命令、退出码、原件及许可边界见[最终工程验收](gen1-final-acceptance.md)。公开发布仍是最后交付动作。
+下文的 GREEN 是对应子任务工作树上的定向验收，存在重叠测试，不能相加冒充全量结果。部分 receipt 的 `sourceSha` 仍是上述 HEAD，执行时含未提交修改；它们不证明基线通过，也不替代最终固定源码。本表保留当时的开发回归身份与失败，不把局部结果改写成基线或最终固定源码通过。后续固定源码 `c5bbe61fef101a8c9eb10edab673be8b2e0935e3` 已完成全量、原生Windows、独立同包安装及完整双平台CI；实际命令、退出码、原件及许可边界见[最终工程验收](gen1-final-acceptance.md)。[v1.9.0 正式发布](https://github.com/ki11a-Conton/harness-agent/releases/tag/v1.9.0)及main推送均已完成，原始工程验收源码保持不变。
 
 ## 阅读入口与来源
 
@@ -106,7 +106,7 @@ dataDir lease 保护同机、同 network namespace 的 CLI/Web 产品入口，�
 | R3 已修复 | stress 同样将含名字的失败判为 produced | 相同失败优先语义 | E-RELEASE |
 | R4 已修复 | 仅拷贝 CI workflow 就声称双平台 ci-results 已 produced | workflow 仅归档定义，produced=false；实际 CI/固定源码 evidence 另验 | E-RELEASE |
 
-新增 portable 构建/完整性/仓库外消费脚本解决独立分发能力缺口。最终包从clean源码c5的Git blobs和冻结依赖fresh-build得到，已完成Ubuntu、Windows自建和Ubuntu同archive在Windows消费三腿安装，以及实际CI字节再次本地独立消费。正式候选archive的SHA256为 `f7006e6c22655d35576bbb800870bda792cfb0df4834fc9405dd55f30e9a278b`；doctor0、无workspace links、两层篡改拒绝。原件见[最终验收](gen1-final-acceptance.md)，版本化manifest、Node与许可条件见[发布报告](gen1-release-comparison.md)。候选资产尚未公开发布。
+新增 portable 构建/完整性/仓库外消费脚本解决独立分发能力缺口。最终包从clean源码c5的Git blobs和冻结依赖fresh-build得到，已完成Ubuntu、Windows自建和Ubuntu同archive在Windows消费三腿安装，以及实际CI字节再次本地独立消费。正式发布archive的SHA256为 `f7006e6c22655d35576bbb800870bda792cfb0df4834fc9405dd55f30e9a278b`；doctor0、无workspace links、两层篡改拒绝。原件见[最终验收](gen1-final-acceptance.md)，版本化manifest、Node与许可条件见[发布报告](gen1-release-comparison.md)。正式资产已公开，见[v1.9.0 正式发布](https://github.com/ki11a-Conton/harness-agent/releases/tag/v1.9.0)。
 
 ## 原始证据索引
 
@@ -160,7 +160,7 @@ dataDir lease 保护同机、同 network namespace 的 CLI/Web 产品入口，�
 
 GitHub Actions 原件下载的储存域在本环境由代理拒绝；原生 Release 资产下载已实际验证可用。新增受限CI导出只向本任务现有的私有draft写入准确源码的证据，失败也保存原件，绝不创建/发布或覆盖Release。安装资产须三腿真实通过且Linux包在Windows消费的hash相同才可准备；完整CI与发布仍由主交付另验。每个阶段保存原始stdout/stderr/hash，不能用定义文件或失败日志冒充成功。
 
-以上保留中间开发结果和原始失败；后续已由clean源码c5重新完成G7的必要工程验收，公开发布仍待最后动作。真实模型质量仍NOT_PROVEN。
+以上保留中间开发结果和原始失败；后续已由clean源码c5重新完成G7的必要工程验收，[v1.9.0 正式发布](https://github.com/ki11a-Conton/harness-agent/releases/tag/v1.9.0)已完成，公开下载字节已核验；真实模型质量仍NOT_PROVEN。
 
 
 ## 干净交付验收新增问题与修复

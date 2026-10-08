@@ -1,6 +1,6 @@
 # 第一代个人 coding agent
 
-这轮以可持续完成个人编程任务为目标：读取/搜索源码、精确修改、运行命令、审批、实际验证、恢复会话、CLI/Web 持续使用和独立下载运行。候选版本为 `v1.9.0`（已有历史 tag 不覆盖）；必要工程验收已全部通过，公开发布是最后动作。工程验收和真实模型质量分别记录；后者仍为 `NOT_PROVEN`。
+这轮以可持续完成个人编程任务为目标：读取/搜索源码、精确修改、运行命令、审批、实际验证、恢复会话、CLI/Web 持续使用和独立下载运行。正式版本为 [v1.9.0 正式发布](https://github.com/ki11a-Conton/harness-agent/releases/tag/v1.9.0)（已有历史 tag 不覆盖）；必要工程验收、main推送及公开无认证下载校验均已完成。工程验收和真实模型质量分别记录；后者仍为 `NOT_PROVEN`。
 
 ## 与参考源码的关系
 
@@ -65,6 +65,6 @@ CLI/Web 产品入口会在加载存储前取得数据目录所有权。同一台
 
 执行合同：[GEN1-20261008](../tasks/GEN1-20261008.md)。计划：[第一代实施规格](../plan(20261008-024527).md)。第一代必须通过固定源码全量、安全、协议、原生 Windows、CLI/Web 编码闭环和独立产物安装验收；未满足时不宣称 release 可用。
 
-产品源码固定为 `c5bbe61fef101a8c9eb10edab673be8b2e0935e3`。本地全量525文件、9284 PASS / 0 FAIL / 14 pending，安全2143、协议52、真实CLI/Web24断言、Chromium29cases/82断言以及原生Windows安装均已通过。正式候选选择Ubuntu构建、已在Windows实际消费的同一个archive：SHA256 `f7006e6c22655d35576bbb800870bda792cfb0df4834fc9405dd55f30e9a278b`；Ubuntu50断言/19HTTP、Windows49/18，消费者无需pnpm或重新构建。
+产品源码固定为 `c5bbe61fef101a8c9eb10edab673be8b2e0935e3`。本地全量525文件、9284 PASS / 0 FAIL / 14 pending，安全2143、协议52、真实CLI/Web24断言、Chromium29cases/82断言以及原生Windows安装均已通过。正式发布选择Ubuntu构建、已在Windows实际消费的同一个archive：SHA256 `f7006e6c22655d35576bbb800870bda792cfb0df4834fc9405dd55f30e9a278b`；Ubuntu50断言/19HTTP、Windows49/18，消费者无需pnpm或重新构建。
 
-完整CI10jobs、安装CI4jobs、原生WindowsCI1job均completed SUCCESS，且绑定同一c5源码。候选资产已核验，公开发布仍待最后main/tag/release步骤；尚未公开发布。命令、退出码、源码身份、浏览器及跨平台原件见[最终验收](gen1-final-acceptance.md)与[独立复验档案](evidence/gen1-final-20261008/README.md)。缺陷、来源及验收新增问题见[审查索引](gen1-audit-index.md)。main的证据文档子提交不替代已测试产品源码，真实模型质量维持 `NOT_PROVEN`。
+完整CI10jobs、安装CI4jobs、原生WindowsCI1job均completed SUCCESS，且绑定同一c5源码。资产已正式公开，main已推送，公开下载产品与证据包hash均核验一致；见[公开交付记录](evidence/gen1-release-20261008/README.md)。命令、退出码、源码身份、浏览器及跨平台原件见[最终验收](gen1-final-acceptance.md)与[独立复验档案](evidence/gen1-final-20261008/README.md)。缺陷、来源及验收新增问题见[审查索引](gen1-audit-index.md)。main的证据文档子提交不替代已测试产品源码，真实模型质量维持 `NOT_PROVEN`。

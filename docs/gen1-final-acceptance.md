@@ -37,4 +37,4 @@ node docs/evidence/gen1-final-20261008/verify.mjs docs/evidence/gen1-final-20261
 
 档案 `ACCEPTED_NOT_RELEASED` 记录采集时的真实阶段；后续公开发布应另记录实际release链接，不把这个原始字段或收据改成伪造的历史发布状态。验证器校验原件与平台/源码/退出码/终态关系，不重新运行归档实验，不联网，也不提供GitHub API的远程数字签名。文档归档子提交与已测试产品源码分开绑定，不能把归档提交当作新的全量测试结果。
 
-发布状态：必要工程验收门已全部通过，候选资产已核验，等待最后的main提交、tag及公开发布动作。现存draft资产不等于公开release；`v1.9.0` tag及产品资产必须绑定上述已测试源码。[实施计划](../plan(20261008-024527).md)记录G1–G11，真实模型质量仍为 `NOT_PROVEN`。
+发布状态：必要工程门全部通过后已推送main并公开发布 [v1.9.0 正式发布](https://github.com/ki11a-Conton/harness-agent/releases/tag/v1.9.0)（原始公开时间 `2026-10-08T10:37:34Z`）。annotated tag及产品包均绑定上述c5源码；无认证公开API及产品/证据下载hash均通过。发布完成原件见[公开交付记录](evidence/gen1-release-20261008/README.md)。最终验收manifest的 `ACCEPTED_NOT_RELEASED` 保留采集先于公开的原始状态，不改写归档字节。[实施计划](../plan(20261008-024527).md)记录G1–G11，真实模型质量仍为 `NOT_PROVEN`。
