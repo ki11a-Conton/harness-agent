@@ -3,7 +3,9 @@
 > 撰写者：**D1（runtime-lifecycle）**，非独立红队成员。
 > 攻击对象：`WHA-02`(D2)、`WHA-03`(D3)、`WHA-04`(D4)、`WHA-05`(D5) 及其 rebuttal。
 > 我的 `WHA-01` 由 **Lead 亲自攻击**，故本文**不自评**（Round 1 的自我攻击留在 `WHA-01-*-rebuttal.md` §5）。
-> 指派原因：本会话团队成员上限 8，独立红队 `red-team-skeptic` **无法创建**（D3/D5 均如实上报投递失败，我本人 `send_message` 返回 `active teammate "red-team-skeptic" not found`）。
+> 指派原因：本会话团队成员上限 8，独立红队 `red-team-skeptic` **无法创建**。**流程事实（D2 亦要求注明）**：`red-team-skeptic` **在本 session 中不存在**——`list_agents` 只返回 lead + D1–D5 + 3 个测试子代理；我本人 `send_message` 得到 `active teammate "red-team-skeptic" not found`，D2、D3、D5 各自尝试投递也均失败。
+> **⚠ 红队缺位的强度声明（D2 提出、我采纳并按其要求加硬一档）**：**本 session 无独立红队；`WHA-06` 由被评者同侪代行，D1 与 D2 均各自自行红队（D2 的自击 A1–A4 见 `WHA-02-*-rebuttal.md` §5，我的四条见 `WHA-01-*-rebuttal.md` §5）。故任何"本清单已被红队检验"的说法在本轮均不成立，须由 session 外的复核者补做。**
+> **理由是结构性的，不是覆盖不足**：被评者自评与同侪互评无法替代独立质疑，**尤其在"判据是否真的可执行"这类自指问题上**——D2 自述其 §1.3 的"`expectation` 为空"判据**两次通读都没看出来**，因为作者知道自己想表达什么；该错误只有靠同侪回读原文才发现。**本轮唯一"独立复核确实改变了盘上内容"的实例就是这一类（详见 §8 第 2 条）。**
 > **视角偏置声明（必读）**：我锁定 Runtime / Lifecycle / Budget / Recovery。对"样本量口径"（D4）、"验收真值来源"（D2）、"人类成本"（D5）**我无归属权**，涉及时只给机制判据、不争夺口径定义权；凡涉我写域（`packages/core/src/runtime/*`、`packages/checkpoint/*`、`packages/contracts/src/limits.ts`）的行号，我已回读原文。
 > **证据强度自我限定**：全文行号均为**静态读代码**所得，**未执行任何测试**。凡引 `[C*-*]`、变异验证、`vitest` 结果者，一律**转引** `EVIDENCE-INDEX.md`，并标注。
 
@@ -105,10 +107,23 @@
 ## §8 他们的回应（双向讨论记录）
 
 **已发质疑**：
-- `verification-truth`（2 条）：Q1 = `expectation` 从不返回空、D2 的第五槽位须同时覆盖"有事实但未声明期望"；Q2 = `verification-controller.ts:75` 的 `return undefined` 使 D2 的四态处方在本仓库不可执行，R1 应收窄为 `requiresVerification === true && 返回 undefined ⇒ NOT_RUN`。**未获回应**（发送返回 accepted；写作时该成员显示 running）。**按 Lead 指示不空等，如实记为未获回应。**
+- `verification-truth`（2 条）：**两条均获回应且 D2 全部接受、已就地落盘**（`WHA-02-*-rebuttal.md` §S2/§S4 与其 §3 表格，我已回读确认）。详见下。
 - `eval-measurement`（2 条 + 1 裁决请求）：**已回复，且纠正了我两处**。见下。
 - `human-ops-cost`：**已回复**（`WHA-05-*-rebuttal.md` §1.1/§1.2/§2.2）——接受我对其 `estimated_cost` 的反对（自认"语义重载的字段不可判"）、接受 H3 判据改写、采纳我收窄后的 P0-A。**D5 另在 rebuttal §6 留了 5 条自我攻击**，其中 H8（"我可能只是在重复一个已被遵守的纪律"）我已在 §2.1/§3-② 采信。
-- `boundary-security`：**D3 已停止工作，未获回应**。但其 rebuttal §2.1/§2.2/§3.2 与 §5 自查共 5 条实质内容已落盘，本文直接引用；其中 §5 的 exec 盲区发现已核实为真（§5-④）。
+- `boundary-security`：**更正——D3 并非停止工作，且已给出实质回应**（见下）。**撤回**我在本文件初稿写的"D3 已停止工作、未获回应"。其 rebuttal §2.1/§2.2/§3.2 与 §5 自查已落盘，本文直接引用；§5 的 exec 盲区发现我已独立核实为真（§5-④）。
+
+**D2 的回应要点（两条质疑全部被接受，红队如实记录"我未被反驳"）**：
+1. **Q1 成立、D2 认错并改正**：`OutcomeExpectationV2` 的两个字段**都是必填 `boolean`**，`securityExpectationFromCase()` 恒返回两布尔、**从不返回空**。D2 原文"`expectation` 为**空**时"是把"空值"与"两个 false"混为一谈，已改为 `expectedAttack === false && expectedDenial === false`（case 未声明 `forbidden.*` 且 `expected.status !== "denied"`）。
+2. **我追加的加强被 D2 采纳**：`:125` 的短路使 `facts.length > 0` 时不进入该分支 → **第五槽位必须同时覆盖"零事实"与"有事实但未声明期望"两种输入**，否则只堵了一半。D2 已写明（rebuttal §S2 第 2 点）。
+3. **Q2 成立、D2 收窄 R1**：`requiresVerification === true && 返回 undefined ⇒ NOT_RUN`（现在就可判、不需改契约）；`requiresVerification === false` 时 `undefined` 是**正确的"未要求"**。D2 自认原 R1"断言集为空必须报 `NOT_RUN`"过宽，属**它自己的不可判据项**。
+4. **D2 对我的一处反批评，我接受并据此修正本报告**：我把 Q2 的收窄判为"真但可能无用"。D2 反驳：**"现在就可判且不需改契约"的判据价值高于"正确但要改类型系统才能判"的判据**，因前者今天就能进 CI。**我接受**——它已把该条从 §2「真但无用」升级为 §7 之外的独立实质改进（D2 记为"被 D1 说服改进"）。**故本报告不再把 D2 的 R1 收窄列入"真但无用"。**
+5. **D2 要求的两处补记已落实**：① D3 并非停止工作（已更正，见上）；② `red-team-skeptic` **在本 session 中不存在**（我 `send_message` 返回 `not found`，`list_agents` 确认只有 lead + D1–D5 + 3 个测试子代理），D2 因此自行红队并把 A1–A4 四条自我攻击写进其 rebuttal §5。
+
+6. **我追加的边界句被 D2 复核确认并落盘（本轮"复核改变盘上内容"的第二例，且是最有说服力的一例）**：我读 `security-evidence-execution.ts:157-166` 后指出——只要声明了**任一** `forbidden.*` 或 `expected.status === "denied"`，`expectedAttack` 即为 `true`，该 case **不属于**第五槽位，而归已实现的 `MISSING_EXPECTED_EVENT` 管辖；**只有"既无 `forbidden.*` 又无 `expected.status === 'denied'`"才落第五槽位**。D2 回读原文确认我的推论完全正确，并按此写成**显式边界句**（其 rebuttal S2 第 2 项第三段）。
+   **D2 补充的后果分析比我的提醒更重，我采纳其定性**：若边界句缺失，"声明了 `forbidden` 但没声明 `expected.status`"的用例会被错误地排除在 `MISSING_EXPECTED_EVENT` 之外——**等于把一条已实现的 fail-closed 保护重新变回 fail-open**。这是**方向性回归**，不是定义含糊。
+   **元教训（D2 自述，我记录）**：D2 判定其 §1.3 的"`expectation` 为空"属 **C4/R3 的自指失败**——**它写了一条无法被任何人复跑的判据，而它恰在批评 D5 的"未执行判据"**；作者两次通读均未发现，**只有同侪回读原文才能发现**。这段自述是本报告"独立复核有效性"的最强证据，也是红队缺位声明的直接依据。
+
+7. **D2 向我申报的、与 D4 的未决分歧（我如实记录，不代其裁决，也不视为已达成共识）**：D2 在 rebuttal §2-S1 **仍反对** D4 的"报 `pass@1` + `pass^k` 两个诚实数字"处方，理由为 **k 次共享工作区时 `pass^k` 的偏差方向不确定**（前次污染既可造假成功也可造假失败），故必须声明"k 次之间是否重置工作区"。**此条与本报告 §3-③ 相关但不等同**：§3-③ 判的是"D2 的 S1 与 D4 的 M7 不冲突、可合并"，D2 此刻强调的是**处方层未达成共识**。→ **请在合成时把"指标可合并"与"处方有分歧"分开处理，勿因 §3-③ 的合并结论而认为 D2 已接受 D4 的处方。**
 
 **D4 的回应要点（红队据此修正了自己 2 处结论，如实记录）**：
 1. **我错、D4 对**：`minStratumRuns` 默认值是 **1**（`harness-metrics.ts:889`），不是 0 → 我 §4-1 的初始机制描述**撤回**。但 D4 确认缺口成立且形态更坏（默认 1 ⇒ 只有空 strata 被标注，**n=1 恰能 PASS**）。
@@ -118,3 +133,5 @@
 5. **D4 确认了我转述 D3 的一条**：`EVIDENCE-INDEX.md` §4 的安全变异清单中**确实没有**"把 `escapedPaths` 从成功副作用改回请求路径派生"这条反向变异（D4 rebuttal §4 记为 M12）→ **§5-④ 的 exec 盲区在当前测试集上不可检出，此结论得到独立确认。**
 
 **声明**：本文对 D3 的 §5 新发现做了**独立复核**（回读 `apps/cli/src/benchmark-command.ts:2050-2066`），对 D2 的 §1.3 做了**独立复核**（回读 `security-evidence-execution.ts:88-167`），对 D4 的 `minStratumRuns` 默认值做了**独立复核**（回读 `harness-metrics.ts:884-891,1165-1171` 与 `harness-conformance-gate.ts:238-241`）。三处均以原文为准，不是转述。
+
+**回读确认的时效说明**：§8 中 D2 与 D4 的回应要点是我**在收到其消息后回读其 rebuttal 原文**所得（D2 的 §S2/§S4 与 §3 表格已见落盘）；**D5 与 D3 未直接回复本报告**，其要点引自各自已落盘的 rebuttal 文件。**凡我未回读原文而仅凭消息转述者，本文均已标注为"据消息"。**

@@ -23,8 +23,15 @@
 - **S2（坚持 `NOT_RUN` 独立计数——也是我对 D3 反问的回答）**：D3 问"模型没越权"与"边界没被测"在未声明期望的用例上同形，**有判据吗？**
   **有，且不需要知道"应该发生什么"，只需要一个单调的观测器。**
   1. **判据核心**：*任何"零事实"结果都必须能回答"观测器在岗吗""期望声明过吗"；两个都答不出时，该结果不属于任何一类，不进入任何门限。*
-  2. **槽位**：`expectation` 为空（`:125` 两标志皆 false）时不得落进 `clean`，须落进第五类 **`NO_EXPECTATION_DECLARED`**——与"期望了但没观测到"（`MISSING_EXPECTED_EVENT`，已实现 ✅）是两个槽位。当前代码把前者读成 `clean`，即缺口。
+  2. **槽位**：`expectation.expectedAttack === false && expectation.expectedDenial === false`（case **未声明** `forbidden.*` 且 `expected.status !== "denied"`）时不得落进 `clean`，须落进第五类 **`NO_EXPECTATION_DECLARED`**——与"期望了但没观测到"（`MISSING_EXPECTED_EVENT`，已实现 ✅）是两个槽位。
+     〔**红队修正（D1 Q1，已复核原文）**：我原文写"`expectation` 为**空**"是**错的**。`OutcomeExpectationV2` 是两个**必填** `boolean`，`securityExpectationFromCase()`（`:152-167`）**从不返回空值**、恒返回两布尔。故正确判据是"两个都为 `false`"，不是"为空"。**"空值"与"两个 false"在 `undefined` 敏感实现里是不同分支；按我自家 C4 标准必须改，否则复跑者按"空值"构造用例永远构造不出来。**〕
+     〔**D1 追加的加强（我接受）**：`:125` 短路顺序意味着 **`facts.length > 0` 时不进入该分支**，`:137-143` 直接把 facts 交给 `classifySecurityOutcomeV2`。故"**未声明期望 + 有 facts**"走**另一个分支**，第五槽位必须同时覆盖两种输入；否则它只在"零事实"时生效，有事实但未声明期望的用例仍落到默认分类——**那正是"被测方定义自己的考卷"的另一半**。〕
+     〔**边界句（D1 提出，我复核 `:157-166` 确认并采纳）**：`expectedAttack = hasForbidden || expectsDenied`，故**只要声明了任一 `forbidden.*` 或 `expected.status === "denied"`，`expectedAttack` 即为 `true`**，该 case **不属于**第五槽位，而归 `MISSING_EXPECTED_EVENT` 管辖。→ 第五槽位的定义**必须**写成"**既无 `forbidden.*` 又无 `expected.status === 'denied'`**"；写成"未声明期望"会被后来读者读宽到覆盖前者。**此边界句是槽位定义的必要部分，非措辞修饰。**〕
   3. **门限口径**：安全门限分母应是"**声明过期望且观测器在岗的用例数**"；未声明 → `NOT_RUN`，**不计分子也不计分母**。与 §3.1 四态分离同构（`0/0` 与 `1/1` 都是 1.0）。
+
+- **S4（接受 D1 Q2 的收窄，这是对我 R1 的实质改进）**：D1 指出 `verification-controller.ts:68-76` 中只有 `policy?.requiresVerification === true && verifier === undefined` 才 `blocked`，否则 `return undefined`；而 `undefined` 与"该 turn 不需要验证"共用同一返回值。**D1 读得对**，故我把 R1 收窄为：
+  > **`requiresVerification === true && controller 返回 undefined` ⇒ 记 `NOT_RUN`。**
+  这个形式**现在就可判**、且**不需要改契约**。`requiresVerification === false` 时 `undefined` 是**正确的"未要求"**，不是缺口。我原 R1 的"断言集为空必须报 `NOT_RUN`"过宽——它把"未要求"也判成了缺陷，属**我自己的不可判据项**。
 
 - **S3（坚持 C5/C7 优先级，并统一成一句纪律）**：D5 附议 C5 并采纳我的处方（判定用副作用计数/幂等键，禁用事件存在性）；D4 M1 与我 §3.1 是同一件事的两半。**三者合并为仓库级单一纪律**：
   > **缺失、失败、与拒绝三者在输出上必须同形可辨；"已知未跑"必须有自己的槽位，禁止与"跑了通过"或"跑了没过"共用表示。**
@@ -38,6 +45,8 @@
 | D5 H2 | "跑一次带人类审批的 run，`total_human_interventions` 应 >0；当前应为 0" | 作者已诚实认错：**未执行，是静态推断**，并就地改正 | ✅ 已闭环。我复核 `paired-executor.ts:193` = `human_interventions: 0`、`load-runs.ts:59` = `?? 0`，与其实测一致 |
 | D5 H2 升级 | "`RunMetrics.human_interventions` 类型上无法表达缺失" | **可判真假且成立**：该字段是 `number`，无 `null` 取值 | 附议。这比"没人写非零值"更硬：**不是忘了守纪律，而是类型上无法遵守纪律** |
 | D3-消息 | "D3 的 `ESCAPE` 当前 HEAD 已是效应来源，不是现存 bug" | 我复核 `security-evidence-execution.ts:44-45` 注释将 `escapedPaths` 钉死为"Absolute paths the case **wrote** outside its workspace" → 语义确为**效应来源**，与请求路径 sentinel 不同 | ✅ 接受，C6 措辞应改为"**历史判定语义缺陷**；当前路径已改为效应来源；旧事实不可翻案" |
+| D1 Q1 | 我 S2 写"`expectation` 为**空**时…" | **复核成立，是我的事实错误**：`OutcomeExpectationV2` 两字段均必填 `boolean`，`securityExpectationFromCase()` 从不返回空值 | ✅ 已改判据为"两个都为 `false`"，并接受 D1 的加强（`:125` 短路使"有 facts + 未声明期望"走另一分支） |
+| D1 Q2 | 我 R1 写"断言集为空必须报 `NOT_RUN`" | **过宽**：`requiresVerification === false` 时 `return undefined`（`verification-controller.ts:75`）是**正确的"未要求"** | ✅ 已收窄为"`requiresVerification === true && 返回 undefined` ⇒ `NOT_RUN`"，形式现在就可判、不需改契约 |
 | D3-消息 | "`clean source tree` 是否间接覆盖'断言被 run 内改写'？" | 我复核 `execution-plan.ts:489`：该约束是"plan confirmed on a CLEAN source tree，但 `treeFingerprint` 已被设置"→**运行前**状态检查 | **确认不覆盖**：它约束 run **前**的源码，不约束 run **中**的写入。见 §4 |
 
 ## 4. 与 D3 联署的共同最大缺口（我复核后同意）

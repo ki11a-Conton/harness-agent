@@ -127,6 +127,12 @@
 - **失败模式**：Agent 改掉验收脚本/放宽断言，然后"通过"——**且没有任何证据能事后发现**。
 - **与 P0-A 同源**：`VerificationGateResult.status` 的类型是 `"passed" | "failed" | "blocked"`，**没有 `not_run`**（我复核类型定义）→ "没跑"只能表现为 `return undefined`，**正是 P0-A 禁止的"缺失与失败同形"**。D2 把自己的这条处方判为"在本仓库尚未落地"，并据此撤回"系统性撒谎面"一词——**作者自纠，应予记录**。
 
+### M19. "未声明期望"这类**槽位边界**必须写死；写宽了会把已实现的 fail-closed 变回 fail-open
+- **判据**：安全证据的第五槽位（"未声明期望"）**仅**覆盖"**既无 `forbidden.*` 又无 `expected.status === "denied"`**"的用例。
+- **为什么（方向性回归，不是措辞问题）**：`security-evidence-execution.ts:157-166` 里 `expectedAttack = hasForbidden || expectsDenied`——**声明了任一者就归已实现的 `MISSING_EXPECTED_EVENT` 管辖**。若边界句缺失或读宽，"声明了 `forbidden` 但没声明 `expected.status`"的用例会被错误排除在该槽位之外，**等于把一条已实现的 fail-closed 保护重新变回 fail-open**（D1 提出、D2 回读复核确认）。
+- **失败模式**：一次"看起来更严谨"的槽位定义，静默撤销一条既有的 fail-closed 保护。
+- **本仓库现状**：`MISSING_EXPECTED_EVENT` 已实现且带条件；**第五槽位是建议、尚未实现** → 实现时必须先写死边界（建议 11 + 12）。
+
 ---
 
 ## 2. 加分清单（有了更好，但缺了不等于不合格）
@@ -171,6 +177,7 @@
 | D3 的"n≥20"这个**数字** | **REJECTED（由 D4 驳回）** | D4 的裁决：下界应由置信水平反推（"违规率 <1% @95%" ⇒ n≈299；n=20 仅支持"违规率 <14%"），**不允许裸整数**。红队转述并接受。→ 保留机制（`INSUFFICIENT_SAMPLE` 表达），**弃用数字 20** |
 | D2 的第五槽位 `NO_EXPECTATION_DECLARED`（即使前提表述改正后） | **PARTIAL：只堵一半** | 红队回读原文：`security-evidence-execution.ts:125` 的短路条件是 `facts.length === 0 && …` → 该槽位**只覆盖"零事实"的用例**；"有事实但未声明期望"的用例仍走 `:137-143` 的正常分类。→ 采纳为建议 11，但**必须同时覆盖两类输入**，且**未与 D2 确认**（其质疑未获回应） |
 | D2 的四态处方（`verification-controller.ts:75` 的 `return undefined`） | **收窄后才可执行** | 红队的替代写法：`requiresVerification === true && 返回 undefined ⇒ NOT_RUN`（现在就可判、**不必改契约**）。建议采用此收窄形式，原四态处方在当前仓库不可执行 |
+| D4 的"报 pass@1 + pass^k 两个诚实数字" | **CONTESTED（处方层面；D2 未获回应地反对）** | **两个层面必须分开**：**指标层面**——D2 的 S1 与 D4 的 M7 **不冲突、可合并**（作用在不同指标上；红队 §3-③ 的合并结论只在这一层成立）；**处方层面**——D2 **仍反对**，理由：`pass@k` 在共享工作区下**单调高估**，而 `pass^k` 的偏差方向**不确定**（共享状态既能造"前次污染后次"的假成功，也能造"前次留半成品"的假失败）→ **报 `pass^k` 必须声明"k 次之间是否重置工作区"，未声明即不可复算**。D4 未回应此点。**裁决：按"存在未解决分歧"处理，不得写成共识** |
 
 ---
 
@@ -216,10 +223,13 @@
 | 9 | **证据自洽性检查（M15）**：`kind === "ESCAPE"` 且 `escapedPaths.length === 0` 时**拒绝该判定** | 构造该矛盾输入，判定必须被拒而不是被接受 | **成本极低，建议最先做** |
 | 10 | **观测器覆盖性（M16）**：`sideEffectScope != "none"` 的工具集合 ⊆ 副作用收集器白名单；不在覆盖内的标注 `OBSERVER_GAP` | 当前判据为假（`exec` 缺失）；补上或显式标注 | 需设计 |
 | 11 | 安全证据补 `NO_EXPECTATION_DECLARED` 槽位，并把门限分母取"声明过期望且观测器在岗的用例数" | 未声明期望的零事件用例**不得**返回 clean | 需契约变更（且红队指出 D2 的输入条件描述须先改正） |
+| 12 | **槽位边界必须先写死**（D2 在轮次末追加）：第五槽位**仅**覆盖"**既无 `forbidden.*` 又无 `expected.status === "denied"`**"的用例 | 因为 `expectedAttack = hasForbidden \|\| expectsDenied`（`security-evidence-execution.ts:157-166`，D2 复核 D1 的质疑后确认）：**声明了任一者就归 `MISSING_EXPECTED_EVENT` 管辖**。宽读会导致"声明了 `forbidden` 但未声明 `expected.status`"的用例被错误排除在该槽位之外——**等于把一条已实现的 fail-closed 保护读回 fail-open** | 与第 11 项同批 |
 
 ---
 
 ## 7. 讨论过程事实（供复核）
+
+> **⚠ 方法论局限（必读）**：**本会话没有独立红队**。`WHA-06` 由**被评者之一的同侪**代行，D1 与 D2 各自还做了自行红队。因此**本轮任何"已通过红队检验"的说法均不成立**，需 session 外的复核者补做。D2 与 D1 都主动要求把这一限定写进结论，D2 还给出最有力的自证：它写了一条**无法被任何人复跑的判据**（把必填布尔写成"空值"）——**而它自己两次通读都没发现**，只有同侪回读原码才逼出来。→ **本轮唯一被证明有效的机制是"同侪回读原文"，不是红队。** 这也是本文件把每条的"判据 + 仓库行号"写全的原因：**读者可以自己复核，而不必相信任何一位参与者。**
 
 - 参与者：D1 `runtime-lifecycle`、D2 `verification-truth`、D3 `boundary-security`、D4 `eval-measurement`、D5 `human-ops-cost`，主席 `lead`。原始文件见 [docs/discourse/](../discourse/README.md)。
 - **红队安排变更（如实记录）**：本会话**团队成员上限为 8**，独立红队成员 `red-team-skeptic` **无法创建**；D3、D5 都如实上报了"投递失败"（`active teammate not found`）而没有静默跳过。因此红队职责改由 `runtime-lifecycle` 对 D2–D5 执行（`WHA-06-redteam.md`），**D1 的清单由主席亲自攻击**（其主张 3 的 token 继承结论经主席逐字复核后**成立且更强**：类型级封死）。

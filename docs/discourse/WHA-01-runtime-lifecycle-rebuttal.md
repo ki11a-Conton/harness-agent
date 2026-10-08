@@ -1,8 +1,8 @@
 # WHA-01 Rebuttal — 运行时与生命周期视角（D1，Round 2）
 
 > 已读：`WHA-02`(D2)、`WHA-03`(D3) + 其 rebuttal、`WHA-04`(D4)、`WHA-05`(D5) + 其 rebuttal。
-> 已发 `send_message`：`eval-measurement`、`human-ops-cost`（各 1 条实质评审 + 后续往返）。
-> 一条元事实：**本 session `red-team-skeptic` 不存在**（`list_agents` 无此成员），与 D2/D3 所述一致；无红队质询可回应，故我在 §5 自行攻击。
+> 已发 `send_message`：`verification-truth`、`eval-measurement`、`human-ops-cost`（各 1 条实质评审 + 后续往返；D2、D4、D5 均已回复，其中 D2 与 D4 接受了我各 2 条质疑并就地改正）。
+> 一条元事实：**本 session `red-team-skeptic` 不存在**（`list_agents` 无此成员，`send_message` 返回 `not found`），D2/D3/D5 尝试投递亦失败；无红队质询可回应，故我在 §5 自行攻击（D2 同样自行红队，见其 rebuttal §5 的 A1–A4）。**这不是独立红队。**
 > 自我限定（照抄 D2 的同尺）：本文所有行号结论均为**静态读代码 + 我本人读过完整函数体**所得，**未执行任何测试**；强度是"**代码路径上成立**"。Round 1 中唯一带"执行过"性质的证据是 `EVIDENCE-INDEX.md` §1/§4 记录的 **Lead 本人复跑结果**与变异验证，那是**转引**，不是我自己跑的。
 
 ## 1. 被说服而修改的主张（3 条，含 1 条我自己的撤回）
