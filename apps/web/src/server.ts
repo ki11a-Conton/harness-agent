@@ -7,7 +7,7 @@ import { randomUUID } from "node:crypto";
 import type { AgentEvent, ApprovalStore, EventStore, Message, SessionId, SessionStore } from "@ar/contracts";
 import type { ChannelMessage } from "@ar/gateway";
 import type { SessionBindings } from "./bindings.js";
-import type { WebChannelAdapter } from "./adapter.js";
+import type { SseSink, WebChannelAdapter } from "./adapter.js";
 
 /** Browser identity format: [A-Za-z0-9-]{8,64} (uuid v4 fits). */
 export const FROM_RE = /^[A-Za-z0-9-]{8,64}$/;
@@ -52,6 +52,7 @@ interface SseConnection {
   assistantCount: number;
   polling: boolean;
   closed: boolean;
+  sink?: SseSink;
   pollTimer?: ReturnType<typeof setInterval>;
   keepaliveTimer?: ReturnType<typeof setInterval>;
 }
@@ -108,7 +109,7 @@ export class WebServer {
   /** Static assets are read once and cached in memory (dev no-cache headers). */
   private readonly staticCache = new Map<string, { contentType: string; body: Buffer }>();
 
-  private readonly connections = new Map<string, SseConnection>();
+  private readonly connections = new Set<SseConnection>();
   private readonly pendingDeliveries: Array<Promise<void>> = [];
   private server?: ReturnType<typeof createServer>;
   private boundPort?: number;
@@ -229,8 +230,6 @@ export class WebServer {
       this.json(res, 400, { ok: false, error: "invalid from" });
       return;
     }
-    const existing = this.connections.get(from);
-    if (existing !== undefined) this.closeConnection(existing); // reconnect replaces the old stream
     res.writeHead(200, {
       "Content-Type": "text/event-stream; charset=utf-8",
       "Cache-Control": "no-cache",
@@ -242,15 +241,21 @@ export class WebServer {
       from,
       res,
       seq: 0,
-      assistantCount: await this.initialAssistantCount(from),
+      assistantCount: 0,
       polling: false,
       closed: false,
     };
-    this.connections.set(from, conn);
-    this.adapter.register(from, {
+    // Track the response and its close listener before any asynchronous store
+    // read. A tab can close, or shutdown can begin, while the cursor is seeded.
+    this.connections.add(conn);
+    res.on("close", () => this.closeConnection(conn));
+    conn.assistantCount = await this.initialAssistantCount(from);
+    if (conn.closed) return;
+    conn.sink = {
       writeFrame: (frame) => this.writeFrame(conn, frame),
       close: () => this.closeConnection(conn),
-    });
+    };
+    this.adapter.register(from, conn.sink);
     this.writeFrame(conn, { type: "hello" });
     conn.pollTimer = setInterval(() => {
       void this.poll(conn);
@@ -263,7 +268,6 @@ export class WebServer {
         this.closeConnection(conn);
       }
     }, KEEPALIVE_MS);
-    res.on("close", () => this.closeConnection(conn));
   }
 
   /** User text → gateway (find-or-create session, run turn). */
@@ -473,10 +477,8 @@ export class WebServer {
     conn.closed = true;
     if (conn.pollTimer !== undefined) clearInterval(conn.pollTimer);
     if (conn.keepaliveTimer !== undefined) clearInterval(conn.keepaliveTimer);
-    if (this.connections.get(conn.from) === conn) {
-      this.connections.delete(conn.from);
-      this.adapter.unregister(conn.from);
-    }
+    this.connections.delete(conn);
+    if (conn.sink !== undefined) this.adapter.unregister(conn.from, conn.sink);
     try {
       conn.res.end();
     } catch (err) {

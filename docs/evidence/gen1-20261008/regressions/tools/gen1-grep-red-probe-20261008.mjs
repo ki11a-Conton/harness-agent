@@ -1,0 +1,18 @@
+import { mkdtemp, writeFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { ToolOrchestrator, ToolRegistry, grepSearchTool } from '/workspace/harness-agent-gen1-20261008/packages/tools/dist/index.js';
+import { newSessionId, newTurnId, newAgentId, newToolCallId } from '/workspace/harness-agent-gen1-20261008/packages/contracts/dist/index.js';
+const root=await mkdtemp(join(tmpdir(),'ar-gen1-regex-red-'));
+await writeFile(join(root,'bad.txt'),'a'.repeat(60)+'!');
+const registry=new ToolRegistry(); registry.register(grepSearchTool);
+const orch=new ToolOrchestrator({registry,workspaceRoot:root});
+const ac=new AbortController();
+const context={cwd:root,sessionId:newSessionId(),turnId:newTurnId(),agentId:newAgentId(),signal:ac.signal,permissions:{rules:[{action:'read',resource:'file',effect:'allow'}]},sandboxPolicy:{filesystem:{mode:'workspace-write'},network:{mode:'deny'},process:{timeoutMs:100,maxOutputBytes:65536}}};
+const id=newToolCallId();
+setTimeout(()=>{process.stdout.write('abort timer fired\n');ac.abort();},50);
+process.stdout.write('dispatching actual grep_search through orchestrator\n');
+const start=Date.now();
+const r=await orch.execute({id,sessionId:context.sessionId,turnId:context.turnId,agentId:context.agentId,call:{id,name:'grep_search',args:{pattern:'(a+)+$',includeSummary:true}}},context);
+process.stdout.write(JSON.stringify({durationMs:Date.now()-start,result:r})+'\n');
+await rm(root,{recursive:true,force:true});

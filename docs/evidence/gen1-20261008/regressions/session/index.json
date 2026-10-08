@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "note": "Intermediate working-tree RED/GREEN evidence, not fixed-release-source acceptance.",
+  "results": [
+    {
+      "file": "public-session-red.json",
+      "description": "Public create/fork/frozen policy RED",
+      "sha256": "082d34f255ae97f8777718e3771f2f1755556439f8f3485c4e30b5ed7b231a49",
+      "testFiles": 1,
+      "passed": 0,
+      "failed": 3,
+      "success": false
+    },
+    {
+      "file": "gateway-resume-fork-list-red.json",
+      "description": "Real AppServer resume/fork/list RED",
+      "sha256": "b6d8af70275bb9bb3a17f37b2e4c682929b1838e707b47b6b8e183f2673379e7",
+      "testFiles": 1,
+      "passed": 0,
+      "failed": 3,
+      "success": false
+    },
+    {
+      "file": "idempotency-red.json",
+      "description": "Concurrent/cross-method idempotency RED",
+      "sha256": "b7808bf5b2c9f3c30e02ff7c69c8d0bd9b86115c2bb0190c32ac57963b935481",
+      "testFiles": 1,
+      "passed": 0,
+      "failed": 1,
+      "success": false
+    },
+    {
+      "file": "fork-integrity-red.json",
+      "description": "Incomplete policy and tool history integrity RED",
+      "sha256": "496e845b961f5935200bbb8bb91fa78f89a26709e0121d88a44314bfee92e015",
+      "testFiles": 1,
+      "passed": 0,
+      "failed": 3,
+      "success": false
+    },
+    {
+      "file": "actual-sdk-final-answer-red.json",
+      "description": "Real SDK missing finalResponse RED; original filename green was misleading",
+      "sha256": "e0f75bbdc9f1ac4878ad7c43b9dae77568e12daabc120f195da2829105e26a31",
+      "testFiles": 1,
+      "passed": 0,
+      "failed": 1,
+      "success": false
+    },
+    {
+      "file": "stateful-provider-intermediate.json",
+      "description": "Intermediate GREEN group with one stateful provider restart drift failure",
+      "sha256": "6c5fcaad71b4d5a2874ee67a83ce63c3dbf05953c458237d6dee3251ddf6a0ea",
+      "testFiles": 3,
+      "passed": 16,
+      "failed": 1,
+      "success": false
+    },
+    {
+      "file": "actual-text-delta-red.json",
+      "description": "Actual SDK text delta RED before controller emitter wiring",
+      "sha256": "0b4d8e82e351920a2696f8015800543df86023ba12261a07d394b0cd8408eafa",
+      "testFiles": 3,
+      "passed": 17,
+      "failed": 1,
+      "success": false
+    },
+    {
+      "file": "acceptance-green.json",
+      "description": "Final 26-file scoped GREEN",
+      "sha256": "5dadc50fe89610b791208fb72f62d5119229a8ab4af10cf8f1bb8fa4237c6e69",
+      "testFiles": 26,
+      "passed": 287,
+      "failed": 0,
+      "success": true
+    },
+    {
+      "file": "sdk-final-green.json",
+      "description": "Final SDK-only actual composition GREEN",
+      "sha256": "dcbc583d74e859e370920719e7efc1fef05683bb313a5b0c7b4f25ce37b3805c",
+      "testFiles": 1,
+      "passed": 2,
+      "failed": 0,
+      "success": true
+    }
+  ]
+}

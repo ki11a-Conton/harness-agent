@@ -1,5 +1,6 @@
 import { pathToFileURL } from "node:url";
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
+import { homedir } from "node:os";
 import { stat } from "node:fs/promises";
 import type { ModelProvider, PermissionPolicy, TaskSpec } from "@ar/contracts";
 import { defaultSandboxPolicy, DEFAULT_MAIN_SYSTEM_PROMPT, resolveAgentPromptPolicy } from "@ar/harness";
@@ -11,8 +12,11 @@ import {
   ToolRegistry,
 } from "@ar/tools";
 import type { CommandDeps } from "./commands.js";
-import { runCommand } from "./commands.js";
+import { runCommand, USAGE } from "./commands.js";
 import { createTerminalRunHost } from "./terminal-run-host.js";
+import { createTerminalChatHost } from "./terminal-chat-host.js";
+import { parseChatArguments } from "./chat-command.js";
+import { acquireDataDirLease } from "./data-dir-lease.js";
 import { preregCmd, type PreregCommandDeps, type PreregResolvedSelection } from "./prereg-command.js";
 import { createProductionPreregRunner } from "./prereg-production-runner.js";
 import {
@@ -90,8 +94,13 @@ export function registerBuiltinTools(registry: ToolRegistry): void {
 /** Entry point: parse `agent <command> [args]` (process.argv includes the
  *  node binary and the script path) and run the command. */
 export async function main(argv: string[]): Promise<number> {
-  const { args, dataDir } = extractDataDirFlag(argv.slice(2));
-  const dir = dataDir ?? process.env.HARNESS_DATA_DIR;
+  let parsed: ReturnType<typeof extractDataDirFlag>;
+  try { parsed = extractDataDirFlag(argv.slice(2)); }
+  catch (error) { return writeLines([error instanceof Error ? error.message : String(error)], 1); }
+  const { args, dataDir } = parsed;
+  if (args[0] === "help" || args[0] === "--help" || args[0] === "-h") return writeLines([USAGE], 0);
+  const chat = args[0] === "chat";
+  const dir = dataDir ?? (process.env.HARNESS_DATA_DIR || (chat ? join(homedir(), ".harness-agent") : undefined));
 
   // The pre-registration chain is dispatched BEFORE the interactive host is
   // constructed. `prereg validate` performs 0 provider calls, and `prereg run`
@@ -104,6 +113,16 @@ export async function main(argv: string[]): Promise<number> {
   }
 
   let cwd: string | undefined; let task: TaskSpec | undefined;
+  if (chat) {
+    let options: ReturnType<typeof parseChatArguments>;
+    try { options = parseChatArguments(args.slice(1)); }
+    catch (error) { return writeLines([`agent chat: ${error instanceof Error ? error.message : String(error)}`], 1); }
+    cwd = options.cwd;
+    try { if (!(await stat(cwd)).isDirectory()) throw new Error("not a directory"); }
+    catch { return writeLines([`agent chat: invalid project directory ${JSON.stringify(cwd)}`], 1); }
+    if (options.verificationCommand !== undefined) task = { id: "cli-chat", goal: "Complete each user task and pass the configured project check",
+      verification: [{ kind: "command", command: options.verificationCommand }] };
+  }
   if (args[0] === "run") {
     if (args.length !== 3 && !(args.length === 5 && args[3] === "--verify" && args[4]?.trim())) {
       return writeLines(["agent run: expected <cwd> <text> [--verify <command>]"], 1);
@@ -117,17 +136,27 @@ export async function main(argv: string[]): Promise<number> {
       args.splice(3);
     }
   }
-  const deps = await createDefaultDeps({ ...(cwd !== undefined ? { cwd } : {}), ...(task !== undefined ? { task } : {}),
-    ...(dir !== undefined && dir.length > 0 ? { dataDir: resolve(dir) } : {}) });
-  const host = args[0] === "run" ? createTerminalRunHost() : undefined;
-  if (host !== undefined) deps.runHost = host;
+  // The product host owns one persistent directory for its entire lifetime.
+  // Acquire before loading mutable approval/ask/recovery state, not after it.
+  const lease = await acquireDataDirLease(dir !== undefined ? resolve(dir) : undefined);
+  lease?.ref();
   try {
-    const result = await runCommand(args, deps);
-    return writeLines(result.lines, result.exitCode);
-  } finally {
-    host?.close();
-    await deps.close?.();
-  }
+    const deps = await createDefaultDeps({ ...(cwd !== undefined ? { cwd } : {}), ...(task !== undefined ? { task } : {}),
+      ...(chat && process.env.HARNESS_AGENT_PROMPT === undefined ? { agentPrompt: "coding-v1" as const } : {}),
+      ...(lease !== undefined ? { dataDir: lease.dataDir } : {}) });
+    const host = args[0] === "run" ? createTerminalRunHost() : undefined;
+    const chatHost = chat ? createTerminalChatHost() : undefined;
+    if (host !== undefined) deps.runHost = host;
+    if (chatHost !== undefined) deps.chatHost = chatHost;
+    try {
+      const result = await runCommand(args, deps);
+      return writeLines(result.lines, result.exitCode);
+    } finally {
+      host?.close();
+      chatHost?.close();
+      await deps.close?.();
+    }
+  } finally { await lease?.release(); }
 }
 
 /** Commands dispatchable without the interactive host (no provider/harness). */
@@ -344,10 +373,16 @@ export function extractDataDirFlag(argv: string[]): { args: string[]; dataDir?: 
     const arg = argv[i];
     if (arg === undefined) continue;
     if (arg === "--data-dir") {
-      dataDir = argv[i + 1];
+      const value = argv[i + 1];
+      if (value === undefined || !value.trim() || value.startsWith("--")) throw new Error("--data-dir requires a non-empty path");
+      if (dataDir !== undefined) throw new Error("duplicate --data-dir");
+      dataDir = value;
       i += 1;
     } else if (arg.startsWith("--data-dir=")) {
-      dataDir = arg.slice("--data-dir=".length);
+      const value = arg.slice("--data-dir=".length);
+      if (!value.trim()) throw new Error("--data-dir requires a non-empty path");
+      if (dataDir !== undefined) throw new Error("duplicate --data-dir");
+      dataDir = value;
     } else {
       args.push(arg);
     }
@@ -400,7 +435,7 @@ export async function createDefaultDeps(options: DefaultDepsOptions = {}): Promi
     events: harness.events,
     listAgents: () => harness.agents,
     listTools: () => harness.registry.specs(),
-    listSkills: () => [],
+    listSkills: () => harness.listSkills(),
   });
   const { client, server } = InMemoryTransport.pair();
   server.connect(registry);

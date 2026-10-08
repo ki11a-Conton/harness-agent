@@ -25,6 +25,7 @@ import {
 } from "@ar/contracts";
 import { redactSecrets } from "@ar/security";
 import { buildProviderDiagnosticBundle } from "./provider-diagnostics.js";
+import { resolveOpenAIChatCompatibility, type OpenAIChatCompatibility } from "./openai-chat-compatibility.js";
 
 /** Optional OpenAI-compatible provider settings, passable via ProviderConfig. */
 export interface OpenAIProviderConfig {
@@ -56,6 +57,9 @@ export interface OpenAIProviderConfig {
    * abort yields "cancelled"). Default 120000; set 0 to disable.
    */
   requestTimeoutMs?: number;
+  /** Explicit wire capabilities for a custom gateway. Official OpenAI
+   * reasoning models resolve their known parameter constraints automatically. */
+  chatCompatibility?: Partial<OpenAIChatCompatibility>;
 }
 
 const DEFAULT_BASE_URL = "https://api.openai.com/v1";
@@ -338,6 +342,7 @@ async function* streamChatCompletion(
     maxProviderRetries: number;
     retryDelayMs: number;
     requestTimeoutMs: number;
+    chatCompatibility: OpenAIChatCompatibility;
   },
   request: ModelRequest,
   signal: AbortSignal,
@@ -383,11 +388,14 @@ async function* streamChatCompletion(
     if (!Number.isSafeInteger(request.maxTokens) || request.maxTokens < 1) {
       throw new AgentError(errorInfo("MODEL_ERROR", "maxTokens must be a positive safe integer", { retryable: false, safeToRetry: false, provider: { kind: "protocol" } }));
     }
-    body.max_tokens = request.maxTokens;
+    body[opts.chatCompatibility.maxTokensField] = request.maxTokens;
   }
   if (request.temperature !== undefined) {
     if (!Number.isFinite(request.temperature) || request.temperature < 0 || request.temperature > 2) {
       throw new AgentError(errorInfo("MODEL_ERROR", "temperature must be between 0 and 2", { retryable: false, safeToRetry: false, provider: { kind: "protocol" } }));
+    }
+    if (!opts.chatCompatibility.supportsTemperature) {
+      throw new AgentError(errorInfo("MODEL_ERROR", `temperature is not supported for ${opts.modelId} on this endpoint; omit temperature to use the provider's default reasoning configuration`, { retryable: false, safeToRetry: false, provider: { kind: "protocol" } }));
     }
     body.temperature = request.temperature;
   }
@@ -759,6 +767,7 @@ async function* streamChatCompletion(
  * Identity resolution, per createClient() call:
  *   config.apiKey/baseUrl/modelId (call-site) >
  *   constructor identity (E4-R83) >
+ *   requested ModelRef.modelId (model only) >
  *   OPENAI_API_KEY / OPENAI_BASE_URL / OPENAI_MODEL env >
  *   built-in default.
  *
@@ -776,6 +785,7 @@ export class OpenAICompatibleProvider implements ModelProvider {
     apiKey?: string;
     baseUrl?: string;
     modelId?: string;
+    chatCompatibility?: Partial<OpenAIChatCompatibility>;
   };
   private readonly requestPolicy?: Readonly<OpenAIRequestPolicy>;
 
@@ -783,6 +793,7 @@ export class OpenAICompatibleProvider implements ModelProvider {
     apiKey?: string;
     baseUrl?: string;
     modelId?: string;
+    chatCompatibility?: Partial<OpenAIChatCompatibility>;
     requestPolicy?: Readonly<OpenAIRequestPolicy>;
   } = {}) {
     this.identity = identity;
@@ -797,7 +808,7 @@ export class OpenAICompatibleProvider implements ModelProvider {
     return [];
   }
 
-  createClient(_ref: ModelRef, config: ProviderConfig): ModelClient {
+  createClient(ref: ModelRef, config: ProviderConfig): ModelClient {
     const str = (value: unknown): string | undefined =>
       typeof value === "string" && value.length > 0 ? value : undefined;
     const baseUrl = (str(config.baseUrl) ?? str(this.identity.baseUrl) ?? str(process.env.OPENAI_BASE_URL) ?? DEFAULT_BASE_URL).replace(
@@ -805,7 +816,10 @@ export class OpenAICompatibleProvider implements ModelProvider {
       "",
     );
     const apiKey = str(config.apiKey) ?? str(this.identity.apiKey) ?? str(process.env.OPENAI_API_KEY);
-    const modelId = str(config.modelId) ?? str(this.identity.modelId) ?? str(process.env.OPENAI_MODEL) ?? DEFAULT_MODEL;
+    // A pinned constructor identity must keep the formal execution identity
+    // stable. Otherwise the selected ModelRef is the model this client serves;
+    // environment defaults must not silently replace an SDK/host selection.
+    const modelId = str(config.modelId) ?? str(this.identity.modelId) ?? str(ref.modelId) ?? str(process.env.OPENAI_MODEL) ?? DEFAULT_MODEL;
     if (!apiKey) {
       throw new AgentError(
         errorInfo("MODEL_ERROR", "OpenAI provider requires an API key: set config.apiKey or the OPENAI_API_KEY environment variable", {
@@ -834,6 +848,8 @@ export class OpenAICompatibleProvider implements ModelProvider {
       requestPolicy = resolveOpenAIRequestPolicy(frozenConfig, {});
     }
     const { maxProviderRetries, retryDelayMs, requestTimeoutMs } = requestPolicy;
+    const chatCompatibility = resolveOpenAIChatCompatibility(baseUrl, modelId,
+      config.chatCompatibility !== undefined ? config.chatCompatibility : this.identity.chatCompatibility);
     return {
       generate: (request, signal) =>
         streamChatCompletion(
@@ -844,6 +860,7 @@ export class OpenAICompatibleProvider implements ModelProvider {
             maxProviderRetries,
             retryDelayMs,
             requestTimeoutMs,
+            chatCompatibility,
           },
           request,
           signal,

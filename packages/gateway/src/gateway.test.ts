@@ -291,6 +291,69 @@ describe("P29 AppServer (wire adapter)", () => {
     expect(sessions[0]?.agentId).toBe(AGENT.id);
   });
 
+  it("GEN1 thread/resume and thread/start resumeThreadId reuse the original thread", async () => {
+    const { server, store } = makeAppServer();
+    await server.invoke("initialize", { clientInfo: { name: "cli", version: "1" } });
+    const started = await server.invoke("thread/start", { agentName: AGENT.name, cwd: "/tmp" });
+    const parent = started.result as Session;
+    const resumed = await server.invoke("thread/resume", { threadId: parent.id });
+    expect(resumed.error).toBeUndefined();
+    expect(resumed.result).toMatchObject({ id: parent.id });
+    const throughStart = await server.invoke("thread/start", { agentName: AGENT.name, resumeThreadId: parent.id });
+    expect(throughStart.result).toMatchObject({ id: parent.id });
+    expect(await store.listSessions()).toHaveLength(1);
+  });
+
+  it("GEN1 thread/fork keeps the source history and list methods describe threads", async () => {
+    const { server, store } = makeAppServer();
+    await server.invoke("initialize", { clientInfo: { name: "cli", version: "1" } });
+    const started = await server.invoke("thread/start", { agentName: AGENT.name, cwd: "/tmp" });
+    const parent = started.result as Session;
+    await store.appendMessage({ id: "message_parent" as never, sessionId: parent.id, role: "user", content: "Prior coding context", createdAt: 1 });
+    const forked = await server.invoke("thread/fork", { threadId: parent.id });
+    expect(forked.error).toBeUndefined();
+    const branch = forked.result as Session;
+    expect(branch.parentId).toBe(parent.id);
+    expect(branch.id).not.toBe(parent.id);
+    expect((await store.listMessages(branch.id)).map(m => m.content)).toEqual(["Prior coding context"]);
+    const listed = await server.invoke("thread/list", {});
+    expect(listed.result).toMatchObject({ threads: expect.arrayContaining([expect.objectContaining({ threadId: parent.id }), expect.objectContaining({ threadId: branch.id })]) });
+    const loaded = await server.invoke("thread/loaded/list", {});
+    expect(loaded.result).toMatchObject({ threads: [expect.objectContaining({ threadId: parent.id })] });
+    await server.invoke("thread/resume", { threadId: branch.id });
+    expect((await server.invoke("thread/loaded/list", {})).result).toMatchObject({ threads: expect.arrayContaining([expect.objectContaining({ threadId: parent.id }), expect.objectContaining({ threadId: branch.id })]) });
+  });
+
+  it("GEN1 missing/unknown source IDs and fork overrides cannot create an unrelated thread", async () => {
+    const { server, store } = makeAppServer();
+    await server.invoke("initialize", { clientInfo: { name: "cli", version: "1" } });
+    for (const method of ["thread/resume", "thread/fork"]) {
+      for (const params of [{}, { threadId: "session_missing" }, { agentName: AGENT.name, cwd: "/tmp" }]) {
+        expect((await server.invoke(method, params)).error).toBeDefined();
+      }
+    }
+    expect(await store.listSessions()).toEqual([]);
+    const started = await server.invoke("thread/start", { agentName: AGENT.name, cwd: "/tmp" });
+    const parent = started.result as Session;
+    expect((await server.invoke("thread/fork", { threadId: parent.id, agentName: AGENT.name })).error?.code).toBe("CONFIG_DRIFT_REJECTED");
+    expect((await server.invoke("thread/resume", { threadId: parent.id, agentName: "different-agent" })).error?.code).toBe("CONFIG_DRIFT_REJECTED");
+    expect((await server.invoke("thread/start", { resumeThreadId: parent.id, agentName: AGENT.name, cwd: "/different" })).error?.code).toBe("CONFIG_DRIFT_REJECTED");
+    expect(await store.listSessions()).toHaveLength(1);
+  });
+
+  it("GEN1 simultaneous retries share one creation and idempotency keys are method scoped", async () => {
+    const { server, store } = makeAppServer();
+    await server.invoke("initialize", { clientInfo: { name: "cli", version: "1" } });
+    const params = { agentName: AGENT.name, cwd: "/tmp", idempotencyKey: "same-retry" };
+    const [first, second] = await Promise.all([server.invoke("thread/start", params), server.invoke("thread/start", params)]);
+    expect(first.error).toBeUndefined(); expect(second.result).toEqual(first.result);
+    expect(await store.listSessions()).toHaveLength(1);
+    const parent = first.result as Session;
+    const fork = await server.invoke("thread/fork", { threadId: parent.id, idempotencyKey: "same-retry" });
+    expect((fork.result as Session).id).not.toBe(parent.id);
+    expect(await store.listSessions()).toHaveLength(2);
+  });
+
   it("bounded ingress capacity=2: third concurrent call rejects fast with SERVER_OVERLOADED", async () => {
     const { server } = makeAppServer();
     await server.invoke("initialize", { clientInfo: { name: "cli", version: "1" } });

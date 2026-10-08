@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "reviewDate": "2026-10-08",
+  "harnessBaseline": "22d97d860cfa1001df578b1193b3bc4c8ee1bce1",
+  "scope": "Session/context recovery design comparison; selected implementation regions read. No direct upstream session Runtime code copied in this scope.",
+  "projects": [
+    {
+      "name": "pi",
+      "license": "MIT",
+      "checkout": "/workspace/HARNESS-SRC-FORK",
+      "checkoutHead": "1a46ea13de9a3f5e6987c5dd0319b2000fe49c92",
+      "sourcePrefix": "pi-main",
+      "reuse": "Design and regression inspiration; production implementation reuses existing Harness components.",
+      "files": [
+        {
+          "path": "LICENSE",
+          "bytes": 1069,
+          "sha256": "0457f5bcec3b3b211605dfb5d1a49042fd638f3686a410fe099c24a25af13c48"
+        },
+        {
+          "path": "packages/coding-agent/src/core/session-manager.ts",
+          "bytes": 53041,
+          "sha256": "9f00ce7d51fa8bb7e3dbc82a83bd6b28c5922e474a5cd86282a746bf24116fdb"
+        },
+        {
+          "path": "packages/coding-agent/src/core/skills.ts",
+          "bytes": 13972,
+          "sha256": "2f56a637c7231f112331a9636ccef2d1d2ae36fc2fee3916b892e053a63ff8f6"
+        },
+        {
+          "path": "packages/coding-agent/src/core/resource-loader.ts",
+          "bytes": 40115,
+          "sha256": "19a7ba16f91ef03c21785fb1583a217b63e7d533c143abcb8910c9c090e9bb91"
+        }
+      ]
+    },
+    {
+      "name": "codex",
+      "license": "Apache-2.0",
+      "checkout": "/workspace/HARNESS-SRC-FORK",
+      "checkoutHead": "1a46ea13de9a3f5e6987c5dd0319b2000fe49c92",
+      "sourcePrefix": "codex-main",
+      "reuse": "Design and regression inspiration; production implementation reuses existing Harness components.",
+      "files": [
+        {
+          "path": "LICENSE",
+          "bytes": 10926,
+          "sha256": "d17f227e4df5da1600391338865ce0f3055211760a36688f816941d58232d8dc"
+        },
+        {
+          "path": "codex-rs/core/src/session/rollout_reconstruction.rs",
+          "bytes": 21548,
+          "sha256": "b0bd0d49184be03f2efa311c06315c4c6a000f94dddbb17f31dae8af77d721f0"
+        },
+        {
+          "path": "codex-rs/core/src/agents_md.rs",
+          "bytes": 16935,
+          "sha256": "6813df76dfb83b39113ba218aab3083ffa3025a2409b3e9a384acb734800f2ea"
+        },
+        {
+          "path": "codex-rs/core/src/skills.rs",
+          "bytes": 5440,
+          "sha256": "479c6bc9ef54e692e7622675a25f0f973a7de057b77785b5a41a45139745b6fa"
+        }
+      ]
+    },
+    {
+      "name": "hermes",
+      "license": "MIT",
+      "checkout": "/workspace/HARNESS-SRC-FORK",
+      "checkoutHead": "1a46ea13de9a3f5e6987c5dd0319b2000fe49c92",
+      "sourcePrefix": "hermes-agent-main",
+      "reuse": "Design and regression inspiration; production implementation reuses existing Harness components.",
+      "files": [
+        {
+          "path": "LICENSE",
+          "bytes": 1070,
+          "sha256": "821556e6336796450ab852d375117b48a4887e71d255794fd6318d99982a5ab6"
+        },
+        {
+          "path": "hermes_state.py",
+          "bytes": 491249,
+          "sha256": "9391353293a74b493ad86df1edebb9383c8a57b720214ac2e9f2c420a7d67da7"
+        },
+        {
+          "path": "agent/memory_manager.py",
+          "bytes": 50027,
+          "sha256": "99be35bdb240393ec52f56e204465622e877ecce24deb450b0cbcf0ef7c87ce7"
+        },
+        {
+          "path": "agent/native_compaction.py",
+          "bytes": 7879,
+          "sha256": "0454377d1c64fd10d758e9e44c942a92f2cc2db963abcd54dada3728c3d33a9c"
+        }
+      ]
+    },
+    {
+      "name": "deepseek-harness",
+      "license": "MIT",
+      "checkout": "/workspace/deepseek-harness",
+      "checkoutHead": "5badb15009ae1756c3afe0ae0cef1faafc290ccc",
+      "sourcePrefix": "",
+      "reuse": "Design and regression inspiration; production implementation reuses existing Harness components.",
+      "files": [
+        {
+          "path": "LICENSE",
+          "bytes": 1065,
+          "sha256": "ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be"
+        },
+        {
+          "path": "packages/core/session/src/index.ts",
+          "bytes": 60227,
+          "sha256": "0ae1db3a5153f9a50e7aaec547c0e0f50af17528ddc5c50aceb8a8bbc34af9f4"
+        },
+        {
+          "path": "packages/core/session/src/fork.ts",
+          "bytes": 1397,
+          "sha256": "de80ecbf0e6a7961c096a2d7f0304bc6f6c83f897268304e28352357da06bfb0"
+        },
+        {
+          "path": "packages/compaction/compaction/src/tool-pairing.ts",
+          "bytes": 5194,
+          "sha256": "30916d32b421553a7753aa56f5e5890bdfa2bf41b0ce3c8f42bd529fd2da4b9a"
+        }
+      ]
+    }
+  ]
+}

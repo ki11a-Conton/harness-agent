@@ -1,0 +1,69 @@
+{
+  "aggregateSourceSha": "1a46ea13de9a3f5e6987c5dd0319b2000fe49c92",
+  "deepseekSourceSha": "5badb15009ae1756c3afe0ae0cef1faafc290ccc",
+  "files": [
+    {
+      "project": "pi",
+      "path": "packages/coding-agent/src/core/tools/read.ts",
+      "sha256": "c8c123fca9c8858dbd9bca347565768767a45a85c8d559aa6970f9969ed26224",
+      "license": "MIT",
+      "use": "read_window pagination semantics adapted"
+    },
+    {
+      "project": "pi",
+      "path": "packages/coding-agent/src/core/tools/truncate.ts",
+      "sha256": "104e61ea602c7f7894097b2771dad8c68de75c5a10ea6222e615c4ad144451c7",
+      "license": "MIT",
+      "use": "complete-line UTF-8 byte accounting adapted"
+    },
+    {
+      "project": "pi",
+      "path": "packages/coding-agent/src/core/tools/grep.ts",
+      "sha256": "4230296ff39124f77d2072907b1b534f1d8f709e9d657e3f93f9cee292fd35b5",
+      "license": "MIT",
+      "use": "literal/summary rendering pattern compared"
+    },
+    {
+      "project": "pi",
+      "path": "packages/coding-agent/src/core/tools/edit.ts",
+      "sha256": "50524bc4498518f8f390087c6a33cc00a5e4fbb05a95ba547ca155d71a184970",
+      "license": "MIT",
+      "use": "comparison only; existing Harness conditional edit retained"
+    },
+    {
+      "project": "codex",
+      "path": "codex-rs/core/src/tools/handlers/unified_exec/exec_command.rs",
+      "sha256": "2c4bda1e8555ad9911cb96ecefcd3bc270566e034deb86bee4c9fc2d69767606",
+      "license": "Apache-2.0",
+      "use": "comparison only; foreground exec retained"
+    },
+    {
+      "project": "hermes",
+      "path": "tools/file_tools.py",
+      "sha256": "2d4e99dbdad67ee82e16cfeba42815cf26abb1a5eed8b671f9b07373336c8f72",
+      "license": "MIT",
+      "use": "pagination/next_offset compared; no Python source copied"
+    },
+    {
+      "project": "deepseek-harness",
+      "path": "packages/fs/tool-fs/src/read-render.ts",
+      "sha256": "72bcf4a70fd3e0908d4aa3869e0fbd6ee63b05ad790af65951af0c5db9edba84",
+      "license": "MIT",
+      "use": "bounded giant-line scanner design adapted"
+    },
+    {
+      "project": "deepseek-harness",
+      "path": "packages/fs/tool-fs/src/read.ts",
+      "sha256": "1e7d5743be73623b07cde79f2f7168f4466794c26c714b923c289cd0e155115f",
+      "license": "MIT",
+      "use": "streaming vs whole-file routing compared"
+    },
+    {
+      "project": "deepseek-harness",
+      "path": "packages/fs/tool-fs/src/edit.ts",
+      "sha256": "0f1123c896bd0a4c53e47f724340e2a90dddc008c6c9f4a869e20c7654814519",
+      "license": "MIT",
+      "use": "comparison only; existing version/edit framework retained"
+    }
+  ]
+}

@@ -1,5 +1,7 @@
 # Harness Agent
 
+The first personal coding-agent generation adds persistent CLI chat, corrected session/tool/provider paths, and a portable distribution. See [first-generation usage and acceptance](docs/first-generation.md) for source comparisons and limits. Engineering acceptance and real-model quality are reported separately.
+
 A TypeScript **agent runtime** with a single-owner session actor, live-streaming
 SDK, defense-in-depth security gates, and benchmark-driven mechanism evolution.
 

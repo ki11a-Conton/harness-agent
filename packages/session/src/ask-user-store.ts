@@ -27,6 +27,7 @@ export class JSONLAskUserStore implements AskUserStore {
   private readonly file: string;
   private readonly maxPending: number;
   private loaded = false;
+  private loading: Promise<void> | undefined;
   private asks = new Map<AskId, AskUserRequest>();
 
   constructor(opts: JSONLAskUserStoreOptions) {
@@ -44,8 +45,10 @@ export class JSONLAskUserStore implements AskUserStore {
           `ask-user queue full: ${pending.length} pending asks exceed maxPending ${this.maxPending}`,
         );
       }
-      this.asks.set(request.id, request);
-      await this.persist();
+      const next = new Map(this.asks);
+      next.set(request.id, request);
+      await this.persist(next);
+      this.asks = next;
     });
   }
 
@@ -71,10 +74,10 @@ export class JSONLAskUserStore implements AskUserStore {
       if (ask.status !== "pending") {
         throw new SessionStoreError("ASK_NOT_PENDING", `ask ${id} is not pending (${ask.status})`);
       }
-      ask.status = "answered";
-      ask.answeredAt = reply.answeredAt;
-      ask.answerText = reply.text;
-      await this.persist();
+      const next = new Map(this.asks);
+      next.set(id, { ...ask, status: "answered", answeredAt: reply.answeredAt, answerText: reply.text });
+      await this.persist(next);
+      this.asks = next;
     });
   }
 
@@ -85,8 +88,10 @@ export class JSONLAskUserStore implements AskUserStore {
       if (ask === undefined) {
         throw new SessionStoreError("UNKNOWN_ASK", `unknown ask ${id}`);
       }
-      ask.status = "withdrawn";
-      await this.persist();
+      const next = new Map(this.asks);
+      next.set(id, { ...ask, status: "withdrawn" });
+      await this.persist(next);
+      this.asks = next;
     });
   }
 
@@ -96,14 +101,27 @@ export class JSONLAskUserStore implements AskUserStore {
 
   private async load(): Promise<void> {
     if (this.loaded) return;
-    this.loaded = true;
-    this.asks.clear();
+    // Publish a complete cache only after the read succeeds. Concurrent callers
+    // await the same first read; a failed read leaves the next call retryable.
+    if (this.loading !== undefined) return this.loading;
+    this.loading = this.loadFromDisk();
+    try {
+      await this.loading;
+    } finally {
+      this.loading = undefined;
+    }
+  }
+
+  private async loadFromDisk(): Promise<void> {
+    const asks = new Map<AskId, AskUserRequest>();
     let raw: string;
     try {
       raw = await readFile(this.file, "utf8");
     } catch (err) {
       // P14-6: first-run ENOENT is expected — other read failures propagate.
       if (!isNodeErrorCode(err, "ENOENT")) throw err;
+      this.asks = asks;
+      this.loaded = true;
       return;
     }
     for (const line of raw.split("\n")) {
@@ -112,7 +130,7 @@ export class JSONLAskUserStore implements AskUserStore {
       try {
         const record = JSON.parse(trimmed) as AskRecord;
         if (record.schemaVersion === ASK_SCHEMA_VERSION && record.ask?.id !== undefined) {
-          this.asks.set(record.ask.id, record.ask);
+          asks.set(record.ask.id, record.ask);
         }
       } catch (err) {
         // P14-6: corrupt line — fail-open read (matching inbox/memory stores)
@@ -120,10 +138,12 @@ export class JSONLAskUserStore implements AskUserStore {
         process.stderr.write(`[degraded] ask-user-store.corrupt-line: ${err instanceof Error ? err.message : String(err)}\n`);
       }
     }
+    this.asks = asks;
+    this.loaded = true;
   }
 
-  private async persist(): Promise<void> {
-    const body = [...this.asks.values()]
+  private async persist(asks: ReadonlyMap<AskId, AskUserRequest>): Promise<void> {
+    const body = [...asks.values()]
       .map((ask) => JSON.stringify({ schemaVersion: ASK_SCHEMA_VERSION, ask } satisfies AskRecord))
       .join("\n");
     await atomicWriteFile(this.file, `${body}\n`);

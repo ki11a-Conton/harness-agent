@@ -1,0 +1,89 @@
+name: first-generation installed acceptance
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/gen1-acceptance.yml'
+      - 'packages/**'
+      - 'apps/**'
+      - 'scripts/release/**'
+      - 'scripts/research/gen1-20261008/**'
+      - 'scripts/research/coding-audit-20261007/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'tsconfig*.json'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gen1-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  installed:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    env:
+      OPENAI_API_KEY: ''
+      OPENAI_MODEL: ''
+      OPENAI_BASE_URL: ''
+      RUN_PAID_BENCHMARKS: ''
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.21.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - name: Frozen install
+        run: pnpm install --frozen-lockfile
+      - name: Build application entries
+        run: pnpm typecheck
+      - name: Real interaction and independent installed coding
+        run: pnpm exec node scripts/release/gen1-ci.mjs
+      - name: Preserve exact-source acceptance and portable artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gen1-${{ matrix.os }}-${{ github.sha }}-${{ github.run_id }}
+          path: .ci/gen1/
+          if-no-files-found: error
+
+  same-archive-on-windows:
+    name: Linux-built portable bytes on native Windows
+    needs: installed
+    runs-on: windows-latest
+    timeout-minutes: 15
+    env:
+      OPENAI_API_KEY: ''
+      OPENAI_MODEL: ''
+      OPENAI_BASE_URL: ''
+      RUN_PAID_BENCHMARKS: ''
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Download the actual Ubuntu-built portable archive
+        uses: actions/download-artifact@v4
+        with:
+          name: gen1-ubuntu-latest-${{ github.sha }}-${{ github.run_id }}
+          path: .ci/ubuntu-built
+      - name: Run the identical distributed bytes without pnpm or a build
+        run: node scripts/release/portable-smoke.mjs --archive .ci/ubuntu-built/assets/harness-agent-1.9.0-portable.tar.gz --out .ci/same-archive-windows --version 1.9.0 --source-sha ${{ github.sha }}
+      - name: Preserve archive hash and native consumer evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gen1-same-archive-windows-${{ github.sha }}-${{ github.run_id }}
+          path: .ci/same-archive-windows/
+          if-no-files-found: error

@@ -1,0 +1,98 @@
+{
+  "sourcePaths": [
+    "packages/harness/src/config-resolver.ts",
+    "packages/harness/src/config-layers.ts",
+    "packages/harness/src/create-harness.ts",
+    "packages/model/src/fakes/scripted.ts"
+  ],
+  "initialProvider": {
+    "id": "scripted",
+    "model": {
+      "providerId": "scripted",
+      "modelId": "scripted-model"
+    },
+    "calls": [],
+    "abortSignalsLength": 0,
+    "index": 0
+  },
+  "firstTurnStatus": "completed",
+  "afterTurnProvider": {
+    "id": "scripted",
+    "model": {
+      "providerId": "scripted",
+      "modelId": "scripted-model"
+    },
+    "calls": [
+      0
+    ],
+    "abortSignalsLength": 1,
+    "index": 1
+  },
+  "sameHarnessFork": {
+    "success": true,
+    "parentId": "session_30c10b92-c7c3-4d4e-90dd-71214dd603ec",
+    "branchId": "session_6bdfc9f5-d269-4e0e-833a-17b59c7dc451",
+    "status": "active"
+  },
+  "frozen": {
+    "fingerprint": "c45e70d3",
+    "modelProvider": {
+      "id": "scripted",
+      "calls": [
+        0
+      ],
+      "abortSignalsLength": 1,
+      "index": 0
+    }
+  },
+  "reusedProviderDrift": {
+    "severity": "reject",
+    "changed": [
+      {
+        "key": "modelProvider.index",
+        "lifecycle": "session_frozen",
+        "direction": "widen",
+        "prev": 0,
+        "next": 1
+      }
+    ],
+    "frozenChanged": true,
+    "fingerprint": {
+      "prev": "c45e70d3",
+      "next": "2f17ac5c"
+    }
+  },
+  "reusedProviderResume": {
+    "success": false,
+    "code": "CONFIG_DRIFT_REJECTED",
+    "message": "session session_30c10b92-c7c3-4d4e-90dd-71214dd603ec config drifted: modelProvider.index (reject); restart or new session required"
+  },
+  "freshProvider": {
+    "id": "scripted",
+    "model": {
+      "providerId": "scripted",
+      "modelId": "scripted-model"
+    },
+    "calls": [],
+    "abortSignalsLength": 0,
+    "index": 0
+  },
+  "freshProviderDrift": {
+    "severity": "none",
+    "changed": [],
+    "frozenChanged": false,
+    "fingerprint": {
+      "prev": "c45e70d3",
+      "next": "c45e70d3"
+    }
+  },
+  "freshProviderResume": {
+    "success": true
+  },
+  "sourceHashes": {
+    "packages/harness/src/config-resolver.ts": "a28ad7ceed59cf70f1deec83657eb1315a789558ddc6ce93569c61628110f084",
+    "packages/harness/src/config-layers.ts": "99e5a3962006e30c52f78b14561c8188428db6d8b2db658e729c3adf71c16c2f",
+    "packages/harness/src/create-harness.ts": "c8a24e34c22876a20a6458e3d8b589817780ca650698a78a58fa03ddf3d70c32",
+    "packages/model/src/fakes/scripted.ts": "078b8c2da121d11f162788fac64dac9654e8f52de81ca573b76b57aec73723d9"
+  }
+}

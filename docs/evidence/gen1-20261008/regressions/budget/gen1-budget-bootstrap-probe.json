@@ -1,0 +1,15 @@
+{
+  "fault": "delay native ledger temp write while a second legitimate first-run starts",
+  "records": [
+    {
+      "code": 0,
+      "stdout": "{\"tag\":\"a\",\"ok\":true,\"view\":{\"granted\":1,\"committed\":0,\"outstanding\":0,\"unknown\":0,\"remaining\":1,\"transportRetries\":0}}\n",
+      "stderr": ""
+    },
+    {
+      "code": 0,
+      "stdout": "{\"tag\":\"b\",\"ok\":true,\"view\":{\"granted\":1,\"committed\":0,\"outstanding\":0,\"unknown\":0,\"remaining\":1,\"transportRetries\":0}}\n",
+      "stderr": ""
+    }
+  ]
+}

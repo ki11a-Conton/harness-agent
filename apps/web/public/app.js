@@ -561,6 +561,7 @@ async function enrichSidebar(generation) {
     const data = await res.json();
     if (generation !== state.sidebarGeneration) return;
     const sessions = Array.isArray(data.sessions) ? data.sessions : [];
+    if (mergeKnownSessions(sessions)) { renderSidebar(); return; }
     const byFrom = new Map(sessions.filter((session) => session && typeof session.from === "string").map((session) => [session.from, session]));
     for (const item of $("session-list").children) {
       const info = byFrom.get(item.dataset.from);
@@ -573,6 +574,29 @@ async function enrichSidebar(generation) {
     }
     saveRecord(LS_TITLES, state.titles);
   } catch { /* Switching aborts the old listing request; local titles remain available. */ }
+}
+// Browser storage remembers drafts and navigation; the backend owns durable
+// conversations. Recover them after a browser reset and when another tab starts
+// a conversation, instead of only enriching already-known local ids.
+function mergeKnownSessions(sessions) {
+  const valid = sessions.filter(session => session && typeof session.from === "string" && FROM_RE.test(session.from));
+  valid.sort((a, b) => (Number(a.createdAt) || 0) - (Number(b.createdAt) || 0));
+  const stored = new Set(valid.map(session => session.from));
+  const combined = [...new Set([...valid.map(session => session.from), ...state.froms.filter(from => !stored.has(from))])];
+  let next = combined.slice(-50);
+  if (state.activeFrom && combined.includes(state.activeFrom) && !next.includes(state.activeFrom)) {
+    next = [...next.slice(1), state.activeFrom];
+  }
+  const changed = JSON.stringify(next) !== JSON.stringify(state.froms);
+  state.froms = next;
+  for (const session of valid) {
+    if (typeof session.firstText === "string" && session.firstText.trim()) {
+      state.titles.set(session.from, session.firstText.trim().replace(/\s+/g, " ").slice(0, 48));
+    }
+  }
+  storageSet(LS_FROMS, JSON.stringify(state.froms));
+  saveRecord(LS_TITLES, state.titles);
+  return changed;
 }
 async function sendMessage() {
   const view = state.view;
@@ -662,6 +686,13 @@ async function init() {
     }
   });
   input.addEventListener("input", () => { saveDraft(state.activeFrom, input.value); resizeInput(); updateControls(); });
+  try {
+    const res = await fetch("/api/sessions");
+    if (res.ok) {
+      const data = await res.json();
+      mergeKnownSessions(Array.isArray(data.sessions) ? data.sessions : []);
+    }
+  } catch { /* Local navigation remains usable; sidebar retries after connecting. */ }
   if (!state.froms.length) { await newSession(); return; }
   const saved = storageGet(LS_ACTIVE);
   await switchSession(state.froms.includes(saved) ? saved : state.froms[state.froms.length - 1]);

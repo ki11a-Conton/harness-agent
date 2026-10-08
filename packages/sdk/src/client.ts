@@ -16,6 +16,7 @@
  */
 import type {
   InitializeServer,
+  ThreadInfo,
   ThreadItem,
   TurnEvent,
 } from "@ar/protocol";
@@ -55,13 +56,7 @@ export interface StartThreadOptions {
   idempotencyKey?: string;
 }
 
-export interface ThreadSummary {
-  threadId: string;
-  createdAt: string;
-  status: ThreadStatus;
-  itemCount: number;
-  lastSequence: number;
-}
+export type ThreadSummary = ThreadInfo;
 
 // ---------------------------------------------------------------------------
 // Single reducer (P30-3 truth). Reduces a wire TurnEvent stream → RunResult.
@@ -529,9 +524,27 @@ export class HarnessClient {
     return new Thread(id, this.transport);
   }
 
+  /** Continue the existing thread through the server's frozen-policy gate. */
+  async resumeThread(threadId: string): Promise<Thread> {
+    const res = await this.invokeOrThrow("thread/resume", { threadId });
+    return new Thread((res as { id: string }).id, this.transport);
+  }
+
+  /** Copy a settled thread's history into a new, independent branch. */
+  async forkThread(threadId: string, opts: { idempotencyKey?: string } = {}): Promise<Thread> {
+    const res = await this.invokeOrThrow("thread/fork", { threadId, ...(opts.idempotencyKey !== undefined ? { idempotencyKey: opts.idempotencyKey } : {}) });
+    return new Thread((res as { id: string }).id, this.transport);
+  }
+
   /** List running/loaded threads. */
   async listThreads(): Promise<ThreadSummary[]> {
     const res = await this.invokeOrThrow("thread/loaded/list", {});
+    return (res as { threads: ThreadSummary[] }).threads;
+  }
+
+  /** Persisted threads remain discoverable after unloading or a restart. */
+  async listStoredThreads(): Promise<ThreadSummary[]> {
+    const res = await this.invokeOrThrow("thread/list", {});
     return (res as { threads: ThreadSummary[] }).threads;
   }
 

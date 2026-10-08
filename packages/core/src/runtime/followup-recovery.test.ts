@@ -174,7 +174,7 @@ describe("P38.4-2/3 followup same-T recovery (nonterminal bound turns)", () => {
     // 1) Durable followup admitted; bind lands; process "dies" before the turn
     //    executes (crash window D: after bind, before promoteToRunning).
     const actor = await loadActor(rt, store, inbox, sessionId);
-    await actor.enqueueFollowup({ sessionId, text: "recover-me" });
+    await actor.inputQueue.enqueueFollowup({ sessionId, text: "recover-me" });
 
     // Park the drain AFTER the durable bind, BEFORE promote/run. The gate
     // NEVER opens: the pre-crash process is dead and runs no cleanup code.
@@ -275,7 +275,7 @@ describe("P38.4-2/3 followup same-T recovery (nonterminal bound turns)", () => {
 
     // Complete a followup normally (bind → run → consume).
     const actor = await loadActor(rt, store, inbox, sessionId);
-    await actor.enqueueFollowup({ sessionId, text: "terminal-me" });
+    await actor.inputQueue.enqueueFollowup({ sessionId, text: "terminal-me" });
     await actor.drainFollowupsForTest();
     await waitFor(async () => {
       const p = inbox.prompts.find((x) => x.text === "terminal-me");
@@ -319,7 +319,7 @@ describe("P38.4-2/3 followup same-T recovery (nonterminal bound turns)", () => {
       },
     };
     const actor = await loadActor(gatedRt, store, inbox, sessionId);
-    await actor.enqueueFollowup({ sessionId, text: "running-recover" });
+    await actor.inputQueue.enqueueFollowup({ sessionId, text: "running-recover" });
     void actor.drainFollowupsForTest();
     await runReachedP; // runTurn is "in flight" (durable turn is running)
 
@@ -347,7 +347,7 @@ describe("P38.4-2/3 followup same-T recovery (nonterminal bound turns)", () => {
     const { runtime: rt, runCalls } = countingRuntime(runtime);
 
     const actor = await loadActor(rt, store, inbox, sessionId);
-    await actor.enqueueFollowup({ sessionId, text: "normal" });
+    await actor.inputQueue.enqueueFollowup({ sessionId, text: "normal" });
     await actor.drainFollowupsForTest();
     await waitFor(async () => {
       const p = inbox.prompts.find((x) => x.text === "normal");

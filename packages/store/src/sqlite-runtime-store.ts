@@ -150,6 +150,19 @@ function parseDoc<T>(raw: SQLInputValue | undefined, label: string): T {
   }
 }
 
+function assertEventAbi(event: Pick<AgentEvent, "id" | "schemaVersion">, label: string, allowUnversioned = false): void {
+  if (event.schemaVersion === EVENT_ABI_VERSION || (allowUnversioned && event.schemaVersion === undefined)) return;
+  throw new Error(
+    `unsupported event ABI version for ${label}: expected ${EVENT_ABI_VERSION}, got ${String(event.schemaVersion)} — migrate the event log before reading`,
+  );
+}
+
+function parseEventDoc(raw: SQLInputValue | undefined): AgentEvent {
+  const event = parseDoc<AgentEvent>(raw, "event");
+  assertEventAbi(event, String(event?.id ?? "event"));
+  return event;
+}
+
 /** Adapter that implements the runtime store contracts on one DB. */
 // InboxStore and AskUserStore BOTH define `listPending(sessionId)` (with
 // different row shapes) — a single class cannot implement two same-signature
@@ -327,6 +340,7 @@ export class SqliteRuntimeStore
     if (!Number.isFinite(event.timestamp) || event.timestamp < 0) {
       throw new Error(`invalid event timestamp for ${event.id}: ${event.timestamp}`);
     }
+    assertEventAbi(event, event.id, true);
     const tx = "BEGIN IMMEDIATE";
     this.db.exec(tx);
     try {
@@ -343,7 +357,7 @@ export class SqliteRuntimeStore
         .get(event.sessionId) as { seq: number | null };
       const sequence = (row.seq ?? -1) + 1;
       // Sequence is authoritative; ignore any caller-supplied value.
-      const stored: AgentEvent = { ...event, sequence };
+      const stored: AgentEvent = { ...event, sequence, schemaVersion: EVENT_ABI_VERSION };
       this.db
         .prepare("INSERT INTO events (session_id, sequence, doc) VALUES (?, ?, ?)")
         .run(stored.sessionId, sequence, docOf(stored));
@@ -375,6 +389,7 @@ export class SqliteRuntimeStore
     if (!Number.isFinite(outcomeEvent.timestamp) || outcomeEvent.timestamp < 0) {
       throw new Error(`invalid event timestamp for ${outcomeEvent.id}: ${outcomeEvent.timestamp}`);
     }
+    assertEventAbi(outcomeEvent, outcomeEvent.id, true);
     const sessionId = toolMessage.sessionId;
     this.db.exec("BEGIN IMMEDIATE");
     try {
@@ -467,7 +482,7 @@ export class SqliteRuntimeStore
               "SELECT doc FROM events WHERE session_id = ? AND sequence > ? ORDER BY sequence LIMIT ?",
             )
             .all(sessionId, afterSequence, opts.limit);
-    return rows.map((row) => parseDoc<AgentEvent>(row.doc, "event"));
+    return rows.map((row) => parseEventDoc(row.doc));
   }
 
   async *stream(
@@ -479,7 +494,7 @@ export class SqliteRuntimeStore
       .prepare("SELECT doc FROM events WHERE session_id = ? AND sequence > ? ORDER BY sequence")
       .all(sessionId, afterSequence);
     for (const row of rows) {
-      yield parseDoc<AgentEvent>(row.doc, "event");
+      yield parseEventDoc(row.doc);
     }
   }
 

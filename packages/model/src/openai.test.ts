@@ -49,7 +49,7 @@ function requestUrl(callIndex = 0): string {
 }
 
 async function generate(provider: OpenAICompatibleProvider, request: ModelRequest, signal: AbortSignal): Promise<ModelEvent[]> {
-  const client = provider.createClient({ providerId: "openai", modelId: "ignored" }, { apiKey: KEY });
+  const client = provider.createClient({ providerId: "openai", modelId: "" }, { apiKey: KEY });
   const events: ModelEvent[] = [];
   for await (const ev of client.generate(request, signal)) events.push(ev);
   return events;

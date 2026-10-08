@@ -8,7 +8,7 @@ export interface SseSink {
 
 /**
  * Web ChannelAdapter (§83): binds a browser tab to the gateway through an
- * SSE stream per `from` id. The gateway only sees the ChannelAdapter surface
+ * SSE streams per `from` id. The gateway only sees the ChannelAdapter surface
  * (connect/disconnect/send/onMessage); HTTP wiring lives in WebServer.
  *
  * `send(recipient, payload)` writes `data: <JSON>\n\n` to the recipient's SSE
@@ -18,7 +18,7 @@ export interface SseSink {
 export class WebChannelAdapter implements ChannelAdapter {
   readonly id = "web";
 
-  private readonly connections = new Map<string, SseSink>();
+  private readonly connections = new Map<string, Set<SseSink>>();
   private handler?: (msg: ChannelMessage) => void | Promise<void>;
   private nextMessageId = 1;
 
@@ -28,30 +28,36 @@ export class WebChannelAdapter implements ChannelAdapter {
   }
 
   async disconnect(): Promise<void> {
-    for (const sink of [...this.connections.values()]) sink.close();
+    for (const sinks of [...this.connections.values()]) for (const sink of [...sinks]) sink.close();
     this.connections.clear();
   }
 
   async send(recipient: string, payload: unknown): Promise<void> {
-    const sink = this.connections.get(recipient);
-    if (sink === undefined) return; // no live stream for this recipient: drop
-    sink.writeFrame({
+    const sinks = this.connections.get(recipient);
+    if (sinks === undefined) return; // no live stream for this recipient: drop
+    const frame = {
       type: "text",
       text: typeof payload === "string" ? payload : JSON.stringify(payload),
-    });
+    };
+    for (const sink of [...sinks]) sink.writeFrame(frame);
   }
 
   onMessage(handler: (msg: ChannelMessage) => void | Promise<void>): void {
     this.handler = handler;
   }
 
-  /** Register the SSE stream for a `from`; replaces any previous one. */
+  /** Every tab owns its subscription; opening one never closes another. */
   register(from: string, sink: SseSink): void {
-    this.connections.set(from, sink);
+    let sinks = this.connections.get(from);
+    if (sinks === undefined) this.connections.set(from, sinks = new Set());
+    sinks.add(sink);
   }
 
-  unregister(from: string): void {
-    this.connections.delete(from);
+  unregister(from: string, sink?: SseSink): void {
+    if (sink === undefined) { this.connections.delete(from); return; }
+    const sinks = this.connections.get(from);
+    sinks?.delete(sink);
+    if (sinks?.size === 0) this.connections.delete(from);
   }
 
   hasConnection(from: string): boolean {

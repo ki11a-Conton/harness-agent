@@ -432,6 +432,44 @@ describe("WebServer HTTP", () => {
 });
 
 describe("WebServer SSE", () => {
+  it("GEN1: two tabs viewing the same session receive pushes without disconnecting each other", async () => {
+    const h = await makeHarness();
+    const a = await openSse(h);
+    expect((await a.next()).type).toBe("hello");
+    const b = await openSse(h);
+    expect((await b.next()).type).toBe("hello");
+    await h.adapter.send(USER, "same-session fanout");
+    expect((await waitForFrame(a, frame => frame.type === "text")).text).toBe("same-session fanout");
+    expect((await waitForFrame(b, frame => frame.type === "text")).text).toBe("same-session fanout");
+    a.close();
+    await h.adapter.send(USER, "remaining-tab");
+    expect((await waitForFrame(b, frame => frame.type === "text")).text).toBe("remaining-tab");
+  });
+
+  it("GEN1: closing while the history cursor is loading never registers a dead SSE sink", async () => {
+    const h = await makeHarness();
+    await postJson(h, "/api/messages", { from: USER, text: "seed durable history" });
+    await waitFor(async () => h.events.events.some(event => event.type === "turn.completed") ? true : undefined);
+    const original = h.store.listMessages.bind(h.store);
+    let release!: () => void;
+    let returned!: () => void;
+    const blocked = new Promise<void>(resolve => { release = resolve; });
+    const seeded = new Promise<void>(resolve => { returned = resolve; });
+    h.store.listMessages = async id => {
+      await blocked;
+      returned();
+      return original(id);
+    };
+    const reader = await openSse(h);
+    reader.close();
+    // Deliver the real transport close before the controlled store read ends.
+    await new Promise(resolve => setTimeout(resolve, 30));
+    release();
+    await seeded;
+    await new Promise(resolve => setTimeout(resolve, 30));
+    expect(h.adapter.hasConnection(USER)).toBe(false);
+  });
+
   it("sends a hello frame on connect", async () => {
     const h = await makeHarness();
     const reader = await openSse(h);

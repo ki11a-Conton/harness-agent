@@ -263,6 +263,10 @@ export class ModelCallController {
     await this.deps.emit(sessionId, "model.completed", {
       callId,
       finishReason: final.finishReason,
+      // The protocol mapper projects this durable event into the SDK's
+      // visible assistant item. Preserve answer text, never thinking content.
+      text: final.text ?? assistantText,
+      final: final.finishReason === "stop" && toolCalls.length === 0,
       toolCalls: toolCalls.length,
       durationMs: this.deps.now() - callStartedAt,
       ...(timeToFirstTokenMs !== undefined ? { timeToFirstTokenMs } : {}),
@@ -451,6 +455,7 @@ export class ModelCallController {
     let callId: ModelCallId;
     let usage: UsageSnapshot | undefined;
     for (let attempt = 1; ; attempt += 1) {
+      if (signal.aborted) return { status: "cancelled" };
       callId = newModelCallId();
       let modelFailed: ReturnType<typeof errorInfo> | undefined;
       usage = undefined;
@@ -518,6 +523,7 @@ export class ModelCallController {
                 timeToFirstTokenMs = this.deps.now() - callStartedAt;
               }
               assistantText += ev.text;
+              await this.deps.emit(sessionId, "model.delta", { kind: "text", text: ev.text }, turnId);
               break;
             case "reasoning_delta":
               if (!firstTokenSeen) {
@@ -599,7 +605,7 @@ export class ModelCallController {
         const retryPayload: ModelRetryPayload = { callId, attempt, error: modelFailed };
         await this.deps.emit(sessionId, "model.retry", { ...retryPayload }, turnId);
         if (retryAction.retryDelayMs > 0) {
-          await timerSleep(this.deps.timer, retryAction.retryDelayMs);
+          await timerSleep(this.deps.timer, retryAction.retryDelayMs, signal);
         }
         assistantText = "";
         reasoningText = "";

@@ -821,6 +821,9 @@ export class AgentRuntime {
     agent: AgentDefinition;
     cwd: string;
     parentId?: SessionId;
+    /** Used by a host copying branch history; it publishes active only after
+     * completing that copy. Failed initialization stays unrunnable. */
+    initialStatus?: "active" | "failed";
   }): Promise<Session> {
     if (!this.agents.has(opts.agent.id)) {
       throw new AgentError(errorInfo("INTERNAL_ERROR", `unknown agent ${opts.agent.id}`));
@@ -831,7 +834,9 @@ export class AgentRuntime {
       agentId: opts.agent.id,
       model: opts.agent.model,
       cwd: opts.cwd,
-      status: "active",
+      // Persist an unrunnable placeholder before the policy snapshot. A
+      // crash/I/O error here must not leave a legacy-fallback active session.
+      status: "failed",
       createdAt: this.now(),
       updatedAt: this.now(),
     };
@@ -855,13 +860,15 @@ export class AgentRuntime {
         createdAt: this.now(),
       } satisfies EffectiveRuntimePolicySnapshot,
     });
+    const initialized: Session = { ...session, status: opts.initialStatus ?? "active" };
+    await this.store.updateSession(initialized);
     await this.emit(session.id, "session.created", { sessionId: session.id, agentId: session.agentId });
     await this.hooks.dispatch("session_start", {
       sessionId: session.id,
       agentId: session.agentId,
       timestamp: this.now(),
     });
-    return session;
+    return initialized;
   }
 
   async startTurn(sessionId: SessionId, text: string): Promise<Turn> {
@@ -1809,6 +1816,14 @@ export class AgentRuntime {
 
   getAgent(agentId: AgentId): AgentDefinition | undefined {
     return this.agents.get(agentId);
+  }
+
+  /** Read the same persisted effective policy runTurn uses. A host branching
+   * a session must not substitute the current registry's wider definition. */
+  async getSessionAgent(sessionId: SessionId): Promise<AgentDefinition> {
+    const session = await this.store.getSession(sessionId);
+    if (session === undefined) throw new AgentError(errorInfo("INTERNAL_ERROR", `unknown session ${sessionId}`));
+    return this.resolveAgent(session);
   }
 
   /**

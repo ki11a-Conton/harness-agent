@@ -1,5 +1,5 @@
 import type { ModelEvent, ModelProvider, ModelRef, ProviderConfig } from "@ar/contracts";
-import { newToolCallId } from "@ar/contracts";
+import { captureModelProviderConfigIdentity, newToolCallId } from "@ar/contracts";
 
 export type Script = Array<ModelEvent> | AsyncIterable<ModelEvent>;
 
@@ -16,6 +16,20 @@ export class ScriptedModelProvider implements ModelProvider {
 
   constructor(scripts: Script[]) {
     this.scripts = scripts;
+  }
+
+  getConfigIdentity(): Readonly<Record<string, unknown>> | undefined {
+    // Array scripts completely describe this test provider's configured
+    // behavior. Programmatic sources have no portable declared identity and
+    // retain the legacy comparison instead of silently dropping their data.
+    try {
+      const identity = captureModelProviderConfigIdentity({ implementation: "ScriptedModelProvider/v1", scripts: this.scripts });
+      if (!(identity.scripts as readonly unknown[]).every(Array.isArray)) return undefined;
+      return identity;
+    } catch (error) {
+      if (error instanceof TypeError) return undefined;
+      throw error;
+    }
   }
 
   async listModels() {

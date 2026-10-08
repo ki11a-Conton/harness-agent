@@ -69,8 +69,16 @@ export interface CommandDeps {
   /** CLI interaction is host-owned; all decisions still go through RPC. */
   runHost?: {
     started?(sessionId: string, turnId: string): void;
+    event?(event: AgentEvent): void;
     approve(request: ApprovalRequest, signal: AbortSignal): Promise<"allow" | "deny">;
     signal?: AbortSignal;
+  };
+  /** Persistent first-generation CLI interaction, sharing the run RPC path. */
+  chatHost?: {
+    readMessage(): Promise<string | undefined>;
+    beginTurn(): NonNullable<CommandDeps["runHost"]>;
+    endTurn(): void;
+    write(line: string): void;
   };
   close?(): Promise<void>;
 }
@@ -83,6 +91,7 @@ export interface CommandResult {
 export const USAGE = `usage: agent <command> [args]
 
 commands:
+  chat [cwd] [--resume <sessionId>] [--verify <command>]  persistent multi-turn coding session
   run <cwd> <text> [--verify <command>]  run with live approval; optionally require a real verification command
   resume <sessionId>                print session state
   cancel <sessionId> <turnId>       cancel a running turn
@@ -123,6 +132,10 @@ commands:
 export async function runCommand(argv: string[], deps: CommandDeps): Promise<CommandResult> {
   const [command, ...rest] = argv;
   switch (command) {
+    case "chat": {
+      const { chatCommand } = await import("./chat-command.js");
+      return chatCommand(rest, deps);
+    }
     case "run":
       return runCmd(rest, deps);
     case "resume":
@@ -482,6 +495,16 @@ async function runCmd(rest: string[], deps: CommandDeps): Promise<CommandResult>
       agentId: agents[0]!.id,
       cwd,
     })) as Session;
+    return await runSessionTurn(session, text, deps);
+  } catch (err) {
+    return { exitCode: 1, lines: [renderError("agent run", err)] };
+  }
+}
+
+/** One turn on an existing session: the same approved/cancellable path for
+ * one-shot run and persistent chat. No host reaches through Runtime boundaries. */
+export async function runSessionTurn(session: Session, text: string, deps: CommandDeps): Promise<CommandResult> {
+  try {
     const { turnId } = (await deps.rpc.request("session.send", {
       sessionId: session.id,
       text,
@@ -489,11 +512,18 @@ async function runCmd(rest: string[], deps: CommandDeps): Promise<CommandResult>
     deps.runHost?.started?.(session.id, turnId);
     const interaction = new AbortController();
     const handled = new Set<string>();
+    let observedSequence = deps.runHost?.event === undefined ? 0 : (await deps.events.list(session.id)).at(-1)?.sequence ?? 0;
     let polling = false;
     const approvePending = async () => {
       if (polling || interaction.signal.aborted || deps.runHost === undefined) return;
       polling = true;
       try {
+        if (deps.runHost.event !== undefined) {
+          for (const event of await deps.events.list(session.id, { afterSequence: observedSequence })) {
+            observedSequence = event.sequence;
+            deps.runHost.event(event);
+          }
+        }
         for (const request of deps.approvalStore.listPending(session.id)) {
           if (interaction.signal.aborted) break;
           if (handled.has(request.id)) continue;
@@ -525,10 +555,13 @@ async function runCmd(rest: string[], deps: CommandDeps): Promise<CommandResult>
     let outcome: TurnOutcome;
     try {
       if (deps.runHost?.signal?.aborted) {
-        cancel();
-        return { exitCode: 1, lines: ["agent run: cancelled before execution"] };
+        interaction.abort();
       }
-      outcome = (await deps.rpc.request("session.run", { sessionId: session.id, turnId })) as TurnOutcome;
+      // Carry the caller signal through the actual run boundary even if it
+      // aborted before execution. A request-only cancel on an idle actor must
+      // not leave the already-created durable turn pending forever.
+      outcome = (await deps.rpc.request("session.run", { sessionId: session.id, turnId },
+        deps.runHost?.signal !== undefined ? { signal: deps.runHost.signal } : undefined)) as TurnOutcome;
     } finally {
       if (timer !== undefined) clearInterval(timer);
       interaction.abort();
@@ -536,13 +569,14 @@ async function runCmd(rest: string[], deps: CommandDeps): Promise<CommandResult>
       await pendingInteraction;
     }
 
-    const events = await deps.events.list(session.id);
-    const messages = await deps.store.listMessages(session.id);
+    const events = (await deps.events.list(session.id)).filter(event => event.turnId === turnId);
+    const messages = await deps.store.listMessagesByTurn(session.id, turnId as import("@ar/contracts").TurnId);
     const summary = [...messages]
       .reverse()
       .find((m) => m.role === "assistant" && m.toolCalls === undefined)?.content ?? "(no assistant text)";
     const files = outcome.state?.filesChanged ?? [];
-    const verification = verificationLine(events);
+    const task = deps.resolvedConfig?.value.task;
+    const verification = verificationLine(events, (task?.verification?.length ?? 0) > 0 || task?.completionPolicy?.requiresVerification === true);
     const issues =
       outcome.status === "completed"
         ? "(none)"
@@ -761,11 +795,11 @@ async function doctorCmd(deps: CommandDeps): Promise<CommandResult> {
 }
 
 /** Verification status from the event trail (plan §173 "verification"). */
-function verificationLine(events: AgentEvent[]): string {
+function verificationLine(events: AgentEvent[], configured = false): string {
   const last = [...events]
     .reverse()
     .find((e) => e.type === "verification.completed" || e.type === "verification.failed");
-  if (last === undefined) return "no verification gate configured";
+  if (last === undefined) return configured ? "not run" : "no verification gate configured";
   if (last.type === "verification.completed") return "passed";
   return `failed: ${String(last.payload.error ?? "unknown reason")}`;
 }

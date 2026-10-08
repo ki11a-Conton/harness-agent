@@ -397,6 +397,11 @@ export class InboxSessionInputQueue implements SessionInputQueue {
   private hydrated = false;
   private hydration: Promise<void> | undefined;
   private followupIdCounter = 0;
+  /** A durable write can become visible before admit() returns. Hydration
+   * must not steal that prompt before its original caller can publish the
+   * local entry and install its deferred. A write-then-error remains excluded
+   * in this actor; its durable uncertainty belongs to restart recovery. */
+  private readonly unacknowledgedPromptIds = new Set<PromptId>();
   /** P38-2: the followup reserved for promotion but NOT yet consumed. */
   private reserved: { id: string; input: UserMessage; promptId?: PromptId } | undefined;
 
@@ -421,11 +426,11 @@ export class InboxSessionInputQueue implements SessionInputQueue {
   async enqueueFollowup(input: UserMessage): Promise<string> {
     this.followupIdCounter += 1;
     const id = `fup-${this.followupIdCounter}`;
-    let promptId: PromptId | undefined;
-    if (this.deps.inbox !== undefined) {
-      promptId = await this.admit(input.text, "followup");
-    }
+    const promptId = this.deps.inbox !== undefined ? newPromptId() : undefined;
+    if (promptId !== undefined) this.unacknowledgedPromptIds.add(promptId);
+    if (promptId !== undefined) await this.admit(input.text, "followup", promptId);
     this.followups.push({ id, input, promptId });
+    if (promptId !== undefined) this.unacknowledgedPromptIds.delete(promptId);
     return id;
   }
 
@@ -469,9 +474,8 @@ export class InboxSessionInputQueue implements SessionInputQueue {
     this.reserved = undefined;
   }
 
-  private async admit(text: string, kind: "steer" | "followup"): Promise<PromptId> {
+  private async admit(text: string, kind: "steer" | "followup", id = newPromptId()): Promise<PromptId> {
     const inbox = this.deps.inbox!;
-    const id = newPromptId();
     await inbox.admit({
       id,
       sessionId: this.sessionId,
@@ -488,7 +492,7 @@ export class InboxSessionInputQueue implements SessionInputQueue {
    *  Hydration skips these so `enqueue before first hydrate` can never create
    *  a duplicate local entry for the same durable prompt. */
   private collectKnownPromptIds(): Set<PromptId> {
-    const ids = new Set<PromptId>();
+    const ids = new Set<PromptId>(this.unacknowledgedPromptIds);
     for (const f of this.followups) {
       if (f.promptId !== undefined) ids.add(f.promptId);
     }
@@ -714,6 +718,10 @@ export class DefaultSessionActor implements SessionActor {
    *  settle-triggered drain when `await this.runTurn(...)` is in a `while`
    *  loop inside the same drain. */
   private _draining = false;
+  /** New admitted work or a successful terminal ACK requests this wake.
+   * Settle/recovery failures do not set it, so a failed promotion cannot
+   * create an unbounded loop. */
+  private _followupWakeRequested = false;
 
   /** E3-10 — the recovery record store. Defaults to an in-memory fallback when
    *  `deps.recoveryStore` is not provided. */
@@ -1256,7 +1264,9 @@ export class DefaultSessionActor implements SessionActor {
       }
       // queue: outcome belongs to the future drained followup
       const followupId = await this.inputQueue.enqueueFollowup(input);
+      this.assertOpen(); // close/unload may have won during durable admission
       const outcome = this.createFollowupOutcome(followupId);
+      this.requestFollowupWake(); // deferred exists before a fast turn can settle
       return { turnId: s.turn.id, outcome };
     }
     if (s.kind === "starting") throw sessionStarting(this.sessionId);
@@ -1355,6 +1365,16 @@ export class DefaultSessionActor implements SessionActor {
   async enqueueFollowup(input: UserMessage): Promise<void> {
     this.assertOpen();
     await this.inputQueue.enqueueFollowup(input);
+    this.assertOpen();
+    this.requestFollowupWake();
+  }
+
+  /** New admitted work must wake even if the previous terminal drain already
+   * observed an empty queue. Preserve the request while that pass unwinds. */
+  private requestFollowupWake(): void {
+    if (this.closed) return;
+    this._followupWakeRequested = true;
+    void this.drainFollowups();
   }
 
   async interrupt(): Promise<TurnOutcome | undefined> {
@@ -1412,6 +1432,7 @@ export class DefaultSessionActor implements SessionActor {
   async close(): Promise<void> {
     if (this.closed) return;
     this.closed = true;
+    this._followupWakeRequested = false;
     // E3-10: cancel any pending retry timer so a closed actor never re-drains.
     this._retryTimer?.cancel();
     this._retryTimer = undefined;
@@ -1610,10 +1631,14 @@ export class DefaultSessionActor implements SessionActor {
     if (this.state.kind !== "idle") return;
     if (this._draining) return;
     this._draining = true;
+    this._followupWakeRequested = false;
     try {
       await this.drainFollowupsInner(queue);
     } finally {
       this._draining = false;
+      if (this._followupWakeRequested && !this.closed && this.state.kind === "idle") {
+        void this.drainFollowups();
+      }
     }
   }
 
@@ -1795,6 +1820,7 @@ export class DefaultSessionActor implements SessionActor {
         (outcome) => {
           void queue
             .completeReservedFollowup(entry.id)
+            .then(() => { if (queue.pendingCount > 0) this.requestFollowupWake(); })
             .catch((ackErr) => {
               process.stderr.write(
                 `[degraded] session ${this.sessionId} durable followup consume failed for ${entry.id} (prompt remains bound to turn ${turn.id}): ${ackErr instanceof Error ? ackErr.message : String(ackErr)}\n`,
@@ -1805,6 +1831,7 @@ export class DefaultSessionActor implements SessionActor {
         (err) => {
           void queue
             .completeReservedFollowup(entry.id)
+            .then(() => { if (queue.pendingCount > 0) this.requestFollowupWake(); })
             .catch((ackErr) => {
               process.stderr.write(
                 `[degraded] session ${this.sessionId} durable followup consume failed for ${entry.id} after terminal error (prompt remains bound to turn ${turn.id}): ${ackErr instanceof Error ? ackErr.message : String(ackErr)}\n`,

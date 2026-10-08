@@ -1,6 +1,7 @@
 import type { HarnessConfig } from "./config.js";
 import type { ConfigLayer, ConfigLayerSource, DeepPartial } from "./config-layers.js";
 import { buildConfigLayers, hashOf, stableSerialize } from "./config-layers.js";
+import { captureModelProviderConfigIdentity, type ModelProvider } from "@ar/contracts";
 
 /**
  * PHASE 27 (P27-2) — effective config resolution with per-key origins.
@@ -49,10 +50,26 @@ function mergeInto(
   path: string[],
   state: MergeState,
 ): void {
-  for (const [key, rawValue] of Object.entries(source)) {
+  for (const [key, sourceValue] of Object.entries(source)) {
+    let rawValue = sourceValue;
     if (rawValue === undefined) continue; // undefined = "not set", never overrides
     const fullPath = [...path, key];
     const dotPath = fullPath.join(".");
+    // Only an explicit provider contract may distinguish immutable execution
+    // configuration from mutable provider internals. Unknown implementations
+    // retain the existing full enumerable-field comparison, never id-only.
+    if (dotPath === "modelProvider" && isMergeableObject(rawValue)) {
+      const provider = rawValue as unknown as ModelProvider;
+      if (typeof provider.getConfigIdentity === "function") {
+        const identity = provider.getConfigIdentity();
+        if (identity !== undefined) {
+          rawValue = { id: provider.id, configIdentity: captureModelProviderConfigIdentity(identity) };
+          // A declared provider is a complete identity, not a partial patch
+          // that inherits unrelated fields from a lower provider layer.
+          target[key] = {};
+        }
+      }
+    }
     if (isMergeableObject(rawValue)) {
       const existing = target[key];
       const childTarget: Record<string, unknown> =
@@ -66,6 +83,18 @@ function mergeInto(
   }
 }
 
+/** Detach every array/object before hashing and later durable serialization.
+ * Functions retain the existing P27 name/normalization semantics. Freezing the
+ * captured data must never freeze the original executable provider instance.
+ */
+function captureConfigValue(value: unknown): unknown {
+  if (value === null || typeof value !== "object") return value;
+  if (Array.isArray(value)) return Object.freeze(value.map(captureConfigValue));
+  const captured: Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(value)) captured[key] = captureConfigValue(child);
+  return Object.freeze(captured);
+}
+
 /** Resolve an ordered layer stack (first = lowest precedence) into the
  *  effective config, origins and fingerprint. */
 export function resolveConfig(layers: readonly ConfigLayer[]): ResolvedConfig<HarnessConfig> {
@@ -74,9 +103,10 @@ export function resolveConfig(layers: readonly ConfigLayer[]): ResolvedConfig<Ha
   for (const layer of layers) {
     mergeInto(value, layer.values as Record<string, unknown>, layer, [], state);
   }
-  const fingerprint = hashOf(stableSerialize(value));
+  const captured = captureConfigValue(value) as HarnessConfig;
+  const fingerprint = hashOf(stableSerialize(captured));
   return {
-    value: value as unknown as HarnessConfig,
+    value: captured,
     layers: [...layers],
     origins: state.origins,
     fingerprint,

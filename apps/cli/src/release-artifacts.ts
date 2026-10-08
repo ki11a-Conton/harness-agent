@@ -9,8 +9,8 @@
  * Artifacts:
  *   - unit/integration report   (vitest run, text log)
  *   - coverage summary          (pnpm test:coverage, json-summary)
- *   - Linux/Windows CI results  (GitHub Actions workflow — the local sandbox
- *                                cannot run Windows; the workflow IS the gate)
+ *   - CI workflow definition    (actual Linux/Windows results must come from
+ *                                source-bound CI gate evidence)
  *   - adversarial report        (benchmark smoke, stub provider)
  *   - stress report             (benchmark smoke --suite stress, stub)
  *   - baseline vs champion paired report (champion eval over stub runs)
@@ -18,7 +18,7 @@
  *   - champion manifest         (CHAMPION_MANIFEST.json)
  */
 import { execFile } from "node:child_process";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { runGateV2, writeGateEvidenceV2, type GateEvidenceV2 } from "@ar/evaluation";
@@ -88,9 +88,17 @@ export async function collectReleaseArtifacts(deps: {
   if (deps.fast === true) {
     put("coverage-summary", false, "skipped (fast mode); run pnpm test:coverage in CI", coverageFile);
   } else {
+    // A failed run must not recycle a summary left by an earlier successful run.
+    await rm(join(deps.root, "coverage", "coverage-summary.json"), { force: true });
     const covOut = await execFn("pnpm", ["test:coverage"], { cwd: deps.root, timeoutMs: 540_000 });
     try {
+      if (covOut.includes("[artifact step failed]")) throw new Error("coverage command failed");
       const summary = await readFile(join(deps.root, "coverage", "coverage-summary.json"), "utf8");
+      const parsed = JSON.parse(summary) as { total?: Record<string, { pct?: unknown }> };
+      if (!["lines", "statements", "functions", "branches"].every((key) => {
+        const pct = parsed.total?.[key]?.pct;
+        return typeof pct === "number" && Number.isFinite(pct) && pct >= 0 && pct <= 100;
+      })) throw new Error("invalid coverage summary");
       await writeFile(coverageFile, summary, "utf8");
       put("coverage-summary", true, "v8 json-summary (per-package thresholds gate the CI job)", coverageFile);
     } catch {
@@ -100,14 +108,14 @@ export async function collectReleaseArtifacts(deps: {
     }
   }
 
-  // 3) Linux/Windows CI results — the workflow IS the gate; local sandbox
-  // cannot run Windows. Record the workflow file as the artifact.
+  // 3) Archive the workflow definition, but never certify it as actual CI
+  // results. Only source-bound results from the real runs can prove that.
   const ciFile = join(deps.root, ".github", "workflows", "ci.yml");
   try {
     const ci = await readFile(ciFile, "utf8");
     const ciOut = join(outDir, "ci-workflow.yml");
     await writeFile(ciOut, ci, "utf8");
-    put("ci-results", true, "GitHub Actions ci.yml (Linux+Windows matrix; runs on push/PR)", ciOut);
+    put("ci-results", false, "workflow definition archived; actual Linux/Windows run results must come from source-bound CI gate evidence", ciOut);
   } catch {
     put("ci-results", false, ".github/workflows/ci.yml missing", ciFile);
   }
@@ -119,7 +127,7 @@ export async function collectReleaseArtifacts(deps: {
     ["apps/cli/dist/main.js", "benchmark", "--suite", "adversarial", "--limit", "1", "--allow-stub", "--out", outDir],
     { cwd: deps.root, timeoutMs: 120_000 },
   );
-  const advProduced = advOut.includes("adversarial") || !advOut.includes("[artifact step failed]");
+  const advProduced = !advOut.includes("[artifact step failed]");
   await writeFile(advFile, advOut, "utf8");
   put("adversarial-report", advProduced, "adversarial smoke (stub provider, 1 case)", advFile);
 
@@ -130,7 +138,7 @@ export async function collectReleaseArtifacts(deps: {
     ["apps/cli/dist/main.js", "benchmark", "--suite", "stress", "--limit", "1", "--allow-stub", "--out", outDir],
     { cwd: deps.root, timeoutMs: 120_000 },
   );
-  const stressProduced = stressOut.includes("stress") || !stressOut.includes("[artifact step failed]");
+  const stressProduced = !stressOut.includes("[artifact step failed]");
   await writeFile(stressFile, stressOut, "utf8");
   put("stress-report", stressProduced, "stress smoke (stub provider, 1 case)", stressFile);
 

@@ -10,7 +10,9 @@ import { gzipSync } from 'node:zlib';
 const cli = fileURLToPath(new URL('../../../apps/cli/dist/main.js', import.meta.url));
 const web = fileURLToPath(new URL('../../../apps/web/dist/main.js', import.meta.url));
 const sourceRoot = fileURLToPath(new URL('../../../', import.meta.url));
-export async function runCodingAcceptance(outputDir = '.ci/coding-acceptance') {
+export async function runCodingAcceptance(outputDir = '.ci/coding-acceptance', entrypoints = {}) {
+  const cli = entrypoints.cli ?? fileURLToPath(new URL('../../../apps/cli/dist/main.js', import.meta.url));
+  const web = entrypoints.web ?? fileURLToPath(new URL('../../../apps/web/dist/main.js', import.meta.url));
   const root = await mkdtemp(join(tmpdir(), 'harness-real-coding-'));
   const output = resolve(outputDir); await mkdir(output, { recursive: true });
   const requests = []; const assertions = []; let scenario = 'coding'; let stage = 0;
@@ -192,8 +194,8 @@ export async function runCodingAcceptance(outputDir = '.ci/coding-acceptance') {
       await writeFile(join(output, 'web-frames.json'), JSON.stringify(frames, null, 2));
       await writeFile(join(output, 'web-process.log'), webLogs);
     } finally { if (stream) await stream.cancel(); if (child) { child.kill('SIGTERM'); await childExit; } }
-    const sourceSha = (await command('git', ['rev-parse', 'HEAD'], sourceRoot)).stdout.trim();
-    const sourceTreeClean = (await command('git', ['status', '--porcelain'], sourceRoot)).stdout.trim() === '';
+    const sourceSha = entrypoints.sourceSha ?? (await command('git', ['rev-parse', 'HEAD'], sourceRoot)).stdout.trim();
+    const sourceTreeClean = entrypoints.sourceTreeClean ?? ((await command('git', ['status', '--porcelain'], sourceRoot)).stdout.trim() === '');
     const result = { schemaVersion: 1, kind: 'scripted-local-HTTP-engineering-acceptance', paidModelCalls: 0, sourceSha, sourceTreeClean,
       platform: process.platform, node: process.version, assertions, requests: requests.length, status: 'PASS',
       skipped: process.platform === 'win32' ? ['POSIX SIGINT CLI case; native Windows tree cancellation is exercised by windows-acceptance regressions'] : [] };

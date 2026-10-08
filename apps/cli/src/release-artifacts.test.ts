@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { collectReleaseArtifacts, renderReleaseArtifacts } from "./release-artifacts.js";
@@ -43,6 +43,34 @@ function fakeGate(passed = true): (opts: { gate: string; command: string[]; tool
 }
 
 describe("P22-4 release artifacts", () => {
+  it("does not turn a failing benchmark into PRODUCED when its error mentions the suite", async () => {
+    const root = await makeRoot();
+    const result = await collectReleaseArtifacts({ root, outDir: join(root, "out"), fast: true,
+      execFn: fakeExec({
+        "benchmark --suite adversarial": "[artifact step failed] adversarial command exited 17",
+        "benchmark --suite stress": "[artifact step failed] stress command exited 18",
+      }), gateFn: fakeGate() as never });
+    expect(result.artifacts.find((a) => a.id === "adversarial-report")!.produced).toBe(false);
+    expect(result.artifacts.find((a) => a.id === "stress-report")!.produced).toBe(false);
+  });
+
+  it("rejects a failed coverage command even when a previous summary exists", async () => {
+    const root = await makeRoot(); await mkdir(join(root, "coverage"));
+    await writeFile(join(root, "coverage/coverage-summary.json"), JSON.stringify({ total: { lines: { pct: 100 } } }));
+    const result = await collectReleaseArtifacts({ root, outDir: join(root, "out"),
+      execFn: fakeExec({ "pnpm test:coverage": "[artifact step failed] coverage exited 17" }), gateFn: fakeGate() as never });
+    expect(result.artifacts.find((a) => a.id === "coverage-summary")!.produced).toBe(false);
+  });
+
+  it("does not label a workflow definition as executed Linux/Windows CI results", async () => {
+    const root = await makeRoot(); await mkdir(join(root, ".github/workflows"), { recursive: true });
+    await writeFile(join(root, ".github/workflows/ci.yml"), "jobs: {}\n");
+    const result = await collectReleaseArtifacts({ root, outDir: join(root, "out"), fast: true,
+      execFn: fakeExec({}), gateFn: fakeGate() as never });
+    const artifact = result.artifacts.find((a) => a.id === "ci-results")!;
+    expect(artifact.produced).toBe(false);
+    expect(artifact.note).toContain("actual Linux/Windows run results");
+  });
   it("records every artifact and reports ok when all produced", async () => {
     const root = await makeRoot();
     const outDir = join(root, "release-artifacts");

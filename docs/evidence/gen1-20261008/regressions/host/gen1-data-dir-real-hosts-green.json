@@ -1,0 +1,41 @@
+{
+  "status": "PASS",
+  "platform": "linux",
+  "node": "v24.19.0",
+  "actualProductEntrypoints": true,
+  "sourceFiles": {
+    "apps/cli/dist/main.js": "2b8562d2eee4567390e0e82ede41d7b6300fff5eac9967104391d22ea3abe80b",
+    "apps/web/dist/main.js": "a60d68fd35654060c6728a2c5cd84a984b37ac4602fe60f13c16d1533a9f8a75",
+    "apps/cli/dist/data-dir-lease.js": "0d20c081750e567a12fdfe8efb9a16e063bf54e7ccf3221d2c435a62310879dc"
+  },
+  "blockedCliExit": 1,
+  "blockedAliasExit": 1,
+  "persistentFilesUnchanged": 1,
+  "seededDurableApprovalPreserved": true,
+  "ownerExit": {
+    "code": null,
+    "signal": "SIGKILL",
+    "stdout": "[web] listening on http://127.0.0.1:32873\n",
+    "stderr": "[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000\n"
+  },
+  "successor": {
+    "code": 0,
+    "signal": null,
+    "stdout": "[OK] environment — Linux / Node 24.19.0 (cross-platform CI required for path/fs/process changes)\n[WARNING] model provider — stub provider active — no real model configured (set OPENAI_API_KEY)\n[OK] sandbox — filesystem=workspace-write network=deny\n[OK] permissions — 4 rule(s)\n[OK] workspace — /tmp/gen1-real-host-lease-vkAq4B\n[OK] tool registry — 12 tool(s)\n[WARNING] skills — skill loader not configured\n[WARNING] plugins — plugin host not configured (optional)\n[OK] session store — reachable (JSONLSessionStore)\n[OK] event store — reachable (JSONLEventStore)\n[OK] persistence — dataDir=/tmp/gen1-real-host-lease-vkAq4B/durable-data\n[WARNING] context budget — model context window unknown — conservative fallback 32000 tokens used\ndoctor: 8 ok, 4 warning(s), 0 error(s)\n",
+    "stderr": "[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000\n"
+  },
+  "contender": {
+    "code": 1,
+    "signal": null,
+    "stdout": "",
+    "stderr": "HARNESS_DATA_DIR_IN_USE: \"/tmp/gen1-real-host-lease-vkAq4B/durable-data\": another local CLI/Web host or service already owns the directory's fixed lock port (127.0.0.1:55080). Close the owning host or choose a different HARNESS_DATA_DIR. No random port fallback is allowed. This lease requires all writers to share one local network namespace.\n"
+  },
+  "aliasContender": {
+    "code": 1,
+    "signal": null,
+    "stdout": "",
+    "stderr": "HARNESS_DATA_DIR_IN_USE: \"/tmp/gen1-real-host-lease-vkAq4B/durable-data\": another local CLI/Web host or service already owns the directory's fixed lock port (127.0.0.1:55080). Close the owning host or choose a different HARNESS_DATA_DIR. No random port fallback is allowed. This lease requires all writers to share one local network namespace.\n"
+  },
+  "paidModelCalls": 0,
+  "realModelQuality": "NOT_PROVEN"
+}

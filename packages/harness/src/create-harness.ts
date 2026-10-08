@@ -12,6 +12,7 @@ import {
   AgentError,
   errorInfo,
   fileConflictKey,
+  stableFingerprint,
   newAgentId,
   newEventId,
   type AgentDefinition,
@@ -122,6 +123,8 @@ export interface Harness {
   registry: ToolRegistry;
   sessionService: SessionService;
   agents: AgentDefinition[];
+  /** Metadata discovery through the same loader and roots used by turns. */
+  listSkills(): Promise<Skill[]>;
   /**
    * R3/F4 — the orchestrator THIS harness composed, carrying the tool-dispatch
    * budget and campaign deadline it was configured with. Exposed so the
@@ -694,7 +697,37 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
   // P3-1: bind the lazily-resolved delegation tools to the real delegator.
   boundDelegator.value = delegator;
   boundParallelDelegator.value = parallelDelegator;
-  const sessionService = new SessionService({ store });
+  const sessionService = new SessionService({
+    store,
+    ...(config.now !== undefined ? { now: config.now } : {}),
+    forkStateKeys: [CONFIG_FP_KEY, CONFIG_VALUE_KEY],
+    onForkHistory: async ({ parentId, sessionId, messages }) => {
+      for (const message of messages) {
+        if (message.role === "system") continue;
+        await appendHarnessEvent(sessionId, "session.forked", {
+          parentSessionId: parentId,
+          historical: true,
+          historyMessage: { id: message.id, role: message.role, content: message.content, timestamp: message.createdAt },
+        });
+      }
+    },
+    createSession: async input => {
+      // A branch must pass the production resume gate before any new session
+      // is created; otherwise branching would bypass frozen-config drift.
+      if (input.parentId !== undefined) await sessions.load(input.parentId);
+      const agent = input.parentId !== undefined
+        ? await runtime.getSessionAgent(input.parentId)
+        : runtime.getAgent(input.agentId);
+      if (agent === undefined || agent.id !== input.agentId) {
+        throw new AgentError(errorInfo("INTERNAL_ERROR", `unknown or mismatched agent ${input.agentId}`));
+      }
+      if (stableFingerprint([input.model]) !== stableFingerprint([agent.model])) {
+        throw new AgentError(errorInfo("INTERNAL_ERROR", "session model must match the effective agent model"));
+      }
+      return runtime.createSession({ agent, cwd: input.cwd, ...(input.parentId !== undefined ? { parentId: input.parentId } : {}),
+        ...(input.initialStatus !== undefined ? { initialStatus: input.initialStatus } : {}) });
+    },
+  });
   // E4-08: production recovery persistence. When a dataDir is configured the
   // actor's recovery record (attempt / nextAttemptAt / lease / terminal state)
   // survives a real process restart via an atomic, CAS-guarded durable store.
@@ -817,6 +850,7 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
     sessionService,
     sessions,
     agents,
+    listSkills: async () => (await discoverSkills()).skills,
     // R3/F4 — the composed orchestrator (with whatever tool budget and campaign
     // deadline this harness was given) is exposed so a host/test can exercise the
     // REAL wired instance rather than a look-alike, the same reason

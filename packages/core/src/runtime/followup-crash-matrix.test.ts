@@ -147,7 +147,7 @@ describe("P38.3-4 followup promotion crash matrix (exactly-once)", () => {
     const { runtime, store, inbox, sessionId } = await setup();
     const { runtime: rt, runCalls } = countingRuntime(runtime);
     const actor = await loadActor(rt, store, inbox, sessionId);
-    await actor.enqueueFollowup({ sessionId, text: "crash-A" });
+    await actor.inputQueue.enqueueFollowup({ sessionId, text: "crash-A" });
     // "Crash" before the drain starts: the durable prompt is pending.
     const pending = await inbox.listPending(sessionId);
     expect(pending.some((p) => p.text === "crash-A")).toBe(true);
@@ -164,7 +164,7 @@ describe("P38.3-4 followup promotion crash matrix (exactly-once)", () => {
     const { runtime, store, inbox, sessionId } = await setup();
     const { runtime: rt, runCalls } = countingRuntime(runtime);
     const actor = await loadActor(rt, store, inbox, sessionId);
-    await actor.enqueueFollowup({ sessionId, text: "crash-B" });
+    await actor.inputQueue.enqueueFollowup({ sessionId, text: "crash-B" });
 
     // Park the drain INSIDE reservePendingFollowup (seam B: after reserve).
     let openReserve!: () => void;
@@ -206,7 +206,7 @@ describe("P38.3-4 followup promotion crash matrix (exactly-once)", () => {
     const { runtime, store, inbox, sessionId } = await setup();
     const { runtime: rt, runCalls } = countingRuntime(runtime);
     const actor = await loadActor(rt, store, inbox, sessionId);
-    await actor.enqueueFollowup({ sessionId, text: "crash-C" });
+    await actor.inputQueue.enqueueFollowup({ sessionId, text: "crash-C" });
 
     // Park the drain inside bindReservedFollowup BEFORE the durable bind lands
     // (seam C: T created, P still pending).
@@ -252,7 +252,7 @@ describe("P38.3-4 followup promotion crash matrix (exactly-once)", () => {
     const { runtime, store, inbox, sessionId } = await setup();
     const { runtime: rt, runCalls } = countingRuntime(runtime);
     const actor = await loadActor(rt, store, inbox, sessionId);
-    await actor.enqueueFollowup({ sessionId, text: "crash-D" });
+    await actor.inputQueue.enqueueFollowup({ sessionId, text: "crash-D" });
 
     // Park the drain AFTER the durable bind lands, BEFORE promoteToRunning
     // (seam D/E).
@@ -296,7 +296,7 @@ describe("P38.3-4 followup promotion crash matrix (exactly-once)", () => {
     const { runtime, store, inbox, sessionId } = await setup();
     const { runtime: rt, runCalls } = countingRuntime(runtime);
     const actor = await loadActor(rt, store, inbox, sessionId);
-    await actor.enqueueFollowup({ sessionId, text: "crash-F" });
+    await actor.inputQueue.enqueueFollowup({ sessionId, text: "crash-F" });
     await actor.drainFollowupsForTest(actor.inputQueue);
     // The turn ran; the prompt must already be durably bound to that turn.
     expect(totalRuns(runCalls)).toBe(1);
@@ -315,7 +315,7 @@ describe("P38.3-4 followup promotion crash matrix (exactly-once)", () => {
     const { runtime, store, inbox, sessionId } = await setup();
     const { runtime: rt, runCalls } = countingRuntime(runtime);
     const actor = await loadActor(rt, store, inbox, sessionId);
-    await actor.enqueueFollowup({ sessionId, text: "crash-G" });
+    await actor.inputQueue.enqueueFollowup({ sessionId, text: "crash-G" });
 
     // Gate the durable consume so we can crash AFTER the turn terminalized
     // but BEFORE markConsumed runs (seam G).
@@ -365,7 +365,7 @@ describe("P38.3-4 followup promotion crash matrix (exactly-once)", () => {
     const { runtime, store, inbox, sessionId } = await setup();
     const { runtime: rt, runCalls } = countingRuntime(runtime);
     const actor = await loadActor(rt, store, inbox, sessionId);
-    await actor.enqueueFollowup({ sessionId, text: "crash-I" });
+    await actor.inputQueue.enqueueFollowup({ sessionId, text: "crash-I" });
     await actor.drainFollowupsForTest(actor.inputQueue);
     await waitFor(async () => (await inbox.listAll(sessionId)).find((p) => p.text === "crash-I")?.status === "consumed");
     // Restart over the durable inbox: nothing pending, nothing to replay.

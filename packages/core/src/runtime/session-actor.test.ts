@@ -718,7 +718,7 @@ describe("SessionActor (PHASE 25)", () => {
   it("P37-1 C — direct start vs followup drain: admission refuses concurrent start (not execution overlap)", async () => {
     const { actor, sessionId, entered, open } = await actorWithGatedStart();
     // Queue a followup while the actor is idle (before any turn).
-    await actor.enqueueFollowup({ sessionId, text: "queued" });
+    await actor.inputQueue.enqueueFollowup({ sessionId, text: "queued" });
     const first = actor.startTurn({ sessionId, text: "A" });
     await entered;
     // While "starting" for A, a direct start must be refused (SESSION_BUSY).
@@ -990,7 +990,7 @@ describe("SessionActor (PHASE 25)", () => {
       runTurn: (sid: SessionId, turnId: TurnId, signal: AbortSignal) => runtime.runTurn(sid, turnId, signal),
     } as Pick<AgentRuntime, "startTurn" | "runTurn">;
     const actor = new DefaultSessionActor({ persistent: session, runtime: proxiedRuntime, store });
-    await actor.enqueueFollowup({ sessionId, text: "queued" });
+    await actor.inputQueue.enqueueFollowup({ sessionId, text: "queued" });
     const gated = gatedFollowupQueue(actor.inputQueue);
     const drainPromise = actor.drainFollowupsForTest(gated.queue);
     await gated.entered; // drain is blocked inside reservePendingFollowup
@@ -1021,7 +1021,7 @@ describe("SessionActor (PHASE 25)", () => {
     } as unknown as Pick<AgentRuntime, "startTurn" | "runTurn">;
     const actor = new DefaultSessionActor({ persistent: session, runtime: failingRuntime, store });
     const id = await actor.inputQueue.enqueueFollowup({ sessionId, text: "survivor" });
-    await actor.enqueueFollowup({ sessionId, text: "second" });
+    await actor.inputQueue.enqueueFollowup({ sessionId, text: "second" });
     await actor.drainFollowupsForTest(actor.inputQueue);
     // The reserved followup is requeued at the head — pendingCount unchanged.
     expect(actor.inputQueue.pendingCount).toBe(2);
@@ -1033,7 +1033,7 @@ describe("SessionActor (PHASE 25)", () => {
     const { runtime, store, sessionId } = await setupActor();
     const session = (await store.getSession(sessionId))!;
     const actor = new DefaultSessionActor({ persistent: session, runtime, store });
-    await actor.enqueueFollowup({ sessionId, text: "good" });
+    await actor.inputQueue.enqueueFollowup({ sessionId, text: "good" });
     await actor.drainFollowupsForTest(actor.inputQueue);
     expect(actor.inputQueue.pendingCount).toBe(0);
   });
@@ -1166,7 +1166,7 @@ describe("SessionActor (PHASE 25)", () => {
       const actor = new DefaultSessionActor({ persistent: session, runtime: countingRuntime, store, inbox });
       // enqueueFollowup admits A durably AND pushes A locally; the first
       // reservePendingFollowup hydrates and must NOT load the same prompt twice.
-      await actor.enqueueFollowup({ sessionId, text: "A" });
+      await actor.inputQueue.enqueueFollowup({ sessionId, text: "A" });
       await actor.drainFollowupsForTest(actor.inputQueue);
       expect(startTurnCalls).toBe(1);
       // No duplicate may remain in the local queue for a late second promotion.
@@ -1440,7 +1440,7 @@ describe("SessionActor (PHASE 25)", () => {
         },
       } as Pick<AgentRuntime, "startTurn" | "runTurn">;
       const actor = new DefaultSessionActor({ persistent: session, runtime: countingRuntime, store, inbox });
-      await actor.enqueueFollowup({ sessionId, text: "crash-A" });
+      await actor.inputQueue.enqueueFollowup({ sessionId, text: "crash-A" });
 
       const gated = gatedPreBindQueue(actor.inputQueue);
       const drainPromise = actor.drainFollowupsForTest(gated.queue);
@@ -1478,7 +1478,7 @@ describe("SessionActor (PHASE 25)", () => {
         },
       } as Pick<AgentRuntime, "startTurn" | "runTurn">;
       const actor = new DefaultSessionActor({ persistent: session, runtime: countingRuntime, store, inbox });
-      await actor.enqueueFollowup({ sessionId, text: "crash-B" });
+      await actor.inputQueue.enqueueFollowup({ sessionId, text: "crash-B" });
 
       const gated = gatedBindQueue(actor.inputQueue);
       const drainPromise = actor.drainFollowupsForTest(gated.queue);
@@ -1525,7 +1525,7 @@ describe("SessionActor (PHASE 25)", () => {
         },
       } as Pick<AgentRuntime, "startTurn" | "runTurn">;
       const actor = new DefaultSessionActor({ persistent: session, runtime: countingRuntime, store, inbox });
-      await actor.enqueueFollowup({ sessionId, text: "crash-C" });
+      await actor.inputQueue.enqueueFollowup({ sessionId, text: "crash-C" });
       await actor.drainFollowupsForTest(actor.inputQueue);
 
       // The turn ran — assert the durable prompt was bound to that exact turn
@@ -1769,7 +1769,7 @@ describe("SessionActor (PHASE 25)", () => {
         },
       } as unknown as Pick<AgentRuntime, "startTurn" | "runTurn">;
       const actor = new DefaultSessionActor({ persistent: session, runtime: countingRuntime, store });
-      await actor.enqueueFollowup({ sessionId, text: "queue0" });
+      await actor.inputQueue.enqueueFollowup({ sessionId, text: "queue0" });
       const runs = Array.from({ length: 50 }, (_, i) =>
         actor
           .startTurn({ sessionId, text: `s${i}` })

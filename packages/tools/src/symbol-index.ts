@@ -50,9 +50,39 @@ const DECL_PATTERNS: ReadonlyArray<{ kind: string; re: RegExp }> = [
   { kind: "enum", re: /(?:export\s+)?enum\s+([A-Za-z_$][\w$]*)/ },
 ];
 
-const IMPORT_RE = /import\s+(?:type\s+)?[^'"]*?\b([A-Za-z_$][\w$]*)\b[^'"]*?from\s+['"]/;
-const NAMED_IMPORT_RE = /import\s+(?:type\s+)?\{([^}]*)\}\s*from\s+['"]/;
-const EXPORT_RE = /export\s+(?:\{[^}]*\}|default|const|function|class|interface|type|enum)/;
+/** An unclosed repeated `export {` must not repeatedly rescan the line tail. */
+function isExportLine(line: string): boolean {
+  const prefix = /\bexport\s+/.exec(line);
+  if (!prefix) return false;
+  const rest = line.slice(prefix.index + prefix[0].length);
+  if (rest.startsWith("{")) return rest.indexOf("}") >= 0;
+  return /^(?:default|const|function|class|interface|type|enum)/.test(rest);
+}
+
+/** Heuristic import classification with bounded, single-pass operations.
+ * The old two lazy wildcards around an identifier could backtrack
+ * quadratically on a long malformed `import` line and block cancellation. */
+function importsBinding(line: string, needle: string): boolean {
+  const prefix = /\bimport\s+/.exec(line);
+  if (!prefix) return false;
+  let rest = line.slice(prefix.index + prefix[0].length);
+  rest = rest.replace(/^type\s+/, "");
+  const from = /\bfrom\s*['"]/.exec(rest);
+  if (!from) return false;
+  const bindings = rest.slice(0, from.index).trim();
+  if (bindings.startsWith("{")) {
+    const end = bindings.indexOf("}");
+    if (end < 0) return false;
+    return bindings.slice(1, end).split(",").some(part => {
+      const local = part.trim().replace(/^type\s+/, "").split(/\s+as\s+/).at(-1);
+      return local?.toLowerCase() === needle;
+    });
+  }
+  const namespace = /^\*\s+as\s+([A-Za-z_$][\w$]*)/.exec(bindings);
+  if (namespace) return namespace[1]!.toLowerCase() === needle;
+  const defaultBinding = /^([A-Za-z_$][\w$]*)/.exec(bindings);
+  return defaultBinding?.[1]?.toLowerCase() === needle;
+}
 
 interface IndexedFile {
   relPath: string;
@@ -207,21 +237,14 @@ export async function indexedSymbolSearch(input: {
         }
       }
       if (role !== "definition") {
-        const exportMatch = EXPORT_RE.test(line);
+        const exportMatch = isExportLine(line);
         if (exportMatch) {
           role = "export";
           kind = "export";
         } else {
-          const named = line.match(NAMED_IMPORT_RE);
-          if (named !== null && named[1]!.split(",").some((part) => part.trim().toLowerCase() === needle)) {
+          if (importsBinding(line, needle)) {
             role = "import";
             kind = "import";
-          } else if (IMPORT_RE.test(line)) {
-            const im = line.match(IMPORT_RE);
-            if (im !== null && im[1]!.toLowerCase() === needle) {
-              role = "import";
-              kind = "import";
-            }
           }
         }
       }

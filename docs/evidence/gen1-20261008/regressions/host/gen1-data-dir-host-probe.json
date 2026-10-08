@@ -1,0 +1,22 @@
+{
+  "results": [
+    {
+      "code": 0,
+      "out": "{\"host\":\"a\",\"pending\":[\"approval-a\"]}\n",
+      "err": ""
+    },
+    {
+      "code": 0,
+      "out": "{\"host\":\"b\",\"pending\":[\"approval-b\"]}\n",
+      "err": "[degraded] sqlite-store.close-journal-mode: database is locked\n"
+    }
+  ],
+  "durablePending": [
+    "approval-b"
+  ],
+  "expected": [
+    "approval-a",
+    "approval-b"
+  ],
+  "calls": 0
+}

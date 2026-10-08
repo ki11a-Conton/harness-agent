@@ -110,7 +110,7 @@ export interface RuntimeRpcDeps {
   /** Host-wired tool listing; absent provider makes `tool.list` an error. */
   listTools?: () => ToolSpec[];
   /** Host-wired skill listing; absent provider makes `skill.list` an error. */
-  listSkills?: () => Skill[];
+  listSkills?: () => Skill[] | Promise<Skill[]>;
 }
 
 function requireParam(name: string, value: unknown): string {
@@ -171,8 +171,25 @@ export function createRuntimeRpc(
     })
     .register("session.resume", async (params) => {
       const { sessionId } = params as { sessionId: SessionId };
-      return deps.sessionService.resume(requireParam("sessionId", sessionId) as SessionId);
+      const id = requireParam("sessionId", sessionId) as SessionId;
+      const session = await deps.sessionService.resume(id);
+      if ((params.agentId !== undefined && params.agentId !== session.agentId) ||
+          (params.cwd !== undefined && params.cwd !== session.cwd)) {
+        throw new AgentError(errorInfo("CONFIG_DRIFT_REJECTED", "resume cannot override the existing session agent or cwd; start a new session"));
+      }
+      await deps.sessions.load(id);
+      return session;
     })
+    .register("session.fork", async (params) => {
+      const id = requireParam("sessionId", params.sessionId) as SessionId;
+      if (params.agentId !== undefined || params.agentName !== undefined || params.cwd !== undefined) {
+        throw new AgentError(errorInfo("CONFIG_DRIFT_REJECTED", "fork inherits the source agent and cwd; overrides require a new session"));
+      }
+      await deps.sessions.load(id);
+      return deps.sessionService.threadFork(id);
+    })
+    .register("session.list", async () => deps.sessionService.list())
+    .register("session.loaded.list", async () => deps.sessions.listLoaded())
     .register("session.steer", async (params) => {
       const { sessionId, text } = params as { sessionId: SessionId; text: string };
       const session = requireParam("sessionId", sessionId) as SessionId;

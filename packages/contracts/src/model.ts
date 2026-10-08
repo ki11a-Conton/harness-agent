@@ -109,7 +109,55 @@ export interface ModelClient {
 export interface ModelProvider {
   readonly id: string;
 
+  /** Optional, synchronous declaration of every execution-affecting provider
+   * configuration field (including implementation/version when relevant).
+   * Runtime counters, caches and in-flight requests are not configuration.
+   * The identity is plain JSON data, without getters, functions, cycles or
+   * programmatic iterables. Hosts capture this data separately; they keep using the original provider
+   * instance for execution. Returning undefined keeps the legacy fail-closed
+   * comparison of all enumerable provider fields. A provider must not omit
+   * configuration merely to make a changed implementation resume successfully.
+   */
+  getConfigIdentity?(): Readonly<Record<string, unknown>> | undefined;
+
   listModels(): Promise<ModelInfo[]>;
 
   createClient(model: ModelRef, config: ProviderConfig): ModelClient;
+}
+
+/** Capture an explicit provider identity without executing data getters or
+ * silently deleting unsupported configuration. Shared by hosts and providers
+ * that opt in only when their complete configuration can be represented.
+ */
+export function captureModelProviderConfigIdentity(identity: Readonly<Record<string, unknown>>): Readonly<Record<string, unknown>> {
+  const active = new WeakSet<object>();
+  const invalid = (path: string): never => { throw new TypeError(`ModelProvider configuration identity is not plain stable data at ${path}`); };
+  const capture = (value: unknown, path: string, depth: number): unknown => {
+    if (value === null || typeof value === "string" || typeof value === "boolean") return value;
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    if (typeof value !== "object" || depth > 100 || active.has(value)) return invalid(path);
+    const array = Array.isArray(value);
+    const prototype = Object.getPrototypeOf(value);
+    if (array && prototype !== Array.prototype) return invalid(path);
+    if (!array && prototype !== null && prototype !== Object.prototype) return invalid(path);
+    active.add(value);
+    try {
+      const descriptors = Object.getOwnPropertyDescriptors(value);
+      const out: unknown[] | Record<string, unknown> = array ? [] : {};
+      for (const key of Reflect.ownKeys(value)) {
+        if (typeof key !== "string") return invalid(path);
+        if (array && key === "length") continue;
+        const descriptor = descriptors[key]!;
+        if (!descriptor.enumerable || !("value" in descriptor) || key === "__proto__") return invalid(`${path}.${key}`);
+        if (array && (!/^(0|[1-9]\d*)$/.test(key) || Number(key) >= value.length)) return invalid(`${path}.${key}`);
+        (out as Record<string, unknown>)[key] = capture(descriptor.value, `${path}.${key}`, depth + 1);
+      }
+      if (array && (out as unknown[]).length !== value.length) return invalid(path);
+      // Sparse slots are configuration too; JSON must not silently invent null.
+      if (array && Object.keys(out).length !== value.length) return invalid(path);
+      return Object.freeze(out);
+    } finally { active.delete(value); }
+  };
+  if (identity === null || typeof identity !== "object" || Array.isArray(identity)) return invalid("identity");
+  return capture(identity, "identity", 0) as Readonly<Record<string, unknown>>;
 }

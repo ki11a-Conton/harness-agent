@@ -29,9 +29,16 @@ export interface InitializeServer {
 
 export interface ThreadStartParams {
   agentName: string;
+  cwd?: string;
   resumeThreadId?: ThreadId;
   /** Optional idempotency key (P29-9) — a retried thread/start must not create
    *  two threads. */
+  idempotencyKey?: string;
+}
+
+export interface ThreadForkParams {
+  /** Branch source; a fork never silently starts an unrelated empty thread. */
+  threadId: ThreadId;
   idempotencyKey?: string;
 }
 
@@ -157,7 +164,7 @@ export type ProtocolRequest =
   | { method: "thread/start"; id: number; params: ThreadStartParams }
   | { method: "thread/read"; id: number; params: ThreadReadParams }
   | { method: "thread/resume"; id: number; params: ThreadReadParams }
-  | { method: "thread/fork"; id: number; params: ThreadStartParams }
+  | { method: "thread/fork"; id: number; params: ThreadForkParams }
   | { method: "thread/list"; id: number; params: Record<string, never> }
   | { method: "thread/loaded/list"; id: number; params: Record<string, never> }
   | { method: "turn/start"; id: number; params: TurnStartParams }

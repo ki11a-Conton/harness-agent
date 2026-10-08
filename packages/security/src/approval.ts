@@ -211,6 +211,49 @@ interface DurableApprovalFile {
   decisions: ApprovalDecisionRecord[];
 }
 
+function approvalStoreFile(raw: string): DurableApprovalFile {
+  try {
+    const data: unknown = JSON.parse(raw);
+    if (typeof data !== "object" || data === null || Array.isArray(data)) throw new Error("record is not an object");
+    const file = data as Record<string, unknown>;
+    // Older valid files had no version marker. Preserve their requests and
+    // audit records, then write the current version on the next real mutation.
+    if (file.version !== undefined && file.version !== 1) throw new Error(`unsupported version ${String(file.version)}`);
+    if (!Array.isArray(file.pending) || !Array.isArray(file.decisions)) throw new Error("pending and decisions must be arrays");
+    const seen = new Set<string>();
+    function record(value: unknown, kind: string): Record<string, unknown> {
+      if (typeof value !== "object" || value === null || Array.isArray(value)) throw new Error(`${kind} is not an object`);
+      const entry = value as Record<string, unknown>;
+      for (const key of ["id", "sessionId", "agentId", "action", "target"]) {
+        if (typeof entry[key] !== "string" || entry[key].length === 0) throw new Error(`${kind} has invalid ${key}`);
+      }
+      if (seen.has(entry.id as string)) throw new Error(`duplicate approval id ${String(entry.id)}`);
+      seen.add(entry.id as string);
+      return entry;
+    }
+    const pending = file.pending.map((value) => {
+      const entry = record(value, "pending request");
+      if (typeof entry.reason !== "string") throw new Error("pending request has invalid reason");
+      for (const key of ["createdAt", "expiresAt"]) {
+        if (typeof entry[key] !== "number" || !Number.isFinite(entry[key])) throw new Error(`pending request has invalid ${key}`);
+      }
+      if (entry.scope !== undefined && !isApprovalScope(entry.scope)) throw new Error("pending request has invalid scope");
+      return entry as unknown as ApprovalRequest;
+    });
+    const decisions = file.decisions.map((value) => {
+      const entry = record(value, "decision record");
+      if (!["allow", "deny", "expired", "cancelled"].includes(String(entry.value))) throw new Error("decision record has invalid value");
+      if (typeof entry.decidedAt !== "number" || !Number.isFinite(entry.decidedAt)) throw new Error("decision record has invalid decidedAt");
+      if (entry.scope !== undefined && !isApprovalScope(entry.scope)) throw new Error("decision record has invalid scope");
+      if (entry.expired !== undefined && entry.expired !== (entry.value === "expired")) throw new Error("decision record has invalid expired flag");
+      return { ...entry, scope: entry.scope ?? "one_call", expired: entry.value === "expired" } as unknown as ApprovalDecisionRecord;
+    });
+    return { version: 1, pending, decisions };
+  } catch (err) {
+    throw new Error(`corrupt or unsupported approval store: ${err instanceof Error ? err.message : String(err)}`);
+  }
+}
+
 export class DurableApprovalStore implements ApprovalStore {
   private readonly inner: InMemoryApprovalStore;
   private readonly filePath: string;
@@ -225,15 +268,14 @@ export class DurableApprovalStore implements ApprovalStore {
     let raw: string | undefined;
     try {
       raw = readFileSync(filePath, "utf8");
-    } catch {
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
       raw = undefined; // no file yet — fresh store
     }
-    if (raw !== undefined && raw.length > 0) {
-      const data = JSON.parse(raw) as DurableApprovalFile;
-      if (Array.isArray(data.pending)) {
-        for (const r of data.pending) this.pending.set(r.id, r);
-      }
-      if (Array.isArray(data.decisions)) this.decisions = data.decisions;
+    if (raw !== undefined) {
+      const data = approvalStoreFile(raw);
+      for (const request of data.pending) this.pending.set(request.id, request);
+      this.decisions = data.decisions;
     }
     // Re-create re-hydrated requests inside the live inner store so they are
     // resolvable again.

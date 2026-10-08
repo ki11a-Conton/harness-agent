@@ -4,6 +4,9 @@ export type { CommandDeps, CommandResult, RpcClient } from "./commands.js";
 export { runChecks } from "./doctor.js";
 export type { DoctorDeps, CheckResult } from "./doctor.js";
 
+export { acquireDataDirLease, DataDirLeaseError } from "./data-dir-lease.js";
+export type { DataDirLease } from "./data-dir-lease.js";
+
 export {
   BUILTIN_TOOLS,
   DEFAULT_MODEL_ID,

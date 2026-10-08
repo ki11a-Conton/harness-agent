@@ -1,6 +1,7 @@
 import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import type { AgentEvent, Message, Session, Turn } from "@ar/contracts";
+import { EVENT_ABI_VERSION } from "@ar/contracts";
 import type { SqliteRuntimeStore } from "./sqlite-runtime-store.js";
 
 /**
@@ -44,24 +45,47 @@ interface WrappedRecord {
 }
 
 function parseRecord<T>(raw: unknown, label: string): T {
-  if (typeof raw !== "object" || raw === null) {
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
     throw new Error(`migrate: corrupt ${label}: not an object`);
   }
+  if ((raw as { schemaVersion?: unknown }).schemaVersion !== SESSION_SCHEMA_VERSION) {
+    throw new Error(`migrate: corrupt ${label}: unsupported wrapper schemaVersion`);
+  }
   return raw as T;
+}
+
+function isDocument(raw: unknown): raw is { id: string } {
+  return typeof raw === "object" && raw !== null && !Array.isArray(raw)
+    && typeof (raw as { id?: unknown }).id === "string" && (raw as { id: string }).id.length > 0;
+}
+
+function migrationEvent(raw: unknown): AgentEvent {
+  if (!isDocument(raw)) throw new Error("migrate: invalid event payload");
+  const event = raw as AgentEvent;
+  // An explicit migration upgrades supported pre-ABI documents, whereas an
+  // unknown declared ABI cannot be interpreted safely in either run mode.
+  if (event.schemaVersion !== undefined && event.schemaVersion !== EVENT_ABI_VERSION) throw new Error("migrate: unsupported event ABI");
+  if (typeof event.sessionId !== "string" || !event.sessionId || typeof event.type !== "string"
+      || !Number.isFinite(event.timestamp) || event.timestamp < 0
+      || typeof event.payload !== "object" || event.payload === null || Array.isArray(event.payload)) {
+    throw new Error("migrate: invalid event payload");
+  }
+  return event;
 }
 
 async function readDirSafe(dir: string): Promise<string[]> {
   try {
     return await readdir(dir);
-  } catch {
-    return [];
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw new Error(`migrate: cannot list ${dir}: ${String(err)}`);
   }
 }
 
 async function readJsonFile<T>(file: string): Promise<T | undefined> {
   try {
     const raw = await readFile(file, "utf8");
-    return JSON.parse(raw) as T;
+    return parseRecord<T>(JSON.parse(raw), file);
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return undefined;
     throw new Error(`migrate: cannot read ${file}: ${String(err)}`);
@@ -87,7 +111,7 @@ export async function migrateJsonlToSqlite(input: {
   for (const file of await readDirSafe(join(source.sessionDataDir, "sessions"))) {
     if (!file.endsWith(".json")) continue;
     const rec = await readJsonFile<WrappedRecord>(join(source.sessionDataDir, "sessions", file));
-    if (rec === undefined || rec.session === undefined) {
+    if (rec === undefined || !isDocument(rec.session)) {
       allSourcesClean = false;
       continue;
     }
@@ -101,7 +125,7 @@ export async function migrateJsonlToSqlite(input: {
   for (const file of await readDirSafe(join(source.sessionDataDir, "turns"))) {
     if (!file.endsWith(".json")) continue;
     const rec = await readJsonFile<WrappedRecord>(join(source.sessionDataDir, "turns", file));
-    if (rec === undefined || rec.turn === undefined) {
+    if (rec === undefined || !isDocument(rec.turn)) {
       allSourcesClean = false;
       continue;
     }
@@ -131,7 +155,7 @@ export async function migrateJsonlToSqlite(input: {
         allSourcesClean = false;
         continue;
       }
-      if (rec.message === undefined) {
+      if (!isDocument(rec.message)) {
         allSourcesClean = false;
         continue;
       }
@@ -177,8 +201,7 @@ export async function migrateJsonlToSqlite(input: {
       let event: AgentEvent;
       try {
         const rec = parseRecord<{ schemaVersion?: number; event?: AgentEvent }>(JSON.parse(line), "event line");
-        if (rec.event === undefined) throw new Error("no event field");
-        event = rec.event;
+        event = migrationEvent(rec.event);
       } catch {
         allSourcesClean = false;
         continue;
@@ -188,14 +211,13 @@ export async function migrateJsonlToSqlite(input: {
         try {
           await target.append({ ...event, sessionId: sessionId as never });
         } catch (err) {
-          // P14-6: a duplicate id (already migrated, idempotent) is expected —
-          // any other append failure is reported, never silent.
-          process.stderr.write(`[degraded] migrate.append: ${err instanceof Error ? err.message : String(err)}\n`);
+          // Only a known duplicate is an idempotent no-op. Storage/ABI failures
+          // must abort, never produce allSourcesClean=true for an unwritten row.
+          if (!(err instanceof Error) || !/^duplicate event id(?:\/sequence)?:/.test(err.message)) throw err;
         }
       }
     }
   }
 
-  void SESSION_SCHEMA_VERSION;
   return { ...counts, dryRun: dryRun ?? false, allSourcesClean };
 }

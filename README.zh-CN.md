@@ -1,5 +1,7 @@
 # Harness Agent（智能体运行时）
 
+第一代个人 coding agent 的能力、开源来源、使用与验收范围见 [第一代交付说明](docs/first-generation.md)。本轮发布前必须通过固定源码全量、真实 Windows 及独立安装验收；模型质量仍单独报告。
+
 一个 TypeScript **智能体运行时**：**会话单一所有者**（SessionActor）、**实时流式 SDK**、**纵深安全门禁**，以及**基准驱动的机制演化**。
 
 基于 pnpm workspace 单体仓库：`packages/` 下 **24 个 `@ar/*` 包**，外加 `apps/cli` 与 `apps/web`。

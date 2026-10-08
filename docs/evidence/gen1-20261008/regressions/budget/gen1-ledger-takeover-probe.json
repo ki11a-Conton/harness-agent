@@ -1,0 +1,22 @@
+{
+  "fault": "delay both stale-owner removals, remove A stale lock then B removes the current live A lock",
+  "overlappingCriticalSections": true,
+  "liveLock": {
+    "token": "0dbd51ccec6a0f9e4c176ecca3520281",
+    "pid": 464039,
+    "host": "bab82d68f5f6",
+    "acquiredAt": 1791437699325
+  },
+  "results": [
+    {
+      "code": 0,
+      "out": "{\"tag\":\"a\",\"ok\":true}\n",
+      "err": ""
+    },
+    {
+      "code": 0,
+      "out": "{\"tag\":\"b\",\"ok\":true}\n",
+      "err": ""
+    }
+  ]
+}

@@ -304,11 +304,40 @@ export function buildResumePrompt(
   return lines.join("\n");
 }
 
-/** Context-length model errors (API 413 / "maximum context length") — the
- *  signal for reactive compact, never blind retries. */
+/** Precise context-length detection adapted from pi (MIT),
+ * packages/ai/src/utils/overflow.ts; see third_party/coding-prompts/pi-MIT.txt.
+ * Authentication, request-parameter and TPM errors are not context overflow.
+ * A confirmed overflow permits a changed-context retry, never a blind resend. */
+const CONTEXT_OVERFLOW_PATTERNS: readonly RegExp[] = [
+  /prompt is too long/i,
+  /request_too_large/i,
+  /input is too long for requested model/i,
+  /exceeds the context window/i,
+  /exceeds (?:the )?(?:model'?s )?maximum context length/i,
+  /input token count.*exceeds the maximum/i,
+  /maximum prompt length is \d+/i,
+  /reduce the length of the messages/i,
+  /maximum context length (?:is \d+ tokens|exceeded)/i,
+  /exceeds (?:the )?maximum allowed input length of [\d,]+ tokens?/i,
+  /input \(\d+ tokens\) is longer than the model'?s context length/i,
+  /exceeds the available context size/i,
+  /greater than the context length/i,
+  /context window exceeds limit/i,
+  /exceeded model token limit/i,
+  /too large for model with \d+ maximum context length/i,
+  /prompt has [\d,]+ tokens?, but the configured context size is [\d,]+ tokens?/i,
+  /model_context_window_exceeded/i,
+  /prompt too long; exceeded (?:max )?context length/i,
+  /range of input length should be/i,
+  /context[_ ]length[_ ]exceeded/i,
+  /\bHTTP 413\b/i,
+];
+
 export function isContextOverflowError(info: ReturnType<typeof errorInfo>): boolean {
+  if (info.provider?.kind === "rate_limit" || [401, 403, 429].includes(info.provider?.status ?? 0)) return false;
   const haystack = `${info.code} ${info.message}`;
-  return /context|token|maximum|too (long|large)|413|prompt is too|length/i.test(haystack);
+  if (/rate limit|too many requests|throttl|invalid (?:authentication )?token|unsupported parameter/i.test(haystack)) return false;
+  return info.provider?.status === 413 || CONTEXT_OVERFLOW_PATTERNS.some(pattern => pattern.test(haystack));
 }
 
 /** LOOP-001: tool result rendered as a compressible context block so the
@@ -473,6 +502,13 @@ export function decideModelRetry(
   if (isContextOverflowError(modelFailed)) {
     if (!reactiveCompacted) return { action: "compact-and-retry" };
     return { action: "fail", maxAttempts: 1, reason: "context overflow after reactive compact", suppressLimitEvent: true };
+  }
+
+  // The provider owns whether replay is safe. In particular a mid-stream
+  // failure must never be replayed by the generic recovery ladder, and an
+  // HTTP 400/401/403 must not be retried merely because its code is MODEL_ERROR.
+  if (modelFailed.retryable === false || modelFailed.safeToRetry === false) {
+    return { action: "fail", maxAttempts: attempt, reason: `model error is not safe to retry: ${modelFailed.message}`, suppressLimitEvent: true };
   }
 
   if (recovery !== undefined && recovery.action === "retry") {

@@ -7,7 +7,9 @@ import {
   DEFAULT_MODEL_ID,
   resolveModelProvider,
   resolveInteractiveModelRef,
+  acquireDataDirLease,
 } from "@ar/cli";
+import type { DataDirLease } from "@ar/cli";
 import { createRuntimeRpc, Gateway } from "@ar/gateway";
 import type { AgentSummary } from "@ar/gateway";
 import { WebChannelAdapter } from "./adapter.js";
@@ -25,7 +27,20 @@ import { WebServer } from "./server.js";
  * harness's agent id is used for new sessions.
  */
 export async function main(): Promise<number> {
-  const dir = process.env.HARNESS_DATA_DIR;
+  const lease = await acquireDataDirLease(process.env.HARNESS_DATA_DIR);
+  lease?.ref();
+  try {
+    const result = await startMain(lease);
+    lease?.unref();
+    return result;
+  } catch (error) {
+    await lease?.release();
+    throw error;
+  }
+}
+
+async function startMain(lease: DataDirLease | undefined): Promise<number> {
+  const dir = lease?.dataDir;
   const agentPromptPolicy = resolveAgentPromptPolicy(process.env.HARNESS_AGENT_PROMPT);
   // E3-01: resolveModelProvider now returns a BillingProvider — unwrap the
   // provider for harness wiring.
@@ -82,8 +97,6 @@ export async function main(): Promise<number> {
     route: (from) => bindings.get(from),
     restoredBindings: bindings.all().map((binding) => ({ ...binding, channelId: adapter.id })),
   });
-  await gateway.start();
-
   const server = new WebServer({
     adapter,
     bindings,
@@ -91,15 +104,29 @@ export async function main(): Promise<number> {
     store: harness.store,
     approvalStore: harness.approvalStore,
   });
-  await server.start();
-
-  const shutdown = async (signal: string): Promise<void> => {
-    process.stdout.write(`[web] ${signal} — shutting down\n`);
-    await server.stop();
-    await gateway.stop();
+  try {
+    await gateway.start();
+    await server.start();
+  } catch (error) {
+    // Partial startup still owns stores/listeners. Finish cleanup before main
+    // releases directory ownership so another host cannot overlap it.
+    const results = await Promise.allSettled([server.stop(), gateway.stop()]);
+    for (const result of results) if (result.status === "rejected") {
+      process.stderr.write(`[degraded] web.startup-cleanup: ${result.reason instanceof Error ? result.reason.message : String(result.reason)}\n`);
+    }
     await harness.close();
-    process.exitCode = 0;
-  };
+    throw error;
+  }
+
+  let shutdownPromise: Promise<void> | undefined;
+  const shutdown = (signal: string): Promise<void> => shutdownPromise ??= (async () => {
+    process.stdout.write(`[web] ${signal} — shutting down\n`);
+    try {
+      try { await server.stop(); }
+      finally { try { await gateway.stop(); } finally { await harness.close(); } }
+      process.exitCode = 0;
+    } finally { await lease?.release(); }
+  })();
   process.once("SIGINT", () => void shutdown("SIGINT"));
   process.once("SIGTERM", () => void shutdown("SIGTERM"));
   return 0;

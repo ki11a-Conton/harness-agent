@@ -528,6 +528,50 @@ try:
                     mobile_context.close()
             run_case('mobile-390x844-layout-and-drawer', 'production-stack', mobile)
 
+            def recover_without_browser_storage():
+                fresh_context = browser.new_context(viewport={'width': 1440, 'height': 900})
+                try:
+                    expect(not fresh_context.storage_state()['origins'], 'fresh browser context unexpectedly has stored origins')
+                    fresh_page = fresh_context.new_page()
+                    fresh_page.on('pageerror', lambda error: browser_errors.append({'controlled': False, 'error': str(error)}))
+                    fresh_page.goto(ready['base'], wait_until='domcontentloaded')
+                    target = fresh_page.locator(f'[data-from="{from_id}"]')
+                    target.wait_for(state='attached', timeout=15000)
+                    if fresh_page.locator('#sidebar-toggle').get_attribute('aria-expanded') != 'true':
+                        fresh_page.locator('#sidebar-toggle').click()
+                    target.click()
+                    fresh_page.locator('#messages').get_by_text('HARNESS_REPLY:BROWSER_FIRST', exact=True).wait_for(timeout=15000)
+                    fresh_page.locator('#messages').get_by_text('HARNESS_REPLY:BROWSER_SECOND', exact=True).wait_for(timeout=15000)
+                    expect(fresh_page.evaluate("localStorage.getItem('harness.web.activeFrom')") == from_id, 'restored sidebar selected a different session')
+                    fresh_page.screenshot(path=str(args.out / 'gen1-empty-browser-restored.png'))
+                    return {'freshOrigins': 0, 'selectedFrom': from_id, 'restoredReplies': 2, 'source': 'real /api/sessions and persisted history'}
+                finally:
+                    fresh_context.close()
+            run_case('gen1-backend-history-restores-empty-browser-storage', 'production-stack', recover_without_browser_storage)
+
+            def live_multi_tab():
+                selected = page.evaluate("localStorage.getItem('harness.web.activeFrom')")
+                second_context = browser.new_context(viewport={'width': 1440, 'height': 900})
+                try:
+                    second_page = second_context.new_page()
+                    second_page.on('pageerror', lambda error: browser_errors.append({'controlled': False, 'error': str(error)}))
+                    second_page.goto(ready['base'], wait_until='domcontentloaded')
+                    target = second_page.locator(f'[data-from="{selected}"]')
+                    target.wait_for(state='attached', timeout=15000)
+                    if second_page.locator('#sidebar-toggle').get_attribute('aria-expanded') != 'true':
+                        second_page.locator('#sidebar-toggle').click()
+                    target.click()
+                    second_page.wait_for_function("document.getElementById('conn-label').textContent.includes('已连接')")
+                    normal_turn('GEN1_SHARED_TAB')
+                    second_page.locator('#messages').get_by_text('HARNESS_REPLY:GEN1_SHARED_TAB', exact=True).wait_for(timeout=15000)
+                    expect(page.locator('#messages').get_by_text('HARNESS_REPLY:GEN1_SHARED_TAB', exact=True).count() == 1, 'first tab lost or duplicated its live reply')
+                    expect(second_page.locator('#messages').get_by_text('HARNESS_REPLY:GEN1_SHARED_TAB', exact=True).count() == 1, 'second tab lost or duplicated its live reply')
+                    expect('已连接' in page.locator('#conn-label').inner_text(), 'opening a second tab disconnected the first')
+                    return {'from': selected, 'liveTabs': 2, 'replyCountPerTab': 1, 'transport': 'real Chromium EventSource'}
+                finally:
+                    second_context.close()
+            run_case('gen1-same-session-two-real-tabs-receive-live-reply', 'production-stack', live_multi_tab)
+
             def verification_failure():
                 send('[fail-verification]')
                 page.locator('.approval-card:not(.resolved) .allow-btn').wait_for(timeout=15000)

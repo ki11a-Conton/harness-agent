@@ -61,6 +61,7 @@ export class AppServer {
   readonly initialize: InitializeGate;
   private readonly ingress: BoundedQueue<unknown>;
   private readonly idempotency = new IdempotencyTable();
+  private readonly idempotencyInFlight = new Map<string, Promise<unknown>>();
   private readonly rpc: RpcMethodRegistry;
   private readonly serverInfo: { name: string; version: string };
   private readonly listAgentsRef?: AppServerOptions["listAgents"];
@@ -114,29 +115,33 @@ export class AppServer {
 
       // Idempotent keys replay the previous result instead of re-running.
       const explicitKey =
-        typeof params.idempotencyKey === "string" ? params.idempotencyKey : undefined;
+        typeof params.idempotencyKey === "string" ? `${method}:${params.idempotencyKey}` : undefined;
       if (explicitKey !== undefined) {
         const prior = this.idempotency.lookup(explicitKey);
         if (prior !== undefined) return { result: prior };
+        const inFlight = this.idempotencyInFlight.get(explicitKey);
+        if (inFlight !== undefined) return { result: await inFlight };
       }
 
       // `thread/read` is a PROTOCOL-level read (P29-8 replay): it must return
       // the DTO shape { threadId, items, nextSequence } the SDK depends on,
       // NOT the runtime status object. Handled BEFORE generic mapping so the
       // wire contract and the runtime RPC surface stay decoupled.
-      if (method === "thread/read") {
-        const result = await this.readThread(
-          params as { threadId?: string; afterSequence?: number; limit?: number },
-        );
+      const pending = this.ingress.submit(async () => {
+        if (method === "thread/read") return this.readThread(params);
+        if (method === "thread/list" || method === "thread/loaded/list") return this.listThreads(method === "thread/loaded/list");
+        const wireMethod = method === "thread/start" && params.resumeThreadId !== undefined
+          ? "session.resume" : this.mapMethod(method);
+        return this.rpc.invoke(wireMethod, this.adaptParams(method, params));
+      });
+      if (explicitKey !== undefined) this.idempotencyInFlight.set(explicitKey, pending);
+      try {
+        const result = await pending;
         if (explicitKey !== undefined) this.idempotency.record(explicitKey, result);
         return { result };
+      } finally {
+        if (explicitKey !== undefined && this.idempotencyInFlight.get(explicitKey) === pending) this.idempotencyInFlight.delete(explicitKey);
       }
-
-      const wireMethod = this.mapMethod(method);
-      const adapted = this.adaptParams(method, params);
-      const result = await this.ingress.submit(() => this.rpc.invoke(wireMethod, adapted));
-      if (explicitKey !== undefined) this.idempotency.record(explicitKey, result);
-      return { result };
     } catch (err) {
       if (err instanceof ProtocolError) {
         return { error: { ...err.info } };
@@ -163,15 +168,17 @@ export class AppServer {
   private mapMethod(method: string): string {
     switch (method) {
       case "thread/start":
-      case "thread/resume":
-      case "thread/fork":
         return "session.create";
+      case "thread/resume":
+        return "session.resume";
+      case "thread/fork":
+        return "session.fork";
       // `thread/read` is handled at the protocol layer (readThread) — it does
       // NOT route to the runtime status RPC (removed in P34-6).
       case "thread/list":
-        return "agent.list";
+        return "session.list";
       case "thread/loaded/list":
-        return "agent.list";
+        return "session.loaded.list";
       case "turn/start":
         return "session.send";
       case "turn/run":
@@ -203,16 +210,34 @@ export class AppServer {
   private adaptParams(method: string, params: Record<string, unknown>): Record<string, unknown> {
     const threadId = typeof params.threadId === "string" ? params.threadId : undefined;
     switch (method) {
-      case "thread/start":
-      case "thread/fork": {
+      case "thread/start": {
         // The wire speaks in agent NAMES; the runtime speaks agent IDs.
         const agentName = typeof params.agentName === "string" ? params.agentName : undefined;
         const resolved = agentName !== undefined ? this.agentIdForName(agentName) : undefined;
+        if (params.resumeThreadId !== undefined) {
+          return {
+            sessionId: params.resumeThreadId,
+            ...(agentName !== undefined ? { agentId: resolved ?? agentName } : {}),
+            ...(params.cwd !== undefined ? { cwd: params.cwd } : {}),
+          };
+        }
         return {
           agentId: resolved ?? params.agentName,
           cwd: typeof params.cwd === "string" ? params.cwd : ".",
         };
       }
+      case "thread/resume":
+        return {
+          sessionId: threadId,
+          ...(params.agentName !== undefined ? { agentId: typeof params.agentName === "string" ? this.agentIdForName(params.agentName) ?? params.agentName : params.agentName } : {}),
+          ...(params.cwd !== undefined ? { cwd: params.cwd } : {}),
+        };
+      case "thread/fork":
+        return {
+          sessionId: threadId,
+          ...(params.agentName !== undefined ? { agentName: params.agentName } : {}),
+          ...(params.cwd !== undefined ? { cwd: params.cwd } : {}),
+        };
       case "turn/start": {
         // wire "threadId" ↔ runtime "sessionId"; wire "prompt" ↔ runtime "text"
         return {
@@ -279,6 +304,24 @@ export class AppServer {
       if (agent.name === name || agent.id === name) return agent.id;
     }
     return undefined;
+  }
+
+  private async listThreads(loadedOnly: boolean): Promise<{ threads: import("@ar/protocol").ThreadInfo[] }> {
+    const sessions = await this.rpc.invoke("session.list", {}) as import("@ar/contracts").Session[];
+    const loaded = loadedOnly ? new Set(await this.rpc.invoke("session.loaded.list", {}) as string[]) : undefined;
+    const threads: import("@ar/protocol").ThreadInfo[] = [];
+    for (const session of sessions) {
+      if (loaded !== undefined && !loaded.has(session.id)) continue;
+      const events = await this.eventsRef.list(session.id);
+      const itemCount = events.reduce((count, event) => {
+        const mapped = this.mapper.mapSafe(event, session.id);
+        return count + (mapped?.type === "item/completed" && mapped.item !== undefined ? 1 : 0);
+      }, 0);
+      threads.push({ threadId: session.id, createdAt: session.createdAt, itemCount,
+        lastSequence: events.at(-1)?.sequence ?? 0,
+        status: session.status === "active" ? "active" : session.status === "completed" ? "completed" : "interrupted" });
+    }
+    return { threads };
   }
 }
 

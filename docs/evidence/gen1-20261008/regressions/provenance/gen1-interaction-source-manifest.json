@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "sources": [
+    {
+      "project": "pi",
+      "snapshotRepositorySha": "1a46ea13de9a3f5e6987c5dd0319b2000fe49c92",
+      "snapshotPath": "pi-main/packages/coding-agent/src/cli/args.ts",
+      "sha256": "feb423762f6e5e64e1df1d46b661c23c5709b976c8e0ccf50002dc304df517fb",
+      "license": "MIT",
+      "reuse": "design comparison; implementation uses existing Harness RPC and host modules, no external source excerpt copied",
+      "idea": "persistent CLI flags and resume UX"
+    },
+    {
+      "project": "pi",
+      "snapshotRepositorySha": "1a46ea13de9a3f5e6987c5dd0319b2000fe49c92",
+      "snapshotPath": "pi-main/packages/coding-agent/src/core/session-manager.ts",
+      "sha256": "9f00ce7d51fa8bb7e3dbc82a83bd6b28c5922e474a5cd86282a746bf24116fdb",
+      "license": "MIT",
+      "reuse": "design comparison; implementation uses existing Harness RPC and host modules, no external source excerpt copied",
+      "idea": "durable session cwd and indexed history"
+    },
+    {
+      "project": "pi",
+      "snapshotRepositorySha": "1a46ea13de9a3f5e6987c5dd0319b2000fe49c92",
+      "snapshotPath": "pi-main/packages/coding-agent/src/modes/interactive/interactive-mode.ts",
+      "sha256": "6cbfac17e40f680a31c084c10e09bb96eea8e9d3158d65650e9c1413a6a104b6",
+      "license": "MIT",
+      "reuse": "design comparison; implementation uses existing Harness RPC and host modules, no external source excerpt copied",
+      "idea": "one session shared by repeated prompts and cancel/follow-up handling"
+    },
+    {
+      "project": "Codex",
+      "snapshotRepositorySha": "1a46ea13de9a3f5e6987c5dd0319b2000fe49c92",
+      "snapshotPath": "codex-main/codex-rs/cli/src/main.rs",
+      "sha256": "b1281b1cd993a0af7763d65c946a4f7ae067a5fd4efa2c5dce603ed4b26d633c",
+      "license": "Apache-2.0",
+      "reuse": "design comparison; implementation uses existing Harness RPC and host modules, no external source excerpt copied",
+      "idea": "resume continues a real interactive session rather than printing state"
+    },
+    {
+      "project": "Hermes",
+      "snapshotRepositorySha": "1a46ea13de9a3f5e6987c5dd0319b2000fe49c92",
+      "snapshotPath": "hermes-agent-main/hermes_cli/main.py",
+      "sha256": "87887b243185bad8d45f2df248a11638cec20c90b7aee776abaa97c19b084f28",
+      "license": "MIT",
+      "reuse": "design comparison; implementation uses existing Harness RPC and host modules, no external source excerpt copied",
+      "idea": "cwd-scoped session resume and exit resume hint"
+    },
+    {
+      "project": "DeepSeek Harness",
+      "snapshotRepositorySha": "5badb15009ae1756c3afe0ae0cef1faafc290ccc",
+      "snapshotPath": "packages/api/session-controller/src/client/sessions/manager.ts",
+      "sha256": "e7dfa21eff0234ffa458ade61dffd80e97aff11d6e5a735c9c1b22d838571802",
+      "license": "MIT",
+      "reuse": "design comparison; implementation uses existing Harness RPC and host modules, no external source excerpt copied",
+      "idea": "server session list refresh and connection generation"
+    },
+    {
+      "project": "DeepSeek Harness",
+      "snapshotRepositorySha": "5badb15009ae1756c3afe0ae0cef1faafc290ccc",
+      "snapshotPath": "packages/api/session-controller/src/client/sessions/service.ts",
+      "sha256": "71b6d24ef3c899e6fcc758ab21c0a3be9dcb2333fa2eb47ad8737d02a1aaacd7",
+      "license": "MIT",
+      "reuse": "design comparison; implementation uses existing Harness RPC and host modules, no external source excerpt copied",
+      "idea": "session/host subscriptions and state lifecycle"
+    },
+    {
+      "project": "DeepSeek Harness",
+      "snapshotRepositorySha": "5badb15009ae1756c3afe0ae0cef1faafc290ccc",
+      "snapshotPath": "packages/api/session-controller/tests/client-apply.client.spec.ts",
+      "sha256": "963c39eb342afa0cbf7fdb5992c30ec06d2a48d2a57550919adce865c16da42e",
+      "license": "MIT",
+      "reuse": "design comparison; implementation uses existing Harness RPC and host modules, no external source excerpt copied",
+      "idea": "server list/reconnect cold startup controls"
+    }
+  ]
+}

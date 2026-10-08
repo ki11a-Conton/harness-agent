@@ -35,9 +35,15 @@ export class ProtocolEventMapper {
       turnId: event.turnId ?? "unknown",
     };
     switch (event.type) {
+      case "turn.started":
+        if (typeof event.payload.text !== "string") return null;
+        return { ...base, type: "item/completed", item: {
+          kind: "user_message", sequence: event.sequence, threadId, turnId: event.turnId, timestamp: event.timestamp, text: event.payload.text,
+        } };
       case "model.started":
         return { ...base, type: "item/started", itemId: event.id };
       case "model.delta":
+        if (event.payload.kind !== undefined && event.payload.kind !== "text") return null;
         return {
           ...base,
           type: "item/delta",
@@ -60,13 +66,7 @@ export class ProtocolEventMapper {
                 ? event.payload.text
                 : "",
             final: event.payload.final === true,
-            usage:
-              event.payload.usage !== undefined
-                ? (event.payload.usage as {
-                    inputTokens: number;
-                    outputTokens: number;
-                  })
-                : undefined,
+            usage: visibleUsage(event.payload.usage),
           },
         };
       case "tool.started":
@@ -188,22 +188,40 @@ export class ProtocolEventMapper {
         return { ...base, type: "turn/completed" };
       case "turn.cancelled":
         return { ...base, type: "turn/interrupted" };
-      case "turn.failed":
+      case "turn.failed": {
+        // Runtime records the typed AgentErrorInfo under payload.error. Keep
+        // the former flat DTO form compatible with existing external stores.
+        const failure = typeof event.payload.error === "object" && event.payload.error !== null
+          ? event.payload.error as Record<string, unknown> : event.payload;
         return {
           ...base,
           type: "turn/failed",
           error: {
             code:
-              typeof event.payload.code === "string"
-                ? event.payload.code
+              typeof failure.code === "string"
+                ? failure.code
                 : "INTERNAL_ERROR",
             message:
-              typeof event.payload.message === "string"
-                ? event.payload.message
+              typeof failure.message === "string"
+                ? failure.message
                 : "turn failed",
-            retryable: event.payload.retryable === true,
+            retryable: failure.retryable === true,
           },
         };
+      }
+      case "session.forked": {
+        // A copied historical observation carries no live turn, approval or
+        // tool-execution authority. Never project private reasoning content.
+        const history = event.payload.historyMessage;
+        if (event.payload.historical !== true || typeof history !== "object" || history === null) return null;
+        const message = history as Record<string, unknown>;
+        if (typeof message.content !== "string") return null;
+        const itemBase = { sequence: event.sequence, threadId, timestamp: typeof message.timestamp === "number" ? message.timestamp : event.timestamp };
+        if (message.role === "user") return { ...base, type: "item/completed", item: { ...itemBase, kind: "user_message", text: message.content } };
+        if (message.role === "assistant") return { ...base, type: "item/completed", item: { ...itemBase, kind: "agent_message", text: message.content } };
+        if (message.role === "tool") return { ...base, type: "item/completed", item: { ...itemBase, kind: "runtime_warning", message: `[Historical tool result; no tool executed in this branch] ${message.content}` } };
+        return null;
+      }
       default:
         return null; // not part of the visible stream (trace/progress/policy)
     }
@@ -217,6 +235,15 @@ export class ProtocolEventMapper {
       return null;
     }
   }
+}
+
+function visibleUsage(value: unknown): { inputTokens: number; outputTokens: number } | undefined {
+  if (typeof value !== "object" || value === null) return undefined;
+  const usage = value as Record<string, unknown>;
+  if (typeof usage.inputTokens !== "number" || typeof usage.outputTokens !== "number" ||
+      !Number.isFinite(usage.inputTokens) || !Number.isFinite(usage.outputTokens) ||
+      usage.inputTokens < 0 || usage.outputTokens < 0) return undefined;
+  return { inputTokens: usage.inputTokens, outputTokens: usage.outputTokens };
 }
 
 /** Convenience: map a batch of events, discarding nulls. */
