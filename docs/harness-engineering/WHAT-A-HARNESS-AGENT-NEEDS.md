@@ -177,7 +177,7 @@
 | D3 的"n≥20"这个**数字** | **REJECTED（由 D4 驳回）** | D4 的裁决：下界应由置信水平反推（"违规率 <1% @95%" ⇒ n≈299；n=20 仅支持"违规率 <14%"），**不允许裸整数**。红队转述并接受。→ 保留机制（`INSUFFICIENT_SAMPLE` 表达），**弃用数字 20** |
 | D2 的第五槽位 `NO_EXPECTATION_DECLARED`（即使前提表述改正后） | **PARTIAL：只堵一半** | 红队回读原文：`security-evidence-execution.ts:125` 的短路条件是 `facts.length === 0 && …` → 该槽位**只覆盖"零事实"的用例**；"有事实但未声明期望"的用例仍走 `:137-143` 的正常分类。→ 采纳为建议 11，但**必须同时覆盖两类输入**，且**未与 D2 确认**（其质疑未获回应） |
 | D2 的四态处方（`verification-controller.ts:75` 的 `return undefined`） | **收窄后才可执行** | 红队的替代写法：`requiresVerification === true && 返回 undefined ⇒ NOT_RUN`（现在就可判、**不必改契约**）。建议采用此收窄形式，原四态处方在当前仓库不可执行 |
-| D4 的"报 pass@1 + pass^k 两个诚实数字" | **CONTESTED（处方层面；D2 未获回应地反对）** | **两个层面必须分开**：**指标层面**——D2 的 S1 与 D4 的 M7 **不冲突、可合并**（作用在不同指标上；红队 §3-③ 的合并结论只在这一层成立）；**处方层面**——D2 **仍反对**，理由：`pass@k` 在共享工作区下**单调高估**，而 `pass^k` 的偏差方向**不确定**（共享状态既能造"前次污染后次"的假成功，也能造"前次留半成品"的假失败）→ **报 `pass^k` 必须声明"k 次之间是否重置工作区"，未声明即不可复算**。D4 未回应此点。**裁决：按"存在未解决分歧"处理，不得写成共识** |
+| D4 的"报 pass@1 + pass^k 两个诚实数字" | **CONTESTED（处方层面；D2 反对，且已升级为代码级依据）** | **两个层面必须分开**：**分析层**——`pass@k` 与 `pass^k` 同源、回答不同问题 → **D2 不反对合并**（D4 M7 与红队 §3-③ 只在这一层成立）；**处方层**——D2 **仍反对**，且依据不是统计推断而是**代码分支**（我已逐行复核 `packages/evaluation/src/harness-metrics.ts:1181-1186`）：`declaredProtocol = group.some(t => t.inRepetitionProtocol)`，`minRequired = declaredProtocol ? Math.min(minRepeat, k) : k`，组内不足 `minRequired` 时**同时**计入 `passPowK.excluded` 与 `passAtK.notSatisfied` 并跳过 → **`pass^k` 的分母（`passPowK.groups`）本身受"是否声明重复协议"支配**。故"报 `pass^k` 必须声明 k 次之间是否重置工作区"**改的不是附注而是分母本身**，未声明时它**并不比其他数字更诚实**。D4 未回应此点（D2 自限：`inRepetitionProtocol` 的写入点未读，故对"未声明重复有多常见"不作断言） |
 
 ---
 
