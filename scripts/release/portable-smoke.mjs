@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { basename, join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { parseArgs } from 'node:util';
@@ -13,7 +13,7 @@ import { runCodingAcceptance } from '../research/coding-audit-20261007/acceptanc
 const { values } = parseArgs({ options: { archive: { type: 'string' }, out: { type: 'string' }, version: { type: 'string' }, 'source-sha': { type: 'string' } } });
 if (!values.archive || !values.out || !values.version || !/^[a-f0-9]{40}$/.test(values['source-sha'] ?? '')) throw new Error('usage: portable-smoke.mjs --archive FILE --out EVIDENCE_DIR --version V --source-sha SHA');
 const output = resolve(values.out); await mkdir(output, { recursive: true });
-const cleanroom = await mkdtemp(join(tmpdir(), 'harness-portable-cleanroom-'));
+const cleanroom = await realpath(await mkdtemp(join(tmpdir(), 'harness-portable-cleanroom-')));
 const saved = { NODE_OPTIONS: process.env.NODE_OPTIONS, NODE_PATH: process.env.NODE_PATH };
 delete process.env.NODE_OPTIONS; delete process.env.NODE_PATH;
 try {

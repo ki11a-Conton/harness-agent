@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { gunzipSync, gzipSync } from 'node:zlib';
@@ -8,7 +8,7 @@ import { digest, extractArchive, makeArchive, safePath, verifyPortable } from '.
 import { copyPackageNotices, run, sourceSnapshot, workspacePackages } from './portable.mjs';
 
 async function temporary(body) {
-  const directory = await mkdtemp(join(tmpdir(), 'harness-portable-test-'));
+  const directory = await realpath(await mkdtemp(join(tmpdir(), 'harness-portable-test-')));
   try { await body(directory); } finally { await rm(directory, { recursive: true, force: true }); }
 }
 async function workspaceFixture(dir) {
@@ -31,6 +31,29 @@ test('portable enumerates the actual workspace, including indirect and unreferen
   const packages = await workspacePackages(dir);
   assert.deepEqual(packages.map(pkg => pkg.metadata.name).sort(), ['@ar/cli', '@ar/contracts', '@ar/orchestration', '@ar/store']);
   assert.ok(packages.every(pkg => pkg.directory.startsWith(dir)));
+}));
+test('workspace identity accepts a root alias and excludes the physical workspace root', async () => temporary(async dir => {
+  const root = join(dir, 'real-source'); const alias = join(dir, 'source-alias');
+  await mkdir(root); await workspaceFixture(root);
+  await symlink(root, alias, process.platform === 'win32' ? 'junction' : 'dir');
+  assert.deepEqual((await workspacePackages(alias)).map(pkg => pkg.metadata.name), ['@ar/cli', '@ar/contracts', '@ar/orchestration', '@ar/store']);
+}));
+test('workspace inventory rejects packages physically outside the pinned source', async () => temporary(async dir => {
+  const root = join(dir, 'source'); const outside = join(dir, 'outside/escape');
+  await mkdir(root); await workspaceFixture(root); await mkdir(outside, { recursive: true });
+  await writeFile(join(outside, 'package.json'), JSON.stringify({ name: '@ar/escape', version: '0.1.0' }));
+  await writeFile(join(outside, 'tsconfig.json'), '{}');
+  await writeFile(join(root, 'pnpm-workspace.yaml'), 'packages:\n  - "apps/*"\n  - "packages/*"\n  - "../outside/*"\n');
+  await assert.rejects(workspacePackages(root), /outside pinned source/);
+}));
+test('linked production workspace dependencies cannot enter the portable payload', async () => temporary(async dir => {
+  await workspaceFixture(dir); const linked = join(dir, 'excluded/linked');
+  await mkdir(linked, { recursive: true });
+  await writeFile(join(linked, 'package.json'), JSON.stringify({ name: '@ar/linked', version: '0.1.0' }));
+  await writeFile(join(linked, 'tsconfig.json'), '{}');
+  await symlink(linked, join(dir, 'packages/linked'), process.platform === 'win32' ? 'junction' : 'dir');
+  await writeFile(join(dir, 'apps/cli/package.json'), JSON.stringify({ name: '@ar/cli', version: '0.1.0', dependencies: { '@ar/linked': 'workspace:*' } }));
+  await assert.rejects(workspacePackages(dir), /symlink|unresolved workspace dependency.*@ar\/linked/);
 }));
 test('portable rejects missing production workspace dependencies and duplicate package names', async () => temporary(async dir => {
   await workspaceFixture(dir);
@@ -75,6 +98,15 @@ test('extraction never overwrites an existing consumer directory', async () => t
   await writeFile(join(dir, 'keep.txt'), 'keep');
   await assert.rejects(extractArchive(makeArchive([{ path: 'harness-agent-1.9.0/a', bytes: Buffer.from('x') }]), dir), /empty/);
   assert.equal(await readFile(join(dir, 'keep.txt'), 'utf8'), 'keep');
+}));
+test('extraction still rejects a link destination and links in its parent path before file writes', async () => temporary(async dir => {
+  const physical = join(dir, 'physical'); const alias = join(dir, 'alias');
+  await mkdir(physical); await symlink(physical, alias, process.platform === 'win32' ? 'junction' : 'dir');
+  const archive = makeArchive([{ path: 'harness-agent-1.9.0/a', bytes: Buffer.from('x') }]);
+  await assert.rejects(extractArchive(archive, alias), /empty real directory/);
+  assert.deepEqual(await readdir(physical), []);
+  await assert.rejects(extractArchive(archive, join(alias, 'nested')), /empty real directory/);
+  assert.deepEqual(await readdir(join(physical, 'nested')), []);
 }));
 async function payload(dir) {
   const paths = ['agent.mjs', 'node_modules/@ar/cli/dist/main.js', 'node_modules/@ar/web/dist/main.js', 'node_modules/@ar/web/public/index.html', 'PROJECT-LICENSE-NOTICE.txt'];

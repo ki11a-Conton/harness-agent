@@ -2,7 +2,7 @@
 // Inspired by pi local-release and DeepSeek verify-packed-install: rebuild one
 // fixed source commit, then verify the actual bytes outside the workspace.
 import { spawnSync } from 'node:child_process';
-import { cp, mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises';
+import { cp, lstat, mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { delimiter, dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -81,19 +81,35 @@ export async function workspacePackages(snapshot) {
   // TypeScript's root references are a build entry list, not the workspace
   // inventory: indirect @ar/store and unlisted @ar/orchestration still need
   // complete manifests and freshly compiled distribution files.
-  const inventory = JSON.parse(pnpm(['-r', 'list', '--depth', '-1', '--json'], snapshot));
-  if (!Array.isArray(inventory)) throw new Error('invalid pnpm workspace inventory');
   const root = await realpath(snapshot);
-  const packages = await Promise.all(inventory.filter(pkg => resolve(pkg.path) !== resolve(snapshot)).map(async pkg => {
+  const inventory = JSON.parse(pnpm(['-r', 'list', '--depth', '-1', '--json'], root));
+  if (!Array.isArray(inventory)) throw new Error('invalid pnpm workspace inventory');
+  const packages = (await Promise.all(inventory.map(async pkg => {
     const directory = await realpath(pkg.path);
     const inside = relative(root, directory);
-    if (!inside || inside === '..' || inside.startsWith(`..${process.platform === 'win32' ? '\\' : '/'}`) || isAbsolute(inside)) throw new Error('workspace package is outside pinned source');
+    // pnpm and Node can expand a Windows short pathname independently. Exclude
+    // the workspace root only after both paths identify their physical directory.
+    if (!inside) return undefined;
+    const outside = path => path === '..' || path.startsWith(`..${process.platform === 'win32' ? '\\' : '/'}`) || isAbsolute(path);
+    if (outside(inside)) throw new Error('workspace package is outside pinned source');
+    // A caller's root alias is legitimate; links below that physical root are
+    // not release input. Check every package ancestor before reading metadata.
+    for (let current = resolve(pkg.path);; current = dirname(current)) {
+      const relativePath = relative(root, current);
+      if (outside(relativePath)) throw new Error('workspace package is outside pinned source');
+      if ((await lstat(current)).isSymbolicLink()) throw new Error(`workspace package symlink: ${pkg.path}`);
+      if (!relativePath) break;
+    }
+    for (const file of ['package.json', 'tsconfig.json']) {
+      const info = await lstat(join(directory, file));
+      if (info.isSymbolicLink() || !info.isFile()) throw new Error(`workspace metadata must be a regular file: ${file}`);
+    }
     const metadata = JSON.parse(await readFile(join(directory, 'package.json'), 'utf8'));
     safePath(metadata.name);
     if (typeof metadata.version !== 'string' || !metadata.version) throw new Error(`workspace package version missing: ${metadata.name}`);
     await readFile(join(directory, 'tsconfig.json'));
     return { directory, metadata };
-  }));
+  }))).filter(Boolean);
   const names = new Set();
   for (const { metadata } of packages) {
     if (names.has(metadata.name)) throw new Error(`duplicate workspace package: ${metadata.name}`);
@@ -110,7 +126,9 @@ export async function workspacePackages(snapshot) {
 export async function buildPortable({ repo, out, version, sourceSha, offline = false, storeDir }) {
   if (!/^\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?$/.test(version ?? '')) throw new Error('a valid explicit --version is required');
   if (!sourceSha) throw new Error('explicit --source-sha is required');
-  const temp = await mkdtemp(join(tmpdir(), 'harness-portable-build-'));
+  // Windows TEMP often uses an 8.3 alias. Keep strict extraction checks and
+  // normalize our trusted temporary directory at the creation boundary.
+  const temp = await realpath(await mkdtemp(join(tmpdir(), 'harness-portable-build-')));
   try {
     const snapshot = join(temp, 'source'); const payload = join(temp, `harness-agent-${version}`);
     const sourceTree = await sourceSnapshot(repo, sourceSha, snapshot);
