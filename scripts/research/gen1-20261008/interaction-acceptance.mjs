@@ -115,6 +115,7 @@ async function waitFor(predicate, label, timeout = 15_000) {
   throw new Error(`deadline: ${label}`);
 }
 let webChild; let webExit; let webLogs = '';
+const webStreams = {}; const webHistory = {}; const webTurns = {}; const subscriptions = new Set();
 async function startWeb() {
   webChild = spawn(process.execPath, [web], { cwd: project, env: { ...env, HARNESS_DATA_DIR: join(root, 'web data'), HARNESS_WEB_PORT: '0' },
     windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -134,7 +135,7 @@ async function startWeb() {
   });
 }
 async function stopWeb() { webChild.kill('SIGTERM'); await webExit; }
-async function subscribe(address, from) {
+async function subscribe(address, from, name) {
   const controller = new AbortController();
   const response = await fetch(`${address}/api/events?from=${from}`, { signal: controller.signal });
   assert.equal(response.status, 200);
@@ -142,7 +143,8 @@ async function subscribe(address, from) {
   const done = (async () => {
     try {
       for (;;) {
-        const next = await reader.read(); if (next.done) break;
+        const next = await reader.read();
+        if (next.done) { if (!controller.signal.aborted) failure = new Error('SSE stream ended before explicit close'); break; }
         buffer += decoder.decode(next.value, { stream: true });
         let index;
         while ((index = buffer.indexOf('\n\n')) !== -1) {
@@ -152,8 +154,46 @@ async function subscribe(address, from) {
       }
     } catch (error) { if (!controller.signal.aborted) failure = error; }
   })();
-  await waitFor(() => frames.some(frame => frame.type === 'hello'), 'SSE hello');
-  return { frames, failure: () => failure, async close() { controller.abort(); await done; } };
+  const stream = { frames, failure: () => failure, async close() { controller.abort(); await done; } };
+  subscriptions.add(stream);
+  webStreams[name] = stream;
+  await waitFor(() => { assert.equal(stream.failure(), undefined, 'SSE hello stream failure'); return frames.some(frame => frame.type === 'hello'); }, 'SSE hello');
+  return stream;
+}
+// Stored assistant text and the durable terminal event are observed by separate
+// asynchronous polls. Receiving the reply alone does not prove turn completion.
+function completedWebTurn(streams, replyText, { sessionId, excludeTurnId } = {}) {
+  assert.ok(streams.length > 0, 'Web completion requires a stream');
+  for (const stream of streams) {
+    assert.equal(stream.failure(), undefined, 'SSE stream failure');
+    assert.ok(!stream.frames.some(frame => frame.type === 'error'), 'SSE protocol error');
+    const failed = stream.frames.find(frame => ['turn.failed', 'turn.cancelled'].includes(frame.event?.type)
+      && frame.event.turnId !== excludeTurnId);
+    assert.equal(failed, undefined, 'Web turn failed or was cancelled');
+  }
+  let observed;
+  for (const stream of streams) {
+    const reply = stream.frames.find(frame => frame.type === 'assistant_text' && frame.text === replyText);
+    if (!reply) return;
+    assert.equal(typeof reply.turnId, 'string', 'Web reply has a turn id');
+    assert.notEqual(reply.turnId, excludeTurnId, 'resumed reply belongs to a new turn');
+    const terminal = stream.frames.find(frame => frame.event?.type === 'turn.completed' && frame.event.turnId === reply.turnId)?.event;
+    if (!terminal) return;
+    assert.equal(terminal.payload?.status, 'completed', 'Web terminal status is completed');
+    assert.equal(terminal.payload?.turnId, reply.turnId, 'Web terminal payload matches the reply turn');
+    assert.equal(typeof terminal.sessionId, 'string', 'Web terminal has a session id');
+    assert.equal(typeof terminal.id, 'string', 'Web terminal has an event id');
+    if (sessionId !== undefined) assert.equal(terminal.sessionId, sessionId, 'resumed terminal belongs to the original session');
+    const current = { turnId: reply.turnId, sessionId: terminal.sessionId, completionEventId: terminal.id };
+    if (observed) assert.deepEqual(current, observed, 'all Web tabs observe the same completed turn');
+    observed = current;
+  }
+  return observed;
+}
+async function waitForWebTurn(streams, replyText, label, previous) {
+  let completed;
+  await waitFor(() => { completed = completedWebTurn(streams, replyText, previous); return completed; }, label);
+  return completed;
 }
 async function post(address, from, text) {
   const response = await fetch(`${address}/api/messages`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ from, text }) });
@@ -216,30 +256,38 @@ try {
     check('Ctrl-C cancels only the current turn and the same chat accepts another task', interrupted && result.code === 0 && result.stdout.includes('status: cancelled') && turnSessions.length === 2 && turnSessions[0] === turnSessions[1]);
   }
   scenario = 'web-first'; stage = 0;
-  let address = await startWeb(); const from = 'gen1-web-session'; const a = await subscribe(address, from); const b = await subscribe(address, from);
+  let address = await startWeb(); const from = 'gen1-web-session';
+  const a = await subscribe(address, from, 'firstTab'); const b = await subscribe(address, from, 'secondTab');
   await post(address, from, 'web first task');
-  await waitFor(() => [a, b].every(stream => stream.frames.some(frame => frame.type === 'assistant_text' && frame.text === 'Web first task completed.')), 'both Web tabs receive the real reply');
-  check('two real SSE tabs receive the same completed Web turn', [a, b].every(stream => !stream.failure() && stream.frames.some(frame => frame.event?.type === 'turn.completed')));
-  const before = await (await fetch(`${address}/api/history?from=${from}`)).json();
-  check('Web history stores its actual user/assistant conversation', before.messages.some(message => message.role === 'user' && message.content === 'web first task'));
+  const firstTurn = webTurns.first = await waitForWebTurn([a, b], 'Web first task completed.', 'both Web tabs receive the real reply and its terminal event');
+  check('two real SSE tabs receive the same completed Web turn', completedWebTurn([a, b], 'Web first task completed.') !== undefined, firstTurn);
+  const before = webHistory.before = await (await fetch(`${address}/api/history?from=${from}`)).json();
+  check('Web history stores its actual user/assistant conversation', before.sessionId === firstTurn.sessionId
+    && before.messages.some(message => message.role === 'user' && message.content === 'web first task')
+    && before.messages.some(message => message.role === 'assistant' && message.content === 'Web first task completed.' && message.turnId === firstTurn.turnId));
   await a.close(); await b.close(); await stopWeb();
-  scenario = 'web-resume'; stage = 0; address = await startWeb(); const c = await subscribe(address, from);
-  const sessions = await (await fetch(`${address}/api/sessions`)).json();
+  scenario = 'web-resume'; stage = 0; address = await startWeb(); const c = await subscribe(address, from, 'restarted');
+  const sessions = webHistory.sessions = await (await fetch(`${address}/api/sessions`)).json();
   check('a new browser can discover persistent backend conversations after restart', sessions.sessions.some(session => session.from === from && session.sessionId === before.sessionId));
   await post(address, from, 'web second task');
-  await waitFor(() => c.frames.some(frame => frame.type === 'assistant_text' && frame.text === 'Web resumed task completed.'), 'resumed Web reply');
-  const after = await (await fetch(`${address}/api/history?from=${from}`)).json();
-  check('restarted Web sends the follow-up on the original session', after.sessionId === before.sessionId && after.messages.filter(message => message.role === 'user').length === 2);
-  await save('web-frames.json', { firstTab: a.frames, secondTab: b.frames, restarted: c.frames });
-  await save('web-history.json', { before, after, sessions });
+  const resumedTurn = webTurns.restarted = await waitForWebTurn([c], 'Web resumed task completed.', 'resumed Web reply and its new terminal event',
+    { sessionId: firstTurn.sessionId, excludeTurnId: firstTurn.turnId });
+  const after = webHistory.after = await (await fetch(`${address}/api/history?from=${from}`)).json();
+  check('restarted Web sends the follow-up on the original session', after.sessionId === before.sessionId
+    && after.messages.filter(message => message.role === 'user').length === 2
+    && after.messages.some(message => message.role === 'assistant' && message.content === 'Web resumed task completed.' && message.turnId === resumedTurn.turnId), resumedTurn);
   await c.close(); await stopWeb();
-  await save('web-logs.json', { text: webLogs });
   check('all actual HTTP requests use the configured model and selected coding policy', requests.every(request => request.body.model === 'gen1-fixture-model' && request.body.messages.some(message => message.role === 'system' && message.content.includes('coding agent'))));
   status = 'PASS';
 } catch (error) { failure = { message: error.message, stack: error.stack }; throw error; }
 finally {
+  await Promise.all([...subscriptions].map(stream => stream.close()));
   for (const child of children) child.kill('SIGKILL');
   await new Promise(resolve => server.close(resolve));
+  await save('web-frames.json', Object.fromEntries(['firstTab', 'secondTab', 'restarted'].map(name => [name, webStreams[name]?.frames ?? []])));
+  await save('web-logs.json', { text: webLogs });
+  await save('web-turns.json', webTurns);
+  await save('web-history.json', webHistory);
   await save('requests.json', requests);
   const receipt = { status, sourceSha, platform: process.platform, node: process.version, provider: 'local-scripted-http', paidModelCalls: 0,
     realModelQuality: 'NOT_PROVEN', cases, assertionCount: cases.length, requestCount: requests.length, artifacts, ...(failure ? { failure } : {}),
