@@ -85,3 +85,5 @@ node scripts/release/portable-smoke.mjs --archive /tmp/harness-gen1-assets/harne
 第二个固定源码 `97928f1532a3d8c7fc815a197ead9243550ed883` 在 Linux 完整套件得到 9284 PASS / 0 FAIL / 14 pending；coverage gate 已通过，但它不是最终发布源码。原生 Windows 独立安装的 portable 单元实际为 5 PASS / 5 FAIL。CI 导出保存了原始 TAP：系统临时目录的短路径别名与 `realpath` 规范路径直接比较，导致 workspace inventory 误报越界，以及严格空目录解包器拒绝合法的临时目标。
 
 修复在受信任的创建/发现边界统一 workspace/package 根与 mkdtemp 的规范路径；保留实际依赖包的物理包含检查，拒绝 symlink 元数据、包入口及祖先逃逸。解包器的目录越界、符号链接与覆盖拒绝规则不变。Linux 的 symlink TMPDIR 确定反例从 12 PASS / 2 FAIL 到 14 PASS；同别名环境的新 Git blob 构建和安装 smoke 为 1621 文件、doctor 0、50 编码断言/19 HTTP 请求通过。该记录只证明 Linux 别名反例，最终新 SHA 的真实 Windows / 同一 Linux archive 消费仍待 CI。
+
+干净checkout补验发现历史development manifest引用的20个原始日志被仓库全局 `*.log` 忽略，原工作树校验因此不能证明Git交付完整。已按原manifest逐字节核对并显式纳入这20个日志，不改原始RED/GREEN或manifest；必须从当前提交的Git blobs独立还原全部90文件并验证。SSE安装验收脚本另修复了“等到text就立即断言稍后terminal”的时序竞态，保持15秒期限并核对同turn/session/event身份及重启新turn；这属于验收脚本补修，未改产品后端。最终源码仍须完整验收后发布。

@@ -1,0 +1,162 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-gen1-20261008
+
+ × packages/tools/src/gen1-text-tools.regressions.test.ts > Gen1 text tools correctness > searches a selected Unicode filename instead of silently listing it as a directory 14ms
+   → expected [] to deeply equal [ { file: '代码.ts', line: 1, …(2) } ]
+ × packages/tools/src/gen1-text-tools.regressions.test.ts > Gen1 text tools correctness > finds a real match beyond the previous 2000 character line boundary 4ms
+   → expected [] to deeply equal [ ObjectContaining{…} ]
+ × packages/tools/src/gen1-text-tools.regressions.test.ts > Gen1 text tools correctness > reports oversized skipped files rather than claiming a complete zero-match scan 5ms
+   → expected undefined to match object { complete: false, …(1) }
+ × packages/tools/src/gen1-text-tools.regressions.test.ts > Gen1 text tools correctness > reads the requested page and hashes the complete original CRLF/Unicode bytes 6ms
+   → expected { …(4) } to match object { content: 'second\r', …(7) }
+(1 matching property omitted from actual)
+ × packages/tools/src/gen1-text-tools.regressions.test.ts > Gen1 text tools correctness > rejects invalid pagination rather than silently ignoring unknown arguments 4ms
+   → expected 'success' to be 'failed' // Object.is equality
+ × packages/tools/src/gen1-text-tools.regressions.test.ts > Gen1 text tools correctness > does not keep traversing sibling files after a grep cancellation 4ms
+   → expected 'success' to be 'cancelled' // Object.is equality
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/tools/src/gen1-text-tools.regressions.test.ts > Gen1 text tools correctness > searches a selected Unicode filename instead of silently listing it as a directory
+AssertionError: expected [] to deeply equal [ { file: '代码.ts', line: 1, …(2) } ]
+
+- Expected
++ Received
+
+- [
+-   {
+-     "column": 1,
+-     "file": "代码.ts",
+-     "line": 1,
+-     "text": "needle",
+-   },
+- ]
++ []
+
+ ❯ packages/tools/src/gen1-text-tools.regressions.test.ts:37:22
+     35|     const r = await invoke("grep_search", { path: "代码.ts", pattern: "n…
+     36|     expect(r.status).toBe("success");
+     37|     expect(r.output).toEqual([{ file: "代码.ts", line: 1, column: 1, tex…
+       |                      ^
+     38|   });
+     39|   it("finds a real match beyond the previous 2000 character line bound…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  packages/tools/src/gen1-text-tools.regressions.test.ts > Gen1 text tools correctness > finds a real match beyond the previous 2000 character line boundary
+AssertionError: expected [] to deeply equal [ ObjectContaining{…} ]
+
+- Expected
++ Received
+
+- [
+-   ObjectContaining {
+-     "column": 2101,
+-     "file": "wide.txt",
+-     "line": 1,
+-   },
+- ]
++ []
+
+ ❯ packages/tools/src/gen1-text-tools.regressions.test.ts:42:22
+     40|     await fs.writeFile(join(root, "wide.txt"), "x".repeat(2100) + "nee…
+     41|     const r = await invoke("grep_search", { pattern: "needle" });
+     42|     expect(r.output).toEqual([expect.objectContaining({ file: "wide.tx…
+       |                      ^
+     43|     expect(r.metadata).toMatchObject({ truncatedLines: 1 });
+     44|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  packages/tools/src/gen1-text-tools.regressions.test.ts > Gen1 text tools correctness > reports oversized skipped files rather than claiming a complete zero-match scan
+AssertionError: expected undefined to match object { complete: false, …(1) }
+
+- Expected:
+{
+  "complete": false,
+  "skippedOversizedFiles": 1,
+}
+
++ Received:
+undefined
+
+ ❯ packages/tools/src/gen1-text-tools.regressions.test.ts:49:24
+     47|     const r = await invoke("grep_search", { pattern: "needle" });
+     48|     expect(r.status).toBe("success");
+     49|     expect(r.metadata).toMatchObject({ complete: false, skippedOversiz…
+       |                        ^
+     50|   });
+     51|   it("reads the requested page and hashes the complete original CRLF/U…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+ FAIL  packages/tools/src/gen1-text-tools.regressions.test.ts > Gen1 text tools correctness > reads the requested page and hashes the complete original CRLF/Unicode bytes
+AssertionError: expected { …(4) } to match object { content: 'second\r', …(7) }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "bytes": 29,
+-   "content": "second",
+-   "endLine": 2,
+-   "nextOffset": 3,
++   "content": "﻿中文
++ second
++ 第三行
++ ",
+    "sha256": "df69effee0b6e503636d411cfbfa76e385e525d3d79d0b9b063e0852d3babe17",
+-   "startLine": 2,
+-   "totalLines": 3,
+-   "truncated": true,
+  }
+
+ ❯ packages/tools/src/gen1-text-tools.regressions.test.ts:56:22
+     54|     const r = await invoke("read_file", { path: "page.txt", offset: 2,…
+     55|     expect(r.status).toBe("success");
+     56|     expect(r.output).toMatchObject({ content: "second\r", startLine: 2…
+       |                      ^
+     57|       sha256: createHash("sha256").update(bytes).digest("hex") });
+     58|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯
+
+ FAIL  packages/tools/src/gen1-text-tools.regressions.test.ts > Gen1 text tools correctness > rejects invalid pagination rather than silently ignoring unknown arguments
+AssertionError: expected 'success' to be 'failed' // Object.is equality
+
+Expected: "failed"
+Received: "success"
+
+ ❯ packages/tools/src/gen1-text-tools.regressions.test.ts:62:22
+     60|     await fs.writeFile(join(root, "page.txt"), "ok");
+     61|     const r = await invoke("read_file", { path: "page.txt", offset: 0 …
+     62|     expect(r.status).toBe("failed");
+       |                      ^
+     63|     expect(r.error?.code).toBe("TOOL_SCHEMA_ERROR");
+     64|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯
+
+ FAIL  packages/tools/src/gen1-text-tools.regressions.test.ts > Gen1 text tools correctness > does not keep traversing sibling files after a grep cancellation
+AssertionError: expected 'success' to be 'cancelled' // Object.is equality
+
+Expected: "cancelled"
+Received: "success"
+
+ ❯ packages/tools/src/gen1-text-tools.regressions.test.ts:74:22
+     72|     }) as typeof fs.readFile);
+     73|     const r = await invoke("grep_search", { pattern: "needle" }, ac.si…
+     74|     expect(r.status).toBe("cancelled"); expect(r.evidence).toBeUndefin…
+       |                      ^
+     75|     expect(reads).toHaveBeenCalledTimes(1);
+     76|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/6]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  6 failed (6)
+   Start at  02:42:12
+   Duration  710ms (transform 408ms, setup 0ms, import 524ms, tests 38ms, environment 0ms)
+

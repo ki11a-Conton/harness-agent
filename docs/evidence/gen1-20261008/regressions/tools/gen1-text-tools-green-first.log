@@ -1,0 +1,66 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-gen1-20261008
+
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: global traversal stop > propagates a nested callback stop across all ancestor/sibling directories 12ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: global traversal stop > keeps directory callbacks and their entry-name contract while stopping 3ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: global traversal stop > stops grep immediately when the first file fills the hit cap 5ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: global traversal stop > stops at a cap inside a multi-line file without entering later siblings 7ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: global traversal stop > also stops the unchanged regex symbol fallback globally 6ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: real directory entries and work bounds > returns all 66 immediate directories including empty ones with one read 23ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: real directory entries and work bounds > performs no listing at absolute depth zero 6ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: real directory entries and work bounds > counts real directories toward the entry cap and stops before descent 6ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: real directory entries and work bounds > shares one cap for mixed files and directories and preserves path sort 2ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: real directory entries and work bounds > prunes recursion exactly at the root-relative depth boundary 2ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: real directory entries and work bounds > keeps verified ancestors for a nonempty subpath and root-relative depth 2ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: real directory entries and work bounds > counts subpath ancestors toward the same cap 2ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: real directory entries and work bounds > keeps missing and empty directories as empty output 1ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: real directory entries and work bounds > does not invent ancestor directories for a file path 1ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: real directory entries and work bounds > treats an unreadable directory as empty rather than fabricating entries 1ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: production security controls > accepts a trusted root directory alias while keeping repository-relative output 1ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: production security controls > skips generated, VCS, dependency and directory symlink entries before descent 2ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: production security controls > does not follow a directory symlink supplied as the subtree 1ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: production security controls > does not follow a symlink ancestor of the selected subtree 1ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: production security controls > rejects a denied permission before any directory read 4ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts > R3 navigation: production security controls > rejects an outside path through the real sandbox before any directory read 1ms
+ ✓ packages/tools/src/read-file-resource.regressions.test.ts > read_file owned descriptors and cancellation > closes a successful read, versioned=false 10ms
+ ✓ packages/tools/src/read-file-resource.regressions.test.ts > read_file owned descriptors and cancellation > closes a successful read, versioned=true 3ms
+ ✓ packages/tools/src/read-file-resource.regressions.test.ts > read_file owned descriptors and cancellation > cancels at the open boundary and closes the handle 3ms
+ ✓ packages/tools/src/read-file-resource.regressions.test.ts > read_file owned descriptors and cancellation > cancels at the stat boundary and closes the handle 2ms
+ ✓ packages/tools/src/read-file-resource.regressions.test.ts > read_file owned descriptors and cancellation > cancels at the read boundary and closes the handle 2ms
+ ✓ packages/tools/src/read-file-resource.regressions.test.ts > read_file owned descriptors and cancellation > closes on a native stat failure 2ms
+ ✓ packages/tools/src/read-file-resource.regressions.test.ts > read_file owned descriptors and cancellation > closes on a native read failure 1ms
+ ✓ packages/tools/src/read-file-resource.regressions.test.ts > read_file owned descriptors and cancellation > reports a close failure and still releases coordination 2ms
+ ✓ packages/tools/src/read-file-resource.regressions.test.ts > read_file owned descriptors and cancellation > passes an effective timeout signal and cleans up after the race settles 34ms
+ ✓ packages/tools/src/read-file-resource.regressions.test.ts > read_file owned descriptors and cancellation > cancels a queued reader without opening it 2ms
+ ✓ packages/tools/src/read-file-resource.regressions.test.ts > read_file owned descriptors and cancellation > does zero opens on deny 1ms
+ ✓ packages/tools/src/read-file-resource.regressions.test.ts > read_file owned descriptors and cancellation > does zero opens on pre-abort 1ms
+ ✓ packages/tools/src/read-file-resource.regressions.test.ts > read_file owned descriptors and cancellation > does zero opens on escape 1ms
+ ✓ packages/tools/src/read-file-resource.regressions.test.ts > read_file owned descriptors and cancellation > preserves the native missing-file error without a descriptor leak 1ms
+ ✓ packages/tools/src/read-file-resource.regressions.test.ts > read_file owned descriptors and cancellation > rejects a directory before reading it 1ms
+ ✓ packages/tools/src/read-file-resource.regressions.test.ts > read_file owned descriptors and cancellation > rejects native fifo without waiting for a writer 5ms
+ ✓ packages/tools/src/read-file-resource.regressions.test.ts > read_file owned descriptors and cancellation > rejects native alias without waiting for a writer 3ms
+ ✓ packages/tools/src/read-file-resource.regressions.test.ts > read_file owned descriptors and cancellation > rejects native replacement without waiting for a writer 4ms
+ ✓ packages/tools/src/read-file-resource.regressions.test.ts > read_file owned descriptors and cancellation > preserves exact content and raw-byte version for {"type":"Buffer","data":[]} 2ms
+ ✓ packages/tools/src/read-file-resource.regressions.test.ts > read_file owned descriptors and cancellation > preserves exact content and raw-byte version for {"type":"Buffer","data":[239,187,191,228,184,173,230,150,135,13,10,98,111,100,121,10]} 1ms
+ ✓ packages/tools/src/read-file-resource.regressions.test.ts > read_file owned descriptors and cancellation > preserves exact content and raw-byte version for {"type":"Buffer","data":[255,10,65]} 1ms
+ ✓ packages/tools/src/read-file-resource.regressions.test.ts > read_file owned descriptors and cancellation > reads an authorized hard alias 1ms
+ ✓ packages/tools/src/read-file-resource.regressions.test.ts > read_file owned descriptors and cancellation > reads an authorized symlink alias 1ms
+ ✓ packages/tools/src/gen1-text-tools.regressions.test.ts > Gen1 text tools correctness > searches a selected Unicode filename instead of silently listing it as a directory 8ms
+ ✓ packages/tools/src/gen1-text-tools.regressions.test.ts > Gen1 text tools correctness > finds a real match beyond the previous 2000 character line boundary 3ms
+ ✓ packages/tools/src/gen1-text-tools.regressions.test.ts > Gen1 text tools correctness > reports oversized skipped files rather than claiming a complete zero-match scan 3ms
+ ✓ packages/tools/src/gen1-text-tools.regressions.test.ts > Gen1 text tools correctness > reads the requested page and hashes the complete original CRLF/Unicode bytes 3ms
+ ✓ packages/tools/src/gen1-text-tools.regressions.test.ts > Gen1 text tools correctness > rejects invalid pagination rather than silently ignoring unknown arguments 2ms
+ ✓ packages/tools/src/gen1-text-tools.regressions.test.ts > Gen1 text tools correctness > does not keep traversing sibling files after a grep cancellation 3ms
+ ✓ packages/tools/src/navigate.test.ts > P2-29 walkFiles skips VCS/dependency dirs > does not surface .git / node_modules files 3ms
+ ✓ packages/tools/src/navigate.test.ts > P2-29 grepFiles > finds case-insensitive text matches with line/column 9ms
+ ✓ packages/tools/src/navigate.test.ts > P2-29 grepFiles > restricts to fileGlob and respects caseSensitive 3ms
+ ✓ packages/tools/src/navigate.test.ts > P2-29 grepFiles > skips binary / oversized files 1ms
+ ✓ packages/tools/src/navigate.test.ts > P2-29 symbolSearch fallback > returns fallback:true with an explicit indexer note 2ms
+ ✓ packages/tools/src/navigate.test.ts > P2-29 symbolSearch fallback > finds class and const symbols 1ms
+ ✓ packages/tools/src/navigate.test.ts > P2-29 repoTree > lists files and synthesized dirs, skipping VCS/dep dirs 1ms
+
+ Test Files  4 passed (4)
+      Tests  57 passed (57)
+   Start at  02:44:48
+   Duration  1.45s (transform 448ms, setup 0ms, import 794ms, tests 223ms, environment 0ms)
+
