@@ -79,3 +79,9 @@ node scripts/release/portable-smoke.mjs --archive /tmp/harness-gen1-assets/harne
 根 `tsconfig.references` 不是完整 workspace 清单；首次不可变构建在打包时缺 `@ar/store`/`@ar/orchestration` 而拒绝。现在依据实际 pnpm workspace inventory 枚举所有包、显式构建并校验完整依赖闭包。两个新反例由8 PASS/2 FAIL转为10 PASS；固定隔离提交的cleanroom包含26包/1621文件，doctor0错误，真实编码50断言/19请求和篡改拒绝通过。该预验不替代主交付新SHA。Windows自动换行fixture的期望改为Git blob，资产字节规则不变。
 
 本地Actions原件下载域被代理拒绝，CI可把精确源码的原件导出到已存在的私有draft，使用原生GitHub HTTP。只准备资产、不发布；完整三腿安装与同archive hash通过才写候选包，失败只写证据bundle。全量/Windows/coverage/release attestation依然单独判定，draft里的文件存在不等于可发布。
+
+### 原生 Windows 临时路径复验与修复
+
+第二个固定源码 `97928f1532a3d8c7fc815a197ead9243550ed883` 在 Linux 完整套件得到 9284 PASS / 0 FAIL / 14 pending；coverage gate 已通过，但它不是最终发布源码。原生 Windows 独立安装的 portable 单元实际为 5 PASS / 5 FAIL。CI 导出保存了原始 TAP：系统临时目录的短路径别名与 `realpath` 规范路径直接比较，导致 workspace inventory 误报越界，以及严格空目录解包器拒绝合法的临时目标。
+
+修复在受信任的创建/发现边界统一 workspace/package 根与 mkdtemp 的规范路径；保留实际依赖包的物理包含检查，拒绝 symlink 元数据、包入口及祖先逃逸。解包器的目录越界、符号链接与覆盖拒绝规则不变。Linux 的 symlink TMPDIR 确定反例从 12 PASS / 2 FAIL 到 14 PASS；同别名环境的新 Git blob 构建和安装 smoke 为 1621 文件、doctor 0、50 编码断言/19 HTTP 请求通过。该记录只证明 Linux 别名反例，最终新 SHA 的真实 Windows / 同一 Linux archive 消费仍待 CI。
