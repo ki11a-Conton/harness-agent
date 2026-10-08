@@ -106,7 +106,11 @@ test('snapshot uses pinned Git blobs and ignores stale dist or untracked ignored
   await writeFile(join(repo, 'packages/store/licenses/NOTICE.txt'), 'indirect package attribution\r\n');
   await writeFile(join(repo, 'packages/a/src/index.ts'), 'export const pinned = true;\n');
   await writeFile(join(repo, '.gitignore'), '**/dist/\n**/ignored.ts\n');
-  run('git', ['init'], { cwd: repo }); run('git', ['add', '.'], { cwd: repo });
+  run('git', ['init'], { cwd: repo });
+  // Windows Git commonly normalizes CRLF on add. Expected release bytes come
+  // from the pinned Git object, not from the caller's working-tree encoding.
+  run('git', ['config', 'core.autocrlf', 'true'], { cwd: repo });
+  run('git', ['add', '.'], { cwd: repo });
   run('git', ['-c', 'user.name=Portable Test', '-c', 'user.email=portable-test@example.invalid', 'commit', '-m', 'pinned fixture'], { cwd: repo });
   const sourceSha = run('git', ['rev-parse', 'HEAD'], { cwd: repo }).trim();
   await mkdir(join(repo, 'packages/a/dist')); await writeFile(join(repo, 'packages/a/dist/index.js'), 'stale');
@@ -114,7 +118,9 @@ test('snapshot uses pinned Git blobs and ignores stale dist or untracked ignored
   const snapshot = join(dir, 'snapshot'); await sourceSnapshot(repo, sourceSha, snapshot);
   assert.equal(await readFile(join(snapshot, 'packages/a/src/index.ts'), 'utf8'), 'export const pinned = true;\n');
   assert.deepEqual((await workspacePackages(snapshot)).map(pkg => pkg.metadata.name), ['@ar/cli', '@ar/contracts', '@ar/orchestration', '@ar/store']);
-  assert.equal(await readFile(join(snapshot, 'packages/store/licenses/NOTICE.txt'), 'utf8'), 'indirect package attribution\r\n');
+  const pinnedNotice = run('git', ['show', `${sourceSha}:packages/store/licenses/NOTICE.txt`], { cwd: repo });
+  assert.equal(pinnedNotice, 'indirect package attribution\n');
+  assert.equal(await readFile(join(snapshot, 'packages/store/licenses/NOTICE.txt'), 'utf8'), pinnedNotice);
   await assert.rejects(readFile(join(snapshot, 'packages/a/dist/index.js')), /ENOENT/);
   await assert.rejects(readFile(join(snapshot, 'packages/a/src/ignored.ts')), /ENOENT/);
   await writeFile(join(repo, 'packages/a/src/index.ts'), 'dirty');
