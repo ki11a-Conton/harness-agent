@@ -54,6 +54,58 @@ import type { FaultPoint, FaultPointContext, TurnContext } from "./turn-helpers.
  */
 const CAMPAIGN_DEADLINE_EXCEEDED = "CAMPAIGN_DEADLINE_EXCEEDED";
 
+/**
+ * M8 / DEFECT-2 — map an orchestrator denial CODE onto the security event that
+ * classifies it. The event TYPE is what
+ * `packages/evaluation/src/security-evidence-execution.ts` groups on
+ * (`security.*_denied`), so the dimension must be recoverable from the code
+ * alone — the runtime is the last layer that still knows the code before the
+ * result is rendered to the model.
+ *
+ * Codes the orchestrator ALREADY reports itself (`PERMISSION_DENIED` from the
+ * permission engine; `SANDBOX_{NETWORK,FILESYSTEM,PROCESS}_DENIED` from the
+ * sandbox gate — see `packages/tools/src/orchestrator.ts:554/562/570/702`) are
+ * listed as OWNED BY A LOWER LAYER: emitting again here would fabricate a
+ * SECOND security fact for one refusal, double-counting it in the evidence
+ * stream. They are deliberately absent from the emitted map below and are
+ * instead recognised in `ORCHESTRATOR_SELF_REPORTED_DENIAL_CODES`.
+ */
+const DENIAL_CODE_TO_SECURITY_EVENT = {
+  // Filesystem-class refusals the runtime must surface (the tool/orchestrator
+  // returns `denied` WITHOUT a security event on these paths).
+  WRITE_SAFETY_DENIED: "security.filesystem_denied",
+  FILESYSTEM_DENIED: "security.filesystem_denied",
+  WORKSPACE_POLICY: "security.filesystem_denied",
+  // Process-class.
+  SANDBOX_BACKEND_DENIED: "security.process_denied",
+  PROCESS_DENIED: "security.process_denied",
+  // Capability / identity escalation.
+  SECURITY_DENIED: "security.capability_denied",
+  CAPABILITY_DENIED: "security.capability_denied",
+  TOOL_NOT_IN_STEP: "security.capability_denied",
+  // Untrusted-content / external-surface refusals.
+  INJECTION_DENIED: "security.injection_denied",
+  MCP_DENIED: "security.mcp_denied",
+  SKILL_DENIED: "security.skill_denied",
+  MEMORY_DENIED: "security.memory_denied",
+} as const satisfies Record<string, AgentEvent["type"]>;
+
+/** Denial codes a LOWER layer already journals as `security.*_denied` itself.
+ *  The runtime must not emit a second event for the same refusal. */
+const ORCHESTRATOR_SELF_REPORTED_DENIAL_CODES: ReadonlySet<string> = new Set([
+  "PERMISSION_DENIED",
+  "SANDBOX_NETWORK_DENIED",
+  "SANDBOX_FILESYSTEM_DENIED",
+  "SANDBOX_PROCESS_DENIED",
+  "SANDBOX_DENIED",
+]);
+
+/** Fail-closed fallback classification for a `denied` result whose code is not
+ *  in the map above. INTENTIONALLY fail-closed: an unrecognised refusal is
+ *  still a refusal, so it must appear on the security stream as a permission
+ *  denial carrying `unmapped_code` — never be dropped. */
+const UNMAPPED_DENIAL_EVENT: AgentEvent["type"] = "security.permission_denied";
+
 /** Q-1: one executed tool call as returned to the turn loop. `streak` is the
  *  consecutive-identical-call count AFTER this call was recorded.
  *  E4-R86 (H2): `progressCancelled`/`wouldBeStreak` are set when this repeated
@@ -184,6 +236,47 @@ export class ToolCallController {
    */
   private deferObservation(collector: string[], content: string): void {
     collector.push(content);
+  }
+
+  /**
+   * M8 / DEFECT-2 — journal an orchestrator-returned denial as a `security.*_denied`
+   * event so the security evidence stream cannot show a refusal as "clean".
+   *
+   * DEDUPLICATION: the runtime-side gates emit their own events (step tool
+   * policy / hook block / hook identity swap) and the `@ar/tools` orchestrator
+   * journals `PERMISSION_DENIED` + `SANDBOX_*` itself on its own gates. This
+   * method is reached ONLY for a `denied` RESULT (i.e. the call went through the
+   * orchestrator and came back refused), and it skips codes a lower layer
+   * already owns — so exactly ONE security fact is produced per refusal.
+   */
+  private async emitOrchestratorDenial(
+    sessionId: SessionId,
+    turnId: TurnId,
+    call: ToolCall,
+    result: ToolResult,
+  ): Promise<void> {
+    // A denial with NO code at all is still a denial: it must NOT be treated as
+    // a lower-layer-owned `PERMISSION_DENIED` (that would silently drop it —
+    // the exact fail-open behavior this fix removes). Only a code that really
+    // IS one of the self-reported ones is skipped.
+    const rawCode = result.error?.code;
+    if (rawCode !== undefined && ORCHESTRATOR_SELF_REPORTED_DENIAL_CODES.has(rawCode)) return;
+    const mapped = rawCode === undefined
+      ? undefined
+      : (DENIAL_CODE_TO_SECURITY_EVENT as Record<string, AgentEvent["type"]>)[rawCode];
+    // Fail-closed: an unidentified / absent refusal code still produces a fact.
+    const eventType = mapped ?? UNMAPPED_DENIAL_EVENT;
+    await this.deps.emit(sessionId, eventType, {
+      toolCallId: call.id,
+      tool: call.name,
+      target: call.name,
+      reason: result.error?.message ?? "denied by the tool orchestrator (no error code supplied)",
+      source: "orchestrator",
+      code: rawCode ?? UNMAPPED_DENIAL_EVENT,
+      // Classifiable dimension: consumers group on the event type, but the raw
+      // code and whether it was recognised stay auditable on the event.
+      ...(mapped === undefined ? { unmapped_code: true } : {}),
+    }, turnId);
   }
 
   /**
@@ -733,6 +826,18 @@ export class ToolCallController {
     if (result.status === "failed" || result.status === "denied") {
       await this.deps.hooks.toolError(hookCtx, call, result);
     }
+    // M8 / DEFECT-2 — a denial returned by the ORCHESTRATOR must be visible on
+    // the security evidence stream. The three runtime-side gates above
+    // (step tool policy, hook block, hook tool-identity swap) emit their own
+    // `security.*_denied` events; this branch is the fourth source and used to
+    // emit NOTHING, so a refusal produced by the real permission engine /
+    // sandbox / write-safety guard left no `security.*_denied` fact behind.
+    // `packages/evaluation/src/security-evidence-execution.ts` builds
+    // POLICY_DENIED from exactly those events, so such a denial read as
+    // "clean" — a fail-OPEN direction bug on the evidence trail.
+    if (result.status === "denied") {
+      await this.emitOrchestratorDenial(session.id, turnId, call, result);
+    }
     if (!deadlineRefused && (result.status === "failed" || result.status === "timeout") && this.deps.recovery !== undefined) {
       // plan.md Phase 3.6: auto-retry ONLY idempotent read-only tools
       // (retry: "safe"). Tools with unknown or non-idempotent effects are
@@ -744,14 +849,42 @@ export class ToolCallController {
       const retryPolicy = this.deps.toolSemanticsOf(call.name).retrySafety;
       for (let attempt = 1; ; attempt += 1) {
         const decision = this.deps.recovery.decide(result.status === "timeout" ? "timeout" : "tool_failure", attempt);
+        // M5 / DEFECT-1 — the trace must not lie. The recovery policy may
+        // DECIDE to retry while the safety gate (retrySafety) refuses to
+        // re-dispatch. Announcing that as `retry_safe` made the journal claim a
+        // retry that never happened, so a reviewer could not tell "retried"
+        // from "refused to retry". The action is therefore resolved BEFORE
+        // emitting, and `retry_safe` is reserved for a retry that is actually
+        // about to be dispatched. The refused case reports `retry_refused`
+        // with the reason the escalation was declined.
+        //
+        // `retry_refused` is a value of the OPEN `RecoveryDecidedPayload.action`
+        // field (typed `string` in @ar/contracts/event-payloads.ts) — it is NOT
+        // a new member of the closed V3 planner taxonomy `RecoveryAction`
+        // (packages/contracts/src/recovery.ts), which describes the ADAPTIVE
+        // planner's budgeted vocabulary, not the legacy ladder's audit trail.
+        // No contract/schema change is required; EVENT_TYPES is unchanged.
+        const willDispatchRetry = decision.action === "retry" && retryPolicy === "safe";
+        const reportedAction =
+          decision.action === "retry"
+            ? willDispatchRetry
+              ? "retry_safe"
+              : "retry_refused"
+            : decision.action === "ask"
+              ? "ask_user"
+              : "fail_safe";
         await this.deps.emit(session.id, "recovery.decided", {
-          action: decision.action === "retry" ? "retry_safe" : decision.action === "ask" ? "ask_user" : "fail_safe",
+          action: reportedAction,
           input: result.status === "timeout" ? "timeout" : "tool_failure",
           toolCallId: call.id,
           tool: call.name,
           used: attempt - 1,
           remaining: Math.max(0, decision.maxAttempts - attempt),
-          reason: decision.reason,
+          reason: willDispatchRetry
+            ? decision.reason
+            : decision.action === "retry"
+              ? `${decision.reason} — NOT re-dispatched: retrySafety="${retryPolicy}" is not "safe"`
+              : decision.reason,
         }, turnId);
         if (decision.action === "retry") {
           if (retryPolicy !== "safe") break;
