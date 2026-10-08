@@ -14,7 +14,7 @@ export function subagentDefinition(config: HarnessConfig): AgentDefinition {
     description: "delegated subagent (read-only workspace exploration)",
     mode: "subagent",
     model: config.model,
-    systemPrompt: "You are a subagent working inside a delegated session. Complete the goal and report findings.",
+    systemPrompt: config.agentPromptPolicy?.readonlyWorker ?? "You are a subagent working inside a delegated session. Complete the goal and report findings.",
     tools: { allow: [...READONLY_TOOL_NAMES] },
     permissions: {
       rules: [
@@ -41,8 +41,9 @@ export function workerAgentDefinition(config: HarnessConfig): AgentDefinition {
     mode: "subagent",
     model: config.model,
     systemPrompt:
-      "You are a write-capable worker in an ISOLATED copy of the parent workspace. " +
-      "Make the requested changes in this workspace only. On success they are merged back under conflict detection.",
+      config.agentPromptPolicy?.writeWorker ?? (
+        "You are a write-capable worker in an ISOLATED copy of the parent workspace. " +
+        "Make the requested changes in this workspace only. On success they are merged back under conflict detection."),
     tools: { allow: [...PRODUCTION_TOOL_NAMES] },
     permissions: {
       rules: [

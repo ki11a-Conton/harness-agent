@@ -8,3 +8,4 @@ export * from "./scheduler.js";
 export * from "./state-handoff.js";
 // P3-4/P3-5: child workspace isolation contract (harness owns the fs impl).
 export * from "./workspace-isolation.js";
+export * from "./coding-prompt.js";

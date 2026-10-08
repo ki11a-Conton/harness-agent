@@ -2,7 +2,7 @@ import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
 import { stat } from "node:fs/promises";
 import type { ModelProvider, PermissionPolicy, TaskSpec } from "@ar/contracts";
-import { defaultSandboxPolicy } from "@ar/harness";
+import { defaultSandboxPolicy, DEFAULT_MAIN_SYSTEM_PROMPT, resolveAgentPromptPolicy } from "@ar/harness";
 import { createHarnessWithChampion } from "./champion-application.js";
 import { createRuntimeRpc, InMemoryTransport } from "@ar/gateway";
 import {
@@ -50,17 +50,8 @@ export const DEFAULT_PERMISSIONS: PermissionPolicy = {
   ],
 };
 
-export const DEFAULT_SYSTEM_PROMPT = [
-  "You are the harness agent running inside a workspace.",
-  "",
-  "Capabilities:",
-  "- read_file / search_files: inspect workspace files (allowed automatically)",
-  "- write_file / edit_file: modify workspace files (require approval)",
-  "- exec: run commands in the workspace shell (requires approval)",
-  "",
-  "State-changing actions ask for approval and are denied until approved.",
-  "When a tool result reports [denied], do not retry it blindly — report the outcome.",
-].join("\n");
+/** Exact legacy base used by the harness, before context/champion suffixes. */
+export const DEFAULT_SYSTEM_PROMPT = DEFAULT_MAIN_SYSTEM_PROMPT;
 
 /** Default request model id for a real provider; the provider may still apply
  *  its own env-based default (e.g. OPENAI_MODEL) when configured. Sourced from
@@ -83,6 +74,8 @@ export interface DefaultDepsOptions {
    *  reflection, `agent learn` promotion). Requires a dataDir — memories are
    *  never written into the workspace. */
   memory?: boolean;
+  /** Explicit Agent policy; otherwise HARNESS_AGENT_PROMPT (default legacy). */
+  agentPrompt?: "legacy" | "coding-v1";
 }
 
 export function registerBuiltinTools(registry: ToolRegistry): void {
@@ -374,6 +367,8 @@ export function extractDataDirFlag(argv: string[]): { args: string[]; dataDir?: 
 export async function createDefaultDeps(options: DefaultDepsOptions = {}): Promise<CommandDeps> {
   const cwd = resolve(options.cwd ?? process.cwd());
   const dataDir = options.dataDir;
+  // Resolve before provider construction; invalid policies fail closed.
+  const agentPromptPolicy = resolveAgentPromptPolicy(options.agentPrompt ?? process.env.HARNESS_AGENT_PROMPT);
   const modelProvider = options.provider ?? (await resolveModelProvider({ modelId: options.model?.modelId ?? (process.env.OPENAI_MODEL || DEFAULT_MODEL_ID) })).provider;
   const memoryEnabled = options.memory === true || process.env.HARNESS_MEMORY === "1";
   if (memoryEnabled && dataDir === undefined) {
@@ -390,6 +385,7 @@ export async function createDefaultDeps(options: DefaultDepsOptions = {}): Promi
       ...(options.task !== undefined ? { task: options.task } : {}),
       ...(dataDir !== undefined ? { dataDir } : {}),
       profile: "interactive",
+      ...(agentPromptPolicy !== undefined ? { agentPromptPolicy } : {}),
       modelProvider,
       model: resolveInteractiveModelRef(modelProvider, options.model),
       ...(memoryEnabled ? { featureFlags: { memory: true, learning: true } } : {}),

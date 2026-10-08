@@ -117,6 +117,11 @@ export interface HarnessConfig {
    */
   completionGuidance?: string;
 
+  /** Explicit Agent-layer coding challenger. Omitted preserves the legacy
+   * baseline. Actual compiled text is session-frozen by the config fingerprint;
+   * this does not change permissions or the champion's completion suffix. */
+  agentPromptPolicy?: import("./coding-prompt-policy.js").AgentPromptPolicy;
+
   /** P7-1/P7-2: progressive tool disclosure — a ToolSelector narrows the
    *  tool schemas advertised to the model per goal. Default: identity (every
    *  schema advertised, pre-P7 behavior). */

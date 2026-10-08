@@ -106,6 +106,17 @@ jobs:
       - name: Real CLI and Web coding acceptance (scripted local HTTP, no paid calls)
         run: node scripts/research/coding-audit-20261007/acceptance.mjs .ci/coding-acceptance
 
+      - name: Opt-in coding prompt on actual CLI and Web HTTP requests
+        run: node scripts/research/coding-prompts-20261008/acceptance.mjs .ci/coding-prompts coding-v1
+
+      - name: Upload exact prompt and coding acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coding-prompts-${{ matrix.os }}-${{ github.sha }}-${{ github.run_id }}
+          path: .ci/coding-prompts/
+          if-no-files-found: error
+
       - name: Unit and integration tests
         # bash on both runners (Git Bash ships with windows-latest); the single
         # command propagates its exit code while the log is kept for P12-5.

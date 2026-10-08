@@ -10,6 +10,7 @@ on:
       - 'apps/**'
       - 'scripts/research/source-audit-20261007/**'
       - 'scripts/research/coding-audit-20261007/**'
+      - 'scripts/research/coding-prompts-20261008/**'
       - 'scripts/research/web-dsh-20261004/**'
       - 'package.json'
       - 'pnpm-lock.yaml'
@@ -51,10 +52,12 @@ jobs:
         run: node --test scripts/ci/windows-acceptance-report.test.mjs
       - name: Real CLI and Web coding acceptance (scripted local HTTP)
         run: node scripts/research/coding-audit-20261007/acceptance.mjs .ci/windows-acceptance/coding
+      - name: Opt-in coding prompt on actual CLI and Web HTTP requests
+        run: node scripts/research/coding-prompts-20261008/acceptance.mjs .ci/windows-acceptance/coding-prompts coding-v1
       - name: Execute native process and production boundary regressions
         run: |
           New-Item -ItemType Directory -Force .ci/windows-acceptance | Out-Null
-          pnpm exec vitest run packages/tools/src/process/executor.test.ts packages/tools/src/process/r96-windows-execution-boundary.test.ts packages/tools/src/process/windows-cancellation.regressions.test.ts packages/tools/src/verification/task-verifier.test.ts packages/tools/src/symbol-scope.regressions.test.ts packages/context/src/scoped-instruction-read.regressions.test.ts packages/harness/src/source-audit-boundaries.regressions.test.ts packages/harness/src/source-audit-fixes.regressions.test.ts packages/harness/src/source-audit-memory.regressions.test.ts packages/harness/src/source-audit-recovery.regressions.test.ts apps/web/src/harness.integration.test.ts apps/web/src/source-audit-restoration.regressions.test.ts apps/cli/src/source-audit-verification.regressions.test.ts apps/cli/src/coding-host.regressions.test.ts packages/harness/src/coding-verification.regressions.test.ts packages/core/src/runtime/encoded-tool-output-security.regressions.test.ts --reporter=default --reporter=json --outputFile=.ci/windows-acceptance/results.json
+          pnpm exec vitest run packages/tools/src/process/executor.test.ts packages/tools/src/process/r96-windows-execution-boundary.test.ts packages/tools/src/process/windows-cancellation.regressions.test.ts packages/tools/src/verification/task-verifier.test.ts packages/tools/src/symbol-scope.regressions.test.ts packages/context/src/scoped-instruction-read.regressions.test.ts packages/harness/src/source-audit-boundaries.regressions.test.ts packages/harness/src/source-audit-fixes.regressions.test.ts packages/harness/src/source-audit-memory.regressions.test.ts packages/harness/src/source-audit-recovery.regressions.test.ts apps/web/src/harness.integration.test.ts apps/web/src/source-audit-restoration.regressions.test.ts apps/cli/src/source-audit-verification.regressions.test.ts apps/cli/src/coding-host.regressions.test.ts packages/harness/src/coding-verification.regressions.test.ts packages/core/src/runtime/encoded-tool-output-security.regressions.test.ts packages/agents/src/coding-prompt.test.ts packages/harness/src/coding-prompt-policy.test.ts apps/cli/src/coding-prompt.integration.test.ts apps/cli/src/champion-application-p1.test.ts --reporter=default --reporter=json --outputFile=.ci/windows-acceptance/results.json
           if ($LASTEXITCODE -ne 0) { throw 'Windows regression tests failed' }
       - name: Publish final-state receipt and all case records
         if: always()

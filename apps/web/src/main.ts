@@ -1,6 +1,7 @@
 import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
 import type { Harness } from "@ar/harness";
+import { resolveAgentPromptPolicy } from "@ar/harness";
 import {
   createHarnessWithChampion,
   DEFAULT_MODEL_ID,
@@ -25,6 +26,7 @@ import { WebServer } from "./server.js";
  */
 export async function main(): Promise<number> {
   const dir = process.env.HARNESS_DATA_DIR;
+  const agentPromptPolicy = resolveAgentPromptPolicy(process.env.HARNESS_AGENT_PROMPT);
   // E3-01: resolveModelProvider now returns a BillingProvider — unwrap the
   // provider for harness wiring.
   const provider = (await resolveModelProvider({ modelId: process.env.OPENAI_MODEL || DEFAULT_MODEL_ID })).provider;
@@ -39,6 +41,7 @@ export async function main(): Promise<number> {
       cwd: process.cwd(),
       ...(dir !== undefined && dir.length > 0 ? { dataDir: dir } : {}),
       profile: "interactive",
+      ...(agentPromptPolicy !== undefined ? { agentPromptPolicy } : {}),
       modelProvider: provider,
       model: resolveInteractiveModelRef(provider),
       ...(verificationCommand ? { task: { id: "web-coding", goal: "Complete the user task and pass the configured project check",

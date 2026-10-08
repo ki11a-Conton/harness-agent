@@ -874,10 +874,11 @@ function mainAgent(
 ): AgentDefinition {
   // E4-R05 (F12): a champion-applied `completionGuidance` MUST actually reach
   // the primary agent's prompt — flags alone are not proof of installation.
+  const policyPrompt = config.agentPromptPolicy?.primary ?? DEFAULT_MAIN_SYSTEM_PROMPT;
   const basePrompt =
     toolLookupName !== undefined
-      ? `${DEFAULT_MAIN_SYSTEM_PROMPT}\n\nDeferred tool schemas: some tools are advertised with a stub schema. Before calling one, fetch its full input schema with ${toolLookupName}({"names": ["<tool>"]}).`
-      : DEFAULT_MAIN_SYSTEM_PROMPT;
+      ? `${policyPrompt}\n\nDeferred tool schemas: some tools are advertised with a stub schema. Before calling one, fetch its full input schema with ${toolLookupName}({"names": ["<tool>"]}).`
+      : policyPrompt;
   const systemPrompt =
     typeof config.completionGuidance === "string" && config.completionGuidance.length > 0
       ? `${basePrompt}\n\n${config.completionGuidance}`
