@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "kind": "coding-prompt-engineering-acceptance",
+  "sourceSha": "64a174d56600d8ca93c1e963a87db87b540a9287",
+  "sourceTreeClean": true,
+  "platform": "linux",
+  "node": "v24.19.0",
+  "policy": "legacy",
+  "prompts": {
+    "primary": {
+      "sha256": "66cd48195dc8b44cb40922d0b4072a940b0b649ab2c419f98465e71d24486e14",
+      "bytes": 519,
+      "estimatedTokens": 130
+    }
+  },
+  "assertions": [
+    "real CLI and Web requests were both captured",
+    "every actual HTTP request carries the exact selected compiled primary policy",
+    "selected policy fits fallback system reserve without raising the budget",
+    "documented native capabilities exist in the actual request schemas",
+    "cli rejects invalid policy before provider or listener startup",
+    "web rejects invalid policy before provider or listener startup"
+  ],
+  "inheritedCodingAssertions": 50,
+  "requests": 19,
+  "status": "PASS",
+  "paidModelCalls": 0,
+  "realModelQuality": "NOT_PROVEN",
+  "limitation": "A scripted local HTTP provider chooses the actions. Passing proves policy installation and runtime/tool invariants; it cannot prove policy obedience or a real-model quality gain."
+}

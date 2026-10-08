@@ -1,0 +1,23 @@
+{
+  "scope": "final strict archive verifier including complete CI",
+  "controls": [
+    {
+      "kind": "byte_drift",
+      "rejected": true,
+      "exitCode": 1,
+      "reason": "AssertionError: artifact drift: coding-v1/coding-v1-primary.txt"
+    },
+    {
+      "kind": "failed_case_with_refreshed_manifest",
+      "rejected": true,
+      "exitCode": 1,
+      "reason": "AssertionError: case states: raw/full-suite.json.gz"
+    },
+    {
+      "kind": "forged_windows_source_with_refreshed_manifest",
+      "rejected": true,
+      "exitCode": 1,
+      "reason": "AssertionError: native Windows identity/status"
+    }
+  ]
+}

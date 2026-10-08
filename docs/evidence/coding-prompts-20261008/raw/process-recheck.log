@@ -1,0 +1,42 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-coding-prompts-20261008
+
+[degraded] e4-r60 taskkill spawn: spawn taskkill ENOENT
+[degraded] e4-r60 taskkill exit: taskkill exited with 1
+[degraded] e4-r60 taskkill spawn: boom
+[degraded] e4-r60 taskkill exit: taskkill exited with 1
+[degraded] e4-r60 taskkill: sync spawn failure
+[degraded] e4-r60 taskkill spawn: nope
+[degraded] e4-r60 taskkill spawn: injected taskkill failure
+[degraded] e4-r55 evidence root: ENOTDIR: not a directory, mkdir '/tmp/e4-r65-root-No8t88/a-file/child'
+[degraded] e4-r55 evidence write child.stdout.txt: EIO: injected write failure for child.stdout.txt
+[degraded] e4-r55 evidence write child.stderr.txt: EACCES: injected write failure for child.stderr.txt
+[degraded] e4-r55 evidence write child-report.json: EIO: injected write failure for child-report.json
+[degraded] e4-r55 evidence write run.json: EIO: injected write failure for run.json
+[degraded] e4-r55 evidence write child.stdout.txt: EIO: injected write failure for child.stdout.txt
+
+R68_SYMLINK_CAPABILITY={"ok":true,"detail":"fs.symlink created a link that lstat reports as a symlink"}
+
+R68_LINK_DIRENT={"isSymbolicLink":true,"isFile":false}
+ ✓ apps/cli/src/e4-r55-failure-wiring.test.ts (65 tests) 17274ms
+     ✓ terminates a never-ending child's whole tree at the deadline and returns a structured timeout  4012ms
+     ✓ drives the real chain, judges its failure evidence, and requires an order mutation to break the acceptance  12602ms
+     ✓ I: a kill that never produces a terminal event resolves as UNCONFIRMED instead of hanging  453ms
+ ✓ packages/evaluation/src/r97-bounded-stop.test.ts (24 tests) 18507ms
+     ✓ returns a NAMED timeout result, and the child is really gone  3514ms
+     ✓ escalates only AFTER the grace: a child that dies on the first signal is not tree-killed  711ms
+     ✓ leaves NO descendant behind: a grandchild that ignores signals is reaped too  3613ms
+     ✓ an AbortSignal cancels a running child and is reported as `cancelled`  2413ms
+     ✓ an output flood past the cap ends the child as `output_limit`, long before the deadline  834ms
+     ✓ leaves NO descendant behind when the CAP is what stops the tree  2037ms
+     ✓ fires its AbortSignal exactly at the deadline, once  402ms
+     ✓ a unit whose deadline is ALREADY spent never dispatches, and reports timeout  810ms
+     ✓ an unspent deadline leaves the normal path completely unchanged  700ms
+     ✓ a stubborn child is stopped well before an independent watchdog would fire  3006ms
+
+ Test Files  2 passed (2)
+      Tests  89 passed (89)
+   Start at  00:44:02
+   Duration  37.53s (transform 1.79s, setup 0ms, import 1.53s, tests 35.78s, environment 0ms)
+
+JSON report written to /tmp/coding-prompts-process-recheck.json

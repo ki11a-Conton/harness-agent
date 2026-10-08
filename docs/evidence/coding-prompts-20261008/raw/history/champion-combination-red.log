@@ -1,0 +1,51 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-coding-prompts-20261008
+
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+ ❯ apps/cli/src/champion-application-p1.test.ts (11 tests | 2 failed) 60ms
+   × P07: cli coding challenger does not attest an unmeasured champion combination 27ms
+   × P07: web coding challenger does not attest an unmeasured champion combination 5ms
+     ✓ RED→GREEN: startup INSTALLS the exact strategy text and the proof attests it 5ms
+     ✓ removing the install FAILS the application (never applied on flags alone) 6ms
+     ✓ the install plan recognizes the mechanism and refuses the mutually-exclusive pair 0ms
+     ✓ the field checks bind the ACTUAL guidance bytes (target hash depends on the text) 0ms
+     ✓ startup INSTALLS the exact candidate text (not a similar-meaning rewrite) 4ms
+     ✓ the WEB entrypoint installs and attests the SAME bytes as the CLI one 3ms
+     ✓ removing the install FAILS the application (never applied on flags alone) 5ms
+     ✓ the install plan recognizes the candidate and refuses EVERY mutually-exclusive pairing 1ms
+     ✓ the field checks bind the candidate's ACTUAL guidance bytes 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  apps/cli/src/champion-application-p1.test.ts > P07: cli coding challenger does not attest an unmeasured champion combination
+ FAIL  apps/cli/src/champion-application-p1.test.ts > P07: web coding challenger does not attest an unmeasured champion combination
+AssertionError: expected 'applied' to be 'agentPromptChallenger' // Object.is equality
+
+Expected: "agentPromptChallenger"
+Received: "applied"
+
+ ❯ apps/cli/src/champion-application-p1.test.ts:83:30
+     81|     });
+     82|     try {
+     83|       expect(outcome.status).toBe("agentPromptChallenger");
+       |                              ^
+     84|       expect(outcome.proof).toBeNull();
+     85|       expect(outcome.harness.agents[0]!.systemPrompt).toBe(policy.prim…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 9 passed (11)
+   Start at  01:00:12
+   Duration  2.07s (transform 1.50s, setup 0ms, import 1.88s, tests 60ms, environment 0ms)
+
+JSON report written to /tmp/coding-prompts-guard-baseline-red.json

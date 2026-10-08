@@ -1,0 +1,33 @@
+{
+  "kind": "linux-test-host-subreaper",
+  "sourceSha": "64a174d56600d8ca93c1e963a87db87b540a9287",
+  "command": [
+    "pnpm",
+    "exec",
+    "vitest",
+    "run",
+    "apps/cli/src/e4-r55-failure-wiring.test.ts",
+    "packages/evaluation/src/r97-bounded-stop.test.ts",
+    "--reporter=default",
+    "--reporter=json",
+    "--outputFile=/tmp/coding-prompts-process-recheck.json"
+  ],
+  "exitCode": 0,
+  "adoptedDescendantsReaped": 3,
+  "reaped": [
+    {
+      "pid": 353439,
+      "exitCode": -9
+    },
+    {
+      "pid": 356787,
+      "exitCode": 0
+    },
+    {
+      "pid": 356835,
+      "exitCode": -9
+    }
+  ],
+  "durationSeconds": 38.291,
+  "note": "Container PID 1 retains orphan zombies. PR_SET_CHILD_SUBREAPER reaps this test invocation's orphan descendants without weakening process-termination assertions."
+}
