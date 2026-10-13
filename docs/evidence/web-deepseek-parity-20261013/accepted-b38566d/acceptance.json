@@ -26,5 +26,10 @@
   "paidModelQuality": "NOT_PROVEN",
   "fullDefaultUiParity": "NOT_PROVEN",
   "mainCiAcceptance": "FAILED_DOCS_MARKER_ON_ORIGINAL_SHA",
-  "documentationCorrection": "docs:verify PASS on corrected current entry; clean SHA-bound docs gate to follow"
+  "documentationCorrection": {
+    "status": "PASS",
+    "cleanSourceSha": "69bceb3906e2371ece20ccb57ef3a265f998cee7",
+    "gate": "docs-gate/docs.json",
+    "codeIdentity": "code-identity.json"
+  }
 }

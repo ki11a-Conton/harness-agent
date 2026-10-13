@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "2.0.0",
+  "gate": "docs",
+  "command": [
+    "pnpm",
+    "docs:verify"
+  ],
+  "toolVersion": "release-command-v2",
+  "gitSha": "69bceb3906e2371ece20ccb57ef3a265f998cee7",
+  "cleanBefore": true,
+  "cleanAfter": true,
+  "inputDigest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+  "outputDigest": "2977489de9b79ae1eb61943e741f30867106e3a3d91c790e7abe964e89027a0f",
+  "startedAtIso": "2026-10-13T11:49:12.380Z",
+  "finishedAtIso": "2026-10-13T11:49:13.053Z",
+  "exitCode": 0,
+  "passed": true,
+  "state": "passed",
+  "summary": "docs: PASS (exit 0)",
+  "providerCalls": 0,
+  "environmentClass": "offline",
+  "artifactRefs": [],
+  "logRef": {
+    "path": "logs/docs-2026-10-13T11-49-12-380Z.log",
+    "digest": "0285b074c7a62bbb4ce04ce54714b64c4bd0970082bf40c7bb53d608979b6793"
+  },
+  "errorSummary": "exitCode=0 (ok)\n# Documentation truth verification\n\nPASS  benchmark suite: regression\n      30 case(s) on disk matches README claim 30\nPASS  benchmark suite: holdout\n      32 case(s) on disk matches README claim 32\nPASS  benchmark suite: adversarial\n      13 case(s) on disk matches README claim 13\nPASS  benchmark suite: stress\n      11 case(s) on disk matches README claim 11\nPASS  package count\n      24 packages/ on disk matches the HANDOVER claim 24\nPASS  CI gates\n      .github/workflows/ci.yml runs test and coverage\nPASS  HANDOVER static truth (P38.4-10)\n      HANDOVER.md canonical section contains no volatile SHA/run-id — a new commit does not make it stale\nPASS  CAPABILITY_MATRIX.md machine-generated\n      CAPABILITY_MATRIX.md carries generatedAt + the audit records table\nPASS  CAPABILITY_MATRIX marked informational (P38.2-11)\n      tracked matrix is explicitly NOT RELEASE EVIDENCE (informational snapshot)\nPASS  capability profiles present\n      CAPABILITY_MATRIX.json carries the per-profile byProfile view\nPASS  evolution ledger consistent (E2-12)\n      evolution-ledger.json verifies: refs exist, digests match, summaries recompute, one active champion\nPASS  current plan entry (E4-00)\n      plan.md is the current entry and references an existing spec plan(20261013-194000).md\nPASS  release gate commands exist in package.json (E4-10)\n      every release-gate command maps to a real package.json script\nPASS  documented pnpm scripts exist in package.json (E4-10 #6)\n      every pnpm command documented in 2 README file(s) maps to a real package.json script\n\nALL CHECKS PASS\n"
+}

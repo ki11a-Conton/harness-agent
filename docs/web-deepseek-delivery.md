@@ -52,7 +52,7 @@
 - [模型/重启浏览器](evidence/web-deepseek-parity-20261013/accepted-b38566d/model-browser/result.json)：18 断言 PASS，包含真实 HTTP route/credential、双 tab、冻结拒绝、历史前缀、实际角色标签和 Core artifact 身份。个别 screenshot timeout 独立列为 BLOCKED，不计作图片成功。
 - [真实 Windows](evidence/web-deepseek-parity-20261013/accepted-b38566d/native-windows-receipt.json)：253 PASS / 1 skipped，Windows_NT 10.0.26100、Node 22.23.3；[workflow](https://github.com/ki11a-Conton/harness-agent/actions/runs/38388122089)。
 - [同一 archive 官方 UI 两端](https://github.com/ki11a-Conton/harness-agent/actions/runs/38388121962)：Ubuntu 与 Windows 各 30 / 75 PASS，archive SHA256 `337011c5f54c1d505f2988b79f4451c3562a2003267f70b340bedb24a639e293`；原 receipt/hash 在归档。另有 Linux-built CLI 同包 Windows 消费 49 断言 / 18 请求 PASS；本地 CLI 50 / 19、doctor=0、篡改拒绝 PASS。
-- [主 CI 原件](evidence/web-deepseek-parity-20261013/accepted-b38566d/main-ci-original.json)：b38566d 的 formal 两端、r97/r98 两端、coverage、cold-start 均通过；verify 最终 docs 门缺入口 marker 而失败，整体 FAIL。已补当前 marker 与当前日期规格，实际 docs:verify PASS；新 main 的自动 CI 状态需另行读取，不能称旧流水线整体成功。
+- [主 CI 原件](evidence/web-deepseek-parity-20261013/accepted-b38566d/main-ci-original.json)：b38566d 的 formal 两端、r97/r98 两端、coverage、cold-start 均通过；verify 最终 docs 门缺入口 marker 而失败，整体 FAIL。已补当前 marker 与当前日期规格，clean `69bceb3` 的 [docs gate](evidence/web-deepseek-parity-20261013/accepted-b38566d/docs-gate/docs.json) exit 0 / clean before+after；[代码一致性](evidence/web-deepseek-parity-20261013/accepted-b38566d/code-identity.json)证明 runtime/build 输入无变化；新 main 的自动 CI 状态需另行读取，不能称旧流水线整体成功。
 
 
 ## 尚未完成的功能与发布条件

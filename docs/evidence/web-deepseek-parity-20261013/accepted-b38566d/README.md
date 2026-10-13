@@ -11,3 +11,5 @@ Runtime source `b38566d5c370509db58cbb495aaf4eb68cbe3ce3` / tree `bf6272b1e03ba7
 主 CI run 38388121891：真实 Ubuntu/Windows formal、两端 r97/r98、coverage 和 cold-start 通过。verify 两端最终 docs 门因 plan.md 缺“当前执行计划入口”标记失败，后续 aggregate 拒绝/attestation skipped；原始工作流不能称整体通过。根入口已补当前 marker 与真正的当前日期规格，实际 docs:verify RED → GREEN 原件保留。后续 docs-only SHA 的 gate 另行记录，运行时代码不改动。禁止把不同 SHA 的整套 CI 拼成最终 HEAD 全绿。
 
 vendor-unchanged-assets.log 是 9c02f1b 执行的 772 文件 verifier；资产、notice 和 verifier 在 9c02f1b → b38566d 完全无 diff。来源参考 Git SHA 与 npm 无 gitHead 分别记录。所有 provider 请求为 loopback / paid=0；付费质量和完整默认功能 parity 仍为 NOT_PROVEN。W3–W6 缺口仍在，本次没有全功能生产 release。
+
+文档补修的 clean gate：`69bceb3906e2371ece20ccb57ef3a265f998cee7`，docs-gate/docs.json 实测 exit 0 / passed / cleanBefore=true / cleanAfter=true；日志的 current plan 明确引用本轮 `plan(20261013-194000).md`。code-identity.json 证明该文档提交与 b38566d 的 runtime、测试、build/config/license/workflow 输入完全无 diff。后续归档只增加这些证据，不宣称新 HEAD 完整远端 CI 已绿。
