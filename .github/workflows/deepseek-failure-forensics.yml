@@ -10,6 +10,18 @@ permissions:
   actions: read
 jobs:
   recover:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - kind: ui
+            source: 65ec152c672682ff20f178df99e98eb6882f8f81
+            run: '38343114931'
+            artifact: deepseek-installed-windows-latest-65ec152c672682ff20f178df99e98eb6882f8f81-38343114931
+          - kind: portable
+            source: 4f7dcb551ec13885992e0099cf615ca9c3eaf049
+            run: '38342742415'
+            artifact: gen1-windows-latest-4f7dcb551ec13885992e0099cf615ca9c3eaf049-38342742415
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -20,20 +32,8 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           github-token: ${{ github.token }}
-          run-id: '38338850273'
-          name: deepseek-installed-windows-latest-f763403477da9d4cc798954abbc6b8ca63c93ded-38338850273
-          path: .ci/deepseek-failure/ui
-      - uses: actions/download-artifact@v4
-        with:
-          github-token: ${{ github.token }}
-          run-id: '38338850341'
-          name: gen1-windows-latest-f763403477da9d4cc798954abbc6b8ca63c93ded-38338850341
-          path: .ci/deepseek-failure/portable
-      - uses: actions/download-artifact@v4
-        with:
-          github-token: ${{ github.token }}
-          run-id: '38338850285'
-          name: test-report-windows-latest
-          path: .ci/deepseek-failure/unit
+          run-id: ${{ matrix.run }}
+          name: ${{ matrix.artifact }}
+          path: .ci/deepseek-failure
       - name: Report the bounded original failure details
-        run: node scripts/ci/deepseek-failure-forensics.mjs .ci/deepseek-failure
+        run: node scripts/ci/deepseek-failure-forensics.mjs .ci/deepseek-failure ${{ matrix.source }}

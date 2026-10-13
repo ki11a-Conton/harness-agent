@@ -6,14 +6,15 @@ import { join, resolve } from 'node:path';
 import { gzipSync } from 'node:zlib';
 
 const root = resolve(process.argv[2]);
-const originalSourceSha = 'f763403477da9d4cc798954abbc6b8ca63c93ded';
+const originalSourceSha = process.argv[3] ?? 'f763403477da9d4cc798954abbc6b8ca63c93ded';
+if (!/^[a-f0-9]{40}$/.test(originalSourceSha)) throw new Error('Expected original source SHA');
 const files = [];
 async function walk(directory) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     const file = join(directory, entry.name), info = await lstat(file);
     if (info.isSymbolicLink()) throw new Error('Forensic artifact link rejected');
     if (entry.isDirectory()) { await walk(file); continue; }
-    if (!entry.isFile() || info.size > 4 * 1024 * 1024 || !/^(?:result|results|commands|test-report|browser|host-stderr|portable-unit-security\.stdout|portable-unit-security\.stderr|.*phase.*)\.(?:json|log)$/.test(entry.name)) continue;
+    if (!entry.isFile() || info.size > 4 * 1024 * 1024 || !/^(?:result|results|commands|test-report|browser|host-stderr|.*\.stdout|.*\.stderr|.*phase.*)\.(?:json|log)$/.test(entry.name)) continue;
     const bytes = await readFile(file), text = bytes.toString('utf8');
     let detail;
     if (entry.name.endsWith('.json')) {
