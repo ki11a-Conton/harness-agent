@@ -16,6 +16,12 @@ jobs:
           - kind: windows-latest
             run: '38346120282'
             artifact: deepseek-installed-windows-latest-facf13fa5ed4f545348b7de78c230603c54f9bf1-38346120282
+          - kind: unit-windows
+            run: '38346120226'
+            artifact: test-report-windows-latest
+          - kind: formal-windows
+            run: '38346120226'
+            artifact: n6-real-formal-windows-latest-facf13fa5ed4f545348b7de78c230603c54f9bf1-38346120226-attempt-1
           - kind: same-archive-windows
             run: '38346120266'
             artifact: gen1-same-archive-windows-facf13fa5ed4f545348b7de78c230603c54f9bf1-38346120266
