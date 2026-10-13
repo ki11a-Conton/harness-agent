@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, writeFile, realpath } from "node:fs/promises";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -17,7 +17,7 @@ import { createDeepseekComposition } from "./composition.js";
 const cleanup: Array<() => Promise<void>> = [];
 afterEach(async () => { for (const action of cleanup.splice(0).reverse()) await action(); vi.unstubAllEnvs(); });
 async function setup(options: { provider?: ModelProvider; clock?: "real"; denyModelEdits?: boolean; admitTaskPath?: boolean } = {}) {
-  const directory = await mkdtemp(join(tmpdir(), "dsh-activity-real-")); cleanup.push(() => rm(directory, { recursive: true, force: true }));
+  const directory = await realpath(await mkdtemp(join(tmpdir(), "dsh-activity-real-"))); cleanup.push(() => rm(directory, { recursive: true, force: true }));
   const cwd = join(directory, "project"); const dataDir = join(directory, "state"); await mkdir(cwd); await mkdir(dataDir);
   const clock = { value: Date.parse("2026-10-11T00:00:00.000Z") };
   const now = options.clock === "real" ? Date.now : () => clock.value;
@@ -358,7 +358,7 @@ it("the displayed todo timeline is derived from actual successful native update_
 });
 
 it("a real secondary workspace skill catalog resolves its own captured Harness roots", async () => {
-  const skillA = await mkdtemp(join(tmpdir(), "actual-skill-A-")); const skillB = await mkdtemp(join(tmpdir(), "actual-skill-B-"));
+  const skillA = await realpath(await mkdtemp(join(tmpdir(), "actual-skill-A-"))); const skillB = await realpath(await mkdtemp(join(tmpdir(), "actual-skill-B-")));
   cleanup.push(() => rm(skillA, { recursive: true, force: true })); cleanup.push(() => rm(skillB, { recursive: true, force: true }));
   for (const [path, name] of [[skillA, "primary-skill"], [skillB, "secondary-skill"]] as const) {
     await mkdir(join(path, name)); await writeFile(join(path, name, "SKILL.md"), `---\nname: ${name}\ndescription: ${name} real metadata\nversion: "1.0.0"\n---\nActual body\n`);
@@ -388,7 +388,7 @@ it("a replaced Web draft schedules through its native model context and the real
   });
   await new Promise<void>(done => server.listen(0, "127.0.0.1", done));
   cleanup.push(() => new Promise<void>((done, reject) => server.close(error => error === undefined ? done() : reject(error))));
-  const directory = await mkdtemp(join(tmpdir(), "dsh-alias-real-timer-")); cleanup.push(() => rm(directory, { recursive: true, force: true }));
+  const directory = await realpath(await mkdtemp(join(tmpdir(), "dsh-alias-real-timer-"))); cleanup.push(() => rm(directory, { recursive: true, force: true }));
   const cwd = join(directory, "project"), dataDir = join(directory, "data"); await mkdir(cwd);
   const baseProvider = new ScriptedModelProvider([ScriptedModelProvider.text("Unselected base route")]);
   const base = await createHarness({ cwd, dataDir, profile: "interactive", modelProvider: baseProvider, model: { providerId: baseProvider.id, modelId: "scripted-model" } }); cleanup.push(() => base.close());

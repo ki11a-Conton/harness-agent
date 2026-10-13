@@ -1,6 +1,7 @@
+import { atomicReplace } from "@ar/store-integrity";
 import { randomUUID } from "node:crypto";
 import { constants, type Stats } from "node:fs";
-import { lstat, mkdir, open, realpath, rename, unlink } from "node:fs/promises";
+import { lstat, mkdir, open, realpath, unlink } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 import Schema from "@deepseek-ai/schemastery";
 import { z } from "zod";
@@ -530,7 +531,7 @@ async function save(path: string, document: SettingsDocument | CredentialDocumen
       await checkDirectory(path, original); signal.throwIfAborted();
     } finally { await file.close(); }
     await checkDirectory(path, original); signal.throwIfAborted();
-    await rename(temporary, path);
+    await atomicReplace(temporary, path);
     await checkDirectory(path, original);
     if (process.platform !== "win32") { const parent = await open(directory, "r"); try { await parent.sync(); } finally { await parent.close(); } }
   } finally { await unlink(temporary).catch(error => { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }); }

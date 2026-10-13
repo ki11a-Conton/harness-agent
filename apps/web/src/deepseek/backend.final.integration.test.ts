@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, readdir, rm, writeFile, realpath } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
@@ -12,7 +12,7 @@ const cleanup: Array<() => Promise<void>> = [];
 afterEach(async () => { for (const action of cleanup.splice(0).reverse()) await action(); });
 
 it("the official desktop path DTOs expose headless capability without executing a launcher or mutating files and reject malformed carriers", async () => {
-  const root = await mkdtemp(join(tmpdir(), "dsh-desktop-official-dto-")); cleanup.push(() => rm(root, { recursive: true, force: true }));
+  const root = await realpath(await mkdtemp(join(tmpdir(), "dsh-desktop-official-dto-"))); cleanup.push(() => rm(root, { recursive: true, force: true }));
   const cwd = join(root, "project"), dataDir = join(root, "data"); await mkdir(cwd); const path = join(cwd, "proof.txt"); await writeFile(path, "Unchanged original bytes\n");
   const provider = new ScriptedModelProvider([ScriptedModelProvider.text("Unused")]);
   const harness = await createHarness({ cwd, dataDir, profile: "interactive", modelProvider: provider, model: { providerId: provider.id, modelId: "scripted-model" } }); cleanup.push(() => harness.close());

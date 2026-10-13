@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, realpath } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
@@ -19,7 +19,7 @@ function service(harness: Harness, directory: string) {
 }
 
 async function fixture() {
-  const directory = await mkdtemp(join(tmpdir(), "dsh-agent-availability-"));
+  const directory = await realpath(await mkdtemp(join(tmpdir(), "dsh-agent-availability-")));
   cleanup.push(() => rm(directory, { recursive: true, force: true }));
   const provider = new ScriptedModelProvider([ScriptedModelProvider.text("actual answer")]);
   const options = { cwd: directory, dataDir: directory, profile: "interactive" as const, modelProvider: provider,

@@ -1,4 +1,5 @@
-import { mkdir, open, readdir, readFile, rename, stat } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { mkdir, open, readdir, readFile, rename, stat, unlink } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve } from "node:path";
 
 /**
@@ -18,7 +19,15 @@ import { basename, dirname, join, relative, resolve } from "node:path";
  *   helpers guarantee in-process mutual exclusion and crash safety.
  */
 
+let windowsDirectorySyncReported = false;
 async function syncDir(dirPath: string): Promise<void> {
+  if (process.platform === "win32") {
+    if (!windowsDirectorySyncReported) {
+      windowsDirectorySyncReported = true;
+      process.stderr.write("[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n");
+    }
+    return;
+  }
   // Directory fsync makes a rename/persist durable across power loss. It is
   // best-effort: some filesystems reject it (EINVAL/EPERM), and skipping it
   // only risks losing the rename itself, never corrupting file contents.
@@ -35,6 +44,27 @@ async function syncDir(dirPath: string): Promise<void> {
   }
 }
 
+/** Keep the old committed file intact while Windows releases a transient
+ * reader/scanner lock. Adapted from the existing R97 ledger contention retry;
+ * never implement replacement as unlink(target) followed by rename. */
+export async function atomicReplace(source: string, target: string, signal?: AbortSignal): Promise<void> {
+  for (let attempt = 0; ; attempt++) {
+    signal?.throwIfAborted();
+    try { await rename(source, target); return; }
+    catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (process.platform !== "win32" || attempt >= 7 || !["EPERM", "EACCES", "EBUSY"].includes(code ?? "")) throw error;
+      await new Promise<void>((done, reject) => {
+        const finish = () => { signal?.removeEventListener("abort", abort); done(); };
+        const timer = setTimeout(finish, Math.min(10 * 2 ** attempt, 200));
+        const abort = () => { clearTimeout(timer); signal?.removeEventListener("abort", abort); reject(signal?.reason); };
+        signal?.addEventListener("abort", abort, { once: true });
+        if (signal?.aborted) abort();
+      });
+    }
+  }
+}
+
 /**
  * Durably write `data` to `target`: temp file + fsync + atomic rename (+ fsync
  * parent dir). Guarantees the target is never observed half-written or missing.
@@ -45,16 +75,18 @@ export async function atomicWriteFile(
 ): Promise<void> {
   const dir = dirname(target);
   await mkdir(dir, { recursive: true });
-  const tmp = join(dir, `.${basename(target)}.${process.pid}.${Date.now()}.tmp`);
-  const handle = await open(tmp, "w");
+  const tmp = join(dir, `.${basename(target)}.${process.pid}.${randomUUID()}.tmp`);
+  const handle = await open(tmp, "wx");
   try {
-    await handle.writeFile(data);
-    await handle.sync();
+    try { await handle.writeFile(data); await handle.sync(); }
+    finally { await handle.close(); }
+    await atomicReplace(tmp, target);
+    await syncDir(dir);
   } finally {
-    await handle.close();
+    await unlink(tmp).catch(error => {
+      if (!isNodeErrorCode(error, "ENOENT")) process.stderr.write(`[degraded] store-integrity.temp-cleanup: ${error instanceof Error ? error.message : String(error)}\n`);
+    });
   }
-  await rename(tmp, target);
-  await syncDir(dir);
 }
 
 /**

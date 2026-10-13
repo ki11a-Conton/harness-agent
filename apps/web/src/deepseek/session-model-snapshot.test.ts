@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, realpath } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
@@ -14,7 +14,7 @@ function gate() { let resolve!: () => void; const promise = new Promise<void>(do
 const signal = () => new AbortController().signal;
 
 it("an existing follow and all snapshot reads wait for committed model-generation activation", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "dsh-model-snapshot-"));
+  const directory = await realpath(await mkdtemp(join(tmpdir(), "dsh-model-snapshot-")));
   cleanup.push(() => rm(directory, { recursive: true, force: true }));
   const original = new ScriptedModelProvider([ScriptedModelProvider.text("original")]);
   const chosen = new ScriptedModelProvider([ScriptedModelProvider.text("chosen")]);

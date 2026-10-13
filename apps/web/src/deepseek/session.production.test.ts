@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, rm, realpath } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
@@ -11,7 +11,7 @@ const cleanup: Array<() => Promise<void>> = [];
 afterEach(async () => { for (const action of cleanup.splice(0).reverse()) await action(); });
 
 it("production composition admits a prompt while official event and follow streams remain open", async () => {
-  const root = await mkdtemp(join(tmpdir(), "dsh-production-prompt-"));
+  const root = await realpath(await mkdtemp(join(tmpdir(), "dsh-production-prompt-")));
   cleanup.push(() => rm(root, { recursive: true, force: true }));
   const cwd = join(root, "project"), dataDir = join(root, "data"); await mkdir(cwd);
   const provider = new ScriptedModelProvider([ScriptedModelProvider.text("Actual production answer")]);

@@ -2,6 +2,10 @@ packages:
   - "apps/*"
   - "packages/*"
 
+# pnpm 11 reads this setting from workspace YAML; the existing .npmrc alone
+# does not prevent run/exec from trying an implicit install into another store.
+verifyDepsBeforeRun: false
+
 allowBuilds:
   node-pty: true
 

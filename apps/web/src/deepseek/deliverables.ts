@@ -1,7 +1,8 @@
+import { atomicReplace } from "@ar/store-integrity";
 import { createHash, randomUUID } from "node:crypto";
 import { constants } from "node:fs";
-import { lstat, mkdir, open, readdir, realpath, rename, unlink, type FileHandle } from "node:fs/promises";
-import { dirname, relative, resolve, sep } from "node:path";
+import { lstat, mkdir, open, readdir, realpath, unlink, type FileHandle } from "node:fs/promises";
+import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { z } from "zod";
 import { newEventId, type AgentEvent, type SessionId, type ToolDefinition, type ToolResult } from "@ar/contracts";
 import { detectSecrets } from "@ar/security";
@@ -143,14 +144,16 @@ export function createDeliverablesService(host: DeliverablesHost) {
             else {
               const root = await realpath(host.dataDir), directory = dirname(input.path);
               await mkdir(directory, { recursive: true, mode: 0o700 });
-              if (!inside(root, await realpath(directory)) || await realpath(directory) !== directory) throw new WorkspaceRemoteError("gateway/forbidden", "Upload directory is a symlink or outside its host root");
+              const expected = join(root, "deepseek", "uploads", createHash("sha256").update(input.sessionId).digest("hex"));
+              const same = (actual: string) => process.platform === "win32" ? actual.toLowerCase() === expected.toLowerCase() : actual === expected;
+              if (!inside(root, await realpath(directory)) || !same(await realpath(directory))) throw new WorkspaceRemoteError("gateway/forbidden", "Upload directory is a symlink or outside its host root");
               const temporary = `${input.path}.${randomUUID()}.tmp`;
               try {
                 const file = await open(temporary, "wx", 0o600);
                 try { await file.writeFile(JSON.stringify(stored)); await file.sync(); } finally { await file.close(); }
                 context.signal.throwIfAborted();
-                if (await realpath(directory) !== directory) throw new WorkspaceRemoteError("gateway/forbidden", "Upload directory changed");
-                await rename(temporary, input.path);
+                if (!same(await realpath(directory))) throw new WorkspaceRemoteError("gateway/forbidden", "Upload directory changed");
+                await atomicReplace(temporary, input.path, context.signal);
               } finally { await unlink(temporary).catch(error => { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }); }
             }
             return { status: "success", output: { receiptId: stored.receiptId, file: stored.file } satisfies FileUploadValue };
@@ -159,14 +162,17 @@ export function createDeliverablesService(host: DeliverablesHost) {
           if (host.dataDir === undefined) stored = memoryUploads.get(input.receiptId);
           else {
             const root = await realpath(host.dataDir), directory = dirname(input.path);
-            if (!inside(root, await realpath(directory)) || await realpath(directory) !== directory) throw new WorkspaceRemoteError("gateway/forbidden", "Upload directory is outside its host root");
+            const expected = join(root, "deepseek", "uploads", createHash("sha256").update(input.sessionId).digest("hex"));
+            const same = (a: string, b: string) => process.platform === "win32" ? a.toLowerCase() === b.toLowerCase() : a === b;
+            if (!inside(root, await realpath(directory)) || !same(await realpath(directory), expected)) throw new WorkspaceRemoteError("gateway/forbidden", "Upload directory is outside its host root");
+            const expectedFile = join(expected, basename(input.path));
             if ((await lstat(input.path)).isSymbolicLink()) throw new WorkspaceRemoteError("gateway/forbidden", "Upload receipt is a symlink");
             const file = await open(input.path, constants.O_RDONLY | (process.platform === "win32" ? 0 : constants.O_NOFOLLOW | constants.O_NONBLOCK));
             try {
               const info = await file.stat();
-              if (!info.isFile() || info.nlink !== 1 || info.size > MAX_UPLOAD_BYTES * 2 || await realpath(input.path) !== input.path) throw new WorkspaceRemoteError("session/attachment-invalid", "Invalid upload receipt file");
+              if (!info.isFile() || info.nlink !== 1 || info.size > MAX_UPLOAD_BYTES * 2 || !same(await realpath(input.path), expectedFile)) throw new WorkspaceRemoteError("session/attachment-invalid", "Invalid upload receipt file");
               const bytes = await boundedRead(file, MAX_UPLOAD_BYTES * 2, context.signal), current = await file.stat();
-              if (statHash(info) !== statHash(current) || bytes.length !== info.size || await realpath(input.path) !== input.path) throw new WorkspaceRemoteError("session/attachment-invalid", "Upload receipt changed during reading");
+              if (statHash(info) !== statHash(current) || bytes.length !== info.size || !same(await realpath(input.path), expectedFile)) throw new WorkspaceRemoteError("session/attachment-invalid", "Upload receipt changed during reading");
               stored = JSON.parse(bytes.toString("utf8")) as StoredUpload;
             }
             finally { await file.close(); }

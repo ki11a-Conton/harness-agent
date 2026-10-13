@@ -116,9 +116,15 @@ const cases = {
     await clickVisible(page, "Settings"); await clickVisible(page, "General");
     await check(checks, "official General settings are usable", async () => {
       assert(await page.getByRole("button", { name: "Edit shortcuts", exact: true }).isVisible());
+      const darkSave = rpcByPage.get(page).waitForResult("settings/update");
       await clickVisible(page, "Dark");
+      const darkResult = await darkSave; if (darkResult.error) throw darkResult.error;
+      assert.equal(darkResult.result.ok, true);
       assert.equal(await page.evaluate(() => document.documentElement.style.colorScheme), "dark");
+      const lightSave = rpcByPage.get(page).waitForResult("settings/update");
       await clickVisible(page, "Light");
+      const lightResult = await lightSave; if (lightResult.error) throw lightResult.error;
+      assert.equal(lightResult.result.ok, true);
       assert.equal(await page.evaluate(() => document.documentElement.style.colorScheme), "light");
     });
     await clickVisible(page, "Close"); await page.reload({ waitUntil: "domcontentloaded" });

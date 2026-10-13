@@ -414,6 +414,13 @@ export function createSessionService(host: SessionHost) {
             const baseline = (await projectSnapshot(row.id, signal)).projections; const encoded = JSON.stringify(baseline.values);
             if (previous.get(row.id) === encoded) continue;
             previous.set(row.id, encoded);
+            // The official baseline supports the empty cursor -1; individual
+            // projection frames require a real non-negative SessionSeq. A
+            // new blank draft must be seeded, not announced as an event -1.
+            if (baseline.asOfSeq === -1) {
+              yield { type: "baseline", value: { projections: { [row.id]: baseline } } };
+              continue;
+            }
             for (const [key, value] of Object.entries(baseline.values)) yield { type: "projection", sessionId: row.id, key, value, seq: baseline.asOfSeq };
           }
           await pause(host.pollDelayMs ?? 25, signal);

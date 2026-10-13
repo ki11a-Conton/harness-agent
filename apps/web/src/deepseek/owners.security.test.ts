@@ -1,4 +1,4 @@
-import { link, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { link, mkdir, mkdtemp, readFile, rm, writeFile, realpath } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
@@ -27,7 +27,7 @@ vi.mock("node:fs/promises", async importOriginal => {
 const cleanup: Array<() => Promise<void>> = [];
 afterEach(async () => { race.armed = false; race.path = ""; for (const action of cleanup.splice(0).reverse()) await action(); });
 async function setup() {
-  const root = await mkdtemp(join(tmpdir(), "dsh-real-owner-index-security-")); cleanup.push(() => rm(root, { recursive: true, force: true }));
+  const root = await realpath(await mkdtemp(join(tmpdir(), "dsh-real-owner-index-security-"))); cleanup.push(() => rm(root, { recursive: true, force: true }));
   const cwd = join(root, "project"), dataDir = join(root, "data"); await mkdir(cwd);
   const provider = new ScriptedModelProvider([ScriptedModelProvider.text("Unused")]);
   const harness = await createHarness({ cwd, dataDir, profile: "interactive", modelProvider: provider, model: { providerId: provider.id, modelId: "scripted-model" } }); cleanup.push(() => harness.close());

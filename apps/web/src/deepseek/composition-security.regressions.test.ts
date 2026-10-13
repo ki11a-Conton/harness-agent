@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { link, mkdtemp, mkdir, readFile, rm, unlink, writeFile } from "node:fs/promises";
+import { link, mkdtemp, mkdir, readFile, rm, unlink, writeFile, realpath } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
@@ -34,7 +34,7 @@ const deferred = () => {
   return { promise, resolve };
 };
 async function setup() {
-  const root = await mkdtemp(join(tmpdir(), "dsh-independent-security-"));
+  const root = await realpath(await mkdtemp(join(tmpdir(), "dsh-independent-security-")));
   cleanups.push(() => rm(root, { recursive: true, force: true }));
   const cwd = join(root, "project"), dataDir = join(root, "data");
   await mkdir(cwd);

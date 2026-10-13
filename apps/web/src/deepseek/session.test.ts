@@ -1,19 +1,20 @@
-import { mkdtemp, mkdir, readFile, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, realpath } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { createHarness, type Harness } from "@ar/harness";
 import { createRuntimeRpc } from "@ar/gateway";
 import { ScriptedModelProvider } from "@ar/model";
 import { newToolCallId, toToolSemantics, type ModelEvent, type ModelProvider, type SessionId } from "@ar/contracts";
 import { ToolOrchestrator, ToolRegistry } from "@ar/tools";
 import { createSessionService, type SessionHost } from "./session.js";
+import { createHostTools } from "./host-tools.js";
 import { createEventsService } from "./events.js";
 
 const cleanup: Array<() => Promise<void>> = [];
 afterEach(async () => { for (const action of cleanup.splice(0).reverse()) await action(); });
 async function setup(provider: ModelProvider = new ScriptedModelProvider([ScriptedModelProvider.text("actual answer")])) {
-  const directory = await mkdtemp(join(tmpdir(), "dsh-session-live-"));
+  const directory = await realpath(await mkdtemp(join(tmpdir(), "dsh-session-live-")));
   cleanup.push(() => rm(directory, { recursive: true, force: true }));
   const harness = await createHarness({ cwd: directory, dataDir: directory, profile: "interactive", modelProvider: provider,
     model: { providerId: provider.id, modelId: "scripted-model" } });
@@ -42,6 +43,27 @@ async function eventually<T>(read: () => Promise<T>, accept: (value: T) => boole
   throw new Error(`Real Harness owner did not settle: ${JSON.stringify(last)}`);
 }
 function send(id: string, requestId = "unique-request") { return { sessionId: id, requestId, mode: "queue", content: [{ type: "text", text: "Please answer" }] }; }
+
+it("control seeds a newly created empty draft with the supported -1 baseline instead of an invalid negative event sequence", async () => {
+  const stack = await setup(), controller = new AbortController();
+  const quietHost = { ...stack.host, ...createHostTools(stack.harness, stack.host.cwd, stack.host.dataDir) };
+  const service = createSessionService(quietHost);
+  const control = service.stream("session/control", {}, controller.signal)[Symbol.asyncIterator]();
+  expect((await control.next()).value).toMatchObject({ type: "baseline" });
+  const append = stack.harness.events.appendNew.bind(stack.harness.events);
+  let release!: () => void, createdId: string | undefined;
+  const parked = new Promise<void>(done => { release = done; });
+  const spy = vi.spyOn(stack.harness.events, "appendNew").mockImplementation(async event => {
+    if (event.type === "session.created" && event.sessionId !== stack.id) { createdId = event.sessionId; await parked; }
+    return append(event);
+  });
+  const creating = stack.harness.runtime.createSession({ agent: stack.harness.agents[0]!, cwd: stack.host.cwd });
+  try {
+    await eventually(async () => createdId, value => value !== undefined);
+    const frame = (await control.next()).value;
+    expect(frame).toMatchObject({ type: "baseline", value: { projections: { [createdId!]: { asOfSeq: -1 } } } });
+  } finally { release(); await creating; spy.mockRestore(); controller.abort(); await control.return?.(); }
+});
 
 it("admission persists one request correlation and retries never start a duplicate turn", async () => {
   const stack = await setup();

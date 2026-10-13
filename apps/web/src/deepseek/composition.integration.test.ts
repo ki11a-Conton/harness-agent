@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, writeFile, realpath } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
@@ -42,7 +42,7 @@ it("configured model window and output limit affect the actual owner and provide
   }
 });
 async function fixture(provider: ModelProvider = new ScriptedModelProvider([ScriptedModelProvider.text("Real composition answer")])) {
-  const root = await mkdtemp(join(tmpdir(), "dsh-composition-")); cleanup.push(() => rm(root, { recursive: true, force: true }));
+  const root = await realpath(await mkdtemp(join(tmpdir(), "dsh-composition-"))); cleanup.push(() => rm(root, { recursive: true, force: true }));
   const cwd = join(root, "primary"); const secondary = join(root, "secondary"); const dataDir = join(root, "data");
   await Promise.all([mkdir(cwd), mkdir(secondary)]);
   await Promise.all([writeFile(join(cwd, "identity.txt"), "PRIMARY"), writeFile(join(secondary, "identity.txt"), "SECONDARY")]);

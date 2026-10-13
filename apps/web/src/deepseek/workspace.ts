@@ -1,7 +1,8 @@
+import { atomicReplace } from "@ar/store-integrity";
 import { randomUUID } from "node:crypto";
 import { constants } from "node:fs";
-import { lstat, mkdir, open, realpath, rename, unlink } from "node:fs/promises";
-import { basename, dirname, resolve } from "node:path";
+import { lstat, mkdir, open, realpath, unlink } from "node:fs/promises";
+import { basename, dirname, join, resolve } from "node:path";
 import { z } from "zod";
 import type { Harness } from "@ar/harness";
 import type { SessionId, ToolDefinition, ToolResult } from "@ar/contracts";
@@ -30,7 +31,9 @@ export function createWorkspaceMetadataStore(host:WorkspaceHost) {
     const directoryPath=dirname(path);
     if(create)await mkdir(directoryPath,{recursive:true,mode:0o700});
     const actual=await realpath(directoryPath);
-    if(!inside(root,actual)||actual!==directoryPath||(await lstat(directoryPath)).isSymbolicLink())throw new Error("Workspace metadata directory is outside its fixed host root");
+    const expected=join(root,"deepseek");
+    const same=process.platform==="win32"?actual.toLowerCase()===expected.toLowerCase():actual===expected;
+    if(!inside(root,actual)||!same||(await lstat(directoryPath)).isSymbolicLink())throw new Error("Workspace metadata directory is outside its fixed host root");
     signal.throwIfAborted();
   }
   async function load(signal:AbortSignal):Promise<WorkspaceDocument> {
@@ -50,7 +53,7 @@ export function createWorkspaceMetadataStore(host:WorkspaceHost) {
     try {
       const file=await open(temporary,"wx",0o600);
       try{await file.writeFile(JSON.stringify(document));await file.sync();}finally{await file.close();}
-      signal.throwIfAborted();await directory(signal);await rename(temporary,path);
+      signal.throwIfAborted();await directory(signal);await atomicReplace(temporary,path,signal);
       if(process.platform!=="win32"){const handle=await open(dirname(path),"r");try{await handle.sync();}finally{await handle.close();}}
     }finally{await unlink(temporary).catch(error=>{if((error as NodeJS.ErrnoException).code!=="ENOENT")throw error;});}
   }

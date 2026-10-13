@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { createServer } from "node:http";
-import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, symlink, writeFile, realpath } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
@@ -19,7 +19,7 @@ afterEach(async () => { for (const action of cleanup.splice(0).reverse()) await 
 const signal = () => new AbortController().signal;
 
 async function fixture(provider: ModelProvider = new ScriptedModelProvider([ScriptedModelProvider.text("real answer")]), options: Partial<OwnerHooks> = {}, modelId = "scripted-model") {
-  const directory = await mkdtemp(join(tmpdir(), "dsh-owner-")); cleanup.push(() => rm(directory, { recursive: true, force: true }));
+  const directory = await realpath(await mkdtemp(join(tmpdir(), "dsh-owner-"))); cleanup.push(() => rm(directory, { recursive: true, force: true }));
   const primary = join(directory, "primary"); const secondary = join(directory, "secondary"); const dataDir = join(directory, "data");
   await Promise.all([mkdir(primary), mkdir(secondary)]);
   await Promise.all([writeFile(join(primary, "identity.txt"), "PRIMARY"), writeFile(join(secondary, "identity.txt"), "SECONDARY")]);

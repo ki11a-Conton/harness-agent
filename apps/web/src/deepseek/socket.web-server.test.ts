@@ -55,7 +55,8 @@ it("real WebServer stop aborts every independent socket and closes a shared serv
     ws.send(JSON.stringify({ type: "request", id: `shutdown_socket_0123456789_${i}`, route: "open", body: { endpoint: "hold", args: {}, streamId: `shutdown_stream_0123456789_${i}` } }));
     await once(ws, "message");
   }
-  await stack.server.stop();
+  const peerClosed = sockets.map(socket => socket.readyState === WebSocket.CLOSED ? Promise.resolve() : once(socket, "close"));
+  await stack.server.stop(); await Promise.all(peerClosed);
   expect(stack.counts()).toEqual({ dispatched: 0, aborted: 2, serviceClosed: 1 });
   await stack.server.stop(); expect(stack.counts().serviceClosed).toBe(1);
   expect(sockets.every(socket => socket.readyState === WebSocket.CLOSED)).toBe(true);

@@ -1,7 +1,8 @@
+import { atomicReplace } from "@ar/store-integrity";
 import { createHash, randomUUID } from "node:crypto";
 import { constants } from "node:fs";
-import { lstat, mkdir, open, realpath, rename, unlink } from "node:fs/promises";
-import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
+import { lstat, mkdir, open, realpath, unlink } from "node:fs/promises";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { z } from "zod";
 import { newEventId } from "@ar/contracts";
 import type {
@@ -149,7 +150,7 @@ export async function createOwnerManager(base: Harness, hooks: OwnerHooks): Prom
     if (create) await mkdir(path, { recursive: true, mode: 0o700 });
     const actual = await realpath(path);
     const delta = relative(root, actual);
-    if (actual !== path || isAbsolute(delta) || delta === ".." || delta.startsWith(`..${sep}`) || (await lstat(path)).isSymbolicLink()) {
+    if (!samePath(actual, join(root, "deepseek")) || isAbsolute(delta) || delta === ".." || delta.startsWith(`..${sep}`) || (await lstat(path)).isSymbolicLink()) {
       throw new Error("Workspace owner metadata directory leaves its fixed host root");
     }
   }
@@ -163,7 +164,8 @@ export async function createOwnerManager(base: Harness, hooks: OwnerHooks): Prom
       opened = true;
       try {
         const stat = await handle.stat();
-        if (!stat.isFile() || stat.nlink !== 1 || stat.size > 2 * 1024 * 1024 || !samePath(await realpath(metadataPath), metadataPath)) throw new Error("Invalid workspace owner index file");
+        const expectedPath = join(await realpath(dirname(metadataPath)), basename(metadataPath));
+        if (!stat.isFile() || stat.nlink !== 1 || stat.size > 2 * 1024 * 1024 || !samePath(await realpath(metadataPath), expectedPath)) throw new Error("Invalid workspace owner index file");
         const chunks: Buffer[] = []; let bytes = 0;
         while (bytes <= 2 * 1024 * 1024) {
           signal.throwIfAborted();
@@ -174,7 +176,7 @@ export async function createOwnerManager(base: Harness, hooks: OwnerHooks): Prom
         }
         if (bytes > 2 * 1024 * 1024) throw new Error("Workspace owner index exceeds its durable byte budget");
         const current = await handle.stat();
-        if (stat.dev !== current.dev || stat.ino !== current.ino || stat.size !== current.size || stat.mtimeMs !== current.mtimeMs || stat.ctimeMs !== current.ctimeMs || bytes !== stat.size || !samePath(await realpath(metadataPath), metadataPath)) throw new Error("Workspace owner index changed during reading");
+        if (stat.dev !== current.dev || stat.ino !== current.ino || stat.size !== current.size || stat.mtimeMs !== current.mtimeMs || stat.ctimeMs !== current.ctimeMs || bytes !== stat.size || !samePath(await realpath(metadataPath), expectedPath)) throw new Error("Workspace owner index changed during reading");
         const value = parseIndex(JSON.parse(Buffer.concat(chunks, bytes).toString("utf8")));
         const ids = new Set<string>();
         for (const row of value.owners) {
@@ -201,7 +203,7 @@ export async function createOwnerManager(base: Harness, hooks: OwnerHooks): Prom
     try {
       const handle = await open(temporary, "wx", 0o600);
       try { await handle.writeFile(JSON.stringify(document)); await handle.sync(); } finally { await handle.close(); }
-      signal.throwIfAborted(); await metadataDirectory(false); await rename(temporary, metadataPath);
+      signal.throwIfAborted(); await metadataDirectory(false); await atomicReplace(temporary, metadataPath, signal);
       if (process.platform !== "win32") { const directory = await open(dirname(metadataPath), "r"); try { await directory.sync(); } finally { await directory.close(); } }
     } finally { await unlink(temporary).catch(error => { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }); }
   }
@@ -239,13 +241,15 @@ export async function createOwnerManager(base: Harness, hooks: OwnerHooks): Prom
         try { if ((await lstat(parent)).isSymbolicLink()) throw new Error("Workspace owner parent is a symlink"); }
         catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
         await mkdir(parent, { mode: 0o700 }).catch(error => { if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error; });
-        if (await realpath(parent) !== parent || !(await lstat(parent)).isDirectory()) throw new Error("Workspace owner parent leaves its fixed directory");
+        const canonicalParent = join(await realpath(dirname(metadataPath)), "owners");
+        if (!samePath(await realpath(parent), canonicalParent) || !(await lstat(parent)).isDirectory()) throw new Error("Workspace owner parent leaves its fixed directory");
         const target = resolve(parent, (raw as { ownerId: string }).ownerId);
         try { if ((await lstat(target)).isSymbolicLink()) throw new Error("Workspace owner directory is a symlink"); }
         catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
         context.signal.throwIfAborted(); await mkdir(target, { mode: 0o700 }).catch(error => { if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error; });
-        if (await realpath(target) !== target || !(await lstat(target)).isDirectory()) throw new Error("Workspace owner directory leaves its fixed directory");
-        return { status: "success", output: { path: target } };
+        const canonicalTarget = join(canonicalParent, (raw as { ownerId: string }).ownerId);
+        if (!samePath(await realpath(target), canonicalTarget) || !(await lstat(target)).isDirectory()) throw new Error("Workspace owner directory leaves its fixed directory");
+        return { status: "success", output: { path: canonicalTarget } };
       } catch (error) { return persistenceFailure(error, context.signal); }
     },
   };
@@ -318,7 +322,7 @@ export async function createOwnerManager(base: Harness, hooks: OwnerHooks): Prom
       let harness: Harness | undefined;
       try {
         signal.throwIfAborted(); guard();
-        if (ownerDir !== undefined && lease?.dataDir !== ownerDir) throw new RemoteFailure("gateway/forbidden", "Workspace owner store resolved outside its fixed directory");
+        if (ownerDir !== undefined && (!lease?.dataDir || !samePath(lease.dataDir, (prepared.output as { path: string }).path))) throw new RemoteFailure("gateway/forbidden", "Workspace owner store resolved outside its fixed directory");
         const originalSandbox = base.config.sandboxPolicy ?? resolveProfile(base.profile).sandbox;
         const config: HarnessConfig = { ...base.config, cwd: row.path, dataDir: lease?.dataDir, ...selection,
           ...(hooks.extraSandboxPaths === undefined || hooks.extraSandboxPaths.length === 0 ? {} : { sandboxPolicy: { ...originalSandbox,

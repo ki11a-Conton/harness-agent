@@ -1,4 +1,4 @@
-import { link, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { link, mkdtemp, readFile, rm, writeFile, realpath } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
@@ -22,7 +22,7 @@ const directories: string[] = [];
 afterEach(async () => { race.armed = false; for (const path of directories.splice(0)) await rm(path, { recursive: true, force: true }); });
 
 it.skipIf(process.platform === "win32")("a task reader never follows a symlink swapped after its regular-file check", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "actual-task-file-race-")); directories.push(directory);
+  const directory = await realpath(await mkdtemp(join(tmpdir(), "actual-task-file-race-"))); directories.push(directory);
   const path = join(directory, "tasks.json"), outside = join(directory, "outside.json");
   await writeFile(path, JSON.stringify({ version: 1, tasks: {} }));
   const outsideBytes = JSON.stringify({ version: 1, tasks: {}, outsideMarker: "private-outside-bytes" }); await writeFile(outside, outsideBytes);
@@ -32,14 +32,14 @@ it.skipIf(process.platform === "win32")("a task reader never follows a symlink s
 });
 
 it("a task reader checks the opened file's byte bound and refuses corrupt durable state", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "actual-task-file-bound-")); directories.push(directory);
+  const directory = await realpath(await mkdtemp(join(tmpdir(), "actual-task-file-bound-"))); directories.push(directory);
   const path = join(directory, "tasks.json");
   await writeFile(path, " ".repeat(16 * 1024 * 1024 + 1)); await expect(new ActivityStore(path).read()).rejects.toThrow();
   await writeFile(path, JSON.stringify({ version: 1, tasks: { wrong: {} } })); await expect(new ActivityStore(path).read()).rejects.toThrow();
 });
 
 it("task state cannot be a hard link to a different retained file", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "actual-task-file-hardlink-")); directories.push(directory);
+  const directory = await realpath(await mkdtemp(join(tmpdir(), "actual-task-file-hardlink-"))); directories.push(directory);
   const path = join(directory, "tasks.json"), outside = join(directory, "outside.json");
   const outsideBytes = JSON.stringify({ version: 1, tasks: {}, outsideMarker: "private-linked-bytes" }); await writeFile(outside, outsideBytes); await link(outside, path);
   await expect(new ActivityStore(path).read()).rejects.toThrow(); expect(await readFile(outside, "utf8")).toBe(outsideBytes);

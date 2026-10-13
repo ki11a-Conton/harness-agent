@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat, symlink, writeFile, realpath } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import Schema from "@deepseek-ai/schemastery";
@@ -15,7 +15,7 @@ import { RemoteFailure } from "./transport.js";
 const cleanup: Array<() => Promise<void>> = [];
 afterEach(async () => { for (const action of cleanup.splice(0).reverse()) await action(); });
 async function setup(overrides: Partial<CatalogHost> = {}) {
-  const directory = await mkdtemp(join(tmpdir(), "dsh-catalog-real-"));
+  const directory = await realpath(await mkdtemp(join(tmpdir(), "dsh-catalog-real-")));
   cleanup.push(() => rm(directory, { recursive: true, force: true }));
   const provider = new ScriptedModelProvider([ScriptedModelProvider.text("actual answer")]);
   const harness = await createHarness({ cwd: directory, dataDir: directory, profile: "interactive", modelProvider: provider,

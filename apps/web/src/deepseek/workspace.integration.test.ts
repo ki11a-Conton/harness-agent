@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, rm, symlink, writeFile, link } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, symlink, writeFile, link, realpath } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -16,7 +16,7 @@ import { createDeliverablesService } from "./deliverables.js";
 const cleanup: Array<() => Promise<void>> = [];
 afterEach(async () => { for (const action of cleanup.splice(0).reverse()) await action(); });
 async function setup(options: { provider?: ScriptedModelProvider; sandbox?: SandboxPolicy } = {}) {
-  const root = await mkdtemp(join(tmpdir(), "deepseek-workspace-real-"));
+  const root = await realpath(await mkdtemp(join(tmpdir(), "deepseek-workspace-real-")));
   cleanup.push(() => rm(root, { recursive: true, force: true }));
   const cwd = join(root, "project"), dataDir = join(root, "host-state");
   await Promise.all([mkdir(cwd), mkdir(dataDir)]);

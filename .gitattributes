@@ -154,3 +154,7 @@ scripts/research/agent-next7-20261006/* text eol=lf
 
 # Native Windows receipts and host diagnostics are hashed over original bytes.
 docs/evidence/windows-acceptance-20261007/raw/** -text
+
+# Published frontend and pinned licenses bind exact upstream bytes on Windows.
+apps/web/public/deepseek/** -text
+third_party/xtermjs-MIT.txt -text

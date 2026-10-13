@@ -1,6 +1,7 @@
+import { atomicReplace } from "@ar/store-integrity";
 import { randomUUID } from "node:crypto";
 import { constants } from "node:fs";
-import { lstat, mkdir, open, realpath, rename, unlink } from "node:fs/promises";
+import { lstat, mkdir, open, realpath, unlink } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { decodeScheduleRecord } from "./schedule-pure/domain.js";
 import type { ScheduleRecord, ScheduleDeliveryRecord } from "./schedule-pure/types.js";
@@ -88,7 +89,7 @@ export class ActivityStore {
     try {
       const file = await open(temporary, "wx", 0o600);
       try { await file.writeFile(serialized); await file.sync(); } finally { await file.close(); }
-      await rename(temporary, this.path);
+      await atomicReplace(temporary, this.path);
       if (process.platform !== "win32") {
         const directory = await open(parent, "r"); try { await directory.sync(); } finally { await directory.close(); }
       }
