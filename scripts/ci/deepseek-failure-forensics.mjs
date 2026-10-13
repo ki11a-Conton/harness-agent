@@ -26,7 +26,8 @@ async function walk(directory) {
       else detail = report;
     } else {
       const marker = text.lastIndexOf('Failed Tests');
-      detail = (marker >= 0 ? text.slice(Math.max(0, marker - 150)) : text).slice(-48_000);
+      const context = text.split('\n').filter(line => /Web question continuation failed|write failed for|terminal acknowledgement rejected/.test(line)).join('\n');
+      detail = (context.slice(-4000) + '\n' + (marker >= 0 ? text.slice(Math.max(0, marker - 150)) : text).slice(-44000));
     }
     files.push({ path: file.slice(root.length + 1).replaceAll('\\', '/'), bytes: bytes.length,
       sha256: createHash('sha256').update(bytes).digest('hex'), detail });

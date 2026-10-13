@@ -13,18 +13,6 @@ jobs:
           - kind: formal-windows
             run: '38385871940'
             artifact: n6-real-formal-windows-latest-9c02f1b101b78f90c09a8479276a2a4d38871bb1-38385871940-attempt-1
-          - kind: ubuntu-ui
-            run: '38385871729'
-            artifact: deepseek-installed-ubuntu-latest-9c02f1b101b78f90c09a8479276a2a4d38871bb1-38385871729
-          - kind: windows-ui
-            run: '38385871729'
-            artifact: deepseek-installed-windows-latest-9c02f1b101b78f90c09a8479276a2a4d38871bb1-38385871729
-          - kind: same-archive-windows
-            run: '38385871808'
-            artifact: gen1-same-archive-windows-9c02f1b101b78f90c09a8479276a2a4d38871bb1-38385871808
-          - kind: native-windows
-            run: '38385871916'
-            artifact: native-windows-9c02f1b101b78f90c09a8479276a2a4d38871bb1-38385871916-attempt-1
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
