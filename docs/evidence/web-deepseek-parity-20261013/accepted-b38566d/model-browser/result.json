@@ -1,0 +1,141 @@
+{
+  "status": "PASS",
+  "scope": "unmodified official UI, real production Web main, local HTTP fixture; not paid model quality",
+  "origin": "http://127.0.0.1:41369",
+  "providerOrigin": "http://127.0.0.1:46163/v1",
+  "runnerSha256": "86e841080be8bde5dd23b25e18e615d95681f7d34cb97b5e84489661a12c0526",
+  "node": "v24.19.0",
+  "playwrightVersion": "1.55.1",
+  "paidModelCalls": 0,
+  "loopbackRequests": 1,
+  "launches": [
+    {
+      "at": "2026-10-13T11:08:19.176Z",
+      "artifacts": {
+        "apps/web/dist/main.js": "ec396984525f0d2a7e241fae220f41ab02f788708db4b9677e67bd0c0f306839",
+        "apps/web/dist/deepseek/catalog.js": "e5bed392ae2c559d58cc6f1eef417af553f3ca89a25c7e8fa9dc2d783948e25f",
+        "apps/web/dist/deepseek/composition.js": "b8c2f0d076cc80903a6487a7cd8ac322a4958e920d8d80a723e1ebddd1405ff7",
+        "apps/web/dist/deepseek/owners.js": "790ee6d4e2b2036286cb7cdeb1b72250da562c2cf9de8adee938a5b46d736952",
+        "apps/web/dist/deepseek/session.js": "9aa39340fa1e58e788261786f6638d99296c6f37bb1487bcaa72fd0ec88e770c",
+        "packages/core/dist/runtime/runtime.js": "302df03b8faa59941ea0fac952b2e6511ede7ecbe60bbb393b289358a14c9314",
+        "packages/core/dist/runtime/session-actor.js": "23e8ad07e9c829d057eec7e59bfcefa39cc5b4e9075f1ec19479641ff9bcd775"
+      }
+    },
+    {
+      "at": "2026-10-13T11:08:52.660Z",
+      "artifacts": {
+        "apps/web/dist/main.js": "ec396984525f0d2a7e241fae220f41ab02f788708db4b9677e67bd0c0f306839",
+        "apps/web/dist/deepseek/catalog.js": "e5bed392ae2c559d58cc6f1eef417af553f3ca89a25c7e8fa9dc2d783948e25f",
+        "apps/web/dist/deepseek/composition.js": "b8c2f0d076cc80903a6487a7cd8ac322a4958e920d8d80a723e1ebddd1405ff7",
+        "apps/web/dist/deepseek/owners.js": "790ee6d4e2b2036286cb7cdeb1b72250da562c2cf9de8adee938a5b46d736952",
+        "apps/web/dist/deepseek/session.js": "9aa39340fa1e58e788261786f6638d99296c6f37bb1487bcaa72fd0ec88e770c",
+        "packages/core/dist/runtime/runtime.js": "302df03b8faa59941ea0fac952b2e6511ede7ecbe60bbb393b289358a14c9314",
+        "packages/core/dist/runtime/session-actor.js": "23e8ad07e9c829d057eec7e59bfcefa39cc5b4e9075f1ec19479641ff9bcd775"
+      }
+    }
+  ],
+  "fingerprints": {
+    "apps/web/src/deepseek/catalog.ts": "e8830f16bde4515c9f6f7da842a2f9c2044a9e087178e14820c058f603fe7272",
+    "apps/web/src/deepseek/composition.ts": "4ddda1a87cb79b32fbac8ec23a2c96fd95a0afb03b296502c6e9fdcb70a596dc",
+    "apps/web/src/deepseek/owners.ts": "01168a7f1bb2a3de3a9b0349c61324409a6464824dad854768066894257f03a3",
+    "apps/web/src/deepseek/session.ts": "0a7eb6bbfc9db9d69e4c5b8870837870954828c79f1d3b0c41bb6cf48b5d328b",
+    "apps/web/src/deepseek/projections.ts": "648811c7b53aff7acc194e6e9e6cb15bf81014aaa7a798b160b532e0757ba5f9",
+    "apps/web/src/main.ts": "f8930a5edd5e86f6aafaeed3a04f554945aa94a511ff73bb948d8ccc8a0f9cd6",
+    "packages/core/src/runtime/runtime.ts": "0503d5ebf4bd7ef5c284b3afb948f8e1a5b5880f5b7d1729037e032d21913233",
+    "packages/core/src/runtime/session-actor.ts": "b7a8d0b265f0f3be722d0d5b8930fe8d458816d2671fdd937826cba266e9c90b"
+  },
+  "screenshots": [
+    {
+      "name": "selected-model-two-tabs",
+      "status": "PASS"
+    },
+    {
+      "name": "started-selection-refused",
+      "status": "BLOCKED",
+      "message": "TimeoutError: page.screenshot: Timeout 8000ms exceeded.\nCall log:\n\u001b[2m  - taking page screenshot\u001b[22m\n\u001b[2m    - disabled all CSS animations\u001b[22m\n\u001b[2m  - waiting for fonts to load...\u001b[22m\n\u001b[2m  - fonts loaded\u001b[22m\n"
+    },
+    {
+      "name": "restart-selection",
+      "status": "PASS"
+    }
+  ],
+  "assertions": [
+    {
+      "name": "official browser booted with production carrier",
+      "status": "PASS"
+    },
+    {
+      "name": "official Models form persisted a real adapter profile",
+      "status": "PASS"
+    },
+    {
+      "name": "official key form stored only a credential reference in profile",
+      "status": "PASS"
+    },
+    {
+      "name": "official theme and font controls persisted to host settings",
+      "status": "PASS"
+    },
+    {
+      "name": "official Work details and Performance controls persisted to ui-chat",
+      "status": "PASS"
+    },
+    {
+      "name": "official composer and second tab show committed selected model",
+      "status": "PASS"
+    },
+    {
+      "name": "authoritative projection.next matches selected route/model",
+      "status": "PASS"
+    },
+    {
+      "name": "existing follow stream received the durable newer model/selection event",
+      "status": "PASS"
+    },
+    {
+      "name": "model switch retained every previously committed history record",
+      "status": "PASS"
+    },
+    {
+      "name": "real production HTTP turn used selected alternate model",
+      "status": "PASS"
+    },
+    {
+      "name": "started-session selection visibly rejects and preserves native owner",
+      "status": "PASS"
+    },
+    {
+      "name": "real process restart rehydrates stable session and model selection",
+      "status": "PASS"
+    },
+    {
+      "name": "real process restart retains the actual native role label",
+      "status": "PASS"
+    },
+    {
+      "name": "real process restart retains actual official chat preference writes",
+      "status": "PASS"
+    },
+    {
+      "name": "restart retained previously committed history prefix",
+      "status": "PASS"
+    },
+    {
+      "name": "both process launches used identical captured production artifact fingerprints",
+      "status": "PASS"
+    },
+    {
+      "name": "browser has no uncaught errors",
+      "status": "PASS",
+      "details": []
+    },
+    {
+      "name": "paid model calls remained zero",
+      "status": "PASS",
+      "details": {
+        "paidModelCalls": 0,
+        "loopbackRequests": 1
+      }
+    }
+  ]
+}

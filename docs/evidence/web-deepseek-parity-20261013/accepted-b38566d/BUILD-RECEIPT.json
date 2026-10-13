@@ -1,0 +1,162 @@
+{
+  "version": "1.10.0-rc.1",
+  "sourceSha": "b38566d5c370509db58cbb495aaf4eb68cbe3ce3",
+  "sourceTree": "bf6272b1e03ba788a1437f0520dfaba4d614f94c",
+  "filename": "harness-agent-1.10.0-rc.1-portable.tar.gz",
+  "sha256": "8fc0620a8e9a78b0c84bff53e5f81589b1fa82e0431e63d9b1fcfd70597aae54",
+  "files": 3034,
+  "manifestSchemaVersion": 2,
+  "nativeDependencies": [
+    {
+      "name": "node-pty",
+      "version": "1.1.0",
+      "integrity": "sha512-20JqtutY6JPXTUnL0ij1uad7Qe1baT46lyolh2sSENDd4sTzKZ4nmAFkeAARDKwmlLjPx6XKRlwRUxwjOy+lUg==",
+      "platform": "linux",
+      "architecture": "x64",
+      "nativeImportVerified": true,
+      "retainedPrebuilds": [
+        {
+          "path": "darwin-arm64/pty.node",
+          "sha256": "e6457d66f45af3facd02920a5b212164e80fe0bb758afe6e6eab1eceeba3fc9a"
+        },
+        {
+          "path": "darwin-arm64/spawn-helper",
+          "sha256": "21c589109bca43e287df884f3c34ab888033a83927ea7d273949ac5030583f26"
+        },
+        {
+          "path": "darwin-x64/pty.node",
+          "sha256": "edab585d5c5c7bf35143a7a53b7d72652e90723b5f9635dfd55b2333f7069198"
+        },
+        {
+          "path": "darwin-x64/spawn-helper",
+          "sha256": "46a4455777c6122d7e71cd706ea4b37b19bedd297684be8b6dabb833ff2a3965"
+        },
+        {
+          "path": "win32-arm64/conpty/conpty.dll",
+          "sha256": "b6cca5f1081111f59e5255eec043d924ebd11a86d09986c0d121b680540b3380"
+        },
+        {
+          "path": "win32-arm64/conpty/OpenConsole.exe",
+          "sha256": "b7763ba27e80d5e84f9e60d1368ec2ddb25dfd10283336c0c9f3f252d35cb2f8"
+        },
+        {
+          "path": "win32-arm64/conpty_console_list.node",
+          "sha256": "fda76b16afb3bf9a4de085c943b5fb4138ecbeb08e8254c09d5555ea5426bd4e"
+        },
+        {
+          "path": "win32-arm64/conpty_console_list.pdb",
+          "sha256": "262b2995833e2d4f28fc719cb26c10e30ff1964ca8967f133d6662d81318ec23"
+        },
+        {
+          "path": "win32-arm64/conpty.node",
+          "sha256": "25a06916c5cb1a3aac7acc401424d8e6a6a9e8eea441a3604cd657a0619555cd"
+        },
+        {
+          "path": "win32-arm64/conpty.pdb",
+          "sha256": "a26c1c6e6e1f12bc669a1075f67edef559c147245417ff9e0d7227bf1ce6ec2d"
+        },
+        {
+          "path": "win32-arm64/pty.node",
+          "sha256": "eae1266e3c34f4c7b67a756a6ff342b699847deaf29c944b7a6bed190ec61982"
+        },
+        {
+          "path": "win32-arm64/pty.pdb",
+          "sha256": "36620a358a8f7dc11ad398eba195a4a2a721e97f20068ac963a4ad09c3a00581"
+        },
+        {
+          "path": "win32-arm64/winpty-agent.exe",
+          "sha256": "9a5f66fbe444728988f51e8099d0d84c515945a1873dbbbec65aec6e07eac50a"
+        },
+        {
+          "path": "win32-arm64/winpty-agent.pdb",
+          "sha256": "7a036659c203caf045faecdbdacecb0be5df5b8693434fa682ed23247d74eea4"
+        },
+        {
+          "path": "win32-arm64/winpty.dll",
+          "sha256": "0247b4d007fcb8059cc2221ec41d736fa548246ce1e10256c15c96d1ef6f2e9c"
+        },
+        {
+          "path": "win32-arm64/winpty.pdb",
+          "sha256": "d334454d6734da2ddf20e387f76943b51fd2530a29cac126d5ef653ca3fd1513"
+        },
+        {
+          "path": "win32-x64/conpty/conpty.dll",
+          "sha256": "7c7430632052ff703540b68371ec43821820aa1335d8e11dfbcd9ff00e9daaed"
+        },
+        {
+          "path": "win32-x64/conpty/OpenConsole.exe",
+          "sha256": "d1fe7faa62f9e955e2ac2371f95d7e5513df4d496255097158f979c94782c5fc"
+        },
+        {
+          "path": "win32-x64/conpty_console_list.node",
+          "sha256": "879dd94cfc79f1e263a00077597ae9448a5394b7d193381aaa50d992a1f91090"
+        },
+        {
+          "path": "win32-x64/conpty_console_list.pdb",
+          "sha256": "3e7c44de002c30875cb6ede95f13e7efc8e13b2d2faa11dfb0e14eae9071ff92"
+        },
+        {
+          "path": "win32-x64/conpty.node",
+          "sha256": "ee8f4e6f4dad71939eecfda11de249400e34bfefe4c8b48af13f3b5476f4035b"
+        },
+        {
+          "path": "win32-x64/conpty.pdb",
+          "sha256": "51ee5739eba477cf41100a6c1e68a5da96f9815717162e01599e8888ef6880ac"
+        },
+        {
+          "path": "win32-x64/pty.node",
+          "sha256": "ae323edd0835ee7b9e18cc96a7b2bb4b8173ff768317d178af2788406feb71ff"
+        },
+        {
+          "path": "win32-x64/pty.pdb",
+          "sha256": "4dfc9da6c08ccee030e3540cd92b8f761962af72f2a313dc1c9970992a1d3445"
+        },
+        {
+          "path": "win32-x64/winpty-agent.exe",
+          "sha256": "0c4834a0ab2a4f8c855a2f1db9b21fa6e5fc324ae8e3c82addd53d503d999825"
+        },
+        {
+          "path": "win32-x64/winpty-agent.pdb",
+          "sha256": "58cf72749645e0b494c5fd5dfe771122b50385709a9099ea4d73677dab9f265c"
+        },
+        {
+          "path": "win32-x64/winpty.dll",
+          "sha256": "e1cb26d868c954ba26817bedf3e4a5744e4ca2030adf51a7156e5ff2fadb881b"
+        },
+        {
+          "path": "win32-x64/winpty.pdb",
+          "sha256": "5566d3f6498fd3b1ea180fffa8444e036be509877defffb986d578b7b78f8a45"
+        }
+      ]
+    }
+  ],
+  "sourcePackageVersions": {
+    "@ar/agents": "0.1.0",
+    "@ar/checkpoint": "0.1.0",
+    "@ar/cli": "0.1.0",
+    "@ar/context": "0.1.0",
+    "@ar/contracts": "0.1.0",
+    "@ar/core": "0.1.0",
+    "@ar/evaluation": "0.1.0",
+    "@ar/events": "0.1.0",
+    "@ar/gateway": "0.1.0",
+    "@ar/harness": "0.1.0",
+    "@ar/learning": "0.1.0",
+    "@ar/mcp": "0.1.0",
+    "@ar/memory": "0.1.0",
+    "@ar/model": "0.1.0",
+    "@ar/observability": "0.1.0",
+    "@ar/orchestration": "0.1.0",
+    "@ar/plugins": "0.1.0",
+    "@ar/protocol": "0.1.0",
+    "@ar/sdk": "0.1.0",
+    "@ar/security": "0.1.0",
+    "@ar/session": "0.1.0",
+    "@ar/skills": "0.1.0",
+    "@ar/store": "0.1.0",
+    "@ar/store-integrity": "0.1.0",
+    "@ar/tools": "0.1.0",
+    "@ar/web": "0.1.0"
+  },
+  "realModelQuality": "NOT_PROVEN"
+}

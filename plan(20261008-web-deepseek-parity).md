@@ -31,14 +31,14 @@
 | 项目 | 当前结果 | 后续验收 |
 | --- | --- | --- |
 | W1 | 官方完整 shell、66 默认动态 entry、字体/主题/notice 离线纳入；原发布 bytes 保持一致，新增本地移动设置样式 | 来源封存 verifier 已 PASS；随独立包再次核验 |
-| W2 | 真实 HTTP + 单一 WebSocket multiplex、bounded queues/cancel/uplink/generation；Host/Origin/路径/身份拒绝 | 相关真实 transport/security 测试已 PASS，clean 全量待执行 |
+| W2 | 真实 HTTP + 单一 WebSocket multiplex、bounded queues/cancel/uplink/generation；Host/Origin/路径/身份拒绝 | 相关真实 transport/security 测试已 PASS，b38566d clean 全量 9,473 PASS/15 skipped、安全 2,146、协议 52 PASS |
 | W3 | 创建、历史、流式 Markdown、读写、审批、提问原 turn 恢复、fork/pin/rename/archive/search 已接真实 owner | 三视口普通编码链路 30 场景/75 断言 PASS；队列原子编辑仍阻断 |
 | W4 | 工作区、受限文件读写/preview/upload、真实改动与交付、PTY owner 接入 | 文件与编码链路 PASS；本环境强 PTY sandbox 不可用，未声称交互终端已验收 |
-| W5 | 真实配置、凭证服务端保存、模型目录/默认路由/draft replacement、窗口与输出限制生效 | 浏览器模型/两 tab/重启 17 断言 PASS；已启动身份冻结、权限 preset 和 Cordis 变更仍受限 |
+| W5 | 真实配置、凭证服务端保存、模型目录/默认路由/draft replacement、窗口与输出限制生效 | 浏览器模型/两 tab/重启与角色 18 断言 PASS；已启动身份冻结、权限 preset 和 Cordis 变更仍受限 |
 | W6 | 实际 journal 投影、任务/timer/job/skills/delegation/artifact，任务 due/admission 与 alias race 修复 | backend 集成有证据；goal/Plan continuation 和 continuable 子 agent 未实现，不接受整域 parity |
 | W7 | ask 身份/历史/幂等/crash 恢复和真实模型 ask 广告已修复；取消/超时审批写入 durable store | 真实 RED/GREEN、loopback 提问和三视口刷新回答 PASS |
-| W8 | 原审查矩阵保留为基线；新增相同 stable id 的当前交付状态；普通链路真实浏览器复验完成 | 固定 clean 源码全量/security/protocol 待最终门，未经运行的控件不算通过 |
-| W9 | portable 模式/长 notice 路径/native 安装缺陷已修复；新增同一 archive Linux/Windows 官方 UI CI | 完整包构建与实际 Windows CI 待运行；不改 v1.9，不因当前部分通过发布全功能版本 |
+| W8 | 原审查矩阵保留为基线；新增相同 stable id 的当前交付状态；普通链路真实浏览器复验完成 | 固定 clean b38566d 全量/security/protocol 与 formal/coverage 已 PASS；旧主 CI docs marker 失败，文档修正已通过事实检查，未经运行的控件不算通过 |
+| W9 | portable 模式/长 notice 路径/native 安装缺陷已修复；新增同一 archive Linux/Windows 官方 UI CI | 3,034 文件独立包、原生 Windows 253 PASS/1 skipped、同 archive 两端 UI 各 30 场景/75 断言 PASS；不改 v1.9，不因当前部分通过发布全功能版本 |
 
 [当前交付、缺陷及限制](docs/web-deepseek-delivery.md)和[交付矩阵](docs/web-deepseek-delivery-matrix.json)是当前状态；原146项审查仍是旧 UI 的历史基线。所有副作用仍走 ToolOrchestrator/PermissionEngine/SandboxManager/Verification；Core 不依赖 UI。paidModelCalls=0，真实模型质量 NOT_PROVEN，旧 N7/champion 及归档结论不改写。
 
@@ -53,3 +53,5 @@
 - 做什么：修复 `9c02f1b` 原生 Windows 正式门真实 EPERM（turn JSON 原子替换），修正 Windows workspace 测试清理争用；修复官方 UI 重启后角色名称降级为 UUID。
 - 怎么做：仅 Windows 原有临时错误允许 16 次原子替换、累计重试等待最多 5.13s，永久失败仍拒绝且保留旧文件；状态回归使用有界 10s I/O 屏障。新建 Session 独立保存并核验 cosmetic name/description/mode，不从该记录取执行策略，不改变 frozen effective config。
 - 怎么验收：实际 rename 八次争用与重启未知注册身份两项 deterministic RED 2 FAIL → 120 targeted GREEN；typecheck PASS。真实浏览器新增重启后的 DOM/projection 角色检查与 Core artifact identity；新 clean 源码再跑完整、安全、协议、覆盖率/正式 CI、Windows 和同包 UI。原 9c02f1b 本地 PASS 与 Windows 正式 FAIL 分开保留。
+
+最终工程原件：[accepted-b38566d](docs/evidence/web-deepseek-parity-20261013/accepted-b38566d/README.md)。主 CI 文档入口失败已独立保留并补 marker/当前日期规格；后续仅文档提交，Code 与已验收 runtime 相同。W8 的逐控件 parity 仍部分完成，W9 的普通链路候选包验收完成，未发布全功能 release。

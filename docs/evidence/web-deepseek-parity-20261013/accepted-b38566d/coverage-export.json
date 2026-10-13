@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "originalSourceSha": "b38566d5c370509db58cbb495aaf4eb68cbe3ce3",
+  "observedBy": "1c55c2491beaa8a1f9b281c803a4ea31e7f0fde1",
+  "purpose": "Existing exact-source CI artifacts and job logs, original byte hashes and bounded excerpts; no rerun or status substitution",
+  "files": [
+    {
+      "path": "coverage/coverage.json",
+      "bytes": 3658,
+      "sha256": "551dedcead2f645ef7b4de40cff73bf32216bb980280729e1b82efe9747d0397",
+      "detail": {
+        "schemaVersion": "2.0.0",
+        "gate": "coverage",
+        "command": [
+          "pnpm",
+          "test:coverage"
+        ],
+        "toolVersion": "release-command-v2",
+        "gitSha": "b38566d5c370509db58cbb495aaf4eb68cbe3ce3",
+        "cleanBefore": true,
+        "cleanAfter": true,
+        "inputDigest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+        "outputDigest": "c1541bdc050edccc4b4c17c25b3ceff9493eec17c2c80540b07f5e38a1fe03e2",
+        "startedAtIso": "2026-10-13T11:18:40.957Z",
+        "finishedAtIso": "2026-10-13T11:27:35.268Z",
+        "exitCode": 0,
+        "passed": true,
+        "state": "passed",
+        "summary": "coverage: PASS (exit 0)",
+        "providerCalls": 0,
+        "environmentClass": "offline",
+        "artifactRefs": [],
+        "logRef": {
+          "path": "logs/coverage-2026-10-13T11-18-40-957Z.log",
+          "digest": "1890f9cff913fe0f44feec4b783cbab6b0b8ca13e5526a4d3b431b7a3a3abc8a"
+        },
+        "errorSummary": "exitCode=0 (ok)\n\u001b[33m\u001b[2m\u2713\u001b[22m\u001b[39m E4-04: runCase produces a real security_outcome (clean vs missing-evidence) \u001b[33m 563\u001b[2mms\u001b[22m\u001b[39m\n\u001b[33m\u001b[2m\u2713\u001b[22m\u001b[39m records a verification failure when the model stops without fixing the task \u001b[33m 522\u001b[2mms\u001b[22m\u001b[39m\n\u001b[33m\u001b[2m\u2713\u001b[22m\u001b[39m wires sources.memory into a real store and the memory.retrieved event fires (judged via expectedEvents) \u001b[33m 525\u001b[2mms\u001b[22m\u001b[39m\n\u001b[33m\u001b[2m\u2713\u001b[22m\u001b[39m a case MISSING from the arm is refused \u2014 never borrowed from the driver repo (T4 \u600e\u4e48\u505a 7) \u001b[33m 903\u001b[2mms\u001b[22m\u001b[39m\n\u001b[33m\u001b[2m\u2713\u001b[22m\u001b[39m a SETTLEMENT write failure on an ENTERED call is refused as `budget` and the allowance is NOT refunded \u001b[33m 1039\u001b[2mms\u001b[22m\u001b[39m\n\u001b[33m\u001b[2m\u2713\u001b[22m\u001b[39m PROTOCOL FIXTURE: a FAILED dry run ends the unit BEFORE any dispatch \u001b[33m 1015\u001b[2mms\u001b[22m\u001b[39m\n\u001b[33m\u001b[2m\u2713\u001b[22m\u001b[39m PROTOCOL FIXTURE: a LEGITIMATE negative stays `case_failed`, not infrastructure \u001b[33m 996\u001b[2mms\u001b[22m\u001b[39m\n\u001b[32m\u2713\u001b[39m apps/cli/src/e4-r55-failure-wiring.test.ts \u001b[2m(\u001b[22m\u001b[2m65 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[33m 27380\u001b[2mms\u001b[22m\u001b[39m\n\u001b[33m\u001b[2m\u2713\u001b[22m\u001b[39m drives the real chain, judges its failure evidence, and requires an order mutation to break the acceptance \u001b[33m 22446\u001b[2mms\u001b[22m\u001b[39m\n\u001b[33m\u001b[2m\u2713\u001b[22m\u001b[39m assert-fail run: observe-then-fail leaves NO committed passed evidence; the green run's rows cannot be borrowed (same name, same HEAD) \u001b[33m 944\u001b[2mms\u001b[22m\u001b[39m\n\u001b[33m\u001b[2m\u2713\u001b[22m\u001b[39m hook-fail run: test body passes + afterAll fails -> NO committed passed evidence \u001b[33m 879\u001b[2mms\u001b[22m\u001b[39m\n\u001b[33m\u001b[2m\u2713\u001b[22m\u001b[39m a LEFTOVER failing fixture is NOT collected by the root config, IS selected by the dedicated config, and cleanup only removes its own file \u001b[33m 1932\u001b[2mms\u001b[22m\u001b[39m\n\u001b[33m\u001b[2m\u2713\u001b[22m\u001b[39m bounds repeated identical failures with existing Runtime limits \u001b[33m 3707\u001b[2mms\u001b[22m\u001b[39m\n\u001b[33m\u001b[2m\u2713\u001b[22m\u001b[39m 6. every verifier DISCRIMINATES: it fails on the shipped fixture and passes after the reference fix \u001b[33m 4570\u001b[2mms\u001b[22m\u001b[39m\n\u001b[33m\u001b[2m\u2713\u001b[22m\u001b[39m 6. every verifier DISCRIMINATES: it fails on the shipped fixture and passes after the reference fix \u001b[33m 1675\u001b[2mms\u001b[22m\u001b[39m"
+      }
+    }
+  ]
+}

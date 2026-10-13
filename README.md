@@ -2,7 +2,7 @@
 
 The first personal coding-agent generation adds persistent CLI chat, corrected session/tool/provider paths, and a portable distribution. See [first-generation usage and acceptance](docs/first-generation.md) for source comparisons and limits. Engineering acceptance and real-model quality are reported separately.
 
-The current Web candidate serves the complete official DeepSeek frontend at `/`, with real Harness services; the previous UI remains at `/legacy/index.html`. See [current delivery and remaining capabilities](docs/web-deepseek-delivery.md) and the [execution plan](plan.md). Ordinary coding flows have browser evidence, while full default UI parity and paid-model quality remain unproven. This candidate does not replace the published v1.9.0 release.
+The current Web candidate serves the complete official DeepSeek frontend at `/`, with real Harness services; the previous UI remains at `/legacy/index.html`. See [current delivery and remaining capabilities](docs/web-deepseek-delivery.md) and the [execution plan](plan.md). Ordinary coding flows have real installed Linux/Windows archive evidence, while full default UI parity and paid-model quality remain unproven. This candidate does not replace the published v1.9.0 release.
 
 A TypeScript **agent runtime** with a single-owner session actor, live-streaming
 SDK, defense-in-depth security gates, and benchmark-driven mechanism evolution.

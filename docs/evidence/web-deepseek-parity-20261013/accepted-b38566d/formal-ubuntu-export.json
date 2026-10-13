@@ -1,0 +1,421 @@
+{
+  "schemaVersion": 1,
+  "originalSourceSha": "b38566d5c370509db58cbb495aaf4eb68cbe3ce3",
+  "observedBy": "1c55c2491beaa8a1f9b281c803a4ea31e7f0fde1",
+  "purpose": "Existing exact-source CI artifacts and job logs, original byte hashes and bounded excerpts; no rerun or status substitution",
+  "files": [
+    {
+      "path": "ci-readiness.json",
+      "bytes": 11564,
+      "sha256": "a487dc4364785e9c799d6ef8c34039cc73bdddd1c7281c60d3bcfec0b0b5979f",
+      "detail": {
+        "schemaVersion": "prereg-ci-readiness-v2",
+        "generatedBy": "scripts/e4/ci-readiness.mjs",
+        "ciRunSha": "b38566d5c370509db58cbb495aaf4eb68cbe3ce3",
+        "expectedSha": "b38566d5c370509db58cbb495aaf4eb68cbe3ce3",
+        "ciRunId": "38388121891",
+        "inputs": {
+          "e2ePath": "/home/runner/work/harness-agent/harness-agent/.ci/n6-real-formal/e2e.json",
+          "e2eSha256": "fd968cd67c56fda43c88ce0d50939038382e82243c7db60d1857752c75a4ee5d",
+          "otherPlatformArtifactPath": null,
+          "otherPlatformArtifactSha256": null,
+          "evidenceRoot": ".ci/n6-real-formal/readiness-bundle",
+          "attempt": 1,
+          "platform": "ubuntu",
+          "strict": true,
+          "requiredLevels": [
+            "fixtureProtocolReady",
+            "realBuildOfflineReady",
+            "budgetEvidenceReady"
+          ]
+        },
+        "os": {
+          "label": "linux-x64",
+          "platform": "linux",
+          "arch": "x64",
+          "node": "v22.23.3"
+        },
+        "platforms": {
+          "thisProcess": {
+            "platform": "ubuntu",
+            "rawPlatform": "linux",
+            "status": "MEASURED"
+          },
+          "windows": {
+            "status": "NOT_OBSERVED",
+            "detail": "no --other-platform-artifact was supplied, so this platform was not measured by this run (it is NOT assumed unproven, and it is NOT assumed measured)"
+          },
+          "ubuntu": {
+            "status": "MEASURED",
+            "detail": "this process: linux/x64"
+          },
+          "crossPlatform": {
+            "status": "NOT_OBSERVED",
+            "sameSha": false,
+            "selfMeasured": false,
+            "source": null,
+            "detail": "no other-platform artifact was supplied; the other platform stays NOT_OBSERVED rather than being hardcoded NOT_PROVEN"
+          }
+        },
+        "commandExits": {
+          "typecheck": null,
+          "test": null,
+          "build": null,
+          "n0GapGate": 0,
+          "legacyRedNextGaps": 0,
+          "docsSmoke": 0
+        },
+        "counts": {
+          "providerFactoryCalls": 1,
+          "inProcessPhysicalProviderCalls": 124,
+          "inProcessLedgerCommitted": 124,
+          "inProcessJournalChargedTokens": 1240,
+          "forwardPhysicalStubRequests": 60,
+          "forwardLedgerCommitted": 60,
+          "forwardJournalChargedTokens": 1080,
+          "forwardAggregateTokensTotal": 1080,
+          "forwardAggregateTokensDelta": 0,
+          "forwardAggregateTokensBaseline": 540,
+          "forwardAggregateTokensCandidate": 540,
+          "forwardIndependentTokensDelta": 0,
+          "forwardCostMatchesJournal": true,
+          "evidenceVerified": 124,
+          "evidenceUnverified": 0,
+          "decision": "INCONCLUSIVE",
+          "externalProviderCalls": null,
+          "costUsdMicros": null
+        },
+        "executionKind": "REAL_DUAL_PINNED_BUILD",
+        "forwardBasis": "REAL_DUAL_PINNED_BUILD",
+        "forwardBasisSource": "readiness.productionOfflineReadiness.executionKind",
+        "levels": {
+          "fixtureProtocolReady": {
+            "status": "PASS",
+            "basis": "the offline closed loop over SYNTHETIC fixture arm builds (writeArmCheckout equals this)",
+            "counts_ref": [
+              "inProcessPhysicalProviderCalls",
+              "forwardPhysicalStubRequests",
+              "evidenceVerified"
+            ]
+          },
+          "realBuildOfflineReady": {
+            "status": "PASS",
+            "basis": "two real pinned checkouts built from distinct source SHAs, with every arm's manifest/verifier/security re-verified from the raw bytes under --evidence-root (S6/F3)",
+            "blocker": null,
+            "evidence": {
+              "executionKind": "REAL_DUAL_PINNED_BUILD",
+              "executionKindSource": "readiness.productionOfflineReadiness.executionKind",
+              "realDeclaration": true,
+              "evidenceRoot": ".ci/n6-real-formal/readiness-bundle",
+              "failures": [],
+              "bundle": {
+                "evidenceRoot": ".ci/n6-real-formal/readiness-bundle",
+                "identity": {
+                  "driverSha": "b38566d5c370509db58cbb495aaf4eb68cbe3ce3",
+                  "runId": "38388121891",
+                  "attempt": 1,
+                  "platform": "ubuntu",
+                  "baselineBuildDigest": "0b6cdc087df9d43c7b91cbf991b216c8d4ef1cc0eacd8f8ac3bab8089c78670e",
+                  "candidateBuildDigest": "9c9dd24c5533ef6835b59079a028cbcc21a2fe1697f988bfd410fa65f401e4de",
+                  "arms": {
+                    "baseline": {
+                      "sourceSha": "298bb9236bfb42c3a43dce479af16360604a14a2",
+                      "head": "298bb9236bfb42c3a43dce479af16360604a14a2",
+                      "clean": true,
+                      "buildDigest": "0b6cdc087df9d43c7b91cbf991b216c8d4ef1cc0eacd8f8ac3bab8089c78670e",
+                      "entrySha256": "72d8c736ae9f1298eebd75227b621c8a4078e1a4f5131ebed39b135ad0dc11f9",
+                      "workerAbi": [
+                        "model-proxy-rpc-v1",
+                        "tool-budget-rpc-v1"
+                      ],
+                      "probe": "r97-arm-probe-v1;candidate=tool_call_efficiency_v1;guidance=tool-call-efficiency:v2;wiring=5fe66d91aee366621e678f4a14c06e319ffb8f988f680c2b37b37e28fa929a8e",
+                      "probeError": null,
+                      "loadedEntrySha256": "72d8c736ae9f1298eebd75227b621c8a4078e1a4f5131ebed39b135ad0dc11f9",
+                      "entryHashAgrees": true,
+                      "declaredArmAbi": [
+                        "model-proxy-rpc-v1",
+                        "tool-budget-rpc-v1"
+                      ],
+                      "runOneCaseExport": "function",
+                      "protocolFixes": {
+                        "P2-41": true,
+                        "P2-43": true
+                      }
+                    },
+                    "candidate": {
+                      "sourceSha": "b6e6d942fadb665a5e58f25dabcf7c38d7b7fba7",
+                      "head": "b6e6d942fadb665a5e58f25dabcf7c38d7b7fba7",
+                      "clean": true,
+                      "buildDigest": "9c9dd24c5533ef6835b59079a028cbcc21a2fe1697f988bfd410fa65f401e4de",
+                      "entrySha256": "72d8c736ae9f1298eebd75227b621c8a4078e1a4f5131ebed39b135ad0dc11f9",
+                      "workerAbi": [
+                        "model-proxy-rpc-v1",
+                        "tool-budget-rpc-v1"
+                      ],
+                      "probe": "r97-arm-probe-v1;candidate=tool_call_efficiency_v1;guidance=tool-call-efficiency:v2;wiring=45af5816edfa447479a5b45756b80f5ba340ae31ea9a11b96965885d327d788c",
+                      "probeError": null,
+                      "loadedEntrySha256": "72d8c736ae9f1298eebd75227b621c8a4078e1a4f5131ebed39b135ad0dc11f9",
+                      "entryHashAgrees": true,
+                      "declaredArmAbi": [
+                        "model-proxy-rpc-v1",
+                        "tool-budget-rpc-v1"
+                      ],
+                      "runOneCaseExport": "function",
+                      "protocolFixes": {
+                        "P2-41": true,
+                        "P2-43": true
+                      }
+                    }
+                  }
+                },
+                "perArmTotal": 24,
+                "perArmVerified": 24,
+                "derivedVerifierCoverage": {
+                  "verified": 24,
+                  "total": 24
+                },
+                "budget": {
+                  "measuredBaseline": 540,
+                  "measuredCandidate": 540,
+                  "measuredTotal": 1080,
+                  "measuredDelta": 0,
+                  "reservedBaseline": 0,
+                  "reservedCandidate": 0,
+                  "reservedUpperBound": 0,
+                  "unknownEntries": 0,
+                  "unsettledEntries": 0
+                },
+                "journalBinding": {
+                  "status": "MEASURED",
+                  "reason": null
+                },
+                "requestDispatchBinding": {
+                  "status": "MEASURED",
+                  "reason": null
+                },
+                "requestDispatchFacts": {
+                  "requestJournalEntries": 60,
+                  "boundAttempts": 60,
+                  "boundReservations": 60,
+                  "distinctArms": [
+                    "27ed84b91b5a42a77fdff0eb-baseline",
+                    "27ed84b91b5a42a77fdff0eb-candidate",
+                    "349b0ae60d7e4680f16899c8-baseline",
+                    "349b0ae60d7e4680f16899c8-candidate",
+                    "362b52aaa750d849cd898842-baseline",
+                    "362b52aaa750d849cd898842-candidate",
+                    "3c7042cad67455e36ab6c642-baseline",
+                    "3c7042cad67455e36ab6c642-candidate",
+                    "54d07dee9712727e2556c7a4-baseline",
+                    "54d07dee9712727e2556c7a4-candidate",
+                    "68815d50f371df0a7d5466d6-baseline",
+                    "68815d50f371df0a7d5466d6-candidate",
+                    "7ed34aa644c861e1f31103f5-baseline",
+                    "7ed34aa644c861e1f31103f5-candidate",
+                    "8a09e96f62e5383eb3118f47-baseline",
+                    "8a09e96f62e5383eb3118f47-candidate",
+                    "9c9f0ed9fa2c73eb56439b4b-baseline",
+                    "9c9f0ed9fa2c73eb56439b4b-candidate",
+                    "aad3ffefde0350e02cdbd004-baseline",
+                    "aad3ffefde0350e02cdbd004-candidate",
+                    "c9901edee323238ebc268dc8-baseline",
+                    "c9901edee323238ebc268dc8-candidate",
+                    "e4e8350607126a73acaf9731-baseline",
+                    "e4e8350607126a73acaf9731-candidate"
+                  ],
+                  "droppedRetries": 0,
+                  "dispatchJournalFile": "dispatch-journal.json",
+                  "toolDispatch": {
+                    "dispatchJournalFile": "dispatch-journal.json",
+                    "schemaVersion": "e4-n3-tool-dispatch-journal-v1",
+                    "eventCount": 24,
+                    "declaredEventCount": 24,
+                    "reserveGranted": 12,
+                    "reserveRefused": 0,
+                    "settled": 12,
+                    "dispatchCount": 12,
+                    "settledDispatched": 12,
+                    "settledNotExecuted": 0,
+                    "settledUnknown": 0,
+                    "unsettledGrants": 0,
+                    "coveredArmRuns": 24,
+                    "scheduledArmRuns": 24,
+                    "chargedToolCalls": 12,
+                    "reservedToolCalls": 0
+                  }
+                }
+              }
+            }
+          },
+          "budgetEvidenceReady": {
+            "status": "PASS",
+            "basis": "per-arm baseline/candidate/total/delta were recomputed from the raw cost-journal entries and reconciled against the aggregate, AND the request/dispatch journal was cross-bound to the schedule and manifest (S6/F3). This proves the OFFLINE execution only; it does not authorize a paid run",
+            "blocker": null,
+            "evidence": {
+              "journalBinding": "MEASURED",
+              "journalBindingReason": null,
+              "requestDispatchBinding": "MEASURED",
+              "requestDispatchBindingReason": null,
+              "budget": {
+                "measuredBaseline": 540,
+                "measuredCandidate": 540,
+                "measuredTotal": 1080,
+                "measuredDelta": 0,
+                "reservedBaseline": 0,
+                "reservedCandidate": 0,
+                "reservedUpperBound": 0,
+                "unknownEntries": 0,
+                "unsettledEntries": 0
+              },
+              "derivedVerifierCoverage": {
+                "verified": 24,
+                "total": 24
+              }
+            },
+            "counts_ref": [
+              "forwardJournalChargedTokens",
+              "forwardAggregateTokensTotal",
+              "forwardAggregateTokensDelta",
+              "forwardAggregateTokensBaseline",
+              "forwardAggregateTokensCandidate",
+              "forwardIndependentTokensDelta",
+              "forwardCostMatchesJournal"
+            ]
+          },
+          "paidExperimentRun": {
+            "status": "NOT_RUN",
+            "basis": "no paid authorization exists; this script never creates one"
+          },
+          "championPromotion": {
+            "status": "NOT_RUN",
+            "basis": "no promotion is performed or authorized by this script"
+          }
+        },
+        "notes": [
+          "counts.* === null means NOT_OBSERVED (an unmeasured value), never zero.",
+          "externalProviderCalls/costUsdMicros are NOT_OBSERVED because nothing is billed offline.",
+          "A green fixtureProtocolReady does not imply realBuildOfflineReady and never authorizes a paid run.",
+          "R7: the execution kind is read from a structured enum field; readiness.productionOfflineReady prose is not read at all, and no log is scanned for the word PASS.",
+          "R7: a platform is MEASURED only by the process that ran on it, or by an other-platform artifact whose ciRunSha equals expectedSha."
+        ]
+      }
+    },
+    {
+      "path": "commands.json",
+      "bytes": 2434,
+      "sha256": "b5846d133337d351cc6443514039477089e56f1538421dc7e5818899d0722349",
+      "detail": [
+        {
+          "label": "pair",
+          "command": "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+          "argv": [
+            "scripts/e4/r5-real-formal.mjs",
+            "--setup-pair",
+            "scripts/e4/r5-formal-pair.json"
+          ],
+          "exitCode": 0
+        },
+        {
+          "label": "arms",
+          "command": "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+          "argv": [
+            "scripts/e4/r97-observe-arms.mjs",
+            "--pair",
+            "r5",
+            "--root",
+            "/tmp/r97-arms-r5pair"
+          ],
+          "exitCode": 0
+        },
+        {
+          "label": "typecheck",
+          "command": "pnpm",
+          "argv": [
+            "typecheck"
+          ],
+          "exitCode": 0
+        },
+        {
+          "label": "test",
+          "command": "pnpm",
+          "argv": [
+            "test"
+          ],
+          "exitCode": 0
+        },
+        {
+          "label": "build",
+          "command": "pnpm",
+          "argv": [
+            "build"
+          ],
+          "exitCode": 0
+        },
+        {
+          "label": "fixture",
+          "command": "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+          "argv": [
+            "scripts/e4/prereg-production-e2e.mjs",
+            "--out",
+            "/home/runner/work/harness-agent/harness-agent/.ci/n6-real-formal/fixture-report.json",
+            "--platform",
+            "ubuntu",
+            "--run-id",
+            "38388121891",
+            "--attempt",
+            "1"
+          ],
+          "exitCode": 0
+        },
+        {
+          "label": "formal",
+          "command": "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+          "argv": [
+            "scripts/e4/r5-real-formal.mjs",
+            "--identity",
+            "--formal",
+            "--content",
+            "--content-matrix",
+            "--negative",
+            "--evidence-dir",
+            "/home/runner/work/harness-agent/harness-agent/.ci/n6-real-formal/formal",
+            "--out",
+            "/home/runner/work/harness-agent/harness-agent/.ci/n6-real-formal/formal-report.json"
+          ],
+          "exitCode": 0
+        },
+        {
+          "label": "readiness",
+          "command": "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+          "argv": [
+            "scripts/e4/ci-readiness.mjs",
+            "--e2e",
+            "/home/runner/work/harness-agent/harness-agent/.ci/n6-real-formal/e2e.json",
+            "--out",
+            "/home/runner/work/harness-agent/harness-agent/.ci/n6-real-formal/ci-readiness.json",
+            "--evidence-root",
+            ".ci/n6-real-formal/readiness-bundle",
+            "--expect-sha",
+            "b38566d5c370509db58cbb495aaf4eb68cbe3ce3",
+            "--run-id",
+            "38388121891",
+            "--attempt",
+            "1",
+            "--platform",
+            "ubuntu",
+            "--require",
+            "fixtureProtocolReady,realBuildOfflineReady,budgetEvidenceReady",
+            "--strict"
+          ],
+          "exitCode": 0
+        }
+      ]
+    },
+    {
+      "path": "test.log",
+      "bytes": 207073,
+      "sha256": "2d3b71a0378e90988d025297a0f5b4673a25e05dfdc9ce63c8e3ef66847350ed",
+      "detail": "\nce-warnings ...` to show where the warning was created)\n[degraded] sqlite-store.close-journal-mode: database is locked\n(node:28923) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] sandbox.bwrap-probe: spawn bwrap ENOENT\n[degraded] sandbox.bwrap-probe: spawn bwrap ENOENT\n[degraded] sandbox.bwrap-probe: spawn bwrap ENOENT\n[degraded] sandbox.bwrap-probe: spawn bwrap ENOENT\n(node:29084) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] sandbox.bwrap-probe: spawn bwrap ENOENT\n[degraded] sandbox.bwrap-probe: spawn bwrap ENOENT\n[degraded] sandbox.bwrap-probe: spawn bwrap ENOENT\n[degraded] sandbox.bwrap-probe: spawn bwrap ENOENT\n(node:29165) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] sandbox.bwrap-probe: spawn bwrap ENOENT\n[n2-arm:baseline] build copied + links created: 1 ms\n[n2-arm:baseline] closure digest computed: 3 ms\n[degraded] sandbox.bwrap-probe: spawn bwrap ENOENT\n[n2-arm:baseline] git tree committed: 46 ms\n[n2-arm:candidate] build copied + links created: 1 ms\n[n2-arm:candidate] closure digest computed: 2 ms\n[n2-arm:candidate] git tree committed: 49 ms\n[degraded] sandbox.bwrap-probe: spawn bwrap ENOENT\n[degraded] sandbox.bwrap-probe: spawn bwrap ENOENT\n[n2-arm:baseline] build copied + links created: 0 ms\n[n2-arm:baseline] closure digest computed: 1 ms\n[n2-arm:baseline] git tree committed: 45 ms\n[n2-arm:candidate] build copied + links created: 0 ms\n[n2-arm:candidate] closure digest computed: 1 ms\n[n2-arm:candidate] git tree committed: 49 ms\n(node:29393) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] memory.search: FTS unavailable or query rejected; using literal search\n(node:29400) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] sandbox.bwrap-probe: spawn bwrap ENOENT\n(node:29592) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:30240) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for gateway/fresh-coding \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for local-coding/selected-coding \u2014 using conservative fallback 32000\n(node:30894) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[skill denied] detection=required-tools target=/tmp/ar-skill-revision-VoC77U/skills/lint/SKILL.md reasons=required tool not allowed by host policy: exec_command\n[skill denied] detection=injection target=/tmp/ar-skill-revision-WUqfsY/skills/lint/SKILL.md reasons=dismiss-previous-instructions,dismiss-all-instructions,override-own-instructions\n[skill denied] detection=secret target=/tmp/ar-skill-revision-kkgfuN/skills/lint/SKILL.md reasons=openai-key\n(node:31259) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] openai.reader.cancel: response cleanup failed\n(node:31407) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[n2-e2e] identity root prepared: 72 ms\n[n2-arm:baseline] build copied + links created: 215 ms\n[n2-arm:baseline] closure digest computed: 401 ms\n(node:31510) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[n2-arm:baseline] git tree committed: 1682 ms\n[n2-arm:candidate] build copied + links created: 266 ms\n[harness] context budget: model capabilities unknown for web-cancellation-probe/scripted-model \u2014 using conservative fallback 32000\n[n2-arm:candidate] closure digest computed: 484 ms\n[harness] context budget: model capabilities unknown for web-queued-followup-stop-probe/scripted-model \u2014 using conservative fallback 32000\n[n2-arm:candidate] git tree committed: 2071 ms\n[n2-e2e] two real arm checkouts prepared: 3827 ms\n[n2-e2e] prereg build finished: 4620 ms\n(node:31728) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:32970) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:33042) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:33159) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[prereg] trusted-build mode: baseline @ 472712fbded6 closure 473ddff35857\u2026 network sandbox=none\n[prereg] trusted-build mode: baseline @ 21db2e973e7e closure 6aab2834f8f3\u2026 network sandbox=none\n[degraded] skill-store.corrupt-line: Expected property name or '}' in JSON at position 1 (line 1 column 2)\n(node:33647) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[skill denied] detection=injection target=/tmp/ar-skill-admission-aT1GIc/skills/blocked-injection/SKILL.md reasons=dismiss-previous-instructions,dismiss-all-instructions,override-own-instructions,extract-system-prompt\n[skill denied] detection=secret target=/tmp/ar-skill-admission-VwiKZ6/skills/blocked-secret/SKILL.md reasons=openai-key\n[skill denied] detection=required-tools target=/tmp/ar-skill-admission-QobEjL/skills/blocked-tools/SKILL.md reasons=required tool not allowed by host policy: unavailable_tool\n(node:33860) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] sandbox.bwrap-probe: spawn bwrap ENOENT\n[n2-e2e] prereg run finished: 23075 ms\n[n2-e2e] cleanup completed: 268 ms\n(node:34005) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:34031) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:34049) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n(node:34216) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:34227) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for fake/unknown-window \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n(node:34317) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:34370) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] reflection.events.list: boom\n[degraded] path-scoped-discovery.close: instruction handle cleanup failed\n[degraded] memory-store.corrupt-line: Expected property name or '}' in JSON at position 1 (line 1 column 2)\n[degraded] memory-store.corrupt-line: Expected property name or '}' in JSON at position 1 (line 1 column 2)\n(node:34502) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath '/tmp/e2-07-g1w2vZ/runs/baseline.json'\n[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath '/tmp/e2-07-g1w2vZ/runs/candidate.json'\n[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath '/tmp/e2-07-g1w2vZ/runs/baseline.json'\n[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath '/tmp/e2-07-g1w2vZ/runs/candidate.json'\n[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath '/tmp/e2-07-g1w2vZ/runs/candidate.json'\n[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath '/tmp/e2-07-g1w2vZ/runs/baseline.json'\n[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath '/tmp/e2-07-SC7OaQ/decision.json'\n(node:34623) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:34616) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[degraded] openai.reader.cancel: response cleanup failed\n(node:34789) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] memory.search: FTS unavailable or query rejected; using literal search\n[degraded] durable-recovery-store.release-lock (ownership changed, not deleting /tmp/e4-08-rec-eH860I/recovery/t10.json.lock): lock token \"9999 newer-owner\" != mine\n(node:35059) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:35135) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for stub/stub-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for stub/stub-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for stub/stub-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for stub/stub-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for stub/stub-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for stub/stub-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for stub/stub-model \u2014 using conservative fallback 32000\n[degraded] inbox.corrupt-line: Expected property name or '}' in JSON at position 1 (line 1 column 2)\n(node:35870) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n(node:35943) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[degraded] sandbox.bwrap-probe: spawn bwrap ENOENT\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n(node:35980) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:36209) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:36234) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:36345) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[skill denied] detection=required-tools target=/tmp/ar-task-skills-eZSkRJ/skills/danger/SKILL.md reasons=required tool not allowed by host policy: ungranted-tool\n[skill denied] detection=injection target=/tmp/ar-task-skills-eZSkRJ/skills/hostile/SKILL.md reasons=dismiss-previous-instructions,dismiss-all-instructions,override-own-instructions,extract-system-prompt\n(node:36683) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:36702) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:36730) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:36830) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: spawn git ENOENT\n(node:36975) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n(node:37022) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n(node:37101) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:37198) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:37287) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:37344) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for unknown-provider/unknown-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for unknown-provider/unknown-model \u2014 using conservative fallback 32000\n(node:37394) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:37452) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:37559) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:37698) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] prereg observer refused case regression/reg-01: not a readable benchmarks case directory\n[degraded] prereg observer refused case regression/reg-02: not a readable benchmarks case directory\n[degraded] prereg observer refused case regression/reg-06: not a readable benchmarks case directory\n[degraded] prereg observer refused case regression/reg-08: not a readable benchmarks case directory\n[degraded] prereg observer refused case regression/adv-03: not a readable benchmarks case directory\n[degraded] prereg observer refused case regression/adv-07: not a readable benchmarks case directory\n[degraded] prereg observer refused case regression/st-02: not a readable benchmarks case directory\n[degraded] prereg observer refused case regression/st-05: not a readable benchmarks case directory\n[degraded] prereg observer refused case regression/reg-01: not a readable benchmarks case directory\n[degraded] prereg observer refused case regression/reg-02: not a readable benchmarks case directory\n[degraded] prereg observer refused case regression/reg-06: not a readable benchmarks case directory\n[degraded] prereg observer refused case regression/reg-08: not a readable benchmarks case directory\n[degraded] prereg observer refused case regression/adv-03: not a readable benchmarks case directory\n[degraded] prereg observer refused case regression/adv-07: not a readable benchmarks case directory\n[degraded] prereg observer refused case regression/st-02: not a readable benchmarks case directory\n[degraded] prereg observer refused case regression/st-05: not a readable benchmarks case directory\n(node:37814) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for securefixture/coding-fixture \u2014 using conservative fallback 32000\n(node:37907) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n(node:38056) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n(node:38071) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n(node:38149) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:38167) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] path-scoped-discovery.close: instruction handle cleanup failed\n(node:38233) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:38267) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:38325) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:38474) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n(node:38752) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:38806) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for openai/formal-coding \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for openai/formal-coding \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for openai/formal-coding \u2014 using conservative fallback 32000\n(node:38985) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for scripted/platform-http-fixture \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/platform-http-fixture \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/platform-http-fixture \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/platform-http-fixture \u2014 using conservative fallback 32000\n(node:39026) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:39033) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for scripted/upgrade-boundary-test \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/upgrade-boundary-test \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/upgrade-boundary-test \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n(node:39092) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] ask-user-store.corrupt-line: Unexpected token 'o', \"not-json\" is not valid JSON\n(node:40256) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:40385) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for scripted/original \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/original \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/chosen \u2014 using conservative fallback 32000\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n(node:40699) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n(node:40869) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] discovery.close: instruction handle cleanup failed\n(node:40937) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for openai/coding-model-selected-by-user \u2014 using conservative fallback 32000\n(node:41037) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n(node:41148) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:41155) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n(node:41171) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n(node:41293) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[skill denied] detection=injection target=/tmp/gen1-skills-cli-YPCsnp/skills/repair-reference/SKILL.md reasons=dismiss-previous-instructions,dismiss-all-instructions,override-own-instructions\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n(node:41371) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n(node:41511) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] candidate-store.corrupt-line: Unexpected token 'o', \"not-json\" is not valid JSON\n(node:41615) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:41654) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:41705) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n(node:41777) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:41788) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n(node:41892) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:41903) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:42362) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n\n"
+    }
+  ]
+}

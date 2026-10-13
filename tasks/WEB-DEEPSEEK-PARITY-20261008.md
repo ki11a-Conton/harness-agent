@@ -23,4 +23,4 @@
 - 身份/路径/取消/策略漂移/未知请求/多tab与重连/审批拒绝等负向真实检查；src typecheck、相关unit/integration/security及固定clean源码完整测试。
 - 真实Windows与同正式portable archive安装消费复验；新发布只在新源必要门通过后进行，不覆盖v1.9标签。
 
-当前（2026-10-13）：官方完整客户端已接生产 Harness，普通编码链路三视口 30 场景/75 断言及实际模型配置/双 tab/重启 17 断言 PASS。见 `docs/web-deepseek-delivery.md`。W8 clean 全量及 W9 完整包/同包 Windows 门仍待最终运行；缺失的后端能力如实阻断，尚未声明默认 UI 全功能 parity 完成。
+当前（2026-10-13）：官方完整客户端已接生产 Harness，普通编码链路三视口 30 场景/75 断言及实际模型配置/双 tab/重启和角色 18 断言 PASS。见 `docs/web-deepseek-delivery.md`。固定 b38566d clean 全量 9,473 PASS/15 skipped、安全/协议、完整包/同包 Windows、formal/coverage 已通过；旧主 CI docs marker 失败，当前日期规格/marker 已补并通过 docs:verify；缺失的后端能力如实阻断，尚未声明默认 UI 全功能 parity 完成。

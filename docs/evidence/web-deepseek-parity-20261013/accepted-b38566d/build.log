@@ -1,0 +1,88 @@
+Scope: all 27 workspace projects
+[WARN] There are cyclic workspace dependencies: /tmp/harness-portable-build-Q1Zd8y/source/packages/evaluation, /tmp/harness-portable-build-Q1Zd8y/source/packages/observability
+? Verifying lockfile against supply-chain policies (124 entries)...
+Lockfile is up to date, resolution step is skipped
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Packages: +81
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+   ╭──────────────────────────────────────────╮
+   │                                          │
+   │   Update available! 11.21.0 → 12.11.2.   │
+   │   Changelog: https://pnpm.io/v/12.11.2   │
+   │     To update, run: pnpm add -g pnpm     │
+   │                                          │
+   ╰──────────────────────────────────────────╯
+
+Packages are copied from the content-addressable store to the virtual store.
+  Content-addressable store is at: /workspace/scratch/deepseek-pnpm-store/v11
+  Virtual store is at:             node_modules/.pnpm
+Progress: resolved 81, reused 81, downloaded 0, added 23
+Progress: resolved 81, reused 81, downloaded 0, added 81, done
+[WARN] Failed to create bin at /tmp/harness-portable-build-Q1Zd8y/source/apps/web/node_modules/.bin/agent. ENOENT: no such file or directory, open '/tmp/harness-portable-build-Q1Zd8y/source/apps/cli/dist/main.js'
+
+devDependencies:
++ @types/node 26.2.0
++ @vitest/coverage-v8 4.1.11
++ typescript 7.0.2
++ vitest 4.1.11
+
+✓ Lockfile passes supply-chain policies (124 entries in 3.2s)
+Done in 5s using pnpm v11.21.0
+
+Scope: all 27 workspace projects
+.../node-pty@1.1.0/node_modules/node-pty install$ node scripts/prebuild.js || node-gyp rebuild
+.../node-pty@1.1.0/node_modules/node-pty install: [32m> Checking prebuilds...[0m
+.../node-pty@1.1.0/node_modules/node-pty install: [33m> Rebuilding because directory /tmp/harness-portable-build-Q1Zd8y/source/node_modules/.pnpm/node-pty@1.1.0/node_modules/node-pty/prebuilds/linux-x64 does not exist[0m
+.../node-pty@1.1.0/node_modules/node-pty install: gyp info it worked if it ends with ok
+.../node-pty@1.1.0/node_modules/node-pty install: gyp info using node-gyp@12.4.0
+.../node-pty@1.1.0/node_modules/node-pty install: gyp info using node@24.19.0 | linux | x64
+.../node-pty@1.1.0/node_modules/node-pty install: gyp info find Python using Python version 3.12.14 found at "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3"
+.../node-pty@1.1.0/node_modules/node-pty install: gyp http GET https://nodejs.org/download/release/v24.19.0/node-v24.19.0-headers.tar.gz
+.../node-pty@1.1.0/node_modules/node-pty install: (node:261779) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+.../node-pty@1.1.0/node_modules/node-pty install: (Use `node --trace-warnings ...` to show where the warning was created)
+.../node-pty@1.1.0/node_modules/node-pty install: gyp http 200 https://nodejs.org/download/release/v24.19.0/node-v24.19.0-headers.tar.gz
+.../node-pty@1.1.0/node_modules/node-pty install: gyp http GET https://nodejs.org/download/release/v24.19.0/SHASUMS256.txt
+.../node-pty@1.1.0/node_modules/node-pty install: gyp http 200 https://nodejs.org/download/release/v24.19.0/SHASUMS256.txt
+.../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn /opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3
+.../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args [
+.../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '/workspace/scratch/deepseek-pnpm-11.21/node_modules/pnpm/dist/node_modules/node-gyp/gyp/gyp_main.py',
+.../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args 'binding.gyp',
+.../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-f',
+.../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args 'make',
+.../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-I',
+.../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '/tmp/harness-portable-build-Q1Zd8y/source/node_modules/.pnpm/node-pty@1.1.0/node_modules/node-pty/build/config.gypi',
+.../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-I',
+.../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '/workspace/scratch/deepseek-pnpm-11.21/node_modules/pnpm/dist/node_modules/node-gyp/addon.gypi',
+.../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-I',
+.../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '/tmp/harness-portable-build-Q1Zd8y/node-gyp-headers/24.19.0/include/node/common.gypi',
+.../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-Dlibrary=shared_library',
+.../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-Dvisibility=default',
+.../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-Dnode_root_dir=/tmp/harness-portable-build-Q1Zd8y/node-gyp-headers/24.19.0',
+.../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-Dnode_gyp_dir=/workspace/scratch/deepseek-pnpm-11.21/node_modules/pnpm/dist/node_modules/node-gyp',
+.../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-Dnode_lib_file=/tmp/harness-portable-build-Q1Zd8y/node-gyp-headers/24.19.0/<(target_arch)/node.lib',
+.../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-Dmodule_root_dir=/tmp/harness-portable-build-Q1Zd8y/source/node_modules/.pnpm/node-pty@1.1.0/node_modules/node-pty',
+.../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-Dnode_engine=v8',
+.../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '--depth=.',
+.../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '--no-parallel',
+.../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '--generator-output',
+.../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args 'build',
+.../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-Goutput_dir=.'
+.../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args ]
+.../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn make
+.../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args [ 'BUILDTYPE=Release', '-C', 'build' ]
+.../node-pty@1.1.0/node_modules/node-pty install: make: Entering directory '/tmp/harness-portable-build-Q1Zd8y/source/node_modules/.pnpm/node-pty@1.1.0/node_modules/node-pty/build'
+.../node-pty@1.1.0/node_modules/node-pty install:   TOUCH Release/obj.target/../../../node-addon-api@7.1.1/node_modules/node-addon-api/node_addon_api_except.stamp
+.../node-pty@1.1.0/node_modules/node-pty install:   CXX(target) Release/obj.target/pty/src/unix/pty.o
+.../node-pty@1.1.0/node_modules/node-pty install:   SOLINK_MODULE(target) Release/obj.target/pty.node
+.../node-pty@1.1.0/node_modules/node-pty install:   COPY Release/pty.node
+.../node-pty@1.1.0/node_modules/node-pty install: make: Leaving directory '/tmp/harness-portable-build-Q1Zd8y/source/node_modules/.pnpm/node-pty@1.1.0/node_modules/node-pty/build'
+.../node-pty@1.1.0/node_modules/node-pty install: gyp info ok 
+.../node-pty@1.1.0/node_modules/node-pty install: Done
+.../node-pty@1.1.0/node_modules/node-pty postinstall$ node scripts/post-install.js
+.../node-pty@1.1.0/node_modules/node-pty postinstall: [32m> Cleaning release folder...[0m
+.../node-pty@1.1.0/node_modules/node-pty postinstall: [32m> Moving conpty.dll...[0m
+.../node-pty@1.1.0/node_modules/node-pty postinstall:   SKIPPED (not Windows)
+.../node-pty@1.1.0/node_modules/node-pty postinstall: Done
+[WARN] Failed to create bin at /tmp/harness-portable-build-Q1Zd8y/source/apps/web/node_modules/.bin/agent. ENOENT: no such file or directory, open '/tmp/harness-portable-build-Q1Zd8y/source/apps/web/node_modules/@ar/cli/dist/main.js'
+

@@ -1,0 +1,421 @@
+{
+  "schemaVersion": 1,
+  "originalSourceSha": "b38566d5c370509db58cbb495aaf4eb68cbe3ce3",
+  "observedBy": "1c55c2491beaa8a1f9b281c803a4ea31e7f0fde1",
+  "purpose": "Existing exact-source CI artifacts and job logs, original byte hashes and bounded excerpts; no rerun or status substitution",
+  "files": [
+    {
+      "path": "ci-readiness.json",
+      "bytes": 11560,
+      "sha256": "2535e59114cb47110073072d7077ff9d110a6907d8e8ab34c0bf3705de39cbe3",
+      "detail": {
+        "schemaVersion": "prereg-ci-readiness-v2",
+        "generatedBy": "scripts/e4/ci-readiness.mjs",
+        "ciRunSha": "b38566d5c370509db58cbb495aaf4eb68cbe3ce3",
+        "expectedSha": "b38566d5c370509db58cbb495aaf4eb68cbe3ce3",
+        "ciRunId": "38388121891",
+        "inputs": {
+          "e2ePath": "D:\\a\\harness-agent\\harness-agent\\.ci\\n6-real-formal\\e2e.json",
+          "e2eSha256": "76e1f24da0d0152253ef45c900dcfeb36a1c5d64266c60f99d61a1f42df0bb0e",
+          "otherPlatformArtifactPath": null,
+          "otherPlatformArtifactSha256": null,
+          "evidenceRoot": ".ci/n6-real-formal/readiness-bundle",
+          "attempt": 1,
+          "platform": "windows",
+          "strict": true,
+          "requiredLevels": [
+            "fixtureProtocolReady",
+            "realBuildOfflineReady",
+            "budgetEvidenceReady"
+          ]
+        },
+        "os": {
+          "label": "win32-x64",
+          "platform": "win32",
+          "arch": "x64",
+          "node": "v22.23.3"
+        },
+        "platforms": {
+          "thisProcess": {
+            "platform": "windows",
+            "rawPlatform": "win32",
+            "status": "MEASURED"
+          },
+          "windows": {
+            "status": "MEASURED",
+            "detail": "this process: win32/x64"
+          },
+          "ubuntu": {
+            "status": "NOT_OBSERVED",
+            "detail": "no --other-platform-artifact was supplied, so this platform was not measured by this run (it is NOT assumed unproven, and it is NOT assumed measured)"
+          },
+          "crossPlatform": {
+            "status": "NOT_OBSERVED",
+            "sameSha": false,
+            "selfMeasured": false,
+            "source": null,
+            "detail": "no other-platform artifact was supplied; the other platform stays NOT_OBSERVED rather than being hardcoded NOT_PROVEN"
+          }
+        },
+        "commandExits": {
+          "typecheck": null,
+          "test": null,
+          "build": null,
+          "n0GapGate": 0,
+          "legacyRedNextGaps": 0,
+          "docsSmoke": 0
+        },
+        "counts": {
+          "providerFactoryCalls": 1,
+          "inProcessPhysicalProviderCalls": 124,
+          "inProcessLedgerCommitted": 124,
+          "inProcessJournalChargedTokens": 1240,
+          "forwardPhysicalStubRequests": 60,
+          "forwardLedgerCommitted": 60,
+          "forwardJournalChargedTokens": 1080,
+          "forwardAggregateTokensTotal": 1080,
+          "forwardAggregateTokensDelta": 0,
+          "forwardAggregateTokensBaseline": 540,
+          "forwardAggregateTokensCandidate": 540,
+          "forwardIndependentTokensDelta": 0,
+          "forwardCostMatchesJournal": true,
+          "evidenceVerified": 124,
+          "evidenceUnverified": 0,
+          "decision": "INCONCLUSIVE",
+          "externalProviderCalls": null,
+          "costUsdMicros": null
+        },
+        "executionKind": "REAL_DUAL_PINNED_BUILD",
+        "forwardBasis": "REAL_DUAL_PINNED_BUILD",
+        "forwardBasisSource": "readiness.productionOfflineReadiness.executionKind",
+        "levels": {
+          "fixtureProtocolReady": {
+            "status": "PASS",
+            "basis": "the offline closed loop over SYNTHETIC fixture arm builds (writeArmCheckout equals this)",
+            "counts_ref": [
+              "inProcessPhysicalProviderCalls",
+              "forwardPhysicalStubRequests",
+              "evidenceVerified"
+            ]
+          },
+          "realBuildOfflineReady": {
+            "status": "PASS",
+            "basis": "two real pinned checkouts built from distinct source SHAs, with every arm's manifest/verifier/security re-verified from the raw bytes under --evidence-root (S6/F3)",
+            "blocker": null,
+            "evidence": {
+              "executionKind": "REAL_DUAL_PINNED_BUILD",
+              "executionKindSource": "readiness.productionOfflineReadiness.executionKind",
+              "realDeclaration": true,
+              "evidenceRoot": ".ci/n6-real-formal/readiness-bundle",
+              "failures": [],
+              "bundle": {
+                "evidenceRoot": ".ci/n6-real-formal/readiness-bundle",
+                "identity": {
+                  "driverSha": "b38566d5c370509db58cbb495aaf4eb68cbe3ce3",
+                  "runId": "38388121891",
+                  "attempt": 1,
+                  "platform": "windows",
+                  "baselineBuildDigest": "96a9cf077d3cf86d11e35f10223fa6ea4558816ec01de42a645c102f54b67cac",
+                  "candidateBuildDigest": "05505fc79649a2f890353e75fa3f1bf3da5c59c562d93d75c4e83774168aeb1a",
+                  "arms": {
+                    "baseline": {
+                      "sourceSha": "298bb9236bfb42c3a43dce479af16360604a14a2",
+                      "head": "298bb9236bfb42c3a43dce479af16360604a14a2",
+                      "clean": true,
+                      "buildDigest": "96a9cf077d3cf86d11e35f10223fa6ea4558816ec01de42a645c102f54b67cac",
+                      "entrySha256": "72d8c736ae9f1298eebd75227b621c8a4078e1a4f5131ebed39b135ad0dc11f9",
+                      "workerAbi": [
+                        "model-proxy-rpc-v1",
+                        "tool-budget-rpc-v1"
+                      ],
+                      "probe": "r97-arm-probe-v1;candidate=tool_call_efficiency_v1;guidance=tool-call-efficiency:v2;wiring=5fe66d91aee366621e678f4a14c06e319ffb8f988f680c2b37b37e28fa929a8e",
+                      "probeError": null,
+                      "loadedEntrySha256": "72d8c736ae9f1298eebd75227b621c8a4078e1a4f5131ebed39b135ad0dc11f9",
+                      "entryHashAgrees": true,
+                      "declaredArmAbi": [
+                        "model-proxy-rpc-v1",
+                        "tool-budget-rpc-v1"
+                      ],
+                      "runOneCaseExport": "function",
+                      "protocolFixes": {
+                        "P2-41": true,
+                        "P2-43": true
+                      }
+                    },
+                    "candidate": {
+                      "sourceSha": "b6e6d942fadb665a5e58f25dabcf7c38d7b7fba7",
+                      "head": "b6e6d942fadb665a5e58f25dabcf7c38d7b7fba7",
+                      "clean": true,
+                      "buildDigest": "05505fc79649a2f890353e75fa3f1bf3da5c59c562d93d75c4e83774168aeb1a",
+                      "entrySha256": "72d8c736ae9f1298eebd75227b621c8a4078e1a4f5131ebed39b135ad0dc11f9",
+                      "workerAbi": [
+                        "model-proxy-rpc-v1",
+                        "tool-budget-rpc-v1"
+                      ],
+                      "probe": "r97-arm-probe-v1;candidate=tool_call_efficiency_v1;guidance=tool-call-efficiency:v2;wiring=45af5816edfa447479a5b45756b80f5ba340ae31ea9a11b96965885d327d788c",
+                      "probeError": null,
+                      "loadedEntrySha256": "72d8c736ae9f1298eebd75227b621c8a4078e1a4f5131ebed39b135ad0dc11f9",
+                      "entryHashAgrees": true,
+                      "declaredArmAbi": [
+                        "model-proxy-rpc-v1",
+                        "tool-budget-rpc-v1"
+                      ],
+                      "runOneCaseExport": "function",
+                      "protocolFixes": {
+                        "P2-41": true,
+                        "P2-43": true
+                      }
+                    }
+                  }
+                },
+                "perArmTotal": 24,
+                "perArmVerified": 24,
+                "derivedVerifierCoverage": {
+                  "verified": 24,
+                  "total": 24
+                },
+                "budget": {
+                  "measuredBaseline": 540,
+                  "measuredCandidate": 540,
+                  "measuredTotal": 1080,
+                  "measuredDelta": 0,
+                  "reservedBaseline": 0,
+                  "reservedCandidate": 0,
+                  "reservedUpperBound": 0,
+                  "unknownEntries": 0,
+                  "unsettledEntries": 0
+                },
+                "journalBinding": {
+                  "status": "MEASURED",
+                  "reason": null
+                },
+                "requestDispatchBinding": {
+                  "status": "MEASURED",
+                  "reason": null
+                },
+                "requestDispatchFacts": {
+                  "requestJournalEntries": 60,
+                  "boundAttempts": 60,
+                  "boundReservations": 60,
+                  "distinctArms": [
+                    "27ed84b91b5a42a77fdff0eb-baseline",
+                    "27ed84b91b5a42a77fdff0eb-candidate",
+                    "349b0ae60d7e4680f16899c8-baseline",
+                    "349b0ae60d7e4680f16899c8-candidate",
+                    "362b52aaa750d849cd898842-baseline",
+                    "362b52aaa750d849cd898842-candidate",
+                    "3c7042cad67455e36ab6c642-baseline",
+                    "3c7042cad67455e36ab6c642-candidate",
+                    "54d07dee9712727e2556c7a4-baseline",
+                    "54d07dee9712727e2556c7a4-candidate",
+                    "68815d50f371df0a7d5466d6-baseline",
+                    "68815d50f371df0a7d5466d6-candidate",
+                    "7ed34aa644c861e1f31103f5-baseline",
+                    "7ed34aa644c861e1f31103f5-candidate",
+                    "8a09e96f62e5383eb3118f47-baseline",
+                    "8a09e96f62e5383eb3118f47-candidate",
+                    "9c9f0ed9fa2c73eb56439b4b-baseline",
+                    "9c9f0ed9fa2c73eb56439b4b-candidate",
+                    "aad3ffefde0350e02cdbd004-baseline",
+                    "aad3ffefde0350e02cdbd004-candidate",
+                    "c9901edee323238ebc268dc8-baseline",
+                    "c9901edee323238ebc268dc8-candidate",
+                    "e4e8350607126a73acaf9731-baseline",
+                    "e4e8350607126a73acaf9731-candidate"
+                  ],
+                  "droppedRetries": 0,
+                  "dispatchJournalFile": "dispatch-journal.json",
+                  "toolDispatch": {
+                    "dispatchJournalFile": "dispatch-journal.json",
+                    "schemaVersion": "e4-n3-tool-dispatch-journal-v1",
+                    "eventCount": 24,
+                    "declaredEventCount": 24,
+                    "reserveGranted": 12,
+                    "reserveRefused": 0,
+                    "settled": 12,
+                    "dispatchCount": 12,
+                    "settledDispatched": 12,
+                    "settledNotExecuted": 0,
+                    "settledUnknown": 0,
+                    "unsettledGrants": 0,
+                    "coveredArmRuns": 24,
+                    "scheduledArmRuns": 24,
+                    "chargedToolCalls": 12,
+                    "reservedToolCalls": 0
+                  }
+                }
+              }
+            }
+          },
+          "budgetEvidenceReady": {
+            "status": "PASS",
+            "basis": "per-arm baseline/candidate/total/delta were recomputed from the raw cost-journal entries and reconciled against the aggregate, AND the request/dispatch journal was cross-bound to the schedule and manifest (S6/F3). This proves the OFFLINE execution only; it does not authorize a paid run",
+            "blocker": null,
+            "evidence": {
+              "journalBinding": "MEASURED",
+              "journalBindingReason": null,
+              "requestDispatchBinding": "MEASURED",
+              "requestDispatchBindingReason": null,
+              "budget": {
+                "measuredBaseline": 540,
+                "measuredCandidate": 540,
+                "measuredTotal": 1080,
+                "measuredDelta": 0,
+                "reservedBaseline": 0,
+                "reservedCandidate": 0,
+                "reservedUpperBound": 0,
+                "unknownEntries": 0,
+                "unsettledEntries": 0
+              },
+              "derivedVerifierCoverage": {
+                "verified": 24,
+                "total": 24
+              }
+            },
+            "counts_ref": [
+              "forwardJournalChargedTokens",
+              "forwardAggregateTokensTotal",
+              "forwardAggregateTokensDelta",
+              "forwardAggregateTokensBaseline",
+              "forwardAggregateTokensCandidate",
+              "forwardIndependentTokensDelta",
+              "forwardCostMatchesJournal"
+            ]
+          },
+          "paidExperimentRun": {
+            "status": "NOT_RUN",
+            "basis": "no paid authorization exists; this script never creates one"
+          },
+          "championPromotion": {
+            "status": "NOT_RUN",
+            "basis": "no promotion is performed or authorized by this script"
+          }
+        },
+        "notes": [
+          "counts.* === null means NOT_OBSERVED (an unmeasured value), never zero.",
+          "externalProviderCalls/costUsdMicros are NOT_OBSERVED because nothing is billed offline.",
+          "A green fixtureProtocolReady does not imply realBuildOfflineReady and never authorizes a paid run.",
+          "R7: the execution kind is read from a structured enum field; readiness.productionOfflineReady prose is not read at all, and no log is scanned for the word PASS.",
+          "R7: a platform is MEASURED only by the process that ran on it, or by an other-platform artifact whose ciRunSha equals expectedSha."
+        ]
+      }
+    },
+    {
+      "path": "commands.json",
+      "bytes": 2502,
+      "sha256": "6c00eb879660659cc05f567e2b6fb8aa6340941d12d3c1fa659ebd95031ce692",
+      "detail": [
+        {
+          "label": "pair",
+          "command": "C:\\hostedtoolcache\\windows\\node\\22.23.3\\x64\\node.exe",
+          "argv": [
+            "scripts/e4/r5-real-formal.mjs",
+            "--setup-pair",
+            "scripts/e4/r5-formal-pair.json"
+          ],
+          "exitCode": 0
+        },
+        {
+          "label": "arms",
+          "command": "C:\\hostedtoolcache\\windows\\node\\22.23.3\\x64\\node.exe",
+          "argv": [
+            "scripts/e4/r97-observe-arms.mjs",
+            "--pair",
+            "r5",
+            "--root",
+            "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\r97-arms-r5pair"
+          ],
+          "exitCode": 0
+        },
+        {
+          "label": "typecheck",
+          "command": "pnpm",
+          "argv": [
+            "typecheck"
+          ],
+          "exitCode": 0
+        },
+        {
+          "label": "test",
+          "command": "pnpm",
+          "argv": [
+            "test"
+          ],
+          "exitCode": 0
+        },
+        {
+          "label": "build",
+          "command": "pnpm",
+          "argv": [
+            "build"
+          ],
+          "exitCode": 0
+        },
+        {
+          "label": "fixture",
+          "command": "C:\\hostedtoolcache\\windows\\node\\22.23.3\\x64\\node.exe",
+          "argv": [
+            "scripts/e4/prereg-production-e2e.mjs",
+            "--out",
+            "D:\\a\\harness-agent\\harness-agent\\.ci\\n6-real-formal\\fixture-report.json",
+            "--platform",
+            "windows",
+            "--run-id",
+            "38388121891",
+            "--attempt",
+            "1"
+          ],
+          "exitCode": 0
+        },
+        {
+          "label": "formal",
+          "command": "C:\\hostedtoolcache\\windows\\node\\22.23.3\\x64\\node.exe",
+          "argv": [
+            "scripts/e4/r5-real-formal.mjs",
+            "--identity",
+            "--formal",
+            "--content",
+            "--content-matrix",
+            "--negative",
+            "--evidence-dir",
+            "D:\\a\\harness-agent\\harness-agent\\.ci\\n6-real-formal\\formal",
+            "--out",
+            "D:\\a\\harness-agent\\harness-agent\\.ci\\n6-real-formal\\formal-report.json"
+          ],
+          "exitCode": 0
+        },
+        {
+          "label": "readiness",
+          "command": "C:\\hostedtoolcache\\windows\\node\\22.23.3\\x64\\node.exe",
+          "argv": [
+            "scripts/e4/ci-readiness.mjs",
+            "--e2e",
+            "D:\\a\\harness-agent\\harness-agent\\.ci\\n6-real-formal\\e2e.json",
+            "--out",
+            "D:\\a\\harness-agent\\harness-agent\\.ci\\n6-real-formal\\ci-readiness.json",
+            "--evidence-root",
+            ".ci/n6-real-formal/readiness-bundle",
+            "--expect-sha",
+            "b38566d5c370509db58cbb495aaf4eb68cbe3ce3",
+            "--run-id",
+            "38388121891",
+            "--attempt",
+            "1",
+            "--platform",
+            "windows",
+            "--require",
+            "fixtureProtocolReady,realBuildOfflineReady,budgetEvidenceReady",
+            "--strict"
+          ],
+          "exitCode": 0
+        }
+      ]
+    },
+    {
+      "path": "test.log",
+      "bytes": 273236,
+      "sha256": "b10212509d70c94c2cb2371505c8b3a0f7a6aacabd7adc422634086754025912",
+      "detail": "\ned atomically\n[prereg] trusted-build mode: baseline @ e5cc84735f6e closure 473ddff35857\u2026 network sandbox=none\nwarning: in the working copy of 'apps/cli/dist/benchmark-command.js', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'apps/cli/dist/main.js', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'package.json', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'packages/core/dist/index.js', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'packages/evaluation/dist/index.js', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'packages/model/dist/index.js', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'apps/cli/dist/benchmark-command.js', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'apps/cli/dist/main.js', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'package.json', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'packages/core/dist/index.js', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'packages/evaluation/dist/index.js', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'packages/model/dist/index.js', LF will be replaced by CRLF the next time Git touches it\n[prereg] trusted-build mode: baseline @ 0a40063bff12 closure 6aab2834f8f3\u2026 network sandbox=none\n(node:9488) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[skill denied] detection=injection target=C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\ar-skill-admission-hv7deg\\skills\\blocked-injection\\SKILL.md reasons=dismiss-previous-instructions,dismiss-all-instructions,override-own-instructions,extract-system-prompt\n[skill denied] detection=secret target=C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\ar-skill-admission-hVbKnq\\skills\\blocked-secret\\SKILL.md reasons=openai-key\n[skill denied] detection=required-tools target=C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\ar-skill-admission-GEwztO\\skills\\blocked-tools\\SKILL.md reasons=required tool not allowed by host policy: unavailable_tool\n(node:756) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n(node:8724) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n(node:1776) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n(node:1352) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for fake/unknown-window \u2014 using conservative fallback 32000\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n(node:5888) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n(node:756) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n(node:2832) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n[degraded] reflection.events.list: boom\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] path-scoped-discovery.close: instruction handle cleanup failed\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath 'C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\e2-07-9qN9W8\\runs\\baseline.json'\n[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath 'C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\e2-07-9qN9W8\\runs\\candidate.json'\n[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath 'C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\e2-07-9qN9W8\\runs\\baseline.json'\n[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath 'C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\e2-07-9qN9W8\\runs\\candidate.json'\n[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath 'C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\e2-07-9qN9W8\\runs\\candidate.json'\n[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath 'C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\e2-07-9qN9W8\\runs\\baseline.json'\n[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath 'C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\e2-07-ybTVXO\\decision.json'\n(node:5932) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n[degraded] memory-store.corrupt-line: Expected property name or '}' in JSON at position 1 (line 1 column 2)\n[degraded] memory-store.corrupt-line: Expected property name or '}' in JSON at position 1 (line 1 column 2)\n(node:3204) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n(node:888) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/test-model \u2014 using conservative fallback 32000\n[degraded] openai.reader.cancel: response cleanup failed\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n(node:9448) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n[n2-arm:baseline] git tree committed: 72238 ms\n[degraded] memory.search: FTS unavailable or query rejected; using literal search\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n[degraded] durable-recovery-store.release-lock (ownership changed, not deleting C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\e4-08-rec-u0gWKM\\recovery\\t10.json.lock): lock token \"9999 newer-owner\" != mine\n[n2-arm:candidate] build copied + links created: 6172 ms\n[n2-arm:candidate] closure digest computed: 6931 ms\n(node:9788) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n(node:4880) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for stub/stub-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for stub/stub-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for stub/stub-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for stub/stub-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for stub/stub-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for stub/stub-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for stub/stub-model \u2014 using conservative fallback 32000\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n[degraded] inbox.corrupt-line: Expected property name or '}' in JSON at position 1 (line 1 column 2)\n(node:10056) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n(node:8348) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n(node:5928) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n(node:2184) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n(node:9752) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n(node:6156) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n[skill denied] detection=required-tools target=C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\ar-task-skills-qzL57r\\skills\\danger\\SKILL.md reasons=required tool not allowed by host policy: ungranted-tool\n[skill denied] detection=injection target=C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\ar-task-skills-qzL57r\\skills\\hostile\\SKILL.md reasons=dismiss-previous-instructions,dismiss-all-instructions,override-own-instructions,extract-system-prompt\n(node:5264) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:8536) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n(node:2704) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:3700) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: spawn git ENOENT\n(node:9704) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:7508) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[n2-arm:candidate] git tree committed: 54909 ms\n[n2-e2e] two real arm checkouts prepared: 128140 ms\n(node:1724) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[n2-e2e] prereg build finished: 128929 ms\n(node:6196) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:6792) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:4944) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n(node:9592) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:7188) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for unknown-provider/unknown-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for unknown-provider/unknown-model \u2014 using conservative fallback 32000\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n(node:3080) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] prereg observer refused case regression/reg-01: not a readable benchmarks case directory\n[degraded] prereg observer refused case regression/reg-02: not a readable benchmarks case directory\n[degraded] prereg observer refused case regression/reg-06: not a readable benchmarks case directory\n[degraded] prereg observer refused case regression/reg-08: not a readable benchmarks case directory\n[degraded] prereg observer refused case regression/adv-03: not a readable benchmarks case directory\n[degraded] prereg observer refused case regression/adv-07: not a readable benchmarks case directory\n[degraded] prereg observer refused case regression/st-02: not a readable benchmarks case directory\n[degraded] prereg observer refused case regression/st-05: not a readable benchmarks case directory\n[degraded] prereg observer refused case regression/reg-01: not a readable benchmarks case directory\n[degraded] prereg observer refused case regression/reg-02: not a readable benchmarks case directory\n[degraded] prereg observer refused case regression/reg-06: not a readable benchmarks case directory\n[degraded] prereg observer refused case regression/reg-08: not a readable benchmarks case directory\n[degraded] prereg observer refused case regression/adv-03: not a readable benchmarks case directory\n[degraded] prereg observer refused case regression/adv-07: not a readable benchmarks case directory\n[degraded] prereg observer refused case regression/st-02: not a readable benchmarks case directory\n[degraded] prereg observer refused case regression/st-05: not a readable benchmarks case directory\n(node:3436) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n(node:8540) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n(node:6764) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for securefixture/coding-fixture \u2014 using conservative fallback 32000\n(node:7768) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n(node:5860) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n(node:5740) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:9116) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n[degraded] path-scoped-discovery.close: instruction handle cleanup failed\n(node:5408) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:7056) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:4264) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n[n2-e2e] prereg run finished: 184816 ms\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n[n2-e2e] cleanup completed: 2160 ms\n(node:4596) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n(node:9240) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n(node:3612) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for openai/formal-coding \u2014 using conservative fallback 32000\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n[harness] context budget: model capabilities unknown for openai/formal-coding \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for openai/formal-coding \u2014 using conservative fallback 32000\n(node:7564) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:10164) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:9560) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for scripted/platform-http-fixture \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/upgrade-boundary-test \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/upgrade-boundary-test \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/upgrade-boundary-test \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/platform-http-fixture \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/platform-http-fixture \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/platform-http-fixture \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n(node:1180) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n[degraded] ask-user-store.corrupt-line: Unexpected token 'o', \"not-json\" is not valid JSON\n(node:8988) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n(node:2700) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n[harness] context budget: model capabilities unknown for scripted/original \u2014 using conservative fallback 32000\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n[harness] context budget: model capabilities unknown for scripted/original \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/chosen \u2014 using conservative fallback 32000\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n(node:2668) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n(node:2028) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n[degraded] discovery.close: instruction handle cleanup failed\n(node:8176) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[harness] context budget: model capabilities unknown for openai/coding-model-selected-by-user \u2014 using conservative fallback 32000\n(node:8536) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n(node:9844) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:2904) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] session session_8b9b0b5d-c979-4360-bc2d-72c489aba474 turn outcome rejected during close: Workspace owner manager is closed\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n(node:6080) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n(node:1448) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel\nfatal: not a git repository (or any of the parent directories): .git\n\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n[skill denied] detection=injection target=C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\gen1-skills-cli-LA3S7a\\skills\\repair-reference\\SKILL.md reasons=dismiss-previous-instructions,dismiss-all-instructions,override-own-instructions\n(node:7368) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n(node:2484) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n[degraded] candidate-store.corrupt-line: Unexpected token 'o', \"not-json\" is not valid JSON\n(node:9644) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:8504) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:10000) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n(node:9812) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:6916) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n(node:6320) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n(node:9548) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n(node:8424) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n\n"
+    }
+  ]
+}
