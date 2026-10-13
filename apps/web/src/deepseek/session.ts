@@ -37,6 +37,9 @@ export function createSessionService(host: SessionHost) {
   const metadata = createSessionMetadataStore(host.dataDir);
   const locks = new Map<string, Promise<void>>();
   const continuations = new Map<string, Promise<void>>();
+  const continuationActors = new Map<string, { interrupt(): Promise<unknown> }>();
+  const pendingCalls = new Set<Promise<void>>();
+  let stopped = false, closing: Promise<void> | undefined;
 
   async function serial<T>(id: string, action: () => Promise<T>): Promise<T> {
     if (host.withSessionLock !== undefined) return host.withSessionLock(id, action);
@@ -167,14 +170,13 @@ export function createSessionService(host: SessionHost) {
       // runTurn reserves its actor slot synchronously. The promise is owned by the host, not the result HTTP request lifetime.
       const running = actor.runTurn(request.turnId!).then(async () => {
         await meta(owner.id, signal, data => { data.answers[request.id]!.status = "settled"; });
-      }).finally(() => { continuations.delete(request.id); });
-      continuations.set(request.id, running);
-      running.catch(error => {
+      }).catch(async error => {
         console.error("Web question continuation failed", request.sessionId, request.id, error instanceof Error ? error.message : String(error));
-        void host.harness.events.appendNew({ id: newEventId(), sessionId: owner.id, turnId: request.turnId, timestamp: Date.now(),
+        await host.harness.events.appendNew({ id: newEventId(), sessionId: owner.id, turnId: request.turnId, timestamp: Date.now(),
           type: "runtime.degraded", payload: { component: "web-question-continuation", reason: "continuation_failed", message: error instanceof Error ? error.message : String(error) } })
           .catch(journalError => { console.error("Web question error journal failed", journalError instanceof Error ? journalError.message : String(journalError)); });
-      });
+      }).finally(() => { continuations.delete(request.id); continuationActors.delete(request.id); });
+      continuations.set(request.id, running); continuationActors.set(request.id, actor);
     });
   }
 
@@ -250,8 +252,18 @@ export function createSessionService(host: SessionHost) {
 
   const endpoints = ["session/list", "session/search", "session/create", "session/rename", "session/fork", "session/prompt", "session/updateQueue", "session/cancel", "session/interrupt", "session/page", "session/follow", "session/projections", "session/control",
     "session/canOpenWorkspacePath", "session/workspacePathApplications", "session/openWorkspacePath", ...events.endpoints];
-  return {
+  const service = {
     endpoints, metadata, summary, publish: events.publish,
+    close(): Promise<void> {
+      return closing ??= (async () => {
+        stopped = true;
+        await Promise.all([...pendingCalls]);
+        const interrupted = await Promise.allSettled([...new Set(continuationActors.values())].map(actor => actor.interrupt()));
+        await Promise.all([...continuations.values()]);
+        await metadata.drain();
+        for (const result of interrupted) if (result.status === "rejected") throw result.reason;
+      })();
+    },
     /** Resolve the official browser seq to the owning Harness journal seq.
      * Changes/diff HTTP handlers must never treat the two seq spaces alike. */
     async sourceSequence(id: string, wireSeq: number, signal: AbortSignal): Promise<number> {
@@ -454,6 +466,15 @@ export function createSessionService(host: SessionHost) {
       }
     },
   };
+  const dispatch = service.call.bind(service);
+  service.call = async (endpoint, args, signal) => {
+    if (stopped) fail("gateway/cancelled", "Session service is closed");
+    let done!: () => void;
+    const settled = new Promise<void>(resolve => { done = resolve; }); pendingCalls.add(settled);
+    try { return await dispatch(endpoint, args, signal); }
+    finally { done(); pendingCalls.delete(settled); }
+  };
+  return service;
 
   async function address(value: unknown): Promise<SessionId> {
     const input = object(value);

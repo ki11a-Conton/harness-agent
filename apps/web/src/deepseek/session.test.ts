@@ -32,7 +32,7 @@ async function setup(provider: ModelProvider = new ScriptedModelProvider([Script
         permissions: { rules: [{ action: "read", resource: "file", effect: "allow" }, { action: "edit", resource: "file", effect: "allow" }] },
         sandboxPolicy: { filesystem: { mode: "workspace-write", allowedPaths: [directory] }, network: { mode: "deny" }, process: {} } });
     } };
-  const service = createSessionService(host); const signal = new AbortController().signal;
+  const service = createSessionService(host); cleanup.push(() => service.close()); const signal = new AbortController().signal;
   const call = (endpoint: string, request: Record<string, unknown>) => service.call(endpoint, { request }, signal);
   const created = await call("session/create", {}) as { sessionId: SessionId };
   return { directory, harness, service, host, call, signal, id: created.sessionId };
@@ -188,9 +188,9 @@ it("holds an unbound queue promotion instead of changing an already followed pro
 it("treats prototype-shaped request ids as durable own identities without poisoning metadata", async () => {
   const provider = new ScriptedModelProvider([ScriptedModelProvider.text("one"), ScriptedModelProvider.text("two")]);
   const stack = await setup(provider);
-  for (const requestId of ["__proto__", "constructor"]) {
+  for (const [index, requestId] of ["__proto__", "constructor"].entries()) {
     await stack.call("session/prompt", send(stack.id, requestId));
-    await eventually(() => stack.harness.store.listTurns(stack.id), turns => turns.length === provider.calls.length && turns.every(turn => turn.status === "completed"));
+    await eventually(() => stack.harness.store.listTurns(stack.id), turns => turns.length === index + 1 && provider.calls.length === index + 1 && turns.every(turn => turn.status === "completed"));
     await stack.call("session/prompt", send(stack.id, requestId));
   }
   expect(provider.calls).toHaveLength(2);
@@ -267,6 +267,34 @@ it("waiting-turn continuation reports a real running model and keeps original-tu
   release();
   await eventually(() => stack.harness.store.getTurn(turns[0]!.id), turn => turn?.status === "completed");
   expect((await stack.service.summary(stack.id)).running).toBe(false);
+});
+
+it("host close waits for the real original-turn continuation's metadata acknowledgement before returning", async () => {
+  const provider = new ScriptedModelProvider([
+    ScriptedModelProvider.toolCall("ask_user", { question: "Close after answer", reason: "choice_required", options: ["yes"] }),
+    ScriptedModelProvider.text("Original turn completed"),
+  ]);
+  const stack = await setup(provider);
+  await stack.call("session/prompt", send(stack.id));
+  await eventually(() => stack.harness.askUserStore!.listPending(stack.id), rows => rows.length === 1);
+  const ask = (await stack.harness.askUserStore!.listPending(stack.id))[0]!;
+  let release!: () => void, entered!: () => void;
+  const gate = new Promise<void>(done => { release = done; }), writing = new Promise<void>(done => { entered = done; });
+  const update = stack.service.metadata.update.bind(stack.service.metadata);
+  const spy = vi.spyOn(stack.service.metadata, "update").mockImplementation(async (...args) => {
+    const result = await update(...args);
+    if (result.answers[ask.id]?.status === "settled") { entered(); await gate; }
+    return result;
+  });
+  try {
+    await stack.service.call("userQuestions/answer", { agentId: stack.id, callId: ask.id, answer: { answers: [{ id: ask.id, selected: ["yes"] }] } }, stack.signal);
+    await writing;
+    let closed = false; const closing = stack.service.close().then(() => { closed = true; });
+    await new Promise(done => setTimeout(done, 30)); expect(closed).toBe(false);
+    release(); await closing;
+    expect((await stack.service.metadata.read(stack.id)).answers[ask.id]?.status).toBe("settled");
+    await expect(stack.call("session/create", {})).rejects.toMatchObject({ code: "gateway/cancelled" });
+  } finally { release(); spy.mockRestore(); }
 });
 
 it("event listener delegation and rejection do not approve an actual pending owner", async () => {

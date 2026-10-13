@@ -217,7 +217,13 @@ export async function createDeepseekComposition(base: Harness, dataDir?: string,
   return { services, owners, harness, sessions, workspace, files, terminal, catalog, activity, deliverables, tools,
     http: deliverables.fetch,
     observe(callback: (event: AgentEvent) => Promise<void>): void { observers.add(callback); },
-    close: (): Promise<void> => closing ??= (async () => { try { await activity?.close(); await terminalService.dispose(); } finally { await owners.close(); } })(),
+    close: (): Promise<void> => closing ??= (async () => {
+      try { await activity?.close(); }
+      finally {
+        try { await terminalService.dispose(); }
+        finally { try { await sessions.close(); } finally { await owners.close(); } }
+      }
+    })(),
   };
   } catch (error) {
     const results = await Promise.allSettled([activity?.close(), terminal?.dispose(), owners.close()]);

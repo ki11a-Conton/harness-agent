@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
+import { atomicReplace } from "@ar/store-integrity";
 import { constants } from "node:fs";
-import { lstat, mkdir, open, rename, unlink } from "node:fs/promises";
+import { lstat, mkdir, open, unlink } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 
 /** Host presentation/admission facts. Runtime snapshots never live in this file. */
@@ -42,6 +43,8 @@ export class SessionMetadataStore {
   private chain: Promise<void> = Promise.resolve();
   private memory: Document = { version: 1, sessions: {} };
   constructor(readonly path?: string) {}
+
+  async drain(): Promise<void> { await this.chain; }
 
   async read(sessionId: string): Promise<SessionMetadata> {
     await this.chain;
@@ -117,7 +120,7 @@ export class SessionMetadataStore {
     try {
       const file = await open(temporary, "wx", 0o600);
       try { await file.writeFile(JSON.stringify(document)); await file.sync(); } finally { await file.close(); }
-      await rename(temporary, this.path);
+      await atomicReplace(temporary, this.path);
       // Windows does not permit opening a directory; file contents still have a durable fence.
       if (process.platform !== "win32") {
         const dir = await open(directory, "r");
