@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { gunzipSync, gzipSync } from 'node:zlib';
 import { digest, extractArchive, makeArchive, MAX_PORTABLE_UNCOMPRESSED_BYTES, safePath, verifyPortable } from './portable-lib.mjs';
-import { canonicalPayloadModes, copyPackageNotices, rebuildReviewedNativeDependencies, REVIEWED_NODE_PTY, run, sourceSnapshot, verifyPinnedBuildTools, workspacePackages } from './portable.mjs';
+import { canonicalPayloadModes, copyPackageNotices, copyReviewedExternalNotice, rebuildReviewedNativeDependencies, REVIEWED_NODE_PTY, run, sourceSnapshot, verifyPinnedBuildTools, workspacePackages } from './portable.mjs';
 
 async function temporary(body) {
   const directory = await realpath(await mkdtemp(join(tmpdir(), 'harness-portable-test-')));
@@ -79,6 +79,23 @@ test('archive round trip preserves exact binary bytes with deterministic output'
   const first = makeArchive(entries); assert.deepEqual(makeArchive(entries), first);
   const root = await extractArchive(first, join(dir, 'out'));
   assert.deepEqual(await readFile(join(root, 'nested/content.txt')), entries[0].bytes);
+}));
+test('exact reviewed xterm packages receive the original pinned MIT notice; no generic license fallback', async () => temporary(async dir => {
+  await mkdir(join(dir, 'third_party'));
+  const notice = await readFile(new URL('../../third_party/xtermjs-MIT.txt', import.meta.url));
+  await writeFile(join(dir, 'third_party/xtermjs-MIT.txt'), notice);
+  const target = join(dir, 'installed');
+  for (const [name, version] of [['@xterm/headless', '6.0.0'], ['@xterm/addon-serialize', '0.14.0']]) {
+    const metadata = { name, version, license: 'MIT', commit: 'f447274f430fd22513f6adbf9862d19524471c04' };
+    await copyReviewedExternalNotice(name, metadata, dir, target);
+    assert.deepEqual(await readFile(join(target, 'LICENSE.xtermjs-MIT.txt')), notice);
+    for (const change of [{ version: '999.0.0' }, { commit: 'unknown' }, { license: 'UNKNOWN' }, { name: 'unreviewed' }]) {
+      await assert.rejects(copyReviewedExternalNotice(name, { ...metadata, ...change }, dir, target), /external license missing/);
+    }
+  }
+  await assert.rejects(copyReviewedExternalNotice('unreviewed', { name: 'unreviewed', license: 'MIT' }, dir, target), /external license missing/);
+  await writeFile(join(dir, 'third_party/xtermjs-MIT.txt'), 'tampered');
+  await assert.rejects(copyReviewedExternalNotice('@xterm/headless', { name: '@xterm/headless', version: '6.0.0', license: 'MIT', commit: 'f447274f430fd22513f6adbf9862d19524471c04' }, dir, target), /digest mismatch/);
 }));
 test('traversal, absolute paths, Windows separators and duplicate case paths are rejected', () => {
   for (const path of ['../x', '/tmp/x', 'a/../x', 'C:/x', 'a\\x', 'a//x', 'a/./x', 'CON.txt', 'a/NUL', 'a/trailing.']) assert.throws(() => safePath(path), /unsafe/);

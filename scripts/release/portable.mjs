@@ -81,6 +81,19 @@ export async function copyPackageNotices(directory, target) {
     await cp(join(directory, entry.name), join(target, entry.name));
   }
 }
+const REVIEWED_XTERM_NOTICES = Object.freeze({ '@xterm/headless': '6.0.0', '@xterm/addon-serialize': '0.14.0' });
+export async function copyReviewedExternalNotice(name, metadata, snapshot, target) {
+  // These exact published packages preserve MIT copyright headers but omit a
+  // standalone LICENSE. Include their original repository LICENSE, pinned to
+  // the commit declared by both npm packages. Unknown packages still fail.
+  if (metadata.name !== name || !Object.hasOwn(REVIEWED_XTERM_NOTICES, name)
+    || metadata.version !== REVIEWED_XTERM_NOTICES[name] || metadata.license !== 'MIT'
+    || metadata.commit !== 'f447274f430fd22513f6adbf9862d19524471c04') throw new Error(`external license missing: ${name}`);
+  const notice = await readFile(join(snapshot, 'third_party/xtermjs-MIT.txt'));
+  if (digest(notice) !== 'b569f629d00f2626a8100df2a1798210535621e42164dfd426a6fe5aac7b0ccd') throw new Error('reviewed xterm license digest mismatch');
+  await mkdir(target, { recursive: true });
+  await writeFile(join(target, 'LICENSE.xtermjs-MIT.txt'), notice);
+}
 export async function workspacePackages(snapshot) {
   // TypeScript's root references are a build entry list, not the workspace
   // inventory: indirect @ar/store and unlisted @ar/orchestration still need
@@ -241,7 +254,10 @@ export async function buildPortable({ repo, out, version, sourceSha, offline = f
         if (metadata.peerDependenciesMeta?.[dependency]?.optional) continue;
         void range; await copyExternal(dependency, resolved);
       }
-      if (!Object.keys(metadata).some(key => /license/i.test(key)) || !(await filesIn(resolved)).some(path => /(?:^|\/)licen[sc]e(?:\.|$)/i.test(path))) throw new Error(`external license missing: ${name}`);
+      if (!Object.keys(metadata).some(key => /license/i.test(key))) throw new Error(`external license missing: ${name}`);
+      if (!(await filesIn(resolved)).some(path => /(?:^|\/)licen[sc]e(?:\.|$)/i.test(path))) {
+        await copyReviewedExternalNotice(name, metadata, snapshot, join(payload, 'node_modules', ...name.split('/')));
+      }
     }
     for (const { directory, metadata } of packages) {
       const target = join(payload, 'node_modules', ...metadata.name.split('/'));

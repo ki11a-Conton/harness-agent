@@ -31,6 +31,7 @@
 | 手机模型设置固定宽导航挡住表单 Cancel 按钮 | 仅本地适配样式，≤600px 设置导航横排；390×844 与 320×1100 实际 pointer 点击通过 |
 | portable 漏执行模式，长 DeepSeek notice 名无法合法 USTAR 分割 | schema 2 绑定文件 mode，合法 slash 搜索/严格 header/size 检查；真实 notice roundtrip 与篡改拒绝 |
 | fresh install ignore-scripts 导致 node-pty addon 未安装 | 只执行锁定且已审查的 node-pty lifecycle，保存原跨平台 prebuild；Node 22/24 actual import/spawn fixture 通过，不等于强沙箱 PTY 可用 |
+| 实际完整包发现 xterm npm 包声明 MIT 却漏独立 LICENSE，构建被拒绝 | 只对固定两个包的 name/version/license/commit 引入固定上游原 LICENSE，并绑定 SHA256；其他缺许可证的包继续拒绝，不放宽全局门 |
 | 全量门把 Linux 已死的 zombie 当成仍执行进程，旧首页测试大小写过度约束 | 仅修测试语义：实际 `/proc` Z 为已退出，其他活进程仍失败；首页检测真实官方入口。原失败报告保留，不降低产品边界 |
 
 每个域的回归位于 `apps/web/src/deepseek/*.test.ts`；Core ask 与 security settlement 的回归在各自包中。历史原件位于 `docs/evidence/web-deepseek-parity-20261011/`、`20261012/`、`20261013/`，文件名 green 不代替其报告状态；runner 的 selector 错误与产品缺陷分开记录。

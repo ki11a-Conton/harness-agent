@@ -1,0 +1,33 @@
+$ tsc -b && vitest run --exclude '**/*.perf.test.ts' --exclude '**/*.soak.test.ts' --exclude '**/e3-repro-current-defects.test.ts' --exclude '**/e4-r40-forensics.test.ts' --exclude '**/r97-driver-closed-loop.test.ts' --reporter=default --reporter=json --outputFile=.ci/deepseek-final/full-suite.json
+
+ RUN  v4.1.11 /workspace/harness-agent-web-parity-20261008
+
+[harness] context budget: model capabilities unknown for stub/m — using conservative fallback 32000
+ ✓ apps/cli/src/benchmark-command.test.ts (103 tests) 18294ms
+     ✓ runs a case end-to-end with a scripted model (real tools + verification gate)  374ms
+     ✓ E4-04: runCase produces a real security_outcome (clean vs missing-evidence)  397ms
+     ✓ supports --shuffle/--seed: randomized execution, fixed report order  429ms
+     ✓ prevents cross-case contamination: case B cannot read case A's workspace file  1338ms
+     ✓ P18-2: deferred schema mode still completes (tool_lookup → tool → write) with same success as full  390ms
+     ✓ P4-7: subagent requirement runs the REAL Delegator (subagent.started fires)  1188ms
+     ✓ 1. 2 cases × 1 rep × 2 arms = exactly 4 logical arm runs, artifact finalized  543ms
+     ✓ E4-04: paired candidate carries promotion-grade activationEvidenceV2 from real signals  580ms
+     ✓ N5: tool_call_efficiency_v1 injects its guidance into the model-visible prompt (candidate only)  540ms
+     ✓ P2: activation evidence digest binds the REAL model-visible block bytes  527ms
+     ✓ P3: manifest prompt digest is a pure function of the real request's system prompt  544ms
+     ✓ N6: the candidate injects ITS OWN guidance into the model-visible prompt — never the v2 bytes  574ms
+     ✓ N6: the v2 candidate's bytes, digest and activation fact site are UNCHANGED  555ms
+     ✓ E4-02: paired run emits canonical V3 in-process (no paired-to-v3.mjs), facts from execution  555ms
+     ✓ 2. BA pairs execute the candidate before the baseline (real order in artifact)  548ms
+     ✓ 3. --repeat 2 on 2 cases → exactly 8 logical arm runs (2×2×2)  923ms
+     ✓ N03/N05: a real paired run writes the V3 manifest with the FULL confirmed plan, policy and a unique sample grid  927ms
+     ✓ N04: the journal identity binds REAL arm config hashes — never 'baseline', never the runtime hash  576ms
+     ✓ F05: request capture — the effective budget reaches the real provider request as guidance; temperature is NOT a request parameter (manifest-only provenance)  370ms
+     ✓ F81-2: endpoint normalization — equivalent spellings agree, real differences do not  442ms
+[harness] context budget: model capabilities unknown for scripted/m — using conservative fallback 32000
+ ✓ apps/cli/src/e4-09-production-e2e.test.ts (5 tests) 5265ms
+     ✓ benchmark -> V3 -> evaluator -> promote -> createHarness -> applied, all real stages  1593ms
+     ✓ editing a real V3 artifact's outcomes while only updating the file SHA breaks the chain  1235ms
+     ✓ a forged decision field (digest recomputed) is caught by the evaluator replay  1182ms
+     ✓ a candidate ref pointing outside the bundle root is rejected  1134ms
+[ELIFECYCLE] Test failed. See above for more details.
