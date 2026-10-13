@@ -10,15 +10,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - kind: ubuntu-ui
-            run: '38388121962'
-            artifact: deepseek-installed-ubuntu-latest-b38566d5c370509db58cbb495aaf4eb68cbe3ce3-38388121962
-          - kind: windows-ui
-            run: '38388121962'
-            artifact: deepseek-installed-windows-latest-b38566d5c370509db58cbb495aaf4eb68cbe3ce3-38388121962
-          - kind: same-archive-windows
-            run: '38388121954'
-            artifact: gen1-same-archive-windows-b38566d5c370509db58cbb495aaf4eb68cbe3ce3-38388121954
+          - kind: formal-ubuntu
+            run: '38388121891'
+            artifact: n6-real-formal-ubuntu-latest-b38566d5c370509db58cbb495aaf4eb68cbe3ce3-38388121891-attempt-1
+          - kind: formal-windows
+            run: '38388121891'
+            artifact: n6-real-formal-windows-latest-b38566d5c370509db58cbb495aaf4eb68cbe3ce3-38388121891-attempt-1
+          - kind: coverage
+            run: '38388121891'
+            artifact: gate-evidence-coverage
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

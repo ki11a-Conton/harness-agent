@@ -14,7 +14,7 @@ async function walk(directory) {
     const file = join(directory, entry.name), info = await lstat(file);
     if (info.isSymbolicLink()) throw new Error('Forensic artifact link rejected');
     if (entry.isDirectory()) { await walk(file); continue; }
-    if (!entry.isFile() || info.size > 4 * 1024 * 1024 || !/^(?:result|results|receipt|commands|coding-run|test-report|test|coverage|browser|host-stderr|.*\.stdout|.*\.stderr|.*phase.*)\.(?:json|log)$/.test(entry.name)) continue;
+    if (!entry.isFile() || info.size > 4 * 1024 * 1024 || !/^(?:result|results|receipt|ci-readiness|coverage|commands|coding-run|test-report|test|coverage|browser|host-stderr|.*\.stdout|.*\.stderr|.*phase.*)\.(?:json|log)$/.test(entry.name)) continue;
     const bytes = await readFile(file), text = bytes.toString('utf8');
     let detail;
     if (entry.name.endsWith('.json')) {
