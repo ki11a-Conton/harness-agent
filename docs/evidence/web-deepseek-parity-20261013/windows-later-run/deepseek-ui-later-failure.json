@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "originalSourceSha": "65ec152c672682ff20f178df99e98eb6882f8f81",
+  "observedBy": "d1f05fddf8acb04b6563bb18dd8261c81c7ce068",
+  "purpose": "Existing failed Windows artifacts, original bytes and bounded excerpts; no rerun or PASS substitution",
+  "files": [
+    {
+      "path": "browser/result.json",
+      "bytes": 1121239,
+      "sha256": "c5944382ba9411b354ef1089baf26140dad7b4561b28b2807b38173354877edd",
+      "detail": [
+        {
+          "name": "settings-general",
+          "viewport": "desktop",
+          "status": "FAIL",
+          "failure": "Actual browser errors, RPC failures or external requests occurred.",
+          "errors": [
+            {
+              "type": "console",
+              "message": "[session-controller] control stream failed: RemoteError: session control stream emitted more than one opening snapshot\n    at protocolViolation (http://127.0.0.1:61271/deepseek/plugins/??@deepseek-ai/dsh-api-gateway/client.js&rev=e09e26fcd484:1505:11)\n    at RemoteSnapshotStream.consume (http://127.0.0.1:61271/deepseek/plugins/??@deepseek-ai/dsh-api-gateway/client.js&rev=e09e26fcd484:1556:32)"
+            }
+          ],
+          "failedHttp": [],
+          "failedCalls": []
+        }
+      ]
+    },
+    {
+      "path": "browser.log",
+      "bytes": 3918,
+      "sha256": "ce06c2ea1e954a42116d402ea5e016c296e82af7f2a6b06d9cd3aee32e597f68",
+      "detail": "{\n  \"output\": \"D:\\\\a\\\\harness-agent\\\\harness-agent\\\\.ci\\\\deepseek\\\\installed\\\\browser\",\n  \"complete\": false,\n  \"results\": [\n    {\n      \"name\": \"settings-general\",\n      \"viewport\": \"desktop\",\n      \"status\": \"FAIL\",\n      \"failure\": \"Actual browser errors, RPC failures or external requests occurred.\",\n      \"assertions\": 2\n    },\n    {\n      \"name\": \"models-editor\",\n      \"viewport\": \"desktop\",\n      \"status\": \"PASS\",\n      \"assertions\": 1\n    },\n    {\n      \"name\": \"workspace-directory-picker\",\n      \"viewport\": \"desktop\",\n      \"status\": \"PASS\",\n      \"assertions\": 1\n    },\n    {\n      \"name\": \"workspace-files\",\n      \"viewport\": \"desktop\",\n      \"status\": \"PASS\",\n      \"assertions\": 2\n    },\n    {\n      \"name\": \"session-lifecycle\",\n      \"viewport\": \"desktop\",\n      \"status\": \"PASS\",\n      \"assertions\": 4\n    },\n    {\n      \"name\": \"markdown-stream-reload\",\n      \"viewport\": \"desktop\",\n      \"status\": \"PASS\",\n      \"assertions\": 4\n    },\n    {\n      \"name\": \"read-tool\",\n      \"viewport\": \"desktop\",\n      \"status\": \"PASS\",\n      \"assertions\": 3\n    },\n    {\n      \"name\": \"write-approval\",\n      \"viewport\": \"desktop\",\n      \"status\": \"PASS\",\n      \"assertions\": 3\n    },\n    {\n      \"name\": \"write-rejection\",\n      \"viewport\": \"desktop\",\n      \"status\": \"PASS\",\n      \"assertions\": 2\n    },\n    {\n      \"name\": \"ask-reload-answer\",\n      \"viewport\": \"desktop\",\n      \"status\": \"PASS\",\n      \"assertions\": 3\n    },\n    {\n      \"name\": \"settings-general\",\n      \"viewport\": \"mobile\",\n      \"status\": \"PASS\",\n      \"assertions\": 2\n    },\n    {\n      \"name\": \"models-editor\",\n      \"viewport\": \"mobile\",\n      \"status\": \"PASS\",\n      \"assertions\": 1\n    },\n    {\n      \"name\": \"workspace-directory-picker\",\n      \"viewport\": \"mobile\",\n      \"status\": \"PASS\",\n      \"assertions\": 1\n    },\n    {\n      \"name\": \"workspace-files\",\n      \"viewport\": \"mobile\",\n      \"status\": \"PASS\",\n      \"assertions\": 2\n    },\n    {\n      \"name\": \"session-lifecycle\",\n      \"viewport\": \"mobile\",\n      \"status\": \"PASS\",\n      \"assertions\": 4\n    },\n    {\n      \"name\": \"markdown-stream-reload\",\n      \"viewport\": \"mobile\",\n      \"status\": \"PASS\",\n      \"assertions\": 4\n    },\n    {\n      \"name\": \"read-tool\",\n      \"viewport\": \"mobile\",\n      \"status\": \"PASS\",\n      \"assertions\": 3\n    },\n    {\n      \"name\": \"write-approval\",\n      \"viewport\": \"mobile\",\n      \"status\": \"PASS\",\n      \"assertions\": 3\n    },\n    {\n      \"name\": \"write-rejection\",\n      \"viewport\": \"mobile\",\n      \"status\": \"PASS\",\n      \"assertions\": 2\n    },\n    {\n      \"name\": \"ask-reload-answer\",\n      \"viewport\": \"mobile\",\n      \"status\": \"PASS\",\n      \"assertions\": 3\n    },\n    {\n      \"name\": \"settings-general\",\n      \"viewport\": \"narrow-tall\",\n      \"status\": \"PASS\",\n      \"assertions\": 2\n    },\n    {\n      \"name\": \"models-editor\",\n      \"viewport\": \"narrow-tall\",\n      \"status\": \"PASS\",\n      \"assertions\": 1\n    },\n    {\n      \"name\": \"workspace-directory-picker\",\n      \"viewport\": \"narrow-tall\",\n      \"status\": \"PASS\",\n      \"assertions\": 1\n    },\n    {\n      \"name\": \"workspace-files\",\n      \"viewport\": \"narrow-tall\",\n      \"status\": \"PASS\",\n      \"assertions\": 2\n    },\n    {\n      \"name\": \"session-lifecycle\",\n      \"viewport\": \"narrow-tall\",\n      \"status\": \"PASS\",\n      \"assertions\": 4\n    },\n    {\n      \"name\": \"markdown-stream-reload\",\n      \"viewport\": \"narrow-tall\",\n      \"status\": \"PASS\",\n      \"assertions\": 4\n    },\n    {\n      \"name\": \"read-tool\",\n      \"viewport\": \"narrow-tall\",\n      \"status\": \"PASS\",\n      \"assertions\": 3\n    },\n    {\n      \"name\": \"write-approval\",\n      \"viewport\": \"narrow-tall\",\n      \"status\": \"PASS\",\n      \"assertions\": 3\n    },\n    {\n      \"name\": \"write-rejection\",\n      \"viewport\": \"narrow-tall\",\n      \"status\": \"PASS\",\n      \"assertions\": 2\n    },\n    {\n      \"name\": \"ask-reload-answer\",\n      \"viewport\": \"narrow-tall\",\n      \"status\": \"PASS\",\n      \"assertions\": 3\n    }\n  ]\n}\n"
+    },
+    {
+      "path": "host-stderr.log",
+      "bytes": 532,
+      "sha256": "251507b0c14a93a269a4c4ea8463e0c92c60069b891787c98486a9e2e1e530b7",
+      "detail": "(node:2944) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for openai/web-loopback-fixture \u2014 using conservative fallback 32000\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n[harness] context budget: model capabilities unknown for openai/web-loopback-fixture \u2014 using conservative fallback 32000\n"
+    }
+  ]
+}

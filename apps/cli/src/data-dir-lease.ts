@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { mkdir, realpath } from "node:fs/promises";
-import { createServer } from "node:net";
+import { createConnection, createServer, type Server } from "node:net";
 import { resolve } from "node:path";
 
 /** Product-host ownership only. Persistent snapshot stores are single-writer:
@@ -40,12 +40,18 @@ export async function acquireDataDirLease(dataDir: string | undefined): Promise<
   // case-sensitive flags. This can over-lock, but cannot permit two aliases.
   const identity = process.platform === "win32" ? canonical.toLowerCase() : canonical;
   const hash = createHash("sha256").update(identity, "utf8").digest();
-  const lockPort = 49_152 + hash.readUInt32BE(0) % 16_384;
-  const server = createServer(socket => socket.destroy());
-  await new Promise<void>((resolveLease, reject) => {
+  const legacyPort = 49_152 + hash.readUInt32BE(0) % 16_384;
+  // Windows commonly excludes parts of its dynamic range for Hyper-V. Always
+  // derive one fixed non-dynamic anchor, including when exclusions change.
+  // An occupied anchor still refuses ownership; there is no random retry port.
+  const lockPort = process.platform === "win32" ? 10_000 + hash.readUInt32BE(0) % 20_000 : legacyPort;
+  const servers: Server[] = [];
+  async function hold(port: number): Promise<void> {
+    const server = createServer(socket => socket.destroy());
+    await new Promise<void>((resolveLease, reject) => {
     const failed = (error: NodeJS.ErrnoException): void => {
       server.removeListener("listening", listening);
-      reject(new DataDirLeaseError(error.code === "EADDRINUSE" ? "HARNESS_DATA_DIR_IN_USE" : "HARNESS_DATA_DIR_LEASE_FAILED", canonical, lockPort, error));
+      reject(new DataDirLeaseError(error.code === "EADDRINUSE" ? "HARNESS_DATA_DIR_IN_USE" : "HARNESS_DATA_DIR_LEASE_FAILED", canonical, port, error));
     };
     const listening = (): void => {
       server.removeListener("error", failed);
@@ -53,19 +59,39 @@ export async function acquireDataDirLease(dataDir: string | undefined): Promise<
     };
     server.once("error", failed);
     server.once("listening", listening);
-    server.listen({ host: "127.0.0.1", port: lockPort, exclusive: true });
-  });
-  server.unref();
+    server.listen({ host: "127.0.0.1", port, exclusive: true });
+    });
+    servers.push(server); server.unref();
+  }
+  const closeAll = async (): Promise<void> => {
+    await Promise.all(servers.map(server => new Promise<void>((done, reject) => server.close(error => error ? reject(error) : done()))));
+  };
+  try {
+    await hold(lockPort);
+    if (process.platform === "win32") {
+      try { await hold(legacyPort); }
+      catch (error) {
+        // Preserve older live hosts. EACCES is also possible for an exclusive
+        // listener, so only an explicit connection refusal proves no listener.
+        if ((error as Error & { cause?: NodeJS.ErrnoException }).cause?.code !== "EACCES") throw error;
+        const absent = await new Promise<boolean>((done, reject) => {
+          const peer = createConnection({ host: "127.0.0.1", port: legacyPort });
+          const timer = setTimeout(() => { peer.destroy(); reject(error); }, 750);
+          peer.once("connect", () => { clearTimeout(timer); peer.destroy(); done(false); });
+          peer.once("error", (failure: NodeJS.ErrnoException) => { clearTimeout(timer); peer.destroy(); if (failure.code === "ECONNREFUSED") done(true); else reject(error); });
+        });
+        if (!absent) throw new DataDirLeaseError("HARNESS_DATA_DIR_IN_USE", canonical, legacyPort, error);
+      }
+    }
+  } catch (error) { await closeAll(); throw error; }
   let releasePromise: Promise<void> | undefined;
   return {
     dataDir: canonical,
     lockPort,
-    ref() { if (releasePromise === undefined) server.ref(); },
-    unref() { server.unref(); },
+    ref() { if (releasePromise === undefined) for (const server of servers) server.ref(); },
+    unref() { for (const server of servers) server.unref(); },
     release() {
-      releasePromise ??= new Promise<void>((resolveRelease, reject) => {
-        server.close(error => error === undefined ? resolveRelease() : reject(error));
-      });
+      releasePromise ??= closeAll();
       return releasePromise;
     },
   };

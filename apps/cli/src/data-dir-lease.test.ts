@@ -70,8 +70,9 @@ describe("single local product host per persistent data directory", () => {
   it("memory-only hosts need no listener, and released ownership is reusable", async () => {
     expect(await acquireDataDirLease(undefined)).toBeUndefined(); expect(await acquireDataDirLease("")).toBeUndefined();
     const root = await directory(); const first = await lease(root);
-    expect(first.dataDir).toBe(await realpath(root)); expect(first.lockPort).toBeGreaterThanOrEqual(49_152);
-    expect(first.lockPort).toBeLessThanOrEqual(65_535);
+    expect(first.dataDir).toBe(await realpath(root));
+    expect(first.lockPort).toBeGreaterThanOrEqual(process.platform === "win32" ? 10_000 : 49_152);
+    expect(first.lockPort).toBeLessThanOrEqual(process.platform === "win32" ? 29_999 : 65_535);
     first.ref(); first.unref(); await first.release(); await first.release();
     const second = await lease(root); expect(second.lockPort).toBe(first.lockPort);
   });

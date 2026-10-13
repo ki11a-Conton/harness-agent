@@ -1,0 +1,373 @@
+{
+  "schemaVersion": 1,
+  "originalSourceSha": "4f7dcb551ec13885992e0099cf615ca9c3eaf049",
+  "observedBy": "e30111d90be8842dcfdba4e72c829d195a95ae1c",
+  "purpose": "Existing failed Windows artifacts, original bytes and bounded excerpts; no rerun or PASS substitution",
+  "files": [
+    {
+      "path": "actual-product-host-ownership.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "detail": ""
+    },
+    {
+      "path": "actual-product-host-ownership.stdout.log",
+      "bytes": 453,
+      "sha256": "4cca8be71f587e36db572f4ce765fbecef20031b8853a66a597bc4a61e023f7e",
+      "detail": "{\"status\":\"PASS\",\"sourceSha\":\"4f7dcb551ec13885992e0099cf615ca9c3eaf049\",\"platform\":\"win32\",\"node\":\"v22.23.3\",\"cases\":[{\"name\":\"real CLI refuses a Web-owned directory before loading mutable stores\",\"passed\":true,\"exitCode\":1},{\"name\":\"OS releases product ownership after owner process crash\",\"passed\":true},{\"name\":\"failed Web startup closes resources and releases directory ownership\",\"passed\":true}],\"paidModelCalls\":0,\"realModelQuality\":\"NOT_PROVEN\"}\n"
+    },
+    {
+      "path": "fixed-source-portable-build.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "detail": ""
+    },
+    {
+      "path": "fixed-source-portable-build.stdout.log",
+      "bytes": 208,
+      "sha256": "a79131e1dc6103ed4c5f6dfcafae97aa0bbd6d4d5aefd31fa06b3b3eda1afab4",
+      "detail": "{\"status\":\"PASS\",\"archive\":\"D:\\\\a\\\\harness-agent\\\\harness-agent\\\\.ci\\\\gen1\\\\assets\\\\harness-agent-1.9.0-portable.tar.gz\",\"version\":\"1.9.0\",\"sourceSha\":\"4f7dcb551ec13885992e0099cf615ca9c3eaf049\",\"files\":3030}\n"
+    },
+    {
+      "path": "host-lease/result.json",
+      "bytes": 571,
+      "sha256": "869c645d43a6b465fe92dbc0bce860360450edbe6fa68418b72ea9db1451dd74",
+      "detail": {
+        "status": "PASS",
+        "sourceSha": "4f7dcb551ec13885992e0099cf615ca9c3eaf049",
+        "platform": "win32",
+        "node": "v22.23.3",
+        "cases": [
+          {
+            "name": "real CLI refuses a Web-owned directory before loading mutable stores",
+            "passed": true,
+            "exitCode": 1
+          },
+          {
+            "name": "OS releases product ownership after owner process crash",
+            "passed": true
+          },
+          {
+            "name": "failed Web startup closes resources and releases directory ownership",
+            "passed": true
+          }
+        ],
+        "paidModelCalls": 0,
+        "realModelQuality": "NOT_PROVEN"
+      }
+    },
+    {
+      "path": "installed/coding/coding-run.json",
+      "bytes": 606,
+      "sha256": "1392f743814549f9b301e236aa38354208109874d62cf8b72381fd0f681b7246",
+      "detail": {
+        "code": 1,
+        "signal": null,
+        "stdout": "",
+        "stderr": "(node:596) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\nHARNESS_DATA_DIR_LEASE_FAILED: \"C:\\\\Users\\\\runneradmin\\\\AppData\\\\Local\\\\Temp\\\\harness-real-coding-gh0hMA\\\\data\": the local directory ownership listener could not start (127.0.0.1:49809). Close the owning host or choose a different HARNESS_DATA_DIR. No random port fallback is allowed. This lease requires all writers to share one local network namespace.\n"
+      }
+    },
+    {
+      "path": "installed-coding-and-tamper-controls.stderr.log",
+      "bytes": 633,
+      "sha256": "250648074e067d3452f3dc3720f1f5ae925cb33ed2b3d1a3b7f26532e77a96d7",
+      "detail": "node:internal/modules/run_main:123\r\n    triggerUncaughtException(\r\n    ^\r\n\r\nAssertionError [ERR_ASSERTION]: real CLI exits successfully\r\n    at check (file:///D:/a/harness-agent/harness-agent/scripts/research/coding-audit-20261007/acceptance.mjs:19:47)\r\n    at runCodingAcceptance (file:///D:/a/harness-agent/harness-agent/scripts/research/coding-audit-20261007/acceptance.mjs:84:5)\r\n    at async file:///D:/a/harness-agent/harness-agent/scripts/release/portable-smoke.mjs:39:14 {\r\n  generatedMessage: false,\r\n  code: 'ERR_ASSERTION',\r\n  actual: false,\r\n  expected: true,\r\n  operator: '==',\r\n  diff: 'simple'\r\n}\r\n\r\nNode.js v22.23.3\r\n"
+    },
+    {
+      "path": "installed-coding-and-tamper-controls.stdout.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "detail": ""
+    },
+    {
+      "path": "interaction/result.json",
+      "bytes": 3655,
+      "sha256": "d2250a4008b87af1a1b89da99ec1e1c7b46548d4e45b6e3da29e579e74929509",
+      "detail": {
+        "status": "PASS",
+        "sourceSha": "4f7dcb551ec13885992e0099cf615ca9c3eaf049",
+        "platform": "win32",
+        "node": "v22.23.3",
+        "provider": "local-scripted-http",
+        "paidModelCalls": 0,
+        "realModelQuality": "NOT_PROVEN",
+        "cases": [
+          {
+            "name": "versioned native file content and sha reach the HTTP provider",
+            "passed": true
+          },
+          {
+            "name": "second chat turn includes first task and completed assistant reply",
+            "passed": true
+          },
+          {
+            "name": "real CLI completes two turns in one live chat process",
+            "passed": true
+          },
+          {
+            "name": "both CLI turns share one durable session id",
+            "passed": true
+          },
+          {
+            "name": "native edit and both verification commands received individual approval",
+            "passed": true
+          },
+          {
+            "name": "CLI reports real successful verification on both turns",
+            "passed": true
+          },
+          {
+            "name": "native conditional edit fixes the actual project file",
+            "passed": true
+          },
+          {
+            "name": "independent test succeeds outside the agent",
+            "passed": true
+          },
+          {
+            "name": "fresh CLI resumes with both earlier user turns and assistant history",
+            "passed": true
+          },
+          {
+            "name": "fresh CLI continues the same session and third turn",
+            "passed": true
+          },
+          {
+            "name": "cross-project resume fails without a provider request",
+            "passed": true
+          },
+          {
+            "name": "incompatible prompt policy fails without a provider request",
+            "passed": true
+          },
+          {
+            "name": "missing data-dir fails before provider while help works without constructing one",
+            "passed": true
+          },
+          {
+            "name": "deny denial reaches model as tool result",
+            "passed": true
+          },
+          {
+            "name": "deny cannot authorize native writes",
+            "passed": true
+          },
+          {
+            "name": "eof denial reaches model as tool result",
+            "passed": true
+          },
+          {
+            "name": "eof cannot authorize native writes",
+            "passed": true
+          },
+          {
+            "name": "two real SSE tabs receive the same completed Web turn",
+            "passed": true,
+            "detail": {
+              "turnId": "turn_8868763d-db6f-489d-9c11-4561fa2430d6",
+              "sessionId": "session_1b3bfa68-3cc1-4c6c-afe7-b204f5c7f2c6",
+              "completionEventId": "event_efef60ae-580f-44fe-b3d3-f7fc409b2a7c"
+            }
+          },
+          {
+            "name": "Web history stores its actual user/assistant conversation",
+            "passed": true
+          },
+          {
+            "name": "a new browser can discover persistent backend conversations after restart",
+            "passed": true
+          },
+          {
+            "name": "restarted Web retains earlier conversation in the actual model request",
+            "passed": true
+          },
+          {
+            "name": "restarted Web sends the follow-up on the original session",
+            "passed": true,
+            "detail": {
+              "turnId": "turn_2a53c40b-92fc-4172-8564-ced7bef3cdfa",
+              "sessionId": "session_1b3bfa68-3cc1-4c6c-afe7-b204f5c7f2c6",
+              "completionEventId": "event_50872e04-8d4a-4809-b52f-307a2ff2c931"
+            }
+          },
+          {
+            "name": "all actual HTTP requests use the configured model and selected coding policy",
+            "passed": true
+          }
+        ],
+        "assertionCount": 23,
+        "requestCount": 11,
+        "artifacts": [
+          "chat-coding.json",
+          "chat-resume.json",
+          "wrong-project.json",
+          "wrong-policy.json",
+          "flags-and-help.json",
+          "chat-deny.json",
+          "chat-eof.json",
+          "web-frames.json",
+          "web-logs.json",
+          "web-turns.json",
+          "web-history.json",
+          "requests.json"
+        ],
+        "skips": [
+          "POSIX SIGINT-to-handler behavior; native Windows cancellation is covered by the Windows gate"
+        ]
+      }
+    },
+    {
+      "path": "portable-unit-security.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "detail": ""
+    },
+    {
+      "path": "portable-unit-security.stdout.log",
+      "bytes": 6004,
+      "sha256": "59a05ea211ef482fd55f3146e35cd68bcbdf8fd7ce280995c0eea86072312910",
+      "detail": "TAP version 13\n# Subtest: portable enumerates the actual workspace, including indirect and unreferenced packages\nok 1 - portable enumerates the actual workspace, including indirect and unreferenced packages\n  ---\n  duration_ms: 2342.7522\n  type: 'test'\n  ...\n# Subtest: workspace identity accepts a root alias and excludes the physical workspace root\nok 2 - workspace identity accepts a root alias and excludes the physical workspace root\n  ---\n  duration_ms: 2307.8077\n  type: 'test'\n  ...\n# Subtest: workspace inventory rejects packages physically outside the pinned source\nok 3 - workspace inventory rejects packages physically outside the pinned source\n  ---\n  duration_ms: 2372.2546\n  type: 'test'\n  ...\n# Subtest: linked production workspace dependencies cannot enter the portable payload\nok 4 - linked production workspace dependencies cannot enter the portable payload\n  ---\n  duration_ms: 2763.0445\n  type: 'test'\n  ...\n# Subtest: portable rejects missing production workspace dependencies and duplicate package names\nok 5 - portable rejects missing production workspace dependencies and duplicate package names\n  ---\n  duration_ms: 4781.6864\n  type: 'test'\n  ...\n# Subtest: package-local adapted-source licenses and root notices ship byte for byte\nok 6 - package-local adapted-source licenses and root notices ship byte for byte\n  ---\n  duration_ms: 22.0615\n  type: 'test'\n  ...\n# Subtest: archive round trip preserves exact binary bytes with deterministic output\nok 7 - archive round trip preserves exact binary bytes with deterministic output\n  ---\n  duration_ms: 9.321\n  type: 'test'\n  ...\n# Subtest: exact reviewed xterm packages receive the original pinned MIT notice; no generic license fallback\nok 8 - exact reviewed xterm packages receive the original pinned MIT notice; no generic license fallback\n  ---\n  duration_ms: 10.3265\n  type: 'test'\n  ...\n# Subtest: traversal, absolute paths, Windows separators and duplicate case paths are rejected\nok 9 - traversal, absolute paths, Windows separators and duplicate case paths are rejected\n  ---\n  duration_ms: 1.0988\n  type: 'test'\n  ...\n# Subtest: bad tar checksums, symlink entries and missing terminators are rejected before writes\nok 10 - bad tar checksums, symlink entries and missing terminators are rejected before writes\n  ---\n  duration_ms: 7.6393\n  type: 'test'\n  ...\n# Subtest: extraction never overwrites an existing consumer directory\nok 11 - extraction never overwrites an existing consumer directory\n  ---\n  duration_ms: 3.843\n  type: 'test'\n  ...\n# Subtest: extraction still rejects a link destination and links in its parent path before file writes\nok 12 - extraction still rejects a link destination and links in its parent path before file writes\n  ---\n  duration_ms: 5.8917\n  type: 'test'\n  ...\n# Subtest: manifest binds every file, exact version and source, and rejects extra files\nok 13 - manifest binds every file, exact version and source, and rejects extra files\n  ---\n  duration_ms: 34.2479\n  type: 'test'\n  ...\n# Subtest: duplicate manifest paths and parent directory links cannot stand in for payload files\nok 14 - duplicate manifest paths and parent directory links cannot stand in for payload files\n  ---\n  duration_ms: 22.4074\n  type: 'test'\n  ...\n# Subtest: snapshot uses pinned Git blobs and ignores stale dist or untracked ignored source\nok 15 - snapshot uses pinned Git blobs and ignores stale dist or untracked ignored source\n  ---\n  duration_ms: 3221.8958\n  type: 'test'\n  ...\n# Subtest: archive retains executable native helpers, independently of their filenames and umask\nok 16 - archive retains executable native helpers, independently of their filenames and umask\n  ---\n  duration_ms: 12.666\n  type: 'test'\n  ...\n# Subtest: tar numeric fields reject privilege bits, writable modes, junk suffixes and nonzero ownership or timestamps before writes\nok 17 - tar numeric fields reject privilege bits, writable modes, junk suffixes and nonzero ownership or timestamps before writes\n  ---\n  duration_ms: 18.2807\n  type: 'test'\n  ...\n# Subtest: schema 2 binds regular file permissions and rejects invalid or altered modes while schema 1 remains readable\nok 18 - schema 2 binds regular file permissions and rejects invalid or altered modes while schema 1 remains readable\n  ---\n  duration_ms: 46.268\n  type: 'test'\n  ...\n# Subtest: schema 2 archive validates declared bytes and modes before extracting any payload\nok 19 - schema 2 archive validates declared bytes and modes before extracting any payload\n  ---\n  duration_ms: 60.724\n  type: 'test'\n  ...\n# Subtest: source snapshot retains executable Git modes instead of inheriting the process umask\nok 20 - source snapshot retains executable Git modes instead of inheriting the process umask\n  ---\n  duration_ms: 560.2283\n  type: 'test'\n  ...\n# Subtest: payload canonicalization restores reviewed Darwin helpers even when the package store stripped all execute bits\nok 21 - payload canonicalization restores reviewed Darwin helpers even when the package store stripped all execute bits\n  ---\n  duration_ms: 12.3262\n  type: 'test'\n  ...\n# Subtest: native rebuild rejects unreviewed versions and lock bytes before executing any lifecycle hook\nok 22 - native rebuild rejects unreviewed versions and lock bytes before executing any lifecycle hook\n  ---\n  duration_ms: 8.3203\n  type: 'test'\n  ...\n# Subtest: builder refuses an archive larger than the consumer extraction budget before reading or compressing its payload\nok 23 - builder refuses an archive larger than the consumer extraction budget before reading or compressing its payload\n  ---\n  duration_ms: 0.7384\n  type: 'test'\n  ...\n# Subtest: executed portable tools must match pinned source so schema 2 cannot ship a stale schema 1 verifier\nok 24 - executed portable tools must match pinned source so schema 2 cannot ship a stale schema 1 verifier\n  ---\n  duration_ms: 15.0457\n  type: 'test'\n  ...\n1..24\n# tests 24\n# suites 0\n# pass 24\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 18758.0054\n"
+    },
+    {
+      "path": "real-multi-turn-interaction.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "detail": ""
+    },
+    {
+      "path": "real-multi-turn-interaction.stdout.log",
+      "bytes": 2858,
+      "sha256": "9e7bfdce38f21b09ecbbdeb0791fce307a8d8d5d0645e7cc86b667da7566fa5d",
+      "detail": "{\"status\":\"PASS\",\"sourceSha\":\"4f7dcb551ec13885992e0099cf615ca9c3eaf049\",\"platform\":\"win32\",\"node\":\"v22.23.3\",\"provider\":\"local-scripted-http\",\"paidModelCalls\":0,\"realModelQuality\":\"NOT_PROVEN\",\"cases\":[{\"name\":\"versioned native file content and sha reach the HTTP provider\",\"passed\":true},{\"name\":\"second chat turn includes first task and completed assistant reply\",\"passed\":true},{\"name\":\"real CLI completes two turns in one live chat process\",\"passed\":true},{\"name\":\"both CLI turns share one durable session id\",\"passed\":true},{\"name\":\"native edit and both verification commands received individual approval\",\"passed\":true},{\"name\":\"CLI reports real successful verification on both turns\",\"passed\":true},{\"name\":\"native conditional edit fixes the actual project file\",\"passed\":true},{\"name\":\"independent test succeeds outside the agent\",\"passed\":true},{\"name\":\"fresh CLI resumes with both earlier user turns and assistant history\",\"passed\":true},{\"name\":\"fresh CLI continues the same session and third turn\",\"passed\":true},{\"name\":\"cross-project resume fails without a provider request\",\"passed\":true},{\"name\":\"incompatible prompt policy fails without a provider request\",\"passed\":true},{\"name\":\"missing data-dir fails before provider while help works without constructing one\",\"passed\":true},{\"name\":\"deny denial reaches model as tool result\",\"passed\":true},{\"name\":\"deny cannot authorize native writes\",\"passed\":true},{\"name\":\"eof denial reaches model as tool result\",\"passed\":true},{\"name\":\"eof cannot authorize native writes\",\"passed\":true},{\"name\":\"two real SSE tabs receive the same completed Web turn\",\"passed\":true,\"detail\":{\"turnId\":\"turn_8868763d-db6f-489d-9c11-4561fa2430d6\",\"sessionId\":\"session_1b3bfa68-3cc1-4c6c-afe7-b204f5c7f2c6\",\"completionEventId\":\"event_efef60ae-580f-44fe-b3d3-f7fc409b2a7c\"}},{\"name\":\"Web history stores its actual user/assistant conversation\",\"passed\":true},{\"name\":\"a new browser can discover persistent backend conversations after restart\",\"passed\":true},{\"name\":\"restarted Web retains earlier conversation in the actual model request\",\"passed\":true},{\"name\":\"restarted Web sends the follow-up on the original session\",\"passed\":true,\"detail\":{\"turnId\":\"turn_2a53c40b-92fc-4172-8564-ced7bef3cdfa\",\"sessionId\":\"session_1b3bfa68-3cc1-4c6c-afe7-b204f5c7f2c6\",\"completionEventId\":\"event_50872e04-8d4a-4809-b52f-307a2ff2c931\"}},{\"name\":\"all actual HTTP requests use the configured model and selected coding policy\",\"passed\":true}],\"assertionCount\":23,\"requestCount\":11,\"artifacts\":[\"chat-coding.json\",\"chat-resume.json\",\"wrong-project.json\",\"wrong-policy.json\",\"flags-and-help.json\",\"chat-deny.json\",\"chat-eof.json\",\"web-frames.json\",\"web-logs.json\",\"web-turns.json\",\"web-history.json\",\"requests.json\",\"result.json\"],\"skips\":[\"POSIX SIGINT-to-handler behavior; native Windows cancellation is covered by the Windows gate\"]}\n"
+    },
+    {
+      "path": "result.json",
+      "bytes": 4249,
+      "sha256": "c20b27c4a4ad3c6aeb0d7a59284cd625b476d36dfafbd269de446e8983e976b2",
+      "detail": {
+        "status": "FAIL",
+        "sourceSha": "4f7dcb551ec13885992e0099cf615ca9c3eaf049",
+        "platform": "win32",
+        "node": "v22.23.3",
+        "steps": [
+          {
+            "name": "portable unit/security",
+            "argv": [
+              "C:\\hostedtoolcache\\windows\\node\\22.23.3\\x64\\node.exe",
+              "--test",
+              "scripts/release/portable.test.mjs"
+            ],
+            "exitCode": 0,
+            "error": null,
+            "stdoutLog": {
+              "path": ".ci/gen1/portable-unit-security.stdout.log",
+              "bytes": 6004,
+              "sha256": "59a05ea211ef482fd55f3146e35cd68bcbdf8fd7ce280995c0eea86072312910"
+            },
+            "stderrLog": {
+              "path": ".ci/gen1/portable-unit-security.stderr.log",
+              "bytes": 0,
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          },
+          {
+            "name": "real multi-turn interaction",
+            "argv": [
+              "C:\\hostedtoolcache\\windows\\node\\22.23.3\\x64\\node.exe",
+              "scripts/research/gen1-20261008/interaction-acceptance.mjs",
+              "--out",
+              "D:\\a\\harness-agent\\harness-agent\\.ci\\gen1\\interaction"
+            ],
+            "exitCode": 0,
+            "error": null,
+            "stdoutLog": {
+              "path": ".ci/gen1/real-multi-turn-interaction.stdout.log",
+              "bytes": 2858,
+              "sha256": "9e7bfdce38f21b09ecbbdeb0791fce307a8d8d5d0645e7cc86b667da7566fa5d"
+            },
+            "stderrLog": {
+              "path": ".ci/gen1/real-multi-turn-interaction.stderr.log",
+              "bytes": 0,
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          },
+          {
+            "name": "actual product host ownership",
+            "argv": [
+              "C:\\hostedtoolcache\\windows\\node\\22.23.3\\x64\\node.exe",
+              "scripts/research/gen1-20261008/host-lease-acceptance.mjs",
+              "--out",
+              "D:\\a\\harness-agent\\harness-agent\\.ci\\gen1\\host-lease"
+            ],
+            "exitCode": 0,
+            "error": null,
+            "stdoutLog": {
+              "path": ".ci/gen1/actual-product-host-ownership.stdout.log",
+              "bytes": 453,
+              "sha256": "4cca8be71f587e36db572f4ce765fbecef20031b8853a66a597bc4a61e023f7e"
+            },
+            "stderrLog": {
+              "path": ".ci/gen1/actual-product-host-ownership.stderr.log",
+              "bytes": 0,
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          },
+          {
+            "name": "fixed-source portable build",
+            "argv": [
+              "C:\\hostedtoolcache\\windows\\node\\22.23.3\\x64\\node.exe",
+              "scripts/release/portable.mjs",
+              "build",
+              "--out",
+              "D:\\a\\harness-agent\\harness-agent\\.ci\\gen1\\assets",
+              "--version",
+              "1.9.0",
+              "--source-sha",
+              "4f7dcb551ec13885992e0099cf615ca9c3eaf049"
+            ],
+            "exitCode": 0,
+            "error": null,
+            "stdoutLog": {
+              "path": ".ci/gen1/fixed-source-portable-build.stdout.log",
+              "bytes": 208,
+              "sha256": "a79131e1dc6103ed4c5f6dfcafae97aa0bbd6d4d5aefd31fa06b3b3eda1afab4"
+            },
+            "stderrLog": {
+              "path": ".ci/gen1/fixed-source-portable-build.stderr.log",
+              "bytes": 0,
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          },
+          {
+            "name": "installed coding and tamper controls",
+            "argv": [
+              "C:\\hostedtoolcache\\windows\\node\\22.23.3\\x64\\node.exe",
+              "scripts/release/portable-smoke.mjs",
+              "--archive",
+              "D:\\a\\harness-agent\\harness-agent\\.ci\\gen1\\assets\\harness-agent-1.9.0-portable.tar.gz",
+              "--out",
+              "D:\\a\\harness-agent\\harness-agent\\.ci\\gen1\\installed",
+              "--version",
+              "1.9.0",
+              "--source-sha",
+              "4f7dcb551ec13885992e0099cf615ca9c3eaf049"
+            ],
+            "exitCode": 1,
+            "error": null,
+            "stdoutLog": {
+              "path": ".ci/gen1/installed-coding-and-tamper-controls.stdout.log",
+              "bytes": 0,
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "stderrLog": {
+              "path": ".ci/gen1/installed-coding-and-tamper-controls.stderr.log",
+              "bytes": 633,
+              "sha256": "250648074e067d3452f3dc3720f1f5ae925cb33ed2b3d1a3b7f26532e77a96d7"
+            }
+          }
+        ],
+        "error": "GEN1_STAGE_FAILED: installed coding and tamper controls: exit=1; signal=none"
+      }
+    }
+  ]
+}

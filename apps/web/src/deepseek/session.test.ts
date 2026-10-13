@@ -44,7 +44,7 @@ async function eventually<T>(read: () => Promise<T>, accept: (value: T) => boole
 }
 function send(id: string, requestId = "unique-request") { return { sessionId: id, requestId, mode: "queue", content: [{ type: "text", text: "Please answer" }] }; }
 
-it("control seeds a newly created empty draft with the supported -1 baseline instead of an invalid negative event sequence", async () => {
+it("control emits one opening baseline and waits for committed non-negative projection frames for a new draft", async () => {
   const stack = await setup(), controller = new AbortController();
   const quietHost = { ...stack.host, ...createHostTools(stack.harness, stack.host.cwd, stack.host.dataDir) };
   const service = createSessionService(quietHost);
@@ -60,8 +60,14 @@ it("control seeds a newly created empty draft with the supported -1 baseline ins
   const creating = stack.harness.runtime.createSession({ agent: stack.harness.agents[0]!, cwd: stack.host.cwd });
   try {
     await eventually(async () => createdId, value => value !== undefined);
-    const frame = (await control.next()).value;
-    expect(frame).toMatchObject({ type: "baseline", value: { projections: { [createdId!]: { asOfSeq: -1 } } } });
+    let emitted = false;
+    const next = control.next().then(frame => { emitted = true; return frame; });
+    await new Promise(done => setTimeout(done, 60));
+    expect(emitted).toBe(false);
+    release(); await creating;
+    await service.call("session/rename", { request: { sessionId: createdId!, title: "Committed new draft" } }, stack.signal);
+    const frame = (await next).value as { type: string; sessionId: string; seq: number };
+    expect(frame.type).toBe("projection"); expect(frame.sessionId).toBe(createdId); expect(frame.seq).toBeGreaterThanOrEqual(0);
   } finally { release(); await creating; spy.mockRestore(); controller.abort(); await control.return?.(); }
 });
 
