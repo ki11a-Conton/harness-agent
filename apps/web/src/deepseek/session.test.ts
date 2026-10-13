@@ -276,7 +276,7 @@ it("host close waits for the real original-turn continuation's metadata acknowle
   ]);
   const stack = await setup(provider);
   await stack.call("session/prompt", send(stack.id));
-  await eventually(() => stack.harness.askUserStore!.listPending(stack.id), rows => rows.length === 1);
+  await eventually(() => stack.harness.store.listTurns(stack.id), turns => turns[0]?.status === "waiting_for_user");
   const ask = (await stack.harness.askUserStore!.listPending(stack.id))[0]!;
   let release!: () => void, entered!: () => void;
   const gate = new Promise<void>(done => { release = done; }), writing = new Promise<void>(done => { entered = done; });

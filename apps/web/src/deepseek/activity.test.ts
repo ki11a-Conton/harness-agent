@@ -29,7 +29,7 @@ async function setup(options: { provider?: ModelProvider; clock?: "real"; denyMo
   const tools = createHostTools(harness, cwd, dataDir);
   const rpc = createRuntimeRpc(harness.runtime, { sessions: harness.sessions, sessionService: harness.sessionService, events: harness.events, approvalStore: harness.approvalStore });
   const sessionHost: SessionHost = { harness, rpc, cwd, dataDir, pollDelayMs: 10, ...tools };
-  const sessions = createSessionService(sessionHost); const signal = new AbortController().signal;
+  const sessions = createSessionService(sessionHost); cleanup.push(() => sessions.close()); const signal = new AbortController().signal;
   const submissions: Array<{ requestId: string; messageId: string }> = [];
   const publications: Array<{ topic: string; args: readonly unknown[] }> = [];
   const host: ActivityHost = { ...sessionHost, now,

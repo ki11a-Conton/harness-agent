@@ -41,3 +41,9 @@
 | W9 | portable 模式/长 notice 路径/native 安装缺陷已修复；新增同一 archive Linux/Windows 官方 UI CI | 完整包构建与实际 Windows CI 待运行；不改 v1.9，不因当前部分通过发布全功能版本 |
 
 [当前交付、缺陷及限制](docs/web-deepseek-delivery.md)和[交付矩阵](docs/web-deepseek-delivery-matrix.json)是当前状态；原146项审查仍是旧 UI 的历史基线。所有副作用仍走 ToolOrchestrator/PermissionEngine/SandboxManager/Verification；Core 不依赖 UI。paidModelCalls=0，真实模型质量 NOT_PROVEN，旧 N7/champion 及归档结论不改写。
+
+### W8 补修：停机仍有持久 inbox 写入（2026-10-13）
+
+- 做什么：修复真实 CI `38348315036` 的 terminal inbox ACK/关闭竞态，纠正问答测试过早提交的状态屏障；不降低覆盖率门槛。
+- 怎么做：actor 保有 terminal ACK promises，释放 resource scope 前 drain；并发 close 共用同一结果。Web activity 的 fixture 关闭 actual session service；问答回归等待实际 turn `waiting_for_user`。
+- 怎么验收：真实 InboxStore ACK 门控 RED 1 FAIL → GREEN；113 项相关测试与 typecheck 已 PASS。固定 clean 新源码再跑全量、CI、真实 Windows、同 archive 官方 UI 消费。原 7ba9eee 本地全量与 UI PASS、主 CI FAIL 分别保留，不拼接成新源通过。

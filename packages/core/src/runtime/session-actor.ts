@@ -688,6 +688,11 @@ const RECOVERY_STORE_RECHECK_MAX_MS = 30_000;
 export class DefaultSessionActor implements SessionActor {
   private state: ActorExecutionState = { kind: "idle" };
   private closed = false;
+  private closing: Promise<void> | undefined;
+  // Runtime terminal status precedes the durable inbox consume ACK. Retain
+  // that ownership until shutdown so a host cannot release its data lease
+  // while an acknowledgement is still writing.
+  private readonly terminalAcknowledgements = new Set<Promise<void>>();
   readonly inputQueue: SessionInputQueue;
   readonly resourceScope: SessionResourceScope;
   readonly cancellation: AbortController;
@@ -1031,7 +1036,7 @@ export class DefaultSessionActor implements SessionActor {
             lease: undefined,
             lastError: null,
           });
-          void this.consumeRecoveredPrompt(head.turn.id, head.promptId, {} as TurnOutcome);
+          this.ownTerminalAcknowledgement(this.consumeRecoveredPrompt(head.turn.id, head.promptId, {} as TurnOutcome));
           this._recoverableTurns.shift();
           return "shifted";
         } catch (reconcileErr) {
@@ -1174,7 +1179,7 @@ export class DefaultSessionActor implements SessionActor {
       await this.releaseLease(head.turn.id);
       // INV-P38.4-004: converged — durably consume the bound prompt
       // (best-effort; consumeRecoveredPrompt re-checks the store).
-      void this.consumeRecoveredPrompt(head.turn.id, head.promptId, outcome);
+      this.ownTerminalAcknowledgement(this.consumeRecoveredPrompt(head.turn.id, head.promptId, outcome));
       this._recoverableTurns.shift(); // RECOVERED transition is durable
       return "shifted";
     } catch (err) {
@@ -1429,7 +1434,11 @@ export class DefaultSessionActor implements SessionActor {
     };
   }
 
-  async close(): Promise<void> {
+  close(): Promise<void> {
+    return this.closing ??= this.closeOwned();
+  }
+
+  private async closeOwned(): Promise<void> {
     if (this.closed) return;
     this.closed = true;
     this._followupWakeRequested = false;
@@ -1465,6 +1474,7 @@ export class DefaultSessionActor implements SessionActor {
         ),
       });
     }
+    await Promise.allSettled([...this.terminalAcknowledgements]);
     this.resourceScope.release();
     this.deps.onClosed?.(this.sessionId);
   }
@@ -1816,9 +1826,9 @@ export class DefaultSessionActor implements SessionActor {
       // and settle the waiting caller exactly once. A consume failure here must
       // NOT requeue — the bound lineage owns the prompt (INV-P38.3-004):
       // surface the loss so reconciliation is on record.
-      void handle.outcome.then(
+      this.ownTerminalAcknowledgement(handle.outcome.then(
         (outcome) => {
-          void queue
+          return queue
             .completeReservedFollowup(entry.id)
             .then(() => { if (queue.pendingCount > 0) this.requestFollowupWake(); })
             .catch((ackErr) => {
@@ -1829,7 +1839,7 @@ export class DefaultSessionActor implements SessionActor {
             .then(() => this.settleFollowup(entry.id, { kind: "ok", outcome }));
         },
         (err) => {
-          void queue
+          return queue
             .completeReservedFollowup(entry.id)
             .then(() => { if (queue.pendingCount > 0) this.requestFollowupWake(); })
             .catch((ackErr) => {
@@ -1839,7 +1849,7 @@ export class DefaultSessionActor implements SessionActor {
             })
             .then(() => this.settleFollowup(entry.id, { kind: "err", err }));
         },
-      );
+      ));
     } catch (err) {
       // reservePendingFollowup (or an unexpected throw) — defensive. Release
       // the reservation if we still hold it and it was never bound (never
@@ -1851,6 +1861,17 @@ export class DefaultSessionActor implements SessionActor {
         await failPromotion(reservedId, `followup promotion failed: ${err instanceof Error ? err.message : String(err)}`);
       }
     }
+  }
+
+  private ownTerminalAcknowledgement(task: Promise<void>): void {
+    this.terminalAcknowledgements.add(task);
+    void task.then(
+      () => { this.terminalAcknowledgements.delete(task); },
+      cause => {
+        this.terminalAcknowledgements.delete(task);
+        process.stderr.write(`[degraded] session ${this.sessionId} terminal acknowledgement rejected: ${cause instanceof Error ? cause.message : String(cause)}\n`);
+      },
+    );
   }
 
   /** @internal P38 test seam: run the followup drain against a (possibly

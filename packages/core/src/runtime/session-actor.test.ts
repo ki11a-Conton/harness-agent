@@ -163,6 +163,25 @@ class MemInboxStore implements InboxStore {
   }
 }
 
+it("close and concurrent close wait for the terminal durable inbox acknowledgement", async () => {
+  const stack = await setupActor();
+  let entered!: () => void, release!: () => void;
+  const writing = new Promise<void>(done => { entered = done; });
+  const gate = new Promise<void>(done => { release = done; });
+  const consumed = stack.inbox.markConsumed.bind(stack.inbox);
+  stack.inbox.markConsumed = async id => { entered(); await gate; await consumed(id); };
+  await stack.actor.enqueueFollowup({ sessionId: stack.sessionId, text: "durable closing receipt" });
+  await writing;
+  let firstClosed = false, secondClosed = false;
+  const first = stack.actor.close().then(() => { firstClosed = true; });
+  const second = stack.actor.close().then(() => { secondClosed = true; });
+  try {
+    await new Promise(done => setTimeout(done, 20));
+    expect(firstClosed).toBe(false); expect(secondClosed).toBe(false);
+  } finally { release(); await Promise.all([first, second]); }
+  expect((await stack.inbox.listAll(stack.sessionId))[0]?.status).toBe("consumed");
+});
+
 interface ActorHarness {
   runtime: AgentRuntime;
   manager: DefaultLoadedSessionManager;
