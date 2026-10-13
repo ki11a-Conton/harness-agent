@@ -1,0 +1,39 @@
+name: DeepSeek Windows failure forensics
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/deepseek-failure-forensics.yml'
+      - 'scripts/ci/deepseek-failure-forensics.mjs'
+permissions:
+  contents: read
+  actions: read
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: '38338850273'
+          name: deepseek-installed-windows-latest-f763403477da9d4cc798954abbc6b8ca63c93ded-38338850273
+          path: .ci/deepseek-failure/ui
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: '38338850341'
+          name: gen1-windows-latest-f763403477da9d4cc798954abbc6b8ca63c93ded-38338850341
+          path: .ci/deepseek-failure/portable
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: '38338850285'
+          name: test-report-windows-latest
+          path: .ci/deepseek-failure/unit
+      - name: Report the bounded original failure details
+        run: node scripts/ci/deepseek-failure-forensics.mjs .ci/deepseek-failure

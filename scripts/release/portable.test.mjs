@@ -82,7 +82,10 @@ test('archive round trip preserves exact binary bytes with deterministic output'
 }));
 test('exact reviewed xterm packages receive the original pinned MIT notice; no generic license fallback', async () => temporary(async dir => {
   await mkdir(join(dir, 'third_party'));
-  const notice = await readFile(new URL('../../third_party/xtermjs-MIT.txt', import.meta.url));
+  // Git's native Windows checkout can use CRLF. The actual sourceSnapshot
+  // reads Git blobs, whose pinned upstream license bytes remain LF. Model
+  // those snapshot bytes here instead of the checkout's materialization.
+  const notice = Buffer.from((await readFile(new URL('../../third_party/xtermjs-MIT.txt', import.meta.url), 'utf8')).replace(/\r\n/g, '\n'));
   await writeFile(join(dir, 'third_party/xtermjs-MIT.txt'), notice);
   const target = join(dir, 'installed');
   for (const [name, version] of [['@xterm/headless', '6.0.0'], ['@xterm/addon-serialize', '0.14.0']]) {
