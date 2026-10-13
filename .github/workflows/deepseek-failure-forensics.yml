@@ -10,9 +10,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - kind: formal-windows
-            run: '38385871940'
-            artifact: n6-real-formal-windows-latest-9c02f1b101b78f90c09a8479276a2a4d38871bb1-38385871940-attempt-1
+          - kind: ubuntu-ui
+            run: '38388121962'
+            artifact: deepseek-installed-ubuntu-latest-b38566d5c370509db58cbb495aaf4eb68cbe3ce3-38388121962
+          - kind: windows-ui
+            run: '38388121962'
+            artifact: deepseek-installed-windows-latest-b38566d5c370509db58cbb495aaf4eb68cbe3ce3-38388121962
+          - kind: same-archive-windows
+            run: '38388121954'
+            artifact: gen1-same-archive-windows-b38566d5c370509db58cbb495aaf4eb68cbe3ce3-38388121954
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -27,4 +33,4 @@ jobs:
           name: ${{ matrix.artifact }}
           path: .ci/original-artifact
       - name: Export existing original evidence
-        run: node scripts/ci/deepseek-failure-forensics.mjs .ci/original-artifact 9c02f1b101b78f90c09a8479276a2a4d38871bb1
+        run: node scripts/ci/deepseek-failure-forensics.mjs .ci/original-artifact b38566d5c370509db58cbb495aaf4eb68cbe3ce3
