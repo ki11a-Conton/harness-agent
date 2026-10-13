@@ -14,7 +14,7 @@ async function walk(directory) {
     const file = join(directory, entry.name), info = await lstat(file);
     if (info.isSymbolicLink()) throw new Error('Forensic artifact link rejected');
     if (entry.isDirectory()) { await walk(file); continue; }
-    if (!entry.isFile() || info.size > 4 * 1024 * 1024 || !/^(?:result|results|commands|coding-run|test-report|browser|host-stderr|.*\.stdout|.*\.stderr|.*phase.*)\.(?:json|log)$/.test(entry.name)) continue;
+    if (!entry.isFile() || info.size > 4 * 1024 * 1024 || !/^(?:result|results|commands|coding-run|test-report|test|coverage|browser|host-stderr|.*\.stdout|.*\.stderr|.*phase.*)\.(?:json|log)$/.test(entry.name)) continue;
     const bytes = await readFile(file), text = bytes.toString('utf8');
     let detail;
     if (entry.name.endsWith('.json')) {
@@ -35,7 +35,7 @@ async function walk(directory) {
 await walk(root);
 if (!files.length) throw new Error('Forensic evidence files missing');
 const receipt = { schemaVersion: 1, originalSourceSha, observedBy: process.env.GITHUB_SHA,
-  purpose: 'Existing failed Windows artifacts, original bytes and bounded excerpts; no rerun or PASS substitution', files };
+  purpose: 'Existing exact-source CI artifacts and job logs, original byte hashes and bounded excerpts; no rerun or status substitution', files };
 const data = gzipSync(Buffer.from(JSON.stringify(receipt))).toString('base64'), size = 2500, total = Math.ceil(data.length / size);
 if (total > 40) throw new Error('Forensic receipt exceeds bounded packet budget');
 for (let index = 0; index < total; index++) console.log(`::notice title=DeepSeek Windows failure ${index + 1}/${total}::${JSON.stringify({ encoding: 'gzip+base64', index, total, data: data.slice(index * size, (index + 1) * size) })}`);

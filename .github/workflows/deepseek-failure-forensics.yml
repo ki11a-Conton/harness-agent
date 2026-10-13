@@ -1,4 +1,4 @@
-name: DeepSeek accepted receipt export
+name: DeepSeek exact-source diagnostic export
 on:
   workflow_dispatch:
 permissions:
@@ -10,21 +10,24 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - kind: ubuntu-latest
-            run: '38346120282'
-            artifact: deepseek-installed-ubuntu-latest-facf13fa5ed4f545348b7de78c230603c54f9bf1-38346120282
-          - kind: windows-latest
-            run: '38346120282'
-            artifact: deepseek-installed-windows-latest-facf13fa5ed4f545348b7de78c230603c54f9bf1-38346120282
           - kind: unit-windows
-            run: '38346120226'
+            run: '38348315036'
             artifact: test-report-windows-latest
+          - kind: unit-ubuntu
+            run: '38348315036'
+            artifact: test-report-ubuntu-latest
           - kind: formal-windows
-            run: '38346120226'
-            artifact: n6-real-formal-windows-latest-facf13fa5ed4f545348b7de78c230603c54f9bf1-38346120226-attempt-1
-          - kind: same-archive-windows
-            run: '38346120266'
-            artifact: gen1-same-archive-windows-facf13fa5ed4f545348b7de78c230603c54f9bf1-38346120266
+            run: '38348315036'
+            artifact: n6-real-formal-windows-latest-7ba9eee0daedb6f0ae02a8cd0892a93e62677286-38348315036-attempt-1
+          - kind: formal-ubuntu
+            run: '38348315036'
+            artifact: n6-real-formal-ubuntu-latest-7ba9eee0daedb6f0ae02a8cd0892a93e62677286-38348315036-attempt-1
+          - kind: ubuntu-ui
+            run: '38348315027'
+            artifact: deepseek-installed-ubuntu-latest-7ba9eee0daedb6f0ae02a8cd0892a93e62677286-38348315027
+          - kind: windows-ui
+            run: '38348315027'
+            artifact: deepseek-installed-windows-latest-7ba9eee0daedb6f0ae02a8cd0892a93e62677286-38348315027
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -37,6 +40,20 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ matrix.run }}
           name: ${{ matrix.artifact }}
-          path: .ci/accepted-receipt
-      - name: Report original fixed-source receipt bytes
-        run: node scripts/ci/deepseek-failure-forensics.mjs .ci/accepted-receipt facf13fa5ed4f545348b7de78c230603c54f9bf1
+          path: .ci/original-artifact
+      - name: Export existing original evidence
+        run: node scripts/ci/deepseek-failure-forensics.mjs .ci/original-artifact 7ba9eee0daedb6f0ae02a8cd0892a93e62677286
+  coverage-log:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Read existing failed coverage job log
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p .ci/original-log
+          curl --fail --location --silent --show-error -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/repos/ki11a-Conton/harness-agent/actions/jobs/115134913998/logs -o .ci/original-log/coverage.log
+          node scripts/ci/deepseek-failure-forensics.mjs .ci/original-log 7ba9eee0daedb6f0ae02a8cd0892a93e62677286
