@@ -1,6 +1,6 @@
 # Harness Agent 当前执行计划入口
 
-当前任务：[本轮验收与后续计划](plan(20261013-194000).md)，详细实现：[DeepSeek Web UI 完整迁移计划](plan(20261008-web-deepseek-parity).md)，任务合同：[WEB-DEEPSEEK-PARITY-20261008](tasks/WEB-DEEPSEEK-PARITY-20261008.md)。各项包含做什么、怎么做与怎么验收。
+当前任务：[Harness Agent Web 品牌统一](plan(20261013-232547).md)，任务合同：[WEB-BRANDING-20261013](tasks/WEB-BRANDING-20261013.md)。移除产品界面的上游名称、鲸鱼、字标及插画，独立资源/浏览器/安装包验收后提交推送。此前验收与缺口保留在[上一轮规格](plan(20261013-194000).md)和[完整 UI 迁移计划](plan(20261008-web-deepseek-parity).md)。各项包含做什么、怎么做与怎么验收。
 
 已将官方完整 frontend shell 和 66 个默认客户端 entry 接到真实 Harness，根页面采用官方 UI，旧客户端保留在 `/legacy/index.html`。来源固定为官方 npm `0.2.1-alpha.1`，发布物没有 gitHead，不声明等同于参考 Git 源码。
 

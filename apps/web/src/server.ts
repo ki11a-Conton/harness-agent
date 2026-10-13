@@ -300,7 +300,7 @@ export class WebServer {
   private async serveModuleAlias(req: IncomingMessage, res: ServerResponse, url: URL): Promise<boolean> {
     // Official importChunk derives a scoped lazy URL from the combo entry URL.
     // Only a reviewed module/revision and a single local client JS file map to
-    // its verbatim published package; this is not a general combo file server.
+    // its reviewed package/brand derivative; this is not a general combo file server.
     const combo = /^\/deepseek\/plugins\/\?\?(@deepseek-ai\/dsh-[a-z0-9-]+)\/(client(?:[.][A-Za-z0-9_-]+)?[.]js)&rev=([a-f0-9]{12})$/.exec(req.url ?? "");
     const scoped = /^\/deepseek\/plugins\/(@deepseek-ai\/dsh-[a-z0-9-]+)\/(client(?:[.][A-Za-z0-9_-]+)?[.]js)$/.exec(url.pathname);
     if (combo === null && scoped === null) return false;
@@ -310,10 +310,14 @@ export class WebServer {
       this.json(res, 404, { ok: false, error: "not found" }); return true;
     }
     const graph = await this.readBootGraph();
-    if (!graph.entries.some(entry => entry.id === module[1] && entry.rev === rev)) {
+    const entry = graph.entries.find(entry => entry.id === module[1] && entry.rev === rev);
+    if (entry === undefined) {
       this.json(res, 404, { ok: false, error: "not found" }); return true;
     }
-    await this.serveVendor(res, `deepseek/plugins/${module[1]!.slice("@deepseek-ai/".length)}/${module[2]}`);
+    // Only the entry file has a branding derivative; lazy chunks keep the
+    // original package path and still require the graph's current revision.
+    const assetRoot = entry.brandOverride === true && module[2] === "client.js" ? "harness-brand/plugins" : "plugins";
+    await this.serveVendor(res, `deepseek/${assetRoot}/${module[1]!.slice("@deepseek-ai/".length)}/${module[2]}`);
     return true;
   }
 

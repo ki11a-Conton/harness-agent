@@ -1,3 +1,7 @@
+# 2026-10-13 产品品牌更新
+
+当前产品界面采用 Harness Agent 名称和独立 H 图标。原始上游名称和 artwork 仅保留在来源/许可证归档中，当前显示层使用单独校验的品牌衍生件；详见 [品牌实现与验收](web-branding.md)。下文的上游名称用于识别复用来源和历史验收，不是当前产品品牌。
+
 # 官方 DeepSeek Web UI 当前交付（2026-10-13）
 
 根页面现在使用官方完整客户端，通过 `window.__DSH_TRANSPORT__.rpc` 调用生产 Harness。旧客户端位于 `/legacy/index.html`。这次采用原发布 bundle，而不是再造少量相似 CSS/DOM。浏览器测试未 mock RPC、未拦截响应、未向页面注入模型输出；HTTP provider 是明确的本地测试 fixture。

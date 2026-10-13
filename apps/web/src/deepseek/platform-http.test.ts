@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { readFile } from "node:fs/promises";
 import { request as requestHttp } from "node:http";
+import { createHash } from "node:crypto";
 import { createHarness } from "@ar/harness";
 import { ScriptedModelProvider } from "@ar/model";
 import { WebChannelAdapter } from "../adapter.js";
@@ -56,6 +57,25 @@ function rawHeaders(url: string, headers: Record<string, string>) {
 }
 
 describe("Official Web platform HTTP routes", () => {
+  it("delivers the branded entry with its own revision while preserving and rejecting stale original identities", async () => {
+    const { base } = await stack();
+    const boot = JSON.parse(await readFile(new URL("../../public/deepseek/boot-manifest.json", import.meta.url), "utf8")) as {
+      entries: Array<{ id: string; rev: string; url: string; brandOverride?: boolean }>;
+    };
+    const derivatives = boot.entries.filter(row => row.brandOverride); expect(derivatives).toHaveLength(6);
+    for (const row of derivatives) {
+      const served = await fetch(base + row.url); expect(served.status).toBe(200);
+      const text = await served.text(); expect(text).not.toContain("DeepSeek Harness");
+      expect(createHash("sha256").update(text).digest("hex").startsWith(row.rev)).toBe(true);
+      const original = await readFile(new URL(`../../public/deepseek/plugins/${row.id.slice("@deepseek-ai/".length)}/client.js`, import.meta.url));
+      const originalRev = createHash("sha256").update(original).digest("hex").slice(0, 12);
+      expect(originalRev).not.toBe(row.rev);
+      expect((await fetch(base + row.url.replace(row.rev, originalRev))).status).toBe(404);
+    }
+    const icon = await fetch(base + "/deepseek/harness-brand/favicon.svg");
+    expect(icon.status).toBe(200); expect(icon.headers.get("content-type")).toContain("image/svg+xml");
+    expect(await icon.text()).toContain("Harness Agent");
+  });
   it("sends the complete actual local boot-manifest graph over a real EventSource SSE carrier", async () => {
     const { base } = await stack(); const controller = new AbortController();
     try {

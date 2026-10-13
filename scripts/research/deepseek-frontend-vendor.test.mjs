@@ -56,6 +56,20 @@ test("rejects an altered official plugin during verification and sealing", async
   });
 });
 
+test("refuses to bless modified branded executable assets even with --seal", async () => {
+  await change("deepseek/harness-brand/plugins/dsh-client-ui-layout/client.js", "unreviewed executable", async () => {
+    await assert.rejects(run(["--seal"]), error => /Brand derivative differs from reviewed transformation/.test(error.stderr));
+  });
+});
+
+test("refuses a branding override on an unrelated plugin", async () => {
+  const graph = JSON.parse(await readFile(path.join(fixturePublic, "deepseek/boot-manifest.json"), "utf8"));
+  graph.entries.find(row => row.id === "@deepseek-ai/dsh-client-ui-chat").brandOverride = true;
+  await change("deepseek/boot-manifest.json", JSON.stringify(graph), async () => {
+    await assert.rejects(run(["--seal"]), error => /Invalid brand override/.test(error.stderr));
+  });
+});
+
 test("rejects altered original npm tar bytes", async () => {
   await change("deepseek/tarballs/dsh-client-ui-chat.tgz", "not the pinned npm tar", async () => {
     await assert.rejects(run(["--verify"]), error => /tar SHA256 mismatch/.test(error.stderr));

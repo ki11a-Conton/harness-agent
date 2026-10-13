@@ -14,6 +14,7 @@ import { gunzipSync } from "node:zlib";
 import { readFile, readdir, mkdir, writeFile, stat } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { expectedBrandFiles, applyBrandGraph, brandedModules, brandRoot } from "./web-branding-lib.mjs";
 
 const repository = fileURLToPath(new URL("../../", import.meta.url));
 const argv = process.argv.slice(2);
@@ -82,6 +83,7 @@ async function allFiles(root, prefix = "") {
 async function createReviewedManifest() {
   const releases = JSON.parse(await readFile(path.join(vendorRoot, "provenance/npm-releases.json"), "utf8"));
   const releaseArtifacts = [];
+  const published = new Map();
   for (const release of releases) {
     assert(/^@deepseek-ai\/dsh-[a-z0-9-]+$/.test(release.name), "Unexpected published package name");
     const stem = release.name.slice("@deepseek-ai/".length);
@@ -104,6 +106,7 @@ async function createReviewedManifest() {
       if (destination === undefined) continue;
       const installed = await readFile(path.join(vendorRoot, safePath(destination)));
       assert(installed.equals(data), `${destination}: original published asset was modified or omitted`);
+      published.set(destination, data);
       mappings.push({ member, path: destination, bytes: data.length, sha256: sha256(data) });
     }
     assert(mappings.some(item => item.member === "package/LICENSE") && mappings.some(item => item.member === "package/package.json"), `${release.name}: missing published identity/notices`);
@@ -130,7 +133,7 @@ async function createReviewedManifest() {
       assert(row !== undefined, "Boot batch references an undeclared entry");
       batch.url = row.url; batch.rev = row.rev;
     }
-    graph.rev = sha256(Buffer.from(JSON.stringify({ entries: graph.entries, batches: graph.batches }))).slice(0, 12);
+    applyBrandGraph(graph, published, expectedBrandFiles(published));
     await writeFile(graphPath, JSON.stringify(graph, null, 2) + "\n");
     await writeFile(path.join(vendorRoot, "boot-manifest.js"), "window.__DSH_BOOT__=" + JSON.stringify(graph) + ";\n");
   }
@@ -141,7 +144,7 @@ async function createReviewedManifest() {
     files.push({ path: file, bytes: bytes.length, sha256: sha256(bytes) });
   }
   return { schemaVersion: 1, defaultClientCount: 66,
-    publishedArtifactPolicy: "Official browser JS/CSS/fonts/images are byte-identical to pinned npm artifacts. The local HTML entry, PWA manifest, boot manifest, carrier, provenance and supplemental notices are reviewed Harness adaptations; original npm HTML/PWA inputs are also preserved.",
+    publishedArtifactPolicy: "Original browser JS/CSS/fonts/images remain byte-identical to pinned npm artifacts. Six explicitly marked Harness Agent presentation derivatives and two independent SVG assets are deterministically verified separately under harness-brand/. HTML, PWA, boot, carrier and notices are reviewed adaptations; original HTML/PWA inputs and copyrights remain preserved.",
     sourceRelationship: "npm gitHead is absent; the separately frozen Git source reference does not establish release/source equivalence.",
     rootIndexSha256: sha256(await readFile(path.join(publicRoot, "index.html"))), releaseArtifacts, files };
 }
@@ -187,6 +190,12 @@ for (const item of manifest.files) {
   assert(bytes.length === item.bytes && sha256(bytes) === item.sha256, `Frozen asset mismatch: ${item.path}`);
 }
 const boot = JSON.parse(await readFile(path.join(vendorRoot, "boot-manifest.json"), "utf8"));
+const branded = expectedBrandFiles(mapped);
+for (const [name, bytes] of branded) {
+  assert((await readFile(path.join(vendorRoot, name))).equals(bytes), `Brand derivative differs from reviewed transformation: ${name}`);
+}
+assert(JSON.stringify(actual.filter(name => name.startsWith(brandRoot + "/")).sort()) === JSON.stringify([...branded.keys()].sort()),
+  "Brand derivative inventory differs from reviewed transformations");
 const roster = JSON.parse(await readFile(path.join(vendorRoot, "provenance/default-client-roster.json"), "utf8"));
 const declared = roster.filter(item => item.client).map(item => item.name).sort();
 assert(JSON.stringify(boot.entries.map(item => item.id).sort()) === JSON.stringify(declared), "Default plugin roster differs from upstream reference");
@@ -194,7 +203,10 @@ for (const item of boot.entries) {
   assert(/^@deepseek-ai\/dsh-[a-z0-9-]+$/.test(item.id) && /^[a-f0-9]{12}$/.test(item.rev), `Invalid boot entry identity: ${item.id}`);
   assert(item.url === `/deepseek/plugins/??${item.id}/client.js&rev=${item.rev}`,
     `Boot plugin URL does not support upstream lazy chunks: ${item.id}`);
-  const bytes = mapped.get(`plugins/${item.id.slice("@deepseek-ai/".length)}/client.js`);
+  const stem = item.id.slice("@deepseek-ai/".length);
+  const overridden = brandedModules.includes(stem);
+  assert(overridden ? item.brandOverride === true : item.brandOverride === undefined, `Invalid brand override: ${item.id}`);
+  const bytes = overridden ? branded.get(`${brandRoot}/plugins/${stem}/client.js`) : mapped.get(`plugins/${stem}/client.js`);
   assert(bytes !== undefined && sha256(bytes).startsWith(item.rev), `Boot plugin revision mismatch: ${item.id}`);
 }
 assert(new Set(boot.entries.map(item => item.id)).size === boot.entries.length, "Duplicate boot entry");

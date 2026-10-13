@@ -292,7 +292,10 @@ export function createActivityService(host: ActivityHost) {
   function plugins() {
     if (host.pluginEntries === undefined) fail("plugin-manager/unavailable", "Verified installed plugin inventory is unavailable");
     return host.pluginEntries!.map(entry => ({ entryId: entry.id, moduleName: entry.id, enabled: true, fiberPhase: null,
-      readOnlyReason: "management-required", ...(entry.description === undefined ? {} : { meta: { name: entry.id, description: entry.description } }) }));
+      readOnlyReason: "management-required", meta: {
+        title: `Harness Agent · ${entry.id.replace(/^@deepseek-ai\/dsh-(?:client-)?/, "").replaceAll("-", " ")}`,
+        ...(entry.description === undefined ? {} : { description: entry.description.replaceAll("DeepSeek Harness", "Harness Agent") }),
+      } }));
   }
 
   const endpoints = ["skills/list", "job/list", "job/follow", "job/kill", "schedule/list", "schedule/catalog", "schedule/history", "schedule/delete", "schedule/update",

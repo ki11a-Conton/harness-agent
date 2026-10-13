@@ -63,6 +63,16 @@ async function eventually<T>(read: () => Promise<T>, accepts: (value: T) => bool
   throw new Error(`Actual activity owner did not settle: ${JSON.stringify(last)}`);
 }
 
+it("presents Harness Agent component metadata while retaining actual module identities", async () => {
+  const stack = await setup();
+  stack.host.pluginEntries = [{ id: "@deepseek-ai/dsh-client-ui-brand-official", description: "Official DeepSeek Harness brand occupants" }];
+  const entries = await stack.activity.call("pluginManager/listPlugins", {}, stack.signal);
+  expect(entries).toMatchObject([{ moduleName: "@deepseek-ai/dsh-client-ui-brand-official", meta: {
+    title: "Harness Agent · ui brand official", description: "Official Harness Agent brand occupants",
+  } }]);
+  expect(JSON.stringify(entries)).not.toContain("DeepSeek Harness");
+});
+
 it("the real wall-clock timer durably admits one reminder and the actual actor executes it", async () => {
   const stack = await setup({ clock: "real" }); const task = await stack.create(); await stack.activity.start();
   const turns = await eventually(() => stack.harness.store.listTurns(stack.id), values => values.length === 1 && values[0]?.status === "completed");
