@@ -1,0 +1,28 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+browserType.launch: Failed to launch chromium because executable doesn't exist at /home/agent/.cache/ms-playwright/chromium-1193/chrome-linux/chrome
+    at /workspace/harness-agent-web-parity-20261008/scripts/research/deepseek-browser-interactions.mjs:36:43 {
+  name: 'Error'
+}
+
+Node.js v24.19.0
+
+
+1 !== 0
+
+    at file:///workspace/harness-agent-web-parity-20261008/scripts/release/deepseek-installed.mjs:64:10 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 1,
+  expected: 0,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.19.0

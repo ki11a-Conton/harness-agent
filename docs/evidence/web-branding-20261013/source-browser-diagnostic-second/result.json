@@ -1,0 +1,126 @@
+{
+  "status": "FAIL",
+  "chromium": "151.0.7922.173",
+  "node": "v24.19.0",
+  "installed": false,
+  "scenarios": 6,
+  "assertions": 48,
+  "paidModelCalls": 0,
+  "scope": "Actual production UI: fresh first-run English/Chinese across desktop/mobile/narrow-tall viewport sizes; not a physical mobile OS claim.",
+  "results": [
+    {
+      "name": "en-desktop",
+      "language": "en",
+      "viewport": "desktop",
+      "status": "FAIL",
+      "checks": [
+        "first-welcome",
+        "empty-conversation",
+        "document-title",
+        "manifest-and-favicon",
+        "settings-general",
+        "settings-dark",
+        "settings-light",
+        "settings-models"
+      ],
+      "errors": [],
+      "externalRequests": [],
+      "failure": "locator.waitFor: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText('Harness Agent · ui brand official', { exact: true }).first() to be visible\u001b[22m\n\n    at /workspace/harness-agent-web-parity-20261008/scripts/research/web-branding-browser.mjs:104:90"
+    },
+    {
+      "name": "en-mobile",
+      "language": "en",
+      "viewport": "mobile",
+      "status": "FAIL",
+      "checks": [
+        "first-welcome",
+        "empty-conversation",
+        "document-title",
+        "manifest-and-favicon",
+        "settings-general",
+        "settings-dark",
+        "settings-light",
+        "settings-models"
+      ],
+      "errors": [],
+      "externalRequests": [],
+      "failure": "locator.waitFor: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText('Harness Agent · ui brand official', { exact: true }).first() to be visible\u001b[22m\n\n    at /workspace/harness-agent-web-parity-20261008/scripts/research/web-branding-browser.mjs:104:90"
+    },
+    {
+      "name": "en-narrow-tall",
+      "language": "en",
+      "viewport": "narrow-tall",
+      "status": "FAIL",
+      "checks": [
+        "first-welcome",
+        "empty-conversation",
+        "document-title",
+        "manifest-and-favicon",
+        "settings-general",
+        "settings-dark",
+        "settings-light",
+        "settings-models"
+      ],
+      "errors": [],
+      "externalRequests": [],
+      "failure": "locator.waitFor: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText('Harness Agent · ui brand official', { exact: true }).first() to be visible\u001b[22m\n\n    at /workspace/harness-agent-web-parity-20261008/scripts/research/web-branding-browser.mjs:104:90"
+    },
+    {
+      "name": "zh-desktop",
+      "language": "zh",
+      "viewport": "desktop",
+      "status": "FAIL",
+      "checks": [
+        "first-welcome",
+        "empty-conversation",
+        "document-title",
+        "manifest-and-favicon",
+        "settings-general",
+        "settings-dark",
+        "settings-light",
+        "settings-models"
+      ],
+      "errors": [],
+      "externalRequests": [],
+      "failure": "locator.waitFor: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText('Harness Agent · ui brand official', { exact: true }).first() to be visible\u001b[22m\n\n    at /workspace/harness-agent-web-parity-20261008/scripts/research/web-branding-browser.mjs:104:90"
+    },
+    {
+      "name": "zh-mobile",
+      "language": "zh",
+      "viewport": "mobile",
+      "status": "FAIL",
+      "checks": [
+        "first-welcome",
+        "empty-conversation",
+        "document-title",
+        "manifest-and-favicon",
+        "settings-general",
+        "settings-dark",
+        "settings-light",
+        "settings-models"
+      ],
+      "errors": [],
+      "externalRequests": [],
+      "failure": "locator.waitFor: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText('Harness Agent · ui brand official', { exact: true }).first() to be visible\u001b[22m\n\n    at /workspace/harness-agent-web-parity-20261008/scripts/research/web-branding-browser.mjs:104:90"
+    },
+    {
+      "name": "zh-narrow-tall",
+      "language": "zh",
+      "viewport": "narrow-tall",
+      "status": "FAIL",
+      "checks": [
+        "first-welcome",
+        "empty-conversation",
+        "document-title",
+        "manifest-and-favicon",
+        "settings-general",
+        "settings-dark",
+        "settings-light",
+        "settings-models"
+      ],
+      "errors": [],
+      "externalRequests": [],
+      "failure": "locator.waitFor: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText('Harness Agent · ui brand official', { exact: true }).first() to be visible\u001b[22m\n\n    at /workspace/harness-agent-web-parity-20261008/scripts/research/web-branding-browser.mjs:104:90"
+    }
+  ]
+}

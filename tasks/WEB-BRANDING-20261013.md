@@ -15,4 +15,4 @@
 - 生产 Web + Chromium 三视口、中英文首次欢迎/空会话/侧栏/深浅主题/设置/插件页，检查可见文字、可访问名称、图标 SVG、标题和 PWA。保留截图、HTTP 与原始结果，不使用响应 mock。
 - 固定 clean 源码独立安装包复验普通 coding 流程及品牌；记录实际通过/失败范围，执行文档门后 commit、native git 推送 main。
 
-状态：执行中。新证据写入 docs/evidence/web-branding-20261013；不改写旧源码验收结论。
+状态：验收完成，成果提交交付 main。固定源码 bda6b2082c721896247705e786d6a5f33a17508a 的独立包 3,043 文件；原始 334 发布文件/6 个衍生组件/2 个独立 SVG 均通过校验。Web 22 文件/186 测试、资源/传输 20、包路径 3、干净源码 docs gate 通过；同一包中英文三视口品牌 6 场景/90 断言及 coding 30 场景/75 断言通过。初始浏览器测试选错管理页/未展开组件分组，以及漏指定 Chromium 的安装包测试失败均保留。证据见 [receipt](../docs/evidence/web-branding-20261013/receipt.json)；不改写旧源码验收，不宣布新的 Core/模型能力或生产 release。

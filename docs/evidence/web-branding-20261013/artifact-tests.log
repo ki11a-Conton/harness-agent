@@ -1,0 +1,28 @@
+✔ verifies the full original npm closure and independently reconstructs it offline (3407.684723ms)
+✔ rejects an altered official plugin during verification and sealing (229.977617ms)
+✔ refuses to bless modified branded executable assets even with --seal (1166.505864ms)
+✔ refuses a branding override on an unrelated plugin (1165.106909ms)
+✔ rejects altered original npm tar bytes (85.186001ms)
+✔ rejects altered source reference archive bytes (392.007932ms)
+✔ rejects unregistered vendor files (530.898816ms)
+✔ rejects a symlink in the vendor inventory (548.703437ms)
+✔ rejects modified local root HTML until explicitly reviewed and sealed (709.565767ms)
+✔ refuses to seal plain-file boot URLs that break upstream lazy client chunks (2791.787085ms)
+✔ refuses to seal a mismatched combo batch or browser boot graph (7280.005961ms)
+✔ graph regeneration still cannot bless a modified original frontend (1127.127931ms)
+✔ unary carrier preserves args, binary data, errors, and server-owned results (53.896469ms)
+✔ stream carrier decodes complete frames, split UTF8 and binary without changing Typert values (41.075226ms)
+✔ failed open and failures after headers remain visible (18.781763ms)
+✔ truncated or malformed frames reject without manufacturing success (15.827395ms)
+✔ a failed HTTP response cannot claim a successful unary result (6.935495ms)
+✔ stream uplink sends ordered values and its completion through the admitted stream id (11.130876ms)
+✔ unary and stream cancellation abort data fetches and notify the server (16.226776ms)
+✔ unrecognized channels, missing args and pre-aborted calls do not reach HTTP (1.550114ms)
+ℹ tests 20
+ℹ suites 0
+ℹ pass 20
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 19956.125068

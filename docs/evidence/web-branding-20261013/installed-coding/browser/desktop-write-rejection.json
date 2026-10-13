@@ -1,0 +1,1003 @@
+{
+  "name": "write-rejection",
+  "viewport": "desktop",
+  "status": "PASS",
+  "checks": [
+    {
+      "label": "UI prompt reached production admission and returned success",
+      "status": "PASS"
+    },
+    {
+      "label": "actual browser rejection returned a denied tool outcome with no target file",
+      "status": "PASS"
+    }
+  ],
+  "calls": [
+    {
+      "carrier": "websocket",
+      "endpoint": "dynamicCordisRunner/syncInspectManifest",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "settings/describe",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "dynamicCordisRunner/inventory",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "credentials/describe",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "session/modelCatalog",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "dynamicCordisRunner/inventory",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "agentPresets/list",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "permissionPresets/catalog",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "agentPresets/list",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "agentPresets/list",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "dynamicCordisRunner/inventory",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "dynamicCordisRunner/syncInspectManifest",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "session/modelCatalog",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "settings/describe",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "session/list",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "llm/listProviders",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "llm/listConfigurableProviders",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "credentials/describe",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "session/create",
+      "status": 200,
+      "ok": true,
+      "value": {
+        "sessionId": "session_cde04e38-b707-4d69-9b9e-a7efa5f0d0fe"
+      }
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "agentPresets/list",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "commands/list",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "skills/list",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "schedule/catalog",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "agentPresets/list",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "schedule/list",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "session/prompt",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "$events/result",
+      "status": 200,
+      "ok": true
+    }
+  ],
+  "rpcRequests": [
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "settings/describe",
+      "argsKeys": [],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "open",
+      "endpoint": "workspace/follow",
+      "argsKeys": [],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "opened"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "dynamicCordisRunner/syncInspectManifest",
+      "argsKeys": [
+        "providers"
+      ],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "dynamicCordisRunner/inventory",
+      "argsKeys": [],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "credentials/describe",
+      "argsKeys": [
+        "refs"
+      ],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "session/modelCatalog",
+      "argsKeys": [],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "open",
+      "endpoint": "$events",
+      "argsKeys": [],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "opened"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "dynamicCordisRunner/inventory",
+      "argsKeys": [],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "agentPresets/list",
+      "argsKeys": [],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "session/list",
+      "argsKeys": [
+        "_request"
+      ],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "open",
+      "endpoint": "session/control",
+      "argsKeys": [],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "opened"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "permissionPresets/catalog",
+      "argsKeys": [],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "agentPresets/list",
+      "argsKeys": [],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "agentPresets/list",
+      "argsKeys": [],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "dynamicCordisRunner/inventory",
+      "argsKeys": [],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "session/modelCatalog",
+      "argsKeys": [],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "settings/describe",
+      "argsKeys": [],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "dynamicCordisRunner/syncInspectManifest",
+      "argsKeys": [
+        "providers"
+      ],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "session/create",
+      "argsKeys": [
+        "request"
+      ],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "llm/listProviders",
+      "argsKeys": [],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "llm/listConfigurableProviders",
+      "argsKeys": [],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "credentials/describe",
+      "argsKeys": [
+        "refs"
+      ],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "open",
+      "endpoint": "session/follow",
+      "argsKeys": [
+        "request"
+      ],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "opened"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "agentPresets/list",
+      "argsKeys": [],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "commands/list",
+      "argsKeys": [
+        "agentId"
+      ],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "skills/list",
+      "argsKeys": [
+        "request"
+      ],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "schedule/catalog",
+      "argsKeys": [],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "agentPresets/list",
+      "argsKeys": [],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "open",
+      "endpoint": "job/list",
+      "argsKeys": [
+        "request"
+      ],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "opened"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "schedule/list",
+      "argsKeys": [
+        "request"
+      ],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "session/prompt",
+      "argsKeys": [
+        "request"
+      ],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "$events/result",
+      "argsKeys": [
+        "clientId",
+        "eventId",
+        "outcome"
+      ],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    }
+  ],
+  "sockets": [
+    {
+      "url": "ws://127.0.0.1:44985/api/deepseek/socket",
+      "sent": 32,
+      "received": 115,
+      "streamFrames": 83,
+      "closed": false,
+      "errors": []
+    }
+  ],
+  "errors": [],
+  "externalRequests": [],
+  "assets": [
+    {
+      "path": "/deepseek/assets/index-DBK_Mahs.css",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/harness-adaptations.css",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/assets/vendor-BNsW4eBh.css",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/loader-facade.js",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/boot-manifest.js",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/dsh-client-modules/client.js",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/transport.js",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/assets/index-DjTxlw_T.js",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/assets/vendor-CCJJTK99.js",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-typert-registry/client.js&rev=26fe17aab7e1",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-connection/client.js&rev=0fbb93fa2382",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-renderer/client.js&rev=ff99042d53a0",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-hmr/client.js&rev=0e312a088abf",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-api-gateway/client.js&rev=e09e26fcd484",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-api-remotes/client.js&rev=24eec987d103",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-settings/client.js&rev=2ac7f186165c",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-file-upload/client.js&rev=4c09378ab7cb",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-locale/client.js&rev=bad8fe9bfb07",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-theme/client.js&rev=b1c1d19438c1",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-resources/client.js&rev=16c6da29e338",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-api-terminal-controller/client.js&rev=f6455f76bb1e",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-api-job-controller/client.js&rev=f3e718cacc81",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-api-workspace-controller/client.js&rev=e0b5f8ae1f3c",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-api-session-controller/client.js&rev=20904cdbc1e5",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-settings-plugins/client.js&rev=9a83a5b1a312",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-shortcuts/client.js&rev=9940bd17d0ff",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-settings-models/client.js&rev=72f2a028a904",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-cordis-client-runner/client.js&rev=814a0d034f84",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-api-workspace-files/client.js&rev=de67777d792d",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-session/client.js&rev=160ebb0d8912",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-layout/client.js&rev=96ac3acb9712",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-settings-session-log/client.js&rev=c70e33483e9e",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-shortcuts/client.js&rev=437b043d2b9d",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-sidebar/client.js&rev=1737ff31a7fe",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-conversation/client.js&rev=d38f5ace36a1",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-workspace/client.js&rev=09a298e8e776",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-jobs/client.js&rev=c7040c2d2d18",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-directory-picker-browse/client.js&rev=55af354b2c4a",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-input-trigger/client.js&rev=3482ab3d6cc9",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-tool/client.js&rev=cb7f20128168",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-brand-official/client.js&rev=4c340fcec3cf",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-plugin-manager/client.js&rev=7ff91ea3e970",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-approval/client.js&rev=d5ae6ff6ebde",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-settings-general/client.js&rev=85a9c992fd83",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-trajectory/client.js&rev=fb7909bc7694",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-agent-preset/client.js&rev=8982e1371b36",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-sidebar-right/client.js&rev=7d1a6168cdb1",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-commands/client.js&rev=edcab697279c",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-cordis/client.js&rev=605bac42a6b4",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-settings-agent-loop/client.js&rev=4d6b48fb4e3c",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-settings-subagent/client.js&rev=eeb1e111045a",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-settings-web-search/client.js&rev=8774d1117af4",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-settings-shell/client.js&rev=d1d32e4244d9",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-settings-plugin-inventory/client.js&rev=2ca909463992",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-reference/client.js&rev=c8ddbfe697eb",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-skill/client.js&rev=eaa0c9e01d69",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-chat/client.js&rev=3c8e71ad348d",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-message-feedback/client.js&rev=62cf5e8b35bb",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-sidebar-files/client.js&rev=d5974bf247e1",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-schedule/client.js&rev=a25659ae7214",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-sidebar-documentpreview/client.js&rev=590884595ce7",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-sidebar-terminal/client.js&rev=999adc871285",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-model-selection/client.js&rev=8f115921888b",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-session-log-export/client.js&rev=7ac601f68c6c",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-permission-presets/client.js&rev=7f89170dd32a",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-user-questions/client.js&rev=9b8a76c3f1a5",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-subagent/client.js&rev=e6627b518ef7",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-goal/client.js&rev=a2f64f78c9c3",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-workflow-run/client.js&rev=5737ba1b7113",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-deliverables/client.js&rev=887a9191221a",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-attachment/client.js&rev=538711ef1fd7",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-settings-account/client.js&rev=d24173cc175d",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-open-in-app/client.js&rev=7a3adda611ea",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-plan/client.js&rev=a4835c181ae9",
+      "status": 200
+    },
+    {
+      "path": "/deepseek/harness-brand/favicon.svg",
+      "status": 200
+    }
+  ],
+  "failedHttp": [],
+  "observation": {
+    "text": "Harness Agent\nNew Session\nPlugins\nAutomation tasks\nWorkspaces\nproject\nRunning\n[fixture:write-deny] Attempt browser-rejected.txt and wait for my approval.\nnow\n[fixture:write] Write the actual browser-created.txt, waiting for my approval.\nnow\n[fixture:read] Read the actual demo.js in this workspace.\nnow\nRender the real Markdown fixture for browser acceptance.\nnow\nBrowser lifecycle 1791906308600 (1)\nnow\nBrowser lifecycle 1791906308600\nnow\nSettings\n[fixture:write-deny] Attempt browser-rejected.txt and wait for my approval.\nmain\nChat\nTrajectory\n[fixture:write-deny] Attempt browser-rejected.txt and wait for my approval.\n15:45\nFailed\nTool call\n[denied] approval denied by web\nActual Harness browser answer\n\nBold result and local documentation.\n\nFirst item\nSecond item\nFile\tStatus\ndemo.js\treviewed\njs\nexport const value = 1;\n\nThe actual tool result was received.\n\nMessage or run a task, / commands, @ files or sessions\nweb-loopback-fixture\n1 turns 1 steps",
+    "controls": [
+      {
+        "tag": "BUTTON",
+        "text": "Harness Agent",
+        "label": "New session",
+        "placeholder": null,
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "",
+        "label": "Collapse sidebar",
+        "placeholder": null,
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "New Session",
+        "label": "New session",
+        "placeholder": null,
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Plugins",
+        "label": "Plugins",
+        "placeholder": null,
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Automation tasks",
+        "label": "Automation tasks",
+        "placeholder": null,
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "",
+        "label": "Search sessions",
+        "placeholder": null,
+        "disabled": false
+      },
+      {
+        "tag": "INPUT",
+        "text": "",
+        "label": null,
+        "placeholder": "Search session names",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "",
+        "label": "View options",
+        "placeholder": null,
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "",
+        "label": "Add workspace",
+        "placeholder": null,
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Settings",
+        "label": "Settings",
+        "placeholder": null,
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "",
+        "label": "More actions",
+        "placeholder": null,
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "",
+        "label": "Open right sidebar",
+        "placeholder": null,
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Chat",
+        "label": null,
+        "placeholder": null,
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Trajectory",
+        "label": null,
+        "placeholder": null,
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "",
+        "label": "Copy",
+        "placeholder": null,
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "",
+        "label": "Wrap lines",
+        "placeholder": null,
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "",
+        "label": "Copy",
+        "placeholder": null,
+        "disabled": false
+      },
+      {
+        "tag": "DIV",
+        "text": "",
+        "label": "Message or run a task, / commands, @ files or sessions",
+        "placeholder": null,
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "",
+        "label": "Add files or run commands",
+        "placeholder": null,
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "web-loopback-fixture",
+        "label": "Select model, current web-loopback-fixture",
+        "placeholder": null,
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "",
+        "label": "Send message",
+        "placeholder": null,
+        "disabled": true
+      },
+      {
+        "tag": "BUTTON",
+        "text": "1 turns 1 steps",
+        "label": "1 turns 1 steps",
+        "placeholder": null,
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "",
+        "label": "New tab",
+        "placeholder": null,
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "",
+        "label": "Split",
+        "placeholder": null,
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "",
+        "label": "Fullscreen",
+        "placeholder": null,
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "",
+        "label": "Collapse right sidebar",
+        "placeholder": null,
+        "disabled": false
+      }
+    ],
+    "horizontalOverflow": false
+  }
+}
