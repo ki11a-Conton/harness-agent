@@ -1,27 +1,24 @@
-name: DeepSeek Windows failure forensics
+name: DeepSeek accepted receipt export
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - '.github/workflows/deepseek-failure-forensics.yml'
-      - 'scripts/ci/deepseek-failure-forensics.mjs'
 permissions:
   contents: read
   actions: read
 jobs:
-  recover:
+  receipts:
     strategy:
       fail-fast: false
       matrix:
         include:
-          - kind: ui
-            source: 65ec152c672682ff20f178df99e98eb6882f8f81
-            run: '38343114931'
-            artifact: deepseek-installed-windows-latest-65ec152c672682ff20f178df99e98eb6882f8f81-38343114931
-          - kind: portable
-            source: 4f7dcb551ec13885992e0099cf615ca9c3eaf049
-            run: '38342742415'
-            artifact: gen1-windows-latest-4f7dcb551ec13885992e0099cf615ca9c3eaf049-38342742415
+          - kind: ubuntu-latest
+            run: '38346120282'
+            artifact: deepseek-installed-ubuntu-latest-facf13fa5ed4f545348b7de78c230603c54f9bf1-38346120282
+          - kind: windows-latest
+            run: '38346120282'
+            artifact: deepseek-installed-windows-latest-facf13fa5ed4f545348b7de78c230603c54f9bf1-38346120282
+          - kind: same-archive-windows
+            run: '38346120266'
+            artifact: gen1-same-archive-windows-facf13fa5ed4f545348b7de78c230603c54f9bf1-38346120266
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -34,6 +31,6 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ matrix.run }}
           name: ${{ matrix.artifact }}
-          path: .ci/deepseek-failure
-      - name: Report the bounded original failure details
-        run: node scripts/ci/deepseek-failure-forensics.mjs .ci/deepseek-failure ${{ matrix.source }}
+          path: .ci/accepted-receipt
+      - name: Report original fixed-source receipt bytes
+        run: node scripts/ci/deepseek-failure-forensics.mjs .ci/accepted-receipt facf13fa5ed4f545348b7de78c230603c54f9bf1
