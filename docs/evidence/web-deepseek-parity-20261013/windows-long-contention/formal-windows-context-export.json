@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "originalSourceSha": "9c02f1b101b78f90c09a8479276a2a4d38871bb1",
+  "observedBy": "d31b062f2b866468ed54aa955b55536542af99c6",
+  "purpose": "Existing exact-source CI artifacts and job logs, original byte hashes and bounded excerpts; no rerun or status substitution",
+  "files": [
+    {
+      "path": "commands.json",
+      "bytes": 770,
+      "sha256": "77f3e89e64c3bed5645fc834e463f41524bd960e515bb4f2333414bc71434216",
+      "detail": [
+        {
+          "label": "pair",
+          "command": "C:\\hostedtoolcache\\windows\\node\\22.23.3\\x64\\node.exe",
+          "argv": [
+            "scripts/e4/r5-real-formal.mjs",
+            "--setup-pair",
+            "scripts/e4/r5-formal-pair.json"
+          ],
+          "exitCode": 0
+        },
+        {
+          "label": "arms",
+          "command": "C:\\hostedtoolcache\\windows\\node\\22.23.3\\x64\\node.exe",
+          "argv": [
+            "scripts/e4/r97-observe-arms.mjs",
+            "--pair",
+            "r5",
+            "--root",
+            "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\r97-arms-r5pair"
+          ],
+          "exitCode": 0
+        },
+        {
+          "label": "typecheck",
+          "command": "pnpm",
+          "argv": [
+            "typecheck"
+          ],
+          "exitCode": 0
+        },
+        {
+          "label": "test",
+          "command": "pnpm",
+          "argv": [
+            "test"
+          ],
+          "exitCode": 1
+        }
+      ]
+    },
+    {
+      "path": "test.log",
+      "bytes": 274559,
+      "sha256": "d7391c2cd67dc0542ba5afeff1336ad929c1899498bb4981a4ee0ce213ba917a",
+      "detail": "\u001b[22m\u001b[39mWeb question continuation failed session_a395c0de-6167-4c5d-ac26-b7b351d4292d ask_20b78f4f-52cf-4810-97be-e5cbe784d8d2 write failed for C:\\Users\\runneradmin\\AppData\\Local\\Temp\\dsh-session-live-ugGnX1\\turns\\turn_381ef6f7-7be9-4ad8-a650-b88ed7175345.json: Error: EPERM: operation not permitted, rename 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\dsh-session-live-ugGnX1\\turns\\.turn_381ef6f7-7be9-4ad8-a650-b88ed7175345.json.5036.0089114d-022e-486a-995d-a2a50b7b82f3.tmp' -> 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\dsh-session-live-ugGnX1\\turns\\turn_381ef6f7-7be9-4ad8-a650-b88ed7175345.json'\nexperimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n\n\u001b[31m\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u001b[39m\u001b[1m\u001b[41m Failed Tests 1 \u001b[49m\u001b[22m\u001b[31m\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u001b[39m\n\n\u001b[41m\u001b[1m FAIL \u001b[22m\u001b[49m apps/web/src/deepseek/session.test.ts\u001b[2m > \u001b[22mdurable answer retries recover a metadata-claim failure and never replace the accepted answer\n\u001b[31m\u001b[1mError\u001b[22m: Real Harness owner did not settle: {\"id\":\"turn_381ef6f7-7be9-4ad8-a650-b88ed7175345\",\"sessionId\":\"session_a395c0de-6167-4c5d-ac26-b7b351d4292d\",\"input\":{\"sessionId\":\"session_a395c0de-6167-4c5d-ac26-b7b351d4292d\",\"text\":\"Please answer\"},\"status\":\"waiting_for_user\",\"startedAt\":1791888656756}\u001b[39m\n\u001b[36m \u001b[2m\u276f\u001b[22m eventually apps/web/src/deepseek/session.test.ts:\u001b[2m43:9\u001b[22m\u001b[39m\n    \u001b[90m 41|\u001b[39m   \u001b[35mlet\u001b[39m last\u001b[33m:\u001b[39m \u001b[33mT\u001b[39m \u001b[33m|\u001b[39m undefined\u001b[33m;\u001b[39m\n    \u001b[90m 42|\u001b[39m   for (let i = 0; i < 500; i++) { const result = await read(); last = \u2026\n    \u001b[90m 43|\u001b[39m   throw new Error(`Real Harness owner did not settle: ${JSON.stringify\u2026\n    \u001b[90m   |\u001b[39m         \u001b[31m^\u001b[39m\n    \u001b[90m 44|\u001b[39m }\n    \u001b[90m 45|\u001b[39m function send(id: string, requestId = \"unique-request\") { return { ses\u2026\n\u001b[90m \u001b[2m\u276f\u001b[22m apps/web/src/deepseek/session.test.ts:\u001b[2m230:3\u001b[22m\u001b[39m\n\n\u001b[31m\u001b[2m\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af[1/1]\u23af\u001b[22m\u001b[39m\n\n\n"
+    }
+  ]
+}

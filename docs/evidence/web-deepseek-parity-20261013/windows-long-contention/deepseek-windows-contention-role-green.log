@@ -1,0 +1,63 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-web-parity-20261008
+
+[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically
+ ✓ packages/store-integrity/src/windows-atomic-write.regressions.test.ts (6 tests) 6930ms
+   ✓ Windows scanner contention lasting beyond the former eight attempts still commits one complete version  1689ms
+   ✓ exhausted Windows contention remains a real failure, preserves the old target and cleans only its own temporary file  5151ms
+ ✓ packages/core/src/runtime/effective-config.test.ts (10 tests) 23ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ apps/web/src/deepseek/workspace.integration.test.ts (15 tests) 3369ms
+   ✓ directory changes start ready and observe both child modifications and deletion without treating directories as regular files  1515ms
+   ✓ a file watch observes deletion and recreation in the same generation  1517ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for gated-live/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ apps/web/src/deepseek/session.test.ts (20 tests) 708ms
+[degraded] session session_604393de-484e-4393-8b31-01c2a0ff68da durable followup consume failed for fup-1 (prompt remains bound to turn turn_5c41f551-af15-420c-b4c5-5c673b177ed0): durable ack down
+[degraded] session session_00a6566b-f26c-4809-881a-914595702245 durable followup bind failed for fup-1 (created turn turn_54dd9bad-9419-426f-a72f-31d40af2dd47 will not execute): bind down
+[degraded] inbox.promotion-identity-missing: session session_af4dac5a-2d56-4907-bd5e-410ea868937f prompt prompt_f48de47f-09ef-4da7-96b4-958825216237 is promoted but has no promotedTurnId — recovery-required, not replayed
+[degraded] session session_2b392618-1ca5-470f-8877-7bd02475c43c failed to persist turn turn_b5ca2e1e-b680-4325-a4f7-d45a2f4a2f83 as cancelled: P38.2-9 simulated updateTurn failure
+[degraded] session session_70ef068f-f91d-44d6-b501-fadca4503255 failed to persist turn turn_d0e62962-1ced-4251-85fc-ed3a7467f8b4 as cancelled: P38.2-9 simulated updateTurn failure
+[degraded] session session_70ef068f-f91d-44d6-b501-fadca4503255 failed to emit turn.cancelled for turn_d0e62962-1ced-4251-85fc-ed3a7467f8b4: P38.2-9 simulated emit failure
+[degraded] session session_6533e4f6-06b5-4566-aae5-328859b54aae failed to persist turn turn_4f21aa00-e3ae-4978-b277-127332d1c38c as cancelled: P38.2-9 simulated updateTurn failure
+[degraded] session session_7d2c81d1-0963-4733-83bc-70c96513097e failed to persist turn turn_0bb12850-7fb8-4c3f-9c65-ea03df24903a as cancelled: P38.3-8 simulated updateTurn failure
+ ✓ packages/core/src/runtime/session-actor.test.ts (69 tests) 95ms
+
+ Test Files  5 passed (5)
+      Tests  120 passed (120)
+   Start at  11:05:33
+   Duration  14.74s (transform 1.88s, setup 0ms, import 2.93s, tests 11.13s, environment 0ms)
+
+JSON report written to /workspace/harness-agent-web-parity-20261008/.ci/deepseek-windows-contention-role-green.json

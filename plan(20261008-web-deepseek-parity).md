@@ -47,3 +47,9 @@
 - 做什么：修复真实 CI `38348315036` 的 terminal inbox ACK/关闭竞态，纠正问答测试过早提交的状态屏障；不降低覆盖率门槛。
 - 怎么做：actor 保有 terminal ACK promises，释放 resource scope 前 drain；并发 close 共用同一结果。Web activity 的 fixture 关闭 actual session service；问答回归等待实际 turn `waiting_for_user`。
 - 怎么验收：真实 InboxStore ACK 门控 RED 1 FAIL → GREEN；113 项相关测试与 typecheck 已 PASS。固定 clean 新源码再跑全量、CI、真实 Windows、同 archive 官方 UI 消费。原 7ba9eee 本地全量与 UI PASS、主 CI FAIL 分别保留，不拼接成新源通过。
+
+### W8/W9 补修：Windows 长锁与重启角色标签（2026-10-13）
+
+- 做什么：修复 `9c02f1b` 原生 Windows 正式门真实 EPERM（turn JSON 原子替换），修正 Windows workspace 测试清理争用；修复官方 UI 重启后角色名称降级为 UUID。
+- 怎么做：仅 Windows 原有临时错误允许 16 次原子替换、累计重试等待最多 5.13s，永久失败仍拒绝且保留旧文件；状态回归使用有界 10s I/O 屏障。新建 Session 独立保存并核验 cosmetic name/description/mode，不从该记录取执行策略，不改变 frozen effective config。
+- 怎么验收：实际 rename 八次争用与重启未知注册身份两项 deterministic RED 2 FAIL → 120 targeted GREEN；typecheck PASS。真实浏览器新增重启后的 DOM/projection 角色检查与 Core artifact identity；新 clean 源码再跑完整、安全、协议、覆盖率/正式 CI、Windows 和同包 UI。原 9c02f1b 本地 PASS 与 Windows 正式 FAIL 分开保留。

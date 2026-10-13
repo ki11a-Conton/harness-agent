@@ -852,6 +852,10 @@ export class AgentRuntime {
     // a session without a frozen policy must not run against the base agent).
     await this.store.saveStateSnapshot(session.id, {
       [EFFECTIVE_AGENT_SNAPSHOT_KEY]: snapshotEffectiveConfig(opts.agent),
+      // Retain display metadata when a fresh host assigns new registry IDs.
+      // Effective policy remains exclusively in the validated config above.
+      agentMetadata: { version: 1, agentId: opts.agent.id, name: opts.agent.name,
+        description: opts.agent.description, mode: opts.agent.mode },
       // P1-6: freeze the runtime policy hashes too, so a resume can detect
       // host-policy drift (safe-resume gate).
       [RUNTIME_POLICY_SNAPSHOT_KEY]: {
@@ -1909,9 +1913,15 @@ export class AgentRuntime {
         }, undefined);
       }
     }
-    // Metadata (name/description/mode) is cosmetic and not part of the
-    // security boundary; fall back to the registry when available.
-    const meta = this.agents.get(session.agentId);
+    // Display metadata never supplies model/tools/permissions/skills/limits.
+    // Existing registry metadata keeps precedence; a restarted registry may
+    // lack this durable ID, in which case use only a validated cosmetic record.
+    const stored = snapshot.agentMetadata as Record<string, unknown> | undefined;
+    const savedMeta: Pick<AgentDefinition, "name" | "description" | "mode"> | undefined = stored !== null && typeof stored === "object" && !Array.isArray(stored)
+      && stored.version === 1 && stored.agentId === cfg.agentId && typeof stored.name === "string"
+      && typeof stored.description === "string" && (stored.mode === "primary" || stored.mode === "subagent")
+      ? { name: stored.name, description: stored.description, mode: stored.mode } : undefined;
+    const meta = this.agents.get(session.agentId) ?? savedMeta;
     return {
       id: cfg.agentId,
       name: meta?.name ?? cfg.agentId,

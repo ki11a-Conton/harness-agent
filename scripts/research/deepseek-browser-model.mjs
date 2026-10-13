@@ -58,7 +58,7 @@ provider.on("connection", socket => { sockets.add(socket); socket.once("close", 
 await new Promise(done => provider.listen(0, "127.0.0.1", done));
 const providerOrigin = `http://127.0.0.1:${provider.address().port}/v1`;
 async function launch() {
-  const builtFiles = ["apps/web/dist/main.js", "apps/web/dist/deepseek/catalog.js", "apps/web/dist/deepseek/composition.js", "apps/web/dist/deepseek/owners.js", "apps/web/dist/deepseek/session.js"];
+  const builtFiles = ["apps/web/dist/main.js", "apps/web/dist/deepseek/catalog.js", "apps/web/dist/deepseek/composition.js", "apps/web/dist/deepseek/owners.js", "apps/web/dist/deepseek/session.js", "packages/core/dist/runtime/runtime.js", "packages/core/dist/runtime/session-actor.js"];
   launches.push({ at: new Date().toISOString(), artifacts: Object.fromEntries(await Promise.all(builtFiles.map(async file => [file,
     createHash("sha256").update(await readFile(resolve(source, file))).digest("hex")]))) });
   child = spawn(process.execPath, [resolve(source, "apps/web/dist/main.js")], { cwd: project,
@@ -230,6 +230,7 @@ try {
   await page.getByRole("button", { name: `Select model, current ${alternate}`, exact: true }).waitFor({ timeout: 10_000 });
   const restored = await rpc("session/projections", { request: { sessionId: id } });
   prove("real process restart rehydrates stable session and model selection", restored.values.modelSelection.next.provider === route && restored.values.modelSelection.next.model === alternate);
+  prove("real process restart retains the actual native role label", restored.values.agentPreset === startedProjection.values.agentPreset && await page.getByText(restored.values.agentPreset, { exact: true }).isVisible());
   const restoredSettings = await rpc("settings/describe", {});
   prove("real process restart retains actual official chat preference writes", restoredSettings.namespaces.some(row => row.ns === "ui-chat" && row.value.transcriptView === "verbose" && row.value.performanceUsage === "compact"));
   prove("restart retained previously committed history prefix", JSON.stringify(await rpc("session/page", { request: { address: { kind: "session", sessionId: id }, throughSeq: firstSnapshot.cursor } })) === JSON.stringify(prefix));
@@ -248,7 +249,7 @@ try {
   await stream?.close().catch(error => trace.push({ kind: "follow-cleanup-error", message: String(error) }));
   await browser?.close(); await stopHost().catch(error => { child?.kill("SIGKILL"); trace.push({ kind: "host-cleanup-error", message: String(error) }); process.exitCode = 1; });
   provider.close(); for (const socket of sockets) socket.destroy();
-  const sourceFiles = ["apps/web/src/deepseek/catalog.ts", "apps/web/src/deepseek/composition.ts", "apps/web/src/deepseek/owners.ts", "apps/web/src/deepseek/session.ts", "apps/web/src/deepseek/projections.ts", "apps/web/src/main.ts"];
+  const sourceFiles = ["apps/web/src/deepseek/catalog.ts", "apps/web/src/deepseek/composition.ts", "apps/web/src/deepseek/owners.ts", "apps/web/src/deepseek/session.ts", "apps/web/src/deepseek/projections.ts", "apps/web/src/main.ts", "packages/core/src/runtime/runtime.ts", "packages/core/src/runtime/session-actor.ts"];
   const fingerprints = Object.fromEntries(await Promise.all(sourceFiles.map(async file => [file, createHash("sha256").update(await readFile(resolve(source, file))).digest("hex")])));
   await writeFile(resolve(output, "trace.json"), JSON.stringify(safe(trace), null, 2) + "\n");
   const result = { status: process.exitCode ? "FAIL" : "PASS", scope: "unmodified official UI, real production Web main, local HTTP fixture; not paid model quality", origin, providerOrigin,

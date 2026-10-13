@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "originalSourceSha": "9c02f1b101b78f90c09a8479276a2a4d38871bb1",
+  "observedBy": "bc0360f2017d98f7eaa30ecb86b73d314cb0019f",
+  "purpose": "Existing exact-source CI artifacts and job logs, original byte hashes and bounded excerpts; no rerun or status substitution",
+  "files": [
+    {
+      "path": "browser/result.json",
+      "bytes": 1128075,
+      "sha256": "bcc10103866c4c873a90fcd58637535b67aede072c142f78d4cfff0e2ddf597d",
+      "detail": []
+    },
+    {
+      "path": "browser.log",
+      "bytes": 3836,
+      "sha256": "0017082b383d9f60de1e2a1c4d4d56ce75ae4b415922639c6b575dc1048e4b4a",
+      "detail": "{\n  \"output\": \"/home/runner/work/harness-agent/harness-agent/.ci/deepseek/installed/browser\",\n  \"complete\": true,\n  \"results\": [\n    {\n      \"name\": \"settings-general\",\n      \"viewport\": \"desktop\",\n      \"status\": \"PASS\",\n      \"assertions\": 2\n    },\n    {\n      \"name\": \"models-editor\",\n      \"viewport\": \"desktop\",\n      \"status\": \"PASS\",\n      \"assertions\": 1\n    },\n    {\n      \"name\": \"workspace-directory-picker\",\n      \"viewport\": \"desktop\",\n      \"status\": \"PASS\",\n      \"assertions\": 1\n    },\n    {\n      \"name\": \"workspace-files\",\n      \"viewport\": \"desktop\",\n      \"status\": \"PASS\",\n      \"assertions\": 2\n    },\n    {\n      \"name\": \"session-lifecycle\",\n      \"viewport\": \"desktop\",\n      \"status\": \"PASS\",\n      \"assertions\": 4\n    },\n    {\n      \"name\": \"markdown-stream-reload\",\n      \"viewport\": \"desktop\",\n      \"status\": \"PASS\",\n      \"assertions\": 4\n    },\n    {\n      \"name\": \"read-tool\",\n      \"viewport\": \"desktop\",\n      \"status\": \"PASS\",\n      \"assertions\": 3\n    },\n    {\n      \"name\": \"write-approval\",\n      \"viewport\": \"desktop\",\n      \"status\": \"PASS\",\n      \"assertions\": 3\n    },\n    {\n      \"name\": \"write-rejection\",\n      \"viewport\": \"desktop\",\n      \"status\": \"PASS\",\n      \"assertions\": 2\n    },\n    {\n      \"name\": \"ask-reload-answer\",\n      \"viewport\": \"desktop\",\n      \"status\": \"PASS\",\n      \"assertions\": 3\n    },\n    {\n      \"name\": \"settings-general\",\n      \"viewport\": \"mobile\",\n      \"status\": \"PASS\",\n      \"assertions\": 2\n    },\n    {\n      \"name\": \"models-editor\",\n      \"viewport\": \"mobile\",\n      \"status\": \"PASS\",\n      \"assertions\": 1\n    },\n    {\n      \"name\": \"workspace-directory-picker\",\n      \"viewport\": \"mobile\",\n      \"status\": \"PASS\",\n      \"assertions\": 1\n    },\n    {\n      \"name\": \"workspace-files\",\n      \"viewport\": \"mobile\",\n      \"status\": \"PASS\",\n      \"assertions\": 2\n    },\n    {\n      \"name\": \"session-lifecycle\",\n      \"viewport\": \"mobile\",\n      \"status\": \"PASS\",\n      \"assertions\": 4\n    },\n    {\n      \"name\": \"markdown-stream-reload\",\n      \"viewport\": \"mobile\",\n      \"status\": \"PASS\",\n      \"assertions\": 4\n    },\n    {\n      \"name\": \"read-tool\",\n      \"viewport\": \"mobile\",\n      \"status\": \"PASS\",\n      \"assertions\": 3\n    },\n    {\n      \"name\": \"write-approval\",\n      \"viewport\": \"mobile\",\n      \"status\": \"PASS\",\n      \"assertions\": 3\n    },\n    {\n      \"name\": \"write-rejection\",\n      \"viewport\": \"mobile\",\n      \"status\": \"PASS\",\n      \"assertions\": 2\n    },\n    {\n      \"name\": \"ask-reload-answer\",\n      \"viewport\": \"mobile\",\n      \"status\": \"PASS\",\n      \"assertions\": 3\n    },\n    {\n      \"name\": \"settings-general\",\n      \"viewport\": \"narrow-tall\",\n      \"status\": \"PASS\",\n      \"assertions\": 2\n    },\n    {\n      \"name\": \"models-editor\",\n      \"viewport\": \"narrow-tall\",\n      \"status\": \"PASS\",\n      \"assertions\": 1\n    },\n    {\n      \"name\": \"workspace-directory-picker\",\n      \"viewport\": \"narrow-tall\",\n      \"status\": \"PASS\",\n      \"assertions\": 1\n    },\n    {\n      \"name\": \"workspace-files\",\n      \"viewport\": \"narrow-tall\",\n      \"status\": \"PASS\",\n      \"assertions\": 2\n    },\n    {\n      \"name\": \"session-lifecycle\",\n      \"viewport\": \"narrow-tall\",\n      \"status\": \"PASS\",\n      \"assertions\": 4\n    },\n    {\n      \"name\": \"markdown-stream-reload\",\n      \"viewport\": \"narrow-tall\",\n      \"status\": \"PASS\",\n      \"assertions\": 4\n    },\n    {\n      \"name\": \"read-tool\",\n      \"viewport\": \"narrow-tall\",\n      \"status\": \"PASS\",\n      \"assertions\": 3\n    },\n    {\n      \"name\": \"write-approval\",\n      \"viewport\": \"narrow-tall\",\n      \"status\": \"PASS\",\n      \"assertions\": 3\n    },\n    {\n      \"name\": \"write-rejection\",\n      \"viewport\": \"narrow-tall\",\n      \"status\": \"PASS\",\n      \"assertions\": 2\n    },\n    {\n      \"name\": \"ask-reload-answer\",\n      \"viewport\": \"narrow-tall\",\n      \"status\": \"PASS\",\n      \"assertions\": 3\n    }\n  ]\n}\n"
+    },
+    {
+      "path": "host-stderr.log",
+      "bytes": 414,
+      "sha256": "9c37be1af9819bfdaf1aee7fd3f45bb5c980bdf2c31dc55e38de2c81c37bf9eb",
+      "detail": "(node:2381) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for openai/web-loopback-fixture \u2014 using conservative fallback 32000\n[harness] context budget: model capabilities unknown for openai/web-loopback-fixture \u2014 using conservative fallback 32000\n"
+    },
+    {
+      "path": "result.json",
+      "bytes": 750,
+      "sha256": "d619b589dc9e48d68bd9cbf400ed6c40694aa8bb063b2444bcdc84f1594ed032",
+      "detail": {
+        "schemaVersion": 1,
+        "status": "PASS",
+        "kind": "harness-official-ui-installed",
+        "version": "1.10.0-rc.1",
+        "sourceSha": "9c02f1b101b78f90c09a8479276a2a4d38871bb1",
+        "sourceTree": "7b688e381513e49421de563fc769abba144b3407",
+        "archiveSha256": "1c99434b4aecc613909341ccfcfcbdc1668b5ea4acffb7bfd9ee776710a2c2d3",
+        "platform": "linux",
+        "architecture": "x64",
+        "node": "v22.23.3",
+        "files": 3034,
+        "workspaceLinks": 0,
+        "installedApplication": true,
+        "cases": 30,
+        "assertions": 75,
+        "paidModelCalls": 0,
+        "realModelQuality": "NOT_PROVEN",
+        "fullDefaultUiParity": "NOT_PROVEN",
+        "scope": "Named ordinary coding UI controls on this verified archive, three viewport sizes; PTY/Cordis/goal/queue-edit capabilities are not claimed."
+      }
+    }
+  ]
+}

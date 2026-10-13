@@ -46,17 +46,18 @@ async function syncDir(dirPath: string): Promise<void> {
 
 /** Keep the old committed file intact while Windows releases a transient
  * reader/scanner lock. Adapted from the existing R97 ledger contention retry;
- * never implement replacement as unlink(target) followed by rename. */
+ * At most 16 attempts / 5.13s of retry delays; a scanner lock lasting beyond
+ * that remains a real error. Never unlink(target) before replacement. */
 export async function atomicReplace(source: string, target: string, signal?: AbortSignal): Promise<void> {
   for (let attempt = 0; ; attempt++) {
     signal?.throwIfAborted();
     try { await rename(source, target); return; }
     catch (error) {
       const code = (error as NodeJS.ErrnoException).code;
-      if (process.platform !== "win32" || attempt >= 7 || !["EPERM", "EACCES", "EBUSY"].includes(code ?? "")) throw error;
+      if (process.platform !== "win32" || attempt >= 15 || !["EPERM", "EACCES", "EBUSY"].includes(code ?? "")) throw error;
       await new Promise<void>((done, reject) => {
         const finish = () => { signal?.removeEventListener("abort", abort); done(); };
-        const timer = setTimeout(finish, Math.min(10 * 2 ** attempt, 200));
+        const timer = setTimeout(finish, Math.min(10 * 2 ** attempt, 500));
         const abort = () => { clearTimeout(timer); signal?.removeEventListener("abort", abort); reject(signal?.reason); };
         signal?.addEventListener("abort", abort, { once: true });
         if (signal?.aborted) abort();

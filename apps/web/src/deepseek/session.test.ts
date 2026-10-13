@@ -39,7 +39,8 @@ async function setup(provider: ModelProvider = new ScriptedModelProvider([Script
 }
 async function eventually<T>(read: () => Promise<T>, accept: (value: T) => boolean): Promise<T> {
   let last: T | undefined;
-  for (let i = 0; i < 500; i++) { const result = await read(); last = result; if (accept(result)) return result; await new Promise(done => setTimeout(done, 5)); }
+  const deadline = performance.now() + 10_000;
+  while (performance.now() < deadline) { const result = await read(); last = result; if (accept(result)) return result; await new Promise(done => setTimeout(done, 5)); }
   throw new Error(`Real Harness owner did not settle: ${JSON.stringify(last)}`);
 }
 function send(id: string, requestId = "unique-request") { return { sessionId: id, requestId, mode: "queue", content: [{ type: "text", text: "Please answer" }] }; }

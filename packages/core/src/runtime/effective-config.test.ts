@@ -224,3 +224,28 @@ describe("P0-1 effective agent config snapshot", () => {
     }
   });
 });
+
+it("a restarted owner with new registry identities retains the original cosmetic role and frozen policy", async () => {
+  const store = new MemorySessionStore();
+  const { runtime } = makeRuntime(store, [BASE]);
+  const session = await runtime.createSession({ agent: READ_ONLY, cwd: "/work" });
+  const { runtime: restarted } = makeRuntime(store, [{ ...BASE, id: newAgentId(), name: "different current role" }]);
+  const actual = await restarted.getSessionAgent(session.id);
+  expect(actual.name).toBe(READ_ONLY.name); expect(actual.description).toBe(READ_ONLY.description);
+  expect(actual.id).toBe(READ_ONLY.id); expect(actual.tools).toEqual(READ_ONLY.tools);
+  expect(actual.permissions).toEqual(READ_ONLY.permissions); expect(actual.systemPrompt).toBe(READ_ONLY.systemPrompt);
+});
+
+it("legacy and mismatched cosmetic records do not replace a frozen agent policy", async () => {
+  for (const cosmetic of [undefined, { version: 1, agentId: newAgentId(), name: "forged", description: "", mode: "primary", tools: { allow: ["exec"] } }]) {
+    const store = new MemorySessionStore(); const { runtime } = makeRuntime(store, [BASE]);
+    const session = await runtime.createSession({ agent: READ_ONLY, cwd: "/work" });
+    const snapshot = (await store.loadStateSnapshot(session.id))!;
+    if (cosmetic === undefined) delete snapshot.agentMetadata; else snapshot.agentMetadata = cosmetic;
+    await store.saveStateSnapshot(session.id, snapshot);
+    const { runtime: restarted } = makeRuntime(store, []);
+    const actual = await restarted.getSessionAgent(session.id);
+    expect(actual.name).toBe(READ_ONLY.id); expect(actual.tools).toEqual(READ_ONLY.tools);
+    expect(actual.permissions).toEqual(READ_ONLY.permissions);
+  }
+});

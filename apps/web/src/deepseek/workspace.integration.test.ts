@@ -17,7 +17,7 @@ const cleanup: Array<() => Promise<void>> = [];
 afterEach(async () => { for (const action of cleanup.splice(0).reverse()) await action(); });
 async function setup(options: { provider?: ScriptedModelProvider; sandbox?: SandboxPolicy } = {}) {
   const root = await realpath(await mkdtemp(join(tmpdir(), "deepseek-workspace-real-")));
-  cleanup.push(() => rm(root, { recursive: true, force: true }));
+  cleanup.push(() => rm(root, { recursive: true, force: true, maxRetries: process.platform === "win32" ? 8 : 0, retryDelay: 50 }));
   const cwd = join(root, "project"), dataDir = join(root, "host-state");
   await Promise.all([mkdir(cwd), mkdir(dataDir)]);
   const provider = options.provider ?? new ScriptedModelProvider([ScriptedModelProvider.text("actual answer")]);
