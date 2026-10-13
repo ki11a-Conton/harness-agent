@@ -1,0 +1,36 @@
+name: DeepSeek accepted receipt export
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  receipts:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - kind: ubuntu-latest
+            run: '38346120282'
+            artifact: deepseek-installed-ubuntu-latest-facf13fa5ed4f545348b7de78c230603c54f9bf1-38346120282
+          - kind: windows-latest
+            run: '38346120282'
+            artifact: deepseek-installed-windows-latest-facf13fa5ed4f545348b7de78c230603c54f9bf1-38346120282
+          - kind: same-archive-windows
+            run: '38346120266'
+            artifact: gen1-same-archive-windows-facf13fa5ed4f545348b7de78c230603c54f9bf1-38346120266
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ matrix.run }}
+          name: ${{ matrix.artifact }}
+          path: .ci/accepted-receipt
+      - name: Report original fixed-source receipt bytes
+        run: node scripts/ci/deepseek-failure-forensics.mjs .ci/accepted-receipt facf13fa5ed4f545348b7de78c230603c54f9bf1
