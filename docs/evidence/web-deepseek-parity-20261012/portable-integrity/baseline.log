@@ -1,0 +1,22 @@
+✔ portable enumerates the actual workspace, including indirect and unreferenced packages (416.710128ms)
+✔ workspace identity accepts a root alias and excludes the physical workspace root (400.114489ms)
+✔ workspace inventory rejects packages physically outside the pinned source (404.173465ms)
+✔ linked production workspace dependencies cannot enter the portable payload (393.525763ms)
+✔ portable rejects missing production workspace dependencies and duplicate package names (809.579841ms)
+✔ package-local adapted-source licenses and root notices ship byte for byte (8.919508ms)
+✔ archive round trip preserves exact binary bytes with deterministic output (5.254054ms)
+✔ traversal, absolute paths, Windows separators and duplicate case paths are rejected (0.632992ms)
+✔ bad tar checksums, symlink entries and missing terminators are rejected before writes (3.555679ms)
+✔ extraction never overwrites an existing consumer directory (2.404427ms)
+✔ extraction still rejects a link destination and links in its parent path before file writes (1.924605ms)
+✔ manifest binds every file, exact version and source, and rejects extra files (15.115739ms)
+✔ duplicate manifest paths and parent directory links cannot stand in for payload files (7.929209ms)
+✔ snapshot uses pinned Git blobs and ignores stale dist or untracked ignored source (471.496237ms)
+ℹ tests 14
+ℹ suites 0
+ℹ pass 14
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3006.062596

@@ -1,0 +1,16 @@
+✔ unary carrier preserves args, binary data, errors, and server-owned results (32.703839ms)
+✔ stream carrier decodes complete frames, split UTF8 and binary without changing Typert values (10.484526ms)
+✔ failed open and failures after headers remain visible (10.29408ms)
+✔ truncated or malformed frames reject without manufacturing success (9.061414ms)
+✔ a failed HTTP response cannot claim a successful unary result (5.027155ms)
+✔ stream uplink sends ordered values and its completion through the admitted stream id (7.513996ms)
+✔ unary and stream cancellation abort data fetches and notify the server (9.181676ms)
+✔ unrecognized channels, missing args and pre-aborted calls do not reach HTTP (1.174968ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 156.101213

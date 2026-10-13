@@ -1,0 +1,98 @@
+✔ portable enumerates the actual workspace, including indirect and unreferenced packages (404.018793ms)
+✔ workspace identity accepts a root alias and excludes the physical workspace root (377.245698ms)
+✔ workspace inventory rejects packages physically outside the pinned source (379.882618ms)
+✔ linked production workspace dependencies cannot enter the portable payload (402.476639ms)
+✔ portable rejects missing production workspace dependencies and duplicate package names (735.638834ms)
+✔ package-local adapted-source licenses and root notices ship byte for byte (7.426228ms)
+✔ archive round trip preserves exact binary bytes with deterministic output (3.818653ms)
+✔ traversal, absolute paths, Windows separators and duplicate case paths are rejected (0.702216ms)
+✔ bad tar checksums, symlink entries and missing terminators are rejected before writes (3.107263ms)
+✔ extraction never overwrites an existing consumer directory (1.909741ms)
+✔ extraction still rejects a link destination and links in its parent path before file writes (1.962531ms)
+✔ manifest binds every file, exact version and source, and rejects extra files (11.485883ms)
+✔ duplicate manifest paths and parent directory links cannot stand in for payload files (4.039925ms)
+✔ snapshot uses pinned Git blobs and ignores stale dist or untracked ignored source (449.755968ms)
+✖ archive retains executable native helpers, independently of their filenames and umask (3.747084ms)
+✖ tar numeric fields reject privilege bits, writable modes, junk suffixes and nonzero ownership or timestamps before writes (2.574852ms)
+✖ schema 2 binds regular file permissions and rejects invalid or altered modes while schema 1 remains readable (8.426342ms)
+✖ schema 2 archive validates declared bytes and modes before extracting any payload (12.510904ms)
+✖ source snapshot retains executable Git modes instead of inheriting the process umask (25.970955ms)
+ℹ tests 19
+ℹ suites 0
+ℹ pass 14
+ℹ fail 5
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2900.572905
+
+✖ failing tests:
+
+test at scripts/release/portable.test.mjs:163:1
+✖ archive retains executable native helpers, independently of their filenames and umask (3.747084ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  448 !== 493
+  
+      at file:///workspace/harness-agent-web-parity-20261008/scripts/release/portable.test.mjs:176:46
+      at async temporary (file:///workspace/harness-agent-web-parity-20261008/scripts/release/portable.test.mjs:12:9)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 448,
+    expected: 493,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts/release/portable.test.mjs:187:1
+✖ tar numeric fields reject privilege bits, writable modes, junk suffixes and nonzero ownership or timestamps before writes (2.574852ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async file:///workspace/harness-agent-web-parity-20261008/scripts/release/portable.test.mjs:197:5
+      at async temporary (file:///workspace/harness-agent-web-parity-20261008/scripts/release/portable.test.mjs:12:9)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: /tar (?:mode|owner|group|timestamp|size)/,
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at scripts/release/portable.test.mjs:217:1
+✖ schema 2 binds regular file permissions and rejects invalid or altered modes while schema 1 remains readable (8.426342ms)
+  Error: invalid portable manifest
+      at verifyPortable (file:///workspace/harness-agent-web-parity-20261008/scripts/release/portable-lib.mjs:32:77)
+      at async file:///workspace/harness-agent-web-parity-20261008/scripts/release/portable.test.mjs:220:3
+      at async temporary (file:///workspace/harness-agent-web-parity-20261008/scripts/release/portable.test.mjs:12:9)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+
+test at scripts/release/portable.test.mjs:233:1
+✖ schema 2 archive validates declared bytes and modes before extracting any payload (12.510904ms)
+  Error: invalid portable manifest
+      at verifyPortable (file:///workspace/harness-agent-web-parity-20261008/scripts/release/portable-lib.mjs:32:77)
+      at async file:///workspace/harness-agent-web-parity-20261008/scripts/release/portable.test.mjs:237:80
+      at async temporary (file:///workspace/harness-agent-web-parity-20261008/scripts/release/portable.test.mjs:12:9)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+
+test at scripts/release/portable.test.mjs:249:1
+✖ source snapshot retains executable Git modes instead of inheriting the process umask (25.970955ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  384 !== 493
+  
+      at file:///workspace/harness-agent-web-parity-20261008/scripts/release/portable.test.mjs:261:44
+      at async temporary (file:///workspace/harness-agent-web-parity-20261008/scripts/release/portable.test.mjs:12:9)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 384,
+    expected: 493,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

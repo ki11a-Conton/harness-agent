@@ -1,0 +1,45 @@
+{
+  "output": "/workspace/harness-agent-web-parity-20261008/docs/evidence/web-deepseek-parity-20261013/browser-corrected",
+  "complete": false,
+  "results": [
+    {
+      "name": "models-editor",
+      "viewport": "desktop",
+      "status": "FAIL",
+      "failure": "TimeoutError: locator.click: Timeout 4000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Customized settings', exact: true }).filter({ visible: true }).first()\u001b[22m\n",
+      "assertions": 0
+    },
+    {
+      "name": "ask-reload-answer",
+      "viewport": "desktop",
+      "status": "PASS",
+      "assertions": 3
+    },
+    {
+      "name": "models-editor",
+      "viewport": "mobile",
+      "status": "FAIL",
+      "failure": "TimeoutError: locator.click: Timeout 4000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Customized settings', exact: true }).filter({ visible: true }).first()\u001b[22m\n",
+      "assertions": 0
+    },
+    {
+      "name": "ask-reload-answer",
+      "viewport": "mobile",
+      "status": "PASS",
+      "assertions": 3
+    },
+    {
+      "name": "models-editor",
+      "viewport": "narrow-tall",
+      "status": "FAIL",
+      "failure": "TimeoutError: locator.click: Timeout 4000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Customized settings', exact: true }).filter({ visible: true }).first()\u001b[22m\n",
+      "assertions": 0
+    },
+    {
+      "name": "ask-reload-answer",
+      "viewport": "narrow-tall",
+      "status": "PASS",
+      "assertions": 3
+    }
+  ]
+}

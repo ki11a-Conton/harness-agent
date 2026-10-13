@@ -1,0 +1,191 @@
+{
+  "output": "/workspace/harness-agent-web-parity-20261008/docs/evidence/web-deepseek-parity-20261013/browser-core",
+  "complete": false,
+  "results": [
+    {
+      "name": "settings-general",
+      "viewport": "desktop",
+      "status": "PASS",
+      "assertions": 2
+    },
+    {
+      "name": "models-editor",
+      "viewport": "desktop",
+      "status": "FAIL",
+      "failure": "AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:\n\n  assert(await page.getByRole(\"textbox\", { name: \"Base URL\", exact: true }).isVisible())\n",
+      "assertions": 0
+    },
+    {
+      "name": "automation-list",
+      "viewport": "desktop",
+      "status": "PASS",
+      "assertions": 1
+    },
+    {
+      "name": "workspace-directory-picker",
+      "viewport": "desktop",
+      "status": "PASS",
+      "assertions": 1
+    },
+    {
+      "name": "session-lifecycle",
+      "viewport": "desktop",
+      "status": "PASS",
+      "assertions": 4
+    },
+    {
+      "name": "markdown-stream-reload",
+      "viewport": "desktop",
+      "status": "PASS",
+      "assertions": 4
+    },
+    {
+      "name": "read-tool",
+      "viewport": "desktop",
+      "status": "PASS",
+      "assertions": 3
+    },
+    {
+      "name": "write-approval",
+      "viewport": "desktop",
+      "status": "PASS",
+      "assertions": 3
+    },
+    {
+      "name": "write-rejection",
+      "viewport": "desktop",
+      "status": "PASS",
+      "assertions": 2
+    },
+    {
+      "name": "ask-reload-answer",
+      "viewport": "desktop",
+      "status": "PASS",
+      "assertions": 3
+    },
+    {
+      "name": "settings-general",
+      "viewport": "mobile",
+      "status": "PASS",
+      "assertions": 2
+    },
+    {
+      "name": "models-editor",
+      "viewport": "mobile",
+      "status": "FAIL",
+      "failure": "AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:\n\n  assert(await page.getByRole(\"textbox\", { name: \"Base URL\", exact: true }).isVisible())\n",
+      "assertions": 0
+    },
+    {
+      "name": "automation-list",
+      "viewport": "mobile",
+      "status": "PASS",
+      "assertions": 1
+    },
+    {
+      "name": "workspace-directory-picker",
+      "viewport": "mobile",
+      "status": "PASS",
+      "assertions": 1
+    },
+    {
+      "name": "session-lifecycle",
+      "viewport": "mobile",
+      "status": "PASS",
+      "assertions": 4
+    },
+    {
+      "name": "markdown-stream-reload",
+      "viewport": "mobile",
+      "status": "PASS",
+      "assertions": 4
+    },
+    {
+      "name": "read-tool",
+      "viewport": "mobile",
+      "status": "PASS",
+      "assertions": 3
+    },
+    {
+      "name": "write-approval",
+      "viewport": "mobile",
+      "status": "PASS",
+      "assertions": 3
+    },
+    {
+      "name": "write-rejection",
+      "viewport": "mobile",
+      "status": "PASS",
+      "assertions": 2
+    },
+    {
+      "name": "ask-reload-answer",
+      "viewport": "mobile",
+      "status": "FAIL",
+      "failure": "TimeoutError: locator.getAttribute: Timeout 4000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-row-key^=\"session:\"][aria-selected=\"true\"]')\u001b[22m\n",
+      "assertions": 1
+    },
+    {
+      "name": "settings-general",
+      "viewport": "narrow-tall",
+      "status": "PASS",
+      "assertions": 2
+    },
+    {
+      "name": "models-editor",
+      "viewport": "narrow-tall",
+      "status": "FAIL",
+      "failure": "AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:\n\n  assert(await page.getByRole(\"textbox\", { name: \"Base URL\", exact: true }).isVisible())\n",
+      "assertions": 0
+    },
+    {
+      "name": "automation-list",
+      "viewport": "narrow-tall",
+      "status": "PASS",
+      "assertions": 1
+    },
+    {
+      "name": "workspace-directory-picker",
+      "viewport": "narrow-tall",
+      "status": "PASS",
+      "assertions": 1
+    },
+    {
+      "name": "session-lifecycle",
+      "viewport": "narrow-tall",
+      "status": "PASS",
+      "assertions": 4
+    },
+    {
+      "name": "markdown-stream-reload",
+      "viewport": "narrow-tall",
+      "status": "PASS",
+      "assertions": 4
+    },
+    {
+      "name": "read-tool",
+      "viewport": "narrow-tall",
+      "status": "PASS",
+      "assertions": 3
+    },
+    {
+      "name": "write-approval",
+      "viewport": "narrow-tall",
+      "status": "PASS",
+      "assertions": 3
+    },
+    {
+      "name": "write-rejection",
+      "viewport": "narrow-tall",
+      "status": "PASS",
+      "assertions": 2
+    },
+    {
+      "name": "ask-reload-answer",
+      "viewport": "narrow-tall",
+      "status": "FAIL",
+      "failure": "TimeoutError: locator.getAttribute: Timeout 4000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-row-key^=\"session:\"][aria-selected=\"true\"]')\u001b[22m\n",
+      "assertions": 1
+    }
+  ]
+}

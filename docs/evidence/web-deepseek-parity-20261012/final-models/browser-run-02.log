@@ -1,0 +1,12 @@
+{
+  "output": "/workspace/scratch/deepseek-final-models-20261012/run-02",
+  "status": "FAIL",
+  "assertions": 6,
+  "failures": [
+    {
+      "name": "production browser model selection acceptance",
+      "status": "FAIL",
+      "details": "TimeoutError: locator.waitFor: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Select model, current web-loopback-alternate', exact: true }) to be visible\u001b[22m\n"
+    }
+  ]
+}

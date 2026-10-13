@@ -2,5 +2,8 @@ packages:
   - "apps/*"
   - "packages/*"
 
+allowBuilds:
+  node-pty: true
+
 overrides:
   source-map-js: "1.2.2"

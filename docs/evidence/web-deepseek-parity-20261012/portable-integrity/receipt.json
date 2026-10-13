@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "kind": "harness-agent-portable-integrity-development-review",
+  "observedAt": "2026-10-12T00:50:29.667135+00:00",
+  "baseSourceSha": "bab0e78e9d6948630bd0b3178dc1144568102775",
+  "sourceState": "dirty development worktree; no formal portable build or release attempted",
+  "moduleDigests": {
+    "scripts/release/portable.mjs": "7efca8abff7fcf53ca6b19db6566ed8e8b6ad54ca31477bf61c0581502aea456",
+    "scripts/release/portable-lib.mjs": "e6a29f1a896f2007ae1edfc5a0b6ca2531377039d31e49b8c7dee6f9d4a28e30",
+    "scripts/release/portable.test.mjs": "b3113b510f611e1101ebd5f36400e9e52a068dea19b11dac7abd561eb033c99c",
+    "scripts/release/portable-native.test.mjs": "5d454c45db5a6c03f0a6126e8cc1162638edad1197fb25ce99eb32479db3e5ca"
+  },
+  "node22Distribution": {
+    "version": "22.19.0",
+    "url": "https://nodejs.org/dist/v22.19.0/node-v22.19.0-linux-x64.tar.xz",
+    "officialSha256": "c0649af18e6a24f6fe5535a3e86b341dd49a8e71117c8b68bde973ef834f16f2",
+    "checksumUrl": "https://nodejs.org/dist/v22.19.0/SHASUMS256.txt"
+  },
+  "nativeFixture": {
+    "status": "PASS",
+    "fixtureArchiveSha256": "f03b24bb096a256c0e5b30dda9b013b4a2564defb09f54af03225bfb69dd34df",
+    "files": 316,
+    "archiveBytes": 15577109,
+    "retainedPrebuilds": 28,
+    "unrelatedLifecycleCalls": 0,
+    "nodes": [
+      {
+        "node": "v24.19.0",
+        "abi": "137",
+        "napi": "10",
+        "output": "portable-native-ok"
+      },
+      {
+        "node": "v22.19.0",
+        "abi": "127",
+        "napi": "10",
+        "output": "portable-native-ok"
+      }
+    ]
+  },
+  "paidModelCalls": 0,
+  "formalCleanSourceArchive": "NOT_RUN",
+  "actualWindowsConsumption": "NOT_RUN",
+  "fullDeepseekUiAcceptance": "NOT_ASSERTED",
+  "realModelQuality": "NOT_PROVEN"
+}

@@ -1,0 +1,43 @@
+{
+  "status": "FAIL",
+  "scope": "unmodified official UI, real production Web main, local HTTP fixture; not paid model quality",
+  "origin": "http://127.0.0.1:34225",
+  "providerOrigin": "http://127.0.0.1:42335/v1",
+  "paidModelCalls": 0,
+  "loopbackRequests": 0,
+  "fingerprints": {
+    "apps/web/src/deepseek/catalog.ts": "7f3068cdcc514e74acaf048ff47b01437405721e8cc706c0ea3e7b723ea177ae",
+    "apps/web/src/deepseek/composition.ts": "1ba6971be370c47cf0b491e7b39797035ae94957f5f5668d2b80410a321b2754",
+    "apps/web/src/deepseek/owners.ts": "95008a9e83421f277bdaa8d0b04c04973f83e1e705db34ed7b8f9e4426348014",
+    "apps/web/src/deepseek/session.ts": "896ccd898acee0d2820d5e23ad71b55862def551a5d1a5eddf992aa347ba1e5c",
+    "apps/web/src/deepseek/projections.ts": "87bb81b7d5029f81b06b06109bb1beb413802e140665de434469a9e4783bba54",
+    "apps/web/src/main.ts": "f8930a5edd5e86f6aafaeed3a04f554945aa94a511ff73bb948d8ccc8a0f9cd6"
+  },
+  "assertions": [
+    {
+      "name": "official browser booted with production carrier",
+      "status": "PASS"
+    },
+    {
+      "name": "official Models form persisted a real adapter profile",
+      "status": "PASS"
+    },
+    {
+      "name": "official key form stored only a credential reference in profile",
+      "status": "PASS"
+    },
+    {
+      "name": "official theme and font controls persisted to host settings",
+      "status": "PASS"
+    },
+    {
+      "name": "official Work details and Performance controls persisted to ui-chat",
+      "status": "PASS"
+    },
+    {
+      "name": "production browser model selection acceptance",
+      "status": "FAIL",
+      "details": "TimeoutError: locator.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText('Model selection acceptance draft', { exact: true }).first()\u001b[22m\n"
+    }
+  ]
+}

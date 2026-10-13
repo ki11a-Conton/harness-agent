@@ -1,13 +1,17 @@
 import { createServer } from "node:http";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { readFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { readFile, lstat } from "node:fs/promises";
+import { dirname, join, extname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
+import { Readable } from "node:stream";
 import type { AgentEvent, ApprovalStore, EventStore, Message, SessionId, SessionStore } from "@ar/contracts";
 import type { ChannelMessage } from "@ar/gateway";
 import type { SessionBindings } from "./bindings.js";
 import type { SseSink, WebChannelAdapter } from "./adapter.js";
+import { DeepseekTransport, type DeepseekService } from "./deepseek/transport.js";
+import { WebSocketServer, type WebSocket } from "ws";
+import { attachDeepseekSocket } from "./deepseek/socket.js";
 
 /** Browser identity format: [A-Za-z0-9-]{8,64} (uuid v4 fits). */
 export const FROM_RE = /^[A-Za-z0-9-]{8,64}$/;
@@ -57,6 +61,8 @@ interface SseConnection {
   keepaliveTimer?: ReturnType<typeof setInterval>;
 }
 
+interface BootGraph { rev: string; entries: Array<{ id: string; rev: string; url: string; [key: string]: unknown }>; [key: string]: unknown }
+
 class HttpError extends Error {
   constructor(
     readonly status: number,
@@ -67,6 +73,8 @@ class HttpError extends Error {
 }
 
 export interface WebServerDeps {
+  deepseekServices?: readonly DeepseekService[];
+  deepseekHttp?: (request: Request) => Promise<Response | undefined>;
   /** Exact authorities/origins explicitly trusted for a reverse proxy. */
   allowedHosts?: readonly string[];
   allowedOrigins?: readonly string[];
@@ -105,17 +113,30 @@ export class WebServer {
   private readonly staticDir: string;
   private readonly allowedHosts: readonly string[];
   private readonly allowedOrigins: readonly string[];
+  private readonly deepseek?: DeepseekTransport;
+  private readonly deepseekServices?: readonly DeepseekService[];
+  private readonly socketServer?: WebSocketServer;
+  private readonly socketBindings = new Map<WebSocket, { close(): Promise<void> }>();
+  private readonly deepseekHttp?: (request: Request) => Promise<Response | undefined>;
 
   /** Static assets are read once and cached in memory (dev no-cache headers). */
   private readonly staticCache = new Map<string, { contentType: string; body: Buffer }>();
 
   private readonly connections = new Set<SseConnection>();
+  private readonly pluginConnections = new Map<ServerResponse, ReturnType<typeof setInterval>>();
+  private bootGraph?: Promise<BootGraph>;
   private readonly pendingDeliveries: Array<Promise<void>> = [];
   private server?: ReturnType<typeof createServer>;
   private boundPort?: number;
   private messageSeq = 0;
 
   constructor(deps: WebServerDeps) {
+    if (deps.deepseekServices !== undefined) {
+      this.deepseek = new DeepseekTransport(deps.deepseekServices);
+      this.deepseekServices = deps.deepseekServices;
+      this.socketServer = new WebSocketServer({ noServer: true, maxPayload: MAX_BODY_BYTES, perMessageDeflate: false });
+    }
+    this.deepseekHttp = deps.deepseekHttp;
     this.adapter = deps.adapter;
     this.bindings = deps.bindings;
     this.events = deps.events;
@@ -159,6 +180,21 @@ export class WebServer {
         }
       })();
     });
+    server.on("upgrade", (req, socket, head) => {
+      try {
+        this.verifyRequestOrigin(req);
+        if (req.method !== "GET" || req.url !== "/api/deepseek/socket" || this.socketServer === undefined || this.deepseekServices === undefined) {
+          socket.end("HTTP/1.1 404 Not Found\r\nConnection: close\r\nContent-Length: 0\r\n\r\n"); return;
+        }
+        this.socketServer.handleUpgrade(req, socket, head, peer => {
+          const binding = attachDeepseekSocket(peer, this.deepseekServices!);
+          this.socketBindings.set(peer, binding);
+          peer.once("close", () => { this.socketBindings.delete(peer); void binding.close(); });
+        });
+      } catch {
+        socket.end("HTTP/1.1 403 Forbidden\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");
+      }
+    });
     this.server = server;
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject);
@@ -176,6 +212,12 @@ export class WebServer {
   }
 
   async stop(): Promise<void> {
+    await Promise.all([...this.socketBindings.values()].map(binding => binding.close()));
+    this.socketBindings.clear();
+    if (this.socketServer !== undefined) await new Promise<void>(resolve => this.socketServer!.close(() => resolve()));
+    await this.deepseek?.stop();
+    for (const [res, timer] of this.pluginConnections) { clearInterval(timer); res.end(); }
+    this.pluginConnections.clear();
     for (const conn of [...this.connections.values()]) this.closeConnection(conn);
     const server = this.server;
     this.server = undefined;
@@ -185,7 +227,7 @@ export class WebServer {
 
   // --- routing -------------------------------------------------------------
 
-  private async handleRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  private verifyRequestOrigin(req: IncomingMessage): void {
     const authority = req.headers.host?.toLowerCase();
     const localHosts = ["127.0.0.1", "localhost", "[::1]"];
     if (this.host !== "0.0.0.0" && this.host !== "::") localHosts.push(this.host.includes(":") ? `[${this.host}]` : this.host.toLowerCase());
@@ -195,18 +237,40 @@ export class WebServer {
     if ((origin !== undefined && origin !== `http://${authority}` && !this.allowedOrigins.includes(origin)) || req.headers["sec-fetch-site"] === "cross-site") {
       throw new HttpError(403, "untrusted request origin");
     }
+  }
+
+  private async handleRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    this.verifyRequestOrigin(req);
     const url = new URL(req.url ?? "/", "http://localhost");
     const path = url.pathname;
 
+    if (this.deepseek !== undefined && (path === "/plugins/events" || path === "/open-in-app/apps")) {
+      if (req.method !== "GET") {
+        res.setHeader("Allow", "GET"); this.json(res, 405, { ok: false, error: "method not allowed" }); return;
+      }
+      if (path === "/open-in-app/apps") {
+        // This local/headless host has no verified native application launchers.
+        this.json(res, 200, { apps: [] }); return;
+      }
+      return this.handlePluginEvents(res);
+    }
+
+    if (this.deepseekHttp !== undefined && /^\/api\/(?:changes\.|present\.|session\.export(?:$|\/)|session\/uploadFileBinary$)/.test(path)) {
+      if (await this.handleDeepseekHttp(req, res)) return;
+    }
+
     if (req.method === "GET") {
+      if (path.startsWith("/deepseek/plugins/") && await this.serveModuleAlias(req, res, url)) return;
       const asset = path === "/" ? "index.html" : path.slice(1);
       if (Object.hasOwn(STATIC_FILES, asset)) return this.serveStatic(res, asset as StaticFile);
+      if (/^(?:deepseek|legacy)\/[A-Za-z0-9@._/-]+$/.test(asset) && !asset.split("/").some(part => !part || part === "." || part === ".." || part.startsWith("."))) return this.serveVendor(res, asset);
       if (path === "/api/bootstrap") return this.handleBootstrap(res, url);
       if (path === "/api/events") return this.handleEvents(res, url);
       if (path === "/api/history") return this.handleHistory(res, url);
       if (path === "/api/sessions") return this.handleSessions(res);
     }
     if (req.method === "POST") {
+      if (path.startsWith("/api/deepseek/") && this.deepseek !== undefined) return this.deepseek.handle(path.slice("/api/deepseek/".length), await this.readJson(req), req, res);
       if (path === "/api/messages") return this.handleMessages(req, res);
       if (path === "/api/commands") return this.handleCommands(req, res);
     }
@@ -214,6 +278,97 @@ export class WebServer {
   }
 
   // --- api handlers ---------------------------------------------------------
+
+  private readBootGraph(): Promise<BootGraph> {
+    return this.bootGraph ??= this.loadBootGraph();
+  }
+
+  private async loadBootGraph(): Promise<BootGraph> {
+    let current = this.staticDir;
+    for (const part of ["deepseek", "boot-manifest.json"]) {
+      current = join(current, part);
+      if ((await lstat(current)).isSymbolicLink()) throw new HttpError(404, "boot manifest unavailable");
+    }
+    const info = await lstat(current);
+    if (!info.isFile() || info.size > MAX_BODY_BYTES) throw new HttpError(500, "invalid boot manifest");
+    const graph: unknown = JSON.parse(await readFile(current, "utf8"));
+    if (graph === null || typeof graph !== "object" || !Array.isArray((graph as { entries?: unknown }).entries)
+      || typeof (graph as { rev?: unknown }).rev !== "string") throw new HttpError(500, "invalid boot graph");
+    return graph as BootGraph;
+  }
+
+  private async serveModuleAlias(req: IncomingMessage, res: ServerResponse, url: URL): Promise<boolean> {
+    // Official importChunk derives a scoped lazy URL from the combo entry URL.
+    // Only a reviewed module/revision and a single local client JS file map to
+    // its verbatim published package; this is not a general combo file server.
+    const combo = /^\/deepseek\/plugins\/\?\?(@deepseek-ai\/dsh-[a-z0-9-]+)\/(client(?:[.][A-Za-z0-9_-]+)?[.]js)&rev=([a-f0-9]{12})$/.exec(req.url ?? "");
+    const scoped = /^\/deepseek\/plugins\/(@deepseek-ai\/dsh-[a-z0-9-]+)\/(client(?:[.][A-Za-z0-9_-]+)?[.]js)$/.exec(url.pathname);
+    if (combo === null && scoped === null) return false;
+    const module = (combo ?? scoped)!;
+    const rev = combo?.[3] ?? url.searchParams.get("rev");
+    if (combo === null && (url.searchParams.size !== 1 || url.searchParams.getAll("rev").length !== 1)) {
+      this.json(res, 404, { ok: false, error: "not found" }); return true;
+    }
+    const graph = await this.readBootGraph();
+    if (!graph.entries.some(entry => entry.id === module[1] && entry.rev === rev)) {
+      this.json(res, 404, { ok: false, error: "not found" }); return true;
+    }
+    await this.serveVendor(res, `deepseek/plugins/${module[1]!.slice("@deepseek-ai/".length)}/${module[2]}`);
+    return true;
+  }
+
+  private async handlePluginEvents(res: ServerResponse): Promise<void> {
+    // The official client consumes the same immutable boot graph it loaded.
+    // No synthetic rebuild event or dynamic-plugin claim is emitted.
+    const graph = await this.readBootGraph();
+    const frame = `data: ${JSON.stringify({ type: "graph", graph })}\n\n`;
+    if (res.destroyed) return;
+    res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", "Connection": "keep-alive", "X-Content-Type-Options": "nosniff" });
+    res.write(`: connected\n\n${frame}`);
+    const timer = setInterval(() => { if (!res.destroyed) res.write(": keepalive\n\n"); }, KEEPALIVE_MS);
+    timer.unref(); this.pluginConnections.set(res, timer);
+    res.once("close", () => { clearInterval(timer); this.pluginConnections.delete(res); });
+  }
+
+  private async handleDeepseekHttp(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
+    const controller = new AbortController();
+    const aborted = () => controller.abort();
+    req.once("aborted", aborted); res.once("close", aborted);
+    try {
+      const headers = new Headers();
+      for (const [key, value] of Object.entries(req.headers)) if (value !== undefined) headers.set(key, Array.isArray(value) ? value.join(", ") : value);
+      const method = req.method ?? "GET";
+      const request = new Request(`http://${req.headers.host}${req.url}`, {
+        method, headers, signal: controller.signal,
+        ...(method === "GET" || method === "HEAD" ? {} : { body: Readable.toWeb(req) as ReadableStream<Uint8Array>, duplex: "half" }),
+      } as RequestInit);
+      const response = await this.deepseekHttp!(request);
+      if (response === undefined) return false;
+      res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
+      if (method !== "HEAD" && response.body !== null) {
+        for await (const chunk of Readable.fromWeb(response.body as import("node:stream/web").ReadableStream<Uint8Array>)) {
+          if (controller.signal.aborted) break;
+          if (!res.write(chunk)) await new Promise<void>(resolve => {
+            const done = () => { res.off("drain", done); res.off("close", done); resolve(); };
+            res.once("drain", done); res.once("close", done);
+          });
+        }
+      }
+      if (!res.destroyed) res.end(); return true;
+    } finally { req.off("aborted", aborted); res.off("close", aborted); }
+  }
+
+  private async serveVendor(res: ServerResponse, asset: string): Promise<void> {
+    const types: Record<string, string> = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".mjs": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".json": "application/json; charset=utf-8", ".webmanifest": "application/manifest+json", ".svg": "image/svg+xml", ".woff": "font/woff", ".woff2": "font/woff2", ".ttf": "font/ttf", ".png": "image/png", ".jpg": "image/jpeg", ".map": "application/json", ".md": "text/plain; charset=utf-8" };
+    let current = this.staticDir;
+    try {
+      for (const part of asset.split("/")) { current = join(current, part); if ((await lstat(current)).isSymbolicLink()) throw new Error("Static symlink rejected"); }
+      if (!(await lstat(current)).isFile()) throw new Error("Static asset is not a file");
+      const body = await readFile(current);
+      res.writeHead(200, { "Content-Type": types[extname(asset)] ?? "application/octet-stream", "Cache-Control": "no-cache", "X-Content-Type-Options": "nosniff" });
+      res.end(body);
+    } catch { this.json(res, 404, { ok: false, error: "not found" }); }
+  }
 
   /** Persist the browser's `from` (validated) or mint a fresh one. */
   private async handleBootstrap(res: ServerResponse, url: URL): Promise<void> {
@@ -500,6 +655,8 @@ export class WebServer {
     }
     let body: Buffer;
     try {
+      let current = this.staticDir;
+      for (const part of name.split("/")) { current = join(current, part); if ((await lstat(current)).isSymbolicLink()) throw new Error("Static symlink rejected"); }
       body = await readFile(join(this.staticDir, name));
     } catch {
       this.json(res, 404, { ok: false, error: "not found" });
@@ -526,7 +683,8 @@ export class WebServer {
     }
     try {
       const parsed = JSON.parse(Buffer.concat(chunks).toString("utf8"));
-      return typeof parsed === "object" && parsed !== null ? (parsed as Record<string, unknown>) : {};
+      if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) throw new HttpError(400, "expected a JSON object");
+      return parsed as Record<string, unknown>;
     } catch {
       throw new HttpError(400, "invalid JSON body");
     }

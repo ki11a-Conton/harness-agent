@@ -186,7 +186,14 @@ export class StoreApprovalResolver implements ApprovalResolver {
 
   async resolve(request: ApprovalRequest, signal: AbortSignal): Promise<ApprovalDecision> {
     const entry = this.store.create(request);
-    return entry.wait(signal);
+    const decision = await entry.wait(signal);
+    // Abort and expiry settle the waiter itself. Commit those outcomes through
+    // the store too, so a disconnected browser cannot leave an orphan pending
+    // approval (and its decision survives a host restart).
+    if (this.store.listPending(request.sessionId).some(pending => pending.id === request.id)) {
+      return this.store.resolve(request.id, decision.value, decision.decidedBy);
+    }
+    return decision;
   }
 }
 

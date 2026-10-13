@@ -18,6 +18,7 @@ export class FrozenStepToolRouter implements StepToolRouter {
   readonly id: string;
   readonly fingerprint: string;
   readonly modelVisibleSpecs: readonly ToolSpec[];
+  readonly formalActionSpecs: readonly ToolSpec[];
   private readonly byName: ReadonlyMap<string, FrozenToolBinding>;
   /** P23-4: permissive mode is OFF in production (a call for a tool absent
    *  from the frozen step fails TOOL_NOT_IN_STEP). Test fakes that drive a
@@ -34,11 +35,13 @@ export class FrozenStepToolRouter implements StepToolRouter {
      *  bindings keep their full schemas for validation/execution. */
     modelVisibleSpecs?: readonly ToolSpec[],
     allowUnlisted = false,
+    formalActionSpecs: readonly ToolSpec[] = [],
   ) {
     this.allowUnlisted = allowUnlisted;
     this.id = id;
     // Freeze the exact visible set: no re-sorting, no later mutation.
     this.modelVisibleSpecs = modelVisibleSpecs ?? bindings.map((b) => b.spec);
+    this.formalActionSpecs = deepFreeze(structuredClone(formalActionSpecs));
     // P23-1 deterministic fingerprint: canonical key order only — never
     // function.toString(), object identity, random iteration order, memory
     // address or the clock.
@@ -55,6 +58,7 @@ export class FrozenStepToolRouter implements StepToolRouter {
           semantics: b.semantics,
           provenance: b.provenance,
         })),
+      ...(this.formalActionSpecs.length === 0 ? [] : [{ formalActions: this.formalActionSpecs }]),
     ]);
     this.byName = new Map(bindings.map((b) => [b.name, b]));
   }
@@ -85,4 +89,9 @@ export class FrozenStepToolRouter implements StepToolRouter {
       provenance: { kind: "dynamic" },
     };
   }
+}
+
+function deepFreeze<T>(value: T): T {
+  if (typeof value === "object" && value !== null) { for (const child of Object.values(value)) deepFreeze(child); Object.freeze(value); }
+  return value;
 }

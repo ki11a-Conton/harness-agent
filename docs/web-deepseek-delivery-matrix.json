@@ -1,0 +1,3043 @@
+{
+  "schemaVersion": 1,
+  "observedDate": "2026-10-13",
+  "baselineMatrix": "docs/web-deepseek-parity-matrix.json",
+  "referenceSource": "5badb15009ae1756c3afe0ae0cef1faafc290ccc",
+  "officialNpmVersion": "0.2.1-alpha.1",
+  "npmGitHead": "absent; exact Git source equivalence not asserted",
+  "defaultClientEntries": 66,
+  "fullDefaultUiParity": "NOT_PROVEN",
+  "paidModelQuality": "NOT_PROVEN",
+  "rows": [
+    {
+      "id": "theme.vendor.base",
+      "title": "主题原样文件 base",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-theme/src/styles/base.css"
+      ],
+      "original_acceptance": [
+        "上游与vendor SHA256相同",
+        "light/dark使用相同token值"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-theme"
+      ],
+      "delivery_status": "SOURCE_VERIFIED",
+      "evidence": [
+        "docs/evidence/web-deepseek-parity-20261013/final-gates/frontend-verify-final.log"
+      ],
+      "limits": "Frozen published bytes and local dependencies verified; this does not assert every visual state."
+    },
+    {
+      "id": "theme.vendor.design-platform",
+      "title": "主题原样文件 design-platform",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-theme/src/styles/design-platform.css"
+      ],
+      "original_acceptance": [
+        "上游与vendor SHA256相同",
+        "light/dark使用相同token值"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-theme"
+      ],
+      "delivery_status": "SOURCE_VERIFIED",
+      "evidence": [
+        "docs/evidence/web-deepseek-parity-20261013/final-gates/frontend-verify-final.log"
+      ],
+      "limits": "Frozen published bytes and local dependencies verified; this does not assert every visual state."
+    },
+    {
+      "id": "theme.vendor.scrollbar",
+      "title": "主题原样文件 scrollbar",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-theme/src/styles/scrollbar.css"
+      ],
+      "original_acceptance": [
+        "上游与vendor SHA256相同",
+        "light/dark使用相同token值"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-theme"
+      ],
+      "delivery_status": "SOURCE_VERIFIED",
+      "evidence": [
+        "docs/evidence/web-deepseek-parity-20261013/final-gates/frontend-verify-final.log"
+      ],
+      "limits": "Frozen published bytes and local dependencies verified; this does not assert every visual state."
+    },
+    {
+      "id": "theme.vendor.focus",
+      "title": "主题原样文件 focus",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-theme/src/styles/focus.css"
+      ],
+      "original_acceptance": [
+        "上游与vendor SHA256相同",
+        "light/dark使用相同token值"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-theme"
+      ],
+      "delivery_status": "SOURCE_VERIFIED",
+      "evidence": [
+        "docs/evidence/web-deepseek-parity-20261013/final-gates/frontend-verify-final.log"
+      ],
+      "limits": "Frozen published bytes and local dependencies verified; this does not assert every visual state."
+    },
+    {
+      "id": "theme.vendor.corner-shape",
+      "title": "主题原样文件 corner-shape",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-theme/src/styles/corner-shape.css"
+      ],
+      "original_acceptance": [
+        "上游与vendor SHA256相同",
+        "light/dark使用相同token值"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-theme"
+      ],
+      "delivery_status": "SOURCE_VERIFIED",
+      "evidence": [
+        "docs/evidence/web-deepseek-parity-20261013/final-gates/frontend-verify-final.log"
+      ],
+      "limits": "Frozen published bytes and local dependencies verified; this does not assert every visual state."
+    },
+    {
+      "id": "theme.vendor.gradient-shadow-text",
+      "title": "主题原样文件 gradient-shadow-text",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-theme/src/styles/gradient-shadow-text.css"
+      ],
+      "original_acceptance": [
+        "上游与vendor SHA256相同",
+        "light/dark使用相同token值"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-theme"
+      ],
+      "delivery_status": "SOURCE_VERIFIED",
+      "evidence": [
+        "docs/evidence/web-deepseek-parity-20261013/final-gates/frontend-verify-final.log"
+      ],
+      "limits": "Frozen published bytes and local dependencies verified; this does not assert every visual state."
+    },
+    {
+      "id": "theme.preference",
+      "title": "主题选择与字体大小",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-theme/src/client/AppearanceRow.tsx",
+        "packages/client/ui-theme/src/client/FontSizeRow.tsx",
+        "packages/client/ui-theme/src/client/settings-store.ts",
+        "packages/client/ui-layout/src/client/theme-presenter.ts"
+      ],
+      "original_acceptance": [
+        "选System后OS主题变化生效",
+        "改到10/22px影响消息与composer，重启后保留",
+        "theme-color与body一致"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-theme",
+        "@deepseek-ai/dsh-client-ui-layout"
+      ],
+      "delivery_status": "VERIFIED_NAMED_BEHAVIOR",
+      "evidence": [
+        {
+          "report": "docs/evidence/web-deepseek-parity-20261013/browser-final/result.json",
+          "case": "settings-general"
+        }
+      ],
+      "limits": "Only named case assertions are accepted; broader original criteria remain subject to separate acceptance."
+    },
+    {
+      "id": "theme.prepaint",
+      "title": "首次渲染主题/字体bootstrap",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-theme/src/index.ts",
+        "packages/client/ui-theme/src/client/index.ts"
+      ],
+      "original_acceptance": [
+        "带dark持久配置冷启动，无先亮后暗",
+        "首paint正文尺寸正确"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-theme"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "theme.onboarding-shiki",
+      "title": "onboarding与语法主题样式",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-theme/src/styles/onboarding.css",
+        "packages/client/ui-theme/src/styles/shiki.css"
+      ],
+      "original_acceptance": [
+        "两文件在产物加载",
+        "onboarding颜色与代码token在双主题正确"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-theme"
+      ],
+      "delivery_status": "SOURCE_VERIFIED",
+      "evidence": [
+        "docs/evidence/web-deepseek-parity-20261013/final-gates/frontend-verify-final.log"
+      ],
+      "limits": "Frozen published bytes and local dependencies verified; this does not assert every visual state."
+    },
+    {
+      "id": "theme.brand-font",
+      "title": "本地品牌字体与许可证",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-theme/src/styles/brand-font.css",
+        "packages/client/ui-theme/src/styles/Montserrat-OFL.txt",
+        "packages/client/ui-theme/src/styles/montserrat-light.woff2",
+        "packages/client/ui-theme/src/styles/montserrat-regular.woff2",
+        "packages/client/ui-theme/src/styles/montserrat-medium.woff2"
+      ],
+      "original_acceptance": [
+        "断网品牌字体加载成功",
+        "三个字体及OFL进入产物"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-theme"
+      ],
+      "delivery_status": "SOURCE_VERIFIED",
+      "evidence": [
+        "docs/evidence/web-deepseek-parity-20261013/final-gates/frontend-verify-final.log"
+      ],
+      "limits": "Frozen published bytes and local dependencies verified; this does not assert every visual state."
+    },
+    {
+      "id": "boot.manifest",
+      "title": "Web安装manifest/favicon",
+      "tier": "default",
+      "upstream_paths": [
+        "apps/web/index.html",
+        "apps/web/public/manifest.webmanifest"
+      ],
+      "original_acceptance": [
+        "manifest合法可读",
+        "明暗favicon可读"
+      ],
+      "official_default_entries": [],
+      "delivery_status": "SOURCE_VERIFIED",
+      "evidence": [
+        "docs/evidence/web-deepseek-parity-20261013/final-gates/frontend-verify-final.log"
+      ],
+      "limits": "Frozen published bytes and local dependencies verified; this does not assert every visual state."
+    },
+    {
+      "id": "boot.document-title",
+      "title": "动态document title",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-layout/src/client/DocumentTitle.tsx"
+      ],
+      "original_acceptance": [
+        "切会话/全局面板后title同步"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-layout"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "layout.columns",
+      "title": "三栏框架与可拖宽度",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-layout/src/client/AppFrame.tsx",
+        "packages/client/ui-layout/src/client/columns.ts",
+        "packages/client/ui-layout/src/client/stores.ts"
+      ],
+      "original_acceptance": [
+        "1366px三栏可见且可拖",
+        "1023px auto rail",
+        "恢复桌面时保留宽度"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-layout"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "layout.navigation-slots",
+      "title": "全局页面/区域装配",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-layout/src/client/index.ts",
+        "packages/client/ui-layout/src/client/service.ts",
+        "packages/client/ui-sidebar/src/client/SidebarRoot.tsx"
+      ],
+      "original_acceptance": [
+        "切全局页不发送/激活session",
+        "返回conversation保留draft/panels"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-sidebar"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "sidebar.shell",
+      "title": "侧栏rail与导航细节",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-sidebar/src/client/SidebarRoot.tsx",
+        "packages/client/ui-sidebar/src/client/SidebarRoot.module.css"
+      ],
+      "original_acceptance": [
+        "折叠rail仍可新建与开全局页",
+        "collapse过渡不换行",
+        "pointer离开后scrollbar隐藏"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-sidebar"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "brand.slots",
+      "title": "品牌/空态可插入组件",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-brand-official/src/client/index.ts",
+        "packages/client/ui-conversation/src/client/skeleton/EmptyHero.tsx"
+      ],
+      "original_acceptance": [
+        "保留Harness品牌替换时，选择workspace/mode仍具上游行为"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-brand-official",
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "workspace.catalog",
+      "title": "workspace与session分组树",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-workspace/src/client/rows/WorkspaceBrowser.tsx",
+        "packages/client/ui-workspace/src/client/tree.ts",
+        "packages/client/ui-workspace/src/client/rows/Rows.tsx"
+      ],
+      "original_acceptance": [
+        "6+idle分批展示，running不占quota",
+        "tree父子indent/current祖先高亮"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-workspace"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "workspace.picker",
+      "title": "工作目录选择与创建",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-workspace/src/client/WorkspacePicker.tsx",
+        "packages/client/ui-directory-picker-browse/src/client/DirectoryBrowser.tsx",
+        "packages/client/ui-directory-picker-native/src/client/flow.ts"
+      ],
+      "original_acceptance": [
+        "选择真实目录后新session cwd对应",
+        "cancel保留当前",
+        "pending连续点击不会重复创建"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-workspace",
+        "@deepseek-ai/dsh-client-ui-directory-picker-browse"
+      ],
+      "delivery_status": "VERIFIED_NAMED_BEHAVIOR",
+      "evidence": [
+        {
+          "report": "docs/evidence/web-deepseek-parity-20261013/browser-final/result.json",
+          "case": "workspace-directory-picker"
+        }
+      ],
+      "limits": "Only named case assertions are accepted; broader original criteria remain subject to separate acceptance."
+    },
+    {
+      "id": "workspace.manage",
+      "title": "workspace管理",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-workspace/src/client/rows/Rows.tsx",
+        "packages/client/ui-workspace/src/client/rows/WorkspaceBrowser.tsx"
+      ],
+      "original_acceptance": [
+        "取消Delete无变更",
+        "确认后session进入Ungrouped，子workspace留存",
+        "拖siblings跨reload保留"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-workspace"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "workspace.view-options",
+      "title": "导航视图/排序/归档过滤",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-workspace/src/client/rows/WorkspaceBrowser.tsx",
+        "packages/client/ui-workspace/src/client/stores.ts",
+        "packages/client/ui-workspace/src/client/pin-order.ts"
+      ],
+      "original_acceptance": [
+        "切三种归档过滤正确",
+        "drag转Manual并保留隐藏archives",
+        "reload保留选择"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-workspace"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "workspace.search",
+      "title": "会话搜索",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-workspace/src/client/rows/WorkspaceBrowser.tsx",
+        "packages/client/ui-workspace/src/client/rows/Rows.tsx"
+      ],
+      "original_acceptance": [
+        "metadata search默认可用",
+        "连续query不受旧响应污染",
+        "归档结果不直接open",
+        "内容索引disabled不记默认缺失"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-workspace"
+      ],
+      "delivery_status": "VERIFIED_NAMED_BEHAVIOR",
+      "evidence": [
+        {
+          "report": "docs/evidence/web-deepseek-parity-20261013/browser-final/result.json",
+          "case": "session-lifecycle"
+        }
+      ],
+      "limits": "Only named case assertions are accepted; broader original criteria remain subject to separate acceptance."
+    },
+    {
+      "id": "session.new-navigation",
+      "title": "新会话/恢复/导航正确性",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-workspace/src/client/navigation.ts",
+        "packages/client/ui-workspace/src/client/index.ts"
+      ],
+      "original_acceptance": [
+        "快速A/B/new切换旧history不污染",
+        "拒绝new toast含Host原因",
+        "first-use workspace可恢复"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-workspace"
+      ],
+      "delivery_status": "VERIFIED_NAMED_BEHAVIOR",
+      "evidence": [
+        {
+          "report": "docs/evidence/web-deepseek-parity-20261013/browser-final/result.json",
+          "case": "session-lifecycle"
+        }
+      ],
+      "limits": "Only named case assertions are accepted; broader original criteria remain subject to separate acceptance."
+    },
+    {
+      "id": "session.rename",
+      "title": "会话重命名",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-workspace/src/client/session-actions/RenameSession.tsx"
+      ],
+      "original_acceptance": [
+        "rename在server catalog持久",
+        "相同title接受",
+        "Escape取消/返回focus"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-workspace"
+      ],
+      "delivery_status": "VERIFIED_NAMED_BEHAVIOR",
+      "evidence": [
+        {
+          "report": "docs/evidence/web-deepseek-parity-20261013/browser-final/result.json",
+          "case": "session-lifecycle"
+        }
+      ],
+      "limits": "Only named case assertions are accepted; broader original criteria remain subject to separate acceptance."
+    },
+    {
+      "id": "session.pin",
+      "title": "会话固定",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-workspace/src/client/session-actions/PinSession.tsx",
+        "packages/client/ui-workspace/src/client/pin-order.ts"
+      ],
+      "original_acceptance": [
+        "跨reload固定",
+        "unpin不改变保存顺序",
+        "排序切换无丢row"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-workspace"
+      ],
+      "delivery_status": "VERIFIED_NAMED_BEHAVIOR",
+      "evidence": [
+        {
+          "report": "docs/evidence/web-deepseek-parity-20261013/browser-final/result.json",
+          "case": "session-lifecycle"
+        }
+      ],
+      "limits": "Only named case assertions are accepted; broader original criteria remain subject to separate acceptance."
+    },
+    {
+      "id": "session.fork",
+      "title": "会话分叉",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-workspace/src/client/session-actions/ForkSession.tsx"
+      ],
+      "original_acceptance": [
+        "source completed turn生成child且title递增",
+        "无completed明确失败",
+        "当前selection不跳转"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-workspace"
+      ],
+      "delivery_status": "VERIFIED_NAMED_BEHAVIOR",
+      "evidence": [
+        {
+          "report": "docs/evidence/web-deepseek-parity-20261013/browser-final/result.json",
+          "case": "session-lifecycle"
+        }
+      ],
+      "limits": "Only named case assertions are accepted; broader original criteria remain subject to separate acceptance."
+    },
+    {
+      "id": "session.archive",
+      "title": "会话归档/恢复",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-workspace/src/client/session-actions/ArchiveSession.tsx",
+        "packages/client/ui-workspace/src/client/session-actions/RowActionToast.tsx"
+      ],
+      "original_acceptance": [
+        "quiet archive隐藏有undo",
+        "running取消仍跑，确认stop并archive",
+        "unarchive保留历史且不resume"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-workspace"
+      ],
+      "delivery_status": "VERIFIED_NAMED_BEHAVIOR",
+      "evidence": [
+        {
+          "report": "docs/evidence/web-deepseek-parity-20261013/browser-final/result.json",
+          "case": "session-lifecycle"
+        }
+      ],
+      "limits": "Only named case assertions are accepted; broader original criteria remain subject to separate acceptance."
+    },
+    {
+      "id": "session.row-details",
+      "title": "会话行状态与hover",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-workspace/src/client/rows/Rows.tsx",
+        "packages/client/ui-workspace/src/client/session-actions/derived.ts"
+      ],
+      "original_acceptance": [
+        "approval pending标题及时更新",
+        "long title hover可读",
+        "reduced-motion跳tail"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-workspace"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "rightbar.shell",
+      "title": "右侧栏开启/展示",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-sidebar-right/src/client/shell/SidebarRight.tsx",
+        "packages/client/ui-sidebar-right/src/client/shell/RightbarRoot.tsx",
+        "packages/client/ui-sidebar-right/src/client/shell/ExpandButton.tsx"
+      ],
+      "original_acceptance": [
+        "宽屏push中心变窄",
+        "767px自动fullscreen",
+        "切模式terminal不remount",
+        "sessionless无rightbar"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-sidebar-right"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "rightbar.docking",
+      "title": "右侧栏tabs/分屏/浮窗",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-dockkit/src/components/DockSurface.tsx",
+        "packages/client/ui-dockkit/src/components/TabLayout.tsx",
+        "packages/client/ui-dockkit/src/components/TabMenu.tsx",
+        "packages/client/ui-dockkit/src/components/FloatLayer.tsx",
+        "packages/client/ui-sidebar-right/src/client/tabs/guide/GuideBody.tsx"
+      ],
+      "original_acceptance": [
+        "两pane上限禁用解释",
+        "float回dock与close cleanup真实",
+        "刷新布局按session独立恢复"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-sidebar-right"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "rightbar.state",
+      "title": "右侧栏恢复及资源导航",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-sidebar-right/src/client/index.ts",
+        "packages/client/ui-sidebar-right/src/client/contract/seed.ts"
+      ],
+      "original_acceptance": [
+        "same resource再次open聚焦同tab且line正确",
+        "reload/restored tab与session隔离",
+        "invalid key不破坏其他session"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-sidebar-right"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "files.tree",
+      "title": "workspace文件树",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-sidebar-files/src/client/FilesBody.tsx",
+        "packages/client/ui-sidebar-files/src/client/FilesTitle.tsx",
+        "packages/client/ui-sidebar-files/src/client/definition.tsx"
+      ],
+      "original_acceptance": [
+        "真实create/write文件使expanded树更新",
+        "file打开正确preview",
+        "目录listing错误有retry"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-sidebar-files"
+      ],
+      "delivery_status": "VERIFIED_NAMED_BEHAVIOR",
+      "evidence": [
+        {
+          "report": "docs/evidence/web-deepseek-parity-20261013/browser-final/result.json",
+          "case": "workspace-files"
+        }
+      ],
+      "limits": "Only named case assertions are accepted; broader original criteria remain subject to separate acceptance."
+    },
+    {
+      "id": "terminal.interactive",
+      "title": "用户terminal",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-sidebar-terminal/src/client/TerminalGuide.tsx",
+        "packages/client/ui-sidebar-terminal/src/client/terminal.tsx",
+        "packages/client/ui-sidebar-terminal/src/client/TerminalTitle.tsx",
+        "packages/client/ui-sidebar-terminal/src/client/TerminalRecovery.tsx",
+        "packages/client/ui-sidebar-terminal/src/client/TerminalCleanup.tsx"
+      ],
+      "original_acceptance": [
+        "键入真实command得到output",
+        "collapse仍跑",
+        "reload重连retained",
+        "close进程终止",
+        "cleanup故障显示retry"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-sidebar-terminal"
+      ],
+      "delivery_status": "BLOCKED_OR_PARTIAL",
+      "evidence": [],
+      "limits": "Managed Linux strong sandbox unavailable; no actual PTY interaction acceptance; mobile approval overlap remains."
+    },
+    {
+      "id": "preview.toolbar",
+      "title": "文件预览toolbar/状态",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-sidebar-documentpreview/src/client/TextTitle.tsx",
+        "packages/client/ui-sidebar-documentpreview/src/client/TextPreview.tsx",
+        "packages/client/ui-sidebar-documentpreview/src/client/LoadingIndicator.tsx"
+      ],
+      "original_acceptance": [
+        "切renderer不换tabidentity",
+        "打开line定位",
+        "编辑文件auto refresh",
+        "取消auto手动refresh正确"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-sidebar-documentpreview"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "preview.text-code-md",
+      "title": "Markdown/代码/纯文本预览",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-sidebar-documentpreview/src/client/markdown/MarkdownBody.tsx",
+        "packages/client/ui-sidebar-documentpreview/src/client/code/CodeBody.tsx",
+        "packages/client/ui-sidebar-documentpreview/src/client/text/TextBody.tsx"
+      ],
+      "original_acceptance": [
+        "大文件bounded分页",
+        "markdown frontmatter与table/math正确",
+        "code theme/wrap正确"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-sidebar-documentpreview"
+      ],
+      "delivery_status": "VERIFIED_NAMED_BEHAVIOR",
+      "evidence": [
+        {
+          "report": "docs/evidence/web-deepseek-parity-20261013/browser-final/result.json",
+          "case": "workspace-files"
+        }
+      ],
+      "limits": "Only named case assertions are accepted; broader original criteria remain subject to separate acceptance."
+    },
+    {
+      "id": "preview.html-image",
+      "title": "HTML与图片预览",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-sidebar-documentpreview/src/client/html/HtmlBody.tsx",
+        "packages/client/ui-sidebar-documentpreview/src/client/image/ImageBody.tsx",
+        "packages/client/ui-sidebar-documentpreview/src/client/zoom/ZoomControls.tsx",
+        "packages/client/ui-sidebar-documentpreview/src/client/zoom/ZoomViewport.tsx"
+      ],
+      "original_acceptance": [
+        "HTML隔离呈现",
+        "图片fit/zoom双主题/手机可用",
+        "Host read错误可见"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-sidebar-documentpreview"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "preview.pdf-office-excel",
+      "title": "PDF/Office/Excel预览",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-sidebar-documentpreview/src/client/pdf/pdf.tsx",
+        "packages/client/ui-sidebar-documentpreview/src/client/office/OfficeBody.tsx",
+        "packages/client/ui-sidebar-documentpreview/src/client/office/OfficeFontAction.tsx",
+        "packages/client/ui-sidebar-documentpreview/src/client/excel/excel.tsx"
+      ],
+      "original_acceptance": [
+        "实际PDF/docx/pptx/xlsx各能读",
+        "转换失败可操作错误",
+        "switch sheet/zoom正确"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-sidebar-documentpreview"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "open-in-app",
+      "title": "外部应用打开/文件位置",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-open-in-app/src/client/OpenInAppAction.tsx",
+        "packages/client/ui-open-in-app/src/client/OpenTargetButton.tsx",
+        "packages/client/ui-open-in-app/src/client/OpenPathAction.tsx",
+        "packages/client/ui-open-in-app/src/client/OpenPathEmptyAction.tsx"
+      ],
+      "original_acceptance": [
+        "有应用真实launch",
+        "query空仍reveal",
+        "重复click不双launch",
+        "无resolved app时正确不画而非fake button"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-open-in-app"
+      ],
+      "delivery_status": "BLOCKED_OR_PARTIAL",
+      "evidence": [],
+      "limits": "Headless capability is false; native launcher unavailable."
+    },
+    {
+      "id": "settings.shell",
+      "title": "Settings窗口/导航与focus",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-settings-general/src/client/SettingsRoot.tsx",
+        "packages/client/ui-settings-general/src/client/GeneralSection.tsx",
+        "packages/client/ui-settings-general/src/client/chrome.tsx"
+      ],
+      "original_acceptance": [
+        "所有标准section可到达",
+        "viewport24px margin",
+        "focus trap与return正确",
+        "上层modal不误关闭settings"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-settings-general"
+      ],
+      "delivery_status": "VERIFIED_NAMED_BEHAVIOR",
+      "evidence": [
+        {
+          "report": "docs/evidence/web-deepseek-parity-20261013/browser-final/result.json",
+          "case": "settings-general"
+        }
+      ],
+      "limits": "Only named case assertions are accepted; broader original criteria remain subject to separate acceptance."
+    },
+    {
+      "id": "settings.connection-recovery",
+      "title": "连接恢复反馈/重试",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-settings-general/src/client/chrome.tsx",
+        "packages/client/ui-primitives/src/ConnectionIndicator.tsx"
+      ],
+      "original_acceptance": [
+        "真实断线点retry立即请求",
+        "reconnect minimum/show green后fade",
+        "healthy startup不闪"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-settings-general"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "settings.general-coding",
+      "title": "General开发工具与版本/配置文件",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-settings-general/src/client/DeveloperToolsRow.tsx",
+        "packages/client/ui-settings-general/src/client/CurrentVersionRow.tsx",
+        "packages/client/ui-settings-general/src/client/SettingsDocumentAction.tsx",
+        "packages/client/ui-settings/src/client/developer-tools.ts"
+      ],
+      "original_acceptance": [
+        "toggle后preset/inspect控制跟随",
+        "失败恢复durable值/显示error",
+        "loopback配置文件action正确"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-settings-general",
+        "@deepseek-ai/dsh-client-ui-settings"
+      ],
+      "delivery_status": "VERIFIED_NAMED_BEHAVIOR",
+      "evidence": [
+        "docs/evidence/web-deepseek-parity-20261013/model-browser-final/result.json"
+      ],
+      "limits": "Only the 17 named assertions accepted; unsupported routes/mutable frozen identity remain rejected."
+    },
+    {
+      "id": "settings.locale",
+      "title": "语言选择与locale所有权",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/locale/src/client/LanguageRow.tsx",
+        "packages/client/locale/src/client/bootstrap.ts",
+        "packages/client/locale/src/client/settings-store.ts"
+      ],
+      "original_acceptance": [
+        "切语言所有产品copy与ARIA更新",
+        "刷新保留",
+        "document.lang正确"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-locale"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "settings.account",
+      "title": "账号与登录/登出",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-settings-account/src/client/AccountSection.tsx",
+        "packages/client/ui-settings-account/src/client/SignInDialog.tsx",
+        "packages/client/ui-settings-account/src/client/SignOutDialog.tsx",
+        "packages/client/ui-settings-account/src/client/AccountMenu.tsx"
+      ],
+      "original_acceptance": [
+        "状态与Host同步",
+        "cancel终止等候",
+        "error分类对应copy",
+        "sign-out后saved model id留存、account catalog隐藏"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-settings-account"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "settings.models-directory",
+      "title": "Models provider页面",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-settings-models/src/client/ModelsSection.tsx",
+        "packages/client/ui-settings-models/src/client/ProviderEditor.tsx",
+        "packages/client/ui-settings-models/src/client/CustomProviderCard.tsx"
+      ],
+      "original_acceptance": [
+        "providers真实载入",
+        "rejected apply保留draft/error",
+        "delete确认与catalog更新"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-settings-models"
+      ],
+      "delivery_status": "VERIFIED_NAMED_BEHAVIOR",
+      "evidence": [
+        {
+          "report": "docs/evidence/web-deepseek-parity-20261013/browser-final/result.json",
+          "case": "models-editor"
+        }
+      ],
+      "limits": "Only named case assertions are accepted; broader original criteria remain subject to separate acceptance."
+    },
+    {
+      "id": "settings.models-credentials",
+      "title": "API key与endpoint/protocol设置",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-settings-models/src/client/apiKey.ts",
+        "packages/client/ui-settings-models/src/client/DeepSeekModelsEditor.tsx",
+        "packages/client/ui-settings-models/src/client/ProviderEditor.tsx",
+        "packages/client/ui-settings-models/src/client/EditorFooter.tsx"
+      ],
+      "original_acceptance": [
+        "设置后requests使用新route",
+        "credentials response无literal",
+        "failed apply仍编辑",
+        "secret不进DOM历史"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-settings-models"
+      ],
+      "delivery_status": "VERIFIED_NAMED_BEHAVIOR",
+      "evidence": [
+        {
+          "report": "docs/evidence/web-deepseek-parity-20261013/browser-final/result.json",
+          "case": "models-editor"
+        }
+      ],
+      "limits": "Only named case assertions are accepted; broader original criteria remain subject to separate acceptance."
+    },
+    {
+      "id": "settings.models-catalog",
+      "title": "模型列表/能力编辑",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-settings-models/src/client/ModelListEditor.tsx",
+        "packages/client/ui-settings-models/src/client/ModelRow.tsx",
+        "packages/client/ui-settings-models/src/client/ModelInputTypes.tsx"
+      ],
+      "original_acceptance": [
+        "catalog改后model selection可读",
+        "至少一种input",
+        "unrelated字段不丢",
+        "restore移override"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-settings-models"
+      ],
+      "delivery_status": "VERIFIED_NAMED_BEHAVIOR",
+      "evidence": [
+        "docs/evidence/web-deepseek-parity-20261013/model-browser-final/result.json"
+      ],
+      "limits": "Only the 17 named assertions accepted; unsupported routes/mutable frozen identity remain rejected."
+    },
+    {
+      "id": "settings.onboarding-web",
+      "title": "Web首次启动welcome与凭证",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-settings-models/src/client/WelcomeNotice.tsx",
+        "packages/client/ui-settings-models/src/client/DeepSeekOnboardingDialog.tsx",
+        "packages/client/ui-settings-models/src/client/OnboardingModal.tsx"
+      ],
+      "original_acceptance": [
+        "未配置key首次dialog正确排序",
+        "完成跨reload不重复",
+        "配置关闭不画credential step"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-settings-models"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "settings.session-log-upload",
+      "title": "General session log上传开关",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-settings-session-log/src/client/UploadRow.tsx"
+      ],
+      "original_acceptance": [
+        "真实setting immediate保存",
+        "pending防重复",
+        "readonly禁用/可读",
+        "不可用provider不画"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-settings-session-log"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "settings.builtin-inventory",
+      "title": "Built-in plugins只读inventory",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-settings-plugins/src/client/PluginsSettingsSection.tsx",
+        "packages/client/ui-settings-plugin-inventory/src/client/PluginInventorySettingsTab.tsx"
+      ],
+      "original_acceptance": [
+        "真实inventory含preset/global",
+        "search跨preset标匹配",
+        "failed read Retry",
+        "不会成为enable写面板"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-settings-plugins",
+        "@deepseek-ai/dsh-client-ui-settings-plugin-inventory"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "settings.plugin-shell",
+      "title": "Shell官方配置页",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-settings-shell/src/client/ShellCard.tsx"
+      ],
+      "original_acceptance": [
+        "没有Save不改Host",
+        "Save后namespace值正确",
+        "Reset回部署default"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-settings-shell"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "settings.plugin-loop",
+      "title": "Agent loop官方配置页",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-settings-agent-loop/src/client/AgentLoopCard.tsx"
+      ],
+      "original_acceptance": [
+        "save并发参数Host实际生效",
+        "invalid数值显错且不写"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-settings-agent-loop"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "settings.plugin-subagent",
+      "title": "Subagent官方配置页",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-settings-subagent/src/client/SubagentCard.tsx",
+        "packages/client/ui-settings-subagent/src/client/SubagentLimitsFields.tsx",
+        "packages/client/ui-settings-subagent/src/client/SubagentModelSelectionFields.tsx"
+      ],
+      "original_acceptance": [
+        "可服务namespace准确显",
+        "保存两namespace有结果/error",
+        "failed保留draft"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-settings-subagent"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "settings.plugin-websearch",
+      "title": "Web search官方配置页",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-settings-web-search/src/client/WebSearchCard.tsx"
+      ],
+      "original_acceptance": [
+        "key不回显或进settings响应",
+        "endpoint/limit真实保存",
+        "namespace无不留死按钮"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-settings-web-search"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "plugins.catalog",
+      "title": "Plugins全局页/详情/刷新",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-plugin-manager/src/client/PluginManagerPage.tsx",
+        "packages/client/ui-plugin-manager/src/client/PluginRefreshToast.tsx",
+        "packages/client/ui-plugin-manager/src/client/presentation.ts"
+      ],
+      "original_acceptance": [
+        "真实bundles/cards/source图标",
+        "刷新失败cached内容仍留并toast",
+        "无profile显示unavailable"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-plugin-manager"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "plugins.install",
+      "title": "插件添加/安装输出与取消",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-plugin-manager/src/client/PluginManagerPage.tsx",
+        "packages/client/ui-plugin-manager/src/client/manager-store.ts",
+        "packages/client/ui-plugin-manager/src/client/sanitize-install-input.ts"
+      ],
+      "original_acceptance": [
+        "真实Host inspect/install生命周期输出",
+        "cancel真实中止",
+        "关闭lateprobe不重开",
+        "失败retry清楚"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-plugin-manager"
+      ],
+      "delivery_status": "BLOCKED_OR_PARTIAL",
+      "evidence": [],
+      "limits": "Cordis host mutation owner is unavailable."
+    },
+    {
+      "id": "plugins.switch-remove",
+      "title": "bundle/entry enable disable remove",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-plugin-manager/src/client/PluginManagerPage.tsx",
+        "packages/client/ui-plugin-manager/src/client/manager-store.ts",
+        "packages/client/ui-plugin-manager/src/client/config-ledger.ts"
+      ],
+      "original_acceptance": [
+        "每个switch修改对应Host row",
+        "拒绝回滚并error",
+        "取消uninstall不删",
+        "确认Host执行且UI收敛"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-plugin-manager"
+      ],
+      "delivery_status": "BLOCKED_OR_PARTIAL",
+      "evidence": [],
+      "limits": "Cordis host mutation owner is unavailable."
+    },
+    {
+      "id": "presets.selection",
+      "title": "Agent preset当前/未来选择",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-agent-preset/src/client/AgentPresetSeat.tsx",
+        "packages/client/ui-agent-preset/src/client/AgentPresetSection.tsx",
+        "packages/client/ui-agent-preset/src/client/AgentPresetLabel.tsx"
+      ],
+      "original_acceptance": [
+        "切preset改变当前blank projection",
+        "未来default不改existing",
+        "unavailable失败toast",
+        "tools off模式过滤正确"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-agent-preset"
+      ],
+      "delivery_status": "BLOCKED_OR_PARTIAL",
+      "evidence": [],
+      "limits": "Current actual role displayed; nondefault frozen root role replacement unavailable."
+    },
+    {
+      "id": "presets.configuration-help",
+      "title": "Preset配置/help/Creator入口",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-agent-preset/src/client/PresetGuideDialog.tsx",
+        "packages/client/ui-agent-preset/src/client/CreatePluginMenuItem.tsx",
+        "packages/client/ui-agent-preset/src/client/AgentPresetSection.tsx"
+      ],
+      "original_acceptance": [
+        "YAML late response不重开",
+        "help scrollposition保留",
+        "Creator进入cordis blank但无消息send"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-agent-preset"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "model.selection",
+      "title": "模型/推理强度composer与/model",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-model-selection/src/client/ModelSelect.tsx",
+        "packages/client/ui-model-selection/src/client/index.ts"
+      ],
+      "original_acceptance": [
+        "选model/effort真实进入session.models",
+        "running step沿旧selection",
+        "removedsaved id留存",
+        "小屏icon仍accessible完整label"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-model-selection"
+      ],
+      "delivery_status": "VERIFIED_NAMED_BEHAVIOR",
+      "evidence": [
+        "docs/evidence/web-deepseek-parity-20261013/model-browser-final/result.json"
+      ],
+      "limits": "Only the 17 named assertions accepted; unsupported routes/mutable frozen identity remain rejected."
+    },
+    {
+      "id": "permission.selection",
+      "title": "权限preset composer/slash/settings",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-permission-presets/src/client/PermissionSelect.tsx",
+        "packages/client/ui-permission-presets/src/client/PermissionRow.tsx",
+        "packages/client/ui-primitives/src/RiskConfirmation.tsx"
+      ],
+      "original_acceptance": [
+        "当前switchHost projection确认且工具PermissionEngine实际遵循",
+        "General不改current",
+        "catalog失效关闭picker不吞draft"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-permission-presets"
+      ],
+      "delivery_status": "BLOCKED_OR_PARTIAL",
+      "evidence": [],
+      "limits": "Frozen permission replacement unavailable."
+    },
+    {
+      "id": "goal.bar",
+      "title": "Goal strip/编辑和运行控制",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-goal/src/client/GoalBar.tsx",
+        "packages/client/ui-goal/src/client/GoalCommandInputView.tsx"
+      ],
+      "original_acceptance": [
+        "每个action真实goal mutation",
+        "rejected保持strip/error",
+        "reload /goal bubble重建且无多余copy/branch"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-goal"
+      ],
+      "delivery_status": "BLOCKED_OR_PARTIAL",
+      "evidence": [],
+      "limits": "No durable goal continuation owner."
+    },
+    {
+      "id": "plan.mode",
+      "title": "Plan模式入口/退出",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-plan/src/client/PlanModeControl.tsx",
+        "packages/client/ui-plan/src/client/index.ts"
+      ],
+      "original_acceptance": [
+        "进入/退出改变projection/下一requestmode",
+        "admissionfailure不假退出",
+        "placeholder变plan hint"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-plan"
+      ],
+      "delivery_status": "BLOCKED_OR_PARTIAL",
+      "evidence": [],
+      "limits": "DeepSeek Plan loop/review continuation owner unavailable."
+    },
+    {
+      "id": "plan.documents",
+      "title": "plan卡片/完整文本和自动open",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-plan/src/client/PlanCard.tsx",
+        "packages/client/ui-plan/src/client/PlanPreview.tsx"
+      ],
+      "original_acceptance": [
+        "pending一次自动open且close后不重开",
+        "history cards click才open",
+        "refreshdurableplan恢复"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-plan"
+      ],
+      "delivery_status": "BLOCKED_OR_PARTIAL",
+      "evidence": [],
+      "limits": "DeepSeek Plan document lifecycle is not implemented as an owner."
+    },
+    {
+      "id": "questions.answer",
+      "title": "agent questions回答交互",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-user-questions/src/client/QuestionComposer.tsx",
+        "packages/client/ui-user-questions/src/client/QuestionReplyView.tsx"
+      ],
+      "original_acceptance": [
+        "单/多选及custom真实answer payload",
+        "incomplete回first",
+        "close不是answer",
+        "aftersettled readonly显示recorded answer"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-user-questions"
+      ],
+      "delivery_status": "VERIFIED_NAMED_BEHAVIOR",
+      "evidence": [
+        {
+          "report": "docs/evidence/web-deepseek-parity-20261013/browser-final/result.json",
+          "case": "ask-reload-answer"
+        }
+      ],
+      "limits": "Only named case assertions are accepted; broader original criteria remain subject to separate acceptance."
+    },
+    {
+      "id": "questions.timed-recovery",
+      "title": "question计时/迟答/草稿恢复",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-user-questions/src/client/QuestionComposer.tsx",
+        "packages/client/ui-user-questions/src/client/index.ts"
+      ],
+      "original_acceptance": [
+        "计时等待握手再开始",
+        "focus停/blur续",
+        "reloaddraft与remaining对应",
+        "lateanswer通过Host steer且duplicate reply报queued"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-user-questions"
+      ],
+      "delivery_status": "BACKEND_TESTED",
+      "evidence": [
+        "apps/web/src/deepseek/backend.final.integration.test.ts"
+      ],
+      "limits": "Actual backend behavior tested; default GUI interaction not independently accepted for this entire item."
+    },
+    {
+      "id": "plan.review",
+      "title": "计划审批composer card",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-user-questions/src/client/PlanReviewPanel.tsx"
+      ],
+      "original_acceptance": [
+        "approve真实Hostanswer后可实施",
+        "requestchanges ASK_CANCELLED且无批准",
+        "pendingspinner/不可重复"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-user-questions"
+      ],
+      "delivery_status": "BLOCKED_OR_PARTIAL",
+      "evidence": [],
+      "limits": "Plan review continuation unavailable; ordinary ask works."
+    },
+    {
+      "id": "jobs.roster",
+      "title": "background jobs列表/输出/停止",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-jobs/src/client/JobListAction.tsx",
+        "packages/client/ui-jobs/src/client/index.ts"
+      ],
+      "original_acceptance": [
+        "真实job.list/observe/kill",
+        "collapse终止观察非job",
+        "kill日志通知agent",
+        "gap/interruptednotice可见"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-jobs"
+      ],
+      "delivery_status": "BACKEND_TESTED",
+      "evidence": [
+        "apps/web/src/deepseek/activity.test.ts"
+      ],
+      "limits": "Actual backend behavior tested; default GUI interaction not independently accepted for this entire item."
+    },
+    {
+      "id": "schedule.catalog",
+      "title": "Automation tasks全局页/header/row标记",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-schedule/src/client/TaskManagerPage.tsx",
+        "packages/client/ui-schedule/src/client/ScheduleCatalogAction.tsx",
+        "packages/client/ui-schedule/src/client/SessionScheduleMark.tsx",
+        "packages/client/ui-schedule/src/client/SessionScheduleHover.tsx"
+      ],
+      "original_acceptance": [
+        "任务真实schedule catalog",
+        "全局browse不activate",
+        "New仅开新session无formcreate",
+        "tasktitle及frequency/next可见"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-schedule"
+      ],
+      "delivery_status": "BACKEND_TESTED",
+      "evidence": [
+        "apps/web/src/deepseek/activity.test.ts"
+      ],
+      "limits": "Actual backend behavior tested; default GUI interaction not independently accepted for this entire item."
+    },
+    {
+      "id": "schedule.rules",
+      "title": "任务Rules/时间与时区编辑",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-schedule/src/client/TaskDetail.tsx",
+        "packages/client/ui-schedule/src/client/DatePicker.tsx",
+        "packages/client/ui-schedule/src/client/ClockPicker.tsx",
+        "packages/client/ui-schedule/src/client/TaskMenu.tsx"
+      ],
+      "original_acceptance": [
+        "真实schedule.update后title/rule/runtimezone正确",
+        "invalidcron/interval blockSave",
+        "inactive不能edit",
+        "untouchedmillis保留"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-schedule"
+      ],
+      "delivery_status": "BACKEND_TESTED",
+      "evidence": [
+        "apps/web/src/deepseek/activity.test.ts"
+      ],
+      "limits": "Actual backend behavior tested; default GUI interaction not independently accepted for this entire item."
+    },
+    {
+      "id": "schedule.history-delete",
+      "title": "任务记录/linked session/delete/transcript",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-schedule/src/client/DeliveryHistory.tsx",
+        "packages/client/ui-schedule/src/client/TaskDetail.tsx",
+        "packages/client/ui-schedule/src/client/ScheduleCreateCard.tsx",
+        "packages/client/ui-schedule/src/client/ScheduleTurnCard.tsx"
+      ],
+      "original_acceptance": [
+        "linked archived disabled explanation且不unarchive",
+        "confirmeddelete真实schedule.remove",
+        "cancel保留task",
+        "creationcard opens正确task"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-schedule"
+      ],
+      "delivery_status": "BACKEND_TESTED",
+      "evidence": [
+        "apps/web/src/deepseek/activity.test.ts"
+      ],
+      "limits": "Actual backend behavior tested; default GUI interaction not independently accepted for this entire item."
+    },
+    {
+      "id": "workflow.run",
+      "title": "workflow run/phases/members",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-workflow-run/src/client/WorkflowRunPanel.tsx"
+      ],
+      "original_acceptance": [
+        "reload重建nestedstatus",
+        "默认fold随state",
+        "不availablemember无死导航"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-workflow-run"
+      ],
+      "delivery_status": "BACKEND_TESTED",
+      "evidence": [
+        "apps/web/src/deepseek/activity.test.ts"
+      ],
+      "limits": "Actual backend behavior tested; default GUI interaction not independently accepted for this entire item."
+    },
+    {
+      "id": "deliverables.cards",
+      "title": "交付物/changed files/inlinefile links",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-deliverables/src/client/Deliverables.tsx",
+        "packages/client/ui-deliverables/src/client/ChangedFiles.tsx",
+        "packages/client/ui-deliverables/src/client/PresentedFileCard.tsx",
+        "packages/client/ui-deliverables/src/client/PresentRow.tsx"
+      ],
+      "original_acceptance": [
+        "实际editturn显示files/counts",
+        "点击打开对应reviewtab/file",
+        "无记录prose不造可点击文件"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-deliverables"
+      ],
+      "delivery_status": "BACKEND_TESTED",
+      "evidence": [
+        "apps/web/src/deepseek/backend.final.integration.test.ts"
+      ],
+      "limits": "Actual backend behavior tested; default GUI interaction not independently accepted for this entire item."
+    },
+    {
+      "id": "deliverables.review-diff",
+      "title": "文件review比较/diff",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-deliverables/src/client/ReviewTab.tsx",
+        "packages/client/ui-deliverables/src/client/FileDiff.tsx"
+      ],
+      "original_acceptance": [
+        "before/after真实对应turn记录",
+        "切文件与context无混淆",
+        "binary/unavailable有明确状态"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-deliverables"
+      ],
+      "delivery_status": "BACKEND_TESTED",
+      "evidence": [
+        "apps/web/src/deepseek/backend.final.integration.test.ts"
+      ],
+      "limits": "Actual backend behavior tested; default GUI interaction not independently accepted for this entire item."
+    },
+    {
+      "id": "trajectory.default",
+      "title": "Trajectory标准事件账本",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-trajectory/src/client/TrajectoryView.tsx",
+        "packages/client/ui-trajectory/src/client/TrajectoryTable.tsx",
+        "packages/client/ui-trajectory/src/client/TrajectoryToolbar.tsx",
+        "packages/client/ui-trajectory/src/client/TrajectoryTurnHeader.tsx"
+      ],
+      "original_acceptance": [
+        "长history分页不重复/丢",
+        "scrollup不自动抢tail",
+        "rowinspector呈Input/Output/Timing/usage/imagefile"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-trajectory"
+      ],
+      "delivery_status": "BACKEND_TESTED",
+      "evidence": [
+        "apps/web/src/deepseek/projections.test.ts"
+      ],
+      "limits": "Actual backend behavior tested; default GUI interaction not independently accepted for this entire item."
+    },
+    {
+      "id": "trajectory.timeline",
+      "title": "Trajectory timing overview",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-trajectory/src/client/TrajectoryTimeline.tsx",
+        "packages/client/ui-trajectory/src/client/TrajectoryTurn.tsx"
+      ],
+      "original_acceptance": [
+        "选inclusive时间区间ledger对应",
+        "streamtail/scrollup暂停follow",
+        "无starttoken不编TTFT"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-trajectory"
+      ],
+      "delivery_status": "BACKEND_TESTED",
+      "evidence": [
+        "apps/web/src/deepseek/projections.test.ts"
+      ],
+      "limits": "Actual backend behavior tested; default GUI interaction not independently accepted for this entire item."
+    },
+    {
+      "id": "primitive.controls",
+      "title": "菜单/modal/tooltip/toast/forms/焦点",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-primitives/src/Menu.tsx",
+        "packages/client/ui-primitives/src/Modal.tsx",
+        "packages/client/ui-primitives/src/Tooltip.tsx",
+        "packages/client/ui-primitives/src/Toast.tsx",
+        "packages/client/ui-primitives/src/input-modality.ts",
+        "packages/client/ui-primitives/src/focus.ts",
+        "packages/client/ui-primitives/src/settings-form/SettingsForm.tsx"
+      ],
+      "original_acceptance": [
+        "keyboard操作无focus丢失",
+        "Esc只toplayer",
+        "focusreturn",
+        "手机overlay不溢出",
+        "invalidfield不写"
+      ],
+      "official_default_entries": [],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "modules.live-extensions",
+      "title": "模块装配/HMR/插件UI扩展",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/modules/src/client/index.ts",
+        "packages/client/ui-renderer/src/client/index.ts",
+        "packages/client/ui-slots/src/index.ts",
+        "packages/client/hmr/src/client/index.ts"
+      ],
+      "original_acceptance": [
+        "启用真实clientplugin后出现contributedslot",
+        "disable卸载listener/style",
+        "HMR不漏旧controls"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-modules",
+        "@deepseek-ai/dsh-client-ui-renderer",
+        "@deepseek-ai/dsh-client-hmr"
+      ],
+      "delivery_status": "BLOCKED_OR_PARTIAL",
+      "evidence": [],
+      "limits": "Frozen official roster boots; dynamic runtime Cordis extension changes unavailable."
+    },
+    {
+      "id": "resources.unified",
+      "title": "资源模型/授权读取与共享",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/resources/src/client/index.ts",
+        "packages/client/ui-session/src/client/index.ts"
+      ],
+      "original_acceptance": [
+        "同attachment共享授权read",
+        "切session不读别会话",
+        "storage布局不含filebytes"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-resources",
+        "@deepseek-ai/dsh-client-ui-session"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "optional.browser",
+      "title": "Web opt-in sandbox browser tab",
+      "tier": "optional-web-disabled",
+      "upstream_paths": [
+        "packages/client/ui-sidebar-browser/src/client/index.ts",
+        "packages/client/ui-sidebar-browser/README.md",
+        "packages/bundle/web-app/cordis.patch.yml"
+      ],
+      "original_acceptance": [
+        "默认Web不出Browser不算标准缺",
+        "显式启用后真实隔离浏览器导航"
+      ],
+      "official_default_entries": [],
+      "delivery_status": "OPTIONAL_NOT_ENABLED",
+      "evidence": [],
+      "limits": "Outside default enabled Web roster; no implementation claim."
+    },
+    {
+      "id": "optional.voice",
+      "title": "Experimental voice input",
+      "tier": "experimental",
+      "upstream_paths": [
+        "packages/experimental/client-ui-voice-input/src/client/VoiceInput.tsx",
+        "packages/experimental/client-ui-voice-input/src/client/VoiceSetupDialog.tsx",
+        "packages/experimental/voice-input-bundle/cordis.patch.yml"
+      ],
+      "original_acceptance": [
+        "默认关闭",
+        "开plugin后真实permission/transcription及setupdownload"
+      ],
+      "official_default_entries": [],
+      "delivery_status": "OPTIONAL_NOT_ENABLED",
+      "evidence": [],
+      "limits": "Outside default enabled Web roster; no implementation claim."
+    },
+    {
+      "id": "optional.agent-team",
+      "title": "Experimental Agent Team",
+      "tier": "experimental",
+      "upstream_paths": [
+        "packages/experimental/client-ui-agent-team/src/client/TeamAction.tsx",
+        "packages/experimental/agent-team-profile/cordis.patch.yml"
+      ],
+      "original_acceptance": [
+        "默认关闭",
+        "开启后真实teamprojection渲染"
+      ],
+      "official_default_entries": [],
+      "delivery_status": "OPTIONAL_NOT_ENABLED",
+      "evidence": [],
+      "limits": "Outside default enabled Web roster; no implementation claim."
+    },
+    {
+      "id": "optional.inspector",
+      "title": "Experimental shared/session inspector",
+      "tier": "experimental",
+      "upstream_paths": [
+        "packages/experimental/session-inspector/src/client/views/View.tsx",
+        "packages/experimental/inspector/src/client/bottom/page.tsx",
+        "packages/experimental/inspector-profile/cordis.patch.yml"
+      ],
+      "original_acceptance": [
+        "默认关闭",
+        "不把缺experimental当缺标准Trajectory"
+      ],
+      "official_default_entries": [],
+      "delivery_status": "OPTIONAL_NOT_ENABLED",
+      "evidence": [],
+      "limits": "Outside default enabled Web roster; no implementation claim."
+    },
+    {
+      "id": "optional.auto-review",
+      "title": "Experimental Auto permission integration",
+      "tier": "experimental",
+      "upstream_paths": [
+        "packages/experimental/auto-review/cordis.patch.yml",
+        "packages/client/ui-permission-presets/src/client/PermissionSelect.tsx"
+      ],
+      "original_acceptance": [
+        "default只有三preset",
+        "开实验plugin后auto有EXP与risk确认"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-permission-presets"
+      ],
+      "delivery_status": "OPTIONAL_NOT_ENABLED",
+      "evidence": [],
+      "limits": "Outside default enabled Web roster; no implementation claim."
+    },
+    {
+      "id": "optional.claude-mods",
+      "title": "Experimental Claude Code mods",
+      "tier": "experimental",
+      "upstream_paths": [
+        "packages/experimental/client-ui-claude-code-mods/src/client/Band.tsx",
+        "packages/experimental/client-ui-claude-code-mods/src/client/index.ts"
+      ],
+      "original_acceptance": [
+        "默认关闭",
+        "开启真实plugin后才渲染"
+      ],
+      "official_default_entries": [],
+      "delivery_status": "OPTIONAL_NOT_ENABLED",
+      "evidence": [],
+      "limits": "Outside default enabled Web roster; no implementation claim."
+    },
+    {
+      "id": "approval.composer",
+      "title": "审批composer占位/工具详情与键盘",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-approval/src/client/ApprovalPanel.tsx",
+        "packages/client/ui-approval/src/client/index.ts"
+      ],
+      "original_acceptance": [
+        "真实decision归owner且pending防重复",
+        "withdraw/replaced不能答",
+        "focus Reject Enter仍拒绝",
+        "IME不决策"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-approval"
+      ],
+      "delivery_status": "VERIFIED_NAMED_BEHAVIOR",
+      "evidence": [
+        {
+          "report": "docs/evidence/web-deepseek-parity-20261013/browser-final/result.json",
+          "case": "write-approval,write-rejection"
+        }
+      ],
+      "limits": "Only named case assertions are accepted; broader original criteria remain subject to separate acceptance."
+    },
+    {
+      "id": "subagent.navigation",
+      "title": "Subagent目录/lineage/右栏聊天",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-subagent/src/client/SubagentHeaderLineage.tsx",
+        "packages/client/ui-subagent/src/client/sidebar-chat/index.tsx"
+      ],
+      "original_acceptance": [
+        "真实nestedchild列表/状态/usage",
+        "用exact parent/child/mode打开",
+        "righttab关闭release",
+        "leaf只readyempty确认"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-subagent"
+      ],
+      "delivery_status": "BACKEND_TESTED",
+      "evidence": [
+        "apps/web/src/deepseek/activity.test.ts"
+      ],
+      "limits": "Actual backend behavior tested; default GUI interaction not independently accepted for this entire item."
+    },
+    {
+      "id": "subagent.continuation",
+      "title": "子agent继续/只读/独立停止",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-subagent/src/client/SubagentReadOnlyComposer.tsx",
+        "packages/client/ui-subagent/src/client/index.ts"
+      ],
+      "original_acceptance": [
+        "FIFO followups真实入child",
+        "one-shot不接受prompt",
+        "parentoffline运行child可Stop，不能send",
+        "错误recovery说明可见"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-subagent"
+      ],
+      "delivery_status": "BLOCKED_OR_PARTIAL",
+      "evidence": [],
+      "limits": "Native one-shot delegation has no continuable child inbox."
+    },
+    {
+      "id": "skill.invoke-preview-card",
+      "title": "Skill slash invoke/预览/历史卡",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-skill/src/client/index.ts",
+        "packages/client/ui-skill/src/client/SkillRow.tsx"
+      ],
+      "original_acceptance": [
+        "选择/手输/name等价",
+        "command同名优先",
+        "已记录Instructionscatalog变更后仍稳定",
+        "tokenlatefetch保持clickedSession"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-skill"
+      ],
+      "delivery_status": "BACKEND_TESTED",
+      "evidence": [
+        "apps/web/src/deepseek/activity.test.ts"
+      ],
+      "limits": "Actual backend behavior tested; default GUI interaction not independently accepted for this entire item."
+    },
+    {
+      "id": "cordis.historical-panel",
+      "title": "Cordis历史卡与process-local定义控制",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/extensions/ui-cordis/src/client/CordisPanel.tsx",
+        "packages/extensions/ui-cordis/src/client/CordisDefineRow.tsx",
+        "packages/extensions/ui-cordis/src/client/CordisRunRow.tsx",
+        "packages/extensions/ui-cordis/src/client/CordisActionRow.tsx"
+      ],
+      "original_acceptance": [
+        "historicalcard重启仍可读不重建defs",
+        "实际registereddefinition控制Host/page状态",
+        "跨Sessionpending可到达",
+        "失败retry/rollback实际接线"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-cordis"
+      ],
+      "delivery_status": "BLOCKED_OR_PARTIAL",
+      "evidence": [],
+      "limits": "No native dynamic Cordis operation producer is mounted."
+    },
+    {
+      "id": "render.message_content",
+      "title": "按content类型保留正文、推理、图片、工具及未知block",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-chat/src/client/chat/AssistantMarkdown.tsx",
+        "packages/client/ui-chat/src/client/chat/MessageItem.tsx"
+      ],
+      "original_acceptance": [
+        "混合text/image/reasoning/tool/unknown消息按原顺序显示；live、history、重连投影相同且无重复。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-chat"
+      ],
+      "delivery_status": "VERIFIED_NAMED_BEHAVIOR",
+      "evidence": [
+        {
+          "report": "docs/evidence/web-deepseek-parity-20261013/browser-final/result.json",
+          "case": "markdown-stream-reload"
+        }
+      ],
+      "limits": "Only named case assertions are accepted; broader original criteria remain subject to separate acceptance."
+    },
+    {
+      "id": "render.user_text",
+      "title": "用户安全纯文本气泡及语义引用",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-chat/src/client/chat/MessageItem.tsx"
+      ],
+      "original_acceptance": [
+        "文字、换行和HTML字面量原样显示；被确认的引用可激活，普通文本不自动变成未经授权文件链接。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-chat"
+      ],
+      "delivery_status": "VERIFIED_NAMED_BEHAVIOR",
+      "evidence": [
+        {
+          "report": "docs/evidence/web-deepseek-parity-20261013/browser-final/result.json",
+          "case": "markdown-stream-reload"
+        }
+      ],
+      "limits": "Only named case assertions are accepted; broader original criteria remain subject to separate acceptance."
+    },
+    {
+      "id": "render.markdown_gfm",
+      "title": "完整GFM正文：标题/列表/引用/强调/删除线/任务/表格/脚注",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-primitives/src/markdown/parse.ts",
+        "packages/client/ui-primitives/src/markdown/render.tsx",
+        "packages/client/ui-primitives/src/markdown/MarkdownText.tsx"
+      ],
+      "original_acceptance": [
+        "固定GFM/CJK/脚注/嵌套引用/任务列表样本与上游fixture输出一致；宽表可横向滚动且正文不溢出。"
+      ],
+      "official_default_entries": [],
+      "delivery_status": "VERIFIED_NAMED_BEHAVIOR",
+      "evidence": [
+        {
+          "report": "docs/evidence/web-deepseek-parity-20261013/browser-final/result.json",
+          "case": "markdown-stream-reload"
+        }
+      ],
+      "limits": "Only named case assertions are accepted; broader original criteria remain subject to separate acceptance."
+    },
+    {
+      "id": "render.markdown_math",
+      "title": "完成回复中的TeX与兼容分隔符",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-primitives/src/markdown/parse.ts",
+        "packages/client/ui-primitives/src/markdown/MarkdownText.tsx",
+        "packages/client/ui-primitives/src/markdown/katex.tsx"
+      ],
+      "original_acceptance": [
+        "$/$ $和兼容TeX样本正确；不完整流式公式不闪错误；危险TeX不获得trusted执行。"
+      ],
+      "official_default_entries": [],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "render.markdown_links",
+      "title": "普通URL、行号文件链接、inline-code URL/文件引用",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-primitives/src/markdown/render.tsx",
+        "packages/client/ui-primitives/src/markdown/MarkdownText.tsx",
+        "packages/client/ui-chat/src/client/apply.ts"
+      ],
+      "original_acceptance": [
+        "HTTP/mailto允许、javascript拒绝；#L24-L30文件链接定位首行；修饰键保持浏览器行为。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-chat"
+      ],
+      "delivery_status": "VERIFIED_NAMED_BEHAVIOR",
+      "evidence": [
+        {
+          "report": "docs/evidence/web-deepseek-parity-20261013/browser-final/result.json",
+          "case": "markdown-stream-reload"
+        }
+      ],
+      "limits": "Only named case assertions are accepted; broader original criteria remain subject to separate acceptance."
+    },
+    {
+      "id": "render.untrusted_html_literal",
+      "title": "模型HTML不执行且输出安全",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-primitives/src/markdown/render.tsx",
+        "packages/client/ui-primitives/src/markdown/MarkdownText.tsx"
+      ],
+      "original_acceptance": [
+        "<script>与事件属性字面显示/不可执行；危险href不产生可点击执行目标。"
+      ],
+      "official_default_entries": [],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "render.markdown_streaming",
+      "title": "流式Markdown增量冻结与稳定DOM",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-primitives/src/markdown/MarkdownText.tsx",
+        "packages/client/ui-primitives/src/markdown/incremental.ts"
+      ],
+      "original_acceptance": [
+        "长回复增量不会重建既有代码选择/披露状态；流式未闭合fence可显示；完成输出与一次性settled一致。"
+      ],
+      "official_default_entries": [],
+      "delivery_status": "VERIFIED_NAMED_BEHAVIOR",
+      "evidence": [
+        {
+          "report": "docs/evidence/web-deepseek-parity-20261013/browser-final/result.json",
+          "case": "markdown-stream-reload"
+        }
+      ],
+      "limits": "Only named case assertions are accepted; broader original criteria remain subject to separate acceptance."
+    },
+    {
+      "id": "render.code_fence",
+      "title": "代码围栏、语言名、横向滚动与复制",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-primitives/src/markdown/CodeBlock.tsx",
+        "packages/client/ui-primitives/src/markdown/render.tsx"
+      ],
+      "original_acceptance": [
+        "三/四反引号、tilde与未闭合流式代码正确；代码复制仅原文不含语言/行号。"
+      ],
+      "official_default_entries": [],
+      "delivery_status": "VERIFIED_NAMED_BEHAVIOR",
+      "evidence": [
+        {
+          "report": "docs/evidence/web-deepseek-parity-20261013/browser-final/result.json",
+          "case": "markdown-stream-reload"
+        }
+      ],
+      "limits": "Only named case assertions are accepted; broader original criteria remain subject to separate acceptance."
+    },
+    {
+      "id": "render.code_toolbar",
+      "title": "代码卡片换行切换/复制确认/粘性header",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-primitives/src/CodeToolbar.tsx",
+        "packages/client/ui-primitives/src/markdown/CodeBlock.tsx",
+        "packages/client/ui-primitives/src/markdown/CodeBlock.module.css"
+      ],
+      "original_acceptance": [
+        "切换wrap保留代码全文；复制确认约1s后复位；无Clipboard时明确失败；键盘可达且sticky banner正确。"
+      ],
+      "official_default_entries": [],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "render.code_highlight",
+      "title": "语言grammar懒加载、流式增量语法高亮",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-primitives/src/markdown/CodeBlock.tsx",
+        "packages/client/ui-primitives/src/markdown/highlight.ts"
+      ],
+      "original_acceptance": [
+        "支持语言高亮；未知language保留全文；长流式代码不丢行；深浅主题token正确。"
+      ],
+      "official_default_entries": [],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "render.markdown_images",
+      "title": "Markdown远程/本地图片、安全alt fallback与预览",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-primitives/src/markdown/render.tsx",
+        "packages/client/ui-chat/src/client/chat/AssistantMarkdown.tsx"
+      ],
+      "original_acceptance": [
+        "HTTP(S)图显示，data/javascript作者URL拒绝；已授权本地文件图可显示；失败仍可读alt。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-chat"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "render.message_images",
+      "title": "用户/助手/工具图集、单图尺寸与失败重试",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-attachment/src/MessageImage.tsx",
+        "packages/client/ui-chat/src/client/chat/AssistantMarkdown.tsx"
+      ],
+      "original_acceptance": [
+        "1图不超自然尺寸；多图64px tile并换行；loading与重试可达；切换会话不显示旧URL。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-attachment",
+        "@deepseek-ai/dsh-client-ui-chat"
+      ],
+      "delivery_status": "BLOCKED_OR_PARTIAL",
+      "evidence": [],
+      "limits": "Broad multimodal admission unavailable."
+    },
+    {
+      "id": "render.image_lightbox",
+      "title": "原图modal、Esc/遮罩/关闭与焦点恢复",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-primitives/src/ImageLightbox.tsx"
+      ],
+      "original_acceptance": [
+        "点击缩略图开原图；Esc、遮罩、close均关闭；Tab保持modal；关闭回到原按钮。"
+      ],
+      "official_default_entries": [],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "render.file_attachments",
+      "title": "历史用户文件卡片：名称/类型/大小/顺序",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-chat/src/client/chat/MessageItem.tsx"
+      ],
+      "original_acceptance": [
+        "图/文件交错顺序保留；长名称ellipsis且title可读；类型及bytes准确。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-chat"
+      ],
+      "delivery_status": "BACKEND_TESTED",
+      "evidence": [
+        "apps/web/src/deepseek/workspace.integration.test.ts"
+      ],
+      "limits": "Actual backend behavior tested; default GUI interaction not independently accepted for this entire item."
+    },
+    {
+      "id": "render.composer_attachments",
+      "title": "草稿图片/文件rail、拖放、上传进度/删除/失败重试",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-attachment/src/client/ComposerAttachments.tsx",
+        "packages/client/ui-attachment/src/FileCard.tsx",
+        "packages/client/ui-attachment/src/client/index.ts"
+      ],
+      "original_acceptance": [
+        "拖放显示overlay；图片可预览/删除；file显示上传进度、失败重试；切session草稿不串；上传未ready不可误提交。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-attachment"
+      ],
+      "delivery_status": "BLOCKED_OR_PARTIAL",
+      "evidence": [],
+      "limits": "Bounded text upload exists; full binary/image admission unavailable."
+    },
+    {
+      "id": "render.unknown_block",
+      "title": "未知/额外消息block的受限JSON披露",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-chat/src/client/chat/AssistantMarkdown.tsx",
+        "packages/client/ui-chat/src/client/chat/MessageItem.tsx",
+        "packages/client/ui-primitives/src/markdown/JsonBlock.tsx"
+      ],
+      "original_acceptance": [
+        "未知content不会消失或[object Object]；展开后可读JSON，超20k有明确截断提示。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-chat"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "render.reasoning",
+      "title": "推理独立disclosure与流式摘要",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-chat/src/client/chat/ReasoningRow.tsx",
+        "packages/client/ui-chat/src/client/chat/AssistantMarkdown.tsx"
+      ],
+      "original_acceptance": [
+        "真实推理默认折叠；流式摘要逐段推进；展开全文与body Markdown能力一致；完成/模式切换不丢展开状态。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-chat"
+      ],
+      "delivery_status": "BLOCKED_OR_PARTIAL",
+      "evidence": [],
+      "limits": "Core deliberately excludes reasoning from public journal; no raw reasoning exposure added for UI parity."
+    },
+    {
+      "id": "render.process_display",
+      "title": "work details四模式、步骤组与completed turn整体折叠",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-chat/src/chat-settings.ts",
+        "packages/client/ui-chat/src/client/presentation-policy.ts",
+        "packages/client/ui-chat/src/client/chat/TurnProcessNodeView.tsx",
+        "packages/client/ui-chat/src/client/chat/ChatGroupSeat.tsx"
+      ],
+      "original_acceptance": [
+        "四模式呈现符合policy；completed turn折叠不隐藏最终回答；running turn正确分组；错误/取消始终可见。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-chat"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "render.tool_row",
+      "title": "工具准备/运行/完成/失败/停止生命周期与独立披露",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-tool/src/client/tool/components/ToolRow.tsx",
+        "packages/client/ui-tool/src/client/tool/models/tool-call-model.ts"
+      ],
+      "original_acceptance": [
+        "一个call始终一个row；preparing不可展开空body；completion/failure不丢stdout/stderr；history/live呈现同一。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-tool"
+      ],
+      "delivery_status": "VERIFIED_NAMED_BEHAVIOR",
+      "evidence": [
+        {
+          "report": "docs/evidence/web-deepseek-parity-20261013/browser-final/result.json",
+          "case": "read-tool"
+        }
+      ],
+      "limits": "Only named case assertions are accepted; broader original criteria remain subject to separate acceptance."
+    },
+    {
+      "id": "render.tool_cards",
+      "title": "默认专业工具卡：terminal/read/image/diff/search/web/todo/details/question",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-tool/src/client/apply.ts",
+        "packages/client/ui-tool/src/client/tool/components/ToolRow.tsx",
+        "packages/client/ui-tool/src/client/tool/toolviews/GenericToolCard.tsx"
+      ],
+      "original_acceptance": [
+        "bash exit!=0可见失败；read有line范围，diff有增删合计，search分文件，web可点击来源，todo/ask/details不丢记录；未知工具显示generic。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-tool"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "render.tool_subcalls",
+      "title": "工具/PTC子调用树",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-tool/src/client/tool/ToolCallTree.tsx"
+      ],
+      "original_acceptance": [
+        "父子层级、状态及输出独立；live准备到result身份稳定；重连后结构不重复。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-tool"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "render.tool_navigation",
+      "title": "工具文件/URL链接和Inspect跳转",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-tool/src/client/tool/components/ToolRow.tsx",
+        "packages/client/ui-tool/src/client/tool/ToolCallTree.tsx"
+      ],
+      "original_acceptance": [
+        "点击路径不折叠row；Enter/Space激活目标；Inspect定位同call；error/stopped不误显示可操作链接。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-tool"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "chat.system_prompt",
+      "title": "完整系统提示词及历史更新披露",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-chat/src/client/chat/SystemPromptRow.tsx",
+        "packages/client/ui-chat/src/client/conversation-nodes/request-prompt.ts"
+      ],
+      "original_acceptance": [
+        "首系统prompt、replacement、request-series新prompt正确；完整文本保持原换行；不重复同step提示词。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-chat"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "chat.context_injection",
+      "title": "注入/召回/工具增减上下文及producer/form详情",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-chat/src/client/chat/ContextInjectionRow.tsx",
+        "packages/client/ui-chat/src/client/chat/ContextBody.tsx"
+      ],
+      "original_acceptance": [
+        "所有默认forms有可读详情；缺失/畸形source回opaque；tool-add/remove单项不显示无意义展开，召回来源可辨。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-chat"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "chat.turn_trigger",
+      "title": "非人工回合触发归因、时间与内容披露",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-chat/src/client/chat/TurnTriggerNodeView.tsx",
+        "packages/client/ui-chat/src/client/chat/turn-trigger.ts"
+      ],
+      "original_acceptance": [
+        "schedule/job/subagent/webhook等真实来源与时间可见；展开显示原内容；来源未知有fallback。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-chat"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "chat.compaction",
+      "title": "自动/手动压缩标记、token/item数量与summary",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-chat/src/client/chat/CompactionItem.tsx",
+        "packages/client/ui-chat/src/client/chat/register-node-renderers.ts"
+      ],
+      "original_acceptance": [
+        "压缩数量/摘要正确；无summary不出现假按钮；完成后历史消息仍可导航。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-chat"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "chat.retry_failure",
+      "title": "重试倒计时、错误/配额/输出上限持久反馈",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-chat/src/client/chat/MessageItem.tsx",
+        "packages/client/ui-chat/src/client/chat/QuotaNoticeHost.tsx"
+      ],
+      "original_acceptance": [
+        "重试剩余秒/attempt/max可展开；error/cancel/max tokens可辨；history恢复不触发旧quota toast。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-chat"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "chat.running_status",
+      "title": "运行尾部状态、计时及reduced motion",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-chat/src/client/chat/RunningStatus.tsx",
+        "packages/client/ui-chat/src/client/chat/RunningWhaleTail.tsx"
+      ],
+      "original_acceptance": [
+        "计时准确且ticks不反复aria-live播报；取消/完成停止计时；reduced-motion没有持续动画。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-chat"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "chat.session_activity_stats",
+      "title": "session turn/step、速度、LLM/tool/TTFT统计弹层",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-chat/src/client/chat/StatsPills.tsx",
+        "packages/bundle/web-app/cordis.patch.yml"
+      ],
+      "original_acceptance": [
+        "paging/压缩不改变整session统计；点击pill显示可用时间/速度；Esc/外点关闭，缺数据不编造。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-chat"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "chat.session_token_stats",
+      "title": "session tokens/cache hit弹层",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-chat/src/client/chat/StatsPills.tsx",
+        "packages/client/ui-chat/src/chat-settings.ts"
+      ],
+      "original_acceptance": [
+        "tokens/cache hit与真实accounting一致；无billing不显示；弹层只展示可用bucket；compact只cache hit。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-chat"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "chat.turn_token_usage",
+      "title": "完成Turn消耗pill与routes/cache/input/output/reasoning详情",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-chat/src/client/chat/TurnUsagePanel.tsx",
+        "packages/client/ui-chat/src/client/chat/turn-assistant.ts",
+        "packages/client/ui-chat/src/client/chat/TurnTailNodeView.tsx"
+      ],
+      "original_acceptance": [
+        "一个turn多个attempt加总正确；routes/reasoning可选；不完整或矛盾数据整个pill隐藏。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-chat"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "chat.session_header",
+      "title": "title/breadcrumb层级与header插槽",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-conversation/src/client/skeleton/ConversationHeader.tsx",
+        "packages/client/ui-conversation/src/client/skeleton/ConversationSession.tsx"
+      ],
+      "original_acceptance": [
+        "当前标题稳定；subagent父层级点击可返回正确session；blank/sessionless保持全局导航。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "chat.view_tabs",
+      "title": "默认Chat/Trajectory切换及会话选择记忆",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-conversation/src/client/skeleton/ConversationSession.tsx",
+        "packages/client/ui-conversation/src/client/view-selection.ts",
+        "packages/bundle/web-app/cordis.patch.yml"
+      ],
+      "original_acceptance": [
+        "默认Chat；两tab可达，切换保留draft/session/scroll；缺失view时回Chat。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "trajectory.default_inspection",
+      "title": "默认事件账本/请求/system/tools/code详情（父matrix有细项）",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-trajectory/src/client/TrajectoryTable.tsx"
+      ],
+      "original_acceptance": [
+        "Request选择对应overview/options/usage/timing；system提示/工具目录/diff正确；details close/resize键盘可用。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-trajectory"
+      ],
+      "delivery_status": "BACKEND_TESTED",
+      "evidence": [
+        "apps/web/src/deepseek/projections.test.ts"
+      ],
+      "limits": "Actual backend behavior tested; default GUI interaction not independently accepted for this entire item."
+    },
+    {
+      "id": "composer.send.basic",
+      "title": "发送按钮、Enter发送、Shift+Enter换行",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-conversation/src/client/skeleton/InputBar.tsx",
+        "packages/client/ui-conversation/src/client/input/editor/keymap.ts"
+      ],
+      "original_acceptance": [
+        "点击/Enter各只发一个请求；空输入不能发送；Shift+Enter只插入换行；切换会话后请求仍归原generation。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ],
+      "delivery_status": "VERIFIED_NAMED_BEHAVIOR",
+      "evidence": [
+        {
+          "report": "docs/evidence/web-deepseek-parity-20261013/browser-final/result.json",
+          "case": "read-tool"
+        }
+      ],
+      "limits": "Only named case assertions are accepted; broader original criteria remain subject to separate acceptance."
+    },
+    {
+      "id": "composer.keyboard.safety",
+      "title": "IME尾键、重复Enter和修饰键仲裁",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-conversation/src/client/input/editor/keymap.ts"
+      ],
+      "original_acceptance": [
+        "中文/日文候选Enter与compositionend紧邻Enter均零请求；独立Enter一请求；repeat、Alt+Enter、Ctrl+Meta+Enter不误发。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "composer.primary.send_stop",
+      "title": "主操作随运行/草稿变为Send或Stop",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-conversation/src/client/skeleton/InputBar.tsx"
+      ],
+      "original_acceptance": [
+        "运行且空草稿只显示可执行Stop；有草稿可继续发消息；停止只取消当前会话当前回合；失败解除pending并可重试。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ],
+      "delivery_status": "VERIFIED_NAMED_BEHAVIOR",
+      "evidence": [
+        {
+          "report": "docs/evidence/web-deepseek-parity-20261013/browser-final/result.json",
+          "case": "markdown-stream-reload"
+        }
+      ],
+      "limits": "Only named case assertions are accepted; broader original criteria remain subject to separate acceptance."
+    },
+    {
+      "id": "composer.stop.double_escape",
+      "title": "双Esc停止与区域隔离",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-conversation/src/client/stop-shortcut.ts",
+        "packages/client/ui-conversation/src/client/apply.ts"
+      ],
+      "original_acceptance": [
+        "单Esc不取消；双Esc取消一次；切换会话/回合、IME、审批卡或弹窗中的Esc不取消；repeat无效。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "composer.busy_delivery",
+      "title": "运行时Queue/Steer偏好与Ctrl/Cmd+Enter互补递送",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-conversation/src/client/input/submission-policy.ts",
+        "packages/client/ui-conversation/src/submission-settings.ts",
+        "packages/client/ui-conversation/src/client/settings/EnterBehaviorRow.tsx"
+      ],
+      "original_acceptance": [
+        "Queue模式Enter排队、Ctrl/Cmd+Enter尝试steer；Steer偏好反转；关闭steering时窗按真实后端规则落队列；空闲均普通发送。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "message.copy.assistant",
+      "title": "Assistant复制的成功时限与防重复",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-chat/src/client/chat/MessageIconActions.tsx"
+      ],
+      "original_acceptance": [
+        "复制内容与原回复逐字相同；连点一次写入；约1秒恢复；复制失败保留可重试操作；旧generation不更新新视图。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-chat"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "message.copy.user_clock",
+      "title": "User复制与消息时间",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-chat/src/client/chat/MessageItem.tsx",
+        "packages/client/ui-chat/src/client/chat/MessageIconActions.tsx",
+        "packages/client/ui-chat/src/client/chat/TurnTailNodeView.tsx"
+      ],
+      "original_acceptance": [
+        "user与assistant均可复制；历史显示真实时间；瞬态/缺字段无伪时间；跨日时钟正确刷新。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-chat"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "message.turn_fork",
+      "title": "完成Turn末尾的消息分支",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-chat/src/client/chat/TurnTailNodeView.tsx",
+        "packages/client/ui-chat/src/client/apply.ts"
+      ],
+      "original_acceptance": [
+        "完成回合分支得到边界一致的历史并打开子会话；运行/非终尾不可点击且有原因；失败源会话保持不变。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-chat"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "message.feedback.actions",
+      "title": "Like/Dislike与已记录判断撤回",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/bundle/web-app/cordis.patch.yml",
+        "packages/client/ui-message-feedback/src/client/MessageFeedbackActions.tsx"
+      ],
+      "original_acceptance": [
+        "评分刷新可读；重复相同评分撤回；并发失败不误显示成功；只有真实durable messageId有按钮。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-message-feedback"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "chat.scroll.reading",
+      "title": "流式滚动尊重读者位置、回到底部和会话阅读记忆",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-chat/src/client/chat/use-chat-scroll.ts",
+        "packages/client/ui-chat/src/client/chat/ChatView.tsx"
+      ],
+      "original_acceptance": [
+        "流式过程中上滚后位置保持；底部时继续跟随；点击回底恢复跟随；切换回来还原读位；发送自己的消息回底。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-chat"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "chat.turn_navigation",
+      "title": "Turn轨道导航、预览与未加载Turn跳转",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-chat/src/client/chat/ChatView.tsx",
+        "packages/client/ui-chat/src/client/chat/TurnNavigator.tsx"
+      ],
+      "original_acceptance": [
+        "两回合出现轨道，单回合隐藏；点击精确定位；未加载历史先加载再定位；焦点预览和busy aria正确；reduced-motion无平滑动画。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-chat"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "chat.history.load_earlier",
+      "title": "显式加载更早历史",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-chat/src/client/chat/ChatView.tsx",
+        "packages/client/ui-chat/src/client/chat/use-chat-scroll.ts"
+      ],
+      "original_acceptance": [
+        "长会话每次只加载一页；按seq/messageId正确合并；读位不跳；失败可重试；旧generation结果不落入新会话。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-chat"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "composer.command.plus_slash",
+      "title": "加号与/命令候选、键盘仲裁",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-conversation/src/client/skeleton/InputBar.tsx",
+        "packages/client/ui-commands/src/client/service.ts",
+        "packages/client/ui-conversation/src/client/input/editor/keymap.ts"
+      ],
+      "original_acceptance": [
+        "点击+与/得到相同菜单；↑↓/Enter/Tab选择；Esc不发送；菜单保持输入焦点；会话切换与能力变更不会复用旧候选。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-commands"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "composer.reference.mention",
+      "title": "@文件/会话引用、目录下钻和引用chip",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-reference/src/client/index.ts",
+        "packages/client/ui-input-trigger/src/client/MenuView.tsx"
+      ],
+      "original_acceptance": [
+        "@列出授权文件/会话；目录下钻和面包屑正确；Esc退回；chip复制/发送恢复真实引用；切换会话无旧候选或越权结果。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-reference",
+        "@deepseek-ai/dsh-client-ui-input-trigger"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "composer.file_intake",
+      "title": "加号文件选择、粘贴文件与发送门控",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-conversation/src/client/skeleton/InputBar.tsx",
+        "packages/client/ui-conversation/src/client/input/editor/keymap.ts"
+      ],
+      "original_acceptance": [
+        "文件/图片多选与粘贴可见；上传未ready不能send；失败可重试/移除；消息提交含真实附件引用；导航撤销本地预览资源。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ],
+      "delivery_status": "BLOCKED_OR_PARTIAL",
+      "evidence": [],
+      "limits": "Bounded text upload exists; broad binary/image model admission unavailable."
+    },
+    {
+      "id": "composer.rich_controls.entries",
+      "title": "Permission/Plan/Model及activity插槽的composer入口",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-conversation/src/client/skeleton/InputBar.tsx"
+      ],
+      "original_acceptance": [
+        "仅能力可用时出现入口；输入冻结/会话失效时锁定；触发不会意外提交当前draft；手机宽度不重叠。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "composer.queue.dock",
+      "title": "Queue状态、折叠、编辑/删除/立即steer",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-conversation/src/client/queue/QueueDock.tsx"
+      ],
+      "original_acceptance": [
+        "单项直显/多项折叠；编辑save/cancel；删除只删目标；运行时steer、不运行解释禁用；pending无重复项；断线重连恢复队列。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ],
+      "delivery_status": "BLOCKED_OR_PARTIAL",
+      "evidence": [],
+      "limits": "Queue admission works; atomic inbox edit/remove/steer-now unavailable."
+    },
+    {
+      "id": "composer.todo.dock",
+      "title": "Todo进度摘要与展开列表",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-conversation/src/client/skeleton/TodoPanel.tsx",
+        "packages/client/ui-conversation/src/client/apply.ts"
+      ],
+      "original_acceptance": [
+        "空投影隐藏；三种状态和计数准确；Enter/Space展开收起；流式todo更新不丢展开状态；手机列表可读。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "conversation.content_width",
+      "title": "对称宽度拖柄及持久化",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-conversation/src/client/skeleton/ConversationWidthControls.tsx",
+        "packages/client/ui-conversation/src/client/skeleton/ConversationRoot.module.css"
+      ],
+      "original_acceptance": [
+        "两侧拖动同样宽度；刷新恢复；窗口缩窄暂时clamp后放宽恢复偏好；pointercancel还原；窄手机无漂浮命中条。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "composer.context_meter",
+      "title": "上下文占用环、百分比与组成面板",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-conversation/src/client/skeleton/InputBar.tsx",
+        "packages/client/ui-conversation/src/client/skeleton/ContextMeter.tsx"
+      ],
+      "original_acceptance": [
+        "投影到达才显示；ring/percent/capacity一致；面板组成值明确近似；Esc/外点关闭；模型切换容量消失立即关闭。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "shortcuts.reference_customization",
+      "title": "快捷键目录、搜索、改键与恢复默认",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/bundle/web-app/cordis.patch.yml",
+        "packages/client/ui-shortcuts/src/client/index.ts",
+        "packages/client/ui-shortcuts/src/client/Reference.tsx"
+      ],
+      "original_acceptance": [
+        "Ctrl/Cmd+/切换目录；搜索按名称/键生效；改键执行新动作；冲突不保存；恢复默认有确认且失败显式；刷新有效绑定保持。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-shortcuts"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "shortcuts.new_sidebar",
+      "title": "默认Web新建会话和侧栏快捷键",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-workspace/src/client/shortcuts.ts",
+        "packages/client/ui-layout/src/client/index.ts"
+      ],
+      "original_acceptance": [
+        "正确平台组合键等价按钮；不会输入字符或重复触发；modal/IME场景阻断；工具提示与aria-keyshortcuts显示有效绑定。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-workspace",
+        "@deepseek-ai/dsh-client-ui-layout"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "responsive.sidebar",
+      "title": "窄屏自动收起与桌面偏好恢复",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-layout/src/client/columns.ts",
+        "packages/client/ui-layout/src/client/stores.ts"
+      ],
+      "original_acceptance": [
+        "390/760/1024/1440宽度无横向溢出；窄屏开关/遮罩/Esc和选择会话关闭；回宽屏恢复原偏好；阅读区和composer可操作。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-layout"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    },
+    {
+      "id": "responsive.composer_controls",
+      "title": "窄composer容器下的工具间距和可用性",
+      "tier": "default",
+      "upstream_paths": [
+        "packages/client/ui-conversation/src/client/skeleton/InputBar.module.css",
+        "packages/client/ui-conversation/src/client/skeleton/ConversationRoot.module.css"
+      ],
+      "original_acceptance": [
+        "390手机、窄桌面分栏和虚拟键盘下输入/Stop/Send都可见；tooltip/菜单不越界；工具控件不重叠；safe-area不遮按钮。"
+      ],
+      "official_default_entries": [
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ],
+      "delivery_status": "PENDING_CONTROL_ACCEPTANCE",
+      "evidence": [],
+      "limits": "Official component assembled where its module is in the fixed roster; no per-control acceptance claimed."
+    }
+  ],
+  "statusCounts": {
+    "SOURCE_VERIFIED": 9,
+    "VERIFIED_NAMED_BEHAVIOR": 27,
+    "PENDING_CONTROL_ACCEPTANCE": 72,
+    "BLOCKED_OR_PARTIAL": 18,
+    "BACKEND_TESTED": 14,
+    "OPTIONAL_NOT_ENABLED": 6
+  },
+  "countNote": "Counts are audit item classifications, never completion percentages or test counts. Original acceptance remains visible; only cited named assertions are accepted."
+}

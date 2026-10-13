@@ -1,0 +1,55 @@
+{
+  "status": "FAIL",
+  "scope": "unmodified official UI, real production Web main, local HTTP fixture; not paid model quality",
+  "origin": "http://127.0.0.1:42075",
+  "providerOrigin": "http://127.0.0.1:33713/v1",
+  "paidModelCalls": 0,
+  "loopbackRequests": 0,
+  "launches": [
+    {
+      "at": "2026-10-12T14:00:06.336Z",
+      "artifacts": {
+        "apps/web/dist/main.js": "ec396984525f0d2a7e241fae220f41ab02f788708db4b9677e67bd0c0f306839",
+        "apps/web/dist/deepseek/catalog.js": "0c7eca4b5950bbadeb35a464208775b925f7b33ab61803a9606e8498026958b1",
+        "apps/web/dist/deepseek/composition.js": "5bfac7ba57304e358771b76778b08649fb9344dc1b85796ddba0e74acbb6681c",
+        "apps/web/dist/deepseek/owners.js": "1929ae632bc5fd77112b30dcdecaec1ba339f327188bb7dde89c4a2616922440",
+        "apps/web/dist/deepseek/session.js": "37f4a388ca1196aa35e81d899ee3b53f666cccef77da8ca566434768e49c08db"
+      }
+    }
+  ],
+  "fingerprints": {
+    "apps/web/src/deepseek/catalog.ts": "7f3068cdcc514e74acaf048ff47b01437405721e8cc706c0ea3e7b723ea177ae",
+    "apps/web/src/deepseek/composition.ts": "1ba6971be370c47cf0b491e7b39797035ae94957f5f5668d2b80410a321b2754",
+    "apps/web/src/deepseek/owners.ts": "95008a9e83421f277bdaa8d0b04c04973f83e1e705db34ed7b8f9e4426348014",
+    "apps/web/src/deepseek/session.ts": "896ccd898acee0d2820d5e23ad71b55862def551a5d1a5eddf992aa347ba1e5c",
+    "apps/web/src/deepseek/projections.ts": "87bb81b7d5029f81b06b06109bb1beb413802e140665de434469a9e4783bba54",
+    "apps/web/src/main.ts": "f8930a5edd5e86f6aafaeed3a04f554945aa94a511ff73bb948d8ccc8a0f9cd6"
+  },
+  "assertions": [
+    {
+      "name": "official browser booted with production carrier",
+      "status": "PASS"
+    },
+    {
+      "name": "official Models form persisted a real adapter profile",
+      "status": "PASS"
+    },
+    {
+      "name": "official key form stored only a credential reference in profile",
+      "status": "PASS"
+    },
+    {
+      "name": "official theme and font controls persisted to host settings",
+      "status": "PASS"
+    },
+    {
+      "name": "official Work details and Performance controls persisted to ui-chat",
+      "status": "PASS"
+    },
+    {
+      "name": "production browser model selection acceptance",
+      "status": "FAIL",
+      "details": "TimeoutError: locator.waitFor: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Select model, current web-loopback-alternate', exact: true }) to be visible\u001b[22m\n"
+    }
+  ]
+}

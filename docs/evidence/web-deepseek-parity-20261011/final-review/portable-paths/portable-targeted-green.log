@@ -1,0 +1,34 @@
+✔ complete DeepSeek UI keeps all ten previously blocked notices byte for byte in a verified schema 2 archive (61.15186ms)
+✔ ustar accepts the exact prefix/name field limits without changing payload bytes or executable modes (3.75546ms)
+✔ ustar still rejects paths with no split fitting both fields (0.781916ms)
+✔ portable enumerates the actual workspace, including indirect and unreferenced packages (643.275465ms)
+✔ workspace identity accepts a root alias and excludes the physical workspace root (525.490081ms)
+✔ workspace inventory rejects packages physically outside the pinned source (661.614758ms)
+✔ linked production workspace dependencies cannot enter the portable payload (575.501351ms)
+✔ portable rejects missing production workspace dependencies and duplicate package names (1026.134184ms)
+✔ package-local adapted-source licenses and root notices ship byte for byte (35.64099ms)
+✔ archive round trip preserves exact binary bytes with deterministic output (8.880504ms)
+✔ traversal, absolute paths, Windows separators and duplicate case paths are rejected (3.295478ms)
+✔ bad tar checksums, symlink entries and missing terminators are rejected before writes (7.55792ms)
+✔ extraction never overwrites an existing consumer directory (2.870824ms)
+✔ extraction still rejects a link destination and links in its parent path before file writes (2.059328ms)
+✔ manifest binds every file, exact version and source, and rejects extra files (20.243062ms)
+✔ duplicate manifest paths and parent directory links cannot stand in for payload files (6.078764ms)
+✔ snapshot uses pinned Git blobs and ignores stale dist or untracked ignored source (605.864278ms)
+✔ archive retains executable native helpers, independently of their filenames and umask (6.600319ms)
+✔ tar numeric fields reject privilege bits, writable modes, junk suffixes and nonzero ownership or timestamps before writes (17.742941ms)
+✔ schema 2 binds regular file permissions and rejects invalid or altered modes while schema 1 remains readable (24.770568ms)
+✔ schema 2 archive validates declared bytes and modes before extracting any payload (16.742406ms)
+✔ source snapshot retains executable Git modes instead of inheriting the process umask (28.536098ms)
+✔ payload canonicalization restores reviewed Darwin helpers even when the package store stripped all execute bits (4.404937ms)
+✔ native rebuild rejects unreviewed versions and lock bytes before executing any lifecycle hook (2.758209ms)
+✔ builder refuses an archive larger than the consumer extraction budget before reading or compressing its payload (0.795546ms)
+✔ executed portable tools must match pinned source so schema 2 cannot ship a stale schema 1 verifier (11.205026ms)
+ℹ tests 26
+ℹ suites 0
+ℹ pass 26
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4441.326404

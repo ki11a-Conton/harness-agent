@@ -1,0 +1,125 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-web-parity-20261008
+
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ × apps/web/src/deepseek/composition-security.regressions.test.ts > a credential reader refuses a real symlink swapped after the metadata observation 87ms
+   → promise resolved "{ securefixture: { …(5) } }" instead of rejecting
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ × apps/web/src/deepseek/composition-security.regressions.test.ts > a private credential document cannot alias an outside retained file through a hard link 55ms
+   → promise resolved "{ securefixture: { …(5) } }" instead of rejecting
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for securefixture/coding-fixture — using conservative fallback 32000
+ × apps/web/src/deepseek/composition-security.regressions.test.ts > byte-range previews cannot reconstruct a protected credential that the whole-file preview refuses 92ms
+   → promise resolved "{ …(6) }" instead of rejecting
+ ✓ apps/web/src/deepseek/composition-security.regressions.test.ts > an owner consumes the final committed credential when rotation completes before the actual owner is frozen 169ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  apps/web/src/deepseek/composition-security.regressions.test.ts > a credential reader refuses a real symlink swapped after the metadata observation
+AssertionError: promise resolved "{ securefixture: { …(5) } }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "securefixture": {
++     "api": "openai-completions",
++     "apiKey": "outside-credential-fixture",
++     "apiKeyEnv": "SECURITY_FIXTURE_KEY",
++     "baseURL": "http://127.0.0.1:1/v1",
++     "models": [
++       {
++         "id": "coding-fixture",
++       },
++     ],
++   },
+  }
+
+ ❯ apps/web/src/deepseek/composition-security.regressions.test.ts:64:71
+     62|   await writeFile(outside, outsideBytes, { mode: 0o600 });
+     63|   Object.assign(fileRace, { armed: true, path, outside });
+     64|   await expect(stack.composed.catalog.resolvedModelProfiles(signal()))…
+       |                                                                       ^
+     65|   expect(fileRace.armed).toBe(false);
+     66|   expect(await readFile(outside, "utf8")).toBe(outsideBytes);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  apps/web/src/deepseek/composition-security.regressions.test.ts > a private credential document cannot alias an outside retained file through a hard link
+AssertionError: promise resolved "{ securefixture: { …(5) } }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "securefixture": {
++     "api": "openai-completions",
++     "apiKey": "outside-linked-credential-fixture",
++     "apiKeyEnv": "SECURITY_FIXTURE_KEY",
++     "baseURL": "http://127.0.0.1:1/v1",
++     "models": [
++       {
++         "id": "coding-fixture",
++       },
++     ],
++   },
+  }
+
+ ❯ apps/web/src/deepseek/composition-security.regressions.test.ts:77:71
+     75|   await writeFile(outside, outsideBytes, { mode: 0o600 });
+     76|   await unlink(path); await link(outside, path);
+     77|   await expect(stack.composed.catalog.resolvedModelProfiles(signal()))…
+       |                                                                       ^
+     78|   expect(await readFile(outside, "utf8")).toBe(outsideBytes);
+     79| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  apps/web/src/deepseek/composition-security.regressions.test.ts > byte-range previews cannot reconstruct a protected credential that the whole-file preview refuses
+AssertionError: promise resolved "{ …(6) }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "absolutePath": "/tmp/dsh-independent-security-Oo26YQ/project/fixture-config.txt",
++   "bytes": 59,
++   "data": Uint8Array [
++     65,
++     117,
++     116,
++     104,
++     111,
++     114,
++     105,
++   ],
++   "eof": false,
++   "offset": 0,
++   "version": "3e644f5eb5cdb3b1ae5bec07a041905e42982ecc110f04e6c09de85bf7357038",
+  }
+
+ ❯ apps/web/src/deepseek/composition-security.regressions.test.ts:88:139
+     86|   const base = { workspaceFileScopeId: id, path: "fixture-config.txt" …
+     87|   await expect(stack.composed.files.call("workspaceFiles/readBytes", {…
+     88|   await expect(stack.composed.files.call("workspaceFiles/readBytes", {…
+       |                                                                                                                                           ^
+     89| });
+     90|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 1 passed (4)
+   Start at  14:01:42
+   Duration  3.94s (transform 2.65s, setup 0ms, import 3.39s, tests 405ms, environment 0ms)
+

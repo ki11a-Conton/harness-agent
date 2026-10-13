@@ -904,6 +904,17 @@ async function writeTempScript(name: string, body: string): Promise<string> {
 async function isProcessAlive(pid: number): Promise<boolean> {
   try {
     process.kill(pid, 0);
+    if (process.platform === "linux") {
+      try {
+        const status = await readFile(`/proc/${pid}/stat`, "utf8");
+        // A zombie has exited irreversibly. Managed PID 1 may delay reaping;
+        // signal 0 alone proves existence, not surviving execution.
+        if (status.slice(status.lastIndexOf(")") + 2).split(" ")[0] === "Z") return false;
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
+        throw error;
+      }
+    }
     return true;
   } catch (err) {
     return (err as { code?: string }).code === "EPERM";

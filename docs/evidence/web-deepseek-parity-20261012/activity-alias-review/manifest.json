@@ -1,0 +1,126 @@
+{
+  "recordedAt": "2026-10-12T00:53:19.910758+00:00",
+  "gitHead": "bab0e78e9d6948630bd0b3178dc1144568102775",
+  "scope": "Mutable task checkout; source hashes identify this review snapshot. This is not a release gate or browser parity claim.",
+  "modelTraffic": "Alias timer uses a loopback HTTP provider: three model requests, zero paid requests.",
+  "reports": [
+    {
+      "file": "web-activity-native-catalog-red-20261012.json",
+      "sha256": "55e55ab1afd05457d66a0a113382a41f2bfac6b877a2be5ca112bc8200d4afb6",
+      "bytes": 7649,
+      "passed": 0,
+      "failed": 2,
+      "pending": 19,
+      "success": false
+    },
+    {
+      "file": "web-activity-native-catalog-green-20261012.json",
+      "sha256": "5fd4f2c97c0da58ea4cc5d2329e252684b17e018431882951e2b66c16796de2c",
+      "bytes": 6701,
+      "passed": 2,
+      "failed": 0,
+      "pending": 19,
+      "success": true
+    },
+    {
+      "file": "web-activity-full-before-alias-green-20261012.json",
+      "sha256": "8afcb58ee11cdf886efbd877bc6412bee1b5dcf43292b8513a862d3ef9e70d7e",
+      "bytes": 7243,
+      "passed": 21,
+      "failed": 0,
+      "pending": 0,
+      "success": true
+    },
+    {
+      "file": "web-activity-alias-native-timer-20261012.json",
+      "sha256": "292b23a67eda1385e09411fb92331330939752cd48be4b46bc768d3b30950853",
+      "bytes": 7786,
+      "passed": 0,
+      "failed": 1,
+      "pending": 21,
+      "success": false
+    },
+    {
+      "file": "web-activity-alias-native-timer-green-20261012.json",
+      "sha256": "4e84a7c1eaaf92f07a1a3db51e04e8618cd37de71f4a5c6515b3f38f01bd9af6",
+      "bytes": 7013,
+      "passed": 1,
+      "failed": 0,
+      "pending": 21,
+      "success": true
+    },
+    {
+      "file": "web-activity-task-file-race-red-20261012.json",
+      "sha256": "c04f4cb19169b3d49204f639c07277a746c5e204b2e2396bc75d203ce40ef63a",
+      "bytes": 2166,
+      "passed": 1,
+      "failed": 1,
+      "pending": 0,
+      "success": false
+    },
+    {
+      "file": "web-activity-all-real-security-green-20261012.json",
+      "sha256": "2f2de6f353816f7c3e575cce2e12afc1b61090fb6b04635a36a24faa1269113a",
+      "bytes": 9028,
+      "passed": 26,
+      "failed": 0,
+      "pending": 0,
+      "success": true
+    },
+    {
+      "file": "web-activity-unknown-schedule-red-20261012.json",
+      "sha256": "02d07f821e3d23fac61caa5beafddc07b5457a548b4043f2da1751ab1b1b2397",
+      "bytes": 8473,
+      "passed": 0,
+      "failed": 1,
+      "pending": 23,
+      "success": false
+    },
+    {
+      "file": "web-activity-final-27-green-20261012.json",
+      "sha256": "23645a11745005e1401ac4d30c26c86be49e06f2817947b02e54984bc67288c7",
+      "bytes": 9331,
+      "passed": 27,
+      "failed": 0,
+      "pending": 0,
+      "success": true
+    }
+  ],
+  "sourceSHA256": {
+    "apps/web/src/deepseek/activity-projections.ts": "44ff8c3447ac52ce58298dcb6057075eee5f1ea70b3f549bc518590757c1605f",
+    "apps/web/src/deepseek/activity-store.security.test.ts": "c4e3dc40e99186ea7b02d8ad2a510bc11f9a169d11dffa8c7ef1e62abe352ef7",
+    "apps/web/src/deepseek/activity-store.ts": "3b3eb4439d7659adefa4226ea095cd8ad48a9e1ddb96116061ba7fbe546f778a",
+    "apps/web/src/deepseek/activity.test.ts": "dc421e003053e554908a061372f160c71aaa0ed74f757d9937fdd241a7b0d55f",
+    "apps/web/src/deepseek/activity.ts": "d292c2318923cad67871901388c99f4f846f2c8d818ced185bb5ca23d17eb7a6",
+    "apps/web/src/deepseek/catalog.test.ts": "3304098a68d07b235704a6161b0ae851dccfa2bbdfca869c9bf5203051248772",
+    "apps/web/src/deepseek/catalog.ts": "7f3068cdcc514e74acaf048ff47b01437405721e8cc706c0ea3e7b723ea177ae",
+    "apps/web/src/deepseek/change-compare.ts": "9f9adbed3d0005631e11b2b5791f9adb45ca44ea578df71c99a26264164c5486",
+    "apps/web/src/deepseek/composition.integration.test.ts": "77625a829bf6d737f4bb37d325fa0281009b8f46394efd5cc0d2ae6753f83848",
+    "apps/web/src/deepseek/composition.ts": "1ba6971be370c47cf0b491e7b39797035ae94957f5f5668d2b80410a321b2754",
+    "apps/web/src/deepseek/deliverables.ts": "1a9608983a44c38a4eb2f5b8bad63558f4d55de92a784d800ef8ec83eb1e6353",
+    "apps/web/src/deepseek/events.ts": "c463681ffd47645adf1806a76528d1dfdfbaec8b45a023223867d5a5fa0cc219",
+    "apps/web/src/deepseek/files.ts": "5c11ed91ea553b1296d6552e3716d3cc020927283ff1db333edd83fabd490912",
+    "apps/web/src/deepseek/host-tools.ts": "93beb87f3520565b95c057b9fb87924b1c07379e1b1541fb7a62ae5bdb8b1250",
+    "apps/web/src/deepseek/metadata.ts": "3cb3daa22b24d09c59d49909b02be77673d28a264732d8b549ab3ff2ebd9462c",
+    "apps/web/src/deepseek/owners.test.ts": "0cc888a1ce8638ca97dd223b66664fdbcc9772bfe94428cafc2daaacdde91aaf",
+    "apps/web/src/deepseek/owners.ts": "95008a9e83421f277bdaa8d0b04c04973f83e1e705db34ed7b8f9e4426348014",
+    "apps/web/src/deepseek/platform-http.test.ts": "0013e146a45629ce07a649289c226f2cb4be5d10347affad1e5b22a9be11ce9d",
+    "apps/web/src/deepseek/projections.test.ts": "6126130bf63cfac4777b05f49e2af6cf40a8f5b45acbca5cd4fd24935ad44e87",
+    "apps/web/src/deepseek/projections.ts": "87bb81b7d5029f81b06b06109bb1beb413802e140665de434469a9e4783bba54",
+    "apps/web/src/deepseek/schedule-pure/domain.ts": "089d33293813e5a713189b8d741650fe490550bead7b4300f0d74dd296fba068",
+    "apps/web/src/deepseek/schedule-pure/session-shim.ts": "6b020a3388c93b158d0b0a6cd3ccb3648a0693caa22cb6caef36f3b49fbd07bb",
+    "apps/web/src/deepseek/schedule-pure/types.ts": "4f6391eb7ddbb707e49b5d8f3ee2a95be64c344170a5e5659dce13edd96147f6",
+    "apps/web/src/deepseek/schedule-pure/update.ts": "897c0b57cd3d65f89cef63b1015dcb33e077c38f68b22697645f5cfc99cdd60f",
+    "apps/web/src/deepseek/session.production.test.ts": "dac2a5499d3c9d6c88f795944c12a4977b92297a362842da6a70a61d1978b7ba",
+    "apps/web/src/deepseek/session.test.ts": "a9aa0acfe370729be80f08487b4ba8f5b34f688e1ff02e1338e3f91b6dfffab1",
+    "apps/web/src/deepseek/session.ts": "4604a0efc3a085ceb258b989da4b61a50d7e28c931b15458d61d4bbed10a04ea",
+    "apps/web/src/deepseek/socket.test.ts": "20a53fce9476f26673b34dc9042f965e617ba592d6ca111490c1c596eec8e3b4",
+    "apps/web/src/deepseek/socket.ts": "db308d3d8de8ca092f45a833d38de7234163fe2685dfa75a0417ee1791a2ce3f",
+    "apps/web/src/deepseek/socket.web-server.test.ts": "ea7888474ebb40bfeb4df79e3a52d62597686272b146bff9e0a5bf35df4776be",
+    "apps/web/src/deepseek/terminal.ts": "a293eac425aa94e74b2f6f2af2c7905e888362cb24190cbfa88ef77bd01043d6",
+    "apps/web/src/deepseek/transport.test.ts": "5fa8141a77de976cd0701d8c1641fa53b78d4e1a0f24152961325f999f23e01c",
+    "apps/web/src/deepseek/transport.ts": "58d850d12479c4007dcecd253dc62adc8c3ac0e5284e38be0b59929c49ac65f5",
+    "apps/web/src/deepseek/workspace.integration.test.ts": "3db42fcc96f680b21d8a715a5bc236eff5e629bc644390672a178b53eb8b88c4",
+    "apps/web/src/deepseek/workspace.ts": "2ced963b277f0ff0f6861490eebdbaede6e9e49205d4d09e99eeb8f396563f59"
+  }
+}

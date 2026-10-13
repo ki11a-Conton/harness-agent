@@ -1,0 +1,660 @@
+$ tsc -b && vitest run --exclude '**/*.perf.test.ts' --exclude '**/*.soak.test.ts' --exclude '**/e3-repro-current-defects.test.ts' --exclude '**/e4-r40-forensics.test.ts' --exclude '**/r97-driver-closed-loop.test.ts' --reporter=json --outputFile=docs/evidence/web-deepseek-parity-20261012/final-gates/full-suite.json
+[harness] context budget: model capabilities unknown for stub/m — using conservative fallback 32000
+[degraded] e4-r60 taskkill spawn: spawn taskkill ENOENT
+[degraded] e4-r60 taskkill exit: taskkill exited with 1
+[degraded] e4-r60 taskkill spawn: boom
+[degraded] e4-r60 taskkill exit: taskkill exited with 1
+[degraded] e4-r60 taskkill: sync spawn failure
+[degraded] e4-r60 taskkill spawn: nope
+[degraded] e4-r60 taskkill spawn: injected taskkill failure
+[degraded] e4-r55 evidence root: ENOTDIR: not a directory, mkdir '/tmp/e4-r65-root-veoOsA/a-file/child'
+[degraded] e4-r55 evidence write child.stdout.txt: EIO: injected write failure for child.stdout.txt
+[degraded] e4-r55 evidence write child.stderr.txt: EACCES: injected write failure for child.stderr.txt
+[degraded] e4-r55 evidence write child-report.json: EIO: injected write failure for child-report.json
+[degraded] e4-r55 evidence write run.json: EIO: injected write failure for run.json
+[degraded] e4-r55 evidence write child.stdout.txt: EIO: injected write failure for child.stdout.txt
+
+R68_SYMLINK_CAPABILITY={"ok":true,"detail":"fs.symlink created a link that lstat reports as a symlink"}
+
+R68_LINK_DIRENT={"isSymbolicLink":true,"isFile":false}
+[web] listening on http://127.0.0.1:43777
+[web] listening on http://127.0.0.1:43333
+[web] listening on http://127.0.0.1:33681
+[web] listening on http://127.0.0.1:41483
+[web] listening on http://127.0.0.1:46621
+[web] listening on http://127.0.0.1:43313
+[web] listening on http://127.0.0.1:35367
+[web] listening on http://127.0.0.1:41799
+[web] listening on http://127.0.0.1:44581
+[web] listening on http://127.0.0.1:45905
+[web] listening on http://127.0.0.1:46705
+[web] listening on http://127.0.0.1:42459
+[web] listening on http://127.0.0.1:44151
+[web] listening on http://127.0.0.1:33053
+[web] listening on http://127.0.0.1:38403
+[web] listening on http://127.0.0.1:43003
+[web] listening on http://127.0.0.1:43267
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for gateway/fresh-coding — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+usage: node scripts/e4/r97-arm-worker.mjs --checkout <arm dir> --case <caseId> --suite <suite> --arm <arm>
+                                                --provider <id> --model <id> [--endpoint <url>]
+                                                --plan-digest <hex> --state <execution state dir> --ledger <ledger dir>
+                                                [--source-sha <40-hex>] [--script-shape write-then-stop|text-only] [--json]
+
+The approved --provider/--model are REQUIRED: a worker that defaulted them would execute a
+different identity than the plan approved (plan T4 怎么做 6).
+usage: node scripts/e4/r97-arm-worker.mjs --checkout <arm dir> --case <caseId> --suite <suite> --arm <arm>
+                                                --provider <id> --model <id> [--endpoint <url>]
+                                                --plan-digest <hex> --state <execution state dir> --ledger <ledger dir>
+                                                [--source-sha <40-hex>] [--script-shape write-then-stop|text-only] [--json]
+
+The approved --provider/--model are REQUIRED: a worker that defaulted them would execute a
+different identity than the plan approved (plan T4 怎么做 6).
+usage: node scripts/e4/r97-arm-worker.mjs --checkout <arm dir> --case <caseId> --suite <suite> --arm <arm>
+                                                --provider <id> --model <id> [--endpoint <url>]
+                                                --plan-digest <hex> --state <execution state dir> --ledger <ledger dir>
+                                                [--source-sha <40-hex>] [--script-shape write-then-stop|text-only] [--json]
+
+The approved --provider/--model are REQUIRED: a worker that defaulted them would execute a
+different identity than the plan approved (plan T4 怎么做 6).
+usage: node scripts/e4/r97-arm-worker.mjs --checkout <arm dir> --case <caseId> --suite <suite> --arm <arm>
+                                                --provider <id> --model <id> [--endpoint <url>]
+                                                --plan-digest <hex> --state <execution state dir> --ledger <ledger dir>
+                                                [--source-sha <40-hex>] [--script-shape write-then-stop|text-only] [--json]
+
+The approved --provider/--model are REQUIRED: a worker that defaulted them would execute a
+different identity than the plan approved (plan T4 怎么做 6).
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for precise-child-job/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for timer/actual-timer-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for openai/model-original — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for openai/model-selected — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for openai/coding — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for openai/coding — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for openai/model-original — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for openai/model-original — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for openai/model-selected — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for openai/model-original — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for openai/model-original — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for openai/model-selected — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/one — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/two — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/new — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/new — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/selected — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/selected — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/selected — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/selected — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/typed-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+[degraded] observation-evidence unreadable row: ObservationEvidence invalid: evidenceDigest does not recompute over the row body
+[degraded] observation-evidence unreadable row: ObservationEvidence invalid: testedSourceSha must be a 40-hex git sha (got null)
+[degraded] observation-evidence: row runId "old-run" != requested run "new-run" (rows copied from another run are diagnostic only) — dropped
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:36691
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:41601
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:41437
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:41365
+[harness] context budget: model capabilities unknown for web-cancellation-probe/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:44499
+[harness] context budget: model capabilities unknown for web-queued-followup-stop-probe/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:44029
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for gated-live/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/custom-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[prereg] trusted-build mode: baseline @ 9a735901fa5b closure 473ddff35857… network sandbox=none
+[prereg] trusted-build mode: baseline @ 989ee7bc83f7 closure 6aab2834f8f3… network sandbox=none
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[skill denied] detection=injection target=/tmp/ar-skill-admission-GwDGMP/skills/blocked-injection/SKILL.md reasons=dismiss-previous-instructions,dismiss-all-instructions,override-own-instructions,extract-system-prompt
+[skill denied] detection=secret target=/tmp/ar-skill-admission-FJOKKv/skills/blocked-secret/SKILL.md reasons=openai-key
+[skill denied] detection=required-tools target=/tmp/ar-skill-admission-neay3O/skills/blocked-tools/SKILL.md reasons=required tool not allowed by host policy: unavailable_tool
+[degraded] prereg observer refused case holdout/ho-esc-01: not a readable benchmarks case directory
+[degraded] prereg observer refused case ../outside/esc-01: not a readable benchmarks case directory
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-HpVZhw/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-JPXxP5/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-EFjqJd/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-MwfMKL/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-QNGt8t/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-iR2Rcw/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-D7rhKL/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-jrr9aK/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-EESPQh/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-Speao1/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-95x8RH/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-zWchfe/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-UHT7dL/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-3cX2oX/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-dLF3LR/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-WNrVmE/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-GJtMJW/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-pREkZk/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-S454ph/package.json'
+[harness] context budget: model capabilities unknown for scripted/upgrade-boundary-test — using conservative fallback 32000
+[web] listening on http://127.0.0.1:35581
+[harness] context budget: model capabilities unknown for scripted/upgrade-boundary-test — using conservative fallback 32000
+[web] listening on http://127.0.0.1:36447
+[harness] context budget: model capabilities unknown for scripted/upgrade-boundary-test — using conservative fallback 32000
+[web] listening on http://127.0.0.1:46593
+[harness] context budget: model capabilities unknown for fake/unknown-window — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[n2-arm:baseline] build copied + links created: 0 ms
+[n2-arm:baseline] closure digest computed: 2 ms
+[n2-arm:baseline] git tree committed: 30 ms
+[n2-arm:candidate] build copied + links created: 0 ms
+[n2-arm:candidate] closure digest computed: 1 ms
+[n2-arm:candidate] git tree committed: 20 ms
+[n2-arm:baseline] build copied + links created: 0 ms
+[n2-arm:baseline] closure digest computed: 0 ms
+[n2-arm:baseline] git tree committed: 22 ms
+[n2-arm:candidate] build copied + links created: 0 ms
+[n2-arm:candidate] closure digest computed: 1 ms
+[n2-arm:candidate] git tree committed: 33 ms
+[harness] context budget: model capabilities unknown for openai/coding-model-selected-by-user — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[skill denied] detection=required-tools target=/tmp/ar-task-skills-7LApOR/skills/danger/SKILL.md reasons=required tool not allowed by host policy: ungranted-tool
+[skill denied] detection=injection target=/tmp/ar-task-skills-7LApOR/skills/hostile/SKILL.md reasons=dismiss-previous-instructions,dismiss-all-instructions,override-own-instructions,extract-system-prompt
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[harness] context budget: model capabilities unknown for scripted/platform-http-fixture — using conservative fallback 32000
+[web] listening on http://127.0.0.1:40067
+[harness] context budget: model capabilities unknown for scripted/platform-http-fixture — using conservative fallback 32000
+[web] listening on http://127.0.0.1:38729
+[harness] context budget: model capabilities unknown for scripted/platform-http-fixture — using conservative fallback 32000
+[web] listening on http://127.0.0.1:35735
+[harness] context budget: model capabilities unknown for scripted/platform-http-fixture — using conservative fallback 32000
+[web] listening on http://127.0.0.1:45255
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[skill denied] detection=required-tools target=/tmp/ar-skill-revision-RSTRSH/skills/lint/SKILL.md reasons=required tool not allowed by host policy: exec_command
+[skill denied] detection=injection target=/tmp/ar-skill-revision-uSxTOO/skills/lint/SKILL.md reasons=dismiss-previous-instructions,dismiss-all-instructions,override-own-instructions
+[skill denied] detection=secret target=/tmp/ar-skill-revision-vtzaZ2/skills/lint/SKILL.md reasons=openai-key
+[prereg] trusted-build mode: baseline @ 3f3556e8aec0 closure 278587dce214… network sandbox=none
+[degraded] openai.reader.cancel: response cleanup failed
+[degraded] path-scoped-discovery.close: instruction handle cleanup failed
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[degraded] memory-store.corrupt-line: Expected property name or '}' in JSON at position 1 (line 1 column 2)
+[degraded] memory-store.corrupt-line: Expected property name or '}' in JSON at position 1 (line 1 column 2)
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[degraded] prereg observer refused case regression/reg-01: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/reg-02: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/reg-06: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/reg-08: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/adv-03: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/adv-07: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/st-02: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/st-05: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/reg-01: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/reg-02: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/reg-06: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/reg-08: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/adv-03: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/adv-07: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/st-02: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/st-05: not a readable benchmarks case directory
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[degraded] memory.search: FTS unavailable or query rejected; using literal search
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[degraded] sqlite-store.close-journal-mode: database is locked
+[degraded] session session_92bfbafe-6d83-4267-a450-e91031731fd3 failed to persist recovery record for turn_aa7c16da-71b4-4239-b90c-b5d339a72fb7: store down
+[degraded] session session_92bfbafe-6d83-4267-a450-e91031731fd3 recovery lease failed for turn_aa7c16da-71b4-4239-b90c-b5d339a72fb7: store down
+[degraded] session session_abbdbfb8-824c-4306-af4b-42ec59e1ad72 recovery lease failed for turn_aeb52b16-ce81-40a6-a8ca-c7a373b9434b: recovery CAS conflict for turn_aeb52b16-ce81-40a6-a8ca-c7a373b9434b: expected version 1, stored 2
+[degraded] session session_afd55e25-96bf-45ad-befa-ac350f66f210 terminal recovery ACK failed for turn_f19a47c1-fdd8-4a86-a34c-931cdc88b4e1: review terminal ACK failure — entering pending-commit (reconcile), queue frozen
+[degraded] session session_688abf9f-947e-44c1-ba7d-258620496387 terminal recovery ACK failed for turn_b27fc988-2d27-4580-8df9-6cdc4c12177d: review terminal ACK failure — entering pending-commit (reconcile), queue frozen
+[degraded] session session_71b327e2-ce3d-4786-81ae-e1483163a04d terminal recovery ACK failed for turn_9a9adfae-95d1-42ba-bbba-ac2a64fc1fbe: review terminal ACK failure — entering pending-commit (reconcile), queue frozen
+[degraded] session session_75243294-6833-41b1-b3ea-c6da9d399b00 terminal recovery ACK failed for turn_8eb6e71a-f72a-4d09-b545-77c68761a4eb: compound terminal/marker write outage — entering pending-commit (reconcile), queue frozen
+[degraded] session session_75243294-6833-41b1-b3ea-c6da9d399b00 failed to persist recovery record for turn_8eb6e71a-f72a-4d09-b545-77c68761a4eb: compound terminal/marker write outage
+[degraded] session session_7b7d32bc-93d2-433d-81b8-26536b753426 terminal recovery ACK failed for turn_6d4dc6e1-2908-4ba8-9327-0b100446e2b4: compound terminal/marker write outage — entering pending-commit (reconcile), queue frozen
+[degraded] session session_7b7d32bc-93d2-433d-81b8-26536b753426 failed to persist recovery record for turn_6d4dc6e1-2908-4ba8-9327-0b100446e2b4: compound terminal/marker write outage
+[degraded] session session_b6dac778-692a-472b-a515-05b73cd9a580 terminal recovery ACK failed for turn_e086fdec-47a1-44ee-a3c9-78da4458196a: compound terminal/marker write outage — entering pending-commit (reconcile), queue frozen
+[degraded] session session_b6dac778-692a-472b-a515-05b73cd9a580 failed to persist recovery record for turn_e086fdec-47a1-44ee-a3c9-78da4458196a: compound terminal/marker write outage
+[degraded] session session_0249d1ea-ee9c-4595-acda-3b8fbc874380 failed to persist recovery record for turn_f4675a0e-d01d-4f3c-9911-e4518935bf35: whole recovery store write outage
+[degraded] session session_0249d1ea-ee9c-4595-acda-3b8fbc874380 recovery lease failed for turn_f4675a0e-d01d-4f3c-9911-e4518935bf35: whole recovery store write outage
+[degraded] session session_0751e0dc-013c-47dd-85e9-89aa8d5e35ef recovery lease failed for turn_ef643f2d-aecc-4be2-aa14-a86f8c66426e: recovery store temporarily refuses the lease write
+[degraded] session session_2bd8bdcf-1641-4ac2-8a75-bb0b62c99a4d recovery lease failed for turn_623219f9-62ca-4c0b-bc3f-08ab2ae64c83: recovery store temporarily refuses the lease write
+[degraded] session session_28c1035e-70d4-4df0-9092-b65fce56cc14 recovery attempt-intent persist failed for turn_e77a49d6-e492-4082-868e-016d174d5ce9 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_fa624322-debd-4370-a679-303ffd526d5f recovery lease failed for turn_8715fd48-9ead-4bba-a48f-1192485e2d69: recovery CAS conflict for turn_8715fd48-9ead-4bba-a48f-1192485e2d69: expected version 0, stored 1
+[degraded] session session_08dc8bf6-a231-4c63-8232-d6c3b3058781 recovery lease failed for turn_f536ec07-d569-42a5-941c-66d05be7634c: recovery store temporarily refuses the lease write
+[degraded] session session_73cc2230-9d6a-42ba-a362-32a3b81f6ce3 recovery lease failed for turn_88f6d259-46f7-4145-a053-cc8c2ea300e1: recovery store temporarily refuses the lease write
+[degraded] session session_73cc2230-9d6a-42ba-a362-32a3b81f6ce3 recovery lease failed for turn_88f6d259-46f7-4145-a053-cc8c2ea300e1: recovery store temporarily refuses the lease write
+[degraded] session session_73cc2230-9d6a-42ba-a362-32a3b81f6ce3 recovery lease failed for turn_88f6d259-46f7-4145-a053-cc8c2ea300e1: recovery store temporarily refuses the lease write
+[degraded] session session_73cc2230-9d6a-42ba-a362-32a3b81f6ce3 recovery lease failed for turn_88f6d259-46f7-4145-a053-cc8c2ea300e1: recovery store temporarily refuses the lease write
+[degraded] session session_73cc2230-9d6a-42ba-a362-32a3b81f6ce3 recovery lease failed for turn_88f6d259-46f7-4145-a053-cc8c2ea300e1: recovery store temporarily refuses the lease write
+[degraded] session session_73cc2230-9d6a-42ba-a362-32a3b81f6ce3 recovery lease failed for turn_88f6d259-46f7-4145-a053-cc8c2ea300e1: recovery store temporarily refuses the lease write
+[degraded] session session_3c4bc3c6-ea1c-448f-a39a-6c0969cfbf33 recovery attempt-intent persist failed for turn_51253f73-5b30-479c-8f39-a30bb37cce80 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_3c4bc3c6-ea1c-448f-a39a-6c0969cfbf33 release lease read failed for turn_51253f73-5b30-479c-8f39-a30bb37cce80: recovery read outage
+[degraded] session session_094356d2-1da5-45fa-8715-3b3f8c4e6fb1 recovery attempt-intent persist failed for turn_58e17ff1-f84e-4055-b1c3-903d17bda379 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_094356d2-1da5-45fa-8715-3b3f8c4e6fb1 recovery attempt-intent persist failed for turn_58e17ff1-f84e-4055-b1c3-903d17bda379 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_094356d2-1da5-45fa-8715-3b3f8c4e6fb1 recovery attempt-intent persist failed for turn_58e17ff1-f84e-4055-b1c3-903d17bda379 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_094356d2-1da5-45fa-8715-3b3f8c4e6fb1 recovery attempt-intent persist failed for turn_58e17ff1-f84e-4055-b1c3-903d17bda379 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_094356d2-1da5-45fa-8715-3b3f8c4e6fb1 recovery attempt-intent persist failed for turn_58e17ff1-f84e-4055-b1c3-903d17bda379 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_094356d2-1da5-45fa-8715-3b3f8c4e6fb1 recovery attempt-intent persist failed for turn_58e17ff1-f84e-4055-b1c3-903d17bda379 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_094356d2-1da5-45fa-8715-3b3f8c4e6fb1 recovery attempt-intent persist failed for turn_58e17ff1-f84e-4055-b1c3-903d17bda379 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_b5a3199d-be12-4f90-b225-e780d59a18e8 recovery attempt-intent persist failed for turn_b7b52be7-d748-42ee-b30b-4bb28de531ea — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_b5a3199d-be12-4f90-b225-e780d59a18e8 release lease read failed for turn_b7b52be7-d748-42ee-b30b-4bb28de531ea: recovery read outage
+[degraded] session session_b5a3199d-be12-4f90-b225-e780d59a18e8 recovery record load failed for turn_b7b52be7-d748-42ee-b30b-4bb28de531ea: recovery read outage
+[degraded] session session_3fdc88bc-7c80-4a4f-91a1-0ae8bd5504bc recovery attempt-intent persist failed for turn_beb5c6eb-a3c1-4c36-8f60-baf62d8ff1c8 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_3fdc88bc-7c80-4a4f-91a1-0ae8bd5504bc release lease read failed for turn_beb5c6eb-a3c1-4c36-8f60-baf62d8ff1c8: recovery read outage
+[degraded] session session_1be726ce-6597-4b1f-b6df-93ea40b96291 recovery discovery: durable read failed — session store temporarily unavailable
+[degraded] session session_f55f5445-b016-45fb-b98a-231dcdf56c3c recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_f55f5445-b016-45fb-b98a-231dcdf56c3c recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_f55f5445-b016-45fb-b98a-231dcdf56c3c recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_f55f5445-b016-45fb-b98a-231dcdf56c3c recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_f55f5445-b016-45fb-b98a-231dcdf56c3c recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_f55f5445-b016-45fb-b98a-231dcdf56c3c recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_f55f5445-b016-45fb-b98a-231dcdf56c3c recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_f03476f2-7f2f-4356-a0bf-6c73a4090970 recovery discovery: durable read failed — session store unavailable for turn turn_bf29a075-b968-4d04-a758-96475bdab08e
+[degraded] session session_445a365b-54d5-499b-9316-fb1af4053eef recovery discovery: durable read failed — session store temporarily unavailable
+[degraded] session session_e032a494-eb09-4637-a96e-e4cfff675564 terminal recovery ACK failed for turn_28373292-014d-46f8-995f-b233ff607322: compound terminal/marker write outage — entering pending-commit (reconcile), queue frozen
+[degraded] session session_e032a494-eb09-4637-a96e-e4cfff675564 failed to persist recovery record for turn_28373292-014d-46f8-995f-b233ff607322: compound terminal/marker write outage
+[degraded] session session_e032a494-eb09-4637-a96e-e4cfff675564 recovery discovery: durable read failed — recovery store lookup outage
+[degraded] session session_bb755724-acf4-498c-9ba4-934b4009444a recovery discovery: durable read failed — session store temporarily unavailable
+r101-mutation: --only definitely-not-a-mutation matches no mutation
+[degraded] memory.search: FTS unavailable or query rejected; using literal search
+[degraded] path-scoped-discovery.close: instruction handle cleanup failed
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] session session_492b2a33-fb62-4b2a-bdf7-a6c012f2e3c8 durable followup consume failed for fup-1 (prompt remains bound to turn turn_d975d4b9-2759-47d4-bc45-0aa6de8dea9a): durable ack down
+[degraded] session session_e18cf43c-e0da-45b8-b494-7e7cadbf4fcd durable followup bind failed for fup-1 (created turn turn_b6bbd413-3b79-4524-8435-20265b33c5dd will not execute): bind down
+[degraded] inbox.promotion-identity-missing: session session_e2c21a69-b9ba-43e3-a879-47b1865c12e5 prompt prompt_b22a6e2c-7ca6-44b1-a138-b2774f8a62fd is promoted but has no promotedTurnId — recovery-required, not replayed
+[degraded] session session_5d5a2855-a3f9-4808-9438-612b5637b369 failed to persist turn turn_3b9bc62b-b8b1-4448-81de-22a5790c03f7 as cancelled: P38.2-9 simulated updateTurn failure
+[degraded] session session_17199391-021f-4cdf-afd9-265c727bc791 failed to persist turn turn_f5b87043-062a-4f5c-804b-fb317a4a5cc2 as cancelled: P38.2-9 simulated updateTurn failure
+[degraded] session session_17199391-021f-4cdf-afd9-265c727bc791 failed to emit turn.cancelled for turn_f5b87043-062a-4f5c-804b-fb317a4a5cc2: P38.2-9 simulated emit failure
+[degraded] session session_c5496ae9-5f63-47cb-b079-fe0d9d8f8f38 failed to persist turn turn_f871a227-feec-4e24-8c2a-b863760ff640 as cancelled: P38.2-9 simulated updateTurn failure
+[degraded] session session_217745e3-5f4e-49e4-8f2c-44385887040b failed to persist turn turn_f2195dd1-9568-4ea6-b17a-ef3f66d4ae35 as cancelled: P38.3-8 simulated updateTurn failure
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+r101-closed-loop: nothing to do — pass --all, or one or more of --setup-only --acceptance --suite --matrix --identity
+r101-closed-loop: the baseline arm has no built CLI at /workspace/harness-agent-web-parity-20261008/.ci/definitely-not-prepared/baseline/apps/cli/dist/main.js — run --setup-only first (a missing arm is a setup failure, never a skip)
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for unknown-provider/unknown-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for unknown-provider/unknown-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[degraded] openai.reader.cancel: response cleanup failed
+[degraded] durable-recovery-store.release-lock (ownership changed, not deleting /tmp/e4-08-rec-hoQ8Rn/recovery/t10.json.lock): lock token "9999 newer-owner" != mine
+[skill denied] detection=injection target=/tmp/gen1-skills-cli-8LeMG7/skills/repair-reference/SKILL.md reasons=dismiss-previous-instructions,dismiss-all-instructions,override-own-instructions
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any of the parent directories): .git
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] inbox.corrupt-line: Expected property name or '}' in JSON at position 1 (line 1 column 2)
+[degraded] skill-store.corrupt-line: Expected property name or '}' in JSON at position 1 (line 1 column 2)
+[degraded] reflection.events.list: boom
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath '/tmp/e2-07-pi0f5f/runs/baseline.json'
+[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath '/tmp/e2-07-pi0f5f/runs/candidate.json'
+[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath '/tmp/e2-07-pi0f5f/runs/baseline.json'
+[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath '/tmp/e2-07-pi0f5f/runs/candidate.json'
+[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath '/tmp/e2-07-pi0f5f/runs/candidate.json'
+[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath '/tmp/e2-07-pi0f5f/runs/baseline.json'
+[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath '/tmp/e2-07-eTnrgi/decision.json'
+[degraded] ask-user-store.corrupt-line: Unexpected token 'o', "not-json" is not valid JSON
+[degraded] session session_12bdc5b4-2203-4142-bb10-236e6cfb82f4 durable followup consume failed for fup-1 (prompt remains bound to turn turn_4dbe591e-bf9a-4872-8d9d-d3bd06c2ef1e): injected consume failure
+[degraded] session session_e10194c6-f986-4ccb-aed0-5063e64eb010 durable followup bind failed for fup-1 (created turn turn_04352fc7-5a05-4d30-ad02-9a0d6ac1f131 will not execute): injected bind failure
+[degraded] discovery.close: instruction handle cleanup failed
+[degraded] candidate-store.corrupt-line: Unexpected token 'o', "not-json" is not valid JSON
+JSON report written to /workspace/harness-agent-web-parity-20261008/docs/evidence/web-deepseek-parity-20261012/final-gates/full-suite.json
+[ELIFECYCLE] Test failed. See above for more details.

@@ -100,6 +100,8 @@ export interface StepToolRouter {
   readonly id: string;
   readonly fingerprint: string;
   readonly modelVisibleSpecs: readonly ToolSpec[];
+  /** Frozen formal Runtime phase triggers, advertised separately from executable tools. */
+  readonly formalActionSpecs?: readonly ToolSpec[];
   has(name: string): boolean;
   resolve(name: string): FrozenToolBinding | undefined;
 }

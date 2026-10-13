@@ -1,0 +1,8 @@
+$ tsc -b
+apps/web/src/deepseek/owners.security.test.ts(17,7): error TS2322: Type '(opts?: StatOptions | undefined) => Promise<BigIntStats | Stats>' is not assignable to type '{ (opts?: (StatOptions & { bigint?: false | undefined; }) | undefined): Promise<Stats>; (opts: StatOptions & { bigint: true; }): Promise<BigIntStats>; (opts?: StatOptions | undefined): Promise<...>; }'.
+  Type 'Promise<BigIntStats | Stats>' is not assignable to type 'Promise<Stats>'.
+    Type 'BigIntStats | Stats' is not assignable to type 'Stats'.
+      Type 'BigIntStats' is not assignable to type 'Stats'.
+        Types of property 'dev' are incompatible.
+          Type 'bigint' is not assignable to type 'number'.
+[ELIFECYCLE] Command failed with exit code 1.

@@ -355,7 +355,9 @@ describe("WebServer HTTP", () => {
     const res = await fetch(`${h.base}/`);
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toContain("text/html");
-    expect(await res.text()).toContain("<!DOCTYPE html>");
+    const html = await res.text();
+    expect(html).toMatch(/<!doctype html>/i);
+    expect(html).toContain("/deepseek/transport.js");
   });
 
   it("bootstrap returns a valid from and echoes a valid one", async () => {

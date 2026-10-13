@@ -15,6 +15,7 @@ import type { AgentSummary } from "@ar/gateway";
 import { WebChannelAdapter } from "./adapter.js";
 import { SessionBindings, TrackingRegistry } from "./bindings.js";
 import { WebServer } from "./server.js";
+import { createDeepseekComposition } from "./deepseek/composition.js";
 
 /**
  * Web console entry: compose the production harness (@ar/harness, interactive
@@ -97,12 +98,24 @@ async function startMain(lease: DataDirLease | undefined): Promise<number> {
     route: (from) => bindings.get(from),
     restoredBindings: bindings.all().map((binding) => ({ ...binding, channelId: adapter.id })),
   });
+  let deepseek: Awaited<ReturnType<typeof createDeepseekComposition>>;
+  try { deepseek = await createDeepseekComposition(harness, dir, {
+    initialProviderProfiles: provider.id === "openai" ? { [provider.id]: {
+      api: "openai-completions", displayName: "OpenAI compatible", baseURL: process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1",
+      apiKeyEnv: "OPENAI_API_KEY", models: [{ id: harness.config.model.modelId }],
+    } } : {},
+    initialCredentials: process.env.OPENAI_API_KEY ? { OPENAI_API_KEY: process.env.OPENAI_API_KEY } : {},
+    environment: { ...process.env },
+  }); }
+  catch (error) { await harness.close(); throw error; }
   const server = new WebServer({
     adapter,
     bindings,
     events: harness.events,
     store: harness.store,
     approvalStore: harness.approvalStore,
+    deepseekServices: deepseek.services,
+    deepseekHttp: deepseek.http,
   });
   try {
     await gateway.start();
@@ -110,7 +123,7 @@ async function startMain(lease: DataDirLease | undefined): Promise<number> {
   } catch (error) {
     // Partial startup still owns stores/listeners. Finish cleanup before main
     // releases directory ownership so another host cannot overlap it.
-    const results = await Promise.allSettled([server.stop(), gateway.stop()]);
+    const results = await Promise.allSettled([server.stop(), gateway.stop(), deepseek.close()]);
     for (const result of results) if (result.status === "rejected") {
       process.stderr.write(`[degraded] web.startup-cleanup: ${result.reason instanceof Error ? result.reason.message : String(result.reason)}\n`);
     }
@@ -123,7 +136,7 @@ async function startMain(lease: DataDirLease | undefined): Promise<number> {
     process.stdout.write(`[web] ${signal} — shutting down\n`);
     try {
       try { await server.stop(); }
-      finally { try { await gateway.stop(); } finally { await harness.close(); } }
+      finally { try { await deepseek.close(); } finally { try { await gateway.stop(); } finally { await harness.close(); } } }
       process.exitCode = 0;
     } finally { await lease?.release(); }
   })();

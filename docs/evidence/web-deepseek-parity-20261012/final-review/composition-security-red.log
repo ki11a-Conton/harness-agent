@@ -1,0 +1,73 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-web-parity-20261008
+
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for securefixture/coding-fixture — using conservative fallback 32000
+ × apps/web/src/deepseek/composition-security.regressions.test.ts > a credential reader refuses a real symlink swapped after the metadata observation 81ms
+   → promise resolved "{ securefixture: { …(5) } }" instead of rejecting
+ × apps/web/src/deepseek/composition-security.regressions.test.ts > a credential cannot rotate between a model owner snapshot and its committed frozen identity 174ms
+   → expected [ 'Bearer rotated-credential-fixture' ] to deeply equal [ Array(1) ]
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  apps/web/src/deepseek/composition-security.regressions.test.ts > a credential reader refuses a real symlink swapped after the metadata observation
+AssertionError: promise resolved "{ securefixture: { …(5) } }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "securefixture": {
++     "api": "openai-completions",
++     "apiKey": "outside-credential-fixture",
++     "apiKeyEnv": "SECURITY_FIXTURE_KEY",
++     "baseURL": "http://127.0.0.1:1/v1",
++     "models": [
++       {
++         "id": "coding-fixture",
++       },
++     ],
++   },
+  }
+
+ ❯ apps/web/src/deepseek/composition-security.regressions.test.ts:64:71
+     62|   await writeFile(outside, outsideBytes, { mode: 0o600 });
+     63|   Object.assign(fileRace, { armed: true, path, outside });
+     64|   await expect(stack.composed.catalog.resolvedModelProfiles(signal()))…
+       |                                                                       ^
+     65|   expect(fileRace.armed).toBe(false);
+     66|   expect(await readFile(outside, "utf8")).toBe(outsideBytes);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  apps/web/src/deepseek/composition-security.regressions.test.ts > a credential cannot rotate between a model owner snapshot and its committed frozen identity
+AssertionError: expected [ 'Bearer rotated-credential-fixture' ] to deeply equal [ Array(1) ]
+
+- Expected
++ Received
+
+  [
+-   "Bearer original-credential-fixture",
++   "Bearer rotated-credential-fixture",
+  ]
+
+ ❯ apps/web/src/deepseek/composition-security.regressions.test.ts:99:19
+     97|     const turn = await actor.createTurn({ sessionId: id, text: "Use th…
+     98|     expect((await actor.runTurn(turn.id)).status).toBe("completed");
+     99|     expect(calls).toEqual(["Bearer original-credential-fixture"]);
+       |                   ^
+    100|     expect(rotation[0]?.status).toBe("rejected");
+    101|   } finally { resume.resolve(); await selecting.catch(() => {}); }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed (2)
+   Start at  13:58:23
+   Duration  4.30s (transform 3.09s, setup 0ms, import 3.88s, tests 256ms, environment 0ms)
+

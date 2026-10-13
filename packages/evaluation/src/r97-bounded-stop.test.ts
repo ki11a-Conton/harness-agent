@@ -292,6 +292,11 @@ describe("R99-B S1: a child that IGNORES SIGTERM is still stopped, within deadli
         for (let i = 0; i < 40; i += 1) {
           try {
             process.kill(pid, 0);
+            if (process.platform === "linux") {
+              const status = await readFile(`/proc/${pid}/stat`, "utf8");
+              // Exited zombies cannot execute; namespace PID 1 owns reaping.
+              if (status.slice(status.lastIndexOf(")") + 2).split(" ")[0] === "Z") return false;
+            }
           } catch {
             return false;
           }

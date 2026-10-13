@@ -1,0 +1,79 @@
+name: official DeepSeek UI installed acceptance
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/deepseek-ui-installed.yml'
+      - 'packages/**'
+      - 'apps/**'
+      - 'scripts/release/**'
+      - 'scripts/research/deepseek-*'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'tsconfig*.json'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deepseek-installed-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.21.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build the pinned clean source once
+        run: node scripts/release/portable.mjs build --out .ci/deepseek/assets --version 1.10.0-rc.1 --source-sha ${{ github.sha }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: deepseek-portable-${{ github.sha }}-${{ github.run_id }}
+          path: .ci/deepseek/assets/
+          if-no-files-found: error
+
+  installed:
+    needs: archive
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    env:
+      OPENAI_API_KEY: ''
+      OPENAI_MODEL: ''
+      OPENAI_BASE_URL: ''
+      RUN_PAID_BENCHMARKS: ''
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          name: deepseek-portable-${{ github.sha }}-${{ github.run_id }}
+          path: .ci/deepseek/assets
+      - name: Install browser test tooling outside the application
+        working-directory: ${{ runner.temp }}
+        run: npm install --no-save --ignore-scripts playwright@1.55.1
+      - name: Install Chromium test browser
+        working-directory: ${{ runner.temp }}
+        run: npx playwright install chromium
+      - name: Run the same installed archive through the real official UI
+        run: node scripts/release/deepseek-installed.mjs --archive .ci/deepseek/assets/harness-agent-1.10.0-rc.1-portable.tar.gz --out .ci/deepseek/installed --version 1.10.0-rc.1 --source-sha ${{ github.sha }} --playwright-module "${{ runner.temp }}/node_modules/playwright/index.mjs"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: deepseek-installed-${{ matrix.os }}-${{ github.sha }}-${{ github.run_id }}
+          path: .ci/deepseek/installed/
+          if-no-files-found: error

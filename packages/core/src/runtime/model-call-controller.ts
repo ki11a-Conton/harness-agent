@@ -36,6 +36,7 @@ import type {
   WorkingState,
 } from "@ar/contracts";
 import { AgentError } from "../errors.js";
+import { validAskGateArgs } from "./ask-gate.js";
 import type { ToolSelector } from "../tools/tool-selector.js";
 import { AgentState } from "../state/agent-state.js";
 import type { RecoveryPolicy } from "../recovery/recovery.js";
@@ -195,6 +196,7 @@ export class ModelCallController {
     toolLedger: ToolExecutionRecord[],
     lastReportTokens: number | undefined,
     verificationFailures: number,
+    step?: StepExecutionSnapshot,
   ): Promise<CompletionResult> {
     const { sessionId, turnId, signal, agent } = ctx;
     const { assistantText, reasoningText, calls, final, callStartedAt, timeToFirstTokenMs, callId, usage } = modelResult;
@@ -396,6 +398,12 @@ export class ModelCallController {
     // still NOT a fabricated side-effect error.
     const askCall = toolCalls.find((c) => c.name === ASK_GATE_TOOL);
     if (askCall !== undefined) {
+      const admitted = step?.tools.formalActionSpecs?.some(spec => spec.name === ASK_GATE_TOOL) === true;
+      if (!admitted || !validAskGateArgs(askCall.args)) {
+        const info = errorInfo(admitted ? "TOOL_SCHEMA_ERROR" : "TOOL_NOT_IN_STEP", admitted ? "The ask_user phase arguments do not match its advertised schema" : "The ask_user phase is unavailable in this frozen step");
+        await settleUnexecutedToolCalls(() => `[not executed] ${info.message}; no question or workspace operation was created.`);
+        return { action: "finish", outcome: await this.deps.finishTurn(ctx, "failed", state, working, info, "tool_error", toolLedger) };
+      }
       // P2-41/PROTOCOL: the ask gate is a formal runtime PHASE — no tool
       // executes. The assistant message still carries `tool_calls`, so every
       // requested call (the ask and any sibling) is answered before parking;
@@ -497,7 +505,7 @@ export class ModelCallController {
         // P23-3: the model-visible tool set is the FROZEN step advertisement —
         // formed once at snapshot build (selector + deferred applied there).
         // The controller never re-selects and never touches the live catalog.
-        const tools: readonly ToolSpec[] = step?.tools.modelVisibleSpecs ?? [];
+        const tools: readonly ToolSpec[] = [...step?.tools.modelVisibleSpecs ?? [], ...step?.tools.formalActionSpecs ?? []];
         // P7-3: selection is observable (availability vs admitted vs dropped).
         // P18-2: advertisedTokens prices the advertisement so full vs deferred
         // schema cost is measurable end-to-end.

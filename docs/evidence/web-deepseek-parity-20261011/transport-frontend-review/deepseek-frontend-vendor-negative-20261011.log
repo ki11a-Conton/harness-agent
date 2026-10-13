@@ -1,0 +1,15 @@
+✔ verifies the full original npm closure and independently reconstructs it offline (2375.946356ms)
+✔ rejects an altered official plugin during verification and sealing (234.794611ms)
+✔ rejects altered original npm tar bytes (100.064676ms)
+✔ rejects altered source reference archive bytes (458.279079ms)
+✔ rejects unregistered vendor files (541.252443ms)
+✔ rejects a symlink in the vendor inventory (504.328725ms)
+✔ rejects modified local root HTML until explicitly reviewed and sealed (702.487199ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5037.520517

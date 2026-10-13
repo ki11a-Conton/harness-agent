@@ -1,0 +1,1549 @@
+[
+  {
+    "which": "models",
+    "dom": {
+      "text": "New Session\nPlugins\nAutomation tasks\nWorkspaces\nproject\nNew Session\nSettings\nInto the Unknown\nPreview\nproject\nDescribe what you want to build, / commands, @ files or sessions\nweb-loopback-fixture\nSettings\nGeneral\nModels\nBuilt-in plugins\nAgent presets\nOpen configuration file\nClose\nModels\n\nEnter your API keys to use models from the following providers.\n\nOpenAI compatible\nEdit\nAdd model provider",
+      "controls": [
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "New session",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "Collapse sidebar",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "New Session",
+          "label": "New session",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Plugins",
+          "label": "Plugins",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Automation tasks",
+          "label": "Automation tasks",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "Search sessions",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "INPUT",
+          "text": "",
+          "label": null,
+          "placeholder": "Search session names",
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "View options",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "Add workspace",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Settings",
+          "label": "Settings",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "Open right sidebar",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "project",
+          "label": "Choose workspace",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "DIV",
+          "text": "",
+          "label": "Describe what you want to build, / commands, @ files or sessions",
+          "placeholder": null
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "Add files or run commands",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "web-loopback-fixture",
+          "label": "Select model, current web-loopback-fixture",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "Send message",
+          "placeholder": null,
+          "disabled": true
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "New tab",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "Split",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "Fullscreen",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "Collapse right sidebar",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "General",
+          "label": null,
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Models",
+          "label": null,
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Built-in plugins",
+          "label": null,
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Agent presets",
+          "label": null,
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open configuration file",
+          "label": null,
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Close",
+          "label": null,
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Edit",
+          "label": "Edit OpenAI compatible (openai)",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Add model provider",
+          "label": null,
+          "placeholder": null,
+          "disabled": false
+        }
+      ]
+    },
+    "calls": [
+      {
+        "endpoint": "settings/describe",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "dynamicCordisRunner/syncInspectManifest",
+        "argsKeys": [
+          "providers"
+        ],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "dynamicCordisRunner/inventory",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "credentials/describe",
+        "argsKeys": [
+          "refs"
+        ],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "session/modelCatalog",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "dynamicCordisRunner/inventory",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "agentPresets/list",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "session/list",
+        "argsKeys": [
+          "_request"
+        ],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "permissionPresets/catalog",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "agentPresets/list",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "agentPresets/list",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "dynamicCordisRunner/inventory",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "session/modelCatalog",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "dynamicCordisRunner/syncInspectManifest",
+        "argsKeys": [
+          "providers"
+        ],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "settings/describe",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "llm/listProviders",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "llm/listConfigurableProviders",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "session/create",
+        "argsKeys": [
+          "request"
+        ],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "credentials/describe",
+        "argsKeys": [
+          "refs"
+        ],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "agentPresets/list",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "commands/list",
+        "argsKeys": [
+          "agentId"
+        ],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "skills/list",
+        "argsKeys": [
+          "request"
+        ],
+        "status": 200,
+        "ok": true
+      }
+    ],
+    "errors": []
+  },
+  {
+    "which": "plugins",
+    "dom": {
+      "text": "New Session\nPlugins\nAutomation tasks\nWorkspaces\nproject\nNew Session\nSettings\nPlugins\nInstall, enable, and configure plugins\nAdd plugin\n\nThis deployment runs without a manageable profile, so plugins cannot be installed or switched here.",
+      "controls": [
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "New session",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "Collapse sidebar",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "New Session",
+          "label": "New session",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Plugins",
+          "label": "Plugins",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Automation tasks",
+          "label": "Automation tasks",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "Search sessions",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "INPUT",
+          "text": "",
+          "label": null,
+          "placeholder": "Search session names",
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "View options",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "Add workspace",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Settings",
+          "label": "Settings",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "About plugins",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "Refresh",
+          "placeholder": null,
+          "disabled": true
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Add plugin",
+          "label": null,
+          "placeholder": null,
+          "disabled": true
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "Choose how to add a plugin",
+          "placeholder": null,
+          "disabled": true
+        }
+      ]
+    },
+    "calls": [
+      {
+        "endpoint": "settings/describe",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "dynamicCordisRunner/syncInspectManifest",
+        "argsKeys": [
+          "providers"
+        ],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "dynamicCordisRunner/inventory",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "credentials/describe",
+        "argsKeys": [
+          "refs"
+        ],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "session/modelCatalog",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "dynamicCordisRunner/inventory",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "agentPresets/list",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "session/list",
+        "argsKeys": [
+          "_request"
+        ],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "permissionPresets/catalog",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "agentPresets/list",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "agentPresets/list",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "dynamicCordisRunner/inventory",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "session/modelCatalog",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "settings/describe",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "dynamicCordisRunner/syncInspectManifest",
+        "argsKeys": [
+          "providers"
+        ],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "session/create",
+        "argsKeys": [
+          "request"
+        ],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "llm/listProviders",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "llm/listConfigurableProviders",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "agentPresets/list",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "credentials/describe",
+        "argsKeys": [
+          "refs"
+        ],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "commands/list",
+        "argsKeys": [
+          "agentId"
+        ],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "skills/list",
+        "argsKeys": [
+          "request"
+        ],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "pluginInventory/list",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      }
+    ],
+    "errors": []
+  },
+  {
+    "which": "tasks",
+    "dom": {
+      "text": "New Session\nPlugins\nAutomation tasks\nWorkspaces\nproject\nNew Session\nSettings\nAutomation tasks\nNew\nAll\nEnabled\nInactive\nNo tasks yet. Tasks created in your sessions appear here.\nNew automation task",
+      "controls": [
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "New session",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "Collapse sidebar",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "New Session",
+          "label": "New session",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Plugins",
+          "label": "Plugins",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Automation tasks",
+          "label": "Automation tasks",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "Search sessions",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "INPUT",
+          "text": "",
+          "label": null,
+          "placeholder": "Search session names",
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "View options",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "Add workspace",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Settings",
+          "label": "Settings",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "New",
+          "label": null,
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "All",
+          "label": null,
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Enabled",
+          "label": null,
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Inactive",
+          "label": null,
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "INPUT",
+          "text": "",
+          "label": "Search tasks",
+          "placeholder": "Search automation tasks",
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "New automation task",
+          "label": null,
+          "placeholder": null,
+          "disabled": false
+        }
+      ]
+    },
+    "calls": [
+      {
+        "endpoint": "settings/describe",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "dynamicCordisRunner/syncInspectManifest",
+        "argsKeys": [
+          "providers"
+        ],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "dynamicCordisRunner/inventory",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "credentials/describe",
+        "argsKeys": [
+          "refs"
+        ],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "session/modelCatalog",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "dynamicCordisRunner/inventory",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "agentPresets/list",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "permissionPresets/catalog",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "agentPresets/list",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "agentPresets/list",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "dynamicCordisRunner/inventory",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "session/modelCatalog",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "session/list",
+        "argsKeys": [
+          "_request"
+        ],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "settings/describe",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "dynamicCordisRunner/syncInspectManifest",
+        "argsKeys": [
+          "providers"
+        ],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "session/create",
+        "argsKeys": [
+          "request"
+        ],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "llm/listProviders",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "llm/listConfigurableProviders",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "agentPresets/list",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "commands/list",
+        "argsKeys": [
+          "agentId"
+        ],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "skills/list",
+        "argsKeys": [
+          "request"
+        ],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "credentials/describe",
+        "argsKeys": [
+          "refs"
+        ],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "schedule/catalog",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      }
+    ],
+    "errors": []
+  },
+  {
+    "which": "files",
+    "dom": {
+      "text": "New Session\nPlugins\nAutomation tasks\nWorkspaces\nproject\nNew Session\nSettings\nInto the Unknown\nPreview\nproject\nDescribe what you want to build, / commands, @ files or sessions\nweb-loopback-fixture\nStart\nCollapse sidebar\nWorkspace files\nBrowse files in this session's workspace\nNew terminal\nRun commands in the Session workspace",
+      "controls": [
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "New session",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "Collapse sidebar",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "New Session",
+          "label": "New session",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Plugins",
+          "label": "Plugins",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Automation tasks",
+          "label": "Automation tasks",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "Search sessions",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "INPUT",
+          "text": "",
+          "label": null,
+          "placeholder": "Search session names",
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "View options",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "Add workspace",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Settings",
+          "label": "Settings",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "project",
+          "label": "Choose workspace",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "DIV",
+          "text": "",
+          "label": "Describe what you want to build, / commands, @ files or sessions",
+          "placeholder": null
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "Add files or run commands",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "web-loopback-fixture",
+          "label": "Select model, current web-loopback-fixture",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "Send message",
+          "placeholder": null,
+          "disabled": true
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "Split",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "Fullscreen",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "Collapse right sidebar",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Workspace filesBrowse files in this session's workspace",
+          "label": null,
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "New terminal Run commands in the Session workspace",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "Choose shell",
+          "placeholder": null,
+          "disabled": false
+        }
+      ]
+    },
+    "calls": [
+      {
+        "endpoint": "settings/describe",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "dynamicCordisRunner/syncInspectManifest",
+        "argsKeys": [
+          "providers"
+        ],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "dynamicCordisRunner/inventory",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "credentials/describe",
+        "argsKeys": [
+          "refs"
+        ],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "session/modelCatalog",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "dynamicCordisRunner/inventory",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "agentPresets/list",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "permissionPresets/catalog",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "agentPresets/list",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "agentPresets/list",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "dynamicCordisRunner/inventory",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "session/modelCatalog",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "session/list",
+        "argsKeys": [
+          "_request"
+        ],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "dynamicCordisRunner/syncInspectManifest",
+        "argsKeys": [
+          "providers"
+        ],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "settings/describe",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "session/create",
+        "argsKeys": [
+          "request"
+        ],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "llm/listProviders",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "llm/listConfigurableProviders",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "agentPresets/list",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "commands/list",
+        "argsKeys": [
+          "agentId"
+        ],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "skills/list",
+        "argsKeys": [
+          "request"
+        ],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "credentials/describe",
+        "argsKeys": [
+          "refs"
+        ],
+        "status": 200,
+        "ok": true
+      }
+    ],
+    "errors": [
+      "TimeoutError: locator.click: Timeout 3000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: /Workspace filesBrowse/ })\u001b[22m\n"
+    ]
+  },
+  {
+    "which": "workspace",
+    "dom": {
+      "text": "New Session\nPlugins\nAutomation tasks\nWorkspaces\nproject\nNew Session\nSettings\nInto the Unknown\nPreview\nproject\nDescribe what you want to build, / commands, @ files or sessions\nweb-loopback-fixture\nSelect Workspace Directory\nHome\nNew folder\nShow hidden files\nCancel\nOpen",
+      "controls": [
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "New session",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "Collapse sidebar",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "New Session",
+          "label": "New session",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Plugins",
+          "label": "Plugins",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Automation tasks",
+          "label": "Automation tasks",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "Search sessions",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "INPUT",
+          "text": "",
+          "label": null,
+          "placeholder": "Search session names",
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "View options",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "Add workspace",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Settings",
+          "label": "Settings",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "Open right sidebar",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "project",
+          "label": "Choose workspace",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "DIV",
+          "text": "",
+          "label": "Describe what you want to build, / commands, @ files or sessions",
+          "placeholder": null
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "Add files or run commands",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "web-loopback-fixture",
+          "label": "Select model, current web-loopback-fixture",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "Send message",
+          "placeholder": null,
+          "disabled": true
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "New tab",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "Split",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "Fullscreen",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "Collapse right sidebar",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Home",
+          "label": null,
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "label": "Edit path",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "New folder",
+          "label": null,
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Show hidden files",
+          "label": null,
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Cancel",
+          "label": null,
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open",
+          "label": null,
+          "placeholder": null,
+          "disabled": false
+        }
+      ]
+    },
+    "calls": [
+      {
+        "endpoint": "settings/describe",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "dynamicCordisRunner/syncInspectManifest",
+        "argsKeys": [
+          "providers"
+        ],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "dynamicCordisRunner/inventory",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "credentials/describe",
+        "argsKeys": [
+          "refs"
+        ],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "session/modelCatalog",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "dynamicCordisRunner/inventory",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "agentPresets/list",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "permissionPresets/catalog",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "agentPresets/list",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "agentPresets/list",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "dynamicCordisRunner/inventory",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "session/modelCatalog",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "settings/describe",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "session/list",
+        "argsKeys": [
+          "_request"
+        ],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "dynamicCordisRunner/syncInspectManifest",
+        "argsKeys": [
+          "providers"
+        ],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "session/create",
+        "argsKeys": [
+          "request"
+        ],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "llm/listProviders",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "llm/listConfigurableProviders",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "agentPresets/list",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "commands/list",
+        "argsKeys": [
+          "agentId"
+        ],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "skills/list",
+        "argsKeys": [
+          "request"
+        ],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "credentials/describe",
+        "argsKeys": [
+          "refs"
+        ],
+        "status": 200,
+        "ok": true
+      },
+      {
+        "endpoint": "directoryPicker/list",
+        "argsKeys": [],
+        "status": 200,
+        "ok": true
+      }
+    ],
+    "errors": []
+  }
+]

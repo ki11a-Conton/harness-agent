@@ -1,0 +1,131 @@
+{
+  "status": "PASS",
+  "scope": "unmodified official UI, real production Web main, local HTTP fixture; not paid model quality",
+  "origin": "http://127.0.0.1:41129",
+  "providerOrigin": "http://127.0.0.1:40159/v1",
+  "runnerSha256": "984fc67ef32f9338f2b03fd0ce9b2f846d725f025e5b416a4243b55d4144acbf",
+  "node": "v24.19.0",
+  "playwrightVersion": "1.55.1",
+  "paidModelCalls": 0,
+  "loopbackRequests": 1,
+  "launches": [
+    {
+      "at": "2026-10-13T02:35:24.559Z",
+      "artifacts": {
+        "apps/web/dist/main.js": "ec396984525f0d2a7e241fae220f41ab02f788708db4b9677e67bd0c0f306839",
+        "apps/web/dist/deepseek/catalog.js": "6649098d33c392a6ca45f58046e81bf9529f94d6aef71b275890ad5a23c6be3c",
+        "apps/web/dist/deepseek/composition.js": "0ca17343aa6dfd43a081bf18b4fc7fd9439a337d3add1727c3645391449a24d3",
+        "apps/web/dist/deepseek/owners.js": "ba99904fc7836ebfdc36a1a4e0589ecc0fb67a3e035d53d3f88000689ee59613",
+        "apps/web/dist/deepseek/session.js": "925bda92dadd9d49b770a05ae863854882c57485e33da48a57c99e2cbcfe1298"
+      }
+    },
+    {
+      "at": "2026-10-13T02:35:56.301Z",
+      "artifacts": {
+        "apps/web/dist/main.js": "ec396984525f0d2a7e241fae220f41ab02f788708db4b9677e67bd0c0f306839",
+        "apps/web/dist/deepseek/catalog.js": "6649098d33c392a6ca45f58046e81bf9529f94d6aef71b275890ad5a23c6be3c",
+        "apps/web/dist/deepseek/composition.js": "0ca17343aa6dfd43a081bf18b4fc7fd9439a337d3add1727c3645391449a24d3",
+        "apps/web/dist/deepseek/owners.js": "ba99904fc7836ebfdc36a1a4e0589ecc0fb67a3e035d53d3f88000689ee59613",
+        "apps/web/dist/deepseek/session.js": "925bda92dadd9d49b770a05ae863854882c57485e33da48a57c99e2cbcfe1298"
+      }
+    }
+  ],
+  "fingerprints": {
+    "apps/web/src/deepseek/catalog.ts": "72a9241328e0573dd4ab9efd5ff76386f96e92cab3555bd7e48e2ccf4994a3c1",
+    "apps/web/src/deepseek/composition.ts": "3a87038518a38f4050afa4457158eb6cf815ea14419f121f618d8d46d2cee641",
+    "apps/web/src/deepseek/owners.ts": "697db34204f7483cfe024ef30b64f8dc498b3df40de9ff296646059db3002122",
+    "apps/web/src/deepseek/session.ts": "916f0c926023c74e678fbaa2d089396cad8b3968d5d94709ff9937a82ae2065d",
+    "apps/web/src/deepseek/projections.ts": "648811c7b53aff7acc194e6e9e6cb15bf81014aaa7a798b160b532e0757ba5f9",
+    "apps/web/src/main.ts": "f8930a5edd5e86f6aafaeed3a04f554945aa94a511ff73bb948d8ccc8a0f9cd6"
+  },
+  "screenshots": [
+    {
+      "name": "selected-model-two-tabs",
+      "status": "PASS"
+    },
+    {
+      "name": "started-selection-refused",
+      "status": "BLOCKED",
+      "message": "TimeoutError: page.screenshot: Timeout 8000ms exceeded.\nCall log:\n\u001b[2m  - taking page screenshot\u001b[22m\n\u001b[2m    - disabled all CSS animations\u001b[22m\n\u001b[2m  - waiting for fonts to load...\u001b[22m\n\u001b[2m  - fonts loaded\u001b[22m\n"
+    },
+    {
+      "name": "restart-selection",
+      "status": "PASS"
+    }
+  ],
+  "assertions": [
+    {
+      "name": "official browser booted with production carrier",
+      "status": "PASS"
+    },
+    {
+      "name": "official Models form persisted a real adapter profile",
+      "status": "PASS"
+    },
+    {
+      "name": "official key form stored only a credential reference in profile",
+      "status": "PASS"
+    },
+    {
+      "name": "official theme and font controls persisted to host settings",
+      "status": "PASS"
+    },
+    {
+      "name": "official Work details and Performance controls persisted to ui-chat",
+      "status": "PASS"
+    },
+    {
+      "name": "official composer and second tab show committed selected model",
+      "status": "PASS"
+    },
+    {
+      "name": "authoritative projection.next matches selected route/model",
+      "status": "PASS"
+    },
+    {
+      "name": "existing follow stream received the durable newer model/selection event",
+      "status": "PASS"
+    },
+    {
+      "name": "model switch retained every previously committed history record",
+      "status": "PASS"
+    },
+    {
+      "name": "real production HTTP turn used selected alternate model",
+      "status": "PASS"
+    },
+    {
+      "name": "started-session selection visibly rejects and preserves native owner",
+      "status": "PASS"
+    },
+    {
+      "name": "real process restart rehydrates stable session and model selection",
+      "status": "PASS"
+    },
+    {
+      "name": "real process restart retains actual official chat preference writes",
+      "status": "PASS"
+    },
+    {
+      "name": "restart retained previously committed history prefix",
+      "status": "PASS"
+    },
+    {
+      "name": "both process launches used identical captured production artifact fingerprints",
+      "status": "PASS"
+    },
+    {
+      "name": "browser has no uncaught errors",
+      "status": "PASS",
+      "details": []
+    },
+    {
+      "name": "paid model calls remained zero",
+      "status": "PASS",
+      "details": {
+        "paidModelCalls": 0,
+        "loopbackRequests": 1
+      }
+    }
+  ]
+}

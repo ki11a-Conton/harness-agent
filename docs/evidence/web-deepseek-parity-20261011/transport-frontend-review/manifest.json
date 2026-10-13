@@ -1,0 +1,136 @@
+{
+  "schemaVersion": 1,
+  "status": "LOCAL_TRANSPORT_AND_VENDOR_ACCEPTED_UI_PARITY_NOT_PROVEN",
+  "baseRevision": "bab0e78e9d6948630bd0b3178dc1144568102775",
+  "sourceState": "Scoped worktree files identified by SHA256; not a clean release commit and not a production UI acceptance claim.",
+  "scope": {
+    "hostTransportTests": 10,
+    "hostRedPassed": 4,
+    "hostRedFailed": 6,
+    "hostGreenPassed": 10,
+    "browserCarrierTests": 8,
+    "vendorTests": 7,
+    "npmTarballs": 67,
+    "defaultDynamicClientCount": 66,
+    "publishedOriginalFiles": 334,
+    "frozenVendorFiles": 771,
+    "sourceGitReferenceFiles": 3181,
+    "paidModelCalls": 0,
+    "hostTransportFinalTests": 12,
+    "hostSecondRoundRedPassed": 10,
+    "hostSecondRoundRedFailed": 2,
+    "hostFinalGreenPassed": 12,
+    "platformHttpTests": 4,
+    "transportPlatformFinalGreenPassed": 16
+  },
+  "records": [
+    {
+      "path": "deepseek-host-transport-review-red-20261011.json",
+      "bytes": 9489,
+      "sha256": "012909c984e9c9a8fdc1894c143e3d2a6953c9de957e3917bc363d1aeef00f9f"
+    },
+    {
+      "path": "deepseek-host-transport-review-green-20261011.json",
+      "bytes": 4380,
+      "sha256": "fc7d56ed57fc2a18698dd883bbd2f481ae8adac95985df3621b88dee1c7d2b99"
+    },
+    {
+      "path": "deepseek-source-git-reference-review-20261011.json",
+      "bytes": 813592,
+      "sha256": "3069e72c4b3dec06f487b78704f03e6c3250d8ad66d22c1b521d11df29beccac"
+    },
+    {
+      "path": "deepseek-frontend-offline-verify-20261011.json",
+      "bytes": 332,
+      "sha256": "a7e3702909d534228ecea17523a3d0ff7fd9d19927003cc1538697d803fa67fc"
+    },
+    {
+      "path": "deepseek-frontend-vendor-negative-20261011.log",
+      "bytes": 630,
+      "sha256": "3613f2192090adfa9e8cb164b342112b016083ed558795596461fa6e470a69ee"
+    },
+    {
+      "path": "deepseek-browser-carrier-green-20261011.log",
+      "bytes": 837,
+      "sha256": "2e54c44151890da22690d0d3324dfea721bbb757097f2f2059d305a1fc4742f8"
+    },
+    {
+      "path": "deepseek-host-transport-result-red-20261011.json",
+      "bytes": 6669,
+      "sha256": "e7d4bba8fc9577457e10f39c4615477708046b28b5ebd15068c576974781ff53"
+    },
+    {
+      "path": "deepseek-host-transport-result-green-20261011.json",
+      "bytes": 5168,
+      "sha256": "7ed585deb373b991b60d5fa4014f51cf287b67ed6b14682ec5eda9d5bc8a6d32"
+    },
+    {
+      "path": "deepseek-platform-http-review-20261011.json",
+      "bytes": 2133,
+      "sha256": "11059d22325230f1e7855ba4241b5af2904a9f3f0139f2458803229cacab5cb7"
+    },
+    {
+      "path": "deepseek-transport-platform-final-green-20261011.json",
+      "bytes": 6834,
+      "sha256": "2bad804c38eff317afc4c0915e5ec6444c2e2b1c5336aff2c507b5443b6a5871"
+    }
+  ],
+  "reviewedSources": [
+    {
+      "path": "apps/web/src/deepseek/transport.ts",
+      "bytes": 10383,
+      "sha256": "ab483fc05f5d0f0581f728632bd0d8e29e85f061ed66607bb542fa10efe1a47f"
+    },
+    {
+      "path": "apps/web/src/deepseek/transport.test.ts",
+      "bytes": 9078,
+      "sha256": "5fa8141a77de976cd0701d8c1641fa53b78d4e1a0f24152961325f999f23e01c"
+    },
+    {
+      "path": "apps/web/public/deepseek/transport.js",
+      "bytes": 7656,
+      "sha256": "bade8a892013869c6c519e88da4a6bcebb105960fbf7e4808866f49a3fdfc0d0"
+    },
+    {
+      "path": "apps/web/public/index.html",
+      "bytes": 1130,
+      "sha256": "d9ff2ef420eca2a672a4ef501678d71b8f75abaf31d330992330c59c67557163"
+    },
+    {
+      "path": "apps/web/public/deepseek/provenance.json",
+      "bytes": 280089,
+      "sha256": "7e35f7d5b4c454905c7249a3d57183c7c11e2b125407dbee704fb10b89fc365c"
+    },
+    {
+      "path": "scripts/research/deepseek-frontend-vendor.mjs",
+      "bytes": 12456,
+      "sha256": "38f04f1f4873aee90b8a224ca0f17b28e85fade8870a9460a8ab79228cb93a97"
+    },
+    {
+      "path": "scripts/research/deepseek-frontend-vendor.test.mjs",
+      "bytes": 4863,
+      "sha256": "8aa22f71ca56df1bb7e7d7c799567256be320894451a2d051c3db97ae6f74f8a"
+    },
+    {
+      "path": "scripts/research/deepseek-transport.test.mjs",
+      "bytes": 9951,
+      "sha256": "bd7fd804dc234a7368cf0492cd919b3b7c976e39ee1a92374f09c3ce56f84545"
+    },
+    {
+      "path": "scripts/research/deepseek-browser-smoke.mjs",
+      "bytes": 7830,
+      "sha256": "fd04d2b3e5f5a6183adf6c4d88e8c830c992aa2caf1aa3dc759fb3ea60a84f90"
+    },
+    {
+      "path": "apps/web/src/deepseek/platform-http.test.ts",
+      "bytes": 5601,
+      "sha256": "0013e146a45629ce07a649289c226f2cb4be5d10347affad1e5b22a9be11ce9d"
+    },
+    {
+      "path": "apps/web/src/server.ts",
+      "bytes": 29150,
+      "sha256": "30d23b5a31d094ccce02ad6953da5529646c8c09d2b9ea1086754e2bf8130147"
+    }
+  ],
+  "historicalReportScope": "The initial RED/GREEN reports preserve observations from earlier uncommitted transport drafts. reviewedSources identifies the final second-round GREEN, not those earlier drafts; the earlier full source snapshots were not archived."
+}

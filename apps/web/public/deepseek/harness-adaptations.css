@@ -1,0 +1,24 @@
+/* Host adaptations for the pinned official 0.2.1-alpha.1 frontend.
+ * Published bundles remain byte-for-byte unchanged. */
+@media (max-width: 600px) {
+  .VOzbGW_overlay .VOzbGW_panel {
+    flex-direction: column;
+    max-width: calc(100vw - 24px);
+    height: calc(100dvh - 24px);
+  }
+  .VOzbGW_overlay .VOzbGW_nav {
+    width: auto;
+    padding: 12px 12px 0;
+    gap: 6px;
+  }
+  .VOzbGW_overlay .VOzbGW_navList {
+    flex-direction: row;
+    flex: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  .VOzbGW_overlay .VOzbGW_navCell { flex: none; padding: 8px 10px; }
+  .VOzbGW_overlay .VOzbGW_content { min-height: 0; }
+  .VOzbGW_overlay .VOzbGW_header { height: auto; min-height: 42px; padding: 6px 12px; }
+  .VOzbGW_overlay .VOzbGW_options { padding: 0 12px 12px; }
+}

@@ -1,5 +1,9 @@
-# Harness Agent：第一代当前执行计划入口
+# Harness Agent 当前执行计划
 
-当前任务：[第一代实现与验收规格](plan(20261008-024527).md)，任务合同：[GEN1-20261008.md](tasks/GEN1-20261008.md)。做什么、怎么做、怎么验收见规格 G1–G11。原执行入口完整保留在 [plan(20261008-before-gen1).md](plan(20261008-before-gen1).md)。
+当前任务：[DeepSeek Web UI 完整迁移计划](plan(20261008-web-deepseek-parity).md)，任务合同：[WEB-DEEPSEEK-PARITY-20261008](tasks/WEB-DEEPSEEK-PARITY-20261008.md)。各项包含做什么、怎么做与怎么验收。
 
-当前状态：六路源码比较与修复已收尾，产品源码固定为 `c5bbe61fef101a8c9eb10edab673be8b2e0935e3`。本地全量9284 PASS / 0 FAIL / 14 pending，CLI/Web、浏览器、原生Windows和同一独立包安装已通过；完整CI10jobs、安装CI4jobs、原生WindowsCI1job均已completed SUCCESS。[最终验收与原件](docs/gen1-final-acceptance.md)。G1–G11及公开发布已完成，main已推送；[v1.9.0 正式发布](https://github.com/ki11a-Conton/harness-agent/releases/tag/v1.9.0)的tag/资产绑定上述验收源码，公开无认证下载校验通过。真实模型质量仍为 NOT_PROVEN；历史 N7/冠军实验不改写。
+已将官方完整 frontend shell 和 66 个默认客户端 entry 接到真实 Harness，根页面采用官方 UI，旧客户端保留在 `/legacy/index.html`。来源固定为官方 npm `0.2.1-alpha.1`，发布物没有 gitHead，不声明等同于参考 Git 源码。
+
+2026-10-13：桌面、移动和窄高视口的 30 个实际编码/UI 场景、75 项断言通过；另有实际模型设置、双 tab、模型切换和进程重启 17 项断言通过。测试使用生产 Web/Runtime 与 loopback HTTP provider，付费调用为 0，不代表模型质量验收。详见[当前交付与缺口](docs/web-deepseek-delivery.md)和[逐项交付状态](docs/web-deepseek-delivery-matrix.json)。
+
+接下来按 W8/W9 完成固定 clean 源码全量测试、独立 portable 包及同一包的 Windows 消费验收，再提交验收记录。队列原子编辑、Cordis、goal/Plan continuation、可续写子智能体和强沙箱 PTY 等缺口尚在，不能发布为“全部默认 UI 功能已完成”。旧第一代工程计划与发布记录保留在[第一代规格](plan(20261008-024527).md)，原用户未提交文件、v1.9及固定 c5 证据不改写。

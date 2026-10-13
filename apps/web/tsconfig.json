@@ -5,14 +5,33 @@
     "outDir": "dist",
     "tsBuildInfoFile": "../../node_modules/.cache/tsbuildinfo/web.tsbuildinfo"
   },
-  "include": ["src"],
+  "include": [
+    "src"
+  ],
   "references": [
-    { "path": "../../packages/contracts" },
-    { "path": "../../packages/core" },
-    { "path": "../../packages/session" },
-    { "path": "../../packages/harness" },
-    { "path": "../../packages/gateway" },
-    { "path": "../../packages/security" },
-    { "path": "../../apps/cli" }
+    {
+      "path": "../../packages/contracts"
+    },
+    {
+      "path": "../../packages/core"
+    },
+    {
+      "path": "../../packages/session"
+    },
+    {
+      "path": "../../packages/harness"
+    },
+    {
+      "path": "../../packages/gateway"
+    },
+    {
+      "path": "../../packages/security"
+    },
+    {
+      "path": "../../apps/cli"
+    },
+    {
+      "path": "../../packages/tools"
+    }
   ]
 }

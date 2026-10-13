@@ -1,0 +1,71 @@
+{
+  "status": "FAIL",
+  "scope": "unmodified official UI, real production Web main, local HTTP fixture; not paid model quality",
+  "origin": "http://127.0.0.1:41965",
+  "providerOrigin": "http://127.0.0.1:39981/v1",
+  "paidModelCalls": 0,
+  "loopbackRequests": 0,
+  "launches": [
+    {
+      "at": "2026-10-12T14:13:38.497Z",
+      "artifacts": {
+        "apps/web/dist/main.js": "ec396984525f0d2a7e241fae220f41ab02f788708db4b9677e67bd0c0f306839",
+        "apps/web/dist/deepseek/catalog.js": "c794d4f6379f0f45423f7884c293916cc2630aba784cb6adb9c9bf6922506935",
+        "apps/web/dist/deepseek/composition.js": "a2ba4fbf9716d5664d295985c242b33e45500270b2981b2ac925c46d5a59ecde",
+        "apps/web/dist/deepseek/owners.js": "1929ae632bc5fd77112b30dcdecaec1ba339f327188bb7dde89c4a2616922440",
+        "apps/web/dist/deepseek/session.js": "0539545740b0d8043e880314e978bf714829d57a032e9ef3f9d27c4d03a93d00"
+      }
+    }
+  ],
+  "fingerprints": {
+    "apps/web/src/deepseek/catalog.ts": "e30ff16740c9c3b45117395be58d6ab84fc03e9804b5035eac0664f52ca6e4eb",
+    "apps/web/src/deepseek/composition.ts": "dd0bd34c6ab0e091b38d85d5251159625bc1ea00d48f4ee3ab16c4ca4c80cb1d",
+    "apps/web/src/deepseek/owners.ts": "95008a9e83421f277bdaa8d0b04c04973f83e1e705db34ed7b8f9e4426348014",
+    "apps/web/src/deepseek/session.ts": "f0be6313eb44d10f8883ad20ff16e4797a957775b618148d19122bae6e4ca4f4",
+    "apps/web/src/deepseek/projections.ts": "87bb81b7d5029f81b06b06109bb1beb413802e140665de434469a9e4783bba54",
+    "apps/web/src/main.ts": "f8930a5edd5e86f6aafaeed3a04f554945aa94a511ff73bb948d8ccc8a0f9cd6"
+  },
+  "assertions": [
+    {
+      "name": "official browser booted with production carrier",
+      "status": "PASS"
+    },
+    {
+      "name": "official Models form persisted a real adapter profile",
+      "status": "PASS"
+    },
+    {
+      "name": "official key form stored only a credential reference in profile",
+      "status": "PASS"
+    },
+    {
+      "name": "official theme and font controls persisted to host settings",
+      "status": "PASS"
+    },
+    {
+      "name": "official Work details and Performance controls persisted to ui-chat",
+      "status": "PASS"
+    },
+    {
+      "name": "official composer and second tab show committed selected model",
+      "status": "PASS"
+    },
+    {
+      "name": "authoritative projection.next matches selected route/model",
+      "status": "PASS"
+    },
+    {
+      "name": "existing follow stream received the durable newer model/selection event",
+      "status": "PASS"
+    },
+    {
+      "name": "model switch retained every previously committed history record",
+      "status": "PASS"
+    },
+    {
+      "name": "production browser model selection acceptance",
+      "status": "FAIL",
+      "details": "TimeoutError: page.screenshot: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - taking page screenshot\u001b[22m\n\u001b[2m  - waiting for fonts to load...\u001b[22m\n\u001b[2m  - fonts loaded\u001b[22m\n"
+    }
+  ]
+}

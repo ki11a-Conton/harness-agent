@@ -1,0 +1,104 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-web-parity-20261008
+
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ × apps/web/src/deepseek/session-availability.test.ts > a real lazy blank session advertises its resolvable frozen agent without loading an actor 132ms
+   → expected { agentAvailable: false, …(6) } to match object { …(4) }
+(6 matching properties omitted from actual)
+ × apps/web/src/deepseek/session-availability.test.ts > a process-reopened blank session remains available before its first actor load or model call 19ms
+   → expected [ { agentAvailable: false, …(6) } ] to deep equally contain ObjectContaining{…}
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  apps/web/src/deepseek/session-availability.test.ts > a real lazy blank session advertises its resolvable frozen agent without loading an actor
+AssertionError: expected { agentAvailable: false, …(6) } to match object { …(4) }
+(6 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "agentAvailable": true,
++   "agentAvailable": false,
+    "blank": true,
+    "running": false,
+    "sessionId": "session_e89d8c2b-0e4f-4657-bb33-1bf9fcd5a22a",
+  }
+
+ ❯ apps/web/src/deepseek/session-availability.test.ts:37:19
+     35|   expect(stack.harness.sessions.listLoaded()).not.toContain(stack.sess…
+     36|   const summary = await service(stack.harness, stack.directory).summar…
+     37|   expect(summary).toMatchObject({ sessionId: stack.session.id, agentAv…
+       |                   ^
+     38|   expect(stack.harness.sessions.listLoaded()).not.toContain(stack.sess…
+     39|   expect(await stack.harness.store.listTurns(stack.session.id)).toEqua…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  apps/web/src/deepseek/session-availability.test.ts > a process-reopened blank session remains available before its first actor load or model call
+AssertionError: expected [ { agentAvailable: false, …(6) } ] to deep equally contain ObjectContaining{…}
+
+- Expected:
+ObjectContaining {
+  "agentAvailable": true,
+  "blank": true,
+  "sessionId": "session_ddfbb1fc-4b03-4003-8c49-56f63aa0b176",
+}
+
++ Received:
+[
+  {
+    "agentAvailable": false,
+    "blank": true,
+    "cwd": "/tmp/dsh-agent-availability-aNUfHs",
+    "projections": {
+      "asOfSeq": 0,
+      "kind": "sequenced",
+      "values": {
+        "agentPreset": "agent_2218c147-3da2-4511-b2af-d9cf59743a83",
+        "modelSelection": {
+          "lastUsed": null,
+          "next": {
+            "model": "scripted-model",
+            "provider": "scripted",
+          },
+        },
+        "sessionListMetadata": {
+          "blank": true,
+          "lastPromptAt": null,
+        },
+        "subagentCatalog": [],
+        "title": null,
+        "todos": null,
+        "turnBoundary": {
+          "lastStepBoundary": null,
+          "lastStepStartSeq": null,
+          "lastTurn": 0,
+          "openTurnStartSeq": null,
+        },
+      },
+    },
+    "running": false,
+    "sessionId": "session_ddfbb1fc-4b03-4003-8c49-56f63aa0b176",
+    "updatedAt": 1791813315399,
+  },
+]
+
+ ❯ apps/web/src/deepseek/session-availability.test.ts:50:24
+     48|   const current = service(reopened, stack.directory);
+     49|   const listed = await current.call("session/list", { _request: {} }, …
+     50|   expect(listed.items).toContainEqual(expect.objectContaining({ sessio…
+       |                        ^
+     51|   expect(reopened.sessions.listLoaded()).not.toContain(stack.session.i…
+     52|   expect(await reopened.store.listTurns(stack.session.id)).toEqual([]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed (2)
+   Start at  13:55:11
+   Duration  3.91s (transform 2.92s, setup 0ms, import 3.61s, tests 151ms, environment 0ms)
+

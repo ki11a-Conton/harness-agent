@@ -53,6 +53,7 @@ import {
   snapshotEffectiveConfig,
   STALL_WINDOW_SIZE,
   defaultAskUserLifecycle,
+  isAskReason,
   RealTimer,
 } from "@ar/contracts";
 import type {
@@ -77,7 +78,6 @@ import type {
   AskUserReply,
   AskUserStore,
   AskUserLifecycle,
-  AskReason,
   AskId,
   Timer,
   TerminationReason,
@@ -89,6 +89,7 @@ import { applyWorkingStateMutation, type WorkingStateMutation } from "@ar/contra
 import { buildStateDigest } from "./turn-helpers.js";
 import { AgentError } from "../errors.js";
 import { buildStepExecutionSnapshot } from "./step-snapshot-factory.js";
+import { ASK_GATE_SPEC } from "./ask-gate.js";
 import type { StepToolCatalog } from "./tool-catalog.js";
 import { AgentState } from "../state/agent-state.js";
 import { HookRegistry } from "../lifecycle/hooks.js";
@@ -553,6 +554,8 @@ export class AgentRuntime {
   private readonly failpoint?: AgentRuntimeDeps["failpoint"];
   /** P2-43: ask-user gate — durable store, handler, and pure lifecycle. */
   private readonly askUserStore?: AskUserStore;
+  /** Serialize reply injection per ask within this single-writer Runtime. */
+  private readonly userAnswerSubmissions = new Map<AskId, Promise<void>>();
   private readonly askUser?: (request: AskUserRequest) => Promise<AskUserReply | undefined>;
   private readonly askUserLifecycle: AskUserLifecycle;
 
@@ -1172,7 +1175,7 @@ export class AgentRuntime {
         reactiveCompacted = modelResult.reactiveCompacted;
         // Q-1: post-completion processing extracted to handleModelCompletion.
         const completion = await this.modelCallController.handleModelCompletion(
-          ctx, modelResult, turn, working, state, toolLedger, lastReportTokens, verificationFailures,
+          ctx, modelResult, turn, working, state, toolLedger, lastReportTokens, verificationFailures, step,
         );
         if (completion.action === "continue_loop") {
           verificationFailures = completion.verificationFailures;
@@ -1369,6 +1372,8 @@ export class AgentRuntime {
       compacted,
       history,
       registry: this.toolRegistry ?? { get: () => undefined, list: () => [], specs: () => [] },
+      ...((this.askUserStore !== undefined || this.askUser !== undefined || this.toolRegistry?.specs().some(spec => spec.name === ASK_GATE_TOOL))
+        ? { formalActionSpecs: [ASK_GATE_SPEC] } : {}),
       goal,
       toolSelector: this.toolSelector,
       schemaAdvertPolicy: this.schemaAdvertPolicy,
@@ -1651,50 +1656,85 @@ export class AgentRuntime {
     askId: AskId,
     text: string,
   ): Promise<{ resumed: boolean; message: string }> {
-    const pending =
-      (this.askUserStore !== undefined
-        ? await this.askUserStore.get(askId)
-        : undefined) ?? {
-          id: askId,
-          sessionId,
-          turnId,
-          reason: "missing_critical_input" as AskReason,
-          question: this.askUserLifecycle.fingerprint({ id: askId, sessionId, turnId, reason: "missing_critical_input", question: "", status: "pending", createdAt: this.now() }),
-          status: "pending",
-          createdAt: this.now(),
-        };
-    // Exactly-once resume injection: if a prior submitUserAnswer already
-    // appended the resumed message for this ask, a duplicate submission is an
-    // IDEMPOTENT success (not an error) — we return resumed:true so a host that
-    // retries an answer (e.g. after a crash between our reply and its ack) does
-    // not treat the recovery as a failure, and we never append a second message.
-    const history = await this.store.listMessages(sessionId);
-    if (history.some((m) => m.askId === askId)) {
-      return { resumed: true, message: `already resumed for ask ${askId}` };
+    const previous = this.userAnswerSubmissions.get(askId);
+    let release!: () => void;
+    const queued = new Promise<void>((resolve) => { release = resolve; });
+    this.userAnswerSubmissions.set(askId, queued);
+    await previous;
+    try {
+      const session = await this.store.getSession(sessionId);
+      const turn = await this.store.getTurn(turnId);
+      if (session === undefined || turn === undefined || turn.sessionId !== sessionId) {
+        return { resumed: false, message: `ask ${askId} is not bound to this session and turn` };
+      }
+      let pending = await this.askUserStore?.get(askId);
+      if (pending !== undefined && (pending.id !== askId || pending.sessionId !== sessionId || pending.turnId !== turnId)) {
+        return { resumed: false, message: `ask ${askId} is not bound to this session and turn` };
+      }
+      // A committed reply proves a genuine retry, even after the turn ended
+      // or the ask record was removed. Scope that proof to the exact user,
+      // session and turn; the same ask id elsewhere is not authorization.
+      const history = await this.store.listMessages(sessionId);
+      const priorReplies = history.filter(message => message.askId === askId);
+      if (priorReplies.some(message => message.role === "user" && message.sessionId === sessionId && message.turnId === turnId)) {
+        return { resumed: true, message: `already resumed for ask ${askId}` };
+      }
+      if (priorReplies.length > 0) {
+        return { resumed: false, message: `ask ${askId} has conflicting reply history` };
+      }
+      if (this.askUserStore === undefined) {
+        // Without a dedicated ask store, the events emitted by the actual
+        // park transition remain the existence proof across reconstruction.
+        // Never invent a pending request from caller-supplied identities.
+        const events = await this.events.list(sessionId);
+        const asked = events.find(event => event.type === "ask.user_asked" && event.sessionId === sessionId
+          && event.turnId === turnId && event.payload.askId === askId && event.payload.turnId === turnId);
+        const waiting = events.some(event => event.type === "ask.turn_waiting" && event.sessionId === sessionId
+          && event.turnId === turnId && event.payload.askId === askId && event.payload.turnId === turnId);
+        if (asked !== undefined && waiting && isAskReason(asked.payload.reason) && typeof asked.payload.question === "string") {
+          pending = { id: askId, sessionId, turnId, reason: asked.payload.reason, question: asked.payload.question,
+            status: "pending", createdAt: asked.timestamp };
+        }
+      }
+      if (pending === undefined) {
+        return { resumed: false, message: `unknown ask ${askId}` };
+      }
+      if (turn.status !== "waiting_for_user") {
+        return { resumed: false, message: `turn ${turnId} is not waiting for a user answer` };
+      }
+      let reply: AskUserReply;
+      if (this.askUserLifecycle.isPending(pending)) {
+        reply = { requestId: askId, text, answeredAt: this.now() };
+        if (this.askUserStore !== undefined) {
+          await this.askUserStore.markAnswered(askId, reply);
+          // The durable answer is authoritative, including when the store's
+          // implementation no-ops because an answer already won the race.
+          pending = await this.askUserStore.get(askId);
+          if (pending === undefined || pending.id !== askId || pending.sessionId !== sessionId || pending.turnId !== turnId
+            || !this.askUserLifecycle.isAnswered(pending) || typeof pending.answerText !== "string"
+            || !Number.isFinite(pending.answeredAt)) {
+            return { resumed: false, message: `ask ${askId} has no durable answer` };
+          }
+          reply = { requestId: askId, text: pending.answerText, answeredAt: pending.answeredAt! };
+        }
+      } else if (this.askUserLifecycle.isAnswered(pending) && typeof pending.answerText === "string"
+        && Number.isFinite(pending.answeredAt)) {
+        // Recover the crash window after markAnswered but before append. A
+        // changed retry text must never replace the answer already persisted.
+        reply = { requestId: askId, text: pending.answerText, answeredAt: pending.answeredAt! };
+      } else {
+        return { resumed: false, message: `ask ${askId} is not pending` };
+      }
+      const prompt = this.askUserLifecycle.resumePrompt(reply);
+      await this.store.appendMessage({
+        id: newMessageId(), sessionId, turnId, role: "user", content: prompt.content, askId, createdAt: this.now(),
+      });
+      await this.emit(sessionId, "ask.user_replied", { askId, turnId, text: reply.text }, turnId);
+      return { resumed: true, message: `resumed turn ${turnId} with reply` };
+    } finally {
+      release();
+      if (this.userAnswerSubmissions.get(askId) === queued) this.userAnswerSubmissions.delete(askId);
     }
-    if (!this.askUserLifecycle.isPending(pending)) {
-      return { resumed: false, message: `ask ${askId} is not pending` };
-    }
-    const reply: AskUserReply = { requestId: askId, text, answeredAt: this.now() };
-    if (this.askUserStore !== undefined) {
-      await this.askUserStore.markAnswered(askId, reply);
-    }
-    const prompt = this.askUserLifecycle.resumePrompt(reply);
-    await this.store.appendMessage({
-      id: newMessageId(),
-      sessionId,
-      turnId,
-      role: "user",
-      content: prompt.content,
-      askId,
-      createdAt: this.now(),
-    });
-    await this.emit(sessionId, "ask.user_replied", {
-      askId,
-      turnId,
-      text,
-    }, turnId);
-    return { resumed: true, message: `resumed turn ${turnId} with reply` };
   }
 
   /** P1-4: restore an interrupted session from its most recent durable

@@ -1,0 +1,65 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-web-parity-20261008
+
+[harness] context budget: model capabilities unknown for scripted/original — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/original — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/chosen — using conservative fallback 32000
+ × apps/web/src/deepseek/session-model-snapshot.test.ts > an existing follow and all snapshot reads wait for committed model-generation activation 110ms
+   → expected [ { settled: true, …(1) }, …(3) ] to be null
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  apps/web/src/deepseek/session-model-snapshot.test.ts > an existing follow and all snapshot reads wait for committed model-generation activation
+AssertionError: expected [ { settled: true, …(1) }, …(3) ] to be null
+
+- Expected:
+null
+
++ Received:
+[
+  {
+    "error": Error {
+      "message": "Session is unavailable",
+      "code": "session/not-found",
+      "details": {},
+    },
+    "settled": true,
+  },
+  {
+    "error": Error {
+      "message": "Session is unavailable",
+      "code": "session/not-found",
+      "details": {},
+    },
+    "settled": true,
+  },
+  {
+    "settled": true,
+    "value": null,
+  },
+  {
+    "error": Error {
+      "message": "Session is unavailable",
+      "code": "session/not-found",
+      "details": {},
+    },
+    "settled": true,
+  },
+]
+
+ ❯ apps/web/src/deepseek/session-model-snapshot.test.ts:58:19
+     56|   try {
+     57|     const early = await Promise.race([Promise.all(observed), new Promi…
+     58|     expect(early).toBeNull();
+       |                   ^
+     59|   } finally { activate.resolve(); }
+     60|   await selecting;
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  14:10:46
+   Duration  5.73s (transform 4.23s, setup 0ms, import 5.21s, tests 111ms, environment 0ms)
+

@@ -22,7 +22,7 @@ import {
 } from "@ar/contracts";
 import { AgentError } from "../errors.js";
 import { decideSchemaAdvert, errorInfo, type SchemaAdvertPolicy } from "@ar/contracts";
-import { defaultSandboxPolicy } from "./turn-helpers.js";
+import { ASK_GATE_TOOL, defaultSandboxPolicy } from "./turn-helpers.js";
 import { FrozenStepToolRouter } from "./step-execution-snapshot.js";
 import type { ToolSelector } from "../tools/tool-selector.js";
 import type { StepToolCatalog } from "./tool-catalog.js";
@@ -56,6 +56,8 @@ export interface StepSnapshotBuildInput {
   toolSelector?: ToolSelector;
   /** P24: bindings from MCP/plugin sources (frozen by their own snapshot). */
   extraBindings?: readonly FrozenToolBinding[];
+  /** Host-supported formal Runtime phases; no ToolDefinition or executable binding is created. */
+  formalActionSpecs?: readonly ToolSpec[];
   /** P18-2 deferred advertisement policy. Applied at freeze so the model
    *  controller consumes the exact advertised set (stubs included). */
   schemaAdvertPolicy?: SchemaAdvertPolicy;
@@ -97,6 +99,9 @@ export function buildStepExecutionSnapshot(input: StepSnapshotBuildInput): StepE
   const specsByName = new Map<string, ToolSpec>(registry.specs().map((spec) => [spec.name, spec]));
   const candidates: FrozenToolBinding[] = [];
   for (const def of registry.list()) {
+    // Legacy catalogs can still describe the reserved gate, but it is never
+    // executable. Only the host-supported formal phase below advertises it.
+    if (def.name === ASK_GATE_TOOL) continue;
     if (!isToolAllowedByPolicy(agent.tools, def.name)) continue;
     const spec = specsByName.get(def.name);
     if (spec === undefined) continue; // not advertised → not visible (P23-2 rule)
@@ -126,7 +131,13 @@ export function buildStepExecutionSnapshot(input: StepSnapshotBuildInput): StepE
     }
     byName.set(candidate.name, candidate);
   }
-  const available = byName.size;
+  const formalActionSpecs = input.formalActionSpecs ?? [];
+  const formalNames = new Set<string>();
+  for (const spec of formalActionSpecs) {
+    if (byName.has(spec.name) || formalNames.has(spec.name)) throw new AgentError(errorInfo("TOOL_COLLISION", `Formal runtime phase "${spec.name}" collides with this frozen step`));
+    formalNames.add(spec.name);
+  }
+  const available = byName.size + formalActionSpecs.length;
   let visible = [...byName.values()];
   const dropped: string[] = [];
   // P7-1/P7-2 goal-based selector narrows the advertised set — applied ONCE
@@ -147,7 +158,7 @@ export function buildStepExecutionSnapshot(input: StepSnapshotBuildInput): StepE
     visible.map((b) => b.spec),
     input.schemaAdvertPolicy,
   );
-  const router = new FrozenStepToolRouter(visible, stepId, advert.advertised, input.permissive === true);
+  const router = new FrozenStepToolRouter(visible, stepId, advert.advertised, input.permissive === true, formalActionSpecs);
 
   // --- fingerprints ----------------------------------------------------------
   const policyFingerprint = hashPolicyConfig({

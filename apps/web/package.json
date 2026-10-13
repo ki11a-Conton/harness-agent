@@ -21,11 +21,22 @@
     "@ar/contracts": "workspace:*",
     "@ar/gateway": "workspace:*",
     "@ar/harness": "workspace:*",
-    "@ar/security": "workspace:*"
+    "@ar/security": "workspace:*",
+    "@ar/tools": "workspace:*",
+    "@deepseek-ai/schemastery": "3.18.5-alpha.1",
+    "@js-temporal/polyfill": "0.5.1",
+    "@xterm/addon-serialize": "0.14.0",
+    "@xterm/headless": "6.0.0",
+    "diff": "9.0.0",
+    "fflate": "0.8.2",
+    "node-pty": "1.1.0",
+    "ws": "8.22.0",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@ar/core": "workspace:*",
     "@ar/model": "workspace:*",
-    "@ar/session": "workspace:*"
+    "@ar/session": "workspace:*",
+    "@types/ws": "8.18.2"
   }
 }
