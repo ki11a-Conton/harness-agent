@@ -68,9 +68,14 @@ jobs:
             ({ name, viewport, status, failure, checks, errors, externalRequests, failedHttp,
               rpcFailures: calls.filter(call => call.ok === false).map(({ endpoint, status, ok, error, expected }) =>
                 ({ endpoint, status, ok, error, expected })) }));
+          const files = {};
+          for (const name of ['host-stderr.log', 'fixture/requests.jsonl']) {
+            const original = await readFile('evidence/' + name);
+            files[name] = { bytes: original.length, sha256: createHash('sha256').update(original).digest('hex'), base64: original.toString('base64') };
+          }
           const record = { schemaVersion: 1, runId: process.env.RUN_ID, sourceSha: process.env.SOURCE_SHA,
             rawReportSha256: createHash('sha256').update(bytes).digest('hex'), rawReportBytes: bytes.length,
-            complete: report.complete, results };
+            rawReportBase64: bytes.toString('base64'), files, complete: report.complete, results };
           const data = gzipSync(Buffer.from(JSON.stringify(record))).toString('base64');
           const size = 48000, total = Math.ceil(data.length / size);
           for (let index = 0; index < total; index++) console.log(`::notice title=Installed UI evidence chunk ${index + 1}/${total}::` +
