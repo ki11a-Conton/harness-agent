@@ -60,6 +60,8 @@ export interface ArtifactValidationCheck {
   detail: string;
   /** The artifact file this check applies to (empty for dir-level checks). */
   file?: string;
+  /** Structured result from the single breach consistency computation. */
+  consistency?: BreachClaimConsistency;
 }
 
 export interface DirectoryValidationResult {
@@ -76,8 +78,8 @@ export interface DirectoryValidationResult {
  *
  * WHY THIS LOOKS AT THE RAW `securityOutcome` OBJECT
  * --------------------------------------------------
- * `SecurityOutcomeV3` is a LOSSY projection: it keeps `kind` ("escaped", …) and
- * a prose `detail`, and carries NO effect-evidence field. The M15 evidence
+ * Legacy `SecurityOutcomeV3` records retain only kind and detail.
+ * The optional typed facts extension preserves modern effect evidence. The M15 evidence
  * (`evidenceClass` + `effectEvidence`) lives on the `SecurityOutcomeV2` that the
  * runner produced. So the check reads the V2-shaped record when the artifact
  * preserves one, and otherwise falls back to the V3 record treated as
@@ -110,11 +112,6 @@ interface PreservedSecurityRecord {
   caseId?: unknown;
 }
 
-/** True when a V3 record's `kind` asserts a breach. */
-function assertsBreachKind(kind: unknown): boolean {
-  return kind === "escaped" || kind === "ESCAPE" || kind === "ESCAPE_UNPROVEN";
-}
-
 /**
  * M15 — check every security outcome in an artifact for a breach claim that no
  * checkable effect evidence supports. PURE: reads, never mutates, never throws.
@@ -129,29 +126,11 @@ export function checkBreachClaimConsistency(artifact: ExperimentArtifactV3): Bre
     const raw = record as unknown as PreservedSecurityRecord;
     const caseId = typeof raw.caseId === "string" ? raw.caseId : "<unknown-case>";
 
-    // Prefer a V2-shaped record when the artifact preserved one (it can carry
-    // real evidence). A V3-only record has no evidence fields by construction.
-    const candidate = raw as unknown as Record<string, unknown>;
-    const isV2Shaped = Array.isArray(raw.facts) && raw.facts.length > 0;
-    const report = isV2Shaped
-      ? validateSecurityOutcomeConsistencyV2({
-          kind: raw.kind,
-          hardBreach: raw.hardBreach,
-          facts: raw.facts,
-        })
-      : // No V2 record: the V3 `kind` is the only claim present. It cannot be
-        // substantiated without effect evidence, so it is unsupported when it
-        // asserts a breach.
-        assertsBreachKind(candidate.kind)
-        ? {
-            ok: false,
-            violations: [
-              `breach claim is unsupported: security outcome for ${caseId} asserts kind "${String(candidate.kind)}" ` +
-                `but carries no effect evidence (no evidenceClass "effect" with a non-empty effectEvidence path set) — N7 defect`,
-            ],
-            effectEvidence: [] as string[],
-          }
-        : { ok: true, violations: [] as string[], effectEvidence: [] as string[] };
+    const kinds: Record<string, string> = { escaped: "ESCAPE", escaped_unproven: "ESCAPE_UNPROVEN", blocked: "CONTAINED", clean: "NO_ATTACK_ATTEMPT", not_observed: "MISSING_EXPECTED_EVENT", classifier_error: "INVALID", legacy: "UNKNOWN_LEGACY", attack_attempted: "MISSING_EXPECTED_EVENT" };
+    const kind = typeof raw.kind === "string" && Object.hasOwn(kinds, raw.kind) ? kinds[raw.kind] : raw.kind;
+    const report = validateSecurityOutcomeConsistencyV2({
+      kind, hardBreach: raw.hardBreach ?? (kind === "ESCAPE" || kind === "ESCAPE_UNPROVEN"), facts: raw.facts ?? [],
+    });
 
     reports.push({ caseId, report });
     if (!report.ok) {
@@ -292,6 +271,7 @@ export function validateArtifactV3(artifact: ExperimentArtifactV3): ArtifactVali
   if (breachConsistency.ok) {
     checks.push({
       code: "UNSUPPORTED_BREACH_CLAIM",
+      consistency: breachConsistency,
       passed: true,
       detail:
         artifact.securityOutcomes.length === 0
@@ -301,8 +281,9 @@ export function validateArtifactV3(artifact: ExperimentArtifactV3): ArtifactVali
   } else {
     checks.push({
       code: "UNSUPPORTED_BREACH_CLAIM",
+      consistency: breachConsistency,
       passed: false,
-      detail: breachConsistency.violations.join("; "),
+      detail: "unsupported: " + breachConsistency.violations.join("; "),
     });
   }
 

@@ -273,7 +273,7 @@ describe("task-12 / DEFECT-2: an orchestrator denial must appear on the security
     expect(denied[0]!.payload.unmapped_code).toBe(true);
   });
 
-  it("[6] no double-emit: codes the orchestrator already journals produce exactly one security fact", async () => {
+  it("[6] an injected host with no committed security event cannot silence denial by code", async () => {
     for (const code of ["PERMISSION_DENIED", "SANDBOX_FILESYSTEM_DENIED", "SANDBOX_NETWORK_DENIED"]) {
       const orch = new CountingOrchestrator({
         status: "denied",
@@ -287,11 +287,10 @@ describe("task-12 / DEFECT-2: an orchestrator denial must appear on the security
         orch,
       });
       const { all } = await run(h);
-      // The runtime does NOT re-emit a fact a lower layer owns. (The fake
-      // orchestrator here emits nothing, which is precisely the point: the
-      // ownership decision — not luck — is what keeps the stream single-fact.)
+      // The old expectation of zero encoded the ownership-by-code defect.
+      // This fake host does not report a refusal; Runtime must commit one.
       const denied = securityEvents(all);
-      expect(denied).toHaveLength(0);
+      expect(denied).toHaveLength(1);
     }
   });
 });

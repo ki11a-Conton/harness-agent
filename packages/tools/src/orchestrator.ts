@@ -698,8 +698,8 @@ export class ToolOrchestrator {
     return result;
   }
 
-  private failPermission(request: ToolCallRequest, context: ToolExecutionContext, decision: PermissionDecision, started: number, target?: string): ToolResult {
-    void this.emit("security.permission_denied", request, context, {
+  private async failPermission(request: ToolCallRequest, context: ToolExecutionContext, decision: PermissionDecision, started: number, target?: string): Promise<ToolResult> {
+    await this.emit("security.permission_denied", request, context, {
       target: target ?? "",
       reason: decision.reason,
       source: "permission-engine",

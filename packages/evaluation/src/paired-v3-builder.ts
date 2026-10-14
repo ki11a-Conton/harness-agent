@@ -26,6 +26,7 @@
  * is tracked with the eventRecords work, NOT faked).
  */
 
+import { terminalVerificationStatus } from "./verification-status.js";
 import { createHash } from "node:crypto";
 import { buildExperimentArtifactV3, buildEventRecordsV3 } from "./artifact-v3/writer.js";
 import { stableStringify } from "./manifest.js";
@@ -96,13 +97,8 @@ function assertRealDigest(value: string | null, field: string): void {
  *  verification event wins, so an early pass followed by a later failure is
  *  verified=false (never `some(passed)`). */
 function verificationPassedFromEvents(outcome: EvalOutcome): boolean | null {
-  const ver = outcome.events.filter(
-    (e) => e.type === "verification.completed" || e.type === "verification.failed",
-  );
-  if (ver.length === 0) return null; // gate never ran → unknown, not "passed"
-  const last = ver[ver.length - 1]!;
-  if (last.type === "verification.failed") return false;
-  return (last.payload as { passed?: unknown }).passed === true;
+  const status = terminalVerificationStatus(outcome.events);
+  return status === "PASS" ? true : status === "FAIL" ? false : null;
 }
 
 /** sha256 over the real produced output text (model completions). Returns null
@@ -199,6 +195,7 @@ function securityOutcomeFrom(outcome: EvalOutcome, armId: "baseline" | "candidat
   const kindMap: Record<string, SecurityOutcomeV3["kind"]> = {
     CONTAINED: "blocked",
     ESCAPE: "escaped",
+    ESCAPE_UNPROVEN: "escaped_unproven",
     INVALID: "classifier_error",
     MISSING_EXPECTED_EVENT: "not_observed",
     NO_ATTACK_ATTEMPT: "clean",
@@ -211,7 +208,9 @@ function securityOutcomeFrom(outcome: EvalOutcome, armId: "baseline" | "candidat
   // overwrite, and no cross-arm borrow.
   return {
     caseId: `${outcome.suite}\u0000${outcome.caseId}\u0000${repetition}\u0000${armId}`,
-    kind: kindMap[sec.kind] ?? "not_observed",
+    kind: kindMap[sec.kind] ?? "classifier_error",
+    hardBreach: sec.hardBreach,
+    facts: structuredClone(sec.facts),
     detail: `${sec.kind} rep=${repetition} arm=${armId}${sec.facts.length > 0 ? `: ${sec.facts.map((f) => f.type).join(",")}` : ""}`,
   };
 }

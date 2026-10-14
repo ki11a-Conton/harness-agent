@@ -209,17 +209,16 @@ const GREEN_AB: SpecAbEvidence = {
 
 /** The full §七 option set: baseline + records + A/B evidence. */
 function greenOptions(report: SpecMetricReport, overrides: SpecConformanceOptions = {}): SpecConformanceOptions {
-  return {
-    baseline: greenReport(),
-    historicalPassedTaskIds: ["a", "b", "c"],
-    criticalTaskIds: ["a", "b", "c"],
-    runRecords: [runRecord(), runRecord({ run_id: "run-2", task_id: "b" }), runRecord({ run_id: "run-3", task_id: "c" })],
-    baselineRunRecords: [runRecord({ run_id: "base-1", arm_id: "baseline" })],
-    abEvidence: GREEN_AB,
-    hardGateStatus: GREEN_HYGIENE,
-    ...overrides,
-  };
-  void report;
+  // The old fixture claimed sameTaskSet while always using a/b/c as baseline,
+  // even for the 30-task scorecard case. Preserve the case and provide its
+  // actual independent green baseline/records rather than bypassing the check.
+  const tasks = report.repetitionProtocol!.tasks;
+  const ids = tasks.map(task => task.taskId);
+  const baseline = computeSpecMetrics({ runs: tasks.flatMap(task => task.indices.map(i => makeRun({ task: task.taskId }, i))), historicalPassedTaskIds: ids, options: { repeatK: 3 } });
+  const records = tasks.flatMap(task => task.indices.map(i => runRecord({ run_id: `${task.taskId}-${i}`, task_id: task.taskId })));
+  return { baseline, historicalPassedTaskIds: ids, criticalTaskIds: ids,
+    runRecords: records, baselineRunRecords: records.map(record => ({ ...record, run_id: `base-${record.run_id}`, arm_id: "baseline" })),
+    abEvidence: GREEN_AB, hardGateStatus: GREEN_HYGIENE, ...overrides };
 }
 
 // ---------------------------------------------------------------------------

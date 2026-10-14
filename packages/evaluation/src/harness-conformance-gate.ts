@@ -242,6 +242,11 @@ interface GateContext {
 }
 
 /** Render a [0,1] threshold as the spec's percentage (1 → "100%", 0.99 → "99%"). */
+function sameSet(left: readonly string[], right: readonly string[]): boolean {
+  const a = new Set(left), b = new Set(right);
+  return a.size === b.size && [...a].every(value => b.has(value));
+}
+
 function formatThreshold(threshold: number): string {
   return `${hashFreePercent(threshold)}%`;
 }
@@ -429,6 +434,15 @@ const GATE_CHECKS: GateCheck[] = [
       const groups = sample?.distribution?.repeatGroups;
       const excluded = sample?.distribution?.excludedGroups;
       const required = `each task repeated >= ${ctx.minRepetitions} time(s) (spec §七); pass^k uses k = ${k}`;
+      const protocol = report.repetitionProtocol;
+      const badTasks = protocol?.tasks.filter(task => task.indices.length < ctx.minRepetitions
+        || task.groups.length !== 1 || task.indices.some(index => !Number.isSafeInteger(index) || index < 0)) ?? [];
+      if (protocol === undefined || protocol.tasks.length === 0 || badTasks.length > 0
+        || protocol.duplicateIdentities.length > 0 || protocol.sharedGroups.length > 0 || (excluded ?? 0) > 0) {
+        return { gate: "repeat_protocol", label: "fixed repetition protocol / 每个任务至少运行 3 次 (§七)",
+          passed: false, required, observed: { protocol: protocol ?? null, excludedGroups: excluded ?? null },
+          failureKind: "NOT_EVALUABLE", detail: "missing, insufficient, duplicated, or shared per-task repetition identities" };
+      }
       if (typeof groups !== "number" || groups === 0) {
         return {
           gate: "repeat_protocol",
@@ -483,7 +497,7 @@ const GATE_CHECKS: GateCheck[] = [
   {
     id: "ab_comparability",
     label: "A/B comparability / §七 同模型同任务集同权限同预算",
-    build: (_report, options) => {
+    build: (report, options) => {
       const required =
         "§七: baseline and candidate share the model, task set, tool permissions and budget cap; model parameters / task order / environment / eval script are recorded";
       const records = options.runRecords;
@@ -524,7 +538,17 @@ const GATE_CHECKS: GateCheck[] = [
         ["evaluation script recorded", evidence?.evaluationScriptRecorded, "evaluationScriptRecorded"],
       ];
       for (const [label, value] of checks) {
-        if (value === false) findings.push(`${label}: NOT satisfied`);
+        if (value !== true) findings.push(`${label}: ${value === false ? "NOT satisfied" : "NOT recorded"}`);
+      }
+      for (const field of ["model_id", "benchmark_version", "environment_id"] as const) {
+        if (records?.length && baselineRecords?.length
+          && !sameSet(records.map(record => String(record[field] ?? "")), baselineRecords.map(record => String(record[field] ?? "")))) {
+          findings.push(`baseline/candidate disagree on ${field}`);
+        }
+      }
+      if (report.repetitionProtocol !== undefined && options.baseline?.repetitionProtocol !== undefined
+        && !sameSet(report.repetitionProtocol.tasks.map(task => task.taskId), options.baseline.repetitionProtocol.tasks.map(task => task.taskId))) {
+        findings.push("baseline/candidate observed task sets differ");
       }
 
       const hasAnyEvidence =
@@ -545,9 +569,11 @@ const GATE_CHECKS: GateCheck[] = [
         ...(passed
           ? {}
           : {
-              failureKind: findings.length > 0 ? ("FAILED" as const) : ("NOT_EVALUABLE" as const),
+              failureKind: findings.some(finding => !finding.endsWith("NOT recorded")) ? ("FAILED" as const) : ("NOT_EVALUABLE" as const),
               detail:
-                findings.length > 0
+                !hasAnyEvidence
+                  ? "no A/B comparability evidence supplied; " + findings.join("; ")
+                  : findings.length > 0
                   ? findings.join("; ")
                   : "no A/B comparability evidence supplied — the A/B rules of §七 cannot be claimed as satisfied",
             }),

@@ -12,7 +12,7 @@ import { join } from "node:path";
 import { ArtifactSchemaError, classifyArtifact, findEventRecordViolations, findRefAndEventViolations, parseExperimentArtifactV3 } from "./schema.js";
 import type { ArtifactClassification, ExperimentArtifactV3 } from "./types.js";
 import { canonicalDigestInput, computeContentDigestV3, deriveSummaryV3 } from "./writer.js";
-import { checkBreachClaimConsistency, validateArtifactV3, type ArtifactValidationCheck, type BreachClaimConsistency } from "./validate.js";
+import { validateArtifactV3, type ArtifactValidationCheck, type BreachClaimConsistency } from "./validate.js";
 
 export interface LoadedArtifact {
   artifact: ExperimentArtifactV3;
@@ -165,7 +165,6 @@ export function validateExperimentArtifactV3FromBytes(raw: string, source: strin
   // changing the check changes the loader's verdict too (they cannot drift).
   const consistency = breachConsistencyFromChecks(
     validateArtifactV3(artifact),
-    checkBreachClaimConsistency(artifact).unsupportedCaseIds,
   );
 
   return { artifact, path: source, recomputedSummary, consistency };
@@ -178,24 +177,22 @@ export function validateExperimentArtifactV3FromBytes(raw: string, source: strin
  */
 function breachConsistencyFromChecks(
   checks: ArtifactValidationCheck[],
-  unsupportedCaseIds: string[],
 ): BreachClaimConsistency {
   const check = checks.find((c) => c.code === "UNSUPPORTED_BREACH_CLAIM");
-  if (check === undefined) {
+  if (check === undefined || check.consistency === undefined) {
     // No check present means the validator was changed without this wiring.
     // Fail closed rather than reporting a comfortable default.
     return {
       ok: false,
       violations: ["UNSUPPORTED_BREACH_CLAIM check missing from validateArtifactV3 — cannot certify breach claims"],
-      unsupportedCaseIds,
+      unsupportedCaseIds: [],
       reports: [],
     };
   }
   return {
-    ok: check.passed,
-    violations: check.passed ? [] : check.detail.split("; ").filter((v) => v.length > 0),
-    unsupportedCaseIds: check.passed ? [] : unsupportedCaseIds,
-    reports: [],
+    ...check.consistency,
+    ok: check.passed && check.consistency.ok,
+    violations: check.consistency.violations.length > 0 ? check.consistency.violations : check.passed ? [] : [check.detail],
   };
 }
 

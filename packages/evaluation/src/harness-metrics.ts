@@ -55,6 +55,7 @@
  * gate then blocks rather than passing a metric that was never tested.
  */
 
+import { terminalVerificationStatus } from "./verification-status.js";
 import type { AgentEvent } from "@ar/contracts";
 import { toolNameOf } from "@ar/contracts";
 import type { EvalOutcome } from "./runner.js";
@@ -422,6 +423,12 @@ export interface SpecMetricReport {
   trials: number;
   /** Distinct tasks observed. */
   tasks: number;
+  /** Observed repetition identities, independent of the aggregate pass^k rate. */
+  repetitionProtocol?: {
+    tasks: Array<{ taskId: string; groups: string[]; indices: number[] }>;
+    duplicateIdentities: string[];
+    sharedGroups: string[];
+  };
 }
 
 /**
@@ -471,31 +478,30 @@ function hasEventOfType(events: readonly AgentEvent[], type: AgentEvent["type"])
  *  with a terminal result. No model wording, no filename convention. */
 export function isTraceComplete(outcome: EvalOutcome): boolean {
   const events = outcome.events;
-  if (events.length === 0) return false;
-  // Every event must be attributable to the run's step/lifecycle.
-  if (!events.every((event) => typeof event.turnId === "string" && event.turnId !== "")) return false;
-  if (!events.every((event) => typeof event.sequence === "number" && Number.isFinite(event.sequence))) {
-    return false;
-  }
-  // A tool invocation must be linkable end to end: its result carries the
-  // same toolCallId and names the tool.
-  const requested = new Map<string, string | undefined>();
+  if (events.length === 0 || !events.some(e => e.type === "turn.started")) return false;
+  const terminal = events.findLast(e => e.type === "turn.completed" || e.type === "turn.failed" || e.type === "turn.cancelled");
+  if (terminal === undefined) return false;
+  const requested = new Map<string, AgentEvent>();
+  let sequence = -1;
   for (const event of events) {
-    if (event.type !== "tool.requested") continue;
-    const callId = event.payload.toolCallId;
-    if (typeof callId !== "string" || callId === "") return false;
-    requested.set(callId, toolNameOf(event.payload));
+    if (typeof event.turnId !== "string" || event.turnId.length === 0
+      || !Number.isSafeInteger(event.sequence) || event.sequence <= sequence) return false;
+    sequence = event.sequence;
+    const id = event.payload.toolCallId;
+    if (event.type === "tool.requested") {
+      if (typeof id !== "string" || id.length === 0 || requested.has(id)
+        || typeof toolNameOf(event.payload) !== "string") return false;
+      requested.set(id, event);
+    } else if (event.type === "tool.started" || event.type === "tool.completed" || event.type === "tool.failed") {
+      const request = typeof id === "string" ? requested.get(id) : undefined;
+      if (request === undefined || request.turnId !== event.turnId || request.sessionId !== event.sessionId
+        || toolNameOf(request.payload) !== toolNameOf(event.payload)) return false;
+    }
   }
-  for (const [callId, tool] of requested) {
-    if (typeof tool !== "string" || tool === "") return false;
-    const settled = events.find(
-      (event) =>
-        (event.type === "tool.completed" || event.type === "tool.failed") &&
-        event.payload.toolCallId === callId,
-    );
-    if (settled === undefined) return false;
-    const settledTool = toolNameOf(settled.payload);
-    if (typeof settledTool !== "string" || settledTool === "") return false;
+  for (const [id, request] of requested) {
+    const started = events.some(e => e.type === "tool.started" && e.payload.toolCallId === id && e.sequence > request.sequence);
+    const result = events.findLast(e => (e.type === "tool.completed" || e.type === "tool.failed") && e.payload.toolCallId === id);
+    if (!started || result === undefined || result.sequence >= terminal.sequence) return false;
   }
   return true;
 }
@@ -511,17 +517,7 @@ export function isTraceComplete(outcome: EvalOutcome): boolean {
  *  The verifier's judgement is the external evidence (§三 note 3); a
  *  completion claim is only precise when this is PASS. */
 export function resolveVerificationStatus(outcome: EvalOutcome): SpecVerificationStatus | null {
-  const events = outcome.events;
-  if (events.length === 0) return null;
-  if (events.some((e) => e.type === "verification.completed" && e.payload.passed === true)) return "PASS";
-  const failed = events.some(
-    (e) =>
-      e.type === "verification.failed" ||
-      (e.type === "verification.completed" && e.payload.passed === false),
-  );
-  if (failed) return "FAIL";
-  if (events.some((e) => e.type === "turn.cancelled")) return "TIMEOUT";
-  return "NOT_RUN";
+  return terminalVerificationStatus(outcome.events);
 }
 
 /** Whether the trial has a machine-executable acceptance condition.
@@ -565,8 +561,10 @@ export function toolCallTally(outcome: EvalOutcome): {
 } {
   const reasons: string[] = [];
   const attempts = new Map<string, { tool: string | undefined; argsOk: boolean }>();
+  let dispatches = 0;
   for (const event of outcome.events) {
     if (event.type !== "tool.requested") continue;
+    dispatches += 1;
     const callId = event.payload.toolCallId;
     if (typeof callId !== "string" || callId === "") {
       reasons.push("tool.requested without a toolCallId (call not attributable)");
@@ -617,7 +615,7 @@ export function toolCallTally(outcome: EvalOutcome): {
     }
     valid += 1;
   }
-  return { dispatches: attempts.size, valid, invalidReasons: reasons };
+  return { dispatches, valid, invalidReasons: reasons };
 }
 
 /** Injectable ground truth for the fault-injection indicators, keyed by task. */
@@ -830,7 +828,7 @@ function asTrial(run: SpecRunInput, index: number): Trial {
   // counts model calls with no provider usage record — those are never priced
   // at 0 (that would understate cost and flatter the candidate).
   const tokens = outcome.metrics.tokens_input + outcome.metrics.tokens_output;
-  const usageRecorded = outcome.metrics.model_call_count > 0 && outcome.metrics.usage_unknown < outcome.metrics.model_call_count;
+  const usageRecorded = outcome.metrics.model_call_count > 0 && outcome.metrics.usage_unknown === 0;
   const costUsd = usageRecorded ? outcome.metrics.estimated_cost : Number.NaN;
 
   return {
@@ -931,7 +929,25 @@ export function computeSpecMetrics(input: SpecMetricsInput): SpecMetricReport {
     scoreCard,
     trials: trials.length,
     tasks: new Set(trials.map((trial) => trial.task)).size,
+    repetitionProtocol: repetitionProtocol(trials),
   };
+}
+
+function repetitionProtocol(trials: readonly Trial[]): NonNullable<SpecMetricReport["repetitionProtocol"]> {
+  const tasks = new Map<string, { taskId: string; groups: Set<string>; indices: Set<number> }>();
+  const identities = new Set<string>();
+  const duplicateIdentities: string[] = [];
+  const groups = new Map<string, Set<string>>();
+  for (const trial of trials) {
+    const key = JSON.stringify([trial.task, trial.repeatIndex]);
+    if (identities.has(key)) duplicateIdentities.push(key);
+    identities.add(key);
+    const task = tasks.get(trial.task) ?? { taskId: trial.task, groups: new Set<string>(), indices: new Set<number>() };
+    task.groups.add(trial.group); task.indices.add(trial.repeatIndex); tasks.set(trial.task, task);
+    const members = groups.get(trial.group) ?? new Set<string>(); members.add(trial.task); groups.set(trial.group, members);
+  }
+  return { tasks: [...tasks.values()].map(task => ({ taskId: task.taskId, groups: [...task.groups], indices: [...task.indices] })),
+    duplicateIdentities, sharedGroups: [...groups].filter(([, members]) => members.size > 1).map(([name]) => name) };
 }
 
 function positiveInt(value: number | undefined, fallback: number): number {

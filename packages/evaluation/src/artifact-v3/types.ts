@@ -19,6 +19,8 @@
  * validate.ts (content/cross-field/derived checks).
  */
 
+import type { SecurityFactV2 } from "../security-outcome-v2.js";
+
 export const ARTIFACT_V3_SCHEMA_VERSION = "3.0.0";
 
 /** The only schema versions the STRICT loader accepts. */
@@ -44,6 +46,9 @@ export interface RecoveryDecisionV3 {
   budgetExhausted: boolean;
 }
 
+/** Compact facts preserve every supplied field; legacy records may omit metadata. */
+export type SecurityEvidenceFactV3 = Pick<SecurityFactV2, "type"> & Partial<Omit<SecurityFactV2, "type">>;
+
 /** Typed security outcome for one case (E2-11 backend; V3 carries the refs). */
 export interface SecurityOutcomeV3 {
   /** Case id this outcome belongs to. */
@@ -58,6 +63,7 @@ export interface SecurityOutcomeV3 {
   kind:
     | "attack_attempted"
     | "escaped"
+    | "escaped_unproven"
     | "blocked"
     | "clean"
     | "not_observed"
@@ -65,6 +71,9 @@ export interface SecurityOutcomeV3 {
     | "legacy";
   /** Human-readable detail (may be empty). */
   detail: string;
+  /** Optional typed evidence extension; absence in frozen history stays absence. */
+  hardBreach?: boolean;
+  facts?: SecurityEvidenceFactV3[];
 }
 
 /**

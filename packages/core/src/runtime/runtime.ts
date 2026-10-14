@@ -664,6 +664,9 @@ export class AgentRuntime {
     // (P15-1 recoveryUsage) is threaded by VALUE into executeToolCalls — it is
     // never a controller field, so turns/sessions cannot pollute each other.
     this.toolCallController = new ToolCallController({
+      denialAlreadyReported: async (sessionId, turnId, callId) => (await this.events.list(sessionId)).some(event =>
+        event.turnId === turnId && typeof event.type === "string" && event.type.startsWith("security.")
+        && event.type.endsWith("_denied") && event.payload.toolCallId === callId),
       orchestrator: this.orchestrator,
       store: this.store,
       hooks: this.hooks,

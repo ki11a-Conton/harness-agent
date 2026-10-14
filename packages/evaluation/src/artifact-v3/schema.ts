@@ -409,7 +409,7 @@ export function parseExperimentArtifactV3(value: unknown): ExperimentArtifactV3 
   const securityOutcomes = expectArray(record.securityOutcomes, "securityOutcomes").map((s, i) => {
     const so = expectObject(s, `securityOutcomes[${i}]`);
     const kind = expectString(so.kind, `securityOutcomes[${i}].kind`)!;
-    const SECURITY_KINDS = ["attack_attempted", "escaped", "blocked", "clean", "not_observed", "classifier_error", "legacy"] as const;
+    const SECURITY_KINDS = ["attack_attempted", "escaped", "escaped_unproven", "blocked", "clean", "not_observed", "classifier_error", "legacy"] as const;
     if (!(SECURITY_KINDS as readonly string[]).includes(kind)) {
       throw new ArtifactSchemaError("SCHEMA_VALIDATION_FAILED", `securityOutcomes[${i}].kind`, `unknown kind "${kind}"`);
     }
@@ -417,6 +417,28 @@ export function parseExperimentArtifactV3(value: unknown): ExperimentArtifactV3 
       caseId: expectString(so.caseId, `securityOutcomes[${i}].caseId`)!,
       kind: kind as (typeof SECURITY_KINDS)[number],
       detail: expectString(so.detail, `securityOutcomes[${i}].detail`)!,
+      ...(so.hardBreach === undefined ? {} : { hardBreach: expectBoolean(so.hardBreach, `securityOutcomes[${i}].hardBreach`)! }),
+      ...(so.facts === undefined ? {} : { facts: expectArray(so.facts, `securityOutcomes[${i}].facts`).map((fact, j) => {
+        const f = expectObject(fact, `securityOutcomes[${i}].facts[${j}]`);
+        // Preserve supported evidence byte-for-byte; semantic contradictions
+        // are flagged by the shared consistency validator, never rewritten.
+        const allowed = new Set(["factId", "type", "evidenceClass", "correlation", "detail", "source", "effectEvidence"]);
+        if (Object.keys(f).some(key => !allowed.has(key))) throw new ArtifactSchemaError("SCHEMA_VALIDATION_FAILED", "securityOutcomes.facts", "unknown fact field");
+        const type = expectString(f.type, `securityOutcomes[${i}].facts[${j}].type`);
+        if (!["ATTACK_ATTEMPTED", "POLICY_DENIED", "UNAUTHORIZED_EFFECT", "ESCAPE", "SECRET_REDACTED", "EXPECTED_EVENT_MISSING", "MODEL_AVOIDED_ACTION"].includes(type!)) throw new ArtifactSchemaError("SCHEMA_VALIDATION_FAILED", "securityOutcomes.facts.type", "unknown fact type");
+        if (f.factId !== undefined) expectString(f.factId, "securityOutcomes.facts.factId");
+        if (f.detail !== undefined) expectString(f.detail, "securityOutcomes.facts.detail");
+        if (f.source !== undefined && !["policy", "sandbox", "runtime", "verifier", "legacy"].includes(String(f.source))) throw new ArtifactSchemaError("SCHEMA_VALIDATION_FAILED", "securityOutcomes.facts.source", "unknown fact source");
+        if (f.correlation !== undefined) {
+          const c = expectObject(f.correlation, "securityOutcomes.facts.correlation");
+          expectString(c.caseId, "securityOutcomes.facts.correlation.caseId"); expectString(c.armId, "securityOutcomes.facts.correlation.armId");
+          for (const field of ["toolCallId", "policyRuleId", "verificationId"]) expectString(c[field], `securityOutcomes.facts.correlation.${field}`, true);
+          for (const field of ["repetition", "attempt"]) if (c[field] !== null && (!Number.isSafeInteger(c[field]) || Number(c[field]) < 0)) throw new ArtifactSchemaError("SCHEMA_VALIDATION_FAILED", "securityOutcomes.facts.correlation", "invalid repetition/attempt");
+        }
+        if (f.evidenceClass !== undefined && f.evidenceClass !== "intent" && f.evidenceClass !== "effect") throw new ArtifactSchemaError("SCHEMA_VALIDATION_FAILED", "securityOutcomes.facts.evidenceClass", "unknown evidence class");
+        if (f.effectEvidence !== undefined) expectArray(f.effectEvidence, "securityOutcomes.facts.effectEvidence").forEach(value => expectString(value, "securityOutcomes.facts.effectEvidence[]"));
+        return structuredClone(f) as unknown as import("./types.js").SecurityEvidenceFactV3;
+      }) }),
     };
   });
 

@@ -6,6 +6,8 @@ export const brandedModules = Object.freeze([
   'dsh-client-ui-settings-models', 'dsh-client-ui-settings-account', 'dsh-client-ui-sidebar-documentpreview',
   'dsh-client-ui-conversation',
   'dsh-client-ui-workspace',
+  'dsh-client-connection',
+  'dsh-client-ui-settings-general',
 ]);
 export const brandRoot = 'harness-brand';
 export const hash = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -42,8 +44,21 @@ export function deriveBrandModule(stem, original) {
   if (!brandedModules.includes(stem)) throw new Error('Unreviewed branding module: ' + stem);
   if (stem === 'dsh-client-ui-brand-official') return Buffer.from(brandModule);
   let source = original.toString('utf8');
-  if (!['dsh-client-ui-conversation', 'dsh-client-ui-workspace'].includes(stem) && !source.includes('DeepSeek Harness')) throw new Error('Branding source changed: ' + stem);
+  if (!['dsh-client-ui-conversation', 'dsh-client-ui-workspace', 'dsh-client-connection', 'dsh-client-ui-settings-general'].includes(stem) && !source.includes('DeepSeek Harness')) throw new Error('Branding source changed: ' + stem);
   source = source.replaceAll('DeepSeek Harness', 'Harness Agent');
+  if (stem === 'dsh-client-ui-settings-general') {
+    for (const pattern of ['connectingShownAt.current = Date.now();', 'const remaining = CONNECTING_MIN_VISIBLE_MS - (Date.now() - shownAt);']) {
+      if (source.split(pattern).length !== 2) throw new Error('Expected exactly one connection indicator clock boundary');
+      source = source.replace(pattern, pattern.replace('Date.now()', 'performance.now()'));
+    }
+  }
+  if (stem === 'dsh-client-connection') {
+    const declaration = 'function watchBrowserNetwork(controller) {';
+    const registration = 'stopNetworkWatch: watchBrowserNetwork(controller)';
+    for (const pattern of [declaration, registration]) if (source.split(pattern).length !== 2) throw new Error('Expected exactly one browser connectivity boundary');
+    source = source.replace(declaration, 'function watchBrowserNetwork(controller, isLoopback = false) {\n\t\t\t// Interface connectivity cannot decide whether the local host is reachable.\n\t\t\t// Actual RPC readiness and transport loss still own connection state.\n\t\t\tif (isLoopback) return () => {};');
+    source = source.replace(registration, 'stopNetworkWatch: watchBrowserNetwork(controller, handle.isLoopback)');
+  }
   if (stem === 'dsh-client-ui-workspace') {
     const open = 'openSession(target) {\n\t\t\t\tthis.replaceMain(target, this.lifetime.signal, "reveal");';
     const clear = 'clearMain() {\n\t\t\t\tconst previous = this.mainReference;';
@@ -82,7 +97,7 @@ export function deriveBrandModule(stem, original) {
   }
   // Derived files have their own provenance, rather than claiming an original source map.
   source = source.replace(/\n\/\/# sourceMappingURL=[^\n]+/g, '');
-  const kind = ['dsh-client-ui-conversation', 'dsh-client-ui-workspace'].includes(stem) ? 'UI' : 'presentation';
+  const kind = ['dsh-client-ui-conversation', 'dsh-client-ui-workspace', 'dsh-client-connection', 'dsh-client-ui-settings-general'].includes(stem) ? 'UI' : 'presentation';
   return Buffer.from(`// Harness Agent ${kind} derivative; original retained under plugins/.\n` + source);
 }
 

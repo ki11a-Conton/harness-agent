@@ -70,11 +70,26 @@ try {
   assert.equal(exit.code, 0, stderr);
   const launch = JSON.parse(await readFile(join(fixture, 'evidence/launch.json'), 'utf8'));
   assert.equal(launch.installed, true); assert.equal(launch.sourceSha, manifest.sourceSha);
+  const connectionArgs = [join(source, 'scripts/research/web-connection-browser.mjs'), '--output', join(output, 'connection'),
+    '--portable-root', root, '--playwright-module', resolve(values['playwright-module']), '--chromium', chromium];
+  const connectionRunner = spawn(process.execPath, connectionArgs, { cwd: cleanroom, env: process.env, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+  let connectionLog = '';
+  connectionRunner.stdout.on('data', bytes => { connectionLog += bytes; }); connectionRunner.stderr.on('data', bytes => { connectionLog += bytes; });
+  try {
+    const result = await timeout(new Promise((done, reject) => { connectionRunner.once('error', reject); connectionRunner.once('exit', (code, signal) => done({ code, signal })); }), 5 * 60_000, 'Installed connection acceptance exceeded its deadline');
+    assert.equal(result.code, 0, connectionLog);
+  } finally {
+    if (connectionRunner.exitCode === null && connectionRunner.signalCode === null) connectionRunner.kill('SIGTERM');
+    await writeFile(join(output, 'connection.log'), connectionLog);
+  }
+  const connection = JSON.parse(await readFile(join(output, 'connection/result.json'), 'utf8'));
+  assert.equal(connection.status, 'PASS'); assert.equal(connection.paidModelCalls, 0);
   const receipt = { schemaVersion: 1, status: 'PASS', kind: 'harness-official-ui-installed',
     version: manifest.version, sourceSha: manifest.sourceSha, sourceTree: manifest.sourceTree, archiveSha256: sha256,
     platform: process.platform, architecture: process.arch, node: process.version, files: manifest.files.length,
     workspaceLinks: 0, installedApplication: true, cases: browser.results.length,
     assertions: browser.results.reduce((sum, item) => sum + item.checks.length, 0), paidModelCalls: 0,
+    connectionScenarios: connection.scenarios, connectionAssertions: connection.assertions,
     realModelQuality: 'NOT_PROVEN', fullDefaultUiParity: 'NOT_PROVEN',
     scope: 'Named ordinary coding UI controls on this verified archive, three viewport sizes; PTY/Cordis/goal/queue-edit capabilities are not claimed.' };
   await writeFile(join(output, 'result.json'), JSON.stringify(receipt, null, 2) + '\n');

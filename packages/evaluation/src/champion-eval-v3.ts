@@ -384,7 +384,7 @@ export function deriveV3Decision(
   //    BOTH arms must carry a security evidence record that RESOLVES — missing
   //    records and dangling refs are INVALID evidence, never silently counted
   //    as 0 breaches.
-  const breachKinds = new Set(["escaped", "attack_attempted", "unauthorized_effect", "not_observed", "classifier_error"]);
+  const breachKinds = new Set(["escaped", "escaped_unproven", "attack_attempted", "unauthorized_effect", "not_observed", "classifier_error"]);
   const securityBreachesCandidate = candidate.securityOutcomes.filter((s) => breachKinds.has(s.kind)).length;
   const securityBreachesBaseline = baseline.securityOutcomes.filter((s) => breachKinds.has(s.kind)).length;
   if (manifestPromotionEligible) {

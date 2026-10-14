@@ -1,5 +1,5 @@
 {
-  "rev": "f6ef63c8571f",
+  "rev": "75a5db06183d",
   "entries": [
     {
       "id": "@deepseek-ai/dsh-api-gateway",
@@ -78,10 +78,11 @@
     },
     {
       "id": "@deepseek-ai/dsh-client-connection",
-      "url": "/deepseek/plugins/??@deepseek-ai/dsh-client-connection/client.js&rev=0fbb93fa2382",
-      "rev": "0fbb93fa2382",
+      "url": "/deepseek/plugins/??@deepseek-ai/dsh-client-connection/client.js&rev=9bbcae0551d7",
+      "rev": "9bbcae0551d7",
       "inject": [],
-      "immediately": true
+      "immediately": true,
+      "brandOverride": true
     },
     {
       "id": "@deepseek-ai/dsh-client-file-upload",
@@ -473,8 +474,8 @@
     },
     {
       "id": "@deepseek-ai/dsh-client-ui-settings-general",
-      "url": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-settings-general/client.js&rev=85a9c992fd83",
-      "rev": "85a9c992fd83",
+      "url": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-settings-general/client.js&rev=82fe56a180f3",
+      "rev": "82fe56a180f3",
       "inject": [
         "@deepseek-ai/dsh-client-ui-settings",
         "@deepseek-ai/dsh-client-locale",
@@ -482,7 +483,8 @@
         "@deepseek-ai/dsh-api-remotes",
         "@deepseek-ai/dsh-client-ui-sidebar",
         "@deepseek-ai/dsh-client-shortcuts"
-      ]
+      ],
+      "brandOverride": true
     },
     {
       "id": "@deepseek-ai/dsh-client-ui-settings-models",
@@ -849,8 +851,8 @@
     },
     {
       "phase": "application",
-      "url": "/deepseek/plugins/??@deepseek-ai/dsh-client-connection/client.js&rev=0fbb93fa2382",
-      "rev": "0fbb93fa2382",
+      "url": "/deepseek/plugins/??@deepseek-ai/dsh-client-connection/client.js&rev=9bbcae0551d7",
+      "rev": "9bbcae0551d7",
       "entries": [
         "@deepseek-ai/dsh-client-connection"
       ]
@@ -1113,8 +1115,8 @@
     },
     {
       "phase": "application",
-      "url": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-settings-general/client.js&rev=85a9c992fd83",
-      "rev": "85a9c992fd83",
+      "url": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-settings-general/client.js&rev=82fe56a180f3",
+      "rev": "82fe56a180f3",
       "entries": [
         "@deepseek-ai/dsh-client-ui-settings-general"
       ]
