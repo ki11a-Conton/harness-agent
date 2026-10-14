@@ -62,7 +62,8 @@ describe("Official Web platform HTTP routes", () => {
     const boot = JSON.parse(await readFile(new URL("../../public/deepseek/boot-manifest.json", import.meta.url), "utf8")) as {
       entries: Array<{ id: string; rev: string; url: string; brandOverride?: boolean }>;
     };
-    const derivatives = boot.entries.filter(row => row.brandOverride); expect(derivatives).toHaveLength(6);
+    const derivatives = boot.entries.filter(row => row.brandOverride); expect(derivatives).toHaveLength(7);
+    expect(derivatives.map(row => row.id)).toContain("@deepseek-ai/dsh-client-ui-conversation");
     for (const row of derivatives) {
       const served = await fetch(base + row.url); expect(served.status).toBe(200);
       const text = await served.text(); expect(text).not.toContain("DeepSeek Harness");

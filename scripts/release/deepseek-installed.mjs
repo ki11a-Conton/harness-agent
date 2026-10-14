@@ -79,6 +79,22 @@ try {
     scope: 'Named ordinary coding UI controls on this verified archive, three viewport sizes; PTY/Cordis/goal/queue-edit capabilities are not claimed.' };
   await writeFile(join(output, 'result.json'), JSON.stringify(receipt, null, 2) + '\n');
   console.log(JSON.stringify(receipt));
+} catch (error) {
+  // Preserve the real failure when raw artifact downloads are unavailable.
+  // Only bounded fixture case metadata is exposed; the original verdict stays red.
+  const escape = text => text.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
+  console.error('::error title=Installed UI acceptance failed::' + escape(String(error).slice(0, 2000)));
+  try {
+    const report = JSON.parse(await readFile(join(output, 'browser/result.json'), 'utf8'));
+    for (const item of report.results.filter(item => item.status !== 'PASS').slice(0, 8)) {
+      console.error('::error title=Installed UI case failed::' + escape(JSON.stringify({
+        name: item.name, viewport: item.viewport, status: item.status, failure: item.failure,
+      }).slice(0, 2000)));
+    }
+  } catch (diagnosticError) {
+    console.error('Installed UI case diagnostics unavailable: ' + diagnosticError.message);
+  }
+  throw error;
 } finally {
   try {
     if (host && host.exitCode === null && host.signalCode === null) {

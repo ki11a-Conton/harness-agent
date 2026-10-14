@@ -1,0 +1,78 @@
+name: inspect installed UI evidence
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Installed UI workflow run whose original evidence should be inspected
+        required: true
+        type: string
+      source_sha:
+        description: Exact source SHA of the original workflow
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify the original workflow identity
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.run_id }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          const { RUN_ID, SOURCE_SHA, REPOSITORY, GH_TOKEN } = process.env;
+          assert.match(RUN_ID, /^\d+$/); assert.match(SOURCE_SHA, /^[a-f0-9]{40}$/);
+          assert.equal(REPOSITORY, 'ki11a-Conton/harness-agent');
+          const response = await fetch(`https://api.github.com/repos/${REPOSITORY}/actions/runs/${RUN_ID}`, {
+            headers: { Authorization: `Bearer ${GH_TOKEN}`, Accept: 'application/vnd.github+json' },
+            redirect: 'error', signal: AbortSignal.timeout(30000),
+          });
+          assert.equal(response.status, 200);
+          const run = await response.json();
+          assert.equal(run.head_sha, SOURCE_SHA); assert.equal(run.head_branch, 'main');
+          assert.equal(run.path, '.github/workflows/deepseek-ui-installed.yml');
+          assert.equal(run.status, 'completed');
+          console.log(JSON.stringify({ runId: run.id, sourceSha: run.head_sha, conclusion: run.conclusion }));
+          NODE
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.run_id }}
+          name: deepseek-installed-windows-latest-${{ inputs.source_sha }}-${{ inputs.run_id }}
+          path: evidence
+      - name: Expose bounded original case records without changing their verdict
+        env:
+          RUN_ID: ${{ inputs.run_id }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile } from 'node:fs/promises';
+          import { createHash } from 'node:crypto';
+          import { gzipSync } from 'node:zlib';
+          const bytes = await readFile('evidence/browser/result.json');
+          const report = JSON.parse(bytes);
+          const results = report.results.map(({ name, viewport, status, failure, checks, errors, externalRequests, failedHttp }) =>
+            ({ name, viewport, status, failure, checks, errors, externalRequests, failedHttp }));
+          const record = { schemaVersion: 1, runId: process.env.RUN_ID, sourceSha: process.env.SOURCE_SHA,
+            rawReportSha256: createHash('sha256').update(bytes).digest('hex'), rawReportBytes: bytes.length,
+            complete: report.complete, results };
+          const data = gzipSync(Buffer.from(JSON.stringify(record))).toString('base64');
+          const size = 48000, total = Math.ceil(data.length / size);
+          for (let index = 0; index < total; index++) console.log(`::notice title=Installed UI evidence chunk ${index + 1}/${total}::` +
+            JSON.stringify({ encoding: 'gzip+base64', index, total, data: data.slice(index * size, (index + 1) * size) }));
+          for (const item of results.filter(item => item.status !== 'PASS')) console.log(`::notice title=Original installed UI failure::` +
+            JSON.stringify({ name: item.name, viewport: item.viewport, status: item.status, failure: item.failure }).slice(0, 4000));
+          NODE

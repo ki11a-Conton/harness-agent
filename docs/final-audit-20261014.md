@@ -76,6 +76,8 @@ Windows 跳过的两项均为 POSIX chmod 语义：B05 模式变更合并和事�
 
 发布目标 v1.10.0：重新冻结 clean 源码，执行完整工程门、真实 Windows 与同一个 Ubuntu 构建包在两平台的 CLI/Web 安装验收。当前代理仍拒绝 Azure artifact 下载；新增受限、手动调度的导出入口，只接受同一源码的 successful CI、四份同 archive hash 的安装收据及绑定该 SHA 的既有 v1.10.0 draft，不能创建或公开发布 release。正向及已发布目标/失败 Windows job/异包收据/篡改包负向控制共 5 项通过。最终公开动作仍由原生 Git/HTTP 在验收通过后完成；新版本不把旧 UI 的运行结果当作其验收证明。
 
+候选 `d459f26` 的原生 Windows 专项为 393 PASS / 2 SKIP / 33 文件，含真实模型发现审批；第一代跨平台安装验收通过。但主 CI 的 HTTP 资产测试仍写死六个派生模块，新增 conversation 模块后实际为七个，确定 FAIL；作为 FA-12 第六处旧验收假设修正，新增模块仍逐个检查内容 digest 和旧 revision 拒绝。该候选的 Windows UI 浏览器验收也失败，CLI 子步骤因此跳过；本轮保留红色结果，通过只读工作流恢复原 artifact 的失败 case records，不能将 skipped 视为 CLI 通过。后续安装 UI 失败也输出有界实际案例诊断，保持原退出码。最终发布必须重新通过这些验收。
+
 ## 原始失败与修正记录
 
 基线 clean-source gate 的 6 个失败、最初安装缓存限制、自己的空 catch 被安全门拒绝、生产依赖公告、885 之前全量两处旧断言失败、旧浏览器过早判断完成以及新增暂停交接的三个 RED 均保留。`fdd8c0e` 与 `4028440` 的全量被显式停止以先修检查发现的问题，没有把中止算通过。`dd05fc1` 全量为 9,512 PASS / 2 FAIL；`7e0295a` 完整为 9,514 PASS / 15 skipped；最终结果只取上表冻结源码。
