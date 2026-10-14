@@ -1,0 +1,36 @@
+name: inspect final CI failure
+on:
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: '38534860525'
+          name: test-report-windows-latest
+          path: evidence
+      - name: Preserve bounded actual failing diagnostics
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile } from 'node:fs/promises';
+          import { createHash } from 'node:crypto';
+          import { gzipSync } from 'node:zlib';
+          const bytes = await readFile('evidence/test-report.log');
+          const lines = bytes.toString('utf8').split('\n');
+          const selected = lines.filter(line => /Web question continuation failed|Real Harness owner did not settle|FAIL.*waterfall answer|Expected:|Received:/.test(line));
+          const data = gzipSync(Buffer.from(JSON.stringify({ sourceSha: 'b65801e49a6991853867106c77d968d7dec2c074', runId: '38534860525',
+            rawLogBytes: bytes.length, rawLogSha256: createHash('sha256').update(bytes).digest('hex'), lines: selected }))).toString('base64');
+          const size = 3600, total = Math.ceil(data.length / size);
+          if (total > 9) throw new Error('Diagnostic excerpt exceeds annotation budget');
+          for (let index = 0; index < total; index++) console.log(`::notice title=Final CI failure chunk ${index + 1}/${total}::` +
+            JSON.stringify({ encoding: 'gzip+base64', index, total, data: data.slice(index * size, (index + 1) * size) }));
+          NODE
