@@ -21,6 +21,7 @@
 | FA-13 | P1，SDK 宿主 | 实际编译代码调用 async askUser 回调，回调 throw 后 turn 虽先返回 waiting_for_user，Node 随即因未处理 rejection 退出 1；原 try/catch 只处理同步异常。 | 对返回的 Promise 安装异常处理，记录降级且保留真正的待答任务，不等待慢回调；同步/异步错误和慢回调均能通过实际回答继续原任务。独立 Node 严格 rejection 模式 RED/GREEN 与 SDK 回归。 |
 | FA-14 | P1，暂停交接竞态 | 实际 Harness 的暂停写入被有界 gate 控制：问题已发布，立即回答会撞到仍运行的原 Actor，答复已记录却不继续；在 waiting 状态落盘前点击取消，旧取消流程漏掉刚暂停的任务；SDK 在问题交付中 abort 也仍返回 waiting。三项 RED 均复现。 | Web 等原 Actor 完成暂停后再提交答案和续跑，等待在会话锁外且有截止/关闭检查，重复在途回答保持幂等；中断后重新读取等待任务，用 Actor 原任务取消 API；Runtime 在暂停检查点后检查 abort，提交真实取消并撤回问题。验收控制两处真实写入窗口、回答一次和取消真实状态。 |
 | FA-15 | P1，归档交付 | 本轮归档提交 2374e94 的深层 fixture 路径达到 240 字符；真实 Windows 工作流在 checkout 阶段报 Filename too long，尚未运行产品测试。 | 将 240 份原始 fixture 转存短路径 fixture-records.tar.gz；归档成员逐个匹配旧 inventory 的字节数和 SHA-256，保留逻辑路径索引。目录最长路径降为 119 字符，必须重新验收真实 Windows checkout 和后续测试。 |
+| FA-16 | P2，CI 验收 | coverage 工作流先执行 pnpm test:coverage，再通过 release gate 重跑相同全量；第二次失败时跳过证据上传，公开注解仅有退出码，无法取得失败详情。e87dbbf 的覆盖率阈值步骤 PASS，第二次证据步骤 FAIL，两次结果均保留。 | 先编译 CLI，再仅通过原有 V2 release gate 执行一次规范覆盖率命令；保留阈值、真实退出码及源码校验。无论成功失败都上传覆盖率和 gate 原件；公开已有 gate 记录及摘要，失败详情绑定保存日志摘要，Unicode/日志篡改/明确截断三项真实 Node 进程测试通过。新 CI 最终状态另行记录，不猜测第二次失败的产品根因。 |
 
 ## 初始检查
 
@@ -62,6 +63,8 @@ Windows 跳过的两项均为 POSIX chmod 语义：B05 模式变更合并和事�
 冻结产品源码的 CI：[原生 Windows](https://github.com/ki11a-Conton/harness-agent/actions/runs/38497874192)、[独立 CLI/Web 包](https://github.com/ki11a-Conton/harness-agent/actions/runs/38497874182)、[浏览器安装包](https://github.com/ki11a-Conton/harness-agent/actions/runs/38497874148) PASS；主 CI 的 Windows 全量 leg 因固定 500ms 的生产组装完成等待误报而失败，coverage/Ubuntu formal/closed-loop/cold-start 已通过。`8613c6e` 使用未释放模型 gate 保持“接收请求不能等模型完成”的证明，再有界等待真实终结状态；本地相关 30 项 PASS，[原生 Windows](https://github.com/ki11a-Conton/harness-agent/actions/runs/38500633280) 353 PASS / 2 skipped、31 文件（含此生产组装测试）。[该提交主 CI](https://github.com/ki11a-Conton/harness-agent/actions/runs/38500633252) 的最终状态按原始 API 快照记录，不将 pending 称为整体 PASS。
 
 补充追踪：8613c6e 主 CI 最终为 FAILURE，Windows 常规全量、Ubuntu 全量、coverage、Ubuntu formal、双平台 closed-loop 和 cold-start 均 PASS；Windows formal 的全量中 `owners.test.ts` 的 stable Web draft 模型切换/重启案例失败，因此 dual-platform gate 也失败。公开诊断尚无完整断言原因，不将它猜测为时序误报；本地 owners 全部 21 项 PASS，已加入原生 Windows 目标并补充终态诊断，继续取得实际结果。2374e94 主 CI 的 Windows leg 则全部因 FA-15 在 checkout 失败；原始 job/annotation 分别保留，不能把 Ubuntu 通过当成 Windows 通过。
+
+`e87dbbf` 的 [原生 Windows](https://github.com/ki11a-Conton/harness-agent/actions/runs/38510542360) 已 PASS：32 文件、374 PASS / 0 FAIL / 2 skipped，含模型切换/重启完整案例和 12 项必需进程测试；case-records SHA-256 为 `0d33b4ec926bfc2c772d7c691e48dc5a9fcea068c3a05c872a583375b6655ab1`。原生 checkout 成功，FA-15 已实际验证。[独立安装包](https://github.com/ki11a-Conton/harness-agent/actions/runs/38510542218) 和 [浏览器安装包](https://github.com/ki11a-Conton/harness-agent/actions/runs/38510542352) 均 PASS；[主 CI](https://github.com/ki11a-Conton/harness-agent/actions/runs/38510542386) 的 Ubuntu/Windows formal、双平台 closed-loop 与 cold-start 已 PASS，coverage 阈值测试 PASS，但重复生成证据的第二遍失败。未把此 run 写为整体 PASS，FA-16 修正后等待真实 CI。此前单次 Windows 模型切换失败的根因未取得，保留失败记录及本次 targeted/formal 正向验收。
 
 ## 原始失败与修正记录
 

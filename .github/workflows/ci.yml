@@ -859,6 +859,12 @@ jobs:
       - name: Install dependencies (frozen lockfile)
         run: pnpm install --frozen-lockfile
 
+      - name: Build the release gate entry
+        run: pnpm typecheck
+
+      - name: Check the coverage report publisher
+        run: node --test scripts/ci/coverage-acceptance-report.test.mjs
+
       - name: Coverage gate (thresholds fail the job)
         # v8 provider + json-summary reporter emit coverage/coverage-summary.json.
         # A missed per-package threshold exits non-zero — no threshold is ever
@@ -870,23 +876,25 @@ jobs:
         # `test:coverage` script — not in a duplicated step here — so this job,
         # the `release gate coverage` CLI (release-verify.ts maps the gate to the
         # same command) and the documented local entry cannot drift apart.
-        run: pnpm test:coverage
+        # Run the canonical command once through the V2 evidence generator.
+        # It runs pnpm test:coverage and binds the real exit, source and log;
+        # a second full run used to replace the first run's coverage summary.
+        run: node apps/cli/dist/main.js release gate coverage --evidence-dir .ci/evidence/gates/coverage
+
+      - name: Publish the actual coverage gate result
+        if: always()
+        run: node scripts/ci/coverage-acceptance-report.mjs .ci/evidence/gates/coverage/coverage.json
 
       - name: Upload coverage summary (P20-4)
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: coverage-summary
           path: coverage/coverage-summary.json
           if-no-files-found: error
 
-      # P38-12 + E4-R09 (F19): coverage gate evidence via the SAME V2 generator
-      # (runs the canonical `pnpm test:coverage`, binds real exit + git state +
-      # digests, writes to gates/coverage/ matching the attestation layout).
-      - name: Generate coverage gate evidence (P38-12, E4-R09 V2)
-        run: |
-          node apps/cli/dist/main.js release gate coverage --evidence-dir .ci/evidence/gates/coverage
-
       - name: Upload coverage gate evidence (P38-12)
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           # E4-R21 (F01): upload from the gates/ root so the artifact keeps the
