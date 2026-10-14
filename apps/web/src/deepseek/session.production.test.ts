@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
 import { createHarness } from "@ar/harness";
 import { ScriptedModelProvider } from "@ar/model";
-import type { SessionId } from "@ar/contracts";
+import type { ModelEvent, SessionId } from "@ar/contracts";
 import { createDeepseekComposition } from "./composition.js";
 
 const cleanup: Array<() => Promise<void>> = [];
@@ -14,7 +14,15 @@ it("production composition admits a prompt while official event and follow strea
   const root = await realpath(await mkdtemp(join(tmpdir(), "dsh-production-prompt-")));
   cleanup.push(() => rm(root, { recursive: true, force: true }));
   const cwd = join(root, "project"), dataDir = join(root, "data"); await mkdir(cwd);
-  const provider = new ScriptedModelProvider([ScriptedModelProvider.text("Actual production answer")]);
+  let releaseModel!: () => void;
+  const modelGate = new Promise<void>(resolve => { releaseModel = resolve; });
+  cleanup.push(async () => { releaseModel(); });
+  const provider = new ScriptedModelProvider([(async function* (): AsyncIterable<ModelEvent> {
+    // Admission and subscriber shutdown must not depend on the model ending.
+    await modelGate;
+    yield { type: "text_delta", text: "Actual production answer", timestamp: 0 };
+    yield { type: "completed", result: { finishReason: "stop", text: "Actual production answer" }, timestamp: 0 };
+  })()]);
   const base = await createHarness({ cwd, dataDir, profile: "interactive", modelProvider: provider,
     model: { providerId: provider.id, modelId: "scripted-model" } });
   cleanup.push(() => base.close());
@@ -39,13 +47,17 @@ it("production composition admits a prompt while official event and follow strea
   try {
     const result = await Promise.race([admission, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error("Production admission timed out")), 1500); })]);
     expect(result).toEqual({ accepted: true });
-  } finally { if (timer) clearTimeout(timer); controller.abort(); await Promise.all(pumps); }
+  } finally {
+    if (timer) clearTimeout(timer); controller.abort();
+    try { await Promise.all(pumps); } finally { releaseModel(); }
+  }
   expect(await stack.harness.inbox.listAll(id)).toHaveLength(1);
   let completed = false;
-  for (let i = 0; i < 100 && !completed; i++) {
+  const completionDeadline = performance.now() + 5000;
+  while (performance.now() < completionDeadline && !completed) {
     completed = (await stack.harness.store.listTurns(id))[0]?.status === "completed";
     if (!completed) await new Promise(done => setTimeout(done, 5));
   }
   expect(completed).toBe(true);
   expect((await stack.harness.store.listMessages(id)).some(message => message.content === "Actual production answer")).toBe(true);
-}, 10_000);
+}, 20_000);
