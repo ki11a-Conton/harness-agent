@@ -69,10 +69,10 @@ async function boot(page) {
   await page.goto(values.url, { waitUntil: "domcontentloaded" });
   await page.locator("[data-composer-input=true]").waitFor({ state: "visible", timeout: 7000 });
   assert.equal(await page.getByRole('heading', { name: /^(Preview Notice|预览版说明)$/ }).count(), 0, 'startup needs no preview acknowledgement');
-  if (await page.locator("[data-composer-input=true]").getAttribute("contenteditable") !== "true") {
-    await page.getByRole("button", { name: "Choose workspace", exact: true }).click();
-    await page.getByRole("menuitem", { name: "project", exact: true }).click();
-  }
+  // Explicit workspace selection owns a navigation intent; a briefly editable
+  // provisional startup draft does not prove the default restore has settled.
+  await page.getByRole("button", { name: "Choose workspace", exact: true }).click();
+  await page.getByRole("menuitem", { name: "project", exact: true }).click();
   await page.locator('[data-composer-input=true][contenteditable=true]').waitFor({ state: "visible", timeout: 7000 });
 }
 async function check(checks, label, operation) { await operation(); checks.push({ label, status: "PASS" }); }
@@ -89,7 +89,7 @@ async function surface(page) {
 }
 const rpcByPage = new WeakMap();
 async function prompt(page, text, checks) {
-  const input = page.locator("[data-composer-input=true]").filter({ visible: true });
+  const input = page.locator('[data-composer-input=true][contenteditable=true]').filter({ visible: true });
   await input.fill(text);
   const responsePromise = rpcByPage.get(page).waitForResult("session/prompt");
   await clickVisible(page, "Send message");

@@ -1,10 +1,11 @@
-/** Reviewed, deterministic presentation-only derivatives; upstream bytes remain frozen. */
+/** Reviewed deterministic UI derivatives; upstream bytes remain frozen. */
 import { createHash } from 'node:crypto';
 
 export const brandedModules = Object.freeze([
   'dsh-client-ui-brand-official', 'dsh-client-ui-layout', 'dsh-client-ui-plugin-manager',
   'dsh-client-ui-settings-models', 'dsh-client-ui-settings-account', 'dsh-client-ui-sidebar-documentpreview',
   'dsh-client-ui-conversation',
+  'dsh-client-ui-workspace',
 ]);
 export const brandRoot = 'harness-brand';
 export const hash = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -41,8 +42,15 @@ export function deriveBrandModule(stem, original) {
   if (!brandedModules.includes(stem)) throw new Error('Unreviewed branding module: ' + stem);
   if (stem === 'dsh-client-ui-brand-official') return Buffer.from(brandModule);
   let source = original.toString('utf8');
-  if (stem !== 'dsh-client-ui-conversation' && !source.includes('DeepSeek Harness')) throw new Error('Branding source changed: ' + stem);
+  if (!['dsh-client-ui-conversation', 'dsh-client-ui-workspace'].includes(stem) && !source.includes('DeepSeek Harness')) throw new Error('Branding source changed: ' + stem);
   source = source.replaceAll('DeepSeek Harness', 'Harness Agent');
+  if (stem === 'dsh-client-ui-workspace') {
+    const open = 'openSession(target) {\n\t\t\t\tthis.replaceMain(target, this.lifetime.signal, "reveal");';
+    const clear = 'clearMain() {\n\t\t\t\tconst previous = this.mainReference;';
+    for (const pattern of [open, clear]) if (source.split(pattern).length !== 2) throw new Error('Expected exactly one workspace navigation boundary');
+    source = source.replace(open, 'openSession(target) {\n\t\t\t\tconst navigation = AbortSignal.any([this.ctx.layout.beginNavigation(), this.lifetime.signal]);\n\t\t\t\tthis.replaceMain(target, navigation, "reveal");');
+    source = source.replace(clear, 'clearMain() {\n\t\t\t\tthis.ctx.layout.beginNavigation();\n\t\t\t\tconst previous = this.mainReference;');
+  }
   if (stem === 'dsh-client-ui-conversation') {
     const badge = /, \(0, react_jsx_runtime\.jsx\)\("span", \{\s*className: HeroShell_module_css_default\.previewBadge,\s*children: t\("hero\.preview"\)\s*\}\)/g;
     if ([...source.matchAll(badge)].length !== 1) throw new Error('Expected exactly one home preview badge');

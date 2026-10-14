@@ -32,6 +32,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Verify pinned UI navigation regressions
+        run: node --test scripts/research/web-navigation.test.mjs
       - name: Build the pinned clean source once
         run: node scripts/release/portable.mjs build --out .ci/deepseek/assets --version 1.10.0 --source-sha ${{ github.sha }}
       - uses: actions/upload-artifact@v4

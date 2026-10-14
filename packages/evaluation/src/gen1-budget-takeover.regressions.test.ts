@@ -62,7 +62,7 @@ it("Gen1: a delayed stale reclaimer cannot remove another reclaimer's new live l
               catch { overlap = true; }
             } catch {}
           }
-        }, {lockTimeoutMs: 5000});
+        }, {lockTimeoutMs: 30_000});
         console.log(JSON.stringify({tag:${JSON.stringify(tag)},ok:true,overlap}));
       } catch(error) { console.log(JSON.stringify({tag:${JSON.stringify(tag)},ok:false,error:String(error)})); }
     `;
@@ -74,6 +74,9 @@ it("Gen1: a delayed stale reclaimer cannot remove another reclaimer's new live l
   try {
     start("a"); await waitFor(["rm-ready-a"]);
     start("b"); await waitFor(["rm-ready-b", "guard-blocked-b"]);
+    // Real process coordination may exceed the former five-second lock budget.
+    // Keep A at the deliberately held removal gate across that old deadline.
+    await new Promise(resolve => setTimeout(resolve, 6000));
     await writeFile(join(root, "remove-a"), "1"); await waitFor(["held-a"]);
     await writeFile(join(root, "remove-b"), "1");
     await waitFor(["held-b", "main-blocked-b"]);
@@ -89,7 +92,7 @@ it("Gen1: a delayed stale reclaimer cannot remove another reclaimer's new live l
     await Promise.allSettled(completions);
     await rm(root, {recursive:true,force:true,maxRetries:3,retryDelay:50});
   }
-}, 30_000);
+}, 60_000);
 
 it("Gen1: a leftover takeover guard is a bounded refusal, never silently stolen", async () => {
   const root = await mkdtemp(join(tmpdir(), "gen1-leftover-guard-"));

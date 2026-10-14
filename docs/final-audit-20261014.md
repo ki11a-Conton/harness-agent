@@ -24,6 +24,7 @@
 | FA-16 | P2，CI 验收 | coverage 工作流先执行 pnpm test:coverage，再通过 release gate 重跑相同全量；第二次失败时跳过证据上传，公开注解仅有退出码，无法取得失败详情。e87dbbf 的覆盖率阈值步骤 PASS，第二次证据步骤 FAIL，两次结果均保留。 | 先编译 CLI，再仅通过原有 V2 release gate 执行一次规范覆盖率命令；保留阈值、真实退出码及源码校验。无论成功失败都上传覆盖率和 gate 原件；公开已有 gate 记录及摘要，失败详情绑定保存日志摘要，Unicode/日志篡改/明确截断三项真实 Node 进程测试通过。新 CI 最终状态另行记录，不猜测第二次失败的产品根因。 |
 | FA-17 | P2，归档字节完整性 | 本轮归档的 .log 未关闭 Git 换行转换；实际 core.autocrlf=true checkout 将最终全量日志由 137854 bytes 改为 139451 bytes，SHA-256 与 inventory 不符。 | 仅在本轮证据目录声明 -text；相同 Git checkout 复算恢复字节一致，记录 RED/GREEN，其他源码不改变换行策略。 |
 | FA-18 | P2，失败可见性 | N6 公共诊断不识别 RemoteFailure，并将真实错误与预期错误噪声放在同一优先级；实际 Node 进程重现错误原因被前 8 条注解挤掉。 | 识别以 Error/Failure 类名开头的真正异常，优先于降级噪声及通过标题；正反回归和原始失败保留。 |
+| FA-19 | P1，前端初始化导航 | 从实际冻结 npm bundle 提取原导航类，使用 gate 延迟初始化的 connectWorkspace，再打开另一会话或清空：旧初始化完成后覆盖新选择，可释放仍在发送的编辑器 scope。原始 Windows 安装验收也观察到两次 create、取消及 gateway/cancelled；两者关联仍由最终浏览器验收验证。 | 增加可复算的 workspace UI 派生模块，openSession/clearMain 撤销旧导航，保留原资产、版权和完整性检查；原代码两处确定复现、修复后两处通过。浏览器通过真实工作区选择确立当前导航，使用实际可编辑元素后发送，保持所有 RPC、工具审批及实体文件断言。 |
 
 ## 初始检查
 
@@ -77,6 +78,8 @@ Windows 跳过的两项均为 POSIX chmod 语义：B05 模式变更合并和事�
 发布目标 v1.10.0：重新冻结 clean 源码，执行完整工程门、真实 Windows 与同一个 Ubuntu 构建包在两平台的 CLI/Web 安装验收。当前代理仍拒绝 Azure artifact 下载；新增受限、手动调度的导出入口，只接受同一源码的 successful CI、四份同 archive hash 的安装收据及绑定该 SHA 的既有 v1.10.0 draft，不能创建或公开发布 release。正向及已发布目标/失败 Windows job/异包收据/篡改包负向控制共 5 项通过。最终公开动作仍由原生 Git/HTTP 在验收通过后完成；新版本不把旧 UI 的运行结果当作其验收证明。
 
 候选 `d459f26` 的原生 Windows 专项为 393 PASS / 2 SKIP / 33 文件，含真实模型发现审批；第一代跨平台安装验收通过。但主 CI 的 HTTP 资产测试仍写死六个派生模块，新增 conversation 模块后实际为七个，确定 FAIL；作为 FA-12 第六处旧验收假设修正，新增模块仍逐个检查内容 digest 和旧 revision 拒绝。该候选的 Windows UI 浏览器验收也失败，CLI 子步骤因此跳过；本轮保留红色结果，通过只读工作流恢复原 artifact 的失败 case records，不能将 skipped 视为 CLI 通过。后续安装 UI 失败也输出有界实际案例诊断，保持原退出码。最终发布必须重新通过这些验收。
+
+候选 `9fbf651` 本地完整测试 9521 PASS / 15 SKIP / 556 文件，但 Ubuntu CI 的锁竞争测试出现 held-a barrier 超时。真实双进程在删除 gate 保持 6 秒，确定复现测试的 5 秒 lockTimeoutMs 先耗尽；作为 FA-12 第七处验收预算假设修正。只调整该测试的有界预算，保留 6 秒重现窗口、双进程真实锁与无 overlap 断言，2 项 GREEN；不修改生产锁超时或回收规则。本地同包 UI 也捕获首次加载的临时编辑器被替换，保留失败原件。最终源码新增上述导航修复和第八个 UI 派生模块，须重新通过实际安装验收。
 
 ## 原始失败与修正记录
 

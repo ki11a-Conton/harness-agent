@@ -144,7 +144,7 @@ async function createReviewedManifest() {
     files.push({ path: file, bytes: bytes.length, sha256: sha256(bytes) });
   }
   return { schemaVersion: 1, defaultClientCount: 66,
-    publishedArtifactPolicy: "Original browser JS/CSS/fonts/images remain byte-identical to pinned npm artifacts. Seven explicitly marked Harness Agent presentation derivatives, including removal of the preview notice registration and home preview badge, and two independent SVG assets are deterministically verified separately under harness-brand/. HTML, PWA, boot, carrier and notices are reviewed adaptations; original HTML/PWA inputs and copyrights remain preserved.",
+    publishedArtifactPolicy: "Original browser JS/CSS/fonts/images remain byte-identical to pinned npm artifacts. Eight explicitly marked Harness Agent UI derivatives, including removal of the preview notice registration and home preview badge and cancellation of superseded startup navigation, and two independent SVG assets are deterministically verified separately under harness-brand/. HTML, PWA, boot, carrier and notices are reviewed adaptations; original HTML/PWA inputs and copyrights remain preserved.",
     sourceRelationship: "npm gitHead is absent; the separately frozen Git source reference does not establish release/source equivalence.",
     rootIndexSha256: sha256(await readFile(path.join(publicRoot, "index.html"))), releaseArtifacts, files };
 }
