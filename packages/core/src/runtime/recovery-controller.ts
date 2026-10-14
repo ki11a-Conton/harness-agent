@@ -248,7 +248,9 @@ export class RecoveryController {
     // (a UI may still be out of band — the reply is captured via submitUserAnswer).
     if (this.deps.askUser !== undefined) {
       try {
-        void this.deps.askUser({ ...request });
+        void Promise.resolve(this.deps.askUser({ ...request })).catch(err => {
+          process.stderr.write(`[degraded] recovery-controller.askUser: ${err instanceof Error ? err.message : String(err)}\n`);
+        });
       } catch (err) {
         // P14-6: handler errors must never fail the turn — but they are
         // reported (the user may never have seen the question), never silent.
