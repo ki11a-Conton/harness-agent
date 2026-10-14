@@ -20,6 +20,10 @@ export function protectToolEventPayload(type: string, payload: Record<string, un
     const protectedText = protectToolOutputText(JSON.stringify(candidate), { redact: redactSecrets });
     const value: unknown = JSON.parse(protectedText.content);
     if (value !== null && typeof value === "object" && !Array.isArray(value)) return value as Record<string, unknown>;
-  } catch { /* No unprocessed payload or exception text may reach the log. */ }
+  } catch {
+    // Persist an observable fallback without logging an exception that may
+    // contain the unprocessed tool output itself.
+    return { withheld: true, reason: "tool-event-security" };
+  }
   return { withheld: true, reason: "tool-event-security" };
 }
