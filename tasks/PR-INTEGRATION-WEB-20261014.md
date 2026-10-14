@@ -19,3 +19,7 @@ R1–R11 独立反例及相关原套件、类型检查、全仓单元/集成、�
 ## 验收追加 R12
 
 12a43d30 本地全量 9,705 PASS / 15 SKIP，双平台 installed/Windows 专项通过，但主 CI 第二次 test 门禁失败。原失败摘要被预期故障注入噪声填满，后续上传因失败被跳过，实际失败用例不可从保存的公开记录确认；不把该候选视为完整通过。两项确定反例证明跨 stream 和同 stream 的晚到失败被摘要丢弃。修复为先识别并优先显示真实 FAIL/断言、再限制行数；CI 失败也保留门禁原件。不修改 verdict、测试阈值或忽略任何失败，重新固定源码执行完整 CI。
+
+## 完成状态
+
+产品源码 `3af15705a9046a370617b9f0dd2948719fee7102`，tree `8e82a39e4c96f2048ca432dcda8e76083f92adc5`。全量 9,707 PASS / 15 SKIP / 0 FAIL、完整 CI 第一轮 10 项与两平台 installed 通过。已原子合并 main，PR #3–#7 全部 closed/merged；现有 v1.10.0 tag 和 assets 身份摘要不变。归档子提交只保存文档和原件，验收源仍绑定以上 SHA。见[报告](../docs/pr-integration-web-20261014.md)及[证据索引](../docs/evidence/pr-20261014/README.md)。
