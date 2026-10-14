@@ -245,9 +245,50 @@ it("stops the actual original paused turn and rejects an answer after terminal c
   const ask = (await stack.harness.askUserStore!.listPending(stack.id))[0]!;
   expect(await stack.call("session/cancel", { sessionId: stack.id })).toEqual({ accepted: true });
   expect((await stack.harness.store.getTurn(turns[0]!.id))?.status).toBe("cancelled");
-  await expect(stack.service.call("userQuestions/answer", { agentId: stack.id, callId: ask.id, answer: { answers: [{ id: ask.id, selected: ["a"] }] } }, stack.signal)).rejects.toMatchObject({ code: "user-questions/conflict" });
+  expect((await stack.harness.askUserStore!.get(ask.id))?.status).toBe("withdrawn");
+  await expect(stack.service.call("userQuestions/answer", { agentId: stack.id, callId: ask.id, answer: { answers: [{ id: ask.id, selected: ["a"] }] } }, stack.signal)).rejects.toMatchObject({ code: "user-questions/not-found" });
   expect((await stack.harness.events.list(stack.id)).filter(event => event.type === "turn.cancelled")).toHaveLength(1);
   expect(provider.calls).toHaveLength(1);
+});
+
+it("an answer published before the pause checkpoint finishes waits for the original actor and resumes exactly once", async () => {
+  const provider = new ScriptedModelProvider([ScriptedModelProvider.toolCall("ask_user", { question: "Go", reason: "choice_required", options: ["yes"] }), ScriptedModelProvider.text("continued")]);
+  const stack = await setup(provider), save = stack.harness.checkpointStore!.save.bind(stack.harness.checkpointStore);
+  let release!: () => void, entered!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; }), ready = new Promise<void>(resolve => { entered = resolve; });
+  stack.harness.checkpointStore!.save = async checkpoint => { if (checkpoint.phase === "waiting_user") { entered(); await gate; } await save(checkpoint); };
+  try {
+    await stack.call("session/prompt", send(stack.id)); await ready;
+    const ask = (await stack.harness.askUserStore!.listPending(stack.id))[0]!;
+    const answering = stack.service.call("userQuestions/answer", { agentId: stack.id, callId: ask.id, answer: { answers: [{ id: ask.id, selected: ["yes"] }] } }, stack.signal);
+    // The controlled checkpoint remains held while the browser submits its
+    // already-published question. No new model may run until it is released.
+    await new Promise(resolve => setTimeout(resolve, 100)); expect(provider.calls).toHaveLength(1);
+    release(); expect(await answering).toBe(true);
+    await eventually(() => stack.harness.store.getTurn(ask.turnId!), turn => turn?.status === "completed");
+    expect(provider.calls).toHaveLength(2); expect(await stack.harness.store.listTurns(stack.id)).toHaveLength(1);
+    expect((await stack.harness.store.listMessages(stack.id)).filter(message => message.askId === ask.id)).toHaveLength(1);
+  } finally { release(); }
+});
+
+it("cancelling a published question before its waiting status commits terminalizes the actual original turn", async () => {
+  const provider = new ScriptedModelProvider([ScriptedModelProvider.toolCall("ask_user", { question: "Wait", reason: "choice_required" })]);
+  const stack = await setup(provider), update = stack.harness.store.updateTurn.bind(stack.harness.store);
+  let release!: () => void, entered!: () => void, cancelling!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; }), ready = new Promise<void>(resolve => { entered = resolve; }), cancelReady = new Promise<void>(resolve => { cancelling = resolve; });
+  stack.harness.store.updateTurn = async turn => { if (turn.status === "waiting_for_user") { entered(); await gate; } await update(turn); };
+  try {
+    await stack.call("session/prompt", send(stack.id)); await ready;
+    const ask = (await stack.harness.askUserStore!.listPending(stack.id))[0]!;
+    expect((await stack.harness.store.getTurn(ask.turnId!))!.status).not.toBe("waiting_for_user");
+    const actor = await stack.harness.sessions.load(stack.id), interrupt = actor.interrupt.bind(actor);
+    vi.spyOn(actor, "interrupt").mockImplementation(() => { cancelling(); return interrupt(); });
+    const cancelled = stack.call("session/cancel", { sessionId: stack.id }); await cancelReady;
+    release(); expect(await cancelled).toEqual({ accepted: true });
+    expect((await stack.harness.store.getTurn(ask.turnId!))!.status).toBe("cancelled");
+    expect((await stack.harness.askUserStore!.get(ask.id))!.status).toBe("withdrawn");
+    expect(provider.calls).toHaveLength(1);
+  } finally { release(); vi.restoreAllMocks(); }
 });
 
 it("waiting-turn continuation reports a real running model and keeps original-turn ownership", async () => {

@@ -801,6 +801,12 @@ export class AgentRuntime {
         // accepted; an earlier side-effect checkpoint is not a substitute.
         this.pausedTurns.set(ctx.turnId, { sessionId: ctx.sessionId, askId: outcome.pendingAsk!.id, options });
         await this.recoveryController.checkpoint(ctx, working, state, ledger, `ask:waiting:${outcome.pendingAsk!.id}`, usage);
+        if (ctx.signal.aborted) {
+          const cancelled = await this.recoveryController.finishTurn(ctx, "cancelled", state, working, undefined, "cancelled", ledger);
+          const ask = await this.askUserStore?.get(outcome.pendingAsk!.id);
+          if (ask?.status === "pending") await this.askUserStore!.markWithdrawn(ask.id);
+          return cancelled;
+        }
         return outcome;
       },
       runVerificationGate: (ctx) => this.verificationController.runVerificationGate(ctx),

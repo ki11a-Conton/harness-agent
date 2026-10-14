@@ -43,3 +43,11 @@ it("a slow asynchronous host callback does not hold the turn open or block out-o
     expect((await input.runtime.runTurn(session.id, turn.id, new AbortController().signal)).status).toBe("completed");
   } finally { finish(); await pending; }
 });
+
+it("cancellation during question delivery commits cancellation instead of returning a paused turn", async () => {
+  const controller = new AbortController(), input = setup(async () => { controller.abort(); return undefined; });
+  const session = await input.runtime.createSession({ agent, cwd: "." }), turn = await input.runtime.startTurn(session.id, "choose target");
+  const outcome = await input.runtime.runTurn(session.id, turn.id, controller.signal);
+  expect(outcome.status).toBe("cancelled"); expect((await input.store.getTurn(turn.id))!.status).toBe("cancelled");
+  expect((await input.events.list(session.id)).filter(event => event.type === "turn.cancelled")).toHaveLength(1);
+});

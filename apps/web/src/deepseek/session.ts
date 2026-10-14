@@ -142,6 +142,18 @@ export function createSessionService(host: SessionHost) {
 
   async function answerAsk(request: AskUserRequest, text: string): Promise<void> {
     if (request.turnId === undefined) fail("user-questions/not-found", "Question has no original turn");
+    // A question can be published while its original actor is still saving
+    // the pause. Wait outside the session lock, so the owner can finish that
+    // operation before an answer claims and resumes the same turn.
+    const waitingOwner = await session(request.sessionId);
+    const waitingActor = await host.harness.sessions.load(waitingOwner.id);
+    const parkDeadline = Date.now() + 10_000, waitSignal = new AbortController().signal;
+    while (waitingActor.status().activeTurn?.turnId === request.turnId && !continuations.has(request.id)) {
+      if (stopped) fail("gateway/cancelled", "Session service is closed");
+      if (Date.now() >= parkDeadline) fail("user-questions/retry-later", "The original task has not finished pausing; retry the answer");
+      await pause(host.pollDelayMs ?? 25, waitSignal);
+    }
+    if (stopped) fail("gateway/cancelled", "Session service is closed");
     await serial(request.sessionId, async () => {
       const owner = await session(request.sessionId);
       const signal = new AbortController().signal;
@@ -384,13 +396,15 @@ export function createSessionService(host: SessionHost) {
       if (endpoint === "session/cancel" || endpoint === "session/interrupt") {
         keys(request, ["sessionId"]); const owner = await session(request.sessionId);
         return serial(owner.id, async () => {
-          const waiting = (await host.harness.store.listTurns(owner.id)).filter(turn => turn.status === "waiting_for_user");
           await host.rpc.invoke("session.interrupt", { sessionId: owner.id }, { signal });
+          // An in-flight ask can commit its pause while interrupt is joining
+          // the original run. Read its durable state AFTER that join.
+          const waiting = (await host.harness.store.listTurns(owner.id)).filter(turn => turn.status === "waiting_for_user");
           // A returned waiting turn has no active actor run. Cancellation goes through the runtime's original turn owner.
           for (const turn of waiting) {
             if ((await host.harness.store.getTurn(turn.id))?.status !== "waiting_for_user") continue;
-            const actor = await host.harness.sessions.load(owner.id); const cancelled = new AbortController(); cancelled.abort();
-            await actor.runTurn(turn.id, cancelled.signal);
+            const actor = await host.harness.sessions.load(owner.id);
+            await actor.cancelTurn(turn.id);
           }
           return { accepted: true };
         });
