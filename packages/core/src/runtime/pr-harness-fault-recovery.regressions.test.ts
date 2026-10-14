@@ -74,24 +74,32 @@
 // [C5-4] 崩溃发生在持久化边界之后但 checkpoint 丢失时不恢复（RESUME_FAILED），
 //        绝不盲重跑未知结局的破坏性写入。
 //
-// ── 本文件发现的缺陷（只记录，不在此修复）───────────────────────────────
-// DEFECT-1（观测不实 / trace 撒谎）：
-//   `packages/core/src/runtime/tool-call-controller.ts:736-757`：legacy 重试阶梯
-//   在判断 `retryPolicy !== "safe"`（第 757 行）之前，先无条件发出
-//   `recovery.decided` 事件，且该事件在 decision.action==="retry" 时被映射成
-//   `action: "retry_safe"`、`reason: "...retrying"`。因此**一个语义为
-//   retrySafety!="safe"（或 retryable=false）的工具失败**，会在 trace 中留下
-//   "retry_safe / retrying" 的记录，而运行时实际**没有重试**（执行次数为 1）。
-//   影响：指标 #9「Trace 完整率」与 §五 第 2 类「分类处理」的可审计性——从 trace
-//   无法区分"真的重试了"与"被拒绝重试"。
-//   证据：本文件 [C2-1] 与 [C2-3] 直接断言了"事件说 retry_safe 但执行次数为 1"。
+// ── 本文件曾发现的两个缺陷：FIXED（task-12 / PR-A），断言已同步改写 ──────
+// DEFECT-1（观测不实 / trace 撒谎）— M5 → **已修复**
+//   原文（修复前的现网行为）：`tool-call-controller.ts` 的 legacy 重试阶梯在判断
+//   `retryPolicy !== "safe"` 之前，先无条件发出 `recovery.decided`，且
+//   `decision.action === "retry"` 时一律映射成 `action:"retry_safe"` /
+//   `reason:"…retrying"`。结果：非 safe（或 retryable=false）的工具**一次都没重试**，
+//   trace 里却留下 "retrying" 记录，审查者无法区分"真重试了"与"被拒绝重试"。
+//   修复：改为**先解析要上报的 action 再 emit**——`retry_safe` 只用于**确实将发起**
+//   重试的情形；安全闸门拒绝升级时报 `retry_refused`（reason 里带 `retrySafety` 值）。
+//   注：`retry_refused` 是开放的 `RecoveryDecidedPayload.action`（@ar/contracts 中
+//   类型为 `string`）的取值，**不是**闭合的 V3 规划器枚举 `RecoveryAction` 的新成员，
+//   因此**无契约/schema 变更**。
+//   受影响断言：[C2-1]、[C2-3]（均已按新语义改写，用例保留）。
 //
-// DEFECT-2（安全事件缺失，与第 2 类"权限拒绝"分类相关）：
-//   `packages/core/src/runtime/tool-call-controller.ts:570-578`、
-//   `:588-595`：`security.permission_denied` 只在**运行时自身**的策略/hook 闸门
-//   触发时发出。当 `status: "denied"` 由 orchestrator（真正的权限引擎位于
-//   @ar/tools）返回时，只发 `tool.failed`，**不发任何 security.* 事件**。
-//   影响：来自工具层的权限拒绝在安全事件流上不可见。
+// DEFECT-2（安全事件缺失）— M8 → **已修复**
+//   原文：orchestrator 返回 `status:"denied"` 时只走 `hooks.toolError`，**不发任何
+//   `security.*` 事件**；而运行时自身三条闸门都会发。后果：真实权限引擎/沙箱/
+//   写安全护栏的拒绝在安全证据流上不可见，`security-evidence-execution.ts` 从
+//   `security.*_denied` 构造 POLICY_DENIED 事实 → 表现为"干净"（放行方向失败）。
+//   修复：运行时按 `result.error.code` 归类补发一条 `security.*_denied`（含
+//   toolCallId/tool/reason/source="orchestrator"/code）；**低层已自行上报的 code
+//   会被跳过以避免同一次拒绝产生两条事实**；未识别的 code 走 fail-closed 兜底
+//   （`security.permission_denied` + `unmapped_code:true`），绝不静默丢弃。
+//   受影响断言：[C2-2]（denied 路径）语义不变；`[C2-1]` 的 gated 工具同理。
+//
+// 聚焦回归见：`recovery-trace-and-security-events.regressions.test.ts`。
 
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -564,11 +572,28 @@ describe("§五-2 工具连续报错：分类处理与有限重试，不得无�
     const remaining = flakyDecisions.map((d) => d.remaining);
     expect(Math.min(...remaining)).toBe(0);
     expect(flakyDecisions.some((d) => d.action === "fail_safe")).toBe(true);
+    // DEFECT-1 FIXED (task-12 / M5): for a retrySafety="safe" tool every
+    // advertised `retry_safe` corresponds to a retry that WAS dispatched.
+    // Previously this count was not constrained at all (the journal advertised
+    // retries regardless of whether one happened). Original assertion text:
+    //   const remaining = flakyDecisions.map((d) => d.remaining);
+    //   expect(Math.min(...remaining)).toBe(0);
+    //   expect(flakyDecisions.some((d) => d.action === "fail_safe")).toBe(true);
+    // — those two lines are kept verbatim; the equality below is the new part.
+    const flakyRetrySafe = flakyDecisions.filter((d) => d.action === "retry_safe");
+    expect(flakyRetrySafe).toHaveLength(flakyCalls - 1); // 2 retries really happened
+    expect(flakyDecisions.filter((d) => d.action === "retry_refused")).toHaveLength(0);
     // Healed by the bounded ladder: the failure did not fail the whole turn.
     expect(all.some((e) => e.type === "tool.completed" && e.payload.tool === "flaky_safe")).toBe(true);
 
     // 非 safe 工具的 timeout 只执行一次 —— 绝不盲重跑可能已生效的调用。
     expect(slowCalls).toBe(1);
+    // DEFECT-1 FIXED (task-12 / M5): the non-safe timeout must be reported as a
+    // REFUSED retry, not as `retry_safe`. It previously emitted
+    // `action:"retry_safe"` with `reason:"…retrying"` while never re-dispatching.
+    const slowDecisions = decisions.filter((d) => d.tool === "slow_tool");
+    expect(slowDecisions.filter((d) => d.action === "retry_safe")).toHaveLength(0);
+    expect(slowDecisions.some((d) => d.action === "retry_refused")).toBe(true);
     // 权限拒绝只执行一次。
     expect(gatedCalls).toBe(1);
 
@@ -640,14 +665,26 @@ describe("§五-2 工具连续报错：分类处理与有限重试，不得无�
     expect(all.filter((e) => e.type === "model.retry")).toHaveLength(0);
     expect(all.filter((e) => e.type === "retry.provider")).toHaveLength(0);
 
-    // DEFECT-1 (recorded, see file header): the journal still advertises a
-    // retry decision for a tool it deliberately refuses to retry. This
-    // assertion pins the CURRENT (misleading) behavior so a fix is visible.
+    // DEFECT-1 FIXED (task-12 / M5). This assertion was updated together with
+    // the fix: it originally pinned the MISLEADING behavior —
+    //   expect(advertisedRetry.length).toBeGreaterThan(0);   // "retry_safe" journaled
+    //   expect(calls).toBe(1);                               // …while nothing retried
+    // which documented a trace that claimed a retry it never performed. The
+    // new semantics reserve `retry_safe` for a retry that IS dispatched, and
+    // report `retry_refused` when the retrySafety gate declines the escalation.
     const advertisedRetry = all.filter(
       (e) => e.type === "recovery.decided" && e.payload.action === "retry_safe",
     );
-    expect(advertisedRetry.length).toBeGreaterThan(0);
-    expect(calls).toBe(1); // …and yet nothing was actually retried.
+    const refusedRetry = all.filter(
+      (e) => e.type === "recovery.decided" && e.payload.action === "retry_refused",
+    );
+    // The trace no longer lies: no retry is advertised…
+    expect(advertisedRetry).toHaveLength(0);
+    // …the refusal is positively recorded instead of silently dropped…
+    expect(refusedRetry.length).toBeGreaterThan(0);
+    // …and the ground truth agrees with the trace: nothing was retried.
+    expect(calls).toBe(1);
+    expect(h.orch.writeCount).toBe(1);
   });
 
   it("[C2-4] 模型连续报错：重试次数受 maxAttempts 限制，并给出 maxRetries 终止原因", async () => {
