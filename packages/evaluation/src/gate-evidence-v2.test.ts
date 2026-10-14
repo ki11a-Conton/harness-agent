@@ -13,6 +13,7 @@ import {
   parseGateEvidenceV2,
   gateEvidenceV2Issues,
   classifyChildFailure,
+  buildGateErrorSummary,
   GATE_EVIDENCE_V2_SCHEMA_VERSION,
   type GateEvidenceV2,
 } from "./gate-evidence-v2.js";
@@ -320,6 +321,23 @@ describe("E4-R09 strict GateEvidenceV2 parse (F18)", () => {
 });
 
 describe("E4-R12 gate output log preservation + failure diagnostics (N01)", () => {
+  it("keeps a real stdout failure visible when stderr contains many expected fault injections", () => {
+    const stderr = Array.from({ length: 30 }, (_, i) => `[degraded] fixture ${i}: injected write failure`).join("\n");
+    const summary = buildGateErrorSummary({ exitCode: 1, stderr,
+      stdout: " FAIL actual-boundary.test.ts > rejects an incomplete turn\nAssertionError: expected completed to equal failed\n Tests 1 failed | 9 passed (10)" });
+    expect(summary).toContain("FAIL actual-boundary.test.ts");
+    expect(summary).toContain("AssertionError:");
+    expect(summary.indexOf("FAIL actual-boundary.test.ts")).toBeLessThan(summary.indexOf("[degraded]"));
+  });
+
+  it("finds a late failure in the same stream before applying its line cap", () => {
+    const stdout = [...Array.from({ length: 30 }, () => " ✓ correctly rejects an expected error"),
+      "\u001b[31m FAIL last-case.test.ts > real failure\u001b[39m"].join("\n");
+    const summary = buildGateErrorSummary({ exitCode: 1, stdout, stderr: "", maxLines: 1 });
+    expect(summary).toContain("FAIL last-case.test.ts");
+    expect(summary).not.toContain("correctly rejects");
+  });
+
   it("runGateV2 persists the FULL output log with a relative ref + byte digest and a summaries errorSummary", async () => {
     const dir = await mkdtemp(join(tmpdir(), "e4-r12-"));
     try {

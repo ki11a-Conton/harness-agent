@@ -434,23 +434,28 @@ export function buildGateErrorSummary(opts: {
   const header = failure !== undefined
     ? `exitCode=${opts.exitCode} [${failure.kind}: ${redactSecrets(failure.detail)}]`
     : `exitCode=${opts.exitCode} (${opts.exitCode === 0 ? "ok" : "failed"})`;
-  // Prefer failure-pattern lines from BOTH streams (stderr first, then stdout)
-  // so a check that prints its failing line to stdout (e.g. docs:verify's
-  // per-check FAIL lines) is still surfaced even when stderr carries a summary.
+  // Collect before bounding: expected fault-injection diagnostics and passing
+  // test titles must not consume the cap before a later real failure is seen.
+  const priority = (line: string): number => {
+    const plain = line.replace(/\u001b\[[0-9;]*m/g, "").trimStart();
+    if (/^(?:FAIL\b|AssertionError:|[×✕])/.test(plain)) return 0;
+    if (/^[\w.$]*(?:Error|Failure):/.test(plain)) return 1;
+    if (/^(?:Test Files|Tests)\s/.test(plain)) return 2;
+    return 3;
+  };
   const matched: string[] = [];
   const seen = new Set<string>();
   for (const stream of [opts.stderr, opts.stdout]) {
-    for (const line of extractFailureLines(stream, maxLines)) {
+    for (const line of extractFailureLines(stream, Number.MAX_SAFE_INTEGER)) {
       if (seen.has(line)) continue;
       seen.add(line);
       matched.push(line);
-      if (matched.length >= maxLines) break;
     }
-    if (matched.length >= maxLines) break;
   }
+  matched.sort((a, b) => priority(a) - priority(b));
   let body: string;
   if (matched.length > 0) {
-    body = matched.join("\n");
+    body = matched.slice(0, maxLines).join("\n");
   } else {
     const tailSource = opts.stderr.trim() === "" ? opts.stdout : opts.stderr;
     body = boundTail(redactSecrets(tailSource), Math.floor(maxChars * 0.6));
