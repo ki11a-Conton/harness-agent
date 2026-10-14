@@ -249,7 +249,9 @@ it("a stable Web draft changes its real HTTP model without editing native frozen
   expect(await stack.manager.projectEvent((await actual.events.list(physical))[0]!)).toMatchObject({ sessionId: session.id, sequence: prefix.length, payload: { sessionId: session.id } });
   const actor = await stack.manager.harnessFacade.sessions.load(session.id); const turn = await actor.createTurn({ sessionId: session.id, text: "Answer through the selected HTTP route" });
   expect(turn.sessionId).toBe(session.id); expect(turn.input.sessionId).toBe(session.id);
-  const outcome = await actor.runTurn(turn.id); expect(outcome.status).toBe("completed"); expect(outcome.turn.sessionId).toBe(session.id);
+  const outcome = await actor.runTurn(turn.id);
+  expect(outcome.status, JSON.stringify({ statusDetail: outcome.statusDetail, terminationReason: outcome.terminationReason, error: outcome.error, calls })).toBe("completed");
+  expect(outcome.turn.sessionId).toBe(session.id);
   expect(calls).toEqual([{ label: "selected", model: "model-selected" }]);
   expect((await stack.manager.harnessFacade.store.listMessages(session.id)).every(message => message.sessionId === session.id)).toBe(true);
   const visibleIds = (await stack.manager.harnessFacade.store.listSessions()).map(row => row.id);

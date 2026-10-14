@@ -20,6 +20,7 @@
 | FA-12 | P2，验收基础设施 | 四处旧验收错误假设：子任务合并检查读取不安全的截断预览；问答协议样例给两次模型请求仅一轮额度，依赖错误的预算刷新；浏览器在答案文本显示时立即检查尚未持久化的完成事件；生产组装测试以固定 500ms 循环等待异步完成，在加载中的 Windows runner 上误判。 | 从父模型实际收到的安全 tool message 验证合并、保留实体文件与子任务状态断言；协议样例明确给两个请求额度，严格额度另有专门回归；浏览器有界等待同一原 turn 的实际终结事件，再验证 exactly-once。生产组装使用未释放模型 gate 验证接收请求不等待模型结束，再有界等待真实完成并保留原消息断言。原失败与改后实测均归档。 |
 | FA-13 | P1，SDK 宿主 | 实际编译代码调用 async askUser 回调，回调 throw 后 turn 虽先返回 waiting_for_user，Node 随即因未处理 rejection 退出 1；原 try/catch 只处理同步异常。 | 对返回的 Promise 安装异常处理，记录降级且保留真正的待答任务，不等待慢回调；同步/异步错误和慢回调均能通过实际回答继续原任务。独立 Node 严格 rejection 模式 RED/GREEN 与 SDK 回归。 |
 | FA-14 | P1，暂停交接竞态 | 实际 Harness 的暂停写入被有界 gate 控制：问题已发布，立即回答会撞到仍运行的原 Actor，答复已记录却不继续；在 waiting 状态落盘前点击取消，旧取消流程漏掉刚暂停的任务；SDK 在问题交付中 abort 也仍返回 waiting。三项 RED 均复现。 | Web 等原 Actor 完成暂停后再提交答案和续跑，等待在会话锁外且有截止/关闭检查，重复在途回答保持幂等；中断后重新读取等待任务，用 Actor 原任务取消 API；Runtime 在暂停检查点后检查 abort，提交真实取消并撤回问题。验收控制两处真实写入窗口、回答一次和取消真实状态。 |
+| FA-15 | P1，归档交付 | 本轮归档提交 2374e94 的深层 fixture 路径达到 240 字符；真实 Windows 工作流在 checkout 阶段报 Filename too long，尚未运行产品测试。 | 将 240 份原始 fixture 转存短路径 fixture-records.tar.gz；归档成员逐个匹配旧 inventory 的字节数和 SHA-256，保留逻辑路径索引。目录最长路径降为 119 字符，必须重新验收真实 Windows checkout 和后续测试。 |
 
 ## 初始检查
 
@@ -59,6 +60,8 @@ typecheck 通过。全量基线 549 文件，9,469 PASS / 6 FAIL / 15 skipped；
 Windows 跳过的两项均为 POSIX chmod 语义：B05 模式变更合并和事务可执行位保留；Linux 相应测试已运行。Windows 的真实 `.cmd`/`.ps1`、PATH/PATHEXT、空格/CJK 参数、安全拒绝、超时、取消与实际孙进程终止均有 passed 最终状态。Azure 原始 artifact 下载受当前网络代理 403 限制，使用工作流原本公开的 notice 分片恢复完整 case records，校验 `caseRecordsSha256`；不声称取得了原始 Vitest JSON 字节。
 
 冻结产品源码的 CI：[原生 Windows](https://github.com/ki11a-Conton/harness-agent/actions/runs/38497874192)、[独立 CLI/Web 包](https://github.com/ki11a-Conton/harness-agent/actions/runs/38497874182)、[浏览器安装包](https://github.com/ki11a-Conton/harness-agent/actions/runs/38497874148) PASS；主 CI 的 Windows 全量 leg 因固定 500ms 的生产组装完成等待误报而失败，coverage/Ubuntu formal/closed-loop/cold-start 已通过。`8613c6e` 使用未释放模型 gate 保持“接收请求不能等模型完成”的证明，再有界等待真实终结状态；本地相关 30 项 PASS，[原生 Windows](https://github.com/ki11a-Conton/harness-agent/actions/runs/38500633280) 353 PASS / 2 skipped、31 文件（含此生产组装测试）。[该提交主 CI](https://github.com/ki11a-Conton/harness-agent/actions/runs/38500633252) 的最终状态按原始 API 快照记录，不将 pending 称为整体 PASS。
+
+补充追踪：8613c6e 主 CI 最终为 FAILURE，Windows 常规全量、Ubuntu 全量、coverage、Ubuntu formal、双平台 closed-loop 和 cold-start 均 PASS；Windows formal 的全量中 `owners.test.ts` 的 stable Web draft 模型切换/重启案例失败，因此 dual-platform gate 也失败。公开诊断尚无完整断言原因，不将它猜测为时序误报；本地 owners 全部 21 项 PASS，已加入原生 Windows 目标并补充终态诊断，继续取得实际结果。2374e94 主 CI 的 Windows leg 则全部因 FA-15 在 checkout 失败；原始 job/annotation 分别保留，不能把 Ubuntu 通过当成 Windows 通过。
 
 ## 原始失败与修正记录
 

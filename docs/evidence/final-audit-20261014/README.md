@@ -9,5 +9,6 @@
 - ci/：原生 GitHub HTTP 返回的 workflow/job/annotation 原件；Windows notice 分片恢复 case records 并验证 JSON.stringify 的 SHA-256。包含早期失败和修正后记录；pending 不能算通过。
 - installed-question-acceptance.mjs：从校验后的包、全新项目/状态目录重现真实 HTTP + 三个 CLI 进程的问答恢复及输出保护。只使用本地 scripted provider。
 - inventory.json：除本清单自身以外，每个归档文件的原字节大小与 SHA-256。GitHub artifact 的原始 ZIP/日志下载曾被代理 403 拒绝；没有伪造为已下载。
+- fixture-records.tar.gz 与 fixture-records-index.json：240 份原始 fixture 按原逻辑路径保存于压缩包，逐文件字节数与 SHA-256 匹配 2374e94 的原 inventory。转存避免 Windows checkout 的路径长度错误；其余报告和截图保持独立文件。可用 Python tarfile 在内存读取成员复算，无须在 Windows 提取长路径。
 
 未归档测试包的 tar.gz；其 SHA256SUMS 与完整 PORTABLE-MANIFEST.json 可复核包内容。未发布 release/tag。合成测试凭证不可用，归档不包含用户 GitHub token；paid model calls 为 0，模型质量及完整默认 UI parity 仍为 NOT_PROVEN。
