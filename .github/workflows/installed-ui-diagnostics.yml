@@ -64,8 +64,10 @@ jobs:
           import { gzipSync } from 'node:zlib';
           const bytes = await readFile('evidence/browser/result.json');
           const report = JSON.parse(bytes);
-          const results = report.results.map(({ name, viewport, status, failure, checks, errors, externalRequests, failedHttp }) =>
-            ({ name, viewport, status, failure, checks, errors, externalRequests, failedHttp }));
+          const results = report.results.map(({ name, viewport, status, failure, checks, errors, externalRequests, failedHttp, calls }) =>
+            ({ name, viewport, status, failure, checks, errors, externalRequests, failedHttp,
+              rpcFailures: calls.filter(call => call.ok === false).map(({ endpoint, status, ok, error, expected }) =>
+                ({ endpoint, status, ok, error, expected })) }));
           const record = { schemaVersion: 1, runId: process.env.RUN_ID, sourceSha: process.env.SOURCE_SHA,
             rawReportSha256: createHash('sha256').update(bytes).digest('hex'), rawReportBytes: bytes.length,
             complete: report.complete, results };
