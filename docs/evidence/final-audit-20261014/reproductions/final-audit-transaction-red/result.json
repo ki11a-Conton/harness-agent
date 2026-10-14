@@ -1,0 +1,32 @@
+{
+  "baseline": "5058d536d44acd61369d822cea4e160b553dff4b",
+  "symlinkCase": {
+    "expected": "refused before external reads/writes",
+    "blocked": false,
+    "outsideContent": "mutated outside"
+  },
+  "binaryCase": {
+    "expected": "refuse unsupported bytes or restore byte-for-byte",
+    "preserved": false,
+    "before": [
+      0,
+      255,
+      254,
+      128,
+      65
+    ],
+    "after": [
+      0,
+      239,
+      191,
+      189,
+      239,
+      191,
+      189,
+      239,
+      191,
+      189,
+      65
+    ]
+  }
+}

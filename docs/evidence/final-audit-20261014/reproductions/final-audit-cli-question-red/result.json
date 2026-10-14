@@ -1,0 +1,43 @@
+{
+  "baseline": "5058d536d44acd61369d822cea4e160b553dff4b",
+  "expected": {
+    "questions": 1,
+    "turns": 1,
+    "status": "completed",
+    "pendingAsks": 0
+  },
+  "actual": {
+    "questions": 0,
+    "exitCode": 1,
+    "turns": [
+      {
+        "id": "turn_fb7f0048-334f-44f8-97bd-4e21a9831039",
+        "status": "waiting_for_user"
+      }
+    ],
+    "pendingAsks": 1,
+    "output": [
+      "chat: session session_d46f520d-d782-4061-97da-d58aa331fd86",
+      "project: /workspace/scratch/final-audit-cli-question-red/project",
+      "data: /workspace/scratch/final-audit-cli-question-red/data",
+      "/help for commands; /quit exits. Ctrl-C cancels the current turn; the session is kept.",
+      "run: session session_d46f520d-d782-4061-97da-d58aa331fd86 turn turn_fb7f0048-334f-44f8-97bd-4e21a9831039",
+      "status: waiting_for_user",
+      "grade: ungraded",
+      "termination: unknown",
+      "summary: (no assistant text)",
+      "files changed: (none)",
+      "tests: no verification gate configured",
+      "verification: no verification gate configured",
+      "remaining issues: waiting_for_user",
+      "tool calls: 0",
+      "iterations: 1"
+    ],
+    "result": {
+      "exitCode": 1,
+      "lines": [
+        "chat closed: session session_d46f520d-d782-4061-97da-d58aa331fd86; resume with agent chat \"/workspace/scratch/final-audit-cli-question-red/project\" --resume session_d46f520d-d782-4061-97da-d58aa331fd86"
+      ]
+    }
+  }
+}

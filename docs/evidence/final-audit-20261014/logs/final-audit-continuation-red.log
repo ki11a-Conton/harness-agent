@@ -1,0 +1,110 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-final-audit-20261014
+
+ ❯ packages/core/src/runtime/final-continuation.regressions.test.ts (8 tests | 6 failed) 41ms
+   × preserves original files, actual counters and effect classification across a question (restart=false) 18ms
+   × preserves original files, actual counters and effect classification across a question (restart=true) 3ms
+   × answering a question does not refresh the consumed tool budget 5ms
+   × cancelled continuation retains the previously committed effect ledger 2ms
+   × preserves spent execution duration while excluding human waiting time 3ms
+   × parallel sessions checkpoint their own live budget, including after another turn finishes 4ms
+   ✓ refuses direct replay of an actual completed turn without calling the model or tool again 3ms
+   ✓ refuses direct replay of an actual cancelled turn without calling the model or tool again 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/core/src/runtime/final-continuation.regressions.test.ts > preserves original files, actual counters and effect classification across a question (restart=false)
+ FAIL  packages/core/src/runtime/final-continuation.regressions.test.ts > preserves original files, actual counters and effect classification across a question (restart=true)
+AssertionError: expected [] to deeply equal [ 'app.txt' ]
+
+- Expected
++ Received
+
+- [
+-   "app.txt",
+- ]
++ []
+
+ ❯ packages/core/src/runtime/final-continuation.regressions.test.ts:42:38
+     40|   const outcome = await runtime.runTurn(session.id, turn.id, new Abort…
+     41|   expect(outcome.status).toBe("completed");
+     42|   expect(outcome.state.filesChanged).toEqual(["app.txt"]); expect(outc…
+       |                                      ^
+     43|   expect(input.orchestrator.calls).toHaveLength(1); expect(await input…
+     44| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  packages/core/src/runtime/final-continuation.regressions.test.ts > answering a question does not refresh the consumed tool budget
+AssertionError: expected 'completed' to be 'failed' // Object.is equality
+
+Expected: "failed"
+Received: "completed"
+
+ ❯ packages/core/src/runtime/final-continuation.regressions.test.ts:50:26
+     48|   const { session, turn } = await paused(input);
+     49|   const outcome = await input.runtime.runTurn(session.id, turn.id, new…
+     50|   expect(outcome.status).toBe("failed"); expect(outcome.error?.code).t…
+       |                          ^
+     51|   expect(outcome.statusDetail).toBe("failed_with_effects"); expect(inp…
+     52|   expect(outcome.state.filesChanged).toEqual(["first.txt"]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  packages/core/src/runtime/final-continuation.regressions.test.ts > cancelled continuation retains the previously committed effect ledger
+AssertionError: expected 'cancelled_no_effect' to be 'cancelled_with_effects' // Object.is equality
+
+Expected: "cancelled_with_effects"
+Received: "cancelled_no_effect"
+
+ ❯ packages/core/src/runtime/final-continuation.regressions.test.ts:59:32
+     57|   const { session, turn } = await paused(input), controller = new Abor…
+     58|   const outcome = await input.runtime.runTurn(session.id, turn.id, con…
+     59|   expect(outcome.statusDetail).toBe("cancelled_with_effects"); expect(…
+       |                                ^
+     60|   expect(outcome.toolCalls).toBe(1); expect(outcome.iterations).toBe(2…
+     61| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+ FAIL  packages/core/src/runtime/final-continuation.regressions.test.ts > preserves spent execution duration while excluding human waiting time
+AssertionError: expected 'completed' to be 'failed' // Object.is equality
+
+Expected: "failed"
+Received: "completed"
+
+ ❯ packages/core/src/runtime/final-continuation.regressions.test.ts:71:26
+     69|   const input = setup(provider, { maxDurationMs: 10 }); const { sessio…
+     70|   const outcome = await input.runtime.runTurn(session.id, turn.id, new…
+     71|   expect(outcome.status).toBe("failed"); expect(outcome.terminationRea…
+       |                          ^
+     72| });
+     73|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯
+
+ FAIL  packages/core/src/runtime/final-continuation.regressions.test.ts > parallel sessions checkpoint their own live budget, including after another turn finishes
+AssertionError: expected +0 to be 1 // Object.is equality
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ packages/core/src/runtime/final-continuation.regressions.test.ts:94:56
+     92|     allowA(); expect((await runningA).status).toBe("completed");
+     93|     const checkpoint = (await checkpoints.list(a.id)).find(value => va…
+     94|     expect(checkpoint.budgetUsage?.run?.usedToolCalls).toBe(1);
+       |                                                        ^
+     95|   } finally { allowB(); await runningB; }
+     96| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  6 failed | 2 passed (8)
+   Start at  00:17:56
+   Duration  802ms (transform 508ms, setup 0ms, import 630ms, tests 41ms, environment 0ms)
+

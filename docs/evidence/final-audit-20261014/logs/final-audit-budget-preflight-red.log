@@ -1,0 +1,96 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-final-audit-20261014
+
+ ❯ packages/core/src/runtime/final-continuation.regressions.test.ts (9 tests | 4 failed) 58ms
+   ✓ preserves original files, actual counters and effect classification across a question (restart=false) 15ms
+   ✓ preserves original files, actual counters and effect classification across a question (restart=true) 3ms
+   × answering a question does not refresh the consumed tool budget 12ms
+   ✓ cancelled continuation retains the previously committed effect ledger 4ms
+   × preserves spent execution duration while excluding human waiting time 9ms
+   × parallel sessions checkpoint their own live budget, including after another turn finishes 8ms
+   × a zero tool budget blocks the side effect before dispatch and still settles the requested tool 2ms
+   ✓ refuses direct replay of an actual completed turn without calling the model or tool again 3ms
+   ✓ refuses direct replay of an actual cancelled turn without calling the model or tool again 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/core/src/runtime/final-continuation.regressions.test.ts > answering a question does not refresh the consumed tool budget
+AssertionError: expected [ { request: { …(9) } }, …(1) ] to have a length of 1 but got 2
+
+- Expected
++ Received
+
+- 1
++ 2
+
+ ❯ packages/core/src/runtime/final-continuation.regressions.test.ts:51:94
+     49|   const outcome = await input.runtime.runTurn(session.id, turn.id, new…
+     50|   expect(outcome.status).toBe("failed"); expect(outcome.error?.code).t…
+     51|   expect(outcome.statusDetail).toBe("failed_with_effects"); expect(inp…
+       |                                                                                              ^
+     52|   expect(outcome.state!.filesChanged).toEqual(["first.txt"]);
+     53| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  packages/core/src/runtime/final-continuation.regressions.test.ts > preserves spent execution duration while excluding human waiting time
+AssertionError: expected 'failed' to be 'waiting_for_user' // Object.is equality
+
+Expected: "waiting_for_user"
+Received: "failed"
+
+ ❯ paused packages/core/src/runtime/final-continuation.regressions.test.ts:30:26
+     28|   const turn = await input.runtime.startTurn(session.id, "implement ta…
+     29|   const outcome = await input.runtime.runTurn(session.id, turn.id, new…
+     30|   expect(outcome.status).toBe("waiting_for_user");
+       |                          ^
+     31|   expect((await input.runtime.submitUserAnswer(session.id, turn.id, ou…
+     32|   return { session, turn, outcome };
+ ❯ packages/core/src/runtime/final-continuation.regressions.test.ts:69:106
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  packages/core/src/runtime/final-continuation.regressions.test.ts > parallel sessions checkpoint their own live budget, including after another turn finishes
+AssertionError: expected 1 to be 2 // Object.is equality
+
+- Expected
++ Received
+
+- 2
++ 1
+
+ ❯ packages/core/src/runtime/final-continuation.regressions.test.ts:95:56
+     93|     allowA(); expect((await runningA).status).toBe("completed");
+     94|     const checkpoint = (await checkpoints.list(a.id)).find(value => va…
+     95|     expect(checkpoint.budgetUsage?.run?.usedToolCalls).toBe(2);
+       |                                                        ^
+     96|   } finally { allowB(); await runningB; }
+     97| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  packages/core/src/runtime/final-continuation.regressions.test.ts > a zero tool budget blocks the side effect before dispatch and still settles the requested tool
+AssertionError: expected [ { request: { …(9) } } ] to have a length of +0 but got 1
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ packages/core/src/runtime/final-continuation.regressions.test.ts:104:36
+    102|   const outcome = await input.runtime.runTurn(session.id, turn.id, new…
+    103|   expect(outcome.status).toBe("failed"); expect(outcome.error?.code).t…
+    104|   expect(input.orchestrator.calls).toHaveLength(0); expect(outcome.sta…
+       |                                    ^
+    105|   const history = await input.store.listMessages(session.id), requeste…
+    106|   expect(history.filter(message => message.role === "tool").map(messag…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 5 passed (9)
+   Start at  00:21:20
+   Duration  753ms (transform 465ms, setup 0ms, import 579ms, tests 58ms, environment 0ms)
+

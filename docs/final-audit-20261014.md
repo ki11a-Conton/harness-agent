@@ -1,4 +1,4 @@
-# 最终工程审查（执行中）
+# 发布前最终工程审查
 
 基线 main：5058d536d44acd61369d822cea4e160b553dff4b。独立工作区；本轮不发布 release/tag，交付后由用户本地测试决定。
 
@@ -34,3 +34,74 @@ typecheck 通过。全量基线 549 文件，9,469 PASS / 6 FAIL / 15 skipped；
 工具输出的未提交片段及截断预览不进入事件存储，事件保留字节数和 withheld 标志；完整工具结果仍走既有 Runtime 输出检查，再进入模型和历史。事务仍是受控写工具的协调原语，不能把路径复查声称为能抵抗任意外部进程竞争的 OS 沙箱。
 
 审查覆盖：CLI 终端/问答/审批/恢复；Web 会话、模型配置、流式活动和工作区变更；Gateway/AppServer/SDK 的身份、取消与消息协议；Runtime/Actor、上下文、provider 流与错误恢复；工具、权限/沙箱与持久化；冻结前端资产、品牌和独立安装包。付费模型质量由用户本地实验；本轮不把脚本 provider 验收作为模型能力证据。
+
+## 固定源码验收
+
+验收源码：`88504f013eec54f1ae0328783345c8c4cf8265e3`，树 `8860e33ee19ef14f6bef8504bdc57f19b915bc37`，执行时工作区 clean。后继 `8613c6e` 只修一处生产组装验收测试、补 Windows 验收列表和文档；1,320 个产品/构建输入的 Git blob 与 `88504f0` 完全相同，见 product-source-identity.json。其后的提交只归档文档、原件及验收复现脚本，不把旧 SHA 的运行记录改写为后继 SHA 的结果。
+
+| 检查 | 实际结果 | 证据 |
+| --- | --- | --- |
+| 类型检查/真实编译 | PASS，Node 24.19.0、pnpm 11.21.0 | `logs/final-audit-typecheck-last-fix.log` |
+| 全量单元/集成 | 556 文件：554 PASS / 2 skipped；9,520 PASS / 15 skipped，失败 0 | `logs/final-audit-full-88504f0.log` |
+| 安全 | 21 文件、2,146 PASS | `logs/final-audit-security-88504f0.log` |
+| 协议 | 7 文件、54 PASS | `logs/final-audit-protocol-88504f0.log` |
+| 发布/供应商/传输脚本 | 68 PASS | `logs/final-audit-release-scripts-88504f0.log` |
+| 冻结资源、文档及 clean docs gate | PASS | `logs/final-audit-vendor-88504f0.log`、`logs/final-audit-docs-gate-88504f0.log` |
+| 生产依赖 | 14 依赖，已知漏洞 0 | `logs/final-audit-dependencies-88504f0.json` |
+| 独立包 CLI/Web 编程 | 50 断言；19 个真实 loopback HTTP 请求；真实读/改/失败验证/修复/重测、审批拒绝、取消及重启 | `installed/cli/result.json` |
+| 独立包 Web 常规 coding 控件 | 30 场景、75 断言，桌面/移动/窄高三视口 | `installed/web/result.json` 与 `installed/web/browser/` |
+| 独立包问答/脱敏 | 15 断言，3 个独立 CLI 进程、5 次真实 HTTP 请求，原任务/已写文件/工具计数保留，事件与模型输出无合成明文密钥 | `installed/questions/result.json` |
+| 中英文品牌 | 6 场景、90 断言，中英三视口；用户可见名称、欢迎、设置、内置组件、清单与图标为 Harness Agent | `installed/branding/result.json` |
+| 真实 Windows | Windows_NT 10.0.26100、Node 22.23.3、30 文件，352 PASS / 0 FAIL / 2 skipped；12 项必需进程测试全部 PASS | `ci/final-audit-native-ci-88504f0/windows-receipt.json`、完整 case records 和校验记录 |
+
+独立包版本为内部测试标识 `1.10.0-rc.1`，3,045 个受校验文件；归档 SHA-256：`d0eee62c37fddfc6bd1b29938e50cfe1ba47439c03bdb3c9dfc310e90d68c665`。构建来自 fresh pinned snapshot，没有复用工作区构建文件、workspace links 或旧 native 二进制；doctor 无错误，真实启动拒绝被篡改的资产。此包未发布为 GitHub release。
+
+Windows 跳过的两项均为 POSIX chmod 语义：B05 模式变更合并和事务可执行位保留；Linux 相应测试已运行。Windows 的真实 `.cmd`/`.ps1`、PATH/PATHEXT、空格/CJK 参数、安全拒绝、超时、取消与实际孙进程终止均有 passed 最终状态。Azure 原始 artifact 下载受当前网络代理 403 限制，使用工作流原本公开的 notice 分片恢复完整 case records，校验 `caseRecordsSha256`；不声称取得了原始 Vitest JSON 字节。
+
+冻结产品源码的 CI：[原生 Windows](https://github.com/ki11a-Conton/harness-agent/actions/runs/38497874192)、[独立 CLI/Web 包](https://github.com/ki11a-Conton/harness-agent/actions/runs/38497874182)、[浏览器安装包](https://github.com/ki11a-Conton/harness-agent/actions/runs/38497874148) PASS；主 CI 的 Windows 全量 leg 因固定 500ms 的生产组装完成等待误报而失败，coverage/Ubuntu formal/closed-loop/cold-start 已通过。`8613c6e` 使用未释放模型 gate 保持“接收请求不能等模型完成”的证明，再有界等待真实终结状态；本地相关 30 项 PASS，[原生 Windows](https://github.com/ki11a-Conton/harness-agent/actions/runs/38500633280) 353 PASS / 2 skipped、31 文件（含此生产组装测试）。[该提交主 CI](https://github.com/ki11a-Conton/harness-agent/actions/runs/38500633252) 的最终状态按原始 API 快照记录，不将 pending 称为整体 PASS。
+
+## 原始失败与修正记录
+
+基线 clean-source gate 的 6 个失败、最初安装缓存限制、自己的空 catch 被安全门拒绝、生产依赖公告、885 之前全量两处旧断言失败、旧浏览器过早判断完成以及新增暂停交接的三个 RED 均保留。`fdd8c0e` 与 `4028440` 的全量被显式停止以先修检查发现的问题，没有把中止算通过。`dd05fc1` 全量为 9,512 PASS / 2 FAIL；`7e0295a` 完整为 9,514 PASS / 15 skipped；最终结果只取上表冻结源码。
+
+安装包问答实测曾因验收脚本把实际 `[redacted]` 写成大写而误报，修正大小写判定后在全新项目/状态目录重跑，原件保留。与真实产品缺陷、公开依赖缺陷分别记录，不用重试抹去失败。
+
+原件归档与可复算清单位于 [evidence](evidence/final-audit-20261014/README.md)；inventory 逐文件记录原字节 SHA-256，不含用户 GitHub token。问答实测复现：先校验解出的包，再运行 `node docs/evidence/final-audit-20261014/installed-question-acceptance.mjs <unpacked-root> <new-output-directory>`；该脚本只调用本地 HTTP 模型 fixture。
+
+## 交付范围与本地验收
+
+本轮关闭 12 项已复现的代码/接口缺陷（FA-1–FA-10、FA-13–FA-14），升级 1 项有公开公告的生产依赖（FA-11），纠正 4 处旧验收假设（FA-12）。保留既有工具、权限、沙箱、验证、持久化和模型策略；没有自动晋升 paid 模型质量结论。
+
+队列原子编辑/steer-now、Cordis 生命周期、goal/Plan continuation、可续写子 agent、多模态二进制接入、原生桌面打开器和强沙箱 PTY 等声明缺口仍在。上述工程门和常规 coding 场景通过不能改写为完整默认 UI parity 或 Codex/Claude Code 等模型能力等价；两项仍为 `NOT_PROVEN`。付费模型实验由用户本地执行，本轮调用数为 0。
+
+已完成或已取消的 turn 现在拒绝重跑；新工作需要创建新 turn。旧版本已暂停但没有完整问答检查点的任务会明确拒绝恢复，避免重置预算、遗失已落地改动；可以查看文件后取消旧任务并开新任务，旧状态不删除。
+
+Windows PowerShell 本地测试可使用以下流程（`npm test` 要替换成你的项目验证命令）：
+
+```powershell
+git switch main
+git pull --ff-only
+pnpm.cmd install --frozen-lockfile
+pnpm.cmd typecheck
+$harnessCli = (Resolve-Path .\apps\cli\dist\main.js).Path
+$harnessWeb = (Resolve-Path .\apps\web\dist\main.js).Path
+$env:OPENAI_BASE_URL = "你的模型服务 /v1 地址"
+$env:OPENAI_MODEL = "你的模型 ID"
+$env:OPENAI_API_KEY = "你的模型服务密钥"
+$env:HARNESS_AGENT_PROMPT = "coding-v1"
+$env:HARNESS_DATA_DIR = Join-Path $env:LOCALAPPDATA "HarnessAgent\final-audit-cli"
+node $harnessCli chat "C:\code\your-project" --verify "npm test"
+# 保存终端实际打印的 session id，退出后用相同配置和目录继续：
+node $harnessCli chat "C:\code\your-project" --resume "实际 session id" --verify "npm test"
+# CLI 关闭后，在项目目录启动 Web；使用独立状态目录验收。
+$env:HARNESS_DATA_DIR = Join-Path $env:LOCALAPPDATA "HarnessAgent\final-audit-web"
+$env:HARNESS_VERIFY_COMMAND = "npm test"
+Set-Location "C:\code\your-project"
+node $harnessWeb
+```
+
+验收一个真实小项目的读取、修改、失败测试后修复并重测；检查审批允许/拒绝、运行中取消、问题显示后的立即回答/取消、问答 EOF 后重启恢复、实际文件及测试结果、Web 模型设置保存/重启，以及中英文页面的 Harness Agent 名称和图标。Web 默认地址为 `http://127.0.0.1:8787`。同一状态目录只由一个宿主占用；使用真实模型而非未配置密钥时的 stub 来评价 coding 质量。
+
+不创建 release/tag。用户拉取本地测试并明确确认后，再按实际发布 SHA 做发布验收。
+
+实际交付状态：修复及验收完成；commit 推送 main 后由用户本地测试决定发布。本轮无 release/tag。

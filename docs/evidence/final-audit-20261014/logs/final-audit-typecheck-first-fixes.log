@@ -1,0 +1,9 @@
+$ tsc -b
+packages/harness/src/tool-event-security.regressions.test.ts(27,55): error TS2741: Property 'agentId' is missing in type '{ id: ToolCallId; sessionId: SessionId; turnId: TurnId; call: { id: ToolCallId; name: string; args: {}; }; }' but required in type 'ToolCallRequest'.
+apps/cli/src/terminal-run-host.ts(44,99): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(value: void | PromiseLike<void>) => void' is not assignable to parameter of type 'EventListener | EventListenerObject'.
+      Type '(value: void | PromiseLike<void>) => void' is not assignable to type 'EventListener'.
+        Types of parameters 'value' and 'evt' are incompatible.
+          Type 'Event' is not assignable to type 'void | PromiseLike<void>'.
+[ELIFECYCLE] Command failed with exit code 1.

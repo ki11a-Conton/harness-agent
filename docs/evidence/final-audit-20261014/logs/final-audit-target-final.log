@@ -1,0 +1,52 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-final-audit-20261014
+
+ ✓ packages/core/src/runtime/final-parked-cancel.regressions.test.ts (4 tests) 18ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ apps/web/src/deepseek/workspace.integration.test.ts (17 tests) 3431ms
+   ✓ directory changes start ready and observe both child modifications and deletion without treating directories as regular files  1517ms
+   ✓ a file watch observes deletion and recreation in the same generation  1514ms
+ ✓ apps/cli/src/final-question.regressions.test.ts (5 tests) 320ms
+ ✓ packages/gateway/src/rpc.test.ts (27 tests) 141ms
+[degraded] session session_1fabd945-fb53-47e1-bcc3-9fb793d44ef5 durable followup consume failed for fup-1 (prompt remains bound to turn turn_3879b3e3-11cc-4037-8423-28b149b66581): durable ack down
+[degraded] session session_866ba47d-a0c7-4611-acc2-20f16e831618 durable followup bind failed for fup-1 (created turn turn_0559a7ef-da9f-4d3b-8dc9-1d0ce372c875 will not execute): bind down
+[degraded] inbox.promotion-identity-missing: session session_d83f75e2-1058-45d0-90b1-db1b31806113 prompt prompt_1a69573a-7cb0-48f8-9aa6-37c438df4fb2 is promoted but has no promotedTurnId — recovery-required, not replayed
+[degraded] session session_29c14d0f-2241-4815-b8e0-f26cd0ce0dfe failed to persist turn turn_089493f5-41b1-471f-a8f1-ff33f6d3ca14 as cancelled: P38.2-9 simulated updateTurn failure
+[degraded] session session_1421ac23-c127-4d27-a18e-2b79e0eab3ad failed to persist turn turn_e185fb07-b695-4109-989d-2ee2ea96a062 as cancelled: P38.2-9 simulated updateTurn failure
+[degraded] session session_1421ac23-c127-4d27-a18e-2b79e0eab3ad failed to emit turn.cancelled for turn_e185fb07-b695-4109-989d-2ee2ea96a062: P38.2-9 simulated emit failure
+[degraded] session session_7c5539d7-da54-44c1-8ba5-8e25dac190da failed to persist turn turn_36bff4c9-83e2-49ff-8395-998e68c8771b as cancelled: P38.2-9 simulated updateTurn failure
+[degraded] session session_d812b301-3470-4bbf-8c06-18a76a64739f failed to persist turn turn_6cc733b3-feda-403b-9a6e-4ac701ee9c10 as cancelled: P38.3-8 simulated updateTurn failure
+ ✓ packages/core/src/runtime/session-actor.test.ts (69 tests) 96ms
+ ✓ packages/core/src/runtime/final-continuation.regressions.test.ts (13 tests) 44ms
+ ✓ packages/gateway/src/transport-conformance.test.ts (22 tests) 28ms
+ ✓ packages/tools/src/transaction.test.ts (9 tests) 28ms
+ ✓ packages/core/src/runtime/session-race2.test.ts (5 tests) 30ms
+ ✓ packages/core/src/runtime/ask-answer-identity.regressions.test.ts (14 tests) 27ms
+ ✓ packages/tools/src/transaction-final.regressions.test.ts (6 tests) 32ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ packages/harness/src/tool-event-security.regressions.test.ts (2 tests) 20ms
+ ✓ packages/core/src/runtime/session-race.test.ts (5 tests) 19ms
+ ✓ apps/web/src/deepseek/change-compare.regressions.test.ts (4 tests) 6ms
+
+ Test Files  14 passed (14)
+      Tests  202 passed (202)
+   Start at  00:27:30
+   Duration  10.08s (transform 2.22s, setup 0ms, import 4.29s, tests 4.24s, environment 1ms)
+

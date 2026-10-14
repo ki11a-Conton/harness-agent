@@ -1,0 +1,36 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-final-audit-20261014
+
+ ✓ apps/cli/src/final-question.regressions.test.ts > answers a CLI model question and continues the same actual turn exactly once 64ms
+ ✓ apps/cli/src/final-question.regressions.test.ts > keeps an unanswered EOF question durable and answers it after CLI restart without a new task 44ms
+ ✓ apps/cli/src/final-question.regressions.test.ts > Ctrl-C while waiting for an answer cancels the actual parked turn without answering it 30ms
+ ✓ apps/cli/src/final-question.regressions.test.ts > one real terminal queue routes question answers and later approvals to their own owners 85ms
+ ✓ packages/tools/src/transaction-final.regressions.test.ts > refuses a real ancestor directory link before it can read or overwrite an outside file 7ms
+ ✓ packages/tools/src/transaction-final.regressions.test.ts > rechecks ancestors after snapshot and before commit or rollback 4ms
+ ✓ packages/tools/src/transaction-final.regressions.test.ts > refuses bytes that cannot round-trip through the transaction's encoding before any edit 2ms
+ ✓ packages/tools/src/transaction-final.regressions.test.ts > preserves executable mode through both commit and rollback 4ms
+ ✓ packages/tools/src/transaction-final.regressions.test.ts > a failed snapshot batch keeps the previous intents without staging a partial new batch 3ms
+ ✓ packages/tools/src/transaction-final.regressions.test.ts > metadata I/O failure is propagated, rather than classified as an absent file 3ms
+ ✓ packages/tools/src/transaction.test.ts > P2-26 WorkspaceChangeTransaction > creates files on commit and rollback removes them 9ms
+ ✓ packages/tools/src/transaction.test.ts > P2-26 WorkspaceChangeTransaction > rollback restores byte-for-byte overwritten content 4ms
+ ✓ packages/tools/src/transaction.test.ts > P2-26 WorkspaceChangeTransaction > rollback removes a generated path that did not exist before the txn 2ms
+ ✓ packages/tools/src/transaction.test.ts > P2-26 WorkspaceChangeTransaction > supports nested create via parent dirs 3ms
+ ✓ packages/tools/src/transaction.test.ts > P2-26 WorkspaceChangeTransaction > resolves relative paths against root and rejects escapes 1ms
+ ✓ packages/tools/src/transaction.test.ts > P2-26 WorkspaceChangeTransaction > rejects a directory as a transaction target 2ms
+ ✓ packages/tools/src/transaction.test.ts > P2-26 WorkspaceChangeTransaction > blocks snapshot/commit after the transaction finished 2ms
+ ✓ packages/tools/src/transaction.test.ts > P2-26 WorkspaceChangeTransaction > all-or-nothing: a failed commit rolls back earlier writes 7ms
+ ✓ packages/tools/src/transaction.test.ts > P2-26 WorkspaceChangeTransaction > rollback is idempotent 3ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ packages/harness/src/tool-event-security.regressions.test.ts > protects real production tool events, including split credentials and capped previews (durable=false) 15ms
+ ✓ packages/harness/src/tool-event-security.regressions.test.ts > protects real production tool events, including split credentials and capped previews (durable=true) 7ms
+ ✓ apps/web/src/deepseek/change-compare.regressions.test.ts > shows format-only edits in the actual diff ("line" to "line\n") 2ms
+ ✓ apps/web/src/deepseek/change-compare.regressions.test.ts > shows format-only edits in the actual diff ("line\n" to "line") 0ms
+ ✓ apps/web/src/deepseek/change-compare.regressions.test.ts > shows format-only edits in the actual diff ("line\n" to "﻿line\n") 0ms
+ ✓ apps/web/src/deepseek/change-compare.regressions.test.ts > keeps identical unterminated text unchanged and marks real EOF line changes 2ms
+
+ Test Files  5 passed (5)
+      Tests  25 passed (25)
+   Start at  17:27:57
+   Duration  4.08s (transform 2.11s, setup 0ms, import 3.17s, tests 311ms, environment 0ms)
+

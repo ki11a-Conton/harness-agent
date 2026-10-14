@@ -1,0 +1,206 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: {
+  "output": "/workspace/scratch/final-audit-portable-dd05fc1/web/browser",
+  "complete": false,
+  "results": [
+    {
+      "name": "settings-general",
+      "viewport": "desktop",
+      "status": "PASS",
+      "assertions": 2
+    },
+    {
+      "name": "models-editor",
+      "viewport": "desktop",
+      "status": "PASS",
+      "assertions": 1
+    },
+    {
+      "name": "workspace-directory-picker",
+      "viewport": "desktop",
+      "status": "PASS",
+      "assertions": 1
+    },
+    {
+      "name": "workspace-files",
+      "viewport": "desktop",
+      "status": "PASS",
+      "assertions": 2
+    },
+    {
+      "name": "session-lifecycle",
+      "viewport": "desktop",
+      "status": "PASS",
+      "assertions": 4
+    },
+    {
+      "name": "markdown-stream-reload",
+      "viewport": "desktop",
+      "status": "PASS",
+      "assertions": 4
+    },
+    {
+      "name": "read-tool",
+      "viewport": "desktop",
+      "status": "PASS",
+      "assertions": 3
+    },
+    {
+      "name": "write-approval",
+      "viewport": "desktop",
+      "status": "PASS",
+      "assertions": 3
+    },
+    {
+      "name": "write-rejection",
+      "viewport": "desktop",
+      "status": "PASS",
+      "assertions": 2
+    },
+    {
+      "name": "ask-reload-answer",
+      "viewport": "desktop",
+      "status": "FAIL",
+      "failure": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n+ actual - expected\n\n+ undefined\n- 'turn_ae93c5d4-db34-49a9-8c69-0384f48324d8'\n",
+      "assertions": 2
+    },
+    {
+      "name": "settings-general",
+      "viewport": "mobile",
+      "status": "PASS",
+      "assertions": 2
+    },
+    {
+      "name": "models-editor",
+      "viewport": "mobile",
+      "status": "PASS",
+      "assertions": 1
+    },
+    {
+      "name": "workspace-directory-picker",
+      "viewport": "mobile",
+      "status": "PASS",
+      "assertions": 1
+    },
+    {
+      "name": "workspace-files",
+      "viewport": "mobile",
+      "status": "PASS",
+      "assertions": 2
+    },
+    {
+      "name": "session-lifecycle",
+      "viewport": "mobile",
+      "status": "PASS",
+      "assertions": 4
+    },
+    {
+      "name": "markdown-stream-reload",
+      "viewport": "mobile",
+      "status": "PASS",
+      "assertions": 4
+    },
+    {
+      "name": "read-tool",
+      "viewport": "mobile",
+      "status": "PASS",
+      "assertions": 3
+    },
+    {
+      "name": "write-approval",
+      "viewport": "mobile",
+      "status": "PASS",
+      "assertions": 3
+    },
+    {
+      "name": "write-rejection",
+      "viewport": "mobile",
+      "status": "PASS",
+      "assertions": 2
+    },
+    {
+      "name": "ask-reload-answer",
+      "viewport": "mobile",
+      "status": "FAIL",
+      "failure": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n+ actual - expected\n\n+ undefined\n- 'turn_b56d4cc5-b560-4fd9-a704-025ce689bd73'\n",
+      "assertions": 2
+    },
+    {
+      "name": "settings-general",
+      "viewport": "narrow-tall",
+      "status": "PASS",
+      "assertions": 2
+    },
+    {
+      "name": "models-editor",
+      "viewport": "narrow-tall",
+      "status": "PASS",
+      "assertions": 1
+    },
+    {
+      "name": "workspace-directory-picker",
+      "viewport": "narrow-tall",
+      "status": "PASS",
+      "assertions": 1
+    },
+    {
+      "name": "workspace-files",
+      "viewport": "narrow-tall",
+      "status": "PASS",
+      "assertions": 2
+    },
+    {
+      "name": "session-lifecycle",
+      "viewport": "narrow-tall",
+      "status": "PASS",
+      "assertions": 4
+    },
+    {
+      "name": "markdown-stream-reload",
+      "viewport": "narrow-tall",
+      "status": "PASS",
+      "assertions": 4
+    },
+    {
+      "name": "read-tool",
+      "viewport": "narrow-tall",
+      "status": "PASS",
+      "assertions": 3
+    },
+    {
+      "name": "write-approval",
+      "viewport": "narrow-tall",
+      "status": "PASS",
+      "assertions": 3
+    },
+    {
+      "name": "write-rejection",
+      "viewport": "narrow-tall",
+      "status": "PASS",
+      "assertions": 2
+    },
+    {
+      "name": "ask-reload-answer",
+      "viewport": "narrow-tall",
+      "status": "PASS",
+      "assertions": 3
+    }
+  ]
+}
+
+
+1 !== 0
+
+    at file:///workspace/harness-agent-final-audit-20261014/scripts/release/deepseek-installed.mjs:64:10 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 1,
+  expected: 0,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.19.0

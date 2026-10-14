@@ -1,0 +1,13 @@
+Scope: all 27 workspace projects
+[WARN] There are cyclic workspace dependencies: /workspace/harness-agent-final-audit-20261014/packages/evaluation, /workspace/harness-agent-final-audit-20261014/packages/observability
+? Verifying lockfile against supply-chain policies (124 entries)...
+Lockfile is up to date, resolution step is skipped
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Packages: +81
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+✗ Lockfile failed supply-chain policy check (124 entries in 283ms)
+Packages are hard linked from the content-addressable store to the virtual store.
+  Content-addressable store is at: /workspace/scratch/deepseek-pnpm-store/v11
+  Virtual store is at:             node_modules/.pnpm
+Progress: resolved 81, reused 81, downloaded 0, added 81, done
+[ERR_PNPM_NO_OFFLINE_META] Failed to resolve @deepseek-ai/cosmokit in package mirror /home/agent/.cache/pnpm/v11/metadata-full/registry.npmjs.org/@deepseek-ai/cosmokit.jsonl

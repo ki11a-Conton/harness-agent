@@ -1,0 +1,79 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-final-audit-20261014
+
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for gated-live/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ❯ apps/web/src/deepseek/session.test.ts (22 tests | 1 failed) 878ms
+   ✓ control emits one opening baseline and waits for committed non-negative projection frames for a new draft 107ms
+   ✓ admission persists one request correlation and retries never start a duplicate turn 44ms
+   ✓ rename and body search are durable across independent browser services 28ms
+   ✓ official follow openings use format 4 and follow live tokens with dense revisions; both tabs cancel independently 32ms
+   ✓ waterfall answer is bound to its current generation and original ask; concurrent retry continues exactly once 52ms
+   ✓ cross-parent reads, malformed args, unknown namespaces and pre-aborted mutations fail closed 8ms
+   ✓ holds an unbound queue promotion instead of changing an already followed prompt rpcId 22ms
+   ✓ treats prototype-shaped request ids as durable own identities without poisoning metadata 32ms
+   ✓ durable answer retries recover a metadata-claim failure and never replace the accepted answer 48ms
+   × stops the actual original paused turn and rejects an answer after terminal cancellation 31ms
+   ✓ an answer published before the pause checkpoint finishes waits for the original actor and resumes exactly once 139ms
+   ✓ cancelling a published question before its waiting status commits terminalizes the actual original turn 28ms
+   ✓ waiting-turn continuation reports a real running model and keeps original-turn ownership 42ms
+   ✓ host close waits for the real original-turn continuation's metadata acknowledgement before returning 71ms
+   ✓ event listener delegation and rejection do not approve an actual pending owner 50ms
+   ✓ private failed host identities never enter session lists, control baselines or event generations 23ms
+   ✓ adopts a blank session in its actual workspace and rejects cwd rebinding and busy adoption 30ms
+   ✓ cancels a running same-turn answer continuation exactly once without replaying its stale paused snapshot 35ms
+   ✓ domain notifications reach both live tabs with owned exact frames and no pre-connection replay 6ms
+   ✓ bounded notification overflow terminates that stale generation for an authoritative reconnect 6ms
+   ✓ reconciles a real rename commit whose journal append failed before the same-title retry 13ms
+   ✓ rejects forged accepted presentation receipts without starting or claiming a missing durable prompt 30ms
+ ✓ packages/core/src/runtime/ask-user-callback.regressions.test.ts (4 tests) 17ms
+ ✓ apps/cli/src/final-question.regressions.test.ts (5 tests) 315ms
+ ✓ packages/core/src/runtime/final-continuation.regressions.test.ts (14 tests) 54ms
+ ✓ packages/core/src/runtime/final-parked-cancel.regressions.test.ts (4 tests) 18ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  apps/web/src/deepseek/session.test.ts > stops the actual original paused turn and rejects an answer after terminal cancellation
+AssertionError: expected Error: No owned pending question { …(2) } to match object { code: 'user-questions/conflict' }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+- {
+-   "code": "user-questions/conflict",
++ Error {
++   "code": "user-questions/not-found",
+  }
+
+ ❯ apps/web/src/deepseek/session.test.ts:248:168
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 4 passed (5)
+      Tests  1 failed | 48 passed (49)
+   Start at  01:42:47
+   Duration  5.11s (transform 2.12s, setup 0ms, import 3.25s, tests 1.28s, environment 0ms)
+

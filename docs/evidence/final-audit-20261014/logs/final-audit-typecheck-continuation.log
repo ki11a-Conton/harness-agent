@@ -1,0 +1,7 @@
+$ tsc -b
+packages/core/src/runtime/final-continuation.regressions.test.ts(42,10): error TS18048: 'outcome.state' is possibly 'undefined'.
+packages/core/src/runtime/final-continuation.regressions.test.ts(52,10): error TS18048: 'outcome.state' is possibly 'undefined'.
+packages/core/src/runtime/final-continuation.regressions.test.ts(59,71): error TS18048: 'outcome.state' is possibly 'undefined'.
+packages/core/src/runtime/final-continuation.regressions.test.ts(65,9): error TS2741: Property 'listModels' is missing in type '{ id: string; createClient: () => { generate(): AsyncGenerator<ModelEvent, void, unknown>; }; }' but required in type 'ModelProvider'.
+packages/core/src/runtime/final-continuation.regressions.test.ts(79,9): error TS2741: Property 'listModels' is missing in type '{ id: string; createClient: () => { generate(request: ModelRequest): AsyncGenerator<ModelEvent, void, unknown>; }; }' but required in type 'ModelProvider'.
+[ELIFECYCLE] Command failed with exit code 1.

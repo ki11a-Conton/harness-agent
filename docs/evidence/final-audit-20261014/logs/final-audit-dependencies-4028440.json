@@ -1,0 +1,39 @@
+{
+  "advisories": {
+    "1164782": {
+      "findings": [
+        {
+          "version": "0.8.2",
+          "paths": [
+            "apps__web>fflate"
+          ],
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        }
+      ],
+      "id": 1164782,
+      "title": "fflate unzipSync can enter an infinite loop when parsing malformed ZIP64 archives",
+      "module_name": "fflate",
+      "vulnerable_versions": ">=0.8.0 <0.8.3",
+      "patched_versions": ">=0.8.3",
+      "severity": "moderate",
+      "cwe": "CWE-400",
+      "github_advisory_id": "GHSA-px8p-9vwx-vf98",
+      "url": "https://github.com/advisories/GHSA-px8p-9vwx-vf98"
+    }
+  },
+  "metadata": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 0,
+      "moderate": 1,
+      "high": 0,
+      "critical": 0
+    },
+    "dependencies": 14,
+    "devDependencies": 0,
+    "optionalDependencies": 0,
+    "totalDependencies": 14
+  }
+}

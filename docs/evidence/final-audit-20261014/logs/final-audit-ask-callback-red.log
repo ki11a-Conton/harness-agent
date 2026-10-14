@@ -1,0 +1,15 @@
+{"status":"waiting_for_user","pendingQuestion":"Which target?"}
+file:///workspace/scratch/final-audit-ask-callback-repro.mjs:10
+  askUser: async () => { throw new Error('controlled asynchronous host question failure'); },
+                               ^
+
+Error: controlled asynchronous host question failure
+    at Object.askUser (file:///workspace/scratch/final-audit-ask-callback-repro.mjs:10:32)
+    at RecoveryController.parkForUserInput (file:///workspace/harness-agent-final-audit-20261014/packages/core/dist/runtime/recovery-controller.js:167:32)
+    at async Object.parkForUserInput (file:///workspace/harness-agent-final-audit-20261014/packages/core/dist/runtime/runtime.js:344:33)
+    at async ModelCallController.handleModelCompletion (file:///workspace/harness-agent-final-audit-20261014/packages/core/dist/runtime/model-call-controller.js:266:49)
+    at async AgentRuntime.runTurnCore (file:///workspace/harness-agent-final-audit-20261014/packages/core/dist/runtime/runtime.js:737:36)
+    at async AgentRuntime.runTurn (file:///workspace/harness-agent-final-audit-20261014/packages/core/dist/runtime/runtime.js:486:29)
+    at async file:///workspace/scratch/final-audit-ask-callback-repro.mjs:13:17
+
+Node.js v24.19.0

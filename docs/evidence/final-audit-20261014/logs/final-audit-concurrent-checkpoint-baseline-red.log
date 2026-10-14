@@ -1,0 +1,41 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-final-audit-20261014
+
+ ❯ packages/core/src/runtime/final-continuation.regressions.test.ts (9 tests | 1 failed | 8 skipped) 23ms
+   ↓ preserves original files, actual counters and effect classification across a question (restart=false)
+   ↓ preserves original files, actual counters and effect classification across a question (restart=true)
+   ↓ answering a question does not refresh the consumed tool budget
+   ↓ cancelled continuation retains the previously committed effect ledger
+   ↓ preserves spent execution duration while excluding human waiting time
+   × parallel sessions checkpoint their own live budget, including after another turn finishes 21ms
+   ↓ a zero tool budget blocks the side effect before dispatch and still settles the requested tool
+   ↓ refuses direct replay of an actual completed turn without calling the model or tool again
+   ↓ refuses direct replay of an actual cancelled turn without calling the model or tool again
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/core/src/runtime/final-continuation.regressions.test.ts > parallel sessions checkpoint their own live budget, including after another turn finishes
+AssertionError: expected 3 to be 2 // Object.is equality
+
+- Expected
++ Received
+
+- 2
++ 3
+
+ ❯ packages/core/src/runtime/final-continuation.regressions.test.ts:95:56
+     93|     allowA(); expect((await runningA).status).toBe("completed");
+     94|     const checkpoint = (await checkpoints.list(a.id)).find(value => va…
+     95|     expect(checkpoint.budgetUsage?.run?.usedToolCalls).toBe(2);
+       |                                                        ^
+     96|   } finally { allowB(); await runningB; }
+     97| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 8 skipped (9)
+   Start at  00:21:43
+   Duration  716ms (transform 449ms, setup 0ms, import 568ms, tests 23ms, environment 0ms)
+

@@ -1,0 +1,39 @@
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+gate docs: exitCode=0 PASS (evidence state=passed) → /workspace/scratch/final-audit-docs-gate-88504f0/docs.json
+  log: logs/docs-2026-10-14T01-54-33-933Z.log (digest 57cafe06b506c165f0dd4061eab34964f379320953649929e463a05c67cfa19b)
+  exitCode=0 (ok)
+  # Documentation truth verification
+  
+  PASS  benchmark suite: regression
+        30 case(s) on disk matches README claim 30
+  PASS  benchmark suite: holdout
+        32 case(s) on disk matches README claim 32
+  PASS  benchmark suite: adversarial
+        13 case(s) on disk matches README claim 13
+  PASS  benchmark suite: stress
+        11 case(s) on disk matches README claim 11
+  PASS  package count
+        24 packages/ on disk matches the HANDOVER claim 24
+  PASS  CI gates
+        .github/workflows/ci.yml runs test and coverage
+  PASS  HANDOVER static truth (P38.4-10)
+        HANDOVER.md canonical section contains no volatile SHA/run-id — a new commit does not make it stale
+  PASS  CAPABILITY_MATRIX.md machine-generated
+        CAPABILITY_MATRIX.md carries generatedAt + the audit records table
+  PASS  CAPABILITY_MATRIX marked informational (P38.2-11)
+        tracked matrix is explicitly NOT RELEASE EVIDENCE (informational snapshot)
+  PASS  capability profiles present
+        CAPABILITY_MATRIX.json carries the per-profile byProfile view
+  PASS  evolution ledger consistent (E2-12)
+        evolution-ledger.json verifies: refs exist, digests match, summaries recompute, one active champion
+  PASS  current plan entry (E4-00)
+        plan.md is the current entry and references an existing spec plan(20261014-003000).md
+  PASS  release gate commands exist in package.json (E4-10)
+        every release-gate command maps to a real package.json script
+  PASS  documented pnpm scripts exist in package.json (E4-10 #6)
+        every pnpm command documented in 2 README file(s) maps to a real package.json script
+  
+  ALL CHECKS PASS
+  
+
+All attempted gates produced durable evidence (INV-P38.2-004).

@@ -1,0 +1,48 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-final-audit-20261014
+
+ ❯ packages/core/src/runtime/final-continuation.regressions.test.ts (14 tests | 1 failed | 13 skipped) 17ms
+   ↓ preserves original files, actual counters and effect classification across a question (restart=false)
+   ↓ preserves original files, actual counters and effect classification across a question (restart=true)
+   ↓ answering a question does not refresh the consumed tool budget
+   ↓ cancelled continuation retains the previously committed effect ledger
+   ↓ preserves spent execution duration while excluding human waiting time (limit=10)
+   ↓ preserves spent execution duration while excluding human waiting time (limit=20)
+   ↓ parallel sessions checkpoint their own live budget, including after another turn finishes
+   ↓ a zero tool budget blocks the side effect before dispatch and still settles the requested tool
+   ↓ a restarted question refuses a missing pause checkpoint instead of silently clearing state and budget
+   ↓ durable continuation restores the actual internal-plan tool count as well as external tool ledger entries
+   ↓ repeated questions cannot refresh the same turn's iteration cap
+   × a user-input pause does not feed a terminal failure to reflection, memory or skill feedback 15ms
+   ↓ refuses direct replay of an actual completed turn without calling the model or tool again
+   ↓ refuses direct replay of an actual cancelled turn without calling the model or tool again
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/core/src/runtime/final-continuation.regressions.test.ts > a user-input pause does not feed a terminal failure to reflection, memory or skill feedback
+AssertionError: expected [ 'waiting_for_user' ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "waiting_for_user",
++ ]
+
+ ❯ packages/core/src/runtime/final-continuation.regressions.test.ts:146:74
+    144| it("a user-input pause does not feed a terminal failure to reflection,…
+    145|   const input = setup(new ScriptedModelProvider([ask(), ScriptedModelP…
+    146|   const { session, turn } = await paused(input); expect(input.complete…
+       |                                                                          ^
+    147|   expect((await input.runtime.runTurn(session.id, turn.id, new AbortCo…
+    148|   expect(input.completed).toEqual(["completed"]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 13 skipped (14)
+   Start at  00:28:19
+   Duration  748ms (transform 472ms, setup 0ms, import 611ms, tests 17ms, environment 0ms)
+

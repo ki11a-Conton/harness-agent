@@ -1,0 +1,56 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-final-audit-20261014
+
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ apps/web/src/deepseek/workspace.integration.test.ts (17 tests) 3459ms
+   ✓ directory changes start ready and observe both child modifications and deletion without treating directories as regular files  1517ms
+   ✓ a file watch observes deletion and recreation in the same generation  1516ms
+ ❯ packages/core/src/runtime/final-parked-cancel.regressions.test.ts (4 tests | 1 failed) 21ms
+   ✓ duplicate cancel, interrupt and close join one durable parked-turn cancellation 10ms
+   ✓ a failed cancellation write leaves the actual turn and question pending, releases admission and can be retried 3ms
+   × cannot cancel another session's parked turn or overwrite a terminal turn 6ms
+   ✓ cannot run an unanswered question again to bypass the pause 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/core/src/runtime/final-parked-cancel.regressions.test.ts > cannot cancel another session's parked turn or overwrite a terminal turn
+AssertionError: expected [Function] to throw error matching /terminal/ but got 'session session_684e80ef-35a5-499a-8d…'
+
+- Expected:
+/terminal/
+
++ Received:
+"session session_684e80ef-35a5-499a-8d6c-9ce7af9f9691 is starting a turn"
+
+ ❯ packages/core/src/runtime/final-parked-cancel.regressions.test.ts:68:45
+     66|     expect((await s.actor.cancelTurn(s.turn.id)).disposition).toBe("no…
+     67|     expect((await s.events.list(s.session.id)).filter(event => event.t…
+     68|     await expect(s.actor.runTurn(s.turn.id)).rejects.toThrow(/terminal…
+       |                                             ^
+     69|   } finally { await Promise.all([actor.close(), s.actor.close()]); }
+     70| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  1 failed | 20 passed (21)
+   Start at  00:25:50
+   Duration  6.49s (transform 2.17s, setup 0ms, import 2.75s, tests 3.48s, environment 0ms)
+

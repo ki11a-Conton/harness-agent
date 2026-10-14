@@ -1,0 +1,25 @@
+{
+  "status": "PASS",
+  "sourceSha": "88504f013eec54f1ae0328783345c8c4cf8265e3",
+  "platform": "win32",
+  "osType": "Windows_NT",
+  "node": "v22.23.3",
+  "passed": 352,
+  "failed": 0,
+  "skipped": 2,
+  "files": 30,
+  "caseRecordsSha256": "d0b4f173b97a8a2b77ac405fc91121747f1a9414526c41437c186d3c7a27b35c",
+  "casePacketsVerified": true,
+  "skippedCases": [
+    {
+      "file": "packages/harness/src/source-audit-boundaries.regressions.test.ts",
+      "name": "B05: chmod-only changes propagate and concurrent parent chmod conflicts",
+      "status": "skipped"
+    },
+    {
+      "file": "packages/tools/src/transaction-final.regressions.test.ts",
+      "name": "preserves executable mode through both commit and rollback",
+      "status": "skipped"
+    }
+  ]
+}

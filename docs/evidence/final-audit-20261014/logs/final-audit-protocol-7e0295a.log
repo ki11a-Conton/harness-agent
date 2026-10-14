@@ -1,0 +1,17 @@
+$ vitest run packages/gateway/src/transport-conformance.test.ts packages/sdk/src/conformance.test.ts packages/protocol
+
+ RUN  v4.1.11 /workspace/harness-agent-final-audit-20261014
+
+ ✓ packages/gateway/src/transport-conformance.test.ts (22 tests) 70ms
+ ✓ packages/sdk/src/conformance.test.ts (3 tests) 19ms
+ ✓ packages/protocol/src/idempotency.test.ts (5 tests) 18ms
+ ✓ packages/protocol/src/bounded.test.ts (6 tests) 53ms
+ ✓ packages/protocol/src/schema.test.ts (4 tests) 28ms
+ ✓ packages/protocol/src/mapper.test.ts (9 tests) 12ms
+ ✓ packages/protocol/src/handshake.test.ts (5 tests) 54ms
+
+ Test Files  7 passed (7)
+      Tests  54 passed (54)
+   Start at  01:02:59
+   Duration  4.97s (transform 1.69s, setup 0ms, import 2.42s, tests 254ms, environment 1ms)
+

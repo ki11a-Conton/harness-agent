@@ -1,0 +1,82 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-final-audit-20261014
+
+ ✓ apps/cli/src/final-question.regressions.test.ts > answers a CLI model question and continues the same actual turn exactly once 70ms
+ ✓ apps/cli/src/final-question.regressions.test.ts > keeps an unanswered EOF question durable and answers it after CLI restart without a new task 51ms
+ × apps/cli/src/final-question.regressions.test.ts > Ctrl-C while waiting for an answer cancels the actual parked turn without answering it 27ms
+   → expected [ Array(1) ] to include 'status: cancelled'
+ ✓ apps/cli/src/final-question.regressions.test.ts > one real terminal queue routes question answers and later approvals to their own owners 54ms
+ ✓ packages/tools/src/transaction-final.regressions.test.ts > refuses a real ancestor directory link before it can read or overwrite an outside file 16ms
+ ✓ packages/tools/src/transaction-final.regressions.test.ts > rechecks ancestors after snapshot and before commit or rollback 4ms
+ ✓ packages/tools/src/transaction-final.regressions.test.ts > refuses bytes that cannot round-trip through the transaction's encoding before any edit 2ms
+ ✓ packages/tools/src/transaction-final.regressions.test.ts > preserves executable mode through both commit and rollback 4ms
+ ✓ packages/tools/src/transaction-final.regressions.test.ts > a failed snapshot batch keeps the previous intents without staging a partial new batch 3ms
+ ✓ packages/tools/src/transaction-final.regressions.test.ts > metadata I/O failure is propagated, rather than classified as an absent file 2ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ packages/harness/src/tool-event-security.regressions.test.ts > protects real production tool events, including split credentials and capped previews (durable=false) 15ms
+ ✓ packages/harness/src/tool-event-security.regressions.test.ts > protects real production tool events, including split credentials and capped previews (durable=true) 7ms
+ ✓ apps/cli/src/gen1-chat.test.ts > rejects missing, empty and duplicate persistent data-directory options 3ms
+ ✓ apps/cli/src/gen1-chat.test.ts > runs two chat turns on one actual runtime session and resumes that same id after restart 84ms
+ ✓ apps/cli/src/gen1-chat.test.ts > refuses another project and incompatible prompt policy instead of silently forking 32ms
+ ✓ apps/cli/src/gen1-chat.test.ts > routes message and approval input through one queue; EOF denies and the next turn gets a fresh signal 4ms
+ ✓ apps/cli/src/gen1-chat.test.ts > idle Ctrl-C and explicit close discard queued work, while active Ctrl-C permits a new turn 1ms
+ ✓ apps/cli/src/gen1-chat.test.ts > a signal already cancelled before execution terminalizes the created turn without calling the model 4ms
+ ✓ apps/cli/src/gen1-chat.test.ts > a cancelled later turn never reports a previous turn's reply or successful verification 63ms
+ ✓ packages/gateway/src/rpc.test.ts > RpcMethodRegistry > exposes the full §84 method surface 2ms
+ ✓ packages/gateway/src/rpc.test.ts > RpcMethodRegistry > rejects unknown methods with METHOD_NOT_FOUND semantics (no stack leak) 1ms
+ ✓ packages/gateway/src/rpc.test.ts > RpcMethodRegistry > rejects duplicate registrations 1ms
+ ✓ packages/gateway/src/rpc.test.ts > RpcMethodRegistry > normalizes a raw handler error to a structured error without a stack 0ms
+ ✓ packages/gateway/src/rpc.test.ts > createRuntimeRpc session lifecycle > session.create → session.send → session.run completes the full chain 7ms
+ ✓ packages/gateway/src/rpc.test.ts > createRuntimeRpc session lifecycle > session.create rejects an unknown agent 0ms
+ ✓ packages/gateway/src/rpc.test.ts > createRuntimeRpc session lifecycle > session.cancel aborts a blocked turn and settles with cancelled 1ms
+ ✓ packages/gateway/src/rpc.test.ts > createRuntimeRpc session lifecycle > session.cancel of a non-running turn reports not_running 0ms
+ ✓ packages/gateway/src/rpc.test.ts > createRuntimeRpc session lifecycle > session.steer admits a steering prompt without touching the transcript 11ms
+ ✓ packages/gateway/src/rpc.test.ts > createRuntimeRpc session lifecycle > session.followup queues a follow-up turn and surfaces it in session.status 54ms
+ ✓ packages/gateway/src/rpc.test.ts > createRuntimeRpc session lifecycle > session.followup on an idle actor automatically runs its own turn 52ms
+ ✓ packages/gateway/src/rpc.test.ts > createRuntimeRpc session lifecycle > session.interrupt reports not_running when no turn is active 1ms
+ ✓ packages/gateway/src/rpc.test.ts > createRuntimeRpc session lifecycle > session.send is refused with SESSION_BUSY while a turn is active (P25-3) 1ms
+ ✓ packages/gateway/src/rpc.test.ts > createRuntimeRpc session lifecycle > session.run rejects a concurrent duplicate run of the same turn 1ms
+ ✓ packages/gateway/src/rpc.test.ts > createRuntimeRpc session lifecycle > session.resume returns the session; unknown session rejects structured 0ms
+ ✓ packages/gateway/src/rpc.test.ts > createRuntimeRpc approval (plan §161) > session.approve allow records the decision and decidedBy 1ms
+ ✓ packages/gateway/src/rpc.test.ts > createRuntimeRpc approval (plan §161) > session.approve deny resolves deny 0ms
+ ✓ packages/gateway/src/rpc.test.ts > createRuntimeRpc approval (plan §161) > session.approve past expiresAt resolves expired even for allow 0ms
+ ✓ packages/gateway/src/rpc.test.ts > createRuntimeRpc approval (plan §161) > session.approve of an unknown approval rejects structured 0ms
+ ✓ packages/gateway/src/rpc.test.ts > createRuntimeRpc approval (plan §161) > session.approve rejects an invalid value 0ms
+ ✓ packages/gateway/src/rpc.test.ts > createRuntimeRpc listings, trace, subscribe > agent.list / tool.list / skill.list return host data 0ms
+ ✓ packages/gateway/src/rpc.test.ts > createRuntimeRpc listings, trace, subscribe > tool.list without a host provider rejects structured 0ms
+ ✓ packages/gateway/src/rpc.test.ts > createRuntimeRpc listings, trace, subscribe > trace.get returns the session event log 0ms
+ ✓ packages/gateway/src/rpc.test.ts > createRuntimeRpc listings, trace, subscribe > session.subscribe returns a snapshot filtered by afterSequence 0ms
+ ✓ packages/gateway/src/rpc.test.ts > concurrency and transport > concurrent runs on one runtime: cancelling one leaves the other intact 2ms
+ ✓ packages/gateway/src/rpc.test.ts > concurrency and transport > transport round-trips requests and propagates structured errors 0ms
+ ✓ packages/gateway/src/rpc.test.ts > concurrency and transport > transport propagates the caller AbortSignal into session.run 0ms
+ ✓ packages/tools/src/transaction.test.ts > P2-26 WorkspaceChangeTransaction > creates files on commit and rollback removes them 9ms
+ ✓ packages/tools/src/transaction.test.ts > P2-26 WorkspaceChangeTransaction > rollback restores byte-for-byte overwritten content 5ms
+ ✓ packages/tools/src/transaction.test.ts > P2-26 WorkspaceChangeTransaction > rollback removes a generated path that did not exist before the txn 2ms
+ ✓ packages/tools/src/transaction.test.ts > P2-26 WorkspaceChangeTransaction > supports nested create via parent dirs 3ms
+ ✓ packages/tools/src/transaction.test.ts > P2-26 WorkspaceChangeTransaction > resolves relative paths against root and rejects escapes 1ms
+ ✓ packages/tools/src/transaction.test.ts > P2-26 WorkspaceChangeTransaction > rejects a directory as a transaction target 1ms
+ ✓ packages/tools/src/transaction.test.ts > P2-26 WorkspaceChangeTransaction > blocks snapshot/commit after the transaction finished 2ms
+ ✓ packages/tools/src/transaction.test.ts > P2-26 WorkspaceChangeTransaction > all-or-nothing: a failed commit rolls back earlier writes 3ms
+ ✓ packages/tools/src/transaction.test.ts > P2-26 WorkspaceChangeTransaction > rollback is idempotent 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  apps/cli/src/final-question.regressions.test.ts > Ctrl-C while waiting for an answer cancels the actual parked turn without answering it
+AssertionError: expected [ Array(1) ] to include 'status: cancelled'
+ ❯ apps/cli/src/final-question.regressions.test.ts:80:59
+     78|     const session = await deps.rpc.request("session.create", { agentId…
+     79|     const result = await runSessionTurn(session, "choose target", deps…
+     80|     expect(result.exitCode).toBe(1); expect(result.lines).toContain("s…
+       |                                                           ^
+     81|     expect((await deps.store.listTurns(session.id))[0]!.status).toBe("…
+     82|     expect((await deps.store.listMessages(session.id)).some(message =>…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 5 passed (6)
+      Tests  1 failed | 54 passed (55)
+   Start at  17:15:27
+   Duration  5.11s (transform 2.29s, setup 0ms, import 3.79s, tests 620ms, environment 1ms)
+

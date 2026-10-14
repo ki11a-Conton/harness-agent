@@ -1,0 +1,28 @@
+{
+  "status": "PASS",
+  "sourceSha": "88504f013eec54f1ae0328783345c8c4cf8265e3",
+  "sourceTree": "8860e33ee19ef14f6bef8504bdc57f19b915bc37",
+  "platform": "linux",
+  "node": "v24.19.0",
+  "assertions": [
+    "EOF actually leaves the question paused",
+    "the prior approved write actually landed",
+    "installed CLI restart answers and completes the original turn",
+    "original changed-file summary survives process restart",
+    "original actual tool counter survives process restart",
+    "answer is present exactly once in the real resumed HTTP request",
+    "the real answer reaches the model",
+    "resuming never re-executes the original write",
+    "the installed CLI actually executes the approved local program",
+    "synthetic credential is absent from real model-facing tool output",
+    "a real sanitized tool result reaches the model",
+    "durable production tool events retain no plaintext synthetic credential",
+    "fragmented stdout is represented by observable withheld events",
+    "pre-truncated preview is withheld",
+    "the original exec approval was resolved through production permission handling"
+  ],
+  "actualHttpRequests": 5,
+  "actualCliProcesses": 3,
+  "syntheticCredentialSha256": "f17e114cc5bd873c4e37ff293fe2ded9b146ec331dcee7c5ed5cc8c141eb0205",
+  "paidModelCalls": 0
+}

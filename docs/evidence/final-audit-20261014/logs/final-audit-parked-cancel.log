@@ -1,0 +1,29 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-final-audit-20261014
+
+ ↓ apps/cli/src/final-question.regressions.test.ts > answers a CLI model question and continues the same actual turn exactly once
+ ↓ apps/cli/src/final-question.regressions.test.ts > keeps an unanswered EOF question durable and answers it after CLI restart without a new task
+ × apps/cli/src/final-question.regressions.test.ts > Ctrl-C while waiting for an answer cancels the actual parked turn without answering it 79ms
+   → agent run failed: question cancellation did not commit; inspect the persisted turn before retrying: expected [ Array(1) ] to include 'status: cancelled'
+ ↓ apps/cli/src/final-question.regressions.test.ts > one real terminal queue routes question answers and later approvals to their own owners
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  apps/cli/src/final-question.regressions.test.ts > Ctrl-C while waiting for an answer cancels the actual parked turn without answering it
+AssertionError: agent run failed: question cancellation did not commit; inspect the persisted turn before retrying: expected [ Array(1) ] to include 'status: cancelled'
+ ❯ apps/cli/src/final-question.regressions.test.ts:80:84
+     78|     const session = await deps.rpc.request("session.create", { agentId…
+     79|     const result = await runSessionTurn(session, "choose target", deps…
+     80|     expect(result.exitCode).toBe(1); expect(result.lines, result.lines…
+       |                                                                                    ^
+     81|     expect((await deps.store.listTurns(session.id))[0]!.status).toBe("…
+     82|     expect((await deps.store.listMessages(session.id)).some(message =>…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 skipped (4)
+   Start at  17:17:43
+   Duration  2.95s (transform 2.16s, setup 0ms, import 2.74s, tests 80ms, environment 0ms)
+

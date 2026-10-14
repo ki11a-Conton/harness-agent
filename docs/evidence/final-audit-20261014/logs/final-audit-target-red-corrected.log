@@ -1,0 +1,130 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-final-audit-20261014
+
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ × packages/harness/src/tool-event-security.regressions.test.ts > protects real production tool events, including split credentials and capped previews (durable=false) 27ms
+   → expected '[{"id":"event_8248d4f5-3afc-483e-9285…' not to contain 'sk-a19ba19ba19ba19ba19ba19ba19ba19ba1…'
+ × packages/harness/src/tool-event-security.regressions.test.ts > protects real production tool events, including split credentials and capped previews (durable=true) 16ms
+   → expected '[{"id":"event_52b9e53a-5f4a-4abb-a84a…' not to contain 'sk-a19ba19ba19ba19ba19ba19ba19ba19ba1…'
+ × apps/cli/src/final-question.regressions.test.ts > answers a CLI model question and continues the same actual turn exactly once 63ms
+   → chat closed: session session_8c9a3c91-5431-48aa-84fc-b3d717f0dea1; resume with agent chat "/tmp/final-cli-question-PfSYAy" --resume session_8c9a3c91-5431-48aa-84fc-b3d717f0dea1: expected 1 to be +0 // Object.is equality
+ × apps/cli/src/final-question.regressions.test.ts > keeps an unanswered EOF question durable and answers it after CLI restart without a new task 34ms
+   → expected [] to have a length of 1 but got +0
+ × apps/cli/src/final-question.regressions.test.ts > Ctrl-C while waiting for an answer cancels the actual parked turn without answering it 25ms
+   → expected [ …(11) ] to include 'status: cancelled'
+ × apps/cli/src/final-question.regressions.test.ts > one real terminal queue routes question answers and later approvals to their own owners 70ms
+   → expected [] to deeply equal [ Array(1) ]
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  apps/cli/src/final-question.regressions.test.ts > answers a CLI model question and continues the same actual turn exactly once
+AssertionError: chat closed: session session_8c9a3c91-5431-48aa-84fc-b3d717f0dea1; resume with agent chat "/tmp/final-cli-question-PfSYAy" --resume session_8c9a3c91-5431-48aa-84fc-b3d717f0dea1: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ apps/cli/src/final-question.regressions.test.ts:36:54
+     34|     deps.chatHost = terminal(["implement target", "/quit"], questions,…
+     35|     const result = await runCommand(["chat", cwd], deps);
+     36|     expect(result.exitCode, result.lines.join("\n")).toBe(0); expect(q…
+       |                                                      ^
+     37|     const session = (await deps.store.listSessions())[0]!;
+     38|     const turns = await deps.store.listTurns(session.id); expect(turns…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  apps/cli/src/final-question.regressions.test.ts > keeps an unanswered EOF question durable and answers it after CLI restart without a new task
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ apps/cli/src/final-question.regressions.test.ts:61:81
+     59|     second.chatHost = terminal(["/quit"], questions, ["blue"]);
+     60|     const result = await runCommand(["chat", cwd, "--resume", session!…
+     61|     expect(result.exitCode, result.lines.join("\n")).toBe(0); expect(q…
+       |                                                                                 ^
+     62|     expect(await second.store.listTurns(session!.id)).toHaveLength(1);
+     63|     expect((await second.store.listTurns(session!.id))[0]!.status).toB…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  apps/cli/src/final-question.regressions.test.ts > Ctrl-C while waiting for an answer cancels the actual parked turn without answering it
+AssertionError: expected [ …(11) ] to include 'status: cancelled'
+ ❯ apps/cli/src/final-question.regressions.test.ts:80:59
+     78|     const session = await deps.rpc.request("session.create", { agentId…
+     79|     const result = await runSessionTurn(session, "choose target", deps…
+     80|     expect(result.exitCode).toBe(1); expect(result.lines).toContain("s…
+       |                                                           ^
+     81|     expect((await deps.store.listTurns(session.id))[0]!.status).toBe("…
+     82|     expect((await deps.store.listMessages(session.id)).some(message =>…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+ FAIL  apps/cli/src/final-question.regressions.test.ts > one real terminal queue routes question answers and later approvals to their own owners
+AssertionError: expected [] to deeply equal [ Array(1) ]
+
+- Expected
++ Received
+
+- [
+-   "[user reply to your question]
+- blue",
+- ]
++ []
+
+ ❯ apps/cli/src/final-question.regressions.test.ts:96:136
+     94|     expect((await runCommand(["chat", cwd], deps)).exitCode).toBe(0);
+     95|     const session = (await deps.store.listSessions())[0]!;
+     96|     expect((await deps.store.listMessages(session.id)).filter(message …
+       |                                                                                                                                        ^
+     97|     const approvals = await deps.events.list(session.id); expect(appro…
+     98|     const { access } = await import("node:fs/promises"); await expect(…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯
+
+ FAIL  packages/harness/src/tool-event-security.regressions.test.ts > protects real production tool events, including split credentials and capped previews (durable=false)
+AssertionError: expected '[{"id":"event_8248d4f5-3afc-483e-9285…' not to contain 'sk-a19ba19ba19ba19ba19ba19ba19ba19ba1…'
+
+Expected: "sk-a19ba19ba19ba19ba19ba19ba19ba19ba19ba19ba19ba19b"
+Received: "[{"id":"event_8248d4f5-3afc-483e-9285-817fbf9d019e","sessionId":"session_f9b9bb89-b54a-42fc-a774-17df61f534c9","turnId":"turn_1b36d50f-8155-4511-9e07-660249e84eab","sequence":1,"timestamp":1791910884707,"type":"tool.permission_resolved","payload":{"toolCallId":"toolcall_fcfee2f5-6242-457c-87a0-5ee04c8cbf2c","tool":"emit_test_output","effect":"allow","reason":"no rule matched read:tool; fallback 'allow'"},"schemaVersion":1},{"id":"event_3edee943-bc2b-4892-888c-971e2dccf926","sessionId":"session_f9b9bb89-b54a-42fc-a774-17df61f534c9","turnId":"turn_1b36d50f-8155-4511-9e07-660249e84eab","sequence":2,"timestamp":1791910884708,"type":"tool.started","payload":{"toolCallId":"toolcall_fcfee2f5-6242-457c-87a0-5ee04c8cbf2c","tool":"emit_test_output"},"schemaVersion":1},{"id":"event_ddb06931-3cda-40db-b629-e3affee976e2","sessionId":"session_f9b9bb89-b54a-42fc-a774-17df61f534c9","turnId":"turn_1b36d50f-8155-4511-9e07-660249e84eab","sequence":3,"timestamp":1791910884708,"type":"tool.completed","payload":{"toolCallId":"toolcall_fcfee2f5-6242-457c-87a0-5ee04c8cbf2c","tool":"emit_test_output","status":"success","durationMs":1,"evidence":[{"type":"file","description":"API_KEY=sk-a19ba19ba19ba19ba19ba19ba19ba19ba19ba19ba19ba19b","source":"/tmp/final-tool-event-E1iJyt","timestamp":1791910884708}],"outputPreview":"{\"stdout\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxAPI_KEY=s"},"schemaVersion":1}]"
+
+ ❯ packages/harness/src/tool-event-security.regressions.test.ts:33:71
+     31|     expect(result.status).toBe("success");
+     32|     const events = await harness.events.list(sessionId);
+     33|     const serialized = JSON.stringify(events); expect(serialized).not.…
+       |                                                                       ^
+     34|     const replayed = events.filter(event => event.type === "tool.outpu…
+     35|     expect(replayed).not.toContain(secret); expect(replayed).not.toCon…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯
+
+ FAIL  packages/harness/src/tool-event-security.regressions.test.ts > protects real production tool events, including split credentials and capped previews (durable=true)
+AssertionError: expected '[{"id":"event_52b9e53a-5f4a-4abb-a84a…' not to contain 'sk-a19ba19ba19ba19ba19ba19ba19ba19ba1…'
+
+Expected: "sk-a19ba19ba19ba19ba19ba19ba19ba19ba19ba19ba19ba19b"
+Received: "[{"id":"event_52b9e53a-5f4a-4abb-a84a-98d6a12d657d","sessionId":"session_3da8b4d2-ad17-49da-b047-15265a1c89ce","turnId":"turn_aa1b5358-b7f7-4a41-bfd7-4c576383cf13","sequence":0,"timestamp":1791910884725,"type":"tool.permission_resolved","payload":{"toolCallId":"toolcall_88b3d89f-8f1c-4a5d-9d5e-62e6bff1495b","tool":"emit_test_output","effect":"allow","reason":"no rule matched read:tool; fallback 'allow'"},"schemaVersion":1},{"id":"event_0aa3c6a8-93f7-4942-9110-48c796b61be6","sessionId":"session_3da8b4d2-ad17-49da-b047-15265a1c89ce","turnId":"turn_aa1b5358-b7f7-4a41-bfd7-4c576383cf13","sequence":1,"timestamp":1791910884727,"type":"tool.started","payload":{"toolCallId":"toolcall_88b3d89f-8f1c-4a5d-9d5e-62e6bff1495b","tool":"emit_test_output"},"schemaVersion":1},{"id":"event_c22abf16-d886-4cce-9f75-d55a8a0ccf14","sessionId":"session_3da8b4d2-ad17-49da-b047-15265a1c89ce","turnId":"turn_aa1b5358-b7f7-4a41-bfd7-4c576383cf13","sequence":2,"timestamp":1791910884727,"type":"tool.completed","payload":{"toolCallId":"toolcall_88b3d89f-8f1c-4a5d-9d5e-62e6bff1495b","tool":"emit_test_output","status":"success","durationMs":2,"evidence":[{"type":"file","description":"API_KEY=sk-a19ba19ba19ba19ba19ba19ba19ba19ba19ba19ba19ba19b","source":"/tmp/final-tool-event-DQUHRK","timestamp":1791910884727}],"outputPreview":"{\"stdout\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxAPI_KEY=s"},"schemaVersion":1}]"
+
+ ❯ packages/harness/src/tool-event-security.regressions.test.ts:33:71
+     31|     expect(result.status).toBe("success");
+     32|     const events = await harness.events.list(sessionId);
+     33|     const serialized = JSON.stringify(events); expect(serialized).not.…
+       |                                                                       ^
+     34|     const replayed = events.filter(event => event.type === "tool.outpu…
+     35|     expect(replayed).not.toContain(secret); expect(replayed).not.toCon…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/6]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  6 failed (6)
+   Start at  17:01:22
+   Duration  3.69s (transform 2.28s, setup 0ms, import 3.18s, tests 238ms, environment 0ms)
+

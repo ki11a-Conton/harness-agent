@@ -1,0 +1,96 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-final-audit-20261014
+
+ ❯ packages/core/src/runtime/final-continuation.regressions.test.ts (8 tests | 5 failed) 42ms
+   × preserves original files, actual counters and effect classification across a question (restart=false) 20ms
+   × preserves original files, actual counters and effect classification across a question (restart=true) 3ms
+   × answering a question does not refresh the consumed tool budget 4ms
+   ✓ cancelled continuation retains the previously committed effect ledger 2ms
+   × preserves spent execution duration while excluding human waiting time 3ms
+   × parallel sessions checkpoint their own live budget, including after another turn finishes 5ms
+   ✓ refuses direct replay of an actual completed turn without calling the model or tool again 3ms
+   ✓ refuses direct replay of an actual cancelled turn without calling the model or tool again 1ms
+ ✓ apps/cli/src/final-question.regressions.test.ts (4 tests) 252ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/core/src/runtime/final-continuation.regressions.test.ts > preserves original files, actual counters and effect classification across a question (restart=false)
+ FAIL  packages/core/src/runtime/final-continuation.regressions.test.ts > preserves original files, actual counters and effect classification across a question (restart=true)
+AssertionError: expected 2 to be 3 // Object.is equality
+
+- Expected
++ Received
+
+- 3
++ 2
+
+ ❯ packages/core/src/runtime/final-continuation.regressions.test.ts:42:122
+     40|   const outcome = await runtime.runTurn(session.id, turn.id, new Abort…
+     41|   expect(outcome.status).toBe("completed");
+     42|   expect(outcome.state.filesChanged).toEqual(["app.txt"]); expect(outc…
+       |                                                                                                                          ^
+     43|   expect(input.orchestrator.calls).toHaveLength(1); expect(await input…
+     44| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  packages/core/src/runtime/final-continuation.regressions.test.ts > answering a question does not refresh the consumed tool budget
+AssertionError: expected [ { request: { …(9) } }, …(1) ] to have a length of 1 but got 2
+
+- Expected
++ Received
+
+- 1
++ 2
+
+ ❯ packages/core/src/runtime/final-continuation.regressions.test.ts:51:94
+     49|   const outcome = await input.runtime.runTurn(session.id, turn.id, new…
+     50|   expect(outcome.status).toBe("failed"); expect(outcome.error?.code).t…
+     51|   expect(outcome.statusDetail).toBe("failed_with_effects"); expect(inp…
+       |                                                                                              ^
+     52|   expect(outcome.state.filesChanged).toEqual(["first.txt"]);
+     53| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  packages/core/src/runtime/final-continuation.regressions.test.ts > preserves spent execution duration while excluding human waiting time
+AssertionError: expected 'completed' to be 'failed' // Object.is equality
+
+Expected: "failed"
+Received: "completed"
+
+ ❯ packages/core/src/runtime/final-continuation.regressions.test.ts:71:26
+     69|   const input = setup(provider, { maxDurationMs: 10 }); const { sessio…
+     70|   const outcome = await input.runtime.runTurn(session.id, turn.id, new…
+     71|   expect(outcome.status).toBe("failed"); expect(outcome.terminationRea…
+       |                          ^
+     72| });
+     73|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  packages/core/src/runtime/final-continuation.regressions.test.ts > parallel sessions checkpoint their own live budget, including after another turn finishes
+AssertionError: expected +0 to be 1 // Object.is equality
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ packages/core/src/runtime/final-continuation.regressions.test.ts:94:56
+     92|     allowA(); expect((await runningA).status).toBe("completed");
+     93|     const checkpoint = (await checkpoints.list(a.id)).find(value => va…
+     94|     expect(checkpoint.budgetUsage?.run?.usedToolCalls).toBe(1);
+       |                                                        ^
+     95|   } finally { allowB(); await runningB; }
+     96| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  5 failed | 7 passed (12)
+   Start at  00:19:06
+   Duration  3.09s (transform 1.99s, setup 0ms, import 2.57s, tests 293ms, environment 0ms)
+

@@ -1,0 +1,262 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-final-audit-20261014
+
+ × packages/tools/src/transaction-final.regressions.test.ts > refuses a real ancestor directory link before it can read or overwrite an outside file 27ms
+   → promise resolved "WorkspaceChangeTransaction{ …(5) }" instead of rejecting
+ × packages/tools/src/transaction-final.regressions.test.ts > rechecks ancestors after snapshot and before commit or rollback 7ms
+   → promise resolved "{ state: 'committed', …(1) }" instead of rejecting
+ × packages/tools/src/transaction-final.regressions.test.ts > refuses bytes that cannot round-trip through the transaction's encoding before any edit 3ms
+   → promise resolved "WorkspaceChangeTransaction{ …(5) }" instead of rejecting
+ × packages/tools/src/transaction-final.regressions.test.ts > preserves executable mode through both commit and rollback 3ms
+   → expected 384 to be 493 // Object.is equality
+ × packages/tools/src/transaction-final.regressions.test.ts > a failed snapshot batch keeps the previous intents without staging a partial new batch 3ms
+   → expected [ 'earlier.txt', 'partial.txt' ] to deeply equal [ 'earlier.txt' ]
+ × packages/tools/src/transaction-final.regressions.test.ts > metadata I/O failure is propagated, rather than classified as an absent file 3ms
+   → promise resolved "WorkspaceChangeTransaction{ …(5) }" instead of rejecting
+ × packages/harness/src/tool-event-security.regressions.test.ts > protects real production tool events, including split credentials and capped previews (durable=false) 15ms
+   → Cannot read properties of undefined (reading 'modelId')
+ × packages/harness/src/tool-event-security.regressions.test.ts > protects real production tool events, including split credentials and capped previews (durable=true) 3ms
+   → Cannot read properties of undefined (reading 'modelId')
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  apps/cli/src/final-question.regressions.test.ts [ apps/cli/src/final-question.regressions.test.ts ]
+Error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected `}` but found `EOF`
+    [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m apps/cli/src/final-question.regressions.test.ts:99:5 [38;5;246m][0m
+    [38;5;246m│[0m
+ [38;5;246m16 │[0m [38;5;249mf[0m[38;5;249mu[0m[38;5;249mn[0m[38;5;249mc[0m[38;5;249mt[0m[38;5;249mi[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249m [0m[38;5;249mp[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mv[0m[38;5;249mi[0m[38;5;249md[0m[38;5;249me[0m[38;5;249mr[0m[38;5;249m([0m[38;5;249ms[0m[38;5;249mc[0m[38;5;249mr[0m[38;5;249mi[0m[38;5;249mp[0m[38;5;249mt[0m[38;5;249m:[0m[38;5;249m [0m[38;5;249mC[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249mr[0m[38;5;249mu[0m[38;5;249mc[0m[38;5;249mt[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mP[0m[38;5;249ma[0m[38;5;249mr[0m[38;5;249ma[0m[38;5;249mm[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249me[0m[38;5;249mr[0m[38;5;249ms[0m[38;5;249m<[0m[38;5;249mt[0m[38;5;249my[0m[38;5;249mp[0m[38;5;249me[0m[38;5;249mo[0m[38;5;249mf[0m[38;5;249m [0m[38;5;249mS[0m[38;5;249mc[0m[38;5;249mr[0m[38;5;249mi[0m[38;5;249mp[0m[38;5;249mt[0m[38;5;249me[0m[38;5;249md[0m[38;5;249mM[0m[38;5;249mo[0m[38;5;249md[0m[38;5;249me[0m[38;5;249ml[0m[38;5;249mP[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mv[0m[38;5;249mi[0m[38;5;249md[0m[38;5;249me[0m[38;5;249mr[0m[38;5;249m>[0m[38;5;249m[[0m[38;5;249m0[0m[38;5;249m][0m[38;5;249m,[0m[38;5;249m [0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mq[0m[38;5;249mu[0m[38;5;249me[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249ms[0m[38;5;249m:[0m[38;5;249m [0m[38;5;249mM[0m[38;5;249mo[0m[38;5;249md[0m[38;5;249me[0m[38;5;249ml[0m[38;5;249mR[0m[38;5;249me[0m[38;5;249mq[0m[38;5;249mu[0m[38;5;249me[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249m[[0m[38;5;249m][0m[38;5;249m)[0m[38;5;249m [0m{
+ [38;5;240m   │[0m                                                                                                             ┬  
+ [38;5;240m   │[0m                                                                                                             ╰── Opened here
+ [38;5;240m   │[0m 
+ [38;5;246m99 │[0m [38;5;249m}[0m[38;5;249m)[0m[38;5;249m;[0m
+ [38;5;240m   │[0m     │ 
+ [38;5;240m   │[0m     ╰─ `}` expected
+[38;5;246m────╯[0m
+
+  Plugin: vite:oxc
+  File: /workspace/harness-agent-final-audit-20261014/apps/cli/src/final-question.regressions.test.ts
+ ❯ transformWithOxc node_modules/.pnpm/vite@8.2.1_@types+node@26.2.0/node_modules/vite/dist/node/chunks/node.js:4097:19
+ ❯ TransformPluginContext.transform node_modules/.pnpm/vite@8.2.1_@types+node@26.2.0/node_modules/vite/dist/node/chunks/node.js:4168:26
+ ❯ EnvironmentPluginContainer.transform node_modules/.pnpm/vite@8.2.1_@types+node@26.2.0/node_modules/vite/dist/node/chunks/node.js:30851:51
+ ❯ loadAndTransform node_modules/.pnpm/vite@8.2.1_@types+node@26.2.0/node_modules/vite/dist/node/chunks/node.js:20619:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/9]⎯
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/harness/src/tool-event-security.regressions.test.ts > protects real production tool events, including split credentials and capped previews (durable=false)
+ FAIL  packages/harness/src/tool-event-security.regressions.test.ts > protects real production tool events, including split credentials and capped previews (durable=true)
+TypeError: Cannot read properties of undefined (reading 'modelId')
+ ❯ packages/model/src/capability-resolver.ts:18:74
+     16|   overrides?: Partial<ModelCapabilities>,
+     17| ): ModelCapabilities {
+     18|   const known = KNOWN_MODEL_CAPABILITIES.find((entry) => entry.match(r…
+       |                                                                          ^
+     19|   return {
+     20|     ...(known ?? {}),
+ ❯ resolveCapabilities packages/model/src/capability-resolver.ts:18:42
+ ❯ resolveContextBudget packages/harness/src/compose/compose-context.ts:144:16
+ ❯ composeContext packages/harness/src/compose/compose-context.ts:82:38
+ ❯ createHarness packages/harness/src/create-harness.ts:324:19
+ ❯ packages/harness/src/tool-event-security.regressions.test.ts:15:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/9]⎯
+
+ FAIL  packages/tools/src/transaction-final.regressions.test.ts > refuses a real ancestor directory link before it can read or overwrite an outside file
+AssertionError: promise resolved "WorkspaceChangeTransaction{ …(5) }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ WorkspaceChangeTransaction {
++   "_state": "open",
++   "changes": [
++     {
++       "absolutePath": "/tmp/final-transaction-q2DP8C/project/link/secret.txt",
++       "after": {
++         "bytes": 19,
++         "content": "outside overwritten",
++         "exists": true,
++       },
++       "before": {
++         "bytes": 17,
++         "content": "outside untouched",
++         "exists": true,
++       },
++       "kind": "write",
++       "path": "link/secret.txt",
++     },
++   ],
++   "encoding": "utf8",
++   "root": "/tmp/final-transaction-q2DP8C/project",
++   "rootLabel": "/tmp/final-transaction-q2DP8C/project",
+  }
+
+ ❯ packages/tools/src/transaction-final.regressions.test.ts:19:92
+     17|   await directoryLink(outside, join(workspace, "link"));
+     18|   const txn = new WorkspaceChangeTransaction({ root: workspace });
+     19|   await expect(txn.snapshot([{ path: "link/secret.txt", content: "outs…
+       |                                                                                            ^
+     20|   expect(txn.entries()).toEqual([]); expect(await fs.readFile(join(out…
+     21| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/9]⎯
+
+ FAIL  packages/tools/src/transaction-final.regressions.test.ts > rechecks ancestors after snapshot and before commit or rollback
+AssertionError: promise resolved "{ state: 'committed', …(1) }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "applied": [
++     "/tmp/final-transaction-1Lcaj6/project/src/a.txt",
++   ],
++   "state": "committed",
+  }
+
+ ❯ packages/tools/src/transaction-final.regressions.test.ts:28:29
+     26|   const txn = new WorkspaceChangeTransaction({ root: workspace }); awa…
+     27|   await fs.rename(directory, join(workspace, "original-src")); await d…
+     28|   await expect(txn.commit()).rejects.toThrow(); await expect(txn.rollb…
+       |                             ^
+     29|   expect(await fs.readFile(join(outside, "a.txt"), "utf8")).toBe("exte…
+     30| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/9]⎯
+
+ FAIL  packages/tools/src/transaction-final.regressions.test.ts > refuses bytes that cannot round-trip through the transaction's encoding before any edit
+AssertionError: promise resolved "WorkspaceChangeTransaction{ …(5) }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ WorkspaceChangeTransaction {
++   "_state": "open",
++   "changes": [
++     {
++       "absolutePath": "/tmp/final-transaction-IMSlAS/project/binary.dat",
++       "after": {
++         "bytes": 4,
++         "content": "text",
++         "exists": true,
++       },
++       "before": {
++         "bytes": 11,
++         "content": " ���A",
++         "exists": true,
++       },
++       "kind": "write",
++       "path": "binary.dat",
++     },
++   ],
++   "encoding": "utf8",
++   "root": "/tmp/final-transaction-IMSlAS/project",
++   "rootLabel": "/tmp/final-transaction-IMSlAS/project",
+  }
+
+ ❯ packages/tools/src/transaction-final.regressions.test.ts:35:72
+     33|   const { workspace } = await fixture(); const path = join(workspace, …
+     34|   await fs.writeFile(path, original); const txn = new WorkspaceChangeT…
+     35|   await expect(txn.snapshot([{ path: "binary.dat", content: "text" }])…
+       |                                                                        ^
+     36|   expect(txn.entries()).toEqual([]); expect(await fs.readFile(path)).t…
+     37| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/9]⎯
+
+ FAIL  packages/tools/src/transaction-final.regressions.test.ts > preserves executable mode through both commit and rollback
+AssertionError: expected 384 to be 493 // Object.is equality
+
+- Expected
++ Received
+
+- 493
++ 384
+
+ ❯ packages/tools/src/transaction-final.regressions.test.ts:42:66
+     40|   const { workspace } = await fixture(); const path = join(workspace, …
+     41|   const txn = new WorkspaceChangeTransaction({ root: workspace }); awa…
+     42|   await txn.commit(); expect((await fs.stat(path)).mode & 0o777).toBe(…
+       |                                                                  ^
+     43|   await txn.rollback(); expect((await fs.stat(path)).mode & 0o777).toB…
+     44| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/9]⎯
+
+ FAIL  packages/tools/src/transaction-final.regressions.test.ts > a failed snapshot batch keeps the previous intents without staging a partial new batch
+AssertionError: expected [ 'earlier.txt', 'partial.txt' ] to deeply equal [ 'earlier.txt' ]
+
+- Expected
++ Received
+
+  [
+    "earlier.txt",
++   "partial.txt",
+  ]
+
+ ❯ packages/tools/src/transaction-final.regressions.test.ts:50:50
+     48|   const txn = new WorkspaceChangeTransaction({ root: workspace }); awa…
+     49|   await expect(txn.snapshot([{ path: "partial.txt", content: "must not…
+     50|   expect(txn.entries().map(entry => entry.path)).toEqual(["earlier.txt…
+       |                                                  ^
+     51| });
+     52|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/9]⎯
+
+ FAIL  packages/tools/src/transaction-final.regressions.test.ts > metadata I/O failure is propagated, rather than classified as an absent file
+AssertionError: promise resolved "WorkspaceChangeTransaction{ …(5) }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ WorkspaceChangeTransaction {
++   "_state": "open",
++   "changes": [
++     {
++       "absolutePath": "/tmp/final-transaction-8MRxjK/project/a.txt",
++       "after": {
++         "bytes": 3,
++         "content": "new",
++         "exists": true,
++       },
++       "before": {
++         "exists": false,
++       },
++       "kind": "create",
++       "path": "a.txt",
++     },
++   ],
++   "encoding": "utf8",
++   "root": "/tmp/final-transaction-8MRxjK/project",
++   "rootLabel": "/tmp/final-transaction-8MRxjK/project",
+  }
+
+ ❯ packages/tools/src/transaction-final.regressions.test.ts:56:131
+     54|   const { workspace } = await fixture(); const error = Object.assign(n…
+     55|   vi.spyOn(fs, "stat").mockRejectedValue(error); vi.spyOn(fs, "lstat")…
+     56|   const txn = new WorkspaceChangeTransaction({ root: workspace }); awa…
+       |                                                                                                                                   ^
+     57|   expect(txn.entries()).toEqual([]);
+     58| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/9]⎯
+
+
+ Test Files  3 failed (3)
+      Tests  8 failed (8)
+   Start at  17:00:24
+   Duration  2.79s (transform 1.77s, setup 0ms, import 2.28s, tests 66ms, environment 0ms)
+
