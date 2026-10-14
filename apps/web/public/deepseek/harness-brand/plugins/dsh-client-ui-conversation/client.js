@@ -1,4 +1,4 @@
-// Harness Agent presentation derivative; original retained under plugins/.
+// Harness Agent UI derivative; original retained under plugins/.
 window.__ModuleLoader__.load({
 	id: "@deepseek-ai/dsh-client-ui-conversation",
 	factory: (require) => {
@@ -21047,6 +21047,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			const composerBlock = useComposerBlock((block) => block);
 			const [pickerOpen, setPickerOpen] = (0, react.useState)(false);
 			const [pendingWorkspaceId, setPendingWorkspaceId] = (0, react.useState)();
+			const workspaceSelection = (0, react.useRef)(0);
+			const [workspaceSelectionPending, setWorkspaceSelectionPending] = (0, react.useState)(false);
 			const pickerAnchor = (0, react.useRef)(null);
 			const seatObserver = (0, react.useRef)(null);
 			const seatResizeRef = (0, react.useCallback)((seat) => {
@@ -21097,8 +21099,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 						onPick: (workspaceId) => {
 							setPickerOpen(false);
 							setPendingWorkspaceId(workspaceId);
+							const selection = ++workspaceSelection.current;
+							setWorkspaceSelectionPending(true);
 							selectWorkspace(workspaceId).catch(() => {
 								setPendingWorkspaceId((current) => current === workspaceId ? void 0 : current);
+							}).finally(() => {
+								if (selection === workspaceSelection.current) setWorkspaceSelectionPending(false);
 							});
 						},
 						onClose: () => {
@@ -21108,7 +21114,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					renderSlot("conversation.hero.agentPreset", {})
 				]
 			});
-			const inert = sessionId === void 0 || hero && chipTitle === void 0;
+			const inert = workspaceSelectionPending || sessionId === void 0 || hero && chipTitle === void 0;
 			const inputBar = renderSlot("conversation.composer.bar", {
 				variant: hero ? "hero" : "composer",
 				...inert ? {

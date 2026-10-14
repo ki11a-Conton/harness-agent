@@ -1,4 +1,4 @@
-// Harness Agent presentation derivative; original retained under plugins/.
+// Harness Agent UI derivative; original retained under plugins/.
 window.__ModuleLoader__.load({
 	id: "@deepseek-ai/dsh-client-ui-workspace",
 	factory: (require) => {

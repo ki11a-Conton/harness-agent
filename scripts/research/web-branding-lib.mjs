@@ -55,6 +55,13 @@ export function deriveBrandModule(stem, original) {
     const badge = /, \(0, react_jsx_runtime\.jsx\)\("span", \{\s*className: HeroShell_module_css_default\.previewBadge,\s*children: t\("hero\.preview"\)\s*\}\)/g;
     if ([...source.matchAll(badge)].length !== 1) throw new Error('Expected exactly one home preview badge');
     source = source.replace(badge, '');
+    const state = 'const [pendingWorkspaceId, setPendingWorkspaceId] = (0, react.useState)();';
+    const pending = 'selectWorkspace(workspaceId).catch(() => {\n\t\t\t\t\t\t\t\tsetPendingWorkspaceId((current) => current === workspaceId ? void 0 : current);\n\t\t\t\t\t\t\t});';
+    const inert = 'const inert = sessionId === void 0 || hero && chipTitle === void 0;';
+    for (const pattern of [state, pending, inert]) if (source.split(pattern).length !== 2) throw new Error('Expected exactly one workspace composer selection boundary');
+    source = source.replace(state, state + '\n\t\t\tconst workspaceSelection = (0, react.useRef)(0);\n\t\t\tconst [workspaceSelectionPending, setWorkspaceSelectionPending] = (0, react.useState)(false);');
+    source = source.replace(pending, 'const selection = ++workspaceSelection.current;\n\t\t\t\t\t\t\tsetWorkspaceSelectionPending(true);\n\t\t\t\t\t\t\tselectWorkspace(workspaceId).catch(() => {\n\t\t\t\t\t\t\t\tsetPendingWorkspaceId((current) => current === workspaceId ? void 0 : current);\n\t\t\t\t\t\t\t}).finally(() => {\n\t\t\t\t\t\t\t\tif (selection === workspaceSelection.current) setWorkspaceSelectionPending(false);\n\t\t\t\t\t\t\t});');
+    source = source.replace(inert, 'const inert = workspaceSelectionPending || sessionId === void 0 || hero && chipTitle === void 0;');
   }
   if (stem === 'dsh-client-ui-settings-models') {
     let replaced = 0;
@@ -75,7 +82,8 @@ export function deriveBrandModule(stem, original) {
   }
   // Derived files have their own provenance, rather than claiming an original source map.
   source = source.replace(/\n\/\/# sourceMappingURL=[^\n]+/g, '');
-  return Buffer.from('// Harness Agent presentation derivative; original retained under plugins/.\n' + source);
+  const kind = ['dsh-client-ui-conversation', 'dsh-client-ui-workspace'].includes(stem) ? 'UI' : 'presentation';
+  return Buffer.from(`// Harness Agent ${kind} derivative; original retained under plugins/.\n` + source);
 }
 
 export function expectedBrandFiles(published) {

@@ -25,6 +25,7 @@
 | FA-17 | P2，归档字节完整性 | 本轮归档的 .log 未关闭 Git 换行转换；实际 core.autocrlf=true checkout 将最终全量日志由 137854 bytes 改为 139451 bytes，SHA-256 与 inventory 不符。 | 仅在本轮证据目录声明 -text；相同 Git checkout 复算恢复字节一致，记录 RED/GREEN，其他源码不改变换行策略。 |
 | FA-18 | P2，失败可见性 | N6 公共诊断不识别 RemoteFailure，并将真实错误与预期错误噪声放在同一优先级；实际 Node 进程重现错误原因被前 8 条注解挤掉。 | 识别以 Error/Failure 类名开头的真正异常，优先于降级噪声及通过标题；正反回归和原始失败保留。 |
 | FA-19 | P1，前端初始化导航 | 从实际冻结 npm bundle 提取原导航类，使用 gate 延迟初始化的 connectWorkspace，再打开另一会话或清空：旧初始化完成后覆盖新选择，可释放仍在发送的编辑器 scope。原始 Windows 安装验收也观察到两次 create、取消及 gateway/cancelled；两者关联仍由最终浏览器验收验证。 | 增加可复算的 workspace UI 派生模块，openSession/clearMain 撤销旧导航，保留原资产、版权和完整性检查；原代码两处确定复现、修复后两处通过。浏览器通过真实工作区选择确立当前导航，使用实际可编辑元素后发送，保持所有 RPC、工具审批及实体文件断言。 |
+| FA-20 | P1，发送到旧工作区会话 | 冻结的实际 conversation 模块将 pendingWorkspace 标题当作编辑器可用的依据，却不等待 selectWorkspace 完成。原 handler/就绪谓词在被 gate 阻塞的选择请求中确定允许旧 session 发送；选择同一工作区创建新空白会话也如此。d0d30275 的 Windows 安装 UI 仍捕获 gateway/cancelled，此候选不发布。 | 编辑器和发送按钮在实际选择 Promise 完成前保持 inert；递增选择编号，旧请求完成不能提前解锁新选择；拒绝后恢复旧编辑器。新增实际 bundle handler/predicate 的四项回归，保留全部真实 UI 编程断言；需要最终两平台安装验收。 |
 
 ## 初始检查
 
