@@ -1,0 +1,54 @@
+✔ original late initialization overwrites a newer open action (3.462946ms)
+✔ reviewed actual UI navigation preserves a newer open action (6.198396ms)
+✔ original late initialization overwrites a newer clear action (2.1021ms)
+✔ reviewed actual UI navigation preserves a newer clear action (3.76503ms)
+✔ original optimistic workspace label permits sending to the old session before selection settles (6.511097ms)
+✖ reviewed actual composer blocks the same-workspace replacement until its real promise settles (4.647325ms)
+✖ an older selection completing cannot unlock a newer pending workspace choice (3.856657ms)
+✖ a rejected latest selection restores the previous editor and clears its optimistic label (3.588444ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 5
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 196.080102
+
+✖ failing tests:
+
+test at scripts/research/web-workspace-composer.test.mjs:33:1
+✖ reviewed actual composer blocks the same-workspace replacement until its real promise settles (4.647325ms)
+  Error: Expected exactly one workspace composer selection boundary
+      at deriveBrandModule (file:///workspace/harness-agent-release-v110-20261014/scripts/research/web-branding-lib.mjs:61:98)
+      at TestContext.<anonymous> (file:///workspace/harness-agent-release-v110-20261014/scripts/research/web-workspace-composer.test.mjs:34:26)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+
+test at scripts/research/web-workspace-composer.test.mjs:39:1
+✖ an older selection completing cannot unlock a newer pending workspace choice (3.856657ms)
+  Error: Expected exactly one workspace composer selection boundary
+      at deriveBrandModule (file:///workspace/harness-agent-release-v110-20261014/scripts/research/web-branding-lib.mjs:61:98)
+      at TestContext.<anonymous> (file:///workspace/harness-agent-release-v110-20261014/scripts/research/web-workspace-composer.test.mjs:40:26)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+
+test at scripts/research/web-workspace-composer.test.mjs:44:1
+✖ a rejected latest selection restores the previous editor and clears its optimistic label (3.588444ms)
+  Error: Expected exactly one workspace composer selection boundary
+      at deriveBrandModule (file:///workspace/harness-agent-release-v110-20261014/scripts/research/web-branding-lib.mjs:61:98)
+      at TestContext.<anonymous> (file:///workspace/harness-agent-release-v110-20261014/scripts/research/web-workspace-composer.test.mjs:45:26)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)

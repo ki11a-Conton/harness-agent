@@ -1,0 +1,38 @@
+[
+  {
+    "path": ".github",
+    "blob_href": "https://github.com/ki11a-Conton/harness-agent/blob/b65801e49a6991853867106c77d968d7dec2c074/.github",
+    "start_line": 13,
+    "start_column": null,
+    "end_line": 13,
+    "end_column": null,
+    "annotation_level": "warning",
+    "title": "",
+    "message": "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-node@v4, actions/upload-artifact@v4, pnpm/action-setup@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/",
+    "raw_details": ""
+  },
+  {
+    "path": ".github",
+    "blob_href": "https://github.com/ki11a-Conton/harness-agent/blob/b65801e49a6991853867106c77d968d7dec2c074/.github",
+    "start_line": 17,
+    "start_column": null,
+    "end_line": 17,
+    "end_column": null,
+    "annotation_level": "notice",
+    "title": "Coverage gate record",
+    "message": "{\"schemaVersion\":\"2.0.0\",\"gate\":\"coverage\",\"gitSha\":\"b65801e49a6991853867106c77d968d7dec2c074\",\"cleanBefore\":true,\"cleanAfter\":true,\"exitCode\":0,\"passed\":true,\"state\":\"passed\",\"summary\":\"coverage: PASS (exit 0)\",\"errorSummary\":\"exitCode=0 (ok)\\n\\u001b[32m✓\\u001b[39m apps/cli/src/e4-r55-failure-wiring.test.ts \\u001b[2m(\\u001b[22m\\u001b[2m65 tests\\u001b[22m\\u001b[2m)\\u001b[22m\\u001b[33m 31540\\u001b[2mms\\u001b[22m\\u001b[39m\\n\\u001b[33m\\u001b[2m✓\\u001b[22m\\u001b[39m drives the real chain, judges its failure evidence, and requires an order mutation to break the acceptance \\u001b[33m 26683\\u001b[2mms\\u001b[22m\\u001b[39m\\n\\u001b[33m\\u001b[2m✓\\u001b[22m\\u001b[39m E4-04: runCase produces a real security_outcome (clean vs missing-evidence) \\u001b[33m 537\\u001b[2mms\\u001b[22m\\u001b[39m\\n\\u001b[33m\\u001b[2m✓\\u001b[22m\\u001b[39m records a verification failure when the model stops without fixing the task \\u001b[33m 618\\u001b[2mms\\u001b[22m\\u001b[39m\\n\\u001b[33m\\u001b[2m✓\\u001b[22m\\u001b[39m wires sources.memory into a real store and the memory.retrieved event fires (judged via expectedEvents) \\u001b[33m 631\\u001b[2mms\\u001b[22m\\u001b[39m\\n\\u001b[33m\\u001b[2m✓\\u001b[22m\\u001b[39m F81-1: the keyless billed plan still fails closed at EXECUTION without authorization \\u001b[33m 309\\u001b[2mms\\u001b[22m\\u001b[39m\\n\\u001b[33m\\u001b[2m✓\\u001b[22m\\u001b[39m a case MISSING from the arm is refused — never borrowed from the driver repo (T4 怎么做 7) \\u001b[33m 1090\\u001b[2mms\\u001b[22m\\u001b[39m\\n\\u001b[33m\\u001b[2m✓\\u001b[22m\\u001b[39m a SETTLEMENT write failure on an ENTERED call is refused as `budget` and the allowance is NOT refunded \\u001b[33m 1103\\u001b[2mms\\u001b[22m\\u001b[39m\\n\\u001b[33m\\u001b[2m✓\\u001b[22m\\u001b[39m PROTOCOL FIXTURE: a FAILED dry run ends the unit BEFORE any dispatch \\u001b[33m 930\\u001b[2mms\\u001b[22m\\u001b[39m\\n\\u001b[33m\\u001b[2m✓\\u001b[22m\\u001b[39m PROTOCOL FIXTURE: a LEGITIMATE negative stays `case_failed`, not infrastructure \\u001b[33m 997\\u001b[2mms\\u001b[22m\\u001b[39m\\n\\u001b[33m\\u001b[2m✓\\u001b[22m\\u001b[39m [F3.12] a genuine zero needs independent zero evidence; a missing request is never 0 \\u001b[33m 426\\u001b[2mms\\u001b[22m\\u001b[39m\\n\\u001b[33m\\u001b[2m✓\\u001b[22m\\u001b[39m model.error with recovery policy retries and then completes \\u001b[33m 507\\u001b[2mms\\u001b[22m\\u001b[39m\\n\\u001b[33m\\u001b[2m✓\\u001b[22m\\u001b[39m exhausted retries turn.failed with MODEL_ERROR and no turn.completed \\u001b[33m 1005\\u001b[2mms\\u001b[22m\\u001b[39m\\n\\u001b[33m\\u001b[2m✓\\u001b[22m\\u001b[39m mid-stream error triggers retry and fallback completes \\u001b[33m 502\\u001b[2mms\\u001b[22m\\u001b[39m\\n\\u001b[33m\\u001b[2m✓\\u001b[22m\\u001b[39m assert-fail run: observe-then-fail leaves NO committed passed evidence; the green run's rows cannot be borrowed (same name, same HEAD) \\u001b[33m 1353\\u001b[2mms\\u001b[22m\\u001b[39m\",\"logRef\":{\"path\":\"logs/coverage-2026-10-14T09-41-08-510Z.log\",\"digest\":\"81fb295e7c40d5c83d501af3f2e38d5b20842ce7212cb0c6733f051daee08fc2\"}}",
+    "raw_details": ""
+  },
+  {
+    "path": ".github",
+    "blob_href": "https://github.com/ki11a-Conton/harness-agent/blob/b65801e49a6991853867106c77d968d7dec2c074/.github",
+    "start_line": 1,
+    "start_column": null,
+    "end_line": 1,
+    "end_column": null,
+    "annotation_level": "notice",
+    "title": "",
+    "message": "\"The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748\"",
+    "raw_details": ""
+  }
+]

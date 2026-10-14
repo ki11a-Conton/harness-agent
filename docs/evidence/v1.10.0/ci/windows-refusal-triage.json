@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sourceSha": "b65801e49a6991853867106c77d968d7dec2c074",
+  "runId": "38534860525",
+  "attempt": 1,
+  "failedJobId": 115755586029,
+  "failedCase": "waterfall answer is bound to its current generation and original ask; concurrent retry continues exactly once",
+  "observedErrorCode": "EPERM",
+  "operation": "atomic rename over existing turn record",
+  "persistedTurnStatusAfterFailure": "waiting_for_user",
+  "runtimeDefectProven": false,
+  "scope": "Observed Windows OS write refusal, raw full log excerpt restored from the original artifact; finite contention retry exhaustion is an intentional refusal, not proof that the core algorithm is incorrect. Original failure retained; fresh-runner revalidation required before publishing."
+}

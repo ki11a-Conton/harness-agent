@@ -2,7 +2,7 @@
 
 The first personal coding-agent generation adds persistent CLI chat, corrected session/tool/provider paths, and a portable distribution. See [first-generation usage and acceptance](docs/first-generation.md) for source comparisons and limits. Engineering acceptance and real-model quality are reported separately.
 
-The current Web candidate serves the complete official DeepSeek frontend at `/`, with real Harness services; the previous UI remains at `/legacy/index.html`. See [current delivery and remaining capabilities](docs/web-deepseek-delivery.md) and the [execution plan](plan.md). Ordinary coding flows have real installed Linux/Windows archive evidence, while full default UI parity and paid-model quality remain unproven. This candidate does not replace the published v1.9.0 release.
+The latest release is [v1.10.0](https://github.com/ki11a-Conton/harness-agent/releases/tag/v1.10.0), with a portable CLI/Web distribution and the Harness Agent interface at `/`. Preview Notice and the homepage Preview badge have been removed. See [installation and release acceptance](docs/release-v1.10.0.md), [remaining capabilities](docs/web-deepseek-delivery.md), and the [execution plan](plan.md). Ordinary coding flows passed on the same archive on Ubuntu and Windows; full default UI parity and paid-model quality remain unproven. The previous UI remains at `/legacy/index.html`.
 
 A TypeScript **agent runtime** with a single-owner session actor, live-streaming
 SDK, defense-in-depth security gates, and benchmark-driven mechanism evolution.
@@ -458,8 +458,10 @@ and the unfinished-work handoff is in [`HANDOVER.md`](./HANDOVER.md).
 | `test:security` / `protocol` / `race` / `chaos` | 2133 / 52 / 23 / 12 |
 | Release attestation (CI) | `runtimeReleaseReady=true`, verdict READY |
 
-**Latest release: v1.8.0** (`gh release` Latest), carrying the source-snapshot
-asset per repo convention.
+The above table records historical E4-R44 / K05 acceptance. **Latest release:
+[v1.10.0](https://github.com/ki11a-Conton/harness-agent/releases/tag/v1.10.0)**;
+its current exact-source gates and portable assets are documented in
+[release acceptance](docs/release-v1.10.0.md).
 
 The final round (**E4-R40…E4-R44**, K01…K05) closed: failure-attribution
 diagnostic bundles that also **settled R39's "full suite not green"** (a

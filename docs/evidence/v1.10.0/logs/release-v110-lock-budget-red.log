@@ -1,0 +1,29 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-release-v110-20261014
+
+ ❯ packages/evaluation/src/gen1-budget-takeover.regressions.test.ts (2 tests | 1 failed) 16220ms
+   × Gen1: a delayed stale reclaimer cannot remove another reclaimer's new live ledger lock 16110ms
+   ✓ Gen1: a leftover takeover guard is a bounded refusal, never silently stolen 109ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/evaluation/src/gen1-budget-takeover.regressions.test.ts > Gen1: a delayed stale reclaimer cannot remove another reclaimer's new live ledger lock
+Error: barrier not reached: held-a
+ ❯ waitFor packages/evaluation/src/gen1-budget-takeover.regressions.test.ts:21:41
+     19|     for (;;) {
+     20|       for (const name of names) if (await exists(name)) return name;
+     21|       if (Date.now() >= deadline) throw new Error(`barrier not reached…
+       |                                         ^
+     22|       await new Promise(resolve => setTimeout(resolve, 5));
+     23|     }
+ ❯ packages/evaluation/src/gen1-budget-takeover.regressions.test.ts:80:51
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed (2)
+   Start at  07:57:51
+   Duration  16.53s (transform 95ms, setup 0ms, import 133ms, tests 16.22s, environment 0ms)
+
+JSON report written to /workspace/scratch/release-v110-lock-budget-red.json

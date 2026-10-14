@@ -1,0 +1,25 @@
+✔ exports exact qualified bytes to the existing draft without publishing (115.987378ms)
+✔ rejects a published release before any upload (115.492253ms)
+✔ rejects a failed Windows job despite passing local receipts (133.234523ms)
+✔ rejects Windows receipts from different archive bytes (146.278018ms)
+✔ rejects tampered archive bytes before any upload (114.338784ms)
+✔ verifies the full original npm closure and independently reconstructs it offline (2975.567305ms)
+✔ rejects an altered official plugin during verification and sealing (165.634884ms)
+✔ refuses to bless modified branded executable assets even with --seal (1131.379648ms)
+✔ refuses a branding override on an unrelated plugin (1079.037725ms)
+✔ rejects altered original npm tar bytes (77.256511ms)
+✔ rejects altered source reference archive bytes (329.633346ms)
+✔ rejects unregistered vendor files (489.155978ms)
+✔ rejects a symlink in the vendor inventory (447.449843ms)
+✔ rejects modified local root HTML until explicitly reviewed and sealed (669.796462ms)
+✔ refuses to seal plain-file boot URLs that break upstream lazy client chunks (2002.892428ms)
+✔ refuses to seal a mismatched combo batch or browser boot graph (2027.123212ms)
+✔ graph regeneration still cannot bless a modified original frontend (254.740097ms)
+ℹ tests 17
+ℹ suites 0
+ℹ pass 17
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 12473.013714

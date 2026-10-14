@@ -1,0 +1,89 @@
+{
+  "total_count": 1,
+  "jobs": [
+    {
+      "id": 115752875614,
+      "run_id": 38534156784,
+      "workflow_name": "inspect installed UI evidence",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/runs/38534156784",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOT8gONs8AAAAa82i2Xg",
+      "head_sha": "d0d3027555596595ddd796161d3b1b4c907ff432",
+      "url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/jobs/115752875614",
+      "html_url": "https://github.com/ki11a-Conton/harness-agent/actions/runs/38534156784/job/115752875614",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-14T08:18:17Z",
+      "started_at": "2026-10-14T08:18:20Z",
+      "completed_at": "2026-10-14T08:18:26Z",
+      "name": "inspect",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-14T08:18:21Z",
+          "completed_at": "2026-10-14T08:18:22Z"
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-14T08:18:22Z",
+          "completed_at": "2026-10-14T08:18:22Z"
+        },
+        {
+          "name": "Verify the original workflow identity",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-14T08:18:22Z",
+          "completed_at": "2026-10-14T08:18:23Z"
+        },
+        {
+          "name": "Run actions/download-artifact@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-14T08:18:23Z",
+          "completed_at": "2026-10-14T08:18:24Z"
+        },
+        {
+          "name": "Expose bounded original case records without changing their verdict",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-14T08:18:24Z",
+          "completed_at": "2026-10-14T08:18:24Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-10-14T08:18:24Z",
+          "completed_at": "2026-10-14T08:18:24Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-10-14T08:18:24Z",
+          "completed_at": "2026-10-14T08:18:24Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/check-runs/115752875614",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000002981,
+      "runner_name": "GitHub Actions 1000002981",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    }
+  ]
+}

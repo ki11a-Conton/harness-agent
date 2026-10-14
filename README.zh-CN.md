@@ -1,8 +1,8 @@
 # Harness Agent（智能体运行时）
 
-第一代个人 coding agent 的能力、开源来源、使用与验收范围见 [第一代交付说明](docs/first-generation.md)。本轮发布前必须通过固定源码全量、真实 Windows 及独立安装验收；模型质量仍单独报告。
+第一代个人 coding agent 已发布 [v1.10.0](https://github.com/ki11a-Conton/harness-agent/releases/tag/v1.10.0)。独立 CLI/Web 安装与最终验收见 [发布说明](docs/release-v1.10.0.md)，开源来源及能力边界见 [第一代交付说明](docs/first-generation.md)。模型质量仍单独报告。
 
-当前 Web 候选在 `/` 使用官方完整 DeepSeek 客户端并接入真实 Harness；旧 UI 保留在 `/legacy/index.html`。普通编码流程已有相同独立包在 Linux/Windows 的实际浏览器证据，详见[当前交付与缺口](docs/web-deepseek-delivery.md)和[执行计划](plan.md)。完整默认 UI parity 与付费模型质量仍未证明，当前候选不替换已发布 v1.9.0。
+Web 在 `/` 使用 Harness Agent 品牌界面并接入真实 Harness，Preview Notice 和首页 Preview 标记已移除；旧 UI 保留在 `/legacy/index.html`。普通编码流程已通过相同独立包在 Ubuntu/Windows 的实际浏览器验收，详见[当前交付与缺口](docs/web-deepseek-delivery.md)和[执行计划](plan.md)。完整默认 UI parity 与付费模型质量仍未证明。
 
 一个 TypeScript **智能体运行时**：**会话单一所有者**（SessionActor）、**实时流式 SDK**、**纵深安全门禁**，以及**基准驱动的机制演化**。
 
@@ -307,7 +307,7 @@ Ubuntu coverage、release attestation）。逐项报告见 `docs/E4-*-report.md`
 | `test:security` / `protocol` / `race` / `chaos` | 2133 / 52 / 23 / 12 |
 | Release attestation（CI） | `runtimeReleaseReady=true`，verdict READY |
 
-**最新发布：v1.8.0**（`gh release` Latest），按仓库惯例附带源码快照资产。
+上表为历史 E4-R44 / K05 验收。**最新发布：[v1.10.0](https://github.com/ki11a-Conton/harness-agent/releases/tag/v1.10.0)**，独立包、当前固定源码验收及安装步骤见 [发布说明](docs/release-v1.10.0.md)。
 
 最后一轮（**E4-R40…E4-R44**，K01…K05）闭环了：失败归因诊断包（并**顺带把 R39
 的「全仓未绿」归因为运行期干净源树前置条件**，而非代码缺陷）、探测失败显式语义 +

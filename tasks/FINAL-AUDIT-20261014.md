@@ -16,4 +16,4 @@
 
 新增发布验收：全新状态目录及刷新/重启均不出现中英文 Preview Notice；编程入口、模型设置和工具审批仍通过。源码与发布资产绑定同一 clean SHA，实际 Ubuntu/Windows 安装包和必要 CI 门全部通过后，创建 v1.10.0 tag/release，上传独立包、校验和与证据，并复核公开下载字节。继续区分工程可用性与未证明的付费模型质量，不自动晋升实验。
 
-状态：旧产品源码的缺陷修复和验收原件保留；追加 Preview Notice 移除、Windows 验收等待/诊断补修和 v1.10.0 固定源码发布验收正在执行。详细清单、实际结果和剩余能力边界见 docs/final-audit-20261014.md。
+状态：已完成。最终产品源码 b65801e4 全量 9,521 PASS / 15 SKIP，完整第三轮 CI 10/10 SUCCESS，原生 Windows 专项 393 PASS / 2 POSIX SKIP，同一包两平台 CLI/Web 安装验收全部通过。Preview Notice 和首页 Preview 标记已移除；v1.10.0 已正式发布，4 项公开资产的无需登录下载均与验收字节一致。详细清单、原始失败和能力边界见 docs/final-audit-20261014.md，使用及最终发布绑定见 docs/release-v1.10.0.md。

@@ -1,0 +1,72 @@
+{
+  "checkpointId": "checkpoint_4aec9c97-b7de-4caf-9083-f2af656e3d5b",
+  "schemaVersion": 1,
+  "sessionId": "session_6a4b5648-c8fc-457f-9bf2-e604baf8ba94",
+  "turnId": "turn_f3b6e57e-40e4-4ebf-b45a-cc9e3c253c1d",
+  "agentId": "agent_780b6197-9e2a-42f3-9537-4c813005009e",
+  "createdAt": 1791966585367,
+  "reason": "ask:waiting:ask_d87d5227-5989-4a50-a9dc-3b3ad3a4b1bf",
+  "phase": "waiting_user",
+  "iteration": 2,
+  "toolCallsExecuted": 1,
+  "state": {
+    "goal": "implement the target",
+    "constraints": [],
+    "plan": [],
+    "decisions": [],
+    "completed": [
+      "modified app.txt"
+    ],
+    "pending": [],
+    "filesChanged": [
+      "app.txt"
+    ],
+    "commandsRun": [],
+    "testsRun": [],
+    "failures": [],
+    "importantFacts": [],
+    "openQuestions": [],
+    "toolRefs": [],
+    "artifactRefs": [],
+    "memoryRefs": [],
+    "childAgentRefs": []
+  },
+  "budgetUsage": {
+    "maxTokens": 32000,
+    "usedTokens": 1130,
+    "run": {
+      "runId": "run_1d4309ae-b59c-431c-a5e2-cee72df8a3dc",
+      "limits": {
+        "maxToolCalls": 50
+      },
+      "usedTurns": 1,
+      "usedToolCalls": 1,
+      "startedAt": 1791966584983,
+      "durationMs": 380,
+      "outputChars": 0,
+      "retries": 0,
+      "subagentsSpawned": 0,
+      "estimatedCostUsd": 0
+    },
+    "recoveryUsage": {},
+    "verificationRetries": 0,
+    "stallRecoveryCount": 0
+  },
+  "toolLedger": [
+    {
+      "toolCallId": "final_question_0",
+      "tool": "write_file",
+      "argsHash": "38c2b4f533b52fb6dc7b4cb088a62a62aa60d13056b3c791c578201b56f3a48e",
+      "started": 1791966585194,
+      "completed": 1791966585194,
+      "status": "success",
+      "resultHash": "0ffb9c68ebe8f8e2505a6c2612daec4724b801d524503627ca4901d2cb0c9ff2",
+      "sideEffect": true
+    }
+  ],
+  "childSessions": [],
+  "lastEventSequence": 26,
+  "effectiveAgentConfigRef": "effectiveAgent",
+  "contextRefs": [],
+  "checksum": "74f3ce98cb08937aeae97089db99c3f906a6a9002ee1d3f9f7f82e3f2b501d1a"
+}

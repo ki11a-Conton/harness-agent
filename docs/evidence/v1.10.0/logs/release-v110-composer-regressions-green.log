@@ -1,0 +1,16 @@
+✔ original late initialization overwrites a newer open action (3.044338ms)
+✔ reviewed actual UI navigation preserves a newer open action (5.602585ms)
+✔ original late initialization overwrites a newer clear action (1.864294ms)
+✔ reviewed actual UI navigation preserves a newer clear action (3.601325ms)
+✔ original optimistic workspace label permits sending to the old session before selection settles (5.7657ms)
+✔ reviewed actual composer blocks the same-workspace replacement until its real promise settles (12.469832ms)
+✔ an older selection completing cannot unlock a newer pending workspace choice (13.710738ms)
+✔ a rejected latest selection restores the previous editor and clears its optimistic label (15.764712ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 225.341671

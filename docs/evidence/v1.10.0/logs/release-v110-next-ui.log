@@ -1,0 +1,209 @@
+::error title=Installed UI acceptance failed::AssertionError [ERR_ASSERTION]: {%0A  "output": "/workspace/scratch/release-v110-next-local/ui/browser",%0A  "complete": false,%0A  "results": [%0A    {%0A      "name": "settings-general",%0A      "viewport": "desktop",%0A      "status": "PASS",%0A      "assertions": 2%0A    },%0A    {%0A      "name": "models-editor",%0A      "viewport": "desktop",%0A      "status": "PASS",%0A      "assertions": 1%0A    },%0A    {%0A      "name": "workspace-directory-picker",%0A      "viewport": "desktop",%0A      "status": "PASS",%0A      "assertions": 1%0A    },%0A    {%0A      "name": "workspace-files",%0A      "viewport": "desktop",%0A      "status": "PASS",%0A      "assertions": 2%0A    },%0A    {%0A      "name": "session-lifecycle",%0A      "viewport": "desktop",%0A      "status": "PASS",%0A      "assertions": 4%0A    },%0A    {%0A      "name": "markdown-stream-reload",%0A      "viewport": "desktop",%0A      "status": "PASS",%0A      "assertions": 4%0A    },%0A    {%0A      "name": "read-tool",%0A      "viewport": "desktop",%0A      "status": "PASS",%0A      "assertions": 3%0A    },%0A    {%0A      "name": "write-approval",%0A      "viewport": "desktop",%0A      "status": "PASS",%0A      "assertions": 3%0A    },%0A    {%0A      "name": "write-rejection",%0A      "viewport": "desktop",%0A      "status": "PASS",%0A      "assertions": 2%0A    },%0A    {%0A      "name": "ask-reload-answer",%0A      "viewport": "desktop",%0A      "status": "PASS",%0A      "assertions": 3%0A    },%0A    {%0A      "name": "settings-general",%0A      "viewport": "mobile",%0A      "status": "PASS",%0A      "assertions": 2%0A    },%0A    {%0A      "name": "models-editor",%0A      "viewport": "mobile",%0A      "status": "PASS",%0A      "assertions": 1%0A    },%0A    {%0A      "name": "workspace-directory-picker",%0A      "viewport": "mobile",%0A      "status": "PASS",%0A      "assertions": 1%0A    },%0A    {%0A      "name": "workspace-files",%0A      "viewport": "mobile",%0A      "status": "PASS",%0A      "assertions": 2%0A    },%0A    {%0A      "name": "session-lifecycle",%0A      "viewport": "mobile",%0A      "status": "PASS",%0A      "assertions": 4%0A    },%0A    {%0A      "name": "mark
+::error title=Installed UI case failed::{"name":"markdown-stream-reload","viewport":"mobile","status":"FAIL","failure":"Error: locator.fill: Error: Element is not an <input>, <textarea> or [contenteditable] element\nCall log:\n\u001b[2m  - waiting for locator('[data-composer-input=true]').filter({ visible: true })\u001b[22m\n\u001b[2m    - locator resolved to <div role=\"textbox\" data-phase=\"plain\" class=\"uV2eYG_input\" aria-multiline=\"true\" contenteditable=\"true\" data-composer-input=\"true\" data-lexical-editor=\"true\" aria-label=\"Describe what you want to build, / commands, @ files or sessions\" data-placeholder=\"Describe what you want to build, / commands, @ files or sessions\"></div>\u001b[22m\n\u001b[2m    - fill(\"Render the real Markdown fixture for browser acceptance.\")\u001b[22m\n\u001b[2m  - attempting fill action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and editable\u001b[22m\n\u001b[2m  - element was detached from the DOM, retrying\u001b[22m\n\u001b[2m    - locator resolved to <div tabindex=\"0\" role=\"textbox\" data-phase=\"plain\" class=\"uV2eYG_input\" aria-haspopup=\"menu\" aria-multiline=\"true\" aria-expanded=\"false\" contenteditable=\"false\" data-composer-input=\"true\" aria-label=\"Choose workspace\" data-placeholder=\"Choose a workspace to start\"></div>\u001b[22m\n\u001b[2m    - fill(\"Render the real Markdown fixture for browser acceptance.\")\u001b[22m\n\u001b[2m  - attempting fill action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and editable\u001b[22m\n"}
+::error title=Installed UI case failed::{"name":"read-tool","viewport":"narrow-tall","status":"FAIL","failure":"Error: locator.fill: Error: Element is not an <input>, <textarea> or [contenteditable] element\nCall log:\n\u001b[2m  - waiting for locator('[data-composer-input=true]').filter({ visible: true })\u001b[22m\n\u001b[2m    - locator resolved to <div tabindex=\"0\" role=\"textbox\" data-phase=\"plain\" class=\"uV2eYG_input\" aria-haspopup=\"menu\" aria-multiline=\"true\" aria-expanded=\"false\" contenteditable=\"false\" data-composer-input=\"true\" aria-label=\"Choose workspace\" data-placeholder=\"Choose a workspace to start\"></div>\u001b[22m\n\u001b[2m    - fill(\"[fixture:read] Read the actual demo.js in this workspace.\")\u001b[22m\n\u001b[2m  - attempting fill action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and editable\u001b[22m\n"}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: {
+  "output": "/workspace/scratch/release-v110-next-local/ui/browser",
+  "complete": false,
+  "results": [
+    {
+      "name": "settings-general",
+      "viewport": "desktop",
+      "status": "PASS",
+      "assertions": 2
+    },
+    {
+      "name": "models-editor",
+      "viewport": "desktop",
+      "status": "PASS",
+      "assertions": 1
+    },
+    {
+      "name": "workspace-directory-picker",
+      "viewport": "desktop",
+      "status": "PASS",
+      "assertions": 1
+    },
+    {
+      "name": "workspace-files",
+      "viewport": "desktop",
+      "status": "PASS",
+      "assertions": 2
+    },
+    {
+      "name": "session-lifecycle",
+      "viewport": "desktop",
+      "status": "PASS",
+      "assertions": 4
+    },
+    {
+      "name": "markdown-stream-reload",
+      "viewport": "desktop",
+      "status": "PASS",
+      "assertions": 4
+    },
+    {
+      "name": "read-tool",
+      "viewport": "desktop",
+      "status": "PASS",
+      "assertions": 3
+    },
+    {
+      "name": "write-approval",
+      "viewport": "desktop",
+      "status": "PASS",
+      "assertions": 3
+    },
+    {
+      "name": "write-rejection",
+      "viewport": "desktop",
+      "status": "PASS",
+      "assertions": 2
+    },
+    {
+      "name": "ask-reload-answer",
+      "viewport": "desktop",
+      "status": "PASS",
+      "assertions": 3
+    },
+    {
+      "name": "settings-general",
+      "viewport": "mobile",
+      "status": "PASS",
+      "assertions": 2
+    },
+    {
+      "name": "models-editor",
+      "viewport": "mobile",
+      "status": "PASS",
+      "assertions": 1
+    },
+    {
+      "name": "workspace-directory-picker",
+      "viewport": "mobile",
+      "status": "PASS",
+      "assertions": 1
+    },
+    {
+      "name": "workspace-files",
+      "viewport": "mobile",
+      "status": "PASS",
+      "assertions": 2
+    },
+    {
+      "name": "session-lifecycle",
+      "viewport": "mobile",
+      "status": "PASS",
+      "assertions": 4
+    },
+    {
+      "name": "markdown-stream-reload",
+      "viewport": "mobile",
+      "status": "FAIL",
+      "failure": "Error: locator.fill: Error: Element is not an <input>, <textarea> or [contenteditable] element\nCall log:\n\u001b[2m  - waiting for locator('[data-composer-input=true]').filter({ visible: true })\u001b[22m\n\u001b[2m    - locator resolved to <div role=\"textbox\" data-phase=\"plain\" class=\"uV2eYG_input\" aria-multiline=\"true\" contenteditable=\"true\" data-composer-input=\"true\" data-lexical-editor=\"true\" aria-label=\"Describe what you want to build, / commands, @ files or sessions\" data-placeholder=\"Describe what you want to build, / commands, @ files or sessions\"></div>\u001b[22m\n\u001b[2m    - fill(\"Render the real Markdown fixture for browser acceptance.\")\u001b[22m\n\u001b[2m  - attempting fill action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and editable\u001b[22m\n\u001b[2m  - element was detached from the DOM, retrying\u001b[22m\n\u001b[2m    - locator resolved to <div tabindex=\"0\" role=\"textbox\" data-phase=\"plain\" class=\"uV2eYG_input\" aria-haspopup=\"menu\" aria-multiline=\"true\" aria-expanded=\"false\" contenteditable=\"false\" data-composer-input=\"true\" aria-label=\"Choose workspace\" data-placeholder=\"Choose a workspace to start\"></div>\u001b[22m\n\u001b[2m    - fill(\"Render the real Markdown fixture for browser acceptance.\")\u001b[22m\n\u001b[2m  - attempting fill action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and editable\u001b[22m\n",
+      "assertions": 0
+    },
+    {
+      "name": "read-tool",
+      "viewport": "mobile",
+      "status": "PASS",
+      "assertions": 3
+    },
+    {
+      "name": "write-approval",
+      "viewport": "mobile",
+      "status": "PASS",
+      "assertions": 3
+    },
+    {
+      "name": "write-rejection",
+      "viewport": "mobile",
+      "status": "PASS",
+      "assertions": 2
+    },
+    {
+      "name": "ask-reload-answer",
+      "viewport": "mobile",
+      "status": "PASS",
+      "assertions": 3
+    },
+    {
+      "name": "settings-general",
+      "viewport": "narrow-tall",
+      "status": "PASS",
+      "assertions": 2
+    },
+    {
+      "name": "models-editor",
+      "viewport": "narrow-tall",
+      "status": "PASS",
+      "assertions": 1
+    },
+    {
+      "name": "workspace-directory-picker",
+      "viewport": "narrow-tall",
+      "status": "PASS",
+      "assertions": 1
+    },
+    {
+      "name": "workspace-files",
+      "viewport": "narrow-tall",
+      "status": "PASS",
+      "assertions": 2
+    },
+    {
+      "name": "session-lifecycle",
+      "viewport": "narrow-tall",
+      "status": "PASS",
+      "assertions": 4
+    },
+    {
+      "name": "markdown-stream-reload",
+      "viewport": "narrow-tall",
+      "status": "PASS",
+      "assertions": 4
+    },
+    {
+      "name": "read-tool",
+      "viewport": "narrow-tall",
+      "status": "FAIL",
+      "failure": "Error: locator.fill: Error: Element is not an <input>, <textarea> or [contenteditable] element\nCall log:\n\u001b[2m  - waiting for locator('[data-composer-input=true]').filter({ visible: true })\u001b[22m\n\u001b[2m    - locator resolved to <div tabindex=\"0\" role=\"textbox\" data-phase=\"plain\" class=\"uV2eYG_input\" aria-haspopup=\"menu\" aria-multiline=\"true\" aria-expanded=\"false\" contenteditable=\"false\" data-composer-input=\"true\" aria-label=\"Choose workspace\" data-placeholder=\"Choose a workspace to start\"></div>\u001b[22m\n\u001b[2m    - fill(\"[fixture:read] Read the actual demo.js in this workspace.\")\u001b[22m\n\u001b[2m  - attempting fill action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and editable\u001b[22m\n",
+      "assertions": 0
+    },
+    {
+      "name": "write-approval",
+      "viewport": "narrow-tall",
+      "status": "PASS",
+      "assertions": 3
+    },
+    {
+      "name": "write-rejection",
+      "viewport": "narrow-tall",
+      "status": "PASS",
+      "assertions": 2
+    },
+    {
+      "name": "ask-reload-answer",
+      "viewport": "narrow-tall",
+      "status": "PASS",
+      "assertions": 3
+    }
+  ]
+}
+
+
+1 !== 0
+
+    at file:///workspace/harness-agent-final-audit-20261014/scripts/release/deepseek-installed.mjs:64:10 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 1,
+  expected: 0,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.19.0

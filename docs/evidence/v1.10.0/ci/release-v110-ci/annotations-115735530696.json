@@ -1,0 +1,74 @@
+[
+  {
+    "path": ".github",
+    "blob_href": "https://github.com/ki11a-Conton/harness-agent/blob/d459f2608ca05ab828ee345bf5e173de64c471a1/.github",
+    "start_line": 5,
+    "start_column": null,
+    "end_line": 5,
+    "end_column": null,
+    "annotation_level": "warning",
+    "title": "",
+    "message": "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-node@v4, actions/upload-artifact@v4, pnpm/action-setup@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/",
+    "raw_details": ""
+  },
+  {
+    "path": ".github",
+    "blob_href": "https://github.com/ki11a-Conton/harness-agent/blob/d459f2608ca05ab828ee345bf5e173de64c471a1/.github",
+    "start_line": 15,
+    "start_column": null,
+    "end_line": 15,
+    "end_column": null,
+    "annotation_level": "failure",
+    "title": "",
+    "message": "No files were found with the provided path: coverage/coverage-summary.json. No artifacts will be uploaded.",
+    "raw_details": ""
+  },
+  {
+    "path": ".github",
+    "blob_href": "https://github.com/ki11a-Conton/harness-agent/blob/d459f2608ca05ab828ee345bf5e173de64c471a1/.github",
+    "start_line": 9,
+    "start_column": null,
+    "end_line": 9,
+    "end_column": null,
+    "annotation_level": "notice",
+    "title": "Coverage failure detail 1/1",
+    "message": "{\"encoding\":\"gzip+base64\",\"index\":0,\"total\":1,\"data\":\"H4sIAAAAAAAAA8VV227cNhD9FWKfYiCz5k28LNCHwjAKPxQtmrw5gcHL0GG8krYkFdsoCvQf0sd+Xb6k2Iu3btfdboECfRGl0Zw55wxH1E+zVqYhuIZxtkhuWfH1rOFDmy1m+JDbxRjxK0auW+5xnNqC3OXlEiPxj2QXIq/eXH3z9vKHb8/evxuuI94WFzG+JyihKEqaq3drzILUxyGQunL3A0kuL6eCx/K3mQuSh48YGsY/XvwduOsIfsoRh4DkvuSGJHzIyzivLY5Tm7eHtiCXV989K7nN2tUjaSwHiH9DgqXsSL6+uLh8cxrPDnQqDxRcjaXNP9ZxONHNc8gJNGUaTqz+lPmnohVrzePwtN4ItCpQGyFoJUHyLoJhzgMVInZcJyoYI3Eqzi/XVZfL8X5akTAOdeq3dBg3bGlaASOvVmXsV40U7F0eKvHjNETSRtKmMmwuNzbwTgqWgHrNQKouglXKg+AmWs6p4FGfLfacLtyRON4fd8GYN1YzCtFxA1KZBN6ZCMw7k7okVUr+0IXPQ3zBQijoNgO9l+y0V4FiAmETgvRagdU2QLLepKCc6Bgl9+vZH8ZG8AHD1PBssSU4EJ8HPz7M140aWx4HWG9vy+0R+lxrHm4XB/aicbpLKoGXMYAUtAMTPYfomaIddZJHQ3ad3y43XLEQUCuQLgiQMSAYhh6Ed8Ji5AoDJbmSrYz1gTE18sFVMoz72NupDFeRfPnlV1IwjJ+wPELBH6dcML7eWC24WrpHjEc3x3fKSWY1JMM6kJx1YK0TawtOGdUpweXTNrSRrLDUXNvzifEpaNMJ6ALjIK1W4KXywKJRgqFRKUTiKgluCLg+/Rbke2HmHCypuZ+Wm92cVtE1XFt68YD6q2jZBaORUUDjJUiNCJ5bA5Q5bVTSwgp1VDTzigdGPaQUHEhJDTglNXgereVWRiXF/ywa+7xVPN+L2HwHJ+t/SfKm6CliDfLAopcQleIgOUWwaDQ4lzjrYmBO+qMd1uipSSYCDeu58pqDl1aD9Z2QRieKWv/XHaY8dB3vAgQlKEieDDhnIzCuUMsojUvHZ1kbK6XhHBzVEqRiEZynATwVRgjKrVIvzbIA8w+i302UMn8teP/lt89PD7YnbrWq52GZz2sJ59tfCuxAcJ9LHm7nDWubt0p2KN6/errj/T6mOrLOqy+8OjuICdETwblm+5z+EChsP/v5dx1NXubfCAAA\"}",
+    "raw_details": ""
+  },
+  {
+    "path": ".github",
+    "blob_href": "https://github.com/ki11a-Conton/harness-agent/blob/d459f2608ca05ab828ee345bf5e173de64c471a1/.github",
+    "start_line": 8,
+    "start_column": null,
+    "end_line": 8,
+    "end_column": null,
+    "annotation_level": "notice",
+    "title": "Coverage gate record",
+    "message": "{\"schemaVersion\":\"2.0.0\",\"gate\":\"coverage\",\"gitSha\":\"d459f2608ca05ab828ee345bf5e173de64c471a1\",\"cleanBefore\":true,\"cleanAfter\":true,\"exitCode\":1,\"passed\":false,\"state\":\"failed\",\"summary\":\"coverage: FAIL (exit 1)\",\"errorSummary\":\"exitCode=1 [timeout: killed by timeout (SIGTERM)]\\n[degraded] e4-r60 taskkill: sync spawn failure\\n[degraded] e4-r60 taskkill spawn: injected taskkill failure\\n[degraded] e4-r55 evidence write child.stdout.txt: EIO: injected write failure for child.stdout.txt\\n[degraded] e4-r55 evidence write child.stderr.txt: EACCES: injected write failure for child.stderr.txt\\n[degraded] e4-r55 evidence write child-report.json: EIO: injected write failure for child-report.json\\n[degraded] e4-r55 evidence write run.json: EIO: injected write failure for run.json\\n[degraded] session session_3e96c09d-c764-425d-81ab-033d527f0311 durable followup consume failed for fup-1 (prompt remains bound to turn turn_9c25431f-0b71-465d-966b-328d922032d7): durable ack down\\n[degraded] session session_11b89710-da28-468f-ba8d-1ba8f5f46ffb durable followup bind failed for fup-1 (created turn turn_a7b6c0ef-39fe-4b76-979c-f9b8fc6a3510 will not execute): bind down\\n[degraded] inbox.promotion-identity-missing: session session_d8a75f6f-b4dc-4305-8db2-db16050a42d8 prompt prompt_261cce76-4ac3-4dce-81eb-3ba39ed26ec0 is promoted but has no promotedTurnId — recovery-required, not replayed\\n[degraded] session session_b56a4197-f815-4215-99a3-8dba68656324 failed to persist turn turn_9bfc7853-5c12-4976-b46b-1d8631e86fcd as cancelled: P38.2-9 simulated updateTurn failure\\n[degraded] session session_45c87e10-e8b4-47ee-b298-01a786f73936 failed to persist turn turn_1b62c10b-ffca-4408-a647-b2d99294d643 as cancelled: P38.2-9 simulated updateTurn failure\\n[degraded] session session_45c87e10-e8b4-47ee-b298-01a786f73936 failed to emit turn.cancelled for turn_1b62c10b-ffca-4408-a647-b2d99294d643: P38.2-9 simulated emit failure\\n[degraded] session session_8e2c1db4-d662-420e-9e87-aaf215dc1a4b failed to persist turn turn_7eb08f8d-0c15-4b72-b497-9b53487f0e77 as cancelled: P38.2-9 simulated updateTurn failure\\n[degraded] session session_02c5525c-c630-42f8-aa9d-126e74d48af4 failed to persist turn turn_78944822-a074-461d-ab0c-b0383302966d as cancelled: P38.3-8 simulated updateTurn failure\\n\\u001b[32m✓\\u001b[39m apps/cli/src/e4-r55-failure-wiring.test.ts \\u001b[2m(\\u001b[22m\\u001b[2m65 tests\\u001b[22m\\u001b[2m)\\u001b[22m\\u001b[33m 32271\\u001b[2mms\\u001b[22m\\u001b[39m\",\"logRef\":{\"path\":\"logs/coverage-2026-10-14T07-31-30-229Z.log\",\"digest\":\"75e58e75dd15e5c0091136056f505078fb15423881f6ec4c63633790e46c1934\"}}",
+    "raw_details": ""
+  },
+  {
+    "path": ".github",
+    "blob_href": "https://github.com/ki11a-Conton/harness-agent/blob/d459f2608ca05ab828ee345bf5e173de64c471a1/.github",
+    "start_line": 31,
+    "start_column": null,
+    "end_line": 31,
+    "end_column": null,
+    "annotation_level": "failure",
+    "title": "",
+    "message": "Process completed with exit code 1.",
+    "raw_details": ""
+  },
+  {
+    "path": ".github",
+    "blob_href": "https://github.com/ki11a-Conton/harness-agent/blob/d459f2608ca05ab828ee345bf5e173de64c471a1/.github",
+    "start_line": 1,
+    "start_column": null,
+    "end_line": 1,
+    "end_column": null,
+    "annotation_level": "notice",
+    "title": "",
+    "message": "\"The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748\"",
+    "raw_details": ""
+  }
+]
