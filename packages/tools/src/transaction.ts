@@ -32,14 +32,15 @@
  * P2-27 write safety guard; this module only arranges *which* files a batch of
  * work will mutate and how to revert them.
  */
-import { promises as fs } from "node:fs";
+import { constants, promises as fs } from "node:fs";
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { randomBytes } from "node:crypto";
 import { withFileLocks } from "./file-coordination.js";
+import { canonicalizePath } from "@ar/security";
 
 /** Immutable before/after state of a single file path. */
 export type FileSnapshot =
-  | { exists: true; content: string; bytes: number }
+  | { exists: true; content: string; bytes: number; mode?: number }
   | { exists: false };
 
 export type ChangeKind = "create" | "write" | "edit" | "delete";
@@ -110,6 +111,7 @@ export class WorkspaceChangeTransaction {
   private readonly root: string;
   private readonly rootLabel: string;
   private readonly encoding: BufferEncoding;
+  private readonly canonicalRoot: string;
   private changes: StagedChange[] = [];
   private _state: TransactionState = "open";
 
@@ -117,6 +119,7 @@ export class WorkspaceChangeTransaction {
     this.root = resolve(opts.root);
     this.rootLabel = opts.rootLabel ?? this.root;
     this.encoding = opts.encoding ?? "utf8";
+    this.canonicalRoot = resolve(canonicalizePath(this.root, { cwd: this.root }));
   }
 
   get state(): TransactionState {
@@ -144,18 +147,48 @@ export class WorkspaceChangeTransaction {
     return abs;
   }
 
+  /** Preserve the chosen root identity and reject links at every child component.
+   * Rechecked for reads/writes/deletes; this is not an OS sandbox against an
+   * arbitrary external writer racing after the final filesystem check. */
+  private async checkedPath(p: string): Promise<string> {
+    const abs = this.resolveInside(p);
+    const currentRoot = resolve(canonicalizePath(this.root, { cwd: this.root }));
+    const identity = (value: string) => process.platform === "win32" ? value.toLowerCase() : value;
+    if (identity(currentRoot) !== identity(this.canonicalRoot)) throw new OutOfBoundsError(p);
+    const target = resolve(this.canonicalRoot, relative(this.root, abs));
+    let current = this.canonicalRoot;
+    for (const part of relative(this.canonicalRoot, target).split(sep)) {
+      current = resolve(current, part);
+      let info;
+      try { info = await fs.lstat(current); }
+      catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") break; throw error; }
+      if (info.isSymbolicLink()) throw new OutOfBoundsError(p);
+      if (current !== target && !info.isDirectory()) throw new NotAFileError(current);
+    }
+    return target;
+  }
+
   /** Capture the current on-disk state of a single file. */
   private async readSnapshot(p: string): Promise<FileSnapshot> {
+    const actual = await this.checkedPath(p);
     let stat;
     try {
-      stat = await fs.stat(p);
+      stat = await fs.lstat(actual);
     } catch (err) {
-      // Missing file → treat as absent (ENOENT/ENOTDIR both mean "not a file").
-      return { exists: false };
+      if ((err as NodeJS.ErrnoException).code === "ENOENT") return { exists: false };
+      throw err;
     }
-    if (stat.isDirectory()) throw new NotAFileError(p);
-    const content = await fs.readFile(p, this.encoding);
-    return { exists: true, content, bytes: Buffer.byteLength(content, this.encoding) };
+    if (!stat.isFile()) throw new NotAFileError(p);
+    const file = await fs.open(actual, constants.O_RDONLY | (process.platform === "win32" ? 0 : constants.O_NOFOLLOW | constants.O_NONBLOCK));
+    try {
+      const opened = await file.stat();
+      if (!opened.isFile() || opened.dev !== stat.dev || opened.ino !== stat.ino) throw new NotAFileError(p);
+      const bytes = await file.readFile();
+      const content = bytes.toString(this.encoding);
+      if (!Buffer.from(content, this.encoding).equals(bytes)) throw new Error(`transaction cannot losslessly decode ${p} as ${this.encoding}`);
+      await this.checkedPath(p);
+      return { exists: true, content, bytes: bytes.length, mode: opened.mode & 0o777 };
+    } finally { await file.close(); }
   }
 
   /**
@@ -169,6 +202,7 @@ export class WorkspaceChangeTransaction {
     this.assertOpen();
     return withFileLocks(plans.map((plan) => this.resolveInside(plan.path)), undefined, async () => {
       this.assertOpen();
+      const staged: StagedChange[] = [];
       for (const plan of plans) {
         const abs = this.resolveInside(plan.path);
         const before = await this.readSnapshot(abs);
@@ -183,11 +217,12 @@ export class WorkspaceChangeTransaction {
         const after: FileSnapshot =
           plan.content === undefined
             ? { exists: false }
-            : { exists: true, content: plan.content, bytes: Buffer.byteLength(plan.content, this.encoding) };
+            : { exists: true, content: plan.content, bytes: Buffer.byteLength(plan.content, this.encoding), ...(before.exists ? { mode: before.mode } : {}) };
         // Deletes that target a path which does not exist are no-ops; still record
         // them so rollback remains consistent (it restores "absent" → nothing).
-        this.changes.push({ path: plan.path, absolutePath: abs, kind, before, after });
+        staged.push({ path: plan.path, absolutePath: abs, kind, before, after });
       }
+      this.changes.push(...staged);
       return this;
     });
   }
@@ -209,13 +244,13 @@ export class WorkspaceChangeTransaction {
         // 1. Write/overwrite/create all non-delete changes first.
         for (const c of this.changes) {
           if (!c.after.exists) continue;
-          await this.writeAtomic(c.absolutePath, c.after.content);
+          await this.writeAtomic(c.absolutePath, c.after.content, c.after.mode);
           applied.push(c.absolutePath);
         }
         // 2. Apply deletes after all content is in place.
         for (const c of this.changes) {
           if (c.kind === "delete") {
-            await fs.rm(c.absolutePath, { force: true });
+            await fs.rm(await this.checkedPath(c.absolutePath), { force: true });
             applied.push(c.absolutePath);
           }
         }
@@ -261,24 +296,34 @@ export class WorkspaceChangeTransaction {
   /** Restore a single path to a target snapshot. */
   private async restore(snap: FileSnapshot, p: string): Promise<void> {
     if (snap.exists) {
-      await this.writeAtomic(p, snap.content);
+      await this.writeAtomic(p, snap.content, snap.mode);
     } else {
-      await fs.rm(p, { force: true });
+      await fs.rm(await this.checkedPath(p), { force: true });
     }
   }
 
   /** Write content atomically: temp file in the same dir, then rename. */
-  private async writeAtomic(p: string, content: string): Promise<void> {
-    const dir = dirname(p);
+  private async writeAtomic(p: string, content: string, mode?: number): Promise<void> {
+    const target = await this.checkedPath(p);
+    const dir = dirname(target);
     await fs.mkdir(dir, { recursive: true });
+    await this.checkedPath(p);
     const tmp = resolve(dir, `.ar-txn-${process.pid}-${randomBytes(6).toString("hex")}.tmp`);
-    await fs.writeFile(tmp, content, this.encoding);
+    let createdTmp = false;
     try {
+      const file = await fs.open(tmp, "wx", mode ?? 0o666);
+      createdTmp = true;
+      try {
+        await file.writeFile(content, this.encoding);
+        if (mode !== undefined && process.platform !== "win32") await file.chmod(mode);
+        await file.sync();
+      } finally { await file.close(); }
       // Windows EPERM: the destination file may still be held by the
       // filesystem (antivirus, indexing). Retry the rename with backoff.
       for (let attempt = 0; attempt < 5; attempt += 1) {
         try {
-          await fs.rename(tmp, p);
+          await this.checkedPath(p);
+          await fs.rename(tmp, target);
           return;
         } catch (rerr) {
           if (attempt < 4) await new Promise((r) => setTimeout(r, 50 * (attempt + 1)));
@@ -287,7 +332,7 @@ export class WorkspaceChangeTransaction {
       }
     } catch (err) {
       // P14-6: tmp cleanup is best-effort — a failure is reported, never silent.
-      await fs.rm(tmp, { force: true }).catch((cleanupErr) =>
+      if (createdTmp) await this.checkedPath(tmp).then(() => fs.rm(tmp, { force: true })).catch((cleanupErr) =>
         process.stderr.write(`[degraded] transaction.tmp-cleanup: ${cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr)}\n`),
       );
       throw err;

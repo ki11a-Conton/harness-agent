@@ -154,7 +154,7 @@ interface ServerHarness {
   provider: BlockingProvider | undefined;
 }
 
-function makeHarness(opts: { blocking?: boolean; ingressCapacity?: number } = {}): ServerHarness {
+function makeHarness(opts: { blocking?: boolean; ingressCapacity?: number; scripts?: ModelEvent[][] } = {}): ServerHarness {
   const store = new MemSessionStore();
   const events = new MemEventStore();
   const orch = new FakeOrchestrator();
@@ -164,7 +164,7 @@ function makeHarness(opts: { blocking?: boolean; ingressCapacity?: number } = {}
     permissiveToolResolution: true,
     store,
     events,
-    modelProvider: provider ?? new ScriptedModelProvider([ScriptedModelProvider.text("ok")]),
+    modelProvider: provider ?? new ScriptedModelProvider(opts.scripts ?? [ScriptedModelProvider.text("ok")]),
     orchestrator: orch,
     agents: [AGENT],
   });
@@ -238,6 +238,27 @@ function expectCode(res: AppServerInvokeResult, code: string): void {
 
 for (const [name, makeClient] of Object.entries(CLIENT_FACTORIES)) {
   describe(`P34-5 ${name}`, () => {
+    it("ask/respond resolves the actual parked turn from askId, injects one answer, and does not enqueue another task", async () => {
+      const h = makeHarness({ scripts: [ScriptedModelProvider.toolCall("ask_user", { question: "Which target?", reason: "choice_required" }), ScriptedModelProvider.text("done")] });
+      const client = makeClient(h); await initClient(client);
+      const start = await client.invoke("thread/start", { agentName: AGENT.name, cwd: "." });
+      const threadId = (start.result as { id: SessionId }).id;
+      const sent = await client.invoke("turn/start", { threadId, prompt: "implement target" });
+      const turnId = (sent.result as { turnId: TurnId }).turnId;
+      const parked = await client.invoke("turn/run", { threadId, turnId });
+      expect(parked.error).toBeUndefined();
+      const askId = (parked.result as { pendingAsk: { id: string } }).pendingAsk.id;
+      expect((await client.invoke("ask/respond", { askId, answer: " " })).error).toBeDefined();
+      const answered = await client.invoke("ask/respond", { askId, answer: "blue" });
+      expect(answered.error).toBeUndefined(); expect(answered.result).toMatchObject({ resumed: true, sessionId: threadId, turnId });
+      expect((await client.invoke("ask/respond", { askId, answer: "retry" })).result).toMatchObject({ resumed: true });
+      expect((await h.store.listTurns(threadId))).toHaveLength(1);
+      expect((await h.store.listMessages(threadId)).filter(message => message.askId !== undefined)).toMatchObject([{ turnId, content: "[user reply to your question]\nblue" }]);
+      expect((await client.invoke("turn/run", { threadId, turnId })).result).toMatchObject({ status: "completed" });
+      expect((await client.invoke("turn/run", { threadId, turnId })).error).toBeDefined();
+      expect((await h.store.listTurns(threadId))).toHaveLength(1);
+    });
+
     it("request before initialize → NOT_INITIALIZED", async () => {
       const client = makeClient(makeHarness());
       const res = await client.invoke("thread/start", { agentName: AGENT.name, cwd: "/tmp" });

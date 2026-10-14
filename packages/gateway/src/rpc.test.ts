@@ -260,6 +260,7 @@ describe("RpcMethodRegistry", () => {
     const { registry } = makeRpc();
     expect(registry.listMethods().sort()).toEqual([
       "agent.list",
+      "session.answer",
       "session.approve",
       "session.cancel",
       "session.create",

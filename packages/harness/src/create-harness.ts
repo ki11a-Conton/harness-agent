@@ -8,6 +8,7 @@ import { composeVerification } from "./compose/compose-verification.js";
 import { composeScheduler, composeDelegators } from "./compose/compose-delegation.js";
 import { introspectHarness, type IntrospectionInput } from "./compose/compose-observability.js";
 import { PRODUCTION_TOOL_NAMES } from "./tool-names.js";
+import { protectToolEventPayload } from "./tool-event-security.js";
 import {
   AgentError,
   errorInfo,
@@ -302,7 +303,7 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
     },
     events: {
       async emit(sessionId, type, payload, turnId) {
-        await appendHarnessEvent(sessionId, type as AgentEvent["type"], payload ?? {}, {
+        await appendHarnessEvent(sessionId, type as AgentEvent["type"], protectToolEventPayload(type, payload ?? {}), {
           ...(turnId !== undefined ? { turnId } : {}),
         });
       },
@@ -741,6 +742,7 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
     runtime,
     store,
     ...(inbox !== undefined ? { inbox } : {}),
+    ...(askUserStore !== undefined ? { askUserStore } : {}),
     ...(config.now !== undefined ? { now: config.now } : {}),
     ...(recoveryStore !== undefined ? { recoveryStore } : {}),
     // P38.1-12/13: keep the durable event stream complete when a starting turn

@@ -473,6 +473,9 @@ export interface RunTurnOptions {
   recoveryUsageSeed?: Partial<Record<RecoveryAction, number>>;
   verificationRetriesSeed?: number;
   stallRecoverySeed?: number;
+  iterationSeed?: number;
+  toolCallsExecutedSeed?: number;
+  toolLedgerSeed?: ToolExecutionRecord[];
 }
 
 export class AgentRuntime {
@@ -550,7 +553,8 @@ export class AgentRuntime {
   /** P16-3: live per-turn budget-usage provider (set by runTurnCore so every
    *  checkpoint writer sees the CURRENT consumed counters). Undefined outside
    *  a turn. */
-  private activeBudgetUsage: (() => CheckpointBudgetUsage | undefined) | undefined = undefined;
+  private readonly activeBudgetUsage = new Map<SessionId, () => CheckpointBudgetUsage>();
+  private readonly pausedTurns = new Map<TurnId, { sessionId: SessionId; askId: AskId; options: RunTurnOptions }>();
   private readonly failpoint?: AgentRuntimeDeps["failpoint"];
   /** P2-43: ask-user gate — durable store, handler, and pure lifecycle. */
   private readonly askUserStore?: AskUserStore;
@@ -693,7 +697,7 @@ export class AgentRuntime {
       compactCounter: this.compactCounter,
       checkpoint: (ctx, working, state, toolLedger, reason, budgetUsage) =>
         this.recoveryController.checkpoint(ctx, working, state, toolLedger, reason,
-          budgetUsage ?? this.activeBudgetUsage?.()),
+          budgetUsage ?? this.activeBudgetUsage.get(ctx.sessionId)?.()),
       finishTurn: (ctx, status, state, working, error, terminationReason, ledger, completionEvidence) =>
         this.recoveryController.finishTurn(ctx, status, state, working, error, terminationReason, ledger, completionEvidence),
       toolOutputBudget: this.toolOutputBudget,
@@ -779,11 +783,26 @@ export class AgentRuntime {
       contextBudgetMaxTokens: this.context?.budget.maxTokens ?? 0,
       checkpoint: (ctx, working, state, toolLedger, reason, budgetUsage) =>
         this.recoveryController.checkpoint(ctx, working, state, toolLedger, reason,
-          budgetUsage ?? this.activeBudgetUsage?.()),
+          budgetUsage ?? this.activeBudgetUsage.get(ctx.sessionId)?.()),
       finishTurn: (ctx, status, state, working, error, terminationReason, ledger, completionEvidence) =>
         this.recoveryController.finishTurn(ctx, status, state, working, error, terminationReason, ledger, completionEvidence),
-      parkForUserInput: (ctx, state, working, call, ledger) =>
-        this.recoveryController.parkForUserInput(ctx, state, working, call, ledger),
+      parkForUserInput: async (ctx, state, working, call, ledger) => {
+        const outcome = await this.recoveryController.parkForUserInput(ctx, state, working, call, ledger);
+        const usage = this.activeBudgetUsage.get(ctx.sessionId)?.();
+        const options: RunTurnOptions = {
+          initialState: structuredClone(working), toolLedgerSeed: structuredClone(ledger),
+          iterationSeed: state.getIteration(), toolCallsExecutedSeed: state.getToolCallsExecuted(),
+          ...(usage?.run !== undefined ? { budgetSeed: structuredClone(usage.run) } : {}),
+          ...(usage?.recoveryUsage !== undefined ? { recoveryUsageSeed: { ...usage.recoveryUsage } } : {}),
+          verificationRetriesSeed: usage?.verificationRetries, stallRecoverySeed: usage?.stallRecoveryCount,
+        };
+        // The live fallback also survives a failed checkpoint write. Across a
+        // process restart, only an intact checkpoint for this exact pause is
+        // accepted; an earlier side-effect checkpoint is not a substitute.
+        this.pausedTurns.set(ctx.turnId, { sessionId: ctx.sessionId, askId: outcome.pendingAsk!.id, options });
+        await this.recoveryController.checkpoint(ctx, working, state, ledger, `ask:waiting:${outcome.pendingAsk!.id}`, usage);
+        return outcome;
+      },
       runVerificationGate: (ctx) => this.verificationController.runVerificationGate(ctx),
       wallClockExceeded: (agent, turn) => this.wallClockExceeded(agent, turn),
     });
@@ -927,11 +946,17 @@ export class AgentRuntime {
     }
     this.runningTurns.set(sessionId, turnId);
     try {
-      const outcome = await this.runTurnCore(sessionId, turnId, signal, opts);
+      const stored = await this.store.getTurn(turnId);
+      if (stored?.status === "completed" || stored?.status === "cancelled") throw new AgentError(errorInfo("INTERNAL_ERROR", `turn ${turnId} is terminal (${stored.status}); create a new turn instead of replaying it`));
+      if (stored?.sessionId !== sessionId) throw new AgentError(errorInfo("INTERNAL_ERROR", `turn ${turnId} does not belong to session ${sessionId}`));
+      const continuing = stored.status === "waiting_for_user";
+      const options = continuing ? await this.restoreQuestionPause(sessionId, turnId, signal) : opts;
+      const outcome = await this.runTurnCore(sessionId, turnId, signal, options, continuing);
+      if (outcome.status !== "waiting_for_user") this.pausedTurns.delete(turnId);
       // P2-5: post-turn reflection hook — fired exactly once per terminal
       // outcome (the host owns the reflection pipeline). Errors are swallowed:
       // reflection must never change the turn result.
-      if (this.onTurnComplete !== undefined) {
+      if (this.onTurnComplete !== undefined && outcome.status !== "waiting_for_user" && outcome.status !== "waiting_for_approval") {
         try {
           await this.onTurnComplete({ sessionId, turnId, outcome });
         } catch (cause) {
@@ -949,10 +974,40 @@ export class AgentRuntime {
       }
       return outcome;
     } finally {
+      this.activeBudgetUsage.delete(sessionId);
       if (this.runningTurns.get(sessionId) === turnId) {
         this.runningTurns.delete(sessionId);
       }
     }
+  }
+
+  private async restoreQuestionPause(sessionId: SessionId, turnId: TurnId, signal: AbortSignal): Promise<RunTurnOptions> {
+    let pause = this.pausedTurns.get(turnId);
+    if (pause === undefined) {
+      const checkpoint = await this.checkpointStore?.loadLatest(sessionId);
+      if (checkpoint?.sessionId !== sessionId || checkpoint.turnId !== turnId || checkpoint.phase !== "waiting_user" ||
+          !checkpoint.reason.startsWith("ask:waiting:") || checkpoint.toolCallsExecuted === undefined || checkpoint.budgetUsage?.run === undefined) {
+        throw new AgentError(errorInfo("RESUME_FAILED", `turn ${turnId} has no intact question-pause checkpoint; refusing to reset task state or budget`));
+      }
+      const usage = checkpoint.budgetUsage;
+      pause = { sessionId, askId: checkpoint.reason.slice("ask:waiting:".length) as AskId, options: {
+        initialState: checkpoint.state, toolLedgerSeed: checkpoint.toolLedger,
+        iterationSeed: checkpoint.iteration, toolCallsExecutedSeed: checkpoint.toolCallsExecuted, budgetSeed: usage.run,
+        recoveryUsageSeed: usage.recoveryUsage, verificationRetriesSeed: usage.verificationRetries, stallRecoverySeed: usage.stallRecoveryCount,
+      } };
+    }
+    if (pause.sessionId !== sessionId) throw new AgentError(errorInfo("RESUME_FAILED", "question-pause session mismatch"));
+    if (!signal.aborted) {
+      const reply = (await this.store.listMessages(sessionId)).some(message => message.turnId === turnId && message.role === "user" && message.askId === pause.askId);
+      if (!reply) throw new AgentError(errorInfo("RESUME_FAILED", `turn ${turnId} is still waiting for the user answer`));
+    }
+    return structuredClone(pause.options);
+  }
+
+  /** Actor cancellation of a parked turn has no run promise to clean it up. */
+  async releasePausedTurn(sessionId: SessionId, turnId: TurnId): Promise<void> {
+    const turn = await this.store.getTurn(turnId);
+    if (turn?.sessionId === sessionId && (turn.status === "cancelled" || turn.status === "completed" || turn.status === "failed")) this.pausedTurns.delete(turnId);
   }
 
   /** P2-5: runTurn body (the wrapper fires the post-turn reflection hook).
@@ -962,10 +1017,11 @@ export class AgentRuntime {
     turnId: TurnId,
     signal: AbortSignal,
     opts: RunTurnOptions = {},
+    continuing = false,
   ): Promise<TurnOutcome> {
     // Q-1: turn initialization extracted to prepareTurn (session/agent/turn
     // resolution, TurnContext, AgentState, working state, tool ledger).
-    const { ctx, state, turn, working, toolLedger, turnState } = await this.prepareTurn(sessionId, turnId, signal, opts);
+    const { ctx, state, turn: storedTurn, working, toolLedger, turnState } = await this.prepareTurn(sessionId, turnId, signal, opts);
 
     const priorBlocks: ContextBlock[] = [];
     let overflowAttempt = 0;
@@ -975,21 +1031,25 @@ export class AgentRuntime {
     let lastReportTokens: number | undefined;
     // P0-10/R6: preparation consumes the same execution duration as the
     // model loop; retrieval must not reset the turn's clock.
-    const budget = new RunBudgetTracker(ctx.agent.limits, this.now);
+    const budget = new RunBudgetTracker(ctx.agent.limits, this.now, continuing ? opts.budgetSeed : undefined);
+    // Keep the durable turn's original timestamp. Model execution deadlines
+    // use the same active-time clock as the restored budget, excluding the
+    // human-input wait rather than treating it as model execution.
+    const turn = continuing ? { ...storedTurn, startedAt: budget.snapshot().startedAt } : storedTurn;
     // P16-3: a resumed turn seeds its consumed counters from the checkpoint —
     // budget is NEVER refreshed on resume.
     if (opts.budgetSeed !== undefined) budget.seedConsumed(opts.budgetSeed);
     // P16-3: expose the live per-turn budget usage to checkpoint writers.
-    this.activeBudgetUsage = () => ({
+    this.activeBudgetUsage.set(sessionId, () => ({
       maxTokens: this.context?.budget.maxTokens ?? 0,
       ...(lastReportTokens !== undefined ? { usedTokens: lastReportTokens } : {}),
       run: budget.snapshot(),
       recoveryUsage: turnState.recoveryUsage,
       verificationRetries: verificationFailures,
       stallRecoveryCount: state.stallRecoveriesUsedCount,
-    });
+    }));
     // P0-10: maxTurns — a turn-level cap, consumed at the start of each turn.
-    const turnBreach = budget.onTurnStart();
+    const turnBreach = continuing ? undefined : budget.onTurnStart();
     if (turnBreach !== undefined) {
       await this.emit(sessionId, "run.limit_reached", { ...turnBreach, used: turnBreach.used }, turnId);
       return this.recoveryController.finishTurn(
@@ -1050,8 +1110,8 @@ export class AgentRuntime {
       }
       // P15-2: step counter — one StepContext per model call; the batch of
       // tool calls it requests reuses the SAME step (immutable snapshot).
-      let stepIndex = 0;
-      for (let i = 0; i < this.maxIterationsPerTurn; i++) {
+      let stepIndex = state.getIteration();
+      for (let i = state.getIteration(); i < this.maxIterationsPerTurn; i++) {
         if (signal.aborted) {
           return this.recoveryController.finishTurn(ctx, "cancelled", state, working, undefined, "cancelled", toolLedger);
         }
@@ -1063,7 +1123,7 @@ export class AgentRuntime {
           state.getIteration() > 0 &&
           state.getIteration() % this.checkpointPolicy.everyNIterations === 0
         ) {
-          await this.recoveryController.checkpoint(ctx, working, state, toolLedger, "periodic:iteration", this.activeBudgetUsage?.());
+          await this.recoveryController.checkpoint(ctx, working, state, toolLedger, "periodic:iteration", this.activeBudgetUsage.get(sessionId)?.());
         }
 
         const durationBreach = budget.onDurationCheck();
@@ -1155,7 +1215,7 @@ export class AgentRuntime {
           // shrink flag → continue, which builds a NEW StepExecutionSnapshot.
           await this.recoveryController.checkpoint(
             ctx, working, state, toolLedger, "context:reactive-compact",
-            this.activeBudgetUsage?.(),
+            this.activeBudgetUsage.get(sessionId)?.(),
           );
           reactiveCompacted = true;
           await this.emit(sessionId, "context.compacted", {
@@ -1244,9 +1304,26 @@ export class AgentRuntime {
             }
           }
         }
-        const executed = await this.toolCallController.executeToolCalls(ctx, state, toolCalls, turnState, step, modelResult.callId);
+        // Reserve the logical call budget BEFORE dispatch. A post-result
+        // check lets the over-budget write land and makes its checkpoint
+        // omit the consumption. Settle the unexecuted suffix as well, so the
+        // model's assistant/tool block remains complete and adjacent.
+        const admitted: ToolCall[] = [], blocked: ExecutedToolCall[] = [];
+        let toolBreach: import("@ar/contracts").LimitBreach | undefined;
+        for (const call of toolCalls) {
+          if (toolBreach === undefined && call.name !== "update_plan") toolBreach = budget.onToolCall();
+          if (toolBreach === undefined) admitted.push(call);
+          else blocked.push({ call, streak: 0, result: { status: "failed", error: errorInfo("RESOURCE_LIMIT", "tool call not dispatched: maxToolCalls reached") } });
+        }
+        if (toolBreach !== undefined) await this.emit(sessionId, "run.limit_reached", { ...toolBreach }, turnId);
+        const executed = [...await this.toolCallController.executeToolCalls(ctx, state, admitted, turnState, step, modelResult.callId), ...blocked];
         const toolAction = await this.handleToolResults(
           ctx, executed, working, state, toolLedger, priorBlocks, lastReportTokens, budget,
+        );
+        if (toolBreach !== undefined) return this.recoveryController.finishTurn(
+          ctx, signal.aborted ? "cancelled" : "failed", state, working,
+          signal.aborted ? undefined : errorInfo("RESOURCE_LIMIT", `maxToolCalls (${toolBreach.allowed}) reached`),
+          signal.aborted ? "cancelled" : "tool_limit", toolLedger,
         );
         if (toolAction.action === "continue_loop") continue;
         if (toolAction.action === "finish") return toolAction.outcome;
@@ -1285,6 +1362,7 @@ export class AgentRuntime {
 
     const state = new AgentState(sessionId, session.agentId, this.now);
     state.beginTurn(turnId);
+    state.seedProgress(opts.iterationSeed ?? 0, opts.toolCallsExecutedSeed ?? 0);
     // P16-3: a resumed turn seeds its stall-recovery consumption.
     if (opts.stallRecoverySeed !== undefined && opts.stallRecoverySeed > 0) {
       state.seedStallRecoveries(opts.stallRecoverySeed);
@@ -1301,7 +1379,7 @@ export class AgentRuntime {
     // P1-3/P1-4: checkpoint material tracked per turn — the durable tool
     // execution ledger and the last observed context usage so a checkpoint
     // can carry budget usage without re-reading the transcript.
-    const toolLedger: ToolExecutionRecord[] = [];
+    const toolLedger: ToolExecutionRecord[] = opts.toolLedgerSeed ?? [];
     // P15-1: the per-turn execution state is created fresh HERE — a new
     // recoveryUsage map per turn, so no turn inherits another turn's budget.
     const turnState: TurnExecutionState = newTurnExecutionState();
@@ -1444,7 +1522,7 @@ export class AgentRuntime {
       // `tool_call_id`, and leaving it unanswered is a protocol violation.
       if (call.name === "update_plan") {
         const mutations = call.args.mutations as WorkingStateMutation[] | undefined;
-        if (mutations !== undefined) {
+        if (result.status === "success" && mutations !== undefined) {
           for (const mutation of mutations) {
             applyWorkingStateMutation(working, mutation);
           }
@@ -1504,7 +1582,7 @@ export class AgentRuntime {
         if (this.checkpointPolicy.afterSideEffectTools) {
           await this.recoveryController.checkpoint(
             ctx, working, state, toolLedger, `tool:completed:${call.name}`,
-            this.activeBudgetUsage?.(),
+            this.activeBudgetUsage.get(sessionId)?.(),
           );
           // P1-5: kill AFTER the checkpoint persisted (a durable safety
           // boundary exists — resume can proceed from it).
@@ -1591,17 +1669,6 @@ export class AgentRuntime {
           reason: "tool_limit",
         };
         break;
-      }
-      if (agent.limits.maxToolCalls !== undefined) {
-        const breach = budget.onToolCall();
-        if (breach !== undefined) {
-          await this.emit(sessionId, "run.limit_reached", { ...breach }, turnId);
-          terminal = {
-            error: errorInfo("RESOURCE_LIMIT", `maxToolCalls (${agent.limits.maxToolCalls}) reached`),
-            reason: "tool_limit",
-          };
-          break;
-        }
       }
     }
 

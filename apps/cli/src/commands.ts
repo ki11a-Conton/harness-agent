@@ -1,5 +1,6 @@
 import type {
   AgentEvent,
+  AskUserRequest,
   ApprovalDecision,
   ApprovalId,
   ApprovalStore,
@@ -71,6 +72,7 @@ export interface CommandDeps {
     started?(sessionId: string, turnId: string): void;
     event?(event: AgentEvent): void;
     approve(request: ApprovalRequest, signal: AbortSignal): Promise<"allow" | "deny">;
+    ask?(request: AskUserRequest, signal: AbortSignal): Promise<string | undefined>;
     signal?: AbortSignal;
   };
   /** Persistent first-generation CLI interaction, sharing the run RPC path. */
@@ -503,9 +505,10 @@ async function runCmd(rest: string[], deps: CommandDeps): Promise<CommandResult>
 
 /** One turn on an existing session: the same approved/cancellable path for
  * one-shot run and persistent chat. No host reaches through Runtime boundaries. */
-export async function runSessionTurn(session: Session, text: string, deps: CommandDeps): Promise<CommandResult> {
+export async function runSessionTurn(session: Session, text: string, deps: CommandDeps,
+  continuation?: { turnId: string; question: AskUserRequest }): Promise<CommandResult> {
   try {
-    const { turnId } = (await deps.rpc.request("session.send", {
+    const { turnId } = continuation ?? (await deps.rpc.request("session.send", {
       sessionId: session.id,
       text,
     })) as { turnId: string };
@@ -526,6 +529,7 @@ export async function runSessionTurn(session: Session, text: string, deps: Comma
         }
         for (const request of deps.approvalStore.listPending(session.id)) {
           if (interaction.signal.aborted) break;
+          if (request.turnId !== turnId) continue;
           if (handled.has(request.id)) continue;
           handled.add(request.id);
           const approvalSignal = AbortSignal.any([interaction.signal, AbortSignal.timeout(Math.max(0, Math.min(2_147_483_647, request.expiresAt - Date.now())))]);
@@ -560,8 +564,43 @@ export async function runSessionTurn(session: Session, text: string, deps: Comma
       // Carry the caller signal through the actual run boundary even if it
       // aborted before execution. A request-only cancel on an idle actor must
       // not leave the already-created durable turn pending forever.
-      outcome = (await deps.rpc.request("session.run", { sessionId: session.id, turnId },
-        deps.runHost?.signal !== undefined ? { signal: deps.runHost.signal } : undefined)) as TurnOutcome;
+      const run = async () => await deps.rpc.request("session.run", { sessionId: session.id, turnId },
+        deps.runHost?.signal !== undefined ? { signal: deps.runHost.signal } : undefined) as TurnOutcome;
+      const answerQuestion = async (question: AskUserRequest): Promise<"answered" | "eof" | "cancelled"> => {
+        if (!deps.runHost?.ask && question.status !== "answered") return "eof";
+        const answerSignal = AbortSignal.any([interaction.signal, ...(deps.runHost?.signal ? [deps.runHost.signal] : [])]);
+        const answer = question.status === "answered" ? question.answerText : await deps.runHost!.ask!(question, answerSignal);
+        if (answerSignal.aborted) {
+          await deps.rpc.request("session.cancel", { sessionId: session.id, turnId });
+          const persisted = await deps.store.getTurn(turnId as import("@ar/contracts").TurnId);
+          if (persisted?.status !== "cancelled") throw new Error("question cancellation did not commit; inspect the persisted turn before retrying");
+          return "cancelled";
+        }
+        if (answer === undefined) return "eof";
+        const submitted = await deps.rpc.request("session.answer", { sessionId: session.id, turnId, askId: question.id, text: answer }) as { resumed: boolean; message: string };
+        if (!submitted.resumed) throw new Error(submitted.message);
+        return "answered";
+      };
+      // On restart the existing parked turn must receive its answer BEFORE
+      // another model step; an answer is never admitted as a new task.
+      if (continuation) {
+        const answered = await answerQuestion(continuation.question);
+        if (answered !== "answered") return { exitCode: 1, lines: [`run: session ${session.id} turn ${turnId}`,
+          `status: ${answered === "eof" ? "waiting_for_user" : "cancelled"}`,
+          `question ${continuation.question.id}: ${continuation.question.question}`,
+          `resume: agent chat ${JSON.stringify(session.cwd)} --resume ${session.id}`] };
+      }
+      outcome = await run();
+      while (outcome.status === "waiting_for_user" && outcome.pendingAsk) {
+        const answered = await answerQuestion(outcome.pendingAsk);
+        if (answered === "cancelled") {
+          const { pendingAsk: _pending, ...rest } = outcome;
+          outcome = { ...rest, status: "cancelled", terminationReason: "cancelled" };
+          break;
+        }
+        if (answered === "eof") break; // EOF keeps the durable question resumable.
+        outcome = await run();
+      }
     } finally {
       if (timer !== undefined) clearInterval(timer);
       interaction.abort();
@@ -587,6 +626,7 @@ export async function runSessionTurn(session: Session, text: string, deps: Comma
       lines: [
         `run: session ${session.id} turn ${turnId}`,
         `status: ${outcome.status}`,
+        ...(outcome.pendingAsk ? [`question ${outcome.pendingAsk.id}: ${outcome.pendingAsk.question}`, `resume: agent chat ${JSON.stringify(session.cwd)} --resume ${session.id}`] : []),
         `grade: ${outcome.grade ?? "ungraded"}`,
         `termination: ${outcome.terminationReason ?? "unknown"}`,
         `summary: ${summary}`,

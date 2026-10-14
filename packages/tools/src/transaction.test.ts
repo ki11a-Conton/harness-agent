@@ -104,12 +104,14 @@ describe("P2-26 WorkspaceChangeTransaction", () => {
   it("all-or-nothing: a failed commit rolls back earlier writes", async () => {
     // A regular file as a parent dir makes the SECOND write fail deterministically
     // (mkdir('blocker') fails), regardless of whether we run as root.
-    writeFileSync(join(ws, "blocker"), "i am a file, not a directory");
     const txn = new WorkspaceChangeTransaction({ root: ws });
     await txn.snapshot([
       { path: "applied-first.txt", content: "FIRST" },
       { path: "blocker/sub/x.txt", content: "SECOND" },
     ]);
+    // The path becomes unusable AFTER staging; an initially invalid ancestor
+    // is now rejected before staging, without any first write to roll back.
+    writeFileSync(join(ws, "blocker"), "i am a file, not a directory");
     const err = await txn.commit().then(
       () => null,
       (e) => e as unknown,

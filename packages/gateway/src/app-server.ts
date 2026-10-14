@@ -16,6 +16,7 @@
 import type {
   AgentDefinition,
   ApprovalStore,
+  AskUserStore,
   EventStore,
   SessionId,
   Skill,
@@ -32,6 +33,7 @@ export interface AppServerOptions {
   sessions: LoadedSessionManager;
   sessionService: SessionService;
   approvalStore: ApprovalStore;
+  askUserStore?: AskUserStore;
   events: EventStore;
   listAgents?: () => AgentDefinition[];
   listTools?: () => ToolSpec[];
@@ -79,6 +81,7 @@ export class AppServer {
       sessionService: opts.sessionService,
       sessions: opts.sessions,
       approvalStore: opts.approvalStore,
+      ...(opts.askUserStore ? { askUserStore: opts.askUserStore } : {}),
       events: opts.events,
       listAgents: opts.listAgents,
       listTools: opts.listTools,
@@ -192,7 +195,7 @@ export class AppServer {
       case "approval/respond":
         return "session.approve";
       case "ask/respond":
-        return "session.followup";
+        return "session.answer";
       case "agent/list":
         return "agent.list";
       case "tool/list":
@@ -210,6 +213,8 @@ export class AppServer {
   private adaptParams(method: string, params: Record<string, unknown>): Record<string, unknown> {
     const threadId = typeof params.threadId === "string" ? params.threadId : undefined;
     switch (method) {
+      case "ask/respond":
+        return { askId: params.askId, text: params.answer };
       case "thread/start": {
         // The wire speaks in agent NAMES; the runtime speaks agent IDs.
         const agentName = typeof params.agentName === "string" ? params.agentName : undefined;

@@ -11,7 +11,7 @@ import type { LimitBreach, RunBudget, RunLimits } from "@ar/contracts";
 export class RunBudgetTracker {
   /** P20-5: a REAL run id generated once per tracker — the snapshot never
    *  carries a fabricated placeholder again. */
-  private readonly runId = newRunId();
+  private readonly runId: RunBudget["runId"];
   private readonly startedAt: number;
   private readonly limits: RunLimits;
   private readonly now: () => number;
@@ -25,10 +25,14 @@ export class RunBudgetTracker {
   private outputTokens = 0;
   private estimatedCostUsd = 0;
 
-  constructor(limits: RunLimits, now: () => number) {
+  constructor(limits: RunLimits, now: () => number, continuation?: RunBudget) {
     this.limits = limits;
     this.now = now;
-    this.startedAt = now();
+    // A human-input pause continues the same run. Count previously spent
+    // execution time, but exclude time spent waiting for the human.
+    this.runId = continuation?.runId ?? newRunId();
+    this.startedAt = now() - (continuation?.durationMs ?? 0);
+    if (continuation !== undefined) this.seedConsumed(continuation);
   }
 
   // ── trigger-point methods ───────────────────────────────────────────────

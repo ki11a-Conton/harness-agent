@@ -343,6 +343,7 @@ export class RecoveryController {
         reason,
         phase: snapshot.phase,
         iteration: snapshot.iteration,
+        toolCallsExecuted: snapshot.toolCallsExecuted,
         state: working,
         ...(budgetUsage !== undefined ? { budgetUsage } : {}),
         toolLedger,

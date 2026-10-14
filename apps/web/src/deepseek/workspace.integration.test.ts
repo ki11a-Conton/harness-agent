@@ -202,6 +202,29 @@ it("turn captures compare actual coding edits with stable source coordinates, an
   expect((await restarted.fetch(new Request(`http://localhost/api/changes.summary?sessionId=${s.session.id}&seq=${announcement!.sequence}`)))?.status).toBe(404);
 });
 
+it.each([
+  { before: "line", after: "line\n", marker: "No newline at end of file" },
+  { before: "line\n", after: "\uFEFFline\n", marker: "\uFEFFline" },
+])("actual turn capture retains a format-only coding change ($marker)", async ({ before, after, marker }) => {
+  const s = await setup({ provider: new ScriptedModelProvider([ScriptedModelProvider.toolCall("write_file", { path: "format.txt", content: after }), ScriptedModelProvider.text("Written")]) });
+  await writeFile(join(s.cwd, "format.txt"), before);
+  const append = s.harness.events.appendNew.bind(s.harness.events);
+  let captured!: () => void; const ready = new Promise<void>(resolve => { captured = resolve; });
+  s.harness.events.appendNew = async event => {
+    const committed = await append(event); await s.deliverables.observe(committed);
+    if (["turn.completed", "turn.failed", "turn.cancelled"].includes(committed.type)) captured();
+    return committed;
+  };
+  const actor = await s.harness.sessions.load(s.session.id); await actor.enqueueFollowup({ sessionId: s.session.id, text: "Change file format" });
+  await settle(s.harness, s.session.id); await ready;
+  const announcement = (await s.harness.events.list(s.session.id)).find(event => event.payload.tool === "web_workspace_changes")!;
+  expect(announcement).toBeDefined();
+  const response = await s.deliverables.fetch(new Request(`http://localhost/api/changes.diff?sessionId=${s.session.id}&seq=${announcement.sequence}&index=0`));
+  const diff = await response!.json() as { hunks: Array<{ lines: string[] }> };
+  expect(diff.hunks).not.toEqual([]); expect(JSON.stringify(diff.hunks)).toContain(marker);
+  expect(await readFile(join(s.cwd, "format.txt"), "utf8")).toBe(after);
+});
+
 it("exports a genuine ZIP of owned durable records and rejects malformed coordinates/native desktop actions", async () => {
   const s = await setup();
   await s.harness.events.appendNew({ id: newEventId(), sessionId: s.session.id, timestamp: Date.now(), type: "human.message", payload: { text: "durable proof" } });

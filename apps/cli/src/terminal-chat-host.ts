@@ -57,6 +57,17 @@ export function createTerminalChatHost(options: { input?: Readable; output?: Wri
           error.write(allowed ? "allowed for this call\n" : "denied (enter exactly allow to authorize one call)\n");
           return allowed ? "allow" : "deny";
         },
+        async ask(request, signal) {
+          error.write(`question ${request.id}: ${request.question}\n`);
+          if (request.options?.length) error.write(`choices: ${request.options.map(value => JSON.stringify(value)).join(" / ")}\n`);
+          for (;;) {
+            error.write("answer> ");
+            const value = await read(signal);
+            if (value === undefined || signal.aborted) return undefined;
+            if (value.trim()) return value;
+            error.write("Enter an answer, or press Ctrl-C to cancel this task.\n");
+          }
+        },
       };
     },
     endTurn() { active = undefined; },

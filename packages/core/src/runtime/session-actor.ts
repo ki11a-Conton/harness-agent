@@ -26,6 +26,7 @@
 
 import type {
   AdmittedPrompt,
+  AskUserStore,
   EventSink,
   InboxStore,
   PromptId,
@@ -311,9 +312,10 @@ export interface LoadedSessionManager {
 
 export interface SessionActorDeps {
   persistent: PersistentSession;
-  runtime: Pick<AgentRuntime, "startTurn" | "runTurn">;
+  runtime: Pick<AgentRuntime, "startTurn" | "runTurn"> & Partial<Pick<AgentRuntime, "releasePausedTurn">>;
   store: SessionStore;
   inbox?: InboxStore;
+  askUserStore?: AskUserStore;
   now?: () => number;
   onClosed?: (sessionId: SessionId) => void;
   /** P38.1-12/13 (INV-P38.1-004/005): when a starting existing-turn's
@@ -361,9 +363,10 @@ export interface FollowupDeferred {
 }
 
 export interface LoadedSessionManagerDeps {
-  runtime: Pick<AgentRuntime, "startTurn" | "runTurn">;
+  runtime: Pick<AgentRuntime, "startTurn" | "runTurn"> & Partial<Pick<AgentRuntime, "releasePausedTurn">>;
   store: SessionStore;
   inbox?: InboxStore;
+  askUserStore?: AskUserStore;
   now?: () => number;
   /** P38.1-12/13: forwarded to each loaded actor so a pre-promotion cancel can
    *  emit turn.cancelled while keeping runtime.runTurn uninvolved. */
@@ -689,6 +692,7 @@ export class DefaultSessionActor implements SessionActor {
   private state: ActorExecutionState = { kind: "idle" };
   private closed = false;
   private closing: Promise<void> | undefined;
+  private cancellingWait: Promise<CancelTurnResult> | undefined;
   // Runtime terminal status precedes the durable inbox consume ACK. Retain
   // that ownership until shutdown so a host cannot release its data lease
   // while an acknowledgement is still writing.
@@ -1383,6 +1387,7 @@ export class DefaultSessionActor implements SessionActor {
   }
 
   async interrupt(): Promise<TurnOutcome | undefined> {
+    if (this.cancellingWait !== undefined) { await this.cancellingWait; return undefined; }
     const s = this.state;
     if (s.kind === "running") {
       s.controller.abort();
@@ -1400,6 +1405,7 @@ export class DefaultSessionActor implements SessionActor {
 
   async cancelTurn(turnId: TurnId): Promise<CancelTurnResult> {
     const s = this.state;
+    if (this.cancellingWait !== undefined && s.kind === "starting" && s.turnId === turnId) return this.cancellingWait;
     if (s.kind === "running") {
       if (s.turn.id !== turnId) {
         return { disposition: "not_running", turnId };
@@ -1420,6 +1426,31 @@ export class DefaultSessionActor implements SessionActor {
       // (updateTurn may fail → failed/cancellation_persistence_uncertain), so
       // the request result never claims "cancelled" as durable truth.
       return { disposition: "cancel_requested", turnId };
+    }
+    if (s.kind === "idle" && !this.closed) {
+      // A user-input pause has no running promise to abort. Reserve the actor
+      // while its durable cancellation commits, so another run cannot begin
+      // and duplicate callers cannot revoke this persistence reservation.
+      const requestId = nextRequestId(), controller = new AbortController();
+      this.state = { kind: "starting", source: "existing_turn", requestId, controller, turnId };
+      const cancellation = (async (): Promise<CancelTurnResult> => {
+        const turn = await this.deps.store.getTurn(turnId);
+        if (!turn || turn.sessionId !== this.sessionId || turn.status !== "waiting_for_user") return { disposition: "not_running", turnId };
+        await this.deps.store.updateTurn({ ...turn, status: "cancelled" });
+        await this.deps.runtime.releasePausedTurn?.(this.sessionId, turnId);
+        for (const ask of await this.deps.askUserStore?.listPending(this.sessionId) ?? []) {
+          if (ask.turnId === turnId) await this.deps.askUserStore!.markWithdrawn(ask.id);
+        }
+        await this.deps.emit?.emit(this.sessionId, "turn.cancelled", { status: "cancelled", waitingForUser: true, reason: "user" }, turnId);
+        return { disposition: "cancel_requested", turnId };
+      })();
+      this.cancellingWait = cancellation;
+      try { return await cancellation; }
+      finally {
+        if (this.cancellingWait === cancellation) this.cancellingWait = undefined;
+        if (this.state.kind === "starting" && this.state.requestId === requestId) this.state = this.closed ? { kind: "closing" } : { kind: "idle" };
+        if (!this.closed) this.requestFollowupWake();
+      }
     }
     return { disposition: "not_running", turnId };
   }
@@ -1474,7 +1505,7 @@ export class DefaultSessionActor implements SessionActor {
         ),
       });
     }
-    await Promise.allSettled([...this.terminalAcknowledgements]);
+    await Promise.allSettled([...this.terminalAcknowledgements, ...(this.cancellingWait ? [this.cancellingWait] : [])]);
     this.resourceScope.release();
     this.deps.onClosed?.(this.sessionId);
   }
@@ -2006,6 +2037,7 @@ export class DefaultSessionActor implements SessionActor {
         errorInfo("INTERNAL_ERROR", `unknown turn ${turnId} for session ${this.sessionId}`),
       );
     }
+    if (turn.status === "completed" || turn.status === "cancelled") throw new AgentError(errorInfo("INTERNAL_ERROR", `turn ${turnId} is terminal (${turn.status}); create a new turn instead of replaying it`));
     return turn;
   }
 
@@ -2067,6 +2099,7 @@ export class DefaultLoadedSessionManager implements LoadedSessionManager {
         runtime: this.deps.runtime,
         store: this.deps.store,
         inbox: this.deps.inbox,
+        askUserStore: this.deps.askUserStore,
         now: this.deps.now,
         emit: this.deps.emit,
         recoveryStore: this.deps.recoveryStore,

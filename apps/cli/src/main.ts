@@ -432,6 +432,7 @@ export async function createDefaultDeps(options: DefaultDepsOptions = {}): Promi
     sessionService: harness.sessionService,
     sessions: harness.sessions,
     approvalStore: harness.approvalStore,
+    ...(harness.askUserStore ? { askUserStore: harness.askUserStore } : {}),
     events: harness.events,
     listAgents: () => harness.agents,
     listTools: () => harness.registry.specs(),

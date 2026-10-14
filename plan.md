@@ -2,7 +2,7 @@
 
 当前任务：[发布前最终大审查](plan(20261014-003000).md)，任务合同：[FINAL-AUDIT-20261014](tasks/FINAL-AUDIT-20261014.md)。全面复查 coding 链路、复现并修复剩余缺陷，固定源码验收后提交推送 main，由用户本地测试决定 release；本轮不发布。此前[品牌统一](plan(20261013-232547).md)、[上一轮规格](plan(20261013-194000).md)及[完整 UI 迁移计划](plan(20261008-web-deepseek-parity).md)保留。各项包含做什么、怎么做与怎么验收。
 
-本轮品牌任务已完成验收：固定 bda6b20 独立包中英文三视口品牌 90 断言、coding 30 场景/75 断言通过，Web 186、资源/传输 20、包路径 3 测试与 clean docs gate 通过。原始发布文件和合法版权归档保持不变；见[品牌报告](docs/web-branding.md)。本轮不改 Core，也不宣布全功能或模型质量通过。
+上一轮品牌任务已完成验收：固定 bda6b20 独立包中英文三视口品牌 90 断言、coding 30 场景/75 断言通过，Web 186、资源/传输 20、包路径 3 测试与 clean docs gate 通过。原始发布文件和合法版权归档保持不变；见[品牌报告](docs/web-branding.md)。该轮未改 Core，也未宣布全功能或模型质量通过。
 
 已将官方完整 frontend shell 和 66 个默认客户端 entry 接到真实 Harness，根页面采用官方 UI，旧客户端保留在 `/legacy/index.html`。来源固定为官方 npm `0.2.1-alpha.1`，发布物没有 gitHead，不声明等同于参考 Git 源码。
 

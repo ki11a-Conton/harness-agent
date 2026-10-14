@@ -83,6 +83,7 @@ async function startMain(lease: DataDirLease | undefined): Promise<number> {
     sessionService: harness.sessionService,
     sessions: harness.sessions,
     approvalStore: harness.approvalStore,
+    ...(harness.askUserStore ? { askUserStore: harness.askUserStore } : {}),
     events: harness.events,
   });
   const gatewayRpc = new TrackingRegistry(registry, (session) => bindings.onSessionCreated(session));

@@ -105,7 +105,7 @@ export function createDeliverablesService(host: DeliverablesHost) {
                 throw new WorkspaceRemoteError("workspace-file/too-large", "Capture file changed while being read");
               const hash = createHash("sha256").update(bytes).digest("hex");
               let decoded: string;
-              try { decoded = new TextDecoder("utf-8", { fatal: true }).decode(bytes); }
+              try { decoded = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes); }
               catch { files[key] = { hash, binary: true }; continue; }
               if (detectSecrets(decoded).hasSecret) { files[key] = { hash, oversized: true }; continue; }
               files[key] = decoded.includes("\0") ? { hash, binary: true } : { hash, text: decoded };

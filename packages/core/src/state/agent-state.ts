@@ -264,6 +264,16 @@ export class AgentState {
     this.stallRecoveriesUsed = used;
   }
 
+  /** Restore actual progress of the SAME paused turn, rather than starting
+   *  the iteration/tool counters over when the user answers a question. */
+  seedProgress(iterations: number, toolCalls: number): void {
+    if (!Number.isSafeInteger(iterations) || iterations < 0 || !Number.isSafeInteger(toolCalls) || toolCalls < 0) {
+      throw new Error("invalid paused-turn progress counters");
+    }
+    this.iteration = iterations;
+    this.toolCallsExecuted = toolCalls;
+  }
+
   /** Reset the identical-call streak after a stall recovery. */
   resetToolStreak(): void {
     this.identicalToolStreak = 0;

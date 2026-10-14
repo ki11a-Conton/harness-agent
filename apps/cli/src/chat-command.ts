@@ -60,6 +60,21 @@ export async function chatCommand(args: string[], deps: CommandDeps): Promise<Co
     host.write(`data: ${deps.doctor.dataDir ?? "in-memory (configure a persistent data directory to resume after exit)"}`);
     host.write("/help for commands; /quit exits. Ctrl-C cancels the current turn; the session is kept.");
     let exitCode = 0;
+    if (options.resume !== undefined) {
+      const waiting = (await deps.store.listTurns(session.id)).filter(turn => turn.status === "waiting_for_user");
+      if (waiting.length > 1) throw new Error("multiple parked questions require recovery before starting another task");
+      if (waiting[0]) {
+        const event = (await deps.events.list(session.id)).filter(event => event.type === "ask.user_asked" && event.turnId === waiting[0]!.id).at(-1);
+        const question = typeof event?.payload.askId === "string" ? await deps.askUserStore?.get(event.payload.askId as import("@ar/contracts").AskId) : undefined;
+        if (!question || question.sessionId !== session.id || question.turnId !== waiting[0].id) throw new Error("parked question identity is unavailable; recover this session before starting another task");
+        const runHost = host.beginTurn();
+        try {
+          const result = await runSessionTurn(session, "", { ...deps, runHost }, { turnId: waiting[0].id, question });
+          exitCode = result.exitCode; for (const line of result.lines) host.write(line);
+          if ((await deps.store.getTurn(waiting[0].id))?.status === "waiting_for_user") return { exitCode, lines: [`chat paused: session ${session.id}; the question remains unanswered`] };
+        } finally { host.endTurn(); }
+      }
+    }
     for (;;) {
       const text = await host.readMessage();
       if (text === undefined || text.trim() === "/quit" || text.trim() === "/exit") break;

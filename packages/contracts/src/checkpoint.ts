@@ -94,6 +94,8 @@ export interface CheckpointData {
   phase: string;
   /** Model round-trips completed in the turn so far. */
   iteration: number;
+  /** Actual completed tool calls, including runtime-internal plan updates. */
+  toolCallsExecuted?: number;
   /** The turn's authoritative run state (P1-1, single source of truth). */
   state: WorkingState;
   budgetUsage?: CheckpointBudgetUsage;

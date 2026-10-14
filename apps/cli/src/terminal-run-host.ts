@@ -35,6 +35,21 @@ export function createTerminalRunHost(): NonNullable<CommandDeps["runHost"]> & {
       process.stderr.write("allowed for this call\n");
       return "allow";
     },
+    async ask(request, signal) {
+      process.stderr.write(`question ${request.id}: ${request.question}\n`);
+      if (request.options?.length) process.stderr.write(`choices: ${request.options.map(value => JSON.stringify(value)).join(" / ")}\n`);
+      for (;;) {
+        process.stderr.write("answer> ");
+        while (!ended && !signal.aborted && lines.length === 0) {
+          await new Promise<void>(resolve => { waiter = () => resolve(); signal.addEventListener("abort", waiter, { once: true }); });
+          signal.removeEventListener("abort", waiter!); waiter = undefined;
+        }
+        if (signal.aborted) return undefined;
+        const value = lines.shift();
+        if (value === undefined || value.trim()) return value;
+        process.stderr.write("Enter an answer, or press Ctrl-C to cancel this task.\n");
+      }
+    },
     close() { process.off("SIGINT", interrupt); rl.close(); },
   };
 }

@@ -1,5 +1,7 @@
 import type {
   AgentDefinition,
+  AskId,
+  AskUserStore,
   AgentEvent,
   AgentId,
   ApprovalId,
@@ -104,6 +106,8 @@ export interface RuntimeRpcDeps {
   sessions: LoadedSessionManager;
   /** §161 approval binding: one-shot, session-scoped decisions. */
   approvalStore: ApprovalStore;
+  /** Optional durable question index; event proofs resolve in-memory asks. */
+  askUserStore?: AskUserStore;
   events: EventStore;
   /** Host-wired agent listing; absent provider makes `agent.list` an error. */
   listAgents?: () => AgentDefinition[];
@@ -157,6 +161,36 @@ export function createRuntimeRpc(
       // parallel run. The caller signal is linked by the actor.
       const actor = await deps.sessions.load(session);
       return actor.runTurn(turn, ctx.signal);
+    })
+    .register("session.answer", async (params, ctx) => {
+      const input = params as { sessionId?: SessionId; turnId?: TurnId; askId: AskId; text: string };
+      const askId = requireParam("askId", input.askId) as AskId;
+      const text = requireParam("text", input.text);
+      if (!text.trim() || text.length > 64_000 || text.includes("\0")) throw new AgentError(errorInfo("INTERNAL_ERROR", "question answer must contain 1–64000 text characters"));
+      ctx.signal?.throwIfAborted();
+      let sessionId = input.sessionId, turnId = input.turnId;
+      if (sessionId === undefined && turnId === undefined) {
+        const recorded = await deps.askUserStore?.get(askId);
+        if (recorded) { sessionId = recorded.sessionId; turnId = recorded.turnId; }
+        else {
+          // The wire protocol identifies a question by askId alone. A host
+          // without a dedicated ask store uses actual park events as its
+          // index, never caller-supplied or invented question metadata.
+          for (const session of await deps.sessionService.list()) {
+            ctx.signal?.throwIfAborted();
+            for (const event of await deps.events.list(session.id)) {
+              if (event.type !== "ask.user_asked" || event.payload.askId !== askId || event.turnId === undefined) continue;
+              if (sessionId !== undefined && (sessionId !== session.id || turnId !== event.turnId)) throw new AgentError(errorInfo("INTERNAL_ERROR", "question identity is ambiguous"));
+              sessionId = session.id; turnId = event.turnId;
+            }
+          }
+        }
+      }
+      const session = requireParam("sessionId", sessionId) as SessionId;
+      const turn = requireParam("turnId", turnId) as TurnId;
+      await deps.sessions.load(session);
+      ctx.signal?.throwIfAborted();
+      return { ...await runtime.submitUserAnswer(session, turn, askId, text), sessionId: session, turnId: turn };
     })
     .register("session.cancel", async (params) => {
       const { sessionId, turnId } = params as { sessionId: SessionId; turnId: TurnId };
