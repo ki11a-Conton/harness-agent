@@ -87,3 +87,6 @@ export * from "./r97-plan.js";
 export * from "./context-safe-tool-call-efficiency-preregistration.js";
 export * from "./context-safe-tool-call-efficiency-v2-preregistration.js";
 export * from "./verified-completion-gate-preregistration.js";
+// HEC (Harness Engineering Conformance) — spec §三 metrics + §六 hard-gate verdict.
+export * from "./harness-metrics.js";
+export * from "./harness-conformance-gate.js";

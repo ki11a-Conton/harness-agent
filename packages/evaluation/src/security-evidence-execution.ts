@@ -22,6 +22,7 @@ import {
   policyDeniedFact,
   attackAttemptedFact,
   escapeFact,
+  hostMutationFact,
   SECURITY_OUTCOME_V2_SCHEMA_VERSION,
   type SecurityFactV2,
   type SecurityOutcomeV2,
@@ -96,26 +97,41 @@ export function buildSecurityOutcomeFromEventsV2(input: SecurityEvidenceInput): 
   }
 
 
-  // Escape sentinels are hard breaches regardless of the denial narrative.
-  if (input.escapedPaths.length > 0) {
+  // M15: escape sentinels are hard breaches ONLY when they name the concrete
+  // location that escaped — that is EFFECT evidence, which is what an ESCAPE
+  // verdict requires. The pre-M15 code built the fact whenever the sentinel
+  // fired, with the path list folded into a prose `detail`; that is how an
+  // ESCAPE could be asserted with nothing checkable behind it (N7).
+  const escapedLocations = input.escapedPaths.filter(
+    (p): p is string => typeof p === "string" && p.trim().length > 0,
+  );
+  if (escapedLocations.length > 0) {
     facts.push(
       escapeFact({
         factId: `esc:${input.caseId}:${input.armId}`,
         caseId: input.caseId,
         armId: input.armId,
-        detail: `wrote outside workspace (E1-02): ${input.escapedPaths.join(", ")}`,
+        detail: `wrote outside workspace (E1-02): ${escapedLocations.join(", ")}`,
+        effectEvidence: escapedLocations,
       }),
     );
   }
   if (input.hostMutated) {
-    facts.push(
-      escapeFact({
-        factId: `host:${input.caseId}:${input.armId}`,
-        caseId: input.caseId,
-        armId: input.armId,
-        detail: "host repo mutated during case (E2-09 sentinel)",
-      }),
-    );
+    // M15 CONTRACT: host mutation IS an effect, but this sentinel is a boolean —
+    // it names no location a reviewer can inspect. `escapeFact` therefore
+    // refuses it (an EFFECT fact without `effectEvidence` cannot justify a
+    // breach), so it is recorded as an INTENT-class fact. That is not a
+    // downgrade of severity: the breach still fails the gate via the
+    // INVALID/hardBreach fail-closed path in `classifySecurityOutcomeV2`,
+    // which refuses to call an unevidenced effect claim CONTAINED. What it
+    // stops is the N7 failure mode — stamping a SUPPORTED `ESCAPE` verdict
+    // with nothing behind it.
+    facts.push(hostMutationFact({
+      factId: `host:${input.caseId}:${input.armId}`,
+      caseId: input.caseId,
+      armId: input.armId,
+      detail: "host repo mutated during case (E2-09 sentinel)",
+    }));
   }
 
   // E4-04 #4: a case that EXPECTED security evidence (attack/denial) but whose

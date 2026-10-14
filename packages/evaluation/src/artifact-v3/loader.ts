@@ -12,6 +12,7 @@ import { join } from "node:path";
 import { ArtifactSchemaError, classifyArtifact, findEventRecordViolations, findRefAndEventViolations, parseExperimentArtifactV3 } from "./schema.js";
 import type { ArtifactClassification, ExperimentArtifactV3 } from "./types.js";
 import { canonicalDigestInput, computeContentDigestV3, deriveSummaryV3 } from "./writer.js";
+import { checkBreachClaimConsistency, validateArtifactV3, type ArtifactValidationCheck, type BreachClaimConsistency } from "./validate.js";
 
 export interface LoadedArtifact {
   artifact: ExperimentArtifactV3;
@@ -19,6 +20,23 @@ export interface LoadedArtifact {
   path: string;
   /** Re-verified summary (equals artifact.summary when not tampered). */
   recomputedSummary: ReturnType<typeof deriveSummaryV3>;
+  /**
+   * M15 (INTERFACE ADDITION — optional, backwards compatible): the result of
+   * checking every security outcome for a breach claim that no checkable effect
+   * evidence supports.
+   *
+   * WHY THIS DOES NOT THROW (unlike the digest/summary checks above): an
+   * unsupported breach claim is a statement about the QUALITY of the archive's
+   * evidence, not about whether the bytes are intact. Two hard constraints force
+   * this design:
+   *   1. the frozen originals under `docs/evidence/**` must never be rewritten,
+   *      and a loader that threw would push callers toward "fixing" the file;
+   *   2. a loader that refused to return the artifact would make an old archive
+   *      unreadable, when the honest treatment is "readable, but flagged".
+   * The CALLER decides whether an unsupported claim disqualifies the artifact
+   * for promotion. `ok: false` means "do not treat this breach as measured".
+   */
+  consistency?: BreachClaimConsistency;
 }
 
 export interface LegacyLoadedArtifact {
@@ -137,7 +155,48 @@ export function validateExperimentArtifactV3FromBytes(raw: string, source: strin
     );
   }
 
-  return { artifact, path: source, recomputedSummary };
+  // M15: check every breach claim for checkable effect evidence. This is
+  // deliberately a FLAG, not a throw — see the `consistency` field doc above.
+  // Frozen archives must stay readable AND unmodified; refusing to load them
+  // would invite exactly the rewriting the freeze forbids.
+  //
+  // Derived from `validateArtifactV3`'s single `UNSUPPORTED_BREACH_CLAIM` check
+  // rather than recomputing it, so there is ONE source of truth: disabling or
+  // changing the check changes the loader's verdict too (they cannot drift).
+  const consistency = breachConsistencyFromChecks(
+    validateArtifactV3(artifact),
+    checkBreachClaimConsistency(artifact).unsupportedCaseIds,
+  );
+
+  return { artifact, path: source, recomputedSummary, consistency };
+}
+
+/**
+ * Project the artifact-level `UNSUPPORTED_BREACH_CLAIM` check into the loader's
+ * structured `consistency` field. Keeps the loader and the artifact validator
+ * from ever disagreeing about whether a breach claim is supported.
+ */
+function breachConsistencyFromChecks(
+  checks: ArtifactValidationCheck[],
+  unsupportedCaseIds: string[],
+): BreachClaimConsistency {
+  const check = checks.find((c) => c.code === "UNSUPPORTED_BREACH_CLAIM");
+  if (check === undefined) {
+    // No check present means the validator was changed without this wiring.
+    // Fail closed rather than reporting a comfortable default.
+    return {
+      ok: false,
+      violations: ["UNSUPPORTED_BREACH_CLAIM check missing from validateArtifactV3 — cannot certify breach claims"],
+      unsupportedCaseIds,
+      reports: [],
+    };
+  }
+  return {
+    ok: check.passed,
+    violations: check.passed ? [] : check.detail.split("; ").filter((v) => v.length > 0),
+    unsupportedCaseIds: check.passed ? [] : unsupportedCaseIds,
+    reports: [],
+  };
 }
 
 /** Legacy-load any non-V3 artifact for HISTORICAL display only. Never throws

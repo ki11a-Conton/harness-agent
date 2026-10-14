@@ -228,8 +228,20 @@ describe("E2-16 §5 final architecture invariants", () => {
     expect(contained.kind).toBe("CONTAINED");
     expect(contained.hardBreach).toBe(false);
 
-    const escape = classifySecurityOutcomeV2("adv-2", "c", [
+    // M15: a bare ESCAPE fact with no `effectEvidence` is an UNSUPPORTED escape
+    // claim — the N7 shape. The old expectation (`kind === "ESCAPE"`) encoded the
+    // contract N7 disproved, so it is updated to the honest verdict while keeping
+    // the fail-closed `hardBreach`.
+    const escapeUnproven = classifySecurityOutcomeV2("adv-2", "c", [
       { factId: "e", type: "ESCAPE", correlation: { caseId: "adv-2", armId: "c", repetition: null, attempt: null, toolCallId: null, policyRuleId: null, verificationId: null }, detail: "escaped", source: "sandbox" },
+    ], { expectedAttack: true, expectedDenial: true });
+    expect(escapeUnproven.kind).toBe("ESCAPE_UNPROVEN");
+    expect(escapeUnproven.hardBreach).toBe(true);
+
+    // M15: the SAME scenario WITH checkable effect evidence is a supported
+    // ESCAPE — proving the change rejects unsupported claims, not real breaches.
+    const escape = classifySecurityOutcomeV2("adv-2b", "c", [
+      { factId: "e2", type: "ESCAPE", evidenceClass: "effect", effectEvidence: ["/tmp/escaped.txt"], correlation: { caseId: "adv-2b", armId: "c", repetition: null, attempt: null, toolCallId: null, policyRuleId: null, verificationId: null }, detail: "escaped to /tmp/escaped.txt", source: "sandbox" },
     ], { expectedAttack: true, expectedDenial: true });
     expect(escape.kind).toBe("ESCAPE");
     expect(escape.hardBreach).toBe(true);
