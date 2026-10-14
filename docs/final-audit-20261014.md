@@ -1,6 +1,6 @@
 # 发布前最终工程审查
 
-基线 main：5058d536d44acd61369d822cea4e160b553dff4b。独立工作区；本轮不发布 release/tag，交付后由用户本地测试决定。
+基线 main：5058d536d44acd61369d822cea4e160b553dff4b。独立工作区。初始阶段按用户要求暂停发布；用户后续已明确授权去除 Preview Notice、完成验收后发布第一代可用版 v1.10.0。下文旧源码及“未发布”原件保持采集时的状态，不改写为新版本证据。
 
 ## 已确认问题与修复方向
 
@@ -22,6 +22,8 @@
 | FA-14 | P1，暂停交接竞态 | 实际 Harness 的暂停写入被有界 gate 控制：问题已发布，立即回答会撞到仍运行的原 Actor，答复已记录却不继续；在 waiting 状态落盘前点击取消，旧取消流程漏掉刚暂停的任务；SDK 在问题交付中 abort 也仍返回 waiting。三项 RED 均复现。 | Web 等原 Actor 完成暂停后再提交答案和续跑，等待在会话锁外且有截止/关闭检查，重复在途回答保持幂等；中断后重新读取等待任务，用 Actor 原任务取消 API；Runtime 在暂停检查点后检查 abort，提交真实取消并撤回问题。验收控制两处真实写入窗口、回答一次和取消真实状态。 |
 | FA-15 | P1，归档交付 | 本轮归档提交 2374e94 的深层 fixture 路径达到 240 字符；真实 Windows 工作流在 checkout 阶段报 Filename too long，尚未运行产品测试。 | 将 240 份原始 fixture 转存短路径 fixture-records.tar.gz；归档成员逐个匹配旧 inventory 的字节数和 SHA-256，保留逻辑路径索引。目录最长路径降为 119 字符，必须重新验收真实 Windows checkout 和后续测试。 |
 | FA-16 | P2，CI 验收 | coverage 工作流先执行 pnpm test:coverage，再通过 release gate 重跑相同全量；第二次失败时跳过证据上传，公开注解仅有退出码，无法取得失败详情。e87dbbf 的覆盖率阈值步骤 PASS，第二次证据步骤 FAIL，两次结果均保留。 | 先编译 CLI，再仅通过原有 V2 release gate 执行一次规范覆盖率命令；保留阈值、真实退出码及源码校验。无论成功失败都上传覆盖率和 gate 原件；公开已有 gate 记录及摘要，失败详情绑定保存日志摘要，Unicode/日志篡改/明确截断三项真实 Node 进程测试通过。新 CI 最终状态另行记录，不猜测第二次失败的产品根因。 |
+| FA-17 | P2，归档字节完整性 | 本轮归档的 .log 未关闭 Git 换行转换；实际 core.autocrlf=true checkout 将最终全量日志由 137854 bytes 改为 139451 bytes，SHA-256 与 inventory 不符。 | 仅在本轮证据目录声明 -text；相同 Git checkout 复算恢复字节一致，记录 RED/GREEN，其他源码不改变换行策略。 |
+| FA-18 | P2，失败可见性 | N6 公共诊断不识别 RemoteFailure，并将真实错误与预期错误噪声放在同一优先级；实际 Node 进程重现错误原因被前 8 条注解挤掉。 | 识别以 Error/Failure 类名开头的真正异常，优先于降级噪声及通过标题；正反回归和原始失败保留。 |
 
 ## 初始检查
 
@@ -65,6 +67,14 @@ Windows 跳过的两项均为 POSIX chmod 语义：B05 模式变更合并和事�
 补充追踪：8613c6e 主 CI 最终为 FAILURE，Windows 常规全量、Ubuntu 全量、coverage、Ubuntu formal、双平台 closed-loop 和 cold-start 均 PASS；Windows formal 的全量中 `owners.test.ts` 的 stable Web draft 模型切换/重启案例失败，因此 dual-platform gate 也失败。公开诊断尚无完整断言原因，不将它猜测为时序误报；本地 owners 全部 21 项 PASS，已加入原生 Windows 目标并补充终态诊断，继续取得实际结果。2374e94 主 CI 的 Windows leg 则全部因 FA-15 在 checkout 失败；原始 job/annotation 分别保留，不能把 Ubuntu 通过当成 Windows 通过。
 
 `e87dbbf` 的 [原生 Windows](https://github.com/ki11a-Conton/harness-agent/actions/runs/38510542360) 已 PASS：32 文件、374 PASS / 0 FAIL / 2 skipped，含模型切换/重启完整案例和 12 项必需进程测试；case-records SHA-256 为 `0d33b4ec926bfc2c772d7c691e48dc5a9fcea068c3a05c872a583375b6655ab1`。原生 checkout 成功，FA-15 已实际验证。[独立安装包](https://github.com/ki11a-Conton/harness-agent/actions/runs/38510542218) 和 [浏览器安装包](https://github.com/ki11a-Conton/harness-agent/actions/runs/38510542352) 均 PASS；[主 CI](https://github.com/ki11a-Conton/harness-agent/actions/runs/38510542386) 的 Ubuntu/Windows formal、双平台 closed-loop 与 cold-start 已 PASS，coverage 阈值测试 PASS，但重复生成证据的第二遍失败。未把此 run 写为整体 PASS，FA-16 修正后等待真实 CI。此前单次 Windows 模型切换失败的根因未取得，保留失败记录及本次 targeted/formal 正向验收。
+
+`b12a87f` 的主 CI 38513132964：双平台常规完整 leg、coverage V2、Ubuntu formal、closed-loop/cold-start PASS；Windows formal 在 catalog 的真实网络模型发现案例失败，整体 FAILURE。该案例通过 200 次短轮询推断审批是否已创建；在真实执行路径加入 600ms 延迟可确定复现“审批尚未创建就断言”的 RED。改为有界等待真实 create 事件，仍调用原审批 store、明确 deny、检查 HTTP 请求未增加、一次性凭证未落盘；本地 GREEN。此项作为 FA-12 的第五处验收假设记录，不将其新增为已证明的模型发现产品漏洞；新 Windows 运行仍需实际验证。
+
+## 用户追加的 Preview Notice 移除及正式发布
+
+删除实际前端的 welcome-notice 启动注册和首页 Preview/预览版徽标，不以伪造后台确认字段实现；旧确认字段留作配置兼容。七份明确标注的前端呈现衍生物与原始许可证/资产分别保存，原始 npm 字节继续逐件校验。浏览器验收改为全新状态直接进入 composer，模型设置/工具审批仍走实际后端，中英三视口、刷新/重启均检查无通知和徽标。
+
+发布目标 v1.10.0：重新冻结 clean 源码，执行完整工程门、真实 Windows 与同一个 Ubuntu 构建包在两平台的 CLI/Web 安装验收。当前代理仍拒绝 Azure artifact 下载；新增受限、手动调度的导出入口，只接受同一源码的 successful CI、四份同 archive hash 的安装收据及绑定该 SHA 的既有 v1.10.0 draft，不能创建或公开发布 release。正向及已发布目标/失败 Windows job/异包收据/篡改包负向控制共 5 项通过。最终公开动作仍由原生 Git/HTTP 在验收通过后完成；新版本不把旧 UI 的运行结果当作其验收证明。
 
 ## 原始失败与修正记录
 

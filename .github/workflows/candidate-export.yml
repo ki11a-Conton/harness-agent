@@ -1,0 +1,66 @@
+name: export qualified v1.10 candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      acceptance_run_id:
+        description: Successful same-source installed UI and CLI workflow run
+        required: true
+        type: string
+      release_id:
+        description: Existing v1.10.0 draft bound to this source SHA
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  export:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.acceptance_run_id }}
+          name: deepseek-portable-${{ github.sha }}-${{ inputs.acceptance_run_id }}
+          path: .ci/candidate/assets
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.acceptance_run_id }}
+          name: deepseek-installed-ubuntu-latest-${{ github.sha }}-${{ inputs.acceptance_run_id }}
+          path: .ci/candidate/web-linux
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.acceptance_run_id }}
+          name: deepseek-installed-windows-latest-${{ github.sha }}-${{ inputs.acceptance_run_id }}
+          path: .ci/candidate/web-windows
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.acceptance_run_id }}
+          name: harness-cli-installed-ubuntu-latest-${{ github.sha }}-${{ inputs.acceptance_run_id }}
+          path: .ci/candidate/cli-linux
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.acceptance_run_id }}
+          name: harness-cli-installed-windows-latest-${{ github.sha }}-${{ inputs.acceptance_run_id }}
+          path: .ci/candidate/cli-windows
+      - name: Verify and export the already tested bytes to the existing draft
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          CANDIDATE_ACCEPTANCE_RUN_ID: ${{ inputs.acceptance_run_id }}
+          CANDIDATE_RELEASE_ID: ${{ inputs.release_id }}
+        run: node scripts/release/candidate-export.mjs

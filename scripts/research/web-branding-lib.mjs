@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 export const brandedModules = Object.freeze([
   'dsh-client-ui-brand-official', 'dsh-client-ui-layout', 'dsh-client-ui-plugin-manager',
   'dsh-client-ui-settings-models', 'dsh-client-ui-settings-account', 'dsh-client-ui-sidebar-documentpreview',
+  'dsh-client-ui-conversation',
 ]);
 export const brandRoot = 'harness-brand';
 export const hash = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -40,8 +41,13 @@ export function deriveBrandModule(stem, original) {
   if (!brandedModules.includes(stem)) throw new Error('Unreviewed branding module: ' + stem);
   if (stem === 'dsh-client-ui-brand-official') return Buffer.from(brandModule);
   let source = original.toString('utf8');
-  if (!source.includes('DeepSeek Harness')) throw new Error('Branding source changed: ' + stem);
+  if (stem !== 'dsh-client-ui-conversation' && !source.includes('DeepSeek Harness')) throw new Error('Branding source changed: ' + stem);
   source = source.replaceAll('DeepSeek Harness', 'Harness Agent');
+  if (stem === 'dsh-client-ui-conversation') {
+    const badge = /, \(0, react_jsx_runtime\.jsx\)\("span", \{\s*className: HeroShell_module_css_default\.previewBadge,\s*children: t\("hero\.preview"\)\s*\}\)/g;
+    if ([...source.matchAll(badge)].length !== 1) throw new Error('Expected exactly one home preview badge');
+    source = source.replace(badge, '');
+  }
   if (stem === 'dsh-client-ui-settings-models') {
     let replaced = 0;
     source = source.replace(/welcomeBody: "(?:[^"\\]|\\.)*"/g, () => {
@@ -49,6 +55,9 @@ export function deriveBrandModule(stem, original) {
       return 'welcomeBody: ' + JSON.stringify(text);
     });
     if (replaced !== 2) throw new Error('Expected exactly two welcome dictionaries');
+    const notice = /if \(!\("dshDesktop" in globalThis\)\) ctx\.slots\.inject\("settings\.onboarding", \(\) => ctx\.slots\.register\(\{\s*name: "settings\.onboarding",\s*id: "welcome-notice",\s*order: -100,\s*inject: welcomeInjected\s*\}, WelcomeNotice\)\);/g;
+    if ([...source.matchAll(notice)].length !== 1) throw new Error('Expected exactly one preview notice registration');
+    source = source.replace(notice, '// Harness Agent opens directly without the preview notice step.');
   }
   if (stem === 'dsh-client-ui-settings-account') {
     let replaced = 0;

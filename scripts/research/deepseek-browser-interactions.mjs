@@ -67,15 +67,8 @@ async function fixtureJournal(sessionId) {
 function requestEndpoint(request) { try { return request.postDataJSON()?.endpoint; } catch { return undefined; } }
 async function boot(page) {
   await page.goto(values.url, { waitUntil: "domcontentloaded" });
-  const preview = page.getByRole("button", { name: "Continue", exact: true });
-  // Official lazy modules can mount the preview modal after the composer.
-  // Waiting only for the underlying input races the modal and masks controls.
-  await preview.waitFor({ state: "visible", timeout: 5000 }).catch(() => {});
-  if (await preview.isVisible()) {
-    await preview.click();
-    await preview.waitFor({ state: "hidden", timeout: 5000 });
-  }
   await page.locator("[data-composer-input=true]").waitFor({ state: "visible", timeout: 7000 });
+  assert.equal(await page.getByRole('heading', { name: /^(Preview Notice|预览版说明)$/ }).count(), 0, 'startup needs no preview acknowledgement');
   if (await page.locator("[data-composer-input=true]").getAttribute("contenteditable") !== "true") {
     await page.getByRole("button", { name: "Choose workspace", exact: true }).click();
     await page.getByRole("menuitem", { name: "project", exact: true }).click();

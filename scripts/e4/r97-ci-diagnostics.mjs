@@ -43,8 +43,12 @@ function isS2RuntimeDiagnostic(line) {
   return /^(?:Error:\s*)?S2_RUNTIME_ERROR_JSON=\{/.test(line.trimStart());
 }
 
+function isFailureHeadline(line) {
+  return /^\s*[\w.$]*(?:Error|Failure):/.test(line);
+}
+
 function prioritizeFailures(lines) {
-  const priority = (line) => isS2RuntimeDiagnostic(line) ? 0 : /FAIL |AssertionError/.test(line) ? 1 : 2;
+  const priority = (line) => isS2RuntimeDiagnostic(line) ? 0 : /FAIL |AssertionError/.test(line) || isFailureHeadline(line) ? 1 : 2;
   return [...lines].sort((a, b) => priority(a) - priority(b));
 }
 
@@ -67,7 +71,7 @@ function interestingLines(text) {
     .split(/\r?\n/)
     .map((l) => l.replace(/\u001b\[[0-9;]*m/g, "").trimEnd())
     .filter((l) =>
-      isS2RuntimeDiagnostic(l) || /FAIL |AssertionError|Failed Tests|Test Files|Tests +\d|Error:|expected |^\s*×|✕/.test(l),
+      isS2RuntimeDiagnostic(l) || isFailureHeadline(l) || /FAIL |AssertionError|Failed Tests|Test Files|Tests +\d|Error:|expected |^\s*×|✕/.test(l),
     );
 }
 
@@ -105,7 +109,7 @@ async function main(argv) {
       // The vitest summary itself names every failed test; the surrounding log is
       // kept only as the fallback when the summary is absent.
       const failed = prioritizeFailures(interestingLines(text).filter((l) =>
-        isS2RuntimeDiagnostic(l) || /FAIL |AssertionError|expected |Error:/.test(l)));
+        isS2RuntimeDiagnostic(l) || isFailureHeadline(l) || /FAIL |AssertionError|expected |Error:/.test(l)));
       const counts = interestingLines(text).filter((l) => /Test Files|Tests +\d|Failed Tests/.test(l));
       blocks.push(...counts, ...failed);
       annotations.push(...failed);

@@ -21,7 +21,7 @@ await writeFile(resolve(project, "README.md"), "# Actual browser model selection
 const trace = [], requests = [], assertions = [], children = [], launches = [], screenshots = [], sockets = new Set();
 const baseline = "web-loopback-fixture", alternate = "web-loopback-alternate", route = "browser-alternate";
 const fixtureCredential = "browser-local-fixture-credential";
-let browser, child, origin, port, playwrightVersion, welcomed = false;
+let browser, child, origin, port, playwrightVersion;
 const deadline = async (operation, timeout = 12_000) => Promise.race([operation, new Promise((_, reject) => {
   const timer = setTimeout(() => reject(new Error("Operation deadline exceeded")), timeout); timer.unref();
 })]);
@@ -120,14 +120,8 @@ function observe(page, name) {
 async function boot(page) {
   page.setDefaultTimeout(10_000);
   await page.goto(origin, { waitUntil: "domcontentloaded" });
-  const preview = page.getByRole("button", { name: "Continue", exact: true });
   await page.locator('[contenteditable="true"]').waitFor({ state: "visible", timeout: 10_000 });
-  // The official welcome scope resolves after the composer mounts. A mounted
-  // editor is not proof that onboarding has finished or its overlay is absent.
-  if (!welcomed) {
-    await preview.waitFor({ state: "visible", timeout: 10_000 }); await preview.click();
-    await preview.waitFor({ state: "hidden", timeout: 10_000 }); welcomed = true;
-  }
+  prove('startup opens the composer without Preview Notice', await page.getByRole('heading', { name: /^(Preview Notice|预览版说明)$/ }).count() === 0);
 }
 async function select(page, model) {
   await page.getByRole("button", { name: /^Select model/ }).click();

@@ -52,9 +52,6 @@ try {
     });
     try {
       await page.goto(url, { waitUntil: "domcontentloaded" });
-      const preview = page.getByRole("button", { name: "Continue", exact: true });
-      await preview.waitFor({ state: "visible", timeout: 2000 }).catch(() => {});
-      if (await preview.isVisible()) await preview.click();
       if (workspace !== undefined) {
         const choose = page.getByRole("button", { name: "Choose workspace", exact: true });
         if (await choose.isVisible()) {
@@ -65,6 +62,7 @@ try {
       await page.waitForFunction(() => document.querySelector("textarea,[contenteditable=true]") !== null ||
         /failed|failure/i.test(document.querySelector("#root")?.textContent ?? ""), undefined, { timeout: 8000 });
       await page.evaluate(() => document.fonts.ready);
+      if (await page.getByRole('heading', { name: /^(Preview Notice|预览版说明)$/ }).count()) throw new Error('Preview Notice must not block startup');
     } catch (error) {
       errors.push("Boot observation failed: " + String(error));
     }

@@ -65,6 +65,7 @@ try {
           };
         });
         assert(!/deepseek[\s\u2014_-]*harness/i.test(JSON.stringify(surface)), label + ': upstream product branding visible');
+        assert(!/Preview Notice|预览版说明/.test(surface.text), label + ': preview notice visible');
         assert.equal(surface.whaleSvgs, 0, label + ': upstream whale/wordmark rendered');
         assert(!surface.images.some(src => /onboarding-welcome|favicon-dark|\/deepseek\/favicon\.svg/.test(src ?? '')), label + ': original illustration visible');
         assert(!surface.overflow, label + ': horizontal overflow');
@@ -76,12 +77,12 @@ try {
         await page.screenshot({ path: path.join(directory, label + '.png'), fullPage: true, timeout: 15000 });
       }
       await page.goto(origin, { waitUntil: 'domcontentloaded' });
-      await button(copy[language].continue).waitFor({ state: 'visible', timeout: 15000 });
-      assert(await page.getByText(/Harness Agent/).count() > 0);
-      await scan('first-welcome');
-      await button(copy[language].continue).click();
       await page.locator('[data-composer-input=true]').waitFor({ state: 'visible', timeout: 15000 });
       await page.locator('[data-harness-brand="mark"]').first().waitFor({ state: 'attached', timeout: 10000 });
+      await scan('first-start', true);
+      assert.equal(await button(copy[language].continue).count(), 0, 'fresh startup requires no preview acknowledgement');
+      assert.equal(await page.getByText(/^(Preview|预览版)$/).count(), 0, 'home has no preview badge');
+      checks.push('no-preview-notice');
       await scan('empty-conversation', true);
       assert.equal(await page.title(), 'Harness Agent'); checks.push('document-title');
       const manifest = await (await page.request.get(origin + '/deepseek/manifest.webmanifest')).json();

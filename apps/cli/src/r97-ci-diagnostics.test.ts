@@ -31,6 +31,15 @@ async function runDiagnostic(log: string) {
 }
 
 describe("N3 public CI diagnostics (real Node process)", () => {
+  it("preserves a real RemoteFailure before expected-error noise and passing test titles", async () => {
+    const noise = Array.from({ length: 20 }, (_, index) => `[degraded] ${index}: Error: expected fixture failure`);
+    const headline = 'RemoteFailure: Provider discovery was refused by the host or failed';
+    const result = await runDiagnostic([...noise, ' ✓ expected valid model catalog', ' FAIL catalog.test.ts > network discovery', headline].join('\n'));
+    expect(result.child.status).toBe(0);
+    expect(result.annotations[0]).toContain('FAIL catalog.test.ts');
+    expect(result.annotations[1]).toContain(headline);
+  });
+
   it("keeps the sanitized S2 runtime reason visible despite expected-error noise and the ordinary line cap", async () => {
     const reason = `${"safe diagnostic detail ".repeat(20)}ROOT_CAUSE_VISIBLE`;
     const marker = `Error: S2_RUNTIME_ERROR_JSON=${JSON.stringify({ reason, failureCategory: "harness", terminationReason: "error" })}`;

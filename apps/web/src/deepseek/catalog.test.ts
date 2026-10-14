@@ -215,13 +215,27 @@ it("network discovery executes through the orchestrator, deduplicates actual HTT
   expect(await service.call("llm/discoverModels", { settingsNs: "llm-pi-ai", request: { api: "openai-completions", baseURL, apiKey: "one-shot-private-key" } }, stack.signal)).toEqual([{ id: "coding", name: "Local coding" }, { id: "other" }]);
   expect(calls).toBe(1); expect(received).toBe("Bearer one-shot-private-key");
   await expect(readFile(join(stack.directory, "deepseek", "credentials.json"))).rejects.toMatchObject({ code: "ENOENT" });
+  const execute = stack.host.executeTool!;
+  stack.host.executeTool = async (...args) => { await new Promise(done => setTimeout(done, 600)); return execute(...args); };
+  type Approval = Parameters<typeof stack.harness.approvalStore.create>[0];
+  let notify!: (request: Approval) => void;
+  const created = new Promise<Approval>(done => { notify = done; });
+  const create = stack.harness.approvalStore.create.bind(stack.harness.approvalStore);
+  stack.harness.approvalStore.create = request => { const pending = create(request); notify(request); return pending; };
   const denied = stack.call("llm/discoverModels", { settingsNs: "llm-pi-ai", request: { baseURL, apiKey: "denied-key" } });
-  // This path uses the real interactive policy and approval owner; explicitly deny rather than wait its deadline.
-  for (let attempt = 0; attempt < 200 && stack.harness.approvalStore.listPending().length === 0; attempt++) await new Promise(done => setTimeout(done, 1));
-  const approval = stack.harness.approvalStore.listPending()[0];
-  expect(approval).toBeDefined();
-  stack.harness.approvalStore.resolve(approval!.id, "deny", "test");
-  await expect(denied).rejects.toMatchObject({ code: "llm/model-discovery-rejected" });
+  let deadline: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const approval = await Promise.race([created,
+      denied.then(() => { throw new Error('Discovery bypassed its required approval'); }, error => { throw error; }),
+      new Promise<never>((_done, reject) => { deadline = setTimeout(() => reject(new Error('Discovery did not create its approval within 10s')), 10_000); }),
+    ]);
+    expect(stack.harness.approvalStore.listPending()).toContainEqual(approval);
+    stack.harness.approvalStore.resolve(approval.id, "deny", "test");
+    await expect(denied).rejects.toMatchObject({ code: "llm/model-discovery-rejected" });
+  } finally {
+    clearTimeout(deadline);
+    stack.harness.approvalStore.create = create;
+  }
   expect(calls).toBe(1);
 });
 

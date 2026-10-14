@@ -1,6 +1,6 @@
 # 发布前最终工程审查
 
-基线：5058d536d44acd61369d822cea4e160b553dff4b。用户要求全面审查、列出并修复剩余 bug，交付后由用户本地测试决定是否发布；本轮禁止创建 release 或 tag。
+基线：5058d536d44acd61369d822cea4e160b553dff4b。用户要求全面审查、列出并修复剩余 bug。初始发布暂停要求已由后续明确授权更新：去除 Preview Notice，完成验收后发布第一代可用版本 v1.10.0；旧证据的“未发布”采集状态不改写。
 
 ## 做什么
 
@@ -12,6 +12,8 @@
 
 ## 怎么验收
 
-全仓 typecheck/unit/integration，相关安全/协议、发布脚本/静态资产完整性；必要缺陷先 RED 后 GREEN。固定 clean 源码构建独立包，CLI/Web loopback 编程闭环、审批允许/拒绝、取消、恢复与中英文三视口品牌回归。能取得的原生 Windows/CI 证据绑定实际 SHA；未执行项如实记录。归档审查范围、所有确认 bug、修法、测试与剩余能力限制，commit 并推送 main，给用户本地测试步骤；不发布 release。
+全仓 typecheck/unit/integration，相关安全/协议、发布脚本/静态资产完整性；必要缺陷先 RED 后 GREEN。固定 clean 源码构建独立包，CLI/Web loopback 编程闭环、审批允许/拒绝、取消、恢复与中英文三视口品牌回归。能取得的原生 Windows/CI 证据绑定实际 SHA；未执行项如实记录。归档审查范围、所有确认 bug、修法、测试与剩余能力限制，commit 并推送 main，给用户本地测试步骤，并按新增要求完成发布。
 
-状态：已完成产品确认缺陷修复、工程及独立包实测；补修本轮证据归档导致的 Windows checkout 长路径问题，继续追踪 Windows formal 的模型切换测试失败。详细清单、实际结果和剩余能力边界见 docs/final-audit-20261014.md；不发布 release/tag。
+新增发布验收：全新状态目录及刷新/重启均不出现中英文 Preview Notice；编程入口、模型设置和工具审批仍通过。源码与发布资产绑定同一 clean SHA，实际 Ubuntu/Windows 安装包和必要 CI 门全部通过后，创建 v1.10.0 tag/release，上传独立包、校验和与证据，并复核公开下载字节。继续区分工程可用性与未证明的付费模型质量，不自动晋升实验。
+
+状态：旧产品源码的缺陷修复和验收原件保留；追加 Preview Notice 移除、Windows 验收等待/诊断补修和 v1.10.0 固定源码发布验收正在执行。详细清单、实际结果和剩余能力边界见 docs/final-audit-20261014.md。

@@ -4074,12 +4074,7 @@ window.__ModuleLoader__.load({
 					}
 				}
 			}, ModelsSection));
-			if (!("dshDesktop" in globalThis)) ctx.slots.inject("settings.onboarding", () => ctx.slots.register({
-				name: "settings.onboarding",
-				id: "welcome-notice",
-				order: -100,
-				inject: welcomeInjected
-			}, WelcomeNotice));
+			// Harness Agent opens directly without the preview notice step.
 			ctx.slots.inject("settings.onboarding", () => ctx.slots.register({
 				name: "settings.onboarding",
 				id: "deepseek-official",
