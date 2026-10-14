@@ -354,7 +354,17 @@ const cases = {
     await page.getByRole("radio", { name: "target-blue", exact: true }).click();
     await clickVisible(page, "Submit"); await answerFinished(page);
     assert(await page.getByText("The browser answer was received.", { exact: false }).isVisible());
-    const completedJournal = await fixtureJournal(sessionId);
+    // Streamed answer text can become visible before the final durable turn
+    // event. Wait for the original task's real terminal boundary, so a slow
+    // journal flush is not mistaken for a different or missing completion.
+    let completedJournal;
+    const terminalDeadline = Date.now() + 8000;
+    do {
+      completedJournal = await fixtureJournal(sessionId);
+      if (completedJournal.some(event => event.turnId === question.turnId
+        && ["turn.completed", "turn.failed", "turn.cancelled"].includes(event.type))) break;
+      await page.waitForTimeout(40);
+    } while (Date.now() < terminalDeadline);
     const replies = completedJournal.filter(event => event.type === "ask.user_replied");
     assert.equal(replies.length, 1); assert.equal(replies[0].turnId, question.turnId);
     assert.equal(replies[0].payload.askId, question.payload.askId);

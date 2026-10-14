@@ -430,7 +430,9 @@ describe("F7/R6 runtime → real provider → strict local stub (serialized wire
     stub.script(toolCallSse("call_ask", "ask_user", { question: "which file?", reason: "choice_required" }));
     const { runtime, store } = makeHarness(stub, new FakeOrchestrator(), {
       askUserStore: askStore,
-      maxIterationsPerTurn: 1,
+      // One model iteration asks; the second carries the user's reply. A
+      // continuation preserves the original cap rather than refreshing it.
+      maxIterationsPerTurn: 2,
     });
 
     const session = await runtime.createSession({ agent: AGENT, cwd: "C:\\work" });

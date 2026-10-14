@@ -249,9 +249,13 @@ describe("P3-6 end-to-end: delegate_worker writes an isolated copy and merges", 
       const childSessionId = events.find((e) => e.type === "subagent.started")?.payload.childSessionId as
         | string
         | undefined;
-      const mergeOutput = events.find(
-        (e) => e.type === "tool.completed" && e.payload.tool === "delegate_worker",
-      )?.payload.outputPreview as string | undefined;
+      // Production previews are withheld before security inspection. Read
+      // the actual, inspected tool message the parent/model received.
+      const messages = await harness.store.listMessages(session.id);
+      const delegated = messages.flatMap(message => message.toolCalls ?? []).find(call => call.name === "delegate_worker");
+      expect(delegated).toBeDefined();
+      const mergeOutput = messages.find(message => message.role === "tool" && message.toolCallId === delegated!.id)?.content;
+      expect(events.find(e => e.type === "tool.completed" && e.payload.tool === "delegate_worker")?.payload).toMatchObject({ previewWithheld: true });
 
       expect(types).toContain("subagent.started");
       expect(types).toContain("subagent.completed");
