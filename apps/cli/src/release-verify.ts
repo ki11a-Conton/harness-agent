@@ -32,6 +32,12 @@ export type RequiredGateId =
   | "chaos"
   | "capability_audit";
 
+/** Full suites now take 19–22 minutes on the measured cloud host. Keep them
+ * bounded within the CI job's 60-minute budget; short gates keep 10 minutes. */
+export function releaseGateTimeoutMs(gate: RequiredGateId): number {
+  return gate === "test" || gate === "coverage" ? 45 * 60_000 : 10 * 60_000;
+}
+
 export interface ReleaseGateResult {
   id: RequiredGateId;
   state: GateState;

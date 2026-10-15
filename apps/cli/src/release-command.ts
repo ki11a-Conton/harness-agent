@@ -13,6 +13,7 @@ import type { CommandResult } from "./commands.js";
 import { reverifyGateEvidenceRefs, type GateEvidenceV2 } from "@ar/evaluation";
 import {
   GATE_COMMANDS,
+  releaseGateTimeoutMs,
   REQUIRED_GATES,
   aggregateGateInstances,
   computeReleaseVerdict,
@@ -323,7 +324,7 @@ export async function runGate(
           encoding: "utf8",
           env: { ...process.env, OPENAI_API_KEY: "" },
           windowsHide: true,
-          timeout: 600_000,
+          timeout: releaseGateTimeoutMs(gate),
           maxBuffer: 128 * 1024 * 1024,
         });
         stdout = String(out ?? "");

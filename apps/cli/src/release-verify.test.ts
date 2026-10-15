@@ -1,3 +1,4 @@
+import { releaseGateTimeoutMs } from "./release-verify.js";
 import { describe, expect, it } from "vitest";
 import {
   GATE_COMMANDS,
@@ -460,4 +461,16 @@ describe("parseRawEvidence", () => {
   it("non-JSON → throws", () => {
     expect(() => parseRawEvidence("{nope", "e.json")).toThrow(/malformed/);
   });
+});
+
+it("full gate budgets cover the measured suite with margin and remain below the CI job deadline", () => {
+  const measuredFullSuiteMs = 22 * 60_000;
+  for (const gate of ["test", "coverage"] as const) {
+    expect(releaseGateTimeoutMs(gate)).toBeGreaterThan(measuredFullSuiteMs * 1.5);
+    expect(releaseGateTimeoutMs(gate)).toBeLessThan(60 * 60_000);
+  }
+  for (const gate of ["typecheck", "build", "docs", "security", "race", "protocol", "chaos", "benchmark_smoke", "capability_audit"] as const) {
+    expect(releaseGateTimeoutMs(gate)).toBeGreaterThan(0);
+    expect(releaseGateTimeoutMs(gate)).toBeLessThanOrEqual(10 * 60_000);
+  }
 });

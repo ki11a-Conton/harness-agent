@@ -23,6 +23,8 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 import { runGateV2, writeGateEvidenceV2, type GateEvidenceV2 } from "@ar/evaluation";
 
+import { releaseGateTimeoutMs } from "./release-verify.js";
+
 const execFileAsync = promisify(execFile);
 
 export interface ReleaseArtifact {
@@ -79,7 +81,7 @@ export async function collectReleaseArtifacts(deps: {
 
   // 1) unit/integration report (vitest run, text log).
   const unitLog = join(outDir, "unit-report.log");
-  const unitOut = await execFn("pnpm", ["test"], { cwd: deps.root, timeoutMs: 420_000 });
+  const unitOut = await execFn("pnpm", ["test"], { cwd: deps.root, timeoutMs: releaseGateTimeoutMs("test") });
   await writeFile(unitLog, unitOut, "utf8");
   put("unit-report", !unitOut.includes("[artifact step failed]"), "vitest run log (unit + integration)", unitLog);
 
@@ -90,7 +92,7 @@ export async function collectReleaseArtifacts(deps: {
   } else {
     // A failed run must not recycle a summary left by an earlier successful run.
     await rm(join(deps.root, "coverage", "coverage-summary.json"), { force: true });
-    const covOut = await execFn("pnpm", ["test:coverage"], { cwd: deps.root, timeoutMs: 540_000 });
+    const covOut = await execFn("pnpm", ["test:coverage"], { cwd: deps.root, timeoutMs: releaseGateTimeoutMs("coverage") });
     try {
       if (covOut.includes("[artifact step failed]")) throw new Error("coverage command failed");
       const summary = await readFile(join(deps.root, "coverage", "coverage-summary.json"), "utf8");

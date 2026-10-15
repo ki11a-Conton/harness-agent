@@ -134,3 +134,24 @@ describe("P22-4 release artifacts", () => {
     expect(lines).toMatch(/PRODUCED|MISSING/);
   });
 });
+
+// This models the measured 22-minute command at the existing exec boundary;
+// it verifies deadline forwarding, not a simulated full-suite pass.
+it("full artifact suites can finish beyond the old 7/9-minute cutoffs while keeping a finite deadline", async () => {
+  const root = await makeRoot();
+  const observedDuration = 22 * 60_000;
+  const summary = { total: Object.fromEntries(["lines", "statements", "functions", "branches"].map(key => [key, { pct: 99 }])) };
+  const result = await collectReleaseArtifacts({ root, outDir: join(root, "out"), gateFn: fakeGate() as never,
+    execFn: async (_cmd, args, options) => {
+      if (args[0] === "test" || args[0] === "test:coverage") {
+        expect(options.timeoutMs).toBeGreaterThan(observedDuration);
+        expect(options.timeoutMs).toBeLessThan(60 * 60_000);
+        if (options.timeoutMs < observedDuration) return "[artifact step failed] timeout";
+        if (args[0] === "test:coverage") { await mkdir(join(root, "coverage")); await writeFile(join(root, "coverage/coverage-summary.json"), JSON.stringify(summary)); }
+        return "bounded full command completed";
+      }
+      return "[artifact step failed] unrelated fixture stage";
+    } });
+  expect(result.artifacts.find(row => row.id === "unit-report")?.produced).toBe(true);
+  expect(result.artifacts.find(row => row.id === "coverage-summary")?.produced).toBe(true);
+});
