@@ -1,0 +1,58 @@
+{
+  "verdict": "PASS",
+  "paidCalls": 0,
+  "checks": [
+    {
+      "name": "Unverified real model turn is displayed as unverified, not passed",
+      "status": "PASS"
+    },
+    {
+      "name": "Actual authorized session list and status remote are connected",
+      "status": "PASS"
+    },
+    {
+      "name": "Stop button cancels the real Runtime turn before displaying cancellation",
+      "status": "PASS"
+    },
+    {
+      "name": "Continue button submits exactly one actual prompt and completes a follow-up",
+      "status": "PASS"
+    },
+    {
+      "name": "An actual approved edit reached disk",
+      "status": "PASS"
+    },
+    {
+      "name": "Successful edit has a scoped, encoded VS Code URI without claiming a server launcher",
+      "status": "PASS"
+    },
+    {
+      "name": "Diff button reads the actual captured workspace comparison",
+      "status": "PASS"
+    },
+    {
+      "name": "Record panel fits a mobile viewport",
+      "status": "PASS"
+    },
+    {
+      "name": "Transport failure stays visibly uncertain and cannot auto-resubmit a new action",
+      "status": "PASS"
+    },
+    {
+      "name": "Explicit retry reuses the identical durable request ID",
+      "status": "PASS"
+    },
+    {
+      "name": "No browser page errors",
+      "status": "PASS"
+    },
+    {
+      "name": "Production Web requests actually use coding-v2 and advertise enabled on-demand memory",
+      "status": "PASS"
+    }
+  ],
+  "actualPromptActions": 4,
+  "browser": "151.0.7922.173",
+  "compiledDigest": "eb96bf1f10b46de651ea6b786aaded77e5043e37fdfe3582956957cc438f6f63",
+  "limits": "Real browser/Runtime with loopback model fixture; not real model quality or physical mobile/Windows evidence."
+}

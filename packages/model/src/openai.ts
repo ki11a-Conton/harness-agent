@@ -336,6 +336,8 @@ async function backoff(
  * (retry taxonomy kind "provider", Phase 11); each retry is observable via
  * ModelEvent "retry". Streaming-phase failures are never retried.
  */
+let diagnosticRequestObserver: RequestPrefixObserver | undefined;
+
 async function* streamChatCompletion(
   opts: {
     baseUrl: string;
@@ -462,7 +464,7 @@ async function* streamChatCompletion(
   let response: Response;
   for (let attempt = 0; ; attempt += 1) {
     try {
-      opts.requestObserver?.observe(body, serializedBody, request.messages[0]?.sessionId ?? "unscoped");
+      opts.requestObserver?.observe(body, serializedBody, JSON.stringify([opts.baseUrl, opts.modelId, request.messages[0]?.sessionId ?? "unscoped"]));
       response = await fetch(`${opts.baseUrl}/chat/completions`, {
         method: "POST",
         headers: {
@@ -800,6 +802,7 @@ export class OpenAICompatibleProvider implements ModelProvider {
     onRequestObservation?: (value: RequestPrefixObservation) => void;
   };
   private readonly requestPolicy?: Readonly<OpenAIRequestPolicy>;
+  private readonly requestObserver?: RequestPrefixObserver;
 
   constructor(identity: {
     apiKey?: string;
@@ -810,6 +813,7 @@ export class OpenAICompatibleProvider implements ModelProvider {
     requestPolicy?: Readonly<OpenAIRequestPolicy>;
   } = {}) {
     this.identity = identity;
+    if (identity.onRequestObservation !== undefined) this.requestObserver = new RequestPrefixObserver(identity.onRequestObservation);
     if (identity.requestPolicy !== undefined) {
       this.requestPolicy = Object.freeze(resolveOpenAIRequestPolicy({ ...identity.requestPolicy }, {}));
     }
@@ -863,10 +867,9 @@ export class OpenAICompatibleProvider implements ModelProvider {
     const { maxProviderRetries, retryDelayMs, requestTimeoutMs } = requestPolicy;
     const chatCompatibility = resolveOpenAIChatCompatibility(baseUrl, modelId,
       config.chatCompatibility !== undefined ? config.chatCompatibility : this.identity.chatCompatibility);
-    const auditSink = this.identity.onRequestObservation ?? (process.env.HARNESS_CACHE_DIAGNOSTICS === "1"
-      ? (value: RequestPrefixObservation) => { process.stderr.write(`[cache-diagnostics] ${JSON.stringify(value)}\n`); }
+    const requestObserver = this.requestObserver ?? (process.env.HARNESS_CACHE_DIAGNOSTICS === "1"
+      ? diagnosticRequestObserver ??= new RequestPrefixObserver(value => { process.stderr.write(`[cache-diagnostics] ${JSON.stringify(value)}\n`); })
       : undefined);
-    const requestObserver = auditSink === undefined ? undefined : new RequestPrefixObserver(auditSink);
     return {
       generate: (request, signal) =>
         streamChatCompletion(

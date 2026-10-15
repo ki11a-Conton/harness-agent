@@ -67,7 +67,7 @@ async function fixtureJournal(sessionId) {
 function requestEndpoint(request) { try { return request.postDataJSON()?.endpoint; } catch { return undefined; } }
 async function boot(page) {
   await page.goto(values.url, { waitUntil: "domcontentloaded" });
-  await page.locator("[data-composer-input=true]").waitFor({ state: "visible", timeout: 7000 });
+  await page.getByRole("button", { name: "Choose workspace", exact: true }).waitFor({ state: "visible", timeout: 10000 });
   assert.equal(await page.getByRole('heading', { name: /^(Preview Notice|预览版说明)$/ }).count(), 0, 'startup needs no preview acknowledgement');
   // Explicit workspace selection owns a navigation intent; a briefly editable
   // provisional startup draft does not prove the default restore has settled.

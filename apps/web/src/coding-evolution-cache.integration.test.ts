@@ -39,7 +39,7 @@ it("C1 preserves cache usage through real provider, Runtime, durable reload and 
     const stored = await harness.store.getSession(session.id); expect(stored).toBeDefined();
     const projected = projectSessionHistory({ session: stored!, events, messages: await harness.store.listMessages(session.id) });
     const assistant = projected.records.find(record => record.event.type === "assistant/message");
-    expect(assistant?.event.data).toMatchObject({ usage: { inputTokens: 200, outputTokens: 20, cacheReadTokens: 128 } });
+    expect(assistant?.event.data).toMatchObject({ usage: { inputTokens: 72, outputTokens: 20, cacheReadTokens: 128, totalTokens: 220 } });
     expect(JSON.stringify([...projected.framesBySourceSequence.values()])).toContain('"cacheReadTokens":128');
   } finally {
     await harness?.close(); server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve()));

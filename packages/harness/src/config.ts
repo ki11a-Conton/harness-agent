@@ -36,6 +36,8 @@ export interface HarnessMemoryConfig {
   dbPath?: string;
   scope?: MemoryScope;
   topK?: number;
+  /** Explicitly advertise scoped memory/current-session search tools. */
+  onDemand?: boolean;
 }
 
 export interface HarnessDelegationConfig {
@@ -98,6 +100,8 @@ export interface HarnessConfig {
 
   /** Explicit budget wins over capability-derived budget. */
   contextBudget?: ContextBudget;
+  /** Optional Agent summary strategy on the existing single compactor. */
+  contextSummary?: import("@ar/context").CodingSummaryPolicy;
   /** Opt-in experimental discovery; omitted preserves default behavior/hash. */
   instructionDiscovery?: import("./path-scoped-instructions.js").PathScopedInstructionsConfig;
 

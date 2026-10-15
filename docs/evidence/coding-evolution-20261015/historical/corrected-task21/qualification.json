@@ -1,0 +1,50 @@
+{
+  "sourceCatalog": "benchmarks/coding-repositories-v1/catalog.json",
+  "paidModelCalls": 0,
+  "results": [
+    {
+      "task": "coding-history-21",
+      "paidModelCalls": 0,
+      "sides": {
+        "fixed": {
+          "revision": "9c02f1b101b78f90c09a8479276a2a4d38871bb1",
+          "oracleIdentity": [
+            {
+              "path": "packages/core/src/runtime/session-actor.test.ts",
+              "sha256": "9e7098634f4f6d1bafbdb8bd353a3c07fb08bafaa7c54a35e35c32ea2efec5d3",
+              "bytes": 96165
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 0,
+          "passed": 69,
+          "failed": 0,
+          "skipped": 0,
+          "verdict": "GREEN",
+          "oraclesIntact": true
+        },
+        "base": {
+          "revision": "7ba9eee0daedb6f0ae02a8cd0892a93e62677286",
+          "oracleIdentity": [
+            {
+              "path": "packages/core/src/runtime/session-actor.test.ts",
+              "sha256": "9e7098634f4f6d1bafbdb8bd353a3c07fb08bafaa7c54a35e35c32ea2efec5d3",
+              "bytes": 96165
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 1,
+          "passed": 68,
+          "failed": 1,
+          "skipped": 0,
+          "verdict": "RED",
+          "oraclesIntact": true
+        }
+      }
+    }
+  ]
+}

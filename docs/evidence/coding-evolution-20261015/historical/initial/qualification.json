@@ -1,0 +1,1227 @@
+{
+  "sourceCatalog": "benchmarks/coding-repositories-v1/catalog.json",
+  "paidModelCalls": 0,
+  "results": [
+    {
+      "task": "coding-history-01",
+      "paidModelCalls": 0,
+      "sides": {
+        "fixed": {
+          "revision": "6fe34b271db374b60947c02adc0d15deecf9d786",
+          "oracleIdentity": [
+            {
+              "path": "apps/web/src/source-audit-restoration.regressions.test.ts",
+              "sha256": "3c0ec372b28c6b15c2ad02ee1fb73dcd9abf6b235653cf8acc0a3db0a4a8efd7",
+              "bytes": 2422
+            },
+            {
+              "path": "packages/harness/src/source-audit-memory.regressions.test.ts",
+              "sha256": "973dbb04d061deca11967f3e52bf4730ffb9a9e4276e048b13ededa4ca15879e",
+              "bytes": 2198
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 0,
+          "passed": 3,
+          "failed": 0,
+          "skipped": 0,
+          "verdict": "GREEN",
+          "oraclesIntact": true
+        },
+        "base": {
+          "revision": "9ea3b5550fecdf9fc3f935c1ed1626c703076172",
+          "oracleIdentity": [
+            {
+              "path": "apps/web/src/source-audit-restoration.regressions.test.ts",
+              "sha256": "3c0ec372b28c6b15c2ad02ee1fb73dcd9abf6b235653cf8acc0a3db0a4a8efd7",
+              "bytes": 2422
+            },
+            {
+              "path": "packages/harness/src/source-audit-memory.regressions.test.ts",
+              "sha256": "973dbb04d061deca11967f3e52bf4730ffb9a9e4276e048b13ededa4ca15879e",
+              "bytes": 2198
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 1,
+          "verdict": "BASE_BUILD_FAILURE_REQUIRES_REVIEW"
+        }
+      }
+    },
+    {
+      "task": "coding-history-02",
+      "paidModelCalls": 0,
+      "sides": {
+        "fixed": {
+          "revision": "402da5731398a3fda84c58e84e79204456861856",
+          "oracleIdentity": [
+            {
+              "path": "packages/agents/src/state-handoff.test.ts",
+              "sha256": "80ece9cf1bf828f617cd7a77a6dca4d11cb0daf2c5f0a18fe7a4dd20616b8fc5",
+              "bytes": 8133
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 0,
+          "passed": 9,
+          "failed": 0,
+          "skipped": 0,
+          "verdict": "GREEN",
+          "oraclesIntact": true
+        },
+        "base": {
+          "revision": "6286be388b52c0a84338ee48ea53607e7297a30f",
+          "oracleIdentity": [
+            {
+              "path": "packages/agents/src/state-handoff.test.ts",
+              "sha256": "80ece9cf1bf828f617cd7a77a6dca4d11cb0daf2c5f0a18fe7a4dd20616b8fc5",
+              "bytes": 8133
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 1,
+          "passed": 8,
+          "failed": 1,
+          "skipped": 0,
+          "verdict": "RED",
+          "oraclesIntact": true
+        }
+      }
+    },
+    {
+      "task": "coding-history-03",
+      "paidModelCalls": 0,
+      "sides": {
+        "fixed": {
+          "revision": "5341e11b8dbade4016b246156c61537eaaaedc9e",
+          "oracleIdentity": [
+            {
+              "path": "apps/cli/src/coding-host.regressions.test.ts",
+              "sha256": "003989a720485f13cb2dd48970a8f09d834ce9872ef780dd73b33ac282050b95",
+              "bytes": 3716
+            },
+            {
+              "path": "packages/core/src/runtime/encoded-tool-output-security.regressions.test.ts",
+              "sha256": "e1fe52c8c3229facd3e297cee7d47467c1c91f306fa69f5752efb8bcfd32ac0b",
+              "bytes": 15994
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 0,
+          "passed": 43,
+          "failed": 0,
+          "skipped": 0,
+          "verdict": "GREEN",
+          "oraclesIntact": true
+        },
+        "base": {
+          "revision": "33eb6438130956be51706bb523071f7550ba83ab",
+          "oracleIdentity": [
+            {
+              "path": "apps/cli/src/coding-host.regressions.test.ts",
+              "sha256": "003989a720485f13cb2dd48970a8f09d834ce9872ef780dd73b33ac282050b95",
+              "bytes": 3716
+            },
+            {
+              "path": "packages/core/src/runtime/encoded-tool-output-security.regressions.test.ts",
+              "sha256": "e1fe52c8c3229facd3e297cee7d47467c1c91f306fa69f5752efb8bcfd32ac0b",
+              "bytes": 15994
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 1,
+          "passed": 36,
+          "failed": 7,
+          "skipped": 0,
+          "verdict": "RED",
+          "oraclesIntact": true
+        }
+      }
+    },
+    {
+      "task": "coding-history-04",
+      "paidModelCalls": 0,
+      "sides": {
+        "fixed": {
+          "revision": "b099a1aa3d0ff4d08a0f50e87af28fd8c07a632d",
+          "oracleIdentity": [
+            {
+              "path": "packages/harness/src/coding-verification.regressions.test.ts",
+              "sha256": "bf294b8a09142873b0f9a5cbe678bdad60538ff6d58119e909835996d9c8487d",
+              "bytes": 5513
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 0,
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0,
+          "verdict": "GREEN",
+          "oraclesIntact": true
+        },
+        "base": {
+          "revision": "5341e11b8dbade4016b246156c61537eaaaedc9e",
+          "oracleIdentity": [
+            {
+              "path": "packages/harness/src/coding-verification.regressions.test.ts",
+              "sha256": "bf294b8a09142873b0f9a5cbe678bdad60538ff6d58119e909835996d9c8487d",
+              "bytes": 5513
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 1,
+          "passed": 3,
+          "failed": 1,
+          "skipped": 0,
+          "verdict": "RED",
+          "oraclesIntact": true
+        }
+      }
+    },
+    {
+      "task": "coding-history-05",
+      "paidModelCalls": 0,
+      "sides": {
+        "fixed": {
+          "revision": "fdd8c0e08ef6fa9755b286c7290fcfd5a0b56c9c",
+          "oracleIdentity": [
+            {
+              "path": "apps/cli/src/final-question.regressions.test.ts",
+              "sha256": "40b00e63b64d32dad43c3226b3ea03e137a14c82e1e1bf5cff02444c7274324f",
+              "bytes": 8709
+            },
+            {
+              "path": "apps/web/src/deepseek/change-compare.regressions.test.ts",
+              "sha256": "90a7e9858cd18611d1a99b5f67fef9e9478f053d750c8c619f513d3d646ca798",
+              "bytes": 760
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 0,
+          "passed": 9,
+          "failed": 0,
+          "skipped": 0,
+          "verdict": "GREEN",
+          "oraclesIntact": true
+        },
+        "base": {
+          "revision": "c7e97bdad40ed14bca6b7452810f5b55edf82fe0",
+          "oracleIdentity": [
+            {
+              "path": "apps/cli/src/final-question.regressions.test.ts",
+              "sha256": "40b00e63b64d32dad43c3226b3ea03e137a14c82e1e1bf5cff02444c7274324f",
+              "bytes": 8709
+            },
+            {
+              "path": "apps/web/src/deepseek/change-compare.regressions.test.ts",
+              "sha256": "90a7e9858cd18611d1a99b5f67fef9e9478f053d750c8c619f513d3d646ca798",
+              "bytes": 760
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 1,
+          "passed": 1,
+          "failed": 8,
+          "skipped": 0,
+          "verdict": "RED",
+          "oraclesIntact": true
+        }
+      }
+    },
+    {
+      "task": "coding-history-06",
+      "paidModelCalls": 0,
+      "sides": {
+        "fixed": {
+          "revision": "4f7dcb551ec13885992e0099cf615ca9c3eaf049",
+          "oracleIdentity": [
+            {
+              "path": "apps/web/src/deepseek/composition-security.regressions.test.ts",
+              "sha256": "f07aec3c6434c6b74925d249e703011bd4d115bc3fe6f1b5c8566cd633a3d05c",
+              "bytes": 7584
+            },
+            {
+              "path": "packages/store-integrity/src/windows-atomic-write.regressions.test.ts",
+              "sha256": "6a359992a26c3fc9aecfc0cc5fa00539dfe2708121afb1e66a1d272addf125f2",
+              "bytes": 4179
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 0,
+          "passed": 9,
+          "failed": 0,
+          "skipped": 0,
+          "verdict": "GREEN",
+          "oraclesIntact": true
+        },
+        "base": {
+          "revision": "85c65dd28c017b6128e721d594a69898344014af",
+          "oracleIdentity": [
+            {
+              "path": "apps/web/src/deepseek/composition-security.regressions.test.ts",
+              "sha256": "f07aec3c6434c6b74925d249e703011bd4d115bc3fe6f1b5c8566cd633a3d05c",
+              "bytes": 7584
+            },
+            {
+              "path": "packages/store-integrity/src/windows-atomic-write.regressions.test.ts",
+              "sha256": "6a359992a26c3fc9aecfc0cc5fa00539dfe2708121afb1e66a1d272addf125f2",
+              "bytes": 4179
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 1,
+          "verdict": "BASE_BUILD_FAILURE_REQUIRES_REVIEW"
+        }
+      }
+    },
+    {
+      "task": "coding-history-07",
+      "paidModelCalls": 0,
+      "sides": {
+        "fixed": {
+          "revision": "64a174d56600d8ca93c1e963a87db87b540a9287",
+          "oracleIdentity": [
+            {
+              "path": "apps/cli/src/coding-prompt.integration.test.ts",
+              "sha256": "8bc92f4edc61a85e72df3b9e3be85af0fee38dc0acf8a86d1223e0ce4cbafdae",
+              "bytes": 3451
+            },
+            {
+              "path": "packages/agents/src/coding-prompt.test.ts",
+              "sha256": "1c1959db262c8eb6bdb0f9b0f04a0894e4a5481565e6011dc40e899349a57c7b",
+              "bytes": 2699
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 0,
+          "passed": 10,
+          "failed": 0,
+          "skipped": 0,
+          "verdict": "GREEN",
+          "oraclesIntact": true
+        },
+        "base": {
+          "revision": "663b6552db0e7006e7e47c70b5ab68fb6212786b",
+          "oracleIdentity": [
+            {
+              "path": "apps/cli/src/coding-prompt.integration.test.ts",
+              "sha256": "8bc92f4edc61a85e72df3b9e3be85af0fee38dc0acf8a86d1223e0ce4cbafdae",
+              "bytes": 3451
+            },
+            {
+              "path": "packages/agents/src/coding-prompt.test.ts",
+              "sha256": "1c1959db262c8eb6bdb0f9b0f04a0894e4a5481565e6011dc40e899349a57c7b",
+              "bytes": 2699
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 1,
+          "verdict": "BASE_BUILD_FAILURE_REQUIRES_REVIEW"
+        }
+      }
+    },
+    {
+      "task": "coding-history-08",
+      "paidModelCalls": 0,
+      "sides": {
+        "fixed": {
+          "revision": "b9c5b05b6bf8d00a7671e57388b3a5c3e463d500",
+          "oracleIdentity": [
+            {
+              "path": "apps/cli/src/gen1-skills-wiring.regressions.test.ts",
+              "sha256": "0ac0c60d2c2e8400c0ef54c185d3019b2b4d4cffea838f8a9c441a741d45c974",
+              "bytes": 3222
+            },
+            {
+              "path": "packages/core/src/runtime/gen1-followup-wakeup.regressions.test.ts",
+              "sha256": "a64c6763be23fafdb4abd16b12f83ec0d974660e1c919c8f8b5b103c5863c9c6",
+              "bytes": 12087
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 0,
+          "passed": 10,
+          "failed": 0,
+          "skipped": 0,
+          "verdict": "GREEN",
+          "oraclesIntact": true
+        },
+        "base": {
+          "revision": "22d97d860cfa1001df578b1193b3bc4c8ee1bce1",
+          "oracleIdentity": [
+            {
+              "path": "apps/cli/src/gen1-skills-wiring.regressions.test.ts",
+              "sha256": "0ac0c60d2c2e8400c0ef54c185d3019b2b4d4cffea838f8a9c441a741d45c974",
+              "bytes": 3222
+            },
+            {
+              "path": "packages/core/src/runtime/gen1-followup-wakeup.regressions.test.ts",
+              "sha256": "a64c6763be23fafdb4abd16b12f83ec0d974660e1c919c8f8b5b103c5863c9c6",
+              "bytes": 12087
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 1,
+          "passed": 2,
+          "failed": 8,
+          "skipped": 0,
+          "verdict": "RED",
+          "oraclesIntact": true
+        }
+      }
+    },
+    {
+      "task": "coding-history-09",
+      "paidModelCalls": 0,
+      "sides": {
+        "fixed": {
+          "revision": "7cd3a4a6eee5937cba1ad9405a52dcfc15757073",
+          "oracleIdentity": [
+            {
+              "path": "apps/web/src/deepseek/composition-security.regressions.test.ts",
+              "sha256": "29cb03259f23677a40a92bd156206790f338d68da51a7d333cb4fe4780f015b7",
+              "bytes": 7558
+            },
+            {
+              "path": "packages/core/src/runtime/ask-answer-identity.regressions.test.ts",
+              "sha256": "7a989c7ee6d8a8945e140b1bc8fed2b62e64324cf1039a417a9deff308b17607",
+              "bytes": 10338
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 0,
+          "passed": 18,
+          "failed": 0,
+          "skipped": 0,
+          "verdict": "GREEN",
+          "oraclesIntact": true
+        },
+        "base": {
+          "revision": "bab0e78e9d6948630bd0b3178dc1144568102775",
+          "oracleIdentity": [
+            {
+              "path": "apps/web/src/deepseek/composition-security.regressions.test.ts",
+              "sha256": "29cb03259f23677a40a92bd156206790f338d68da51a7d333cb4fe4780f015b7",
+              "bytes": 7558
+            },
+            {
+              "path": "packages/core/src/runtime/ask-answer-identity.regressions.test.ts",
+              "sha256": "7a989c7ee6d8a8945e140b1bc8fed2b62e64324cf1039a417a9deff308b17607",
+              "bytes": 10338
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 1,
+          "verdict": "BASE_BUILD_FAILURE_REQUIRES_REVIEW"
+        }
+      }
+    },
+    {
+      "task": "coding-history-10",
+      "paidModelCalls": 0,
+      "sides": {
+        "fixed": {
+          "revision": "616ef30593da69bdf6db3546d4c22b80c1b4378f",
+          "oracleIdentity": [
+            {
+              "path": "packages/harness/src/effective-instruction-context.regressions.test.ts",
+              "sha256": "98e833d0c748269b778793b8358111d407c4c43290778abb8eb24588584b8997",
+              "bytes": 7988
+            },
+            {
+              "path": "packages/harness/src/memory-search-production.regressions.test.ts",
+              "sha256": "2b8ca8f48137f3fcca4b69ab42c17d43595e37c9b22b0d221977ac365b6f1078",
+              "bytes": 4083
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 0,
+          "passed": 16,
+          "failed": 0,
+          "skipped": 0,
+          "verdict": "GREEN",
+          "oraclesIntact": true
+        },
+        "base": {
+          "revision": "a1df586e4d105eb4171889931fbb59e557bb8d5d",
+          "oracleIdentity": [
+            {
+              "path": "packages/harness/src/effective-instruction-context.regressions.test.ts",
+              "sha256": "98e833d0c748269b778793b8358111d407c4c43290778abb8eb24588584b8997",
+              "bytes": 7988
+            },
+            {
+              "path": "packages/harness/src/memory-search-production.regressions.test.ts",
+              "sha256": "2b8ca8f48137f3fcca4b69ab42c17d43595e37c9b22b0d221977ac365b6f1078",
+              "bytes": 4083
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 1,
+          "passed": 5,
+          "failed": 11,
+          "skipped": 0,
+          "verdict": "RED",
+          "oraclesIntact": true
+        }
+      }
+    },
+    {
+      "task": "coding-history-11",
+      "paidModelCalls": 0,
+      "sides": {
+        "fixed": {
+          "revision": "91967f4dd2442b3d1979dee1c2b165d376c8895c",
+          "oracleIdentity": [
+            {
+              "path": "packages/memory/src/retrieval-work.regressions.test.ts",
+              "sha256": "eb6be187b836f91afa8dbb34007576cc7ad22a51dea7326e468e3569043abfe8",
+              "bytes": 9231
+            },
+            {
+              "path": "packages/model/src/openai-system-context.regressions.test.ts",
+              "sha256": "f2614215e52509bd0b8575d1e5d058812e14f9e7b0596d39240a50b8100fd5ab",
+              "bytes": 7664
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 0,
+          "passed": 42,
+          "failed": 0,
+          "skipped": 0,
+          "verdict": "GREEN",
+          "oraclesIntact": true
+        },
+        "base": {
+          "revision": "fbe5098c43060fd066bd5fbdaa4a4d1612abdeb6",
+          "oracleIdentity": [
+            {
+              "path": "packages/memory/src/retrieval-work.regressions.test.ts",
+              "sha256": "eb6be187b836f91afa8dbb34007576cc7ad22a51dea7326e468e3569043abfe8",
+              "bytes": 9231
+            },
+            {
+              "path": "packages/model/src/openai-system-context.regressions.test.ts",
+              "sha256": "f2614215e52509bd0b8575d1e5d058812e14f9e7b0596d39240a50b8100fd5ab",
+              "bytes": 7664
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 1,
+          "passed": 33,
+          "failed": 9,
+          "skipped": 0,
+          "verdict": "RED",
+          "oraclesIntact": true
+        }
+      }
+    },
+    {
+      "task": "coding-history-12",
+      "paidModelCalls": 0,
+      "sides": {
+        "fixed": {
+          "revision": "d01df59f31b156f7c8622ae6c926ce99bc751400",
+          "oracleIdentity": [
+            {
+              "path": "packages/harness/src/candidate-persistence.regressions.test.ts",
+              "sha256": "1693e2f89e0af93481c882cacf4b7140c01325341ee5da09a20d8d0d0829ec35",
+              "bytes": 7707
+            },
+            {
+              "path": "packages/harness/src/command-discovery-cache.regressions.test.ts",
+              "sha256": "748db9ab536c8650e0446c6a1ca3f8dceb5c2ae0a16a0b6068990aaa663cb34e",
+              "bytes": 3493
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 0,
+          "passed": 14,
+          "failed": 0,
+          "skipped": 0,
+          "verdict": "GREEN",
+          "oraclesIntact": true
+        },
+        "base": {
+          "revision": "965da0bb123fbdd9b61bded6bc345b767ad0c48f",
+          "oracleIdentity": [
+            {
+              "path": "packages/harness/src/candidate-persistence.regressions.test.ts",
+              "sha256": "1693e2f89e0af93481c882cacf4b7140c01325341ee5da09a20d8d0d0829ec35",
+              "bytes": 7707
+            },
+            {
+              "path": "packages/harness/src/command-discovery-cache.regressions.test.ts",
+              "sha256": "748db9ab536c8650e0446c6a1ca3f8dceb5c2ae0a16a0b6068990aaa663cb34e",
+              "bytes": 3493
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 1,
+          "passed": 3,
+          "failed": 11,
+          "skipped": 0,
+          "verdict": "RED",
+          "oraclesIntact": true
+        }
+      }
+    },
+    {
+      "task": "coding-history-13",
+      "paidModelCalls": 0,
+      "sides": {
+        "fixed": {
+          "revision": "29ba9546bc4c3d515a46058c5cf69046f0e82e57",
+          "oracleIdentity": [
+            {
+              "path": "packages/model/src/openai-empty-finish-reason.regressions.test.ts",
+              "sha256": "d958d5bd51ca43d55146c5fce63b003e9d54681a824f4e6847cb945e86e70577",
+              "bytes": 3926
+            },
+            {
+              "path": "packages/model/src/openai-termination-regressions.test.ts",
+              "sha256": "d70315a44e9683cced43cd720ef14becb6d4d25c45e56b574e677a98ea10028c",
+              "bytes": 6785
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 0,
+          "passed": 21,
+          "failed": 0,
+          "skipped": 0,
+          "verdict": "GREEN",
+          "oraclesIntact": true
+        },
+        "base": {
+          "revision": "6bace16dacebf148f5e5c8390ce2b5e3e38015cf",
+          "oracleIdentity": [
+            {
+              "path": "packages/model/src/openai-empty-finish-reason.regressions.test.ts",
+              "sha256": "d958d5bd51ca43d55146c5fce63b003e9d54681a824f4e6847cb945e86e70577",
+              "bytes": 3926
+            },
+            {
+              "path": "packages/model/src/openai-termination-regressions.test.ts",
+              "sha256": "d70315a44e9683cced43cd720ef14becb6d4d25c45e56b574e677a98ea10028c",
+              "bytes": 6785
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 1,
+          "passed": 18,
+          "failed": 3,
+          "skipped": 0,
+          "verdict": "RED",
+          "oraclesIntact": true
+        }
+      }
+    },
+    {
+      "task": "coding-history-14",
+      "paidModelCalls": 0,
+      "sides": {
+        "fixed": {
+          "revision": "5e4d9b8f23e596e887c18a46f8e031d41b8a458e",
+          "oracleIdentity": [
+            {
+              "path": "packages/tools/src/read-file-resource.regressions.test.ts",
+              "sha256": "6d18ea87c8bbeb31a5548c2c69003e53f865d86e8869b156abfdb637d0dfa804",
+              "bytes": 10013
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 0,
+          "passed": 23,
+          "failed": 0,
+          "skipped": 0,
+          "verdict": "GREEN",
+          "oraclesIntact": true
+        },
+        "base": {
+          "revision": "2802f46f81276e41dbcd81bfd2fd095c9102b599",
+          "oracleIdentity": [
+            {
+              "path": "packages/tools/src/read-file-resource.regressions.test.ts",
+              "sha256": "6d18ea87c8bbeb31a5548c2c69003e53f865d86e8869b156abfdb637d0dfa804",
+              "bytes": 10013
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 1,
+          "passed": 10,
+          "failed": 13,
+          "skipped": 0,
+          "verdict": "RED",
+          "oraclesIntact": true
+        }
+      }
+    },
+    {
+      "task": "coding-history-15",
+      "paidModelCalls": 0,
+      "sides": {
+        "fixed": {
+          "revision": "f8373b0fa4ec6491a55a9a3ba198235b689cc140",
+          "oracleIdentity": [
+            {
+              "path": "packages/context/src/rehydration-headroom.regressions.test.ts",
+              "sha256": "f6b5a88dd912629a549e646150eb91acac7bd030c0bc319592fa95cfc2d2c02f",
+              "bytes": 9241
+            },
+            {
+              "path": "packages/harness/src/memory-feedback-atomic.regressions.test.ts",
+              "sha256": "64941c892cf1d3984cdc273710f55d74cdf547bae719b203c72c6c931e91fa69",
+              "bytes": 13423
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 0,
+          "passed": 38,
+          "failed": 0,
+          "skipped": 0,
+          "verdict": "GREEN",
+          "oraclesIntact": true
+        },
+        "base": {
+          "revision": "0c70309de478797be8d0f6b8a3c2dbbe282f7844",
+          "oracleIdentity": [
+            {
+              "path": "packages/context/src/rehydration-headroom.regressions.test.ts",
+              "sha256": "f6b5a88dd912629a549e646150eb91acac7bd030c0bc319592fa95cfc2d2c02f",
+              "bytes": 9241
+            },
+            {
+              "path": "packages/harness/src/memory-feedback-atomic.regressions.test.ts",
+              "sha256": "64941c892cf1d3984cdc273710f55d74cdf547bae719b203c72c6c931e91fa69",
+              "bytes": 13423
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 1,
+          "passed": 8,
+          "failed": 30,
+          "skipped": 0,
+          "verdict": "RED",
+          "oraclesIntact": true
+        }
+      }
+    },
+    {
+      "task": "coding-history-16",
+      "paidModelCalls": 0,
+      "sides": {
+        "fixed": {
+          "revision": "be537085551fc8f14d976f05865d6c0f4bd57e7a",
+          "oracleIdentity": [
+            {
+              "path": "packages/context/src/scoped-instruction-read.regressions.test.ts",
+              "sha256": "030fe9547a217dd65f4d194f9828c8ee3f85a8d6fae785178b3d3cdd03d936cb",
+              "bytes": 12039
+            },
+            {
+              "path": "packages/model/src/openai-stream-footer.regressions.test.ts",
+              "sha256": "9dfcd44d0a645b262489cfe6a17c9fff77bc2c45fa20782ef68c270ffccf2ca6",
+              "bytes": 15095
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 0,
+          "passed": 65,
+          "failed": 0,
+          "skipped": 0,
+          "verdict": "GREEN",
+          "oraclesIntact": true
+        },
+        "base": {
+          "revision": "b00299e5d0da03656c00e2041fc261aa01af6c96",
+          "oracleIdentity": [
+            {
+              "path": "packages/context/src/scoped-instruction-read.regressions.test.ts",
+              "sha256": "030fe9547a217dd65f4d194f9828c8ee3f85a8d6fae785178b3d3cdd03d936cb",
+              "bytes": 12039
+            },
+            {
+              "path": "packages/model/src/openai-stream-footer.regressions.test.ts",
+              "sha256": "9dfcd44d0a645b262489cfe6a17c9fff77bc2c45fa20782ef68c270ffccf2ca6",
+              "bytes": 15095
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 1,
+          "passed": 22,
+          "failed": 43,
+          "skipped": 0,
+          "verdict": "RED",
+          "oraclesIntact": true
+        }
+      }
+    },
+    {
+      "task": "coding-history-17",
+      "paidModelCalls": 0,
+      "sides": {
+        "fixed": {
+          "revision": "97928f1532a3d8c7fc815a197ead9243550ed883",
+          "oracleIdentity": [
+            {
+              "path": "packages/core/src/runtime/gen1-model-recovery.regressions.test.ts",
+              "sha256": "945dd77fb54659984470e6b9b17d5d3be2817434ce358ab8100631e76458d209",
+              "bytes": 9000
+            },
+            {
+              "path": "packages/gateway/src/rpc.test.ts",
+              "sha256": "2b3e3c51930cb8417f47bffddeead682b65c758b09bdab9591a6d7071856b77c",
+              "bytes": 29002
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 0,
+          "passed": 61,
+          "failed": 0,
+          "skipped": 0,
+          "verdict": "GREEN",
+          "oraclesIntact": true
+        },
+        "base": {
+          "revision": "f48d7d7335a238b1c8883d6bf6ddec0e73703d9a",
+          "oracleIdentity": [
+            {
+              "path": "packages/core/src/runtime/gen1-model-recovery.regressions.test.ts",
+              "sha256": "945dd77fb54659984470e6b9b17d5d3be2817434ce358ab8100631e76458d209",
+              "bytes": 9000
+            },
+            {
+              "path": "packages/gateway/src/rpc.test.ts",
+              "sha256": "2b3e3c51930cb8417f47bffddeead682b65c758b09bdab9591a6d7071856b77c",
+              "bytes": 29002
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 1,
+          "passed": 57,
+          "failed": 4,
+          "skipped": 0,
+          "verdict": "RED",
+          "oraclesIntact": true
+        }
+      }
+    },
+    {
+      "task": "coding-history-18",
+      "paidModelCalls": 0,
+      "sides": {
+        "fixed": {
+          "revision": "4ebfcf7cd59c09aad0818c365f4a3673350eaf2e",
+          "oracleIdentity": [
+            {
+              "path": "packages/core/src/runtime/pr-harness-fault-recovery.regressions.test.ts",
+              "sha256": "f5a722e48d7be0c97510a97caf2b03e63956da2f99702d5ab3cba36764978107",
+              "bytes": 43163
+            },
+            {
+              "path": "packages/core/src/runtime/recovery-trace-and-security-events.regressions.test.ts",
+              "sha256": "c59e8a26ae689ab18799c4d827fc7d490bb101eb7143d02a79690db2268d8cbc",
+              "bytes": 12158
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 0,
+          "passed": 19,
+          "failed": 0,
+          "skipped": 0,
+          "verdict": "GREEN",
+          "oraclesIntact": true
+        },
+        "base": {
+          "revision": "083b38cfba87cd1ce3fc3fd80f1515f9fe977218",
+          "oracleIdentity": [
+            {
+              "path": "packages/core/src/runtime/pr-harness-fault-recovery.regressions.test.ts",
+              "sha256": "f5a722e48d7be0c97510a97caf2b03e63956da2f99702d5ab3cba36764978107",
+              "bytes": 43163
+            },
+            {
+              "path": "packages/core/src/runtime/recovery-trace-and-security-events.regressions.test.ts",
+              "sha256": "c59e8a26ae689ab18799c4d827fc7d490bb101eb7143d02a79690db2268d8cbc",
+              "bytes": 12158
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 1,
+          "passed": 12,
+          "failed": 7,
+          "skipped": 0,
+          "verdict": "RED",
+          "oraclesIntact": true
+        }
+      }
+    },
+    {
+      "task": "coding-history-19",
+      "paidModelCalls": 0,
+      "sides": {
+        "fixed": {
+          "revision": "88504f013eec54f1ae0328783345c8c4cf8265e3",
+          "oracleIdentity": [
+            {
+              "path": "packages/core/src/runtime/ask-user-callback.regressions.test.ts",
+              "sha256": "0ce84e0407cf6467fdc309b40d1c6ac4892dae61edd3b38e65900cebc9a321e1",
+              "bytes": 4356
+            },
+            {
+              "path": "apps/web/src/deepseek/session.test.ts",
+              "sha256": "4c3fe62a1125b874b580c8662cc8f06cd93f7c694d9e47a6ea5966d92ba5a6b7",
+              "bytes": 39470
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 0,
+          "passed": 26,
+          "failed": 0,
+          "skipped": 0,
+          "verdict": "GREEN",
+          "oraclesIntact": true
+        },
+        "base": {
+          "revision": "272ace5cfdca85dd0948562314fafcac08d936ec",
+          "oracleIdentity": [
+            {
+              "path": "packages/core/src/runtime/ask-user-callback.regressions.test.ts",
+              "sha256": "0ce84e0407cf6467fdc309b40d1c6ac4892dae61edd3b38e65900cebc9a321e1",
+              "bytes": 4356
+            },
+            {
+              "path": "apps/web/src/deepseek/session.test.ts",
+              "sha256": "4c3fe62a1125b874b580c8662cc8f06cd93f7c694d9e47a6ea5966d92ba5a6b7",
+              "bytes": 39470
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 1,
+          "passed": 22,
+          "failed": 4,
+          "skipped": 0,
+          "verdict": "RED",
+          "oraclesIntact": true
+        }
+      }
+    },
+    {
+      "task": "coding-history-20",
+      "paidModelCalls": 0,
+      "sides": {
+        "fixed": {
+          "revision": "272ace5cfdca85dd0948562314fafcac08d936ec",
+          "oracleIdentity": [
+            {
+              "path": "packages/core/src/runtime/ask-user-callback.regressions.test.ts",
+              "sha256": "eb91f2501bb5f27c63987c3b89ae4d81abcfed274b3436b62664a2e1b1ad1083",
+              "bytes": 3665
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 0,
+          "passed": 3,
+          "failed": 0,
+          "skipped": 0,
+          "verdict": "GREEN",
+          "oraclesIntact": true
+        },
+        "base": {
+          "revision": "7e0295a3577e55e7550e0b4b218d38dc45d1dea3",
+          "oracleIdentity": [
+            {
+              "path": "packages/core/src/runtime/ask-user-callback.regressions.test.ts",
+              "sha256": "eb91f2501bb5f27c63987c3b89ae4d81abcfed274b3436b62664a2e1b1ad1083",
+              "bytes": 3665
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 1,
+          "passed": 2,
+          "failed": 1,
+          "skipped": 0,
+          "verdict": "RED",
+          "oraclesIntact": true
+        }
+      }
+    },
+    {
+      "task": "coding-history-21",
+      "paidModelCalls": 0,
+      "sides": {
+        "fixed": {
+          "revision": "9c02f1b101b78f90c09a8479276a2a4d38871bb1",
+          "oracleIdentity": [
+            {
+              "path": "apps/web/src/deepseek/activity.test.ts",
+              "sha256": "38535710fbbf6a5bbcc24c6396bc1a8e1541a82ffb6049355f702a6c3c5153e5",
+              "bytes": 42590
+            },
+            {
+              "path": "apps/web/src/deepseek/session.test.ts",
+              "sha256": "62d87091fbe2a64901b5b6db0abd0224d388b9e4f78268b1f3c8f359a3a76d58",
+              "bytes": 35844
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 0,
+          "passed": 44,
+          "failed": 0,
+          "skipped": 0,
+          "verdict": "GREEN",
+          "oraclesIntact": true
+        },
+        "base": {
+          "revision": "7ba9eee0daedb6f0ae02a8cd0892a93e62677286",
+          "oracleIdentity": [
+            {
+              "path": "apps/web/src/deepseek/activity.test.ts",
+              "sha256": "38535710fbbf6a5bbcc24c6396bc1a8e1541a82ffb6049355f702a6c3c5153e5",
+              "bytes": 42590
+            },
+            {
+              "path": "apps/web/src/deepseek/session.test.ts",
+              "sha256": "62d87091fbe2a64901b5b6db0abd0224d388b9e4f78268b1f3c8f359a3a76d58",
+              "bytes": 35844
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 0,
+          "passed": 44,
+          "failed": 0,
+          "skipped": 0,
+          "verdict": "GREEN",
+          "oraclesIntact": true
+        }
+      }
+    },
+    {
+      "task": "coding-history-22",
+      "paidModelCalls": 0,
+      "sides": {
+        "fixed": {
+          "revision": "7ba9eee0daedb6f0ae02a8cd0892a93e62677286",
+          "oracleIdentity": [
+            {
+              "path": "apps/web/src/deepseek/session.test.ts",
+              "sha256": "6ff2d68fe445490b6003b41d2e22326c7ab3042c144f8de70326bce41028c3a8",
+              "bytes": 35831
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 0,
+          "passed": 20,
+          "failed": 0,
+          "skipped": 0,
+          "verdict": "GREEN",
+          "oraclesIntact": true
+        },
+        "base": {
+          "revision": "facf13fa5ed4f545348b7de78c230603c54f9bf1",
+          "oracleIdentity": [
+            {
+              "path": "apps/web/src/deepseek/session.test.ts",
+              "sha256": "6ff2d68fe445490b6003b41d2e22326c7ab3042c144f8de70326bce41028c3a8",
+              "bytes": 35831
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 1,
+          "verdict": "BASE_BUILD_FAILURE_REQUIRES_REVIEW"
+        }
+      }
+    },
+    {
+      "task": "coding-history-23",
+      "paidModelCalls": 0,
+      "sides": {
+        "fixed": {
+          "revision": "b38566d5c370509db58cbb495aaf4eb68cbe3ce3",
+          "oracleIdentity": [
+            {
+              "path": "packages/store-integrity/src/windows-atomic-write.regressions.test.ts",
+              "sha256": "ffb7c4571be97cf6aa2162c01060b39d6862823cd6a632fe7aec2202bc8aa849",
+              "bytes": 4610
+            },
+            {
+              "path": "apps/web/src/deepseek/session.test.ts",
+              "sha256": "9aff8bc5de019d5ef0617fdeb3203cbed427f3fd0046d7133f20ae37f737817e",
+              "bytes": 35898
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 0,
+          "passed": 26,
+          "failed": 0,
+          "skipped": 0,
+          "verdict": "GREEN",
+          "oraclesIntact": true
+        },
+        "base": {
+          "revision": "9c02f1b101b78f90c09a8479276a2a4d38871bb1",
+          "oracleIdentity": [
+            {
+              "path": "packages/store-integrity/src/windows-atomic-write.regressions.test.ts",
+              "sha256": "ffb7c4571be97cf6aa2162c01060b39d6862823cd6a632fe7aec2202bc8aa849",
+              "bytes": 4610
+            },
+            {
+              "path": "apps/web/src/deepseek/session.test.ts",
+              "sha256": "9aff8bc5de019d5ef0617fdeb3203cbed427f3fd0046d7133f20ae37f737817e",
+              "bytes": 35898
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 1,
+          "passed": 24,
+          "failed": 2,
+          "skipped": 0,
+          "verdict": "RED",
+          "oraclesIntact": true
+        }
+      }
+    },
+    {
+      "task": "coding-history-24",
+      "paidModelCalls": 0,
+      "sides": {
+        "fixed": {
+          "revision": "3adbebe8af87a8490e63365a077840b6765296ea",
+          "oracleIdentity": [
+            {
+              "path": "apps/web/src/harness.integration.test.ts",
+              "sha256": "079d35c189c165f506d9cacbb3bf5d817115ed96ea061b15b80b160bfae98159",
+              "bytes": 15095
+            },
+            {
+              "path": "packages/gateway/src/gateway.test.ts",
+              "sha256": "483a2b9a9f69d7d6c7260a72c91b4531163ad313dec2fef279aa1d765f408ffc",
+              "bytes": 39382
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 0,
+          "passed": 38,
+          "failed": 0,
+          "skipped": 0,
+          "verdict": "GREEN",
+          "oraclesIntact": true
+        },
+        "base": {
+          "revision": "b016dc3ccbb1808728617374745fae46d5c3ee87",
+          "oracleIdentity": [
+            {
+              "path": "apps/web/src/harness.integration.test.ts",
+              "sha256": "079d35c189c165f506d9cacbb3bf5d817115ed96ea061b15b80b160bfae98159",
+              "bytes": 15095
+            },
+            {
+              "path": "packages/gateway/src/gateway.test.ts",
+              "sha256": "483a2b9a9f69d7d6c7260a72c91b4531163ad313dec2fef279aa1d765f408ffc",
+              "bytes": 39382
+            }
+          ],
+          "prepareExit": 0,
+          "installExit": 0,
+          "buildExit": 0,
+          "testExit": 1,
+          "passed": 36,
+          "failed": 2,
+          "skipped": 0,
+          "verdict": "RED",
+          "oraclesIntact": true
+        }
+      }
+    }
+  ]
+}

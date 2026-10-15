@@ -3,7 +3,7 @@ import { join, resolve } from "node:path";
 import { homedir } from "node:os";
 import { stat } from "node:fs/promises";
 import type { ModelProvider, PermissionPolicy, TaskSpec } from "@ar/contracts";
-import { defaultSandboxPolicy, DEFAULT_MAIN_SYSTEM_PROMPT, resolveAgentPromptPolicy } from "@ar/harness";
+import { defaultSandboxPolicy, DEFAULT_MAIN_SYSTEM_PROMPT, resolveAgentPromptPolicy, resolveCodingSummaryPolicy } from "@ar/harness";
 import { createHarnessWithChampion } from "./champion-application.js";
 import { createRuntimeRpc, InMemoryTransport } from "@ar/gateway";
 import {
@@ -79,7 +79,7 @@ export interface DefaultDepsOptions {
    *  never written into the workspace. */
   memory?: boolean;
   /** Explicit Agent policy; otherwise HARNESS_AGENT_PROMPT (default legacy). */
-  agentPrompt?: "legacy" | "coding-v1";
+  agentPrompt?: "legacy" | "coding-v1" | "coding-v2";
 }
 
 export function registerBuiltinTools(registry: ToolRegistry): void {
@@ -406,6 +406,7 @@ export async function createDefaultDeps(options: DefaultDepsOptions = {}): Promi
   const agentPromptPolicy = resolveAgentPromptPolicy(options.agentPrompt ?? process.env.HARNESS_AGENT_PROMPT);
   const modelProvider = options.provider ?? (await resolveModelProvider({ modelId: options.model?.modelId ?? (process.env.OPENAI_MODEL || DEFAULT_MODEL_ID) })).provider;
   const memoryEnabled = options.memory === true || process.env.HARNESS_MEMORY === "1";
+  const contextSummary = resolveCodingSummaryPolicy(process.env.HARNESS_CONTEXT_SUMMARY);
   if (memoryEnabled && dataDir === undefined) {
     throw new Error("memory is enabled but no dataDir is configured (--data-dir or HARNESS_DATA_DIR) — refusing to write memories into the workspace");
   }
@@ -421,9 +422,11 @@ export async function createDefaultDeps(options: DefaultDepsOptions = {}): Promi
       ...(dataDir !== undefined ? { dataDir } : {}),
       profile: "interactive",
       ...(agentPromptPolicy !== undefined ? { agentPromptPolicy } : {}),
+      ...(contextSummary !== undefined ? { contextSummary } : {}),
       modelProvider,
       model: resolveInteractiveModelRef(modelProvider, options.model),
       ...(memoryEnabled ? { featureFlags: { memory: true, learning: true } } : {}),
+      ...(memoryEnabled && process.env.HARNESS_MEMORY_SEARCH === "1" ? { memory: { enabled: true, onDemand: true } } : {}),
     },
     sourceSha: process.env.GIT_SHA ?? null,
   });

@@ -9,6 +9,7 @@ import { discoverCommandsTool } from "./tools/discover-commands-tool.js";
 import { updatePlanTool } from "./tools/update-plan-tool.js";
 import { createRepoMapTool, makeRepoMapResolver, type RepoMapResolver } from "./tools/repo-map-tool.js";
 import { createEnvSnapshotTool } from "./tools/env-snapshot-tool.js";
+import { NATIVE_TOOL_GUIDANCE } from "./tool-prompt-guidance.js";
 
 /** The shared default repo-map resolver for hosts using createProductionTools
  *  without injecting their own (P0-6: cache survives across calls/turns). */
@@ -83,7 +84,7 @@ export function createProductionTools(deps: ProductionToolDeps): ToolDefinition[
     envSnapshot,
     execTool,
     updatePlanTool,
-  ];
+  ].map(tool => ({ ...tool, promptGuidance: NATIVE_TOOL_GUIDANCE[tool.name] }));
 }
 
 /** The 11 names in profile order (registry introspection contract). */

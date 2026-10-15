@@ -117,6 +117,17 @@ jobs:
           path: .ci/coding-prompts/
           if-no-files-found: error
 
+      - name: Coding-v2 actual CLI and Web request acceptance
+        run: node scripts/research/coding-prompts-20261008/acceptance.mjs .ci/coding-v2 coding-v2
+
+      - name: Upload coding-v2 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coding-v2-${{ matrix.os }}-${{ github.sha }}-${{ github.run_id }}
+          path: .ci/coding-v2/
+          if-no-files-found: error
+
       - name: Unit and integration tests
         # bash on both runners (Git Bash ships with windows-latest); the single
         # command propagates its exit code while the log is kept for P12-5.

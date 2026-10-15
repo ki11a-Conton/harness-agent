@@ -13,7 +13,7 @@ import { runCodingAcceptance } from '../coding-audit-20261007/acceptance.mjs';
 // engineering invariants, never causal model-quality or prompt obedience.
 const output = resolve(process.argv[2] ?? '.ci/coding-prompts');
 const selected = process.argv[3] ?? 'coding-v1';
-assert.ok(['legacy', 'coding-v1'].includes(selected), 'closed policy selector');
+assert.ok(['legacy', 'coding-v1', 'coding-v2'].includes(selected), 'closed policy selector');
 await mkdir(output, { recursive: true });
 const previous = process.env.HARNESS_AGENT_PROMPT;
 let coding;
@@ -25,7 +25,7 @@ try {
   else process.env.HARNESS_AGENT_PROMPT = previous;
 }
 const requests = JSON.parse(await readFile(join(output, 'coding/requests.json'), 'utf8'));
-const policy = selected === 'coding-v1' ? createCodingPromptPolicy() : { version: 'legacy', primary: DEFAULT_MAIN_SYSTEM_PROMPT };
+const policy = selected !== 'legacy' ? createCodingPromptPolicy(selected) : { version: 'legacy', primary: DEFAULT_MAIN_SYSTEM_PROMPT };
 const assertions = [];
 const check = (name, condition) => { assert.ok(condition, name); assertions.push(name); };
 check('real CLI and Web requests were both captured', requests.some(r => r.scenario === 'coding') && requests.some(r => r.scenario === 'web-coding'));
@@ -33,7 +33,7 @@ check('every actual HTTP request carries the exact selected compiled primary pol
 check('selected policy fits fallback system reserve without raising the budget', DEFAULT_TOKEN_ESTIMATOR.estimate(policy.primary) <= 1500);
 const advertised = [...policy.primary.matchAll(/^- ([a-z_]+):/gm)].map(match => match[1]);
 check('documented native capabilities exist in the actual request schemas', requests.every(r => advertised.every(name => r.body.tools.some(t => t.function.name === name))));
-if (selected === 'coding-v1') {
+if (selected !== 'legacy') {
   check('new requests carry the versioned challenger rather than legacy prompt', requests.every(r => !r.body.messages.some(m => m.role === 'system' && m.content.includes(DEFAULT_MAIN_SYSTEM_PROMPT))));
   check('readonly policy does not advertise mutating/exec/plan capabilities', !/^- (write_file|edit_file|exec|update_plan):/m.test(policy.readonlyWorker));
 }

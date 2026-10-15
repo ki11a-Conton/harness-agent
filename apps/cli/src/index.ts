@@ -36,3 +36,5 @@ export {
   stubProvider,
 } from "./provider.js";
 export type { BillingClass, BillingProvider, ResolveModelProviderOptions } from "./provider.js";
+
+export * from "./coding-benchmark.js";

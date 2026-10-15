@@ -22,7 +22,7 @@ it("policy selector defaults to unchanged legacy and rejects unsupported/empty v
   expect(resolveAgentPromptPolicy()).toBeUndefined();
   expect(resolveAgentPromptPolicy("legacy")).toBeUndefined();
   expect(resolveAgentPromptPolicy("coding-v1")).toEqual(createCodingPromptPolicy());
-  for (const value of ["", "coding-v2", "CODING-V1", " coding-v1 "]) {
+  for (const value of ["", "coding-v3", "CODING-V1", " coding-v1 "]) {
     expect(() => resolveAgentPromptPolicy(value)).toThrow("Unsupported HARNESS_AGENT_PROMPT");
   }
   expect(Object.isFrozen(createCodingPromptPolicy())).toBe(true);

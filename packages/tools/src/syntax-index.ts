@@ -1,7 +1,7 @@
 import { constants } from "node:fs";
-import { lstat, open, readdir } from "node:fs/promises";
+import { lstat, open, readdir, realpath } from "node:fs/promises";
 import { createHash } from "node:crypto";
-import { dirname, extname, join, relative } from "node:path";
+import { dirname, extname, join, relative, resolve } from "node:path";
 import { createRequire } from "node:module";
 import type { Parser as ParserType, Language as LanguageType, Node } from "@vscode/tree-sitter-wasm";
 import ignore, { type Ignore } from "ignore";
@@ -41,15 +41,15 @@ async function parseTags(content: string, language: string, signal?: AbortSignal
   let tree: ReturnType<ParserType["parse"]> = null;
   try {
     parser.setLanguage(await pending);
-    const deadline = Date.now() + 250;
-    tree = parser.parse(content, null, { progressCallback: () => { signal?.throwIfAborted(); if (Date.now() > deadline) throw new Error("syntax parse deadline"); } });
+    const deadline = performance.now() + 1000;
+    tree = parser.parse(content, null, { progressCallback: () => { signal?.throwIfAborted(); if (performance.now() > deadline) throw new Error("syntax parse deadline"); } });
     if (!tree) throw new Error("syntax parse incomplete");
     const lines = content.split("\n");
     const tags: SyntaxTag[] = [];
     const stack: Node[] = [tree.rootNode];
     let visited = 0;
     while (stack.length && visited++ < 100000 && tags.length < 5000) {
-      if (visited % 256 === 0) { signal?.throwIfAborted(); if (Date.now() > deadline) throw new Error("syntax walk deadline"); }
+      if (visited % 256 === 0) { signal?.throwIfAborted(); if (performance.now() > deadline) throw new Error("syntax walk deadline"); }
       const node = stack.pop()!;
       if (identifier.test(node.type)) {
         const parent = node.parent;
@@ -68,6 +68,7 @@ async function parseTags(content: string, language: string, signal?: AbortSignal
       for (let i = children.length - 1; i >= 0; i--) if (children[i]) stack.push(children[i]!);
     }
     const parsed = { tags, complete: !tree.rootNode.hasError && stack.length === 0, bytes: Buffer.byteLength(JSON.stringify(tags)) };
+    const replaced = cache.get(key); if (replaced) cachedBytes -= replaced.bytes;
     cache.set(key, parsed); cachedBytes += parsed.bytes;
     while (cache.size > 256 || cachedBytes > 16 * 1024 * 1024) {
       const first = cache.keys().next().value;
@@ -78,13 +79,19 @@ async function parseTags(content: string, language: string, signal?: AbortSignal
   } finally { tree?.delete(); parser.delete(); }
 }
 
-async function boundedRead(path: string, limit = MAX_BYTES): Promise<Buffer | undefined> {
+const samePath = (a: string, b: string) => process.platform === "win32" ? a.toLowerCase() === b.toLowerCase() : a === b;
+async function boundedRead(path: string, limit = MAX_BYTES, expected?: string): Promise<Buffer | undefined> {
+  if (expected !== undefined && !samePath(await realpath(path), expected)) throw new Error("source path changed");
   const handle = await open(path, constants.O_RDONLY | (process.platform === "win32" ? 0 : constants.O_NONBLOCK | constants.O_NOFOLLOW));
   try {
     const stats = await handle.stat(); if (!stats.isFile() || stats.size > limit) return undefined;
     const buffer = Buffer.alloc(limit + 1);
     const { bytesRead } = await handle.read(buffer, 0, limit + 1, 0);
     if (bytesRead > limit) return undefined;
+    const after = await handle.stat(), linked = await lstat(path);
+    if (linked.isSymbolicLink() || stats.ino !== linked.ino || stats.dev !== linked.dev
+      || stats.size !== after.size || stats.mtimeMs !== after.mtimeMs || stats.ctimeMs !== after.ctimeMs
+      || (expected !== undefined && !samePath(await realpath(path), expected))) throw new Error("source changed during read");
     return buffer.subarray(0, bytesRead);
   } finally { await handle.close(); }
 }
@@ -100,14 +107,17 @@ export async function buildSyntaxIndex(root: string, path = ".", signal?: AbortS
   const result: SyntaxIndex = { files: [], complete: true, skippedFiles: 0, fingerprint: "", indexer: "tree-sitter-wasm-v1" };
   const scope = await resolveSearchScope(root, path, skipped);
   if (!scope) return { ...result, complete: false };
+  const realRoot = await realpath(scope.root);
+  const expectedPath = (name: string) => resolve(realRoot, relative(scope.root, name));
   const rules: { base: string; matcher: Ignore }[] = [];
   const addIgnore = async (directory: string) => {
     try {
       const name = join(directory, ".gitignore"); const stat = await lstat(name);
-      if (!stat.isFile() || stat.isSymbolicLink()) return;
-      const bytes = await boundedRead(name, 64 * 1024);
-      if (bytes) rules.push({ base: directory, matcher: ignore().add(bytes.toString("utf8")) });
-    } catch { /* absent ignore file does not authorize a broader scope */ }
+      if (!stat.isFile() || stat.isSymbolicLink()) return false;
+      const bytes = await boundedRead(name, 64 * 1024, expectedPath(name));
+      if (!bytes) return false;
+      rules.push({ base: directory, matcher: ignore().add(bytes.toString("utf8")) }); return true;
+    } catch (error) { return (error as NodeJS.ErrnoException).code === "ENOENT"; }
   };
   const ignored = (name: string, directory: boolean) => {
     let excluded = false;
@@ -121,29 +131,34 @@ export async function buildSyntaxIndex(root: string, path = ".", signal?: AbortS
   };
   const ancestors: string[] = [];
   for (let parent = scope.type === "file" ? dirname(scope.path) : scope.path; parent !== scope.root; parent = dirname(parent)) ancestors.unshift(parent);
-  await addIgnore(scope.root);
-  for (const parent of ancestors) await addIgnore(parent);
+  if (!await addIgnore(scope.root)) return { ...result, complete: false };
+  for (const parent of ancestors) if (!await addIgnore(parent)) return { ...result, complete: false };
   let bytesTotal = 0, entriesVisited = 0, tagsTotal = 0;
-  const deadline = Date.now() + 10000;
+  const deadline = performance.now() + 10000;
   const visit = async (name: string, depth = 0): Promise<void> => {
     signal?.throwIfAborted();
-    if (result.files.length >= maxFiles || bytesTotal > 16 * 1024 * 1024 || tagsTotal > 100000 || entriesVisited++ >= 50000 || depth > 64 || Date.now() > deadline) { result.complete = false; return; }
+    if (result.files.length >= maxFiles || bytesTotal > 16 * 1024 * 1024 || tagsTotal > 100000 || entriesVisited++ >= 50000 || depth > 64 || performance.now() > deadline) { result.complete = false; return; }
     let stat;
     try { stat = await lstat(name); } catch { result.complete = false; return; }
     if (stat.isSymbolicLink() || ignored(name, stat.isDirectory())) return;
     if (stat.isDirectory()) {
       const saved = rules.length;
-      if (name !== scope.path && name !== scope.root) await addIgnore(name);
+      if (name !== scope.path && name !== scope.root && !await addIgnore(name)) { result.complete = false; return; }
+      if (!samePath(await realpath(name), expectedPath(name))) { rules.length = saved; result.complete = false; return; }
       try {
         const entries = (await readdir(name, { withFileTypes: true })).sort((a, b) => a.name.localeCompare(b.name, "en"));
-        for (const entry of entries) { if (!entry.isSymbolicLink() && !skipped.has(entry.name)) await visit(join(name, entry.name), depth + 1); }
+        if (!samePath(await realpath(name), expectedPath(name))) { result.complete = false; return; }
+        for (const entry of entries) {
+          if (result.files.length >= maxFiles || tagsTotal > 100000 || performance.now() > deadline) { result.complete = false; break; }
+          if (!entry.isSymbolicLink() && !skipped.has(entry.name)) await visit(join(name, entry.name), depth + 1);
+        }
       } catch { result.complete = false; }
       finally { rules.length = saved; }
       return;
     }
     const language = extensions[extname(name)]; if (!stat.isFile() || !language) return;
     try {
-      const bytes = await boundedRead(name);
+      const bytes = await boundedRead(name, MAX_BYTES, expectedPath(name));
       if (!bytes || bytes.includes(0)) { result.skippedFiles++; result.complete = false; return; }
       bytesTotal += bytes.length;
       const parsed = await parseTags(bytes.toString("utf8"), language, signal);

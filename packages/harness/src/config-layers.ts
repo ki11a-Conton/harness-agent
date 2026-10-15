@@ -225,6 +225,7 @@ const LIFECYCLE_RULES: ReadonlyArray<{ match: string; lifecycle: ConfigLifecycle
   { match: "skillSelection", lifecycle: "session_frozen" },
   { match: "toolSelector", lifecycle: "session_frozen" },
   { match: "agentPromptPolicy", lifecycle: "session_frozen" },
+  { match: "contextSummary", lifecycle: "session_frozen" },
   // turn_dynamic — per-turn task/verification inputs
   { match: "task", lifecycle: "turn_dynamic" },
   { match: "verification", lifecycle: "turn_dynamic" },
@@ -268,6 +269,7 @@ export const CONFIG_FIELD_DOCS: Readonly<Record<string, ConfigFieldDoc>> = {
   "skillSelection.*": { lifecycle: "session_frozen", doc: "opt-in task_scoped_skills_v1 metadata selection policy" },
   toolSelector: { lifecycle: "session_frozen", doc: "progressive tool disclosure callback" },
   "agentPromptPolicy.*": { lifecycle: "session_frozen", doc: "versioned Agent policy with actual compiled primary/worker prompts; opt-in coding challenger" },
+  "contextSummary.*": { lifecycle: "session_frozen", doc: "bounded factual or externally budgeted coding summary strategy" },
   task: { lifecycle: "turn_dynamic", doc: "task whose verification specs gate completion" },
   "verification.*": { lifecycle: "turn_dynamic", doc: "verification plan builder / verifier overrides" },
   "mcp.*": { lifecycle: "step_dynamic", doc: "MCP server catalog — binding selection happens per step" },

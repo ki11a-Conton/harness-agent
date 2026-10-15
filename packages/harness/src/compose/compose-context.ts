@@ -6,7 +6,7 @@
  * resolution, skill discovery, and the P7-6 lazy command discovery service.
  */
 import type { AgentEvent, ContextBudget, EventStore } from "@ar/contracts";
-import { ContextPipeline } from "@ar/context";
+import { ContextPipeline, createCodingSummaryAdapter } from "@ar/context";
 import { budgetForCapabilities, resolveCapabilities } from "@ar/model";
 import { FileSkillLoader } from "@ar/skills";
 import type { SkillDiscovery, SkillSecurityDenialRecord } from "@ar/core";
@@ -47,6 +47,7 @@ export async function composeContext(
   // harness routes them into the event stream (never content, only
   // source/priority/tokens/reason).
   const pipelineDeps: import("@ar/context").ContextPipelineDeps = {
+    ...(config.contextSummary !== undefined ? { summarize: createCodingSummaryAdapter(config.contextSummary) } : {}),
     onTelemetry: (event) => {
       // candidate facts without a quarantine reason are noise — skip.
       if (event.sessionId === undefined || (event.phase === "candidate" && event.reason !== "quarantine-envelope")) {

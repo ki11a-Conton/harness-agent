@@ -128,6 +128,8 @@ After building, start the Web console from the repository root with
 See [Web UI](docs/web-ui.md) for the DeepSeek Harness UI source attribution,
 supported interactions, and session lifecycle.
 
+Optional coding-v2, bounded summaries, scoped memory search, multilingual code retrieval and workflow controls are documented in [coding evolution](docs/coding-evolution-20261015.md). They are opt-in pending real-model paired evaluation.
+
 Requirements: **Node ≥ 22**, **pnpm ≥ 9** (workspace pinned to pnpm 11.21.0).
 
 ```bash

@@ -1,4 +1,5 @@
-import { buildCodingSystemPrompt, CODING_PROMPT_VERSION } from "@ar/agents";
+import { buildCodingSystemPrompt, buildCodingV2SystemPrompt, CODING_PROMPT_VERSION, CODING_PROMPT_V2 } from "@ar/agents";
+import { createProductionTools } from "@ar/tools";
 import { PRODUCTION_TOOL_NAMES, READONLY_TOOL_NAMES } from "./tool-names.js";
 
 /** Persist actual compiled text, not just an identifier: the existing config
@@ -10,7 +11,16 @@ export interface AgentPromptPolicy {
   readonly writeWorker: string;
 }
 
-export function createCodingPromptPolicy(): AgentPromptPolicy {
+export function createCodingPromptPolicy(version: "coding-v1" | "coding-v2" = "coding-v1"): AgentPromptPolicy {
+  if (version === CODING_PROMPT_V2) {
+    const tools = createProductionTools({ networkMode: "deny", availableTools: () => [] });
+    return Object.freeze({ version,
+      primary: buildCodingV2SystemPrompt({ role: "primary", tools }),
+      readonlyWorker: buildCodingV2SystemPrompt({ role: "readonly-worker", tools: tools.filter(t => (READONLY_TOOL_NAMES as readonly string[]).includes(t.name)) }),
+      writeWorker: buildCodingV2SystemPrompt({ role: "write-worker", tools }),
+    });
+  }
+  if (version !== CODING_PROMPT_VERSION) throw new TypeError("unsupported coding prompt version");
   return Object.freeze({
     version: CODING_PROMPT_VERSION,
     primary: buildCodingSystemPrompt({ role: "primary", toolNames: PRODUCTION_TOOL_NAMES }),
@@ -24,5 +34,6 @@ export function createCodingPromptPolicy(): AgentPromptPolicy {
 export function resolveAgentPromptPolicy(value?: string): AgentPromptPolicy | undefined {
   if (value === undefined || value === "legacy") return undefined;
   if (value === CODING_PROMPT_VERSION) return createCodingPromptPolicy();
-  throw new TypeError(`Unsupported HARNESS_AGENT_PROMPT: use legacy or ${CODING_PROMPT_VERSION}`);
+  if (value === CODING_PROMPT_V2) return createCodingPromptPolicy(CODING_PROMPT_V2);
+  throw new TypeError(`Unsupported HARNESS_AGENT_PROMPT: use legacy, ${CODING_PROMPT_VERSION} or ${CODING_PROMPT_V2}`);
 }

@@ -24,3 +24,5 @@ export * from "./delegation-tools.js";
 // P30-5 — CLI hosts may build a sandbox policy without importing the runtime
 // package directly; harness already re-uses it internally for profiles.
 export { defaultSandboxPolicy } from "@ar/core";
+
+export { resolveCodingSummaryPolicy } from "@ar/context";

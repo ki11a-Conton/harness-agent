@@ -300,6 +300,8 @@ export interface ToolDefinition<I = unknown, O = unknown> {
   inputSchema: ZodType<I>;
   risk: ToolRisk;
   metadata: ToolMetadata;
+  /** Agent-facing operating advice owned beside the tool; never permission. */
+  promptGuidance?: readonly string[];
 
   execute(input: I, context: ToolExecutionContext): Promise<ToolResult<O>>;
 }

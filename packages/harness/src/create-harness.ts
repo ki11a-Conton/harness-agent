@@ -1,3 +1,5 @@
+import { createMemorySearchTools } from "./memory-search-tools.js";
+import { normalizeCodingSummaryPolicy } from "@ar/context";
 import { mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { composeStores } from "./compose/compose-stores.js";
@@ -221,6 +223,7 @@ export const DEFAULT_MAIN_SYSTEM_PROMPT = [
 ].join("\n");
 
 export async function createHarness(config: HarnessConfig): Promise<Harness> {
+  if (config.contextSummary !== undefined) config = { ...config, contextSummary: normalizeCodingSummaryPolicy(config.contextSummary) };
   if (config.skillSelector !== undefined && config.skillSelection !== undefined) {
     throw new TypeError("skillSelector and skillSelection are mutually exclusive");
   }
@@ -257,6 +260,15 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
   const registry = composedTools.registry;
   const delegationEnabled = composedTools.delegationEnabled;
   const memoryEnabled = composedTools.memoryEnabled;
+  const memorySearchNames: string[] = [];
+  if (memoryEnabled && config.memory?.onDemand === true) {
+    for (const tool of createMemorySearchTools(() => {
+      if (!memoryBridge) throw new Error("memory bridge is not ready");
+      return memoryBridge;
+    }, store)) {
+      registry.register(tool); memorySearchNames.push(tool.name);
+    }
+  }
   const productionTools = composedTools.productionTools;
   const delegationToolNames = composedTools.delegationToolNames;
   const workerAgent = composedTools.workerAgent;
@@ -338,6 +350,7 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
   const builtinToolNames = new Set<string>([
     ...productionTools.map((t) => t.name),
     ...delegationToolNames,
+    ...memorySearchNames,
   ]);
   let schemaAdvert = decideSchemaAdvert(registry.specs(), {
     keepFull: (name) => builtinToolNames.has(name),
@@ -353,7 +366,7 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
     });
   }
   const agents: AgentDefinition[] = [
-    mainAgent(config, mcpToolNames, delegationToolNames, toolLookupName),
+    mainAgent(config, mcpToolNames, [...delegationToolNames, ...memorySearchNames], toolLookupName),
     ...(workerAgent !== undefined ? [workerAgent] : []),
   ];
   const scheduler = composeScheduler(config, delegationEnabled, store);

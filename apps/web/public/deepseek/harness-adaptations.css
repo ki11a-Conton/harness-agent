@@ -22,3 +22,9 @@
   .VOzbGW_overlay .VOzbGW_header { height: auto; min-height: 42px; padding: 6px 12px; }
   .VOzbGW_overlay .VOzbGW_options { padding: 0 12px 12px; }
 }
+
+/* Approval is the active interaction on narrow screens. Keep the terminal
+ * mounted, but uncover the approval until it is answered or cancelled. */
+@media (max-width: 600px) {
+  body:has([data-approval-key]) [data-rightbar-col="true"] { display: none !important; }
+}

@@ -15,9 +15,10 @@ it("C6 observes actual wire prefixes without rewriting dynamic facts, tools or p
   try {
     const address = server.address(); if (!address || typeof address === "string") throw new Error("missing port");
     const provider = new OpenAICompatibleProvider({ onRequestObservation: value => observations.push(value) });
-    const client = provider.createClient({ providerId: "openai", modelId: "offline" }, { apiKey: "offline", baseUrl: `http://127.0.0.1:${address.port}/v1` });
     const sessionId = newSessionId();
     for (const date of ["2026-10-15", "2026-10-16"]) {
+      // Runtime/provider routers can create a fresh client for each step.
+      const client = provider.createClient({ providerId: "openai", modelId: "offline" }, { apiKey: "offline", baseUrl: `http://127.0.0.1:${address.port}/v1` });
       const request: ModelRequest = { system: `稳定的 coding policy\n[dynamic]\ndate=${date}\nlatest goal=${date}`, messages: [{ id: newMessageId(), sessionId, role: "user", content: "private source fixture", createdAt: 0 }], tools: [{ name: "read_file", description: "read current bytes", inputSchema: { type: "object" } }] };
       for await (const _ of client.generate(request, AbortSignal.timeout(5000))) { /* real stream */ }
     }

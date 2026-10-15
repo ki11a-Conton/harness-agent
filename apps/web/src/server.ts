@@ -35,6 +35,7 @@ const STATIC_FILES = {
   "index.html": { contentType: "text/html; charset=utf-8" },
   "app.js": { contentType: "text/javascript; charset=utf-8" },
   "style.css": { contentType: "text/css; charset=utf-8" },
+  "coding-workflow.js": { contentType: "text/javascript; charset=utf-8" },
   "vendor/deepseek/base.css": { contentType: "text/css; charset=utf-8" },
   "vendor/deepseek/corner-shape.css": { contentType: "text/css; charset=utf-8" },
   "vendor/deepseek/design-platform.css": { contentType: "text/css; charset=utf-8" },

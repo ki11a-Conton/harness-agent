@@ -1,3 +1,4 @@
+import { modelUsageForBrowser as usageOf } from "./browser-usage.js";
 import { EVENT_ABI_VERSION, toolNameOf } from "@ar/contracts";
 import type { AgentEvent, Message, Session } from "@ar/contracts";
 import { createActivityProjection } from "./activity-projections.js";
@@ -567,20 +568,6 @@ function finishReasonOf(value: unknown, error: unknown): JsonValue {
     case "cancelled": return { kind: "aborted", failure: failureOf(error) };
     default: return { kind: "stop" };
   }
-}
-function usageOf(value: unknown): JsonValue | undefined {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
-  const record = value as Record<string, unknown>;
-  if (record.source !== undefined && record.source !== "measured") return undefined;
-  const usage: Record<string, JsonValue> = {};
-  for (const key of ["inputTokens", "outputTokens", "cacheReadTokens", "cacheCreationTokens"]) {
-    const count = record[key];
-    if (typeof count === "number" && Number.isSafeInteger(count) && count >= 0
-      && !(key.startsWith("cache") && record.cacheUsageIssue !== undefined)) {
-      usage[key === "cacheCreationTokens" ? "cacheWriteTokens" : key] = count;
-    }
-  }
-  return Object.keys(usage).length === 0 ? undefined : usage;
 }
 function sessionMetadataOf(event: AgentEvent): Readonly<Record<string, JsonValue>> | undefined {
   if (event.type !== "tool.completed" || toolNameOf(event.payload) !== "web_session_metadata"

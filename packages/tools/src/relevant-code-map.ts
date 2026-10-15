@@ -10,6 +10,7 @@ export interface RelevantCodeMap {
 /** Aider-inspired design, independently implemented: syntax tags, a candidate
  * reference graph and query-personalized ranking under an explicit budget. */
 export async function buildRelevantCodeMap(input: { root: string; query: string; maxTokens?: number; signal?: AbortSignal }): Promise<RelevantCodeMap> {
+  if (typeof input.query !== "string" || !input.query.trim() || input.query.length > 512) throw new TypeError("invalid relevant code query");
   const maxTokens = input.maxTokens ?? 1600;
   if (!Number.isSafeInteger(maxTokens) || maxTokens < 128 || maxTokens > 4000) throw new TypeError("invalid relevant code token budget");
   const index = await buildSyntaxIndex(input.root, ".", input.signal);

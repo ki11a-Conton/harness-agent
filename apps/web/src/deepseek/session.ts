@@ -8,6 +8,7 @@ import type { RpcMethodRegistry } from "@ar/gateway";
 import { createEventsService, fail, keys, object, pause, string } from "./events.js";
 import { createSessionMetadataStore, type SessionMetadata, type SessionMetadataStore } from "./metadata.js";
 import { pageSessionHistory, projectSessionHistory } from "./projections.js";
+import { codingStatusOf } from "./coding-status.js";
 
 export interface SessionHost {
   harness: Harness;
@@ -192,7 +193,7 @@ export function createSessionService(host: SessionHost) {
     });
   }
 
-  const events = createEventsService({ harness: host.harness, pollDelayMs: host.pollDelayMs, answerAsk, summary: id => summary(id) });
+  const events = createEventsService({ harness: host.harness, pollDelayMs: host.pollDelayMs, answerAsk, summary: (id, signal) => summary(id, signal) });
 
   async function prompt(request: Record<string, unknown>, signal: AbortSignal): Promise<{ accepted: true }> {
     keys(request, ["requestId", "sessionId", "mode", "content"], ["clientTimeZone"]);
@@ -262,7 +263,7 @@ export function createSessionService(host: SessionHost) {
     });
   }
 
-  const endpoints = ["session/list", "session/search", "session/create", "session/rename", "session/fork", "session/prompt", "session/updateQueue", "session/cancel", "session/interrupt", "session/page", "session/follow", "session/projections", "session/control",
+  const endpoints = ["session/list", "session/search", "session/create", "session/rename", "session/fork", "session/prompt", "session/updateQueue", "session/cancel", "session/interrupt", "session/page", "session/follow", "session/projections", "session/control", "session/codingStatus",
     "session/canOpenWorkspacePath", "session/workspacePathApplications", "session/openWorkspacePath", ...events.endpoints];
   const service = {
     endpoints, metadata, summary, publish: events.publish,
@@ -421,6 +422,10 @@ export function createSessionService(host: SessionHost) {
         keys(request, ["address", "throughSeq"], ["beforeSeq", "maxMessages", "turnWindow"]);
         const id = await address(request.address);
         return pageSessionHistory(await projectSnapshot(id, signal), request as never);
+      }
+      if (endpoint === "session/codingStatus") {
+        keys(request, ["address"]);
+        return codingStatusOf(await projectSnapshot(await address(request.address), signal));
       }
       fail("gateway/not-found", `Unknown session endpoint: ${endpoint}`);
     },

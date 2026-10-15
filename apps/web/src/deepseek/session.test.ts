@@ -502,3 +502,30 @@ it("rejects forged accepted presentation receipts without starting or claiming a
   await expect(stack.call("session/prompt", send(stack.id))).rejects.toMatchObject({ code: "session/admission-uncertain" });
   expect(await stack.harness.store.listTurns(stack.id)).toHaveLength(1);
 });
+
+// A private terminal-create holds the owner lock while it awaits approval.
+// Its summary cannot complete until that same approval is delivered.
+it("approval waterfall stays live while a session summary is blocked on its owner", async () => {
+  const provider = new ScriptedModelProvider([ScriptedModelProvider.toolCall("write_file", { path: "unblocked.txt", content: "approved bytes" }), ScriptedModelProvider.text("written")]);
+  const stack = await setup(provider), controller = new AbortController();
+  let entered!: () => void, release!: () => void;
+  const reading = new Promise<void>(done => { entered = done; });
+  const gate = new Promise<void>(done => { release = done; });
+  let reads = 0;
+  const events = createEventsService({ harness: stack.harness, pollDelayMs: 1,
+    answerAsk: async () => { throw new Error("unused"); },
+    summary: async () => { reads++; entered(); await gate; return { sessionId: stack.id }; } });
+  const stream = events.stream("$events", {}, controller.signal)[Symbol.asyncIterator]();
+  const ready = (await stream.next()).value as { clientId: string };
+  const next = stream.next();
+  try {
+    await reading;
+    await stack.call("session/prompt", send(stack.id));
+    const frame = (await next).value as { event: string; eventId: string };
+    expect(frame.event).toBe("approval/request"); expect(reads).toBe(1);
+    await events.call("$events/result", { clientId: ready.clientId, eventId: frame.eventId, outcome: { kind: "result", value: "allowed-once" } }, stack.signal);
+    release();
+    await eventually(() => stack.harness.store.listTurns(stack.id), turns => turns[0]?.status === "completed");
+    expect(await readFile(join(stack.directory, "unblocked.txt"), "utf8")).toBe("approved bytes");
+  } finally { release(); controller.abort(); await stream.return?.(); }
+});

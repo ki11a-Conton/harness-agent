@@ -30,6 +30,8 @@ export interface ContextPipelineDeps {
   planner?: BudgetPlanner;
   /** Default: new DefaultCompactor(). */
   compactor?: Compactor;
+  /** Agent-owned summary hook on the same production compactor. */
+  summarize?: (content: string) => string | Promise<string>;
   /** P6-3: per-build selection telemetry (candidate/selected/dropped/
    *  compacted). The pipeline only reports facts — emitting context.* events
    *  is the runtime's job (it owns the EventStore). */
@@ -237,6 +239,7 @@ export class ContextPipeline {
     this.compactor =
       deps.compactor ??
       new MultiStageCompactor({
+        summarize: deps.summarize,
         onStage: (report) => this.lastStageReports.push(report),
         tokenEstimator: this.tokenEstimator,
       });

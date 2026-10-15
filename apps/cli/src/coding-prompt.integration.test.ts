@@ -37,9 +37,9 @@ it("P02: CLI exported default is the base prompt actually sent to the model", as
   } finally { await deps.close?.(); }
 });
 
-it("CLI installs opt-in policy in config and the actual model request", async () => {
-  vi.stubEnv("HARNESS_AGENT_PROMPT", "coding-v1");
-  const f = await fixture(); const policy = createCodingPromptPolicy();
+it.each(["coding-v1", "coding-v2"] as const)("CLI installs %s in config and the actual model request", async version => {
+  vi.stubEnv("HARNESS_AGENT_PROMPT", version);
+  const f = await fixture(); const policy = createCodingPromptPolicy(version);
   const deps = await createDefaultDeps({ cwd: f.cwd, provider: f.provider });
   try {
     expect(deps.resolvedConfig?.value.agentPromptPolicy).toEqual(policy);

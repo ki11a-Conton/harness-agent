@@ -1,7 +1,7 @@
 import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
 import type { Harness } from "@ar/harness";
-import { resolveAgentPromptPolicy } from "@ar/harness";
+import { resolveAgentPromptPolicy, resolveCodingSummaryPolicy } from "@ar/harness";
 import {
   createHarnessWithChampion,
   DEFAULT_MODEL_ID,
@@ -43,6 +43,8 @@ export async function main(): Promise<number> {
 async function startMain(lease: DataDirLease | undefined): Promise<number> {
   const dir = lease?.dataDir;
   const agentPromptPolicy = resolveAgentPromptPolicy(process.env.HARNESS_AGENT_PROMPT);
+  const contextSummary = resolveCodingSummaryPolicy(process.env.HARNESS_CONTEXT_SUMMARY);
+  const memoryEnabled = process.env.HARNESS_MEMORY === "1";
   // E3-01: resolveModelProvider now returns a BillingProvider — unwrap the
   // provider for harness wiring.
   const provider = (await resolveModelProvider({ modelId: process.env.OPENAI_MODEL || DEFAULT_MODEL_ID })).provider;
@@ -58,6 +60,8 @@ async function startMain(lease: DataDirLease | undefined): Promise<number> {
       ...(dir !== undefined && dir.length > 0 ? { dataDir: dir } : {}),
       profile: "interactive",
       ...(agentPromptPolicy !== undefined ? { agentPromptPolicy } : {}),
+      ...(contextSummary !== undefined ? { contextSummary } : {}),
+      ...(memoryEnabled ? { memory: { enabled: true, onDemand: process.env.HARNESS_MEMORY_SEARCH === "1" } } : {}),
       modelProvider: provider,
       model: resolveInteractiveModelRef(provider),
       ...(verificationCommand ? { task: { id: "web-coding", goal: "Complete the user task and pass the configured project check",

@@ -1,0 +1,1363 @@
+{
+  "version": "coding-repositories-v1",
+  "repository": "https://github.com/ki11a-Conton/harness-agent",
+  "taskKind": "retrospective-real-repository-tasks",
+  "scope": "24 real Harness history tasks; not an unseen multi-repository or real-model success-rate claim. Fixed historical test oracles require environment bootstrap and RED/GREEN qualification before formal promotion use.",
+  "pairedProtocol": {
+    "policies": [
+      "legacy",
+      "coding-v1",
+      "coding-v2"
+    ],
+    "repetitions": 3,
+    "order": "alternate baseline/candidate",
+    "defaultPromotion": "NOT_PROVEN",
+    "controlledAxes": [
+      "prompt-only",
+      "summary",
+      "retrieval",
+      "memory",
+      "cache-layout"
+    ],
+    "requiredRecordedFields": [
+      "engineSourceSha",
+      "taskBaseSha",
+      "oracleSha256",
+      "policySha256",
+      "modelIdentity",
+      "toolSchemaSha256",
+      "permissionAndBudgetIdentity",
+      "initialWorkspaceDigest",
+      "independentOracleResult",
+      "diff",
+      "events",
+      "humanInterventions",
+      "tokens",
+      "cost",
+      "latency",
+      "cacheCoverage"
+    ]
+  },
+  "tasks": [
+    {
+      "id": "coding-history-01",
+      "category": "cross-file",
+      "baseSha": "9ea3b5550fecdf9fc3f935c1ed1626c703076172",
+      "fixedSha": "6fe34b271db374b60947c02adc0d15deecf9d786",
+      "request": "Preserve Web origin boundaries and restore session bindings while isolating repository memory.",
+      "oracleFiles": [
+        {
+          "path": "apps/web/src/source-audit-restoration.regressions.test.ts",
+          "sha256": "3c0ec372b28c6b15c2ad02ee1fb73dcd9abf6b235653cf8acc0a3db0a4a8efd7",
+          "bytes": 2422
+        },
+        {
+          "path": "packages/harness/src/source-audit-memory.regressions.test.ts",
+          "sha256": "973dbb04d061deca11967f3e52bf4730ffb9a9e4276e048b13ededa4ca15879e",
+          "bytes": 2198
+        }
+      ],
+      "historicalChangedPaths": [
+        "apps/web/src/bindings.ts",
+        "apps/web/src/main.ts",
+        "apps/web/src/server.ts",
+        "packages/gateway/src/gateway.ts",
+        "packages/harness/src/create-harness.ts",
+        "packages/mcp/src/json-schema-zod.ts"
+      ],
+      "verification": {
+        "command": "pnpm",
+        "args": [
+          "exec",
+          "vitest",
+          "run",
+          "apps/web/src/source-audit-restoration.regressions.test.ts",
+          "packages/harness/src/source-audit-memory.regressions.test.ts"
+        ]
+      },
+      "qualification": {
+        "sourceAndOracleIntegrity": "PINNED",
+        "baselineRed": "REVIEWED_FEATURE_ABSENCE_BUILD_RED",
+        "fixedGreen": "PASS",
+        "platform": "Linux x64; real Windows NOT_RUN",
+        "evidence": "docs/evidence/coding-evolution-20261015/historical/initial/qualification.json",
+        "review": "Oracle uses GatewayDeps.restoredBindings introduced by the fix; the base compiler rejects only that feature field."
+      },
+      "platform": "portable"
+    },
+    {
+      "id": "coding-history-02",
+      "category": "cross-file",
+      "baseSha": "6286be388b52c0a84338ee48ea53607e7297a30f",
+      "fixedSha": "402da5731398a3fda84c58e84e79204456861856",
+      "request": "Preserve scoped delegated state and workspace integration under conflicting edits.",
+      "oracleFiles": [
+        {
+          "path": "packages/agents/src/state-handoff.test.ts",
+          "sha256": "80ece9cf1bf828f617cd7a77a6dca4d11cb0daf2c5f0a18fe7a4dd20616b8fc5",
+          "bytes": 8133
+        }
+      ],
+      "historicalChangedPaths": [
+        "packages/agents/src/delegator.ts",
+        "packages/agents/src/scheduler.ts",
+        "packages/agents/src/state-handoff.ts",
+        "packages/agents/src/workspace-isolation.ts",
+        "packages/harness/src/child-merge.ts",
+        "packages/harness/src/mem-stores.ts",
+        "packages/harness/src/workspace-manager.ts"
+      ],
+      "verification": {
+        "command": "pnpm",
+        "args": [
+          "exec",
+          "vitest",
+          "run",
+          "packages/agents/src/state-handoff.test.ts"
+        ]
+      },
+      "qualification": {
+        "sourceAndOracleIntegrity": "PINNED",
+        "baselineRed": "ASSERTION_RED",
+        "fixedGreen": "PASS",
+        "platform": "Linux x64; real Windows NOT_RUN",
+        "evidence": "docs/evidence/coding-evolution-20261015/historical/initial/qualification.json"
+      },
+      "platform": "portable"
+    },
+    {
+      "id": "coding-history-03",
+      "category": "cross-file",
+      "baseSha": "33eb6438130956be51706bb523071f7550ba83ab",
+      "fixedSha": "5341e11b8dbade4016b246156c61537eaaaedc9e",
+      "request": "Bind coding project roots and preserve actionable repair diagnostics across tool/host boundaries.",
+      "oracleFiles": [
+        {
+          "path": "apps/cli/src/coding-host.regressions.test.ts",
+          "sha256": "003989a720485f13cb2dd48970a8f09d834ce9872ef780dd73b33ac282050b95",
+          "bytes": 3716
+        },
+        {
+          "path": "packages/core/src/runtime/encoded-tool-output-security.regressions.test.ts",
+          "sha256": "e1fe52c8c3229facd3e297cee7d47467c1c91f306fa69f5752efb8bcfd32ac0b",
+          "bytes": 15994
+        }
+      ],
+      "historicalChangedPaths": [
+        "apps/cli/src/commands.ts",
+        "apps/cli/src/index.ts",
+        "apps/cli/src/main.ts",
+        "apps/cli/src/provider.ts",
+        "apps/cli/src/terminal-run-host.ts",
+        "apps/web/src/main.ts",
+        "packages/core/src/runtime/runtime.ts",
+        "packages/core/src/runtime/turn-helpers.ts",
+        "packages/harness/src/command-discovery-service.ts",
+        "packages/harness/src/compose/compose-verification.ts",
+        "packages/harness/src/verification-planner.ts"
+      ],
+      "verification": {
+        "command": "pnpm",
+        "args": [
+          "exec",
+          "vitest",
+          "run",
+          "apps/cli/src/coding-host.regressions.test.ts",
+          "packages/core/src/runtime/encoded-tool-output-security.regressions.test.ts"
+        ]
+      },
+      "qualification": {
+        "sourceAndOracleIntegrity": "PINNED",
+        "baselineRed": "ASSERTION_RED",
+        "fixedGreen": "PASS",
+        "platform": "Linux x64; real Windows NOT_RUN",
+        "evidence": "docs/evidence/coding-evolution-20261015/historical/initial/qualification.json"
+      },
+      "platform": "portable"
+    },
+    {
+      "id": "coding-history-04",
+      "category": "cross-file",
+      "baseSha": "5341e11b8dbade4016b246156c61537eaaaedc9e",
+      "fixedSha": "b099a1aa3d0ff4d08a0f50e87af28fd8c07a632d",
+      "request": "Retain observable coding failures and valid thinking-model tool history across requests.",
+      "oracleFiles": [
+        {
+          "path": "packages/harness/src/coding-verification.regressions.test.ts",
+          "sha256": "bf294b8a09142873b0f9a5cbe678bdad60538ff6d58119e909835996d9c8487d",
+          "bytes": 5513
+        }
+      ],
+      "historicalChangedPaths": [
+        "apps/cli/src/commands.ts",
+        "packages/core/src/runtime/runtime.ts",
+        "packages/core/src/runtime/turn-helpers.ts"
+      ],
+      "verification": {
+        "command": "pnpm",
+        "args": [
+          "exec",
+          "vitest",
+          "run",
+          "packages/harness/src/coding-verification.regressions.test.ts"
+        ]
+      },
+      "qualification": {
+        "sourceAndOracleIntegrity": "PINNED",
+        "baselineRed": "ASSERTION_RED",
+        "fixedGreen": "PASS",
+        "platform": "Linux x64; real Windows NOT_RUN",
+        "evidence": "docs/evidence/coding-evolution-20261015/historical/initial/qualification.json"
+      },
+      "platform": "portable"
+    },
+    {
+      "id": "coding-history-05",
+      "category": "cross-file",
+      "baseSha": "c7e97bdad40ed14bca6b7452810f5b55edf82fe0",
+      "fixedSha": "fdd8c0e08ef6fa9755b286c7290fcfd5a0b56c9c",
+      "request": "Continue the original coding request after a user answer without losing protected output or state.",
+      "oracleFiles": [
+        {
+          "path": "apps/cli/src/final-question.regressions.test.ts",
+          "sha256": "40b00e63b64d32dad43c3226b3ea03e137a14c82e1e1bf5cff02444c7274324f",
+          "bytes": 8709
+        },
+        {
+          "path": "apps/web/src/deepseek/change-compare.regressions.test.ts",
+          "sha256": "90a7e9858cd18611d1a99b5f67fef9e9478f053d750c8c619f513d3d646ca798",
+          "bytes": 760
+        }
+      ],
+      "historicalChangedPaths": [
+        "apps/cli/src/chat-command.ts",
+        "apps/cli/src/commands.ts",
+        "apps/cli/src/main.ts",
+        "apps/cli/src/terminal-chat-host.ts",
+        "apps/cli/src/terminal-run-host.ts",
+        "apps/web/src/deepseek/change-compare.ts",
+        "apps/web/src/deepseek/deliverables.ts",
+        "apps/web/src/main.ts",
+        "packages/contracts/src/checkpoint.ts",
+        "packages/core/src/index.ts",
+        "packages/core/src/runtime/recovery-controller.ts",
+        "packages/core/src/runtime/run-budget.ts",
+        "packages/core/src/runtime/runtime.ts",
+        "packages/core/src/runtime/session-actor.ts",
+        "packages/core/src/state/agent-state.ts",
+        "packages/gateway/src/app-server.ts",
+        "packages/gateway/src/rpc.ts",
+        "packages/harness/src/create-harness.ts",
+        "packages/harness/src/tool-event-security.ts",
+        "packages/tools/src/transaction.ts"
+      ],
+      "verification": {
+        "command": "pnpm",
+        "args": [
+          "exec",
+          "vitest",
+          "run",
+          "apps/cli/src/final-question.regressions.test.ts",
+          "apps/web/src/deepseek/change-compare.regressions.test.ts"
+        ]
+      },
+      "qualification": {
+        "sourceAndOracleIntegrity": "PINNED",
+        "baselineRed": "ASSERTION_RED",
+        "fixedGreen": "PASS",
+        "platform": "Linux x64; real Windows NOT_RUN",
+        "evidence": "docs/evidence/coding-evolution-20261015/historical/initial/qualification.json"
+      },
+      "platform": "portable"
+    },
+    {
+      "id": "coding-history-06",
+      "category": "cross-file",
+      "baseSha": "85c65dd28c017b6128e721d594a69898344014af",
+      "fixedSha": "4f7dcb551ec13885992e0099cf615ca9c3eaf049",
+      "request": "Keep workspace host boundaries and durable replacement operations correct on Windows.",
+      "oracleFiles": [
+        {
+          "path": "apps/web/src/deepseek/composition-security.regressions.test.ts",
+          "sha256": "f07aec3c6434c6b74925d249e703011bd4d115bc3fe6f1b5c8566cd633a3d05c",
+          "bytes": 7584
+        },
+        {
+          "path": "packages/store-integrity/src/windows-atomic-write.regressions.test.ts",
+          "sha256": "6a359992a26c3fc9aecfc0cc5fa00539dfe2708121afb1e66a1d272addf125f2",
+          "bytes": 4179
+        }
+      ],
+      "historicalChangedPaths": [
+        "apps/web/package.json",
+        "apps/web/src/deepseek/activity-store.ts",
+        "apps/web/src/deepseek/catalog.ts",
+        "apps/web/src/deepseek/deliverables.ts",
+        "apps/web/src/deepseek/owners.ts",
+        "apps/web/src/deepseek/session.ts",
+        "apps/web/src/deepseek/workspace.ts",
+        "apps/web/tsconfig.json",
+        "packages/store-integrity/src/index.ts"
+      ],
+      "verification": {
+        "command": "pnpm",
+        "args": [
+          "exec",
+          "vitest",
+          "run",
+          "apps/web/src/deepseek/composition-security.regressions.test.ts",
+          "packages/store-integrity/src/windows-atomic-write.regressions.test.ts"
+        ]
+      },
+      "qualification": {
+        "sourceAndOracleIntegrity": "PINNED",
+        "baselineRed": "REVIEWED_FEATURE_ABSENCE_BUILD_RED",
+        "fixedGreen": "PASS",
+        "platform": "Linux x64; real Windows NOT_RUN",
+        "evidence": "docs/evidence/coding-evolution-20261015/historical/initial/qualification.json",
+        "review": "Oracle imports new atomicReplace export; missing export stops dependency declarations and causes cascading TS6305 errors."
+      },
+      "platform": "windows-sensitive"
+    },
+    {
+      "id": "coding-history-07",
+      "category": "feature",
+      "baseSha": "663b6552db0e7006e7e47c70b5ab68fb6212786b",
+      "fixedSha": "64a174d56600d8ca93c1e963a87db87b540a9287",
+      "request": "Implement a versioned capability-aware coding prompt with explicit opt-in and resume fingerprinting.",
+      "oracleFiles": [
+        {
+          "path": "apps/cli/src/coding-prompt.integration.test.ts",
+          "sha256": "8bc92f4edc61a85e72df3b9e3be85af0fee38dc0acf8a86d1223e0ce4cbafdae",
+          "bytes": 3451
+        },
+        {
+          "path": "packages/agents/src/coding-prompt.test.ts",
+          "sha256": "1c1959db262c8eb6bdb0f9b0f04a0894e4a5481565e6011dc40e899349a57c7b",
+          "bytes": 2699
+        }
+      ],
+      "historicalChangedPaths": [
+        "apps/cli/src/main.ts",
+        "apps/web/src/main.ts",
+        "packages/agents/src/coding-prompt.ts",
+        "packages/agents/src/index.ts",
+        "packages/harness/src/coding-prompt-policy.ts",
+        "packages/harness/src/config-layers.ts",
+        "packages/harness/src/config.ts",
+        "packages/harness/src/create-harness.ts",
+        "packages/harness/src/index.ts",
+        "packages/harness/src/worker-agent.ts"
+      ],
+      "verification": {
+        "command": "pnpm",
+        "args": [
+          "exec",
+          "vitest",
+          "run",
+          "apps/cli/src/coding-prompt.integration.test.ts",
+          "packages/agents/src/coding-prompt.test.ts"
+        ]
+      },
+      "qualification": {
+        "sourceAndOracleIntegrity": "PINNED",
+        "baselineRed": "REVIEWED_FEATURE_ABSENCE_BUILD_RED",
+        "fixedGreen": "PASS",
+        "platform": "Linux x64; real Windows NOT_RUN",
+        "evidence": "docs/evidence/coding-evolution-20261015/historical/initial/qualification.json",
+        "review": "Oracle imports the new coding-prompt module; downstream declaration errors follow from that missing feature module."
+      },
+      "platform": "portable"
+    },
+    {
+      "id": "coding-history-08",
+      "category": "feature",
+      "baseSha": "22d97d860cfa1001df578b1193b3bc4c8ee1bce1",
+      "fixedSha": "b9c5b05b6bf8d00a7671e57388b3a5c3e463d500",
+      "request": "Support continuous coding sessions and truthful durable chat behavior.",
+      "oracleFiles": [
+        {
+          "path": "apps/cli/src/gen1-skills-wiring.regressions.test.ts",
+          "sha256": "0ac0c60d2c2e8400c0ef54c185d3019b2b4d4cffea838f8a9c441a741d45c974",
+          "bytes": 3222
+        },
+        {
+          "path": "packages/core/src/runtime/gen1-followup-wakeup.regressions.test.ts",
+          "sha256": "a64c6763be23fafdb4abd16b12f83ec0d974660e1c919c8f8b5b103c5863c9c6",
+          "bytes": 12087
+        }
+      ],
+      "historicalChangedPaths": [
+        "apps/cli/src/chat-command.ts",
+        "apps/cli/src/commands.ts",
+        "apps/cli/src/data-dir-lease.ts",
+        "apps/cli/src/index.ts",
+        "apps/cli/src/main.ts",
+        "apps/cli/src/release-artifacts.ts",
+        "apps/cli/src/terminal-chat-host.ts",
+        "apps/web/public/app.js",
+        "apps/web/src/adapter.ts",
+        "apps/web/src/main.ts",
+        "apps/web/src/server.ts",
+        "packages/contracts/src/model.ts",
+        "packages/core/src/runtime/model-call-controller.ts",
+        "packages/core/src/runtime/runtime.ts",
+        "packages/core/src/runtime/session-actor.ts",
+        "packages/core/src/runtime/turn-helpers.ts",
+        "packages/evaluation/src/r97-budget-ledger.ts",
+        "packages/gateway/src/app-server.ts",
+        "packages/gateway/src/rpc.ts",
+        "packages/harness/src/config-resolver.ts",
+        "packages/harness/src/create-harness.ts",
+        "packages/model/src/fakes/scripted.ts",
+        "packages/model/src/openai-chat-compatibility.ts",
+        "packages/model/src/openai.ts",
+        "packages/protocol/src/mapper.ts",
+        "packages/protocol/src/types.ts",
+        "packages/sdk/src/client.ts",
+        "packages/security/src/approval.ts",
+        "packages/session/src/ask-user-store.ts",
+        "packages/session/src/service.ts",
+        "packages/store/src/migrate.ts",
+        "packages/store/src/sqlite-runtime-store.ts",
+        "packages/tools/src/navigate.ts",
+        "packages/tools/src/read-window.ts",
+        "packages/tools/src/regex-scanner.ts",
+        "packages/tools/src/symbol-index.ts",
+        "packages/tools/src/tools/navigation-tools.ts",
+        "packages/tools/src/tools/read-file.ts"
+      ],
+      "verification": {
+        "command": "pnpm",
+        "args": [
+          "exec",
+          "vitest",
+          "run",
+          "apps/cli/src/gen1-skills-wiring.regressions.test.ts",
+          "packages/core/src/runtime/gen1-followup-wakeup.regressions.test.ts"
+        ]
+      },
+      "qualification": {
+        "sourceAndOracleIntegrity": "PINNED",
+        "baselineRed": "ASSERTION_RED",
+        "fixedGreen": "PASS",
+        "platform": "Linux x64; real Windows NOT_RUN",
+        "evidence": "docs/evidence/coding-evolution-20261015/historical/initial/qualification.json"
+      },
+      "platform": "portable"
+    },
+    {
+      "id": "coding-history-09",
+      "category": "feature",
+      "baseSha": "bab0e78e9d6948630bd0b3178dc1144568102775",
+      "fixedSha": "7cd3a4a6eee5937cba1ad9405a52dcfc15757073",
+      "request": "Connect the browser session history and native host services to the actual coding runtime.",
+      "oracleFiles": [
+        {
+          "path": "apps/web/src/deepseek/composition-security.regressions.test.ts",
+          "sha256": "29cb03259f23677a40a92bd156206790f338d68da51a7d333cb4fe4780f015b7",
+          "bytes": 7558
+        },
+        {
+          "path": "packages/core/src/runtime/ask-answer-identity.regressions.test.ts",
+          "sha256": "7a989c7ee6d8a8945e140b1bc8fed2b62e64324cf1039a417a9deff308b17607",
+          "bytes": 10338
+        }
+      ],
+      "historicalChangedPaths": [
+        "apps/web/package.json",
+        "apps/web/public/deepseek/assets/index-DjTxlw_T.js",
+        "apps/web/public/deepseek/assets/langs/asciidoc-Ve4PFQV2.js",
+        "apps/web/public/deepseek/assets/langs/bat-BkioyH1T.js",
+        "apps/web/public/deepseek/assets/langs/bibtex-CHM0blh-.js",
+        "apps/web/public/deepseek/assets/langs/c-BIGW1oBm.js",
+        "apps/web/public/deepseek/assets/langs/clojure-P80f7IUj.js",
+        "apps/web/public/deepseek/assets/langs/cmake-D1j8_8rp.js",
+        "apps/web/public/deepseek/assets/langs/cpp-DIPi6g--.js",
+        "apps/web/public/deepseek/assets/langs/csharp-DSvCPggb.js",
+        "apps/web/public/deepseek/assets/langs/css-CLj8gQPS.js",
+        "apps/web/public/deepseek/assets/langs/csv-fuZLfV_i.js",
+        "apps/web/public/deepseek/assets/langs/dart-bE4Kk8sk.js",
+        "apps/web/public/deepseek/assets/langs/diff-D97Zzqfu.js",
+        "apps/web/public/deepseek/assets/langs/dotenv-Da5cRb03.js",
+        "apps/web/public/deepseek/assets/langs/elixir-CvYZzuDY.js",
+        "apps/web/public/deepseek/assets/langs/erlang-DsQrWhSR.js",
+        "apps/web/public/deepseek/assets/langs/fish-BvzEVeQv.js",
+        "apps/web/public/deepseek/assets/langs/fsharp-CXgrBDvD.js",
+        "apps/web/public/deepseek/assets/langs/go-C27-OAKa.js",
+        "apps/web/public/deepseek/assets/langs/graphql-DujV8YkJ.js",
+        "apps/web/public/deepseek/assets/langs/groovy-gcz8RCvz.js",
+        "apps/web/public/deepseek/assets/langs/haskell-Df6bDoY_.js",
+        "apps/web/public/deepseek/assets/langs/hcl-BWvSN4gD.js",
+        "apps/web/public/deepseek/assets/langs/html-derivative-DOyKdj44.js",
+        "apps/web/public/deepseek/assets/langs/html-fwsONPVS.js",
+        "apps/web/public/deepseek/assets/langs/http-DcV90OkR.js",
+        "apps/web/public/deepseek/assets/langs/ini-BEwlwnbL.js",
+        "apps/web/public/deepseek/assets/langs/java-CylS5w8V.js",
+        "apps/web/public/deepseek/assets/langs/javascript-DI5JR1nB.js",
+        "apps/web/public/deepseek/assets/langs/julia-BpJ6DjL_.js",
+        "apps/web/public/deepseek/assets/langs/kotlin-BdnUsdx6.js",
+        "apps/web/public/deepseek/assets/langs/latex-B4C7GdlO.js",
+        "apps/web/public/deepseek/assets/langs/less-B1dDrJ26.js",
+        "apps/web/public/deepseek/assets/langs/log-2UxHyX5q.js",
+        "apps/web/public/deepseek/assets/langs/lua-BaeVxFsk.js",
+        "apps/web/public/deepseek/assets/langs/make-CHLpvVh8.js",
+        "apps/web/public/deepseek/assets/langs/markdown-Cvjx9yec.js",
+        "apps/web/public/deepseek/assets/langs/mdx-Cmh6b_Ma.js",
+        "apps/web/public/deepseek/assets/langs/nix-CwoSXNpI.js",
+        "apps/web/public/deepseek/assets/langs/perl-DsWkoyyU.js",
+        "apps/web/public/deepseek/assets/langs/php-LEPfNACG.js",
+        "apps/web/public/deepseek/assets/langs/powershell-Dpen1YoG.js",
+        "apps/web/public/deepseek/assets/langs/proto-C7zT0LnQ.js",
+        "apps/web/public/deepseek/assets/langs/python-B6aJPvgy.js",
+        "apps/web/public/deepseek/assets/langs/r-Dspwwk_N.js",
+        "apps/web/public/deepseek/assets/langs/rst-BbocfKWr.js",
+        "apps/web/public/deepseek/assets/langs/ruby-R292Iif0.js",
+        "apps/web/public/deepseek/assets/langs/rust-B1yitclQ.js",
+        "apps/web/public/deepseek/assets/langs/scala-C151Ov-r.js",
+        "apps/web/public/deepseek/assets/langs/scss-D5BDwBP9.js",
+        "apps/web/public/deepseek/assets/langs/sql-CRqJ_cUM.js",
+        "apps/web/public/deepseek/assets/langs/svelte-DNMY6jOf.js",
+        "apps/web/public/deepseek/assets/langs/swift-D82vCrfD.js",
+        "apps/web/public/deepseek/assets/langs/system-verilog-CnnmHF94.js",
+        "apps/web/public/deepseek/assets/langs/toml-vGWfd6FD.js",
+        "apps/web/public/deepseek/assets/langs/vb-D17OF-Vu.js",
+        "apps/web/public/deepseek/assets/langs/verilog-BQ8w6xss.js",
+        "apps/web/public/deepseek/assets/langs/vue-Dq2x6432.js",
+        "apps/web/public/deepseek/assets/langs/xml-sdJ4AIDG.js",
+        "apps/web/public/deepseek/assets/langs/yaml-Buea-lGh.js",
+        "apps/web/public/deepseek/assets/vendor-CCJJTK99.js",
+        "apps/web/public/deepseek/boot-manifest.js",
+        "apps/web/public/deepseek/boot-manifest.json",
+        "apps/web/public/deepseek/licenses/bundled-notices/index.json",
+        "apps/web/public/deepseek/licenses/bundled-notices/license-comments/index.json",
+        "apps/web/public/deepseek/licenses/dsh-api-gateway/package.json",
+        "apps/web/public/deepseek/licenses/dsh-api-job-controller/package.json",
+        "apps/web/public/deepseek/licenses/dsh-api-remotes/package.json",
+        "apps/web/public/deepseek/licenses/dsh-api-session-controller/package.json",
+        "apps/web/public/deepseek/licenses/dsh-api-terminal-controller/package.json",
+        "apps/web/public/deepseek/licenses/dsh-api-workspace-controller/package.json",
+        "apps/web/public/deepseek/licenses/dsh-api-workspace-files/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-connection/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-file-upload/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-hmr/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-locale/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-modules/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-resources/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-shortcuts/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-agent-preset/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-approval/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-attachment/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-brand-official/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-chat/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-commands/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-conversation/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-cordis/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-deliverables/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-directory-picker-browse/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-goal/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-input-trigger/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-jobs/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-layout/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-message-feedback/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-model-selection/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-open-in-app/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-permission-presets/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-plan/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-plugin-manager/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-reference/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-renderer/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-schedule/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-session/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-settings-account/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-settings-agent-loop/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-settings-general/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-settings-models/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-settings-plugin-inventory/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-settings-plugins/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-settings-session-log/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-settings-shell/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-settings-subagent/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-settings-web-search/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-settings/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-shortcuts/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-sidebar-documentpreview/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-sidebar-files/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-sidebar-right/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-sidebar-terminal/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-sidebar/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-skill/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-subagent/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-theme/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-tool/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-trajectory/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-user-questions/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-workflow-run/package.json",
+        "apps/web/public/deepseek/licenses/dsh-client-ui-workspace/package.json",
+        "apps/web/public/deepseek/licenses/dsh-cordis-client-runner/package.json",
+        "apps/web/public/deepseek/licenses/dsh-session-log-export/package.json",
+        "apps/web/public/deepseek/licenses/dsh-typert-registry/package.json",
+        "apps/web/public/deepseek/licenses/dsh-web-frontend/package.json",
+        "apps/web/public/deepseek/licenses/fonts/font-inventory.json",
+        "apps/web/public/deepseek/licenses/frontend-asset-hashes.json",
+        "apps/web/public/deepseek/licenses/icons/icon-inventory.json",
+        "apps/web/public/deepseek/licenses/icons/license-text-sources.json",
+        "apps/web/public/deepseek/licenses/icons/simple-icons-data.json",
+        "apps/web/public/deepseek/licenses/icons/simple-icons-package.json",
+        "apps/web/public/deepseek/licenses/published-package-registry-metadata.json",
+        "apps/web/public/deepseek/licenses/published-packages.json",
+        "apps/web/public/deepseek/licenses/shell-reference/package-lock.json",
+        "apps/web/public/deepseek/licenses/shell-reference/package.json",
+        "apps/web/public/deepseek/licenses/shell-reference/packages.json",
+        "apps/web/public/deepseek/licenses/upstream-source-reference/apps/web/package.json",
+        "apps/web/public/deepseek/licenses/upstream-source-reference/apps/web/product-isolation.ts",
+        "apps/web/public/deepseek/licenses/upstream-source-reference/apps/web/vite.config.ts",
+        "apps/web/public/deepseek/licenses/upstream-source-reference/index.json",
+        "apps/web/public/deepseek/licenses/upstream-source-reference/packages/client/tsdown.client.ts",
+        "apps/web/public/deepseek/licenses/upstream-source-reference/packages/client/ui-primitives/package.json",
+        "apps/web/public/deepseek/licenses/upstream-source-reference/packages/client/ui-primitives/src/code-file-icon-artwork.manifest.json",
+        "apps/web/public/deepseek/licenses/upstream-source-reference/packages/client/ui-primitives/src/code-file-icon-artwork.ts",
+        "apps/web/public/deepseek/licenses/upstream-source-reference/packages/client/ui-sidebar-documentpreview/package.json",
+        "apps/web/public/deepseek/licenses/upstream-source-reference/packages/client/ui-sidebar-documentpreview/tsdown.config.ts",
+        "apps/web/public/deepseek/licenses/upstream-source-reference/scripts/client-build-environment.ts",
+        "apps/web/public/deepseek/licenses/upstream-source-reference/scripts/gen-third-party-notices.ts",
+        "apps/web/public/deepseek/loader-facade.js",
+        "apps/web/public/deepseek/plugins/dsh-api-gateway/client.js",
+        "apps/web/public/deepseek/plugins/dsh-api-job-controller/client.js",
+        "apps/web/public/deepseek/plugins/dsh-api-remotes/client.js",
+        "apps/web/public/deepseek/plugins/dsh-api-session-controller/client.js",
+        "apps/web/public/deepseek/plugins/dsh-api-terminal-controller/client.js",
+        "apps/web/public/deepseek/plugins/dsh-api-workspace-controller/client.js",
+        "apps/web/public/deepseek/plugins/dsh-api-workspace-files/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-connection/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-file-upload/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-hmr/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-locale/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-modules/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-resources/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-shortcuts/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-agent-preset/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-approval/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-attachment/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-brand-official/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-chat/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-commands/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-conversation/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-cordis/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-deliverables/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-directory-picker-browse/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-goal/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-input-trigger/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-jobs/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-layout/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-message-feedback/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-model-selection/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-open-in-app/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-permission-presets/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-plan/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-plugin-manager/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-reference/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-renderer/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-schedule/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-session/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-settings-account/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-settings-agent-loop/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-settings-general/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-settings-models/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-settings-plugin-inventory/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-settings-plugins/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-settings-session-log/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-settings-shell/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-settings-subagent/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-settings-web-search/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-settings/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-shortcuts/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-sidebar-documentpreview/client.excel.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-sidebar-documentpreview/client.frontmatter-fields.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-sidebar-documentpreview/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-sidebar-documentpreview/client.pdf.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-sidebar-files/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-sidebar-right/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-sidebar-terminal/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-sidebar-terminal/client.terminal.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-sidebar/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-skill/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-subagent/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-theme/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-tool/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-trajectory/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-user-questions/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-workflow-run/client.js",
+        "apps/web/public/deepseek/plugins/dsh-client-ui-workspace/client.js",
+        "apps/web/public/deepseek/plugins/dsh-cordis-client-runner/client.js",
+        "apps/web/public/deepseek/plugins/dsh-session-log-export/client.js",
+        "apps/web/public/deepseek/plugins/dsh-typert-registry/client.js",
+        "apps/web/public/deepseek/provenance.json",
+        "apps/web/public/deepseek/provenance/default-client-roster.json",
+        "apps/web/public/deepseek/provenance/npm-releases.json",
+        "apps/web/public/deepseek/provenance/source-reference.json",
+        "apps/web/public/deepseek/transport.js",
+        "apps/web/public/legacy/app.js",
+        "apps/web/src/deepseek/activity-projections.ts",
+        "apps/web/src/deepseek/activity-store.ts",
+        "apps/web/src/deepseek/activity.ts",
+        "apps/web/src/deepseek/catalog.ts",
+        "apps/web/src/deepseek/change-compare.ts",
+        "apps/web/src/deepseek/composition.ts",
+        "apps/web/src/deepseek/deliverables.ts",
+        "apps/web/src/deepseek/events.ts",
+        "apps/web/src/deepseek/files.ts",
+        "apps/web/src/deepseek/host-tools.ts",
+        "apps/web/src/deepseek/metadata.ts",
+        "apps/web/src/deepseek/owners.ts",
+        "apps/web/src/deepseek/projections.ts",
+        "apps/web/src/deepseek/schedule-pure/domain.ts",
+        "apps/web/src/deepseek/schedule-pure/session-shim.ts",
+        "apps/web/src/deepseek/schedule-pure/types.ts",
+        "apps/web/src/deepseek/schedule-pure/update.ts",
+        "apps/web/src/deepseek/session.ts",
+        "apps/web/src/deepseek/socket.ts",
+        "apps/web/src/deepseek/terminal.ts",
+        "apps/web/src/deepseek/transport.ts",
+        "apps/web/src/deepseek/workspace.ts",
+        "apps/web/src/main.ts",
+        "apps/web/src/server.ts",
+        "apps/web/tsconfig.json",
+        "packages/contracts/src/step-context.ts",
+        "packages/core/src/runtime/ask-gate.ts",
+        "packages/core/src/runtime/model-call-controller.ts",
+        "packages/core/src/runtime/runtime.ts",
+        "packages/core/src/runtime/step-execution-snapshot.ts",
+        "packages/core/src/runtime/step-snapshot-factory.ts",
+        "packages/security/src/approval.ts"
+      ],
+      "verification": {
+        "command": "pnpm",
+        "args": [
+          "exec",
+          "vitest",
+          "run",
+          "apps/web/src/deepseek/composition-security.regressions.test.ts",
+          "packages/core/src/runtime/ask-answer-identity.regressions.test.ts"
+        ]
+      },
+      "qualification": {
+        "sourceAndOracleIntegrity": "PINNED",
+        "baselineRed": "REVIEWED_FEATURE_ABSENCE_BUILD_RED",
+        "fixedGreen": "PASS",
+        "platform": "Linux x64; real Windows NOT_RUN",
+        "evidence": "docs/evidence/coding-evolution-20261015/historical/initial/qualification.json",
+        "review": "Oracle imports new composition module; module absence also removes contextual parameter types."
+      },
+      "platform": "portable"
+    },
+    {
+      "id": "coding-history-10",
+      "category": "feature",
+      "baseSha": "a1df586e4d105eb4171889931fbb59e557bb8d5d",
+      "fixedSha": "616ef30593da69bdf6db3546d4c22b80c1b4378f",
+      "request": "Bound default project-instruction discovery and support Chinese/mixed memory recall.",
+      "oracleFiles": [
+        {
+          "path": "packages/harness/src/effective-instruction-context.regressions.test.ts",
+          "sha256": "98e833d0c748269b778793b8358111d407c4c43290778abb8eb24588584b8997",
+          "bytes": 7988
+        },
+        {
+          "path": "packages/harness/src/memory-search-production.regressions.test.ts",
+          "sha256": "2b8ca8f48137f3fcca4b69ab42c17d43595e37c9b22b0d221977ac365b6f1078",
+          "bytes": 4083
+        }
+      ],
+      "historicalChangedPaths": [
+        "packages/context/src/discovery.ts",
+        "packages/harness/src/compose/compose-context.ts",
+        "packages/harness/src/effective-instruction-context.ts",
+        "packages/memory/src/memory-store.ts",
+        "packages/memory/src/search-text.ts",
+        "packages/memory/src/sqlite-memory-store.ts"
+      ],
+      "verification": {
+        "command": "pnpm",
+        "args": [
+          "exec",
+          "vitest",
+          "run",
+          "packages/harness/src/effective-instruction-context.regressions.test.ts",
+          "packages/harness/src/memory-search-production.regressions.test.ts"
+        ]
+      },
+      "qualification": {
+        "sourceAndOracleIntegrity": "PINNED",
+        "baselineRed": "ASSERTION_RED",
+        "fixedGreen": "PASS",
+        "platform": "Linux x64; real Windows NOT_RUN",
+        "evidence": "docs/evidence/coding-evolution-20261015/historical/initial/qualification.json"
+      },
+      "platform": "portable"
+    },
+    {
+      "id": "coding-history-11",
+      "category": "feature",
+      "baseSha": "fbe5098c43060fd066bd5fbdaa4a4d1612abdeb6",
+      "fixedSha": "91967f4dd2442b3d1979dee1c2b165d376c8895c",
+      "request": "Deliver assembled system context to the provider and bound retrieval/navigation work.",
+      "oracleFiles": [
+        {
+          "path": "packages/memory/src/retrieval-work.regressions.test.ts",
+          "sha256": "eb6be187b836f91afa8dbb34007576cc7ad22a51dea7326e468e3569043abfe8",
+          "bytes": 9231
+        },
+        {
+          "path": "packages/model/src/openai-system-context.regressions.test.ts",
+          "sha256": "f2614215e52509bd0b8575d1e5d058812e14f9e7b0596d39240a50b8100fd5ab",
+          "bytes": 7664
+        }
+      ],
+      "historicalChangedPaths": [
+        "packages/memory/src/retrieval.ts",
+        "packages/model/src/openai.ts",
+        "packages/tools/src/navigate.ts"
+      ],
+      "verification": {
+        "command": "pnpm",
+        "args": [
+          "exec",
+          "vitest",
+          "run",
+          "packages/memory/src/retrieval-work.regressions.test.ts",
+          "packages/model/src/openai-system-context.regressions.test.ts"
+        ]
+      },
+      "qualification": {
+        "sourceAndOracleIntegrity": "PINNED",
+        "baselineRed": "ASSERTION_RED",
+        "fixedGreen": "PASS",
+        "platform": "Linux x64; real Windows NOT_RUN",
+        "evidence": "docs/evidence/coding-evolution-20261015/historical/initial/qualification.json"
+      },
+      "platform": "portable"
+    },
+    {
+      "id": "coding-history-12",
+      "category": "feature",
+      "baseSha": "965da0bb123fbdd9b61bded6bc345b767ad0c48f",
+      "fixedSha": "d01df59f31b156f7c8622ae6c926ce99bc751400",
+      "request": "Preserve verification status and advisory memory/reflection trust across the production harness.",
+      "oracleFiles": [
+        {
+          "path": "packages/harness/src/candidate-persistence.regressions.test.ts",
+          "sha256": "1693e2f89e0af93481c882cacf4b7140c01325341ee5da09a20d8d0d0829ec35",
+          "bytes": 7707
+        },
+        {
+          "path": "packages/harness/src/command-discovery-cache.regressions.test.ts",
+          "sha256": "748db9ab536c8650e0446c6a1ca3f8dceb5c2ae0a16a0b6068990aaa663cb34e",
+          "bytes": 3493
+        }
+      ],
+      "historicalChangedPaths": [
+        "packages/harness/src/candidate-store.ts",
+        "packages/harness/src/command-discovery-service.ts",
+        "packages/harness/src/memory-runtime-bridge.ts",
+        "packages/harness/src/reflection-runner.ts",
+        "packages/harness/src/verification-planner.ts",
+        "packages/memory/src/memory-store.ts",
+        "packages/memory/src/retrieval.ts",
+        "packages/memory/src/security-gate.ts",
+        "packages/memory/src/sqlite-memory-store.ts",
+        "packages/tools/src/command-discovery.ts",
+        "packages/tools/src/verification/plan-builder.ts"
+      ],
+      "verification": {
+        "command": "pnpm",
+        "args": [
+          "exec",
+          "vitest",
+          "run",
+          "packages/harness/src/candidate-persistence.regressions.test.ts",
+          "packages/harness/src/command-discovery-cache.regressions.test.ts"
+        ]
+      },
+      "qualification": {
+        "sourceAndOracleIntegrity": "PINNED",
+        "baselineRed": "ASSERTION_RED",
+        "fixedGreen": "PASS",
+        "platform": "Linux x64; real Windows NOT_RUN",
+        "evidence": "docs/evidence/coding-evolution-20261015/historical/initial/qualification.json"
+      },
+      "platform": "portable"
+    },
+    {
+      "id": "coding-history-13",
+      "category": "recovery",
+      "baseSha": "6bace16dacebf148f5e5c8390ce2b5e3e38015cf",
+      "fixedSha": "29ba9546bc4c3d515a46058c5cf69046f0e82e57",
+      "request": "An empty stream finish_reason must not certify successful model completion.",
+      "oracleFiles": [
+        {
+          "path": "packages/model/src/openai-empty-finish-reason.regressions.test.ts",
+          "sha256": "d958d5bd51ca43d55146c5fce63b003e9d54681a824f4e6847cb945e86e70577",
+          "bytes": 3926
+        },
+        {
+          "path": "packages/model/src/openai-termination-regressions.test.ts",
+          "sha256": "d70315a44e9683cced43cd720ef14becb6d4d25c45e56b574e677a98ea10028c",
+          "bytes": 6785
+        }
+      ],
+      "historicalChangedPaths": [
+        "packages/model/src/openai.ts"
+      ],
+      "verification": {
+        "command": "pnpm",
+        "args": [
+          "exec",
+          "vitest",
+          "run",
+          "packages/model/src/openai-empty-finish-reason.regressions.test.ts",
+          "packages/model/src/openai-termination-regressions.test.ts"
+        ]
+      },
+      "qualification": {
+        "sourceAndOracleIntegrity": "PINNED",
+        "baselineRed": "ASSERTION_RED",
+        "fixedGreen": "PASS",
+        "platform": "Linux x64; real Windows NOT_RUN",
+        "evidence": "docs/evidence/coding-evolution-20261015/historical/initial/qualification.json"
+      },
+      "platform": "portable"
+    },
+    {
+      "id": "coding-history-14",
+      "category": "recovery",
+      "baseSha": "2802f46f81276e41dbcd81bfd2fd095c9102b599",
+      "fixedSha": "5e4d9b8f23e596e887c18a46f8e031d41b8a458e",
+      "request": "Prevent special-file read stalls and release file reads when cancelled.",
+      "oracleFiles": [
+        {
+          "path": "packages/tools/src/read-file-resource.regressions.test.ts",
+          "sha256": "6d18ea87c8bbeb31a5548c2c69003e53f865d86e8869b156abfdb637d0dfa804",
+          "bytes": 10013
+        }
+      ],
+      "historicalChangedPaths": [
+        "packages/tools/src/tools/read-file.ts"
+      ],
+      "verification": {
+        "command": "pnpm",
+        "args": [
+          "exec",
+          "vitest",
+          "run",
+          "packages/tools/src/read-file-resource.regressions.test.ts"
+        ]
+      },
+      "qualification": {
+        "sourceAndOracleIntegrity": "PINNED",
+        "baselineRed": "ASSERTION_RED",
+        "fixedGreen": "PASS",
+        "platform": "Linux x64; real Windows NOT_RUN",
+        "evidence": "docs/evidence/coding-evolution-20261015/historical/initial/qualification.json"
+      },
+      "platform": "portable"
+    },
+    {
+      "id": "coding-history-15",
+      "category": "recovery",
+      "baseSha": "0c70309de478797be8d0f6b8a3c2dbbe282f7844",
+      "fixedSha": "f8373b0fa4ec6491a55a9a3ba198235b689cc140",
+      "request": "Honor retry deadlines, atomic feedback and rehydration context headroom.",
+      "oracleFiles": [
+        {
+          "path": "packages/context/src/rehydration-headroom.regressions.test.ts",
+          "sha256": "f6b5a88dd912629a549e646150eb91acac7bd030c0bc319592fa95cfc2d2c02f",
+          "bytes": 9241
+        },
+        {
+          "path": "packages/harness/src/memory-feedback-atomic.regressions.test.ts",
+          "sha256": "64941c892cf1d3984cdc273710f55d74cdf547bae719b203c72c6c931e91fa69",
+          "bytes": 13423
+        }
+      ],
+      "historicalChangedPaths": [
+        "packages/context/src/pipeline.ts",
+        "packages/harness/src/memory-runtime-bridge.ts",
+        "packages/memory/src/memory-store.ts",
+        "packages/memory/src/sqlite-memory-store.ts",
+        "packages/model/src/openai.ts",
+        "packages/tools/src/tools/search-files.ts"
+      ],
+      "verification": {
+        "command": "pnpm",
+        "args": [
+          "exec",
+          "vitest",
+          "run",
+          "packages/context/src/rehydration-headroom.regressions.test.ts",
+          "packages/harness/src/memory-feedback-atomic.regressions.test.ts"
+        ]
+      },
+      "qualification": {
+        "sourceAndOracleIntegrity": "PINNED",
+        "baselineRed": "ASSERTION_RED",
+        "fixedGreen": "PASS",
+        "platform": "Linux x64; real Windows NOT_RUN",
+        "evidence": "docs/evidence/coding-evolution-20261015/historical/initial/qualification.json"
+      },
+      "platform": "portable"
+    },
+    {
+      "id": "coding-history-16",
+      "category": "recovery",
+      "baseSha": "b00299e5d0da03656c00e2041fc261aa01af6c96",
+      "fixedSha": "be537085551fc8f14d976f05865d6c0f4bd57e7a",
+      "request": "Keep streaming termination and explicitly scoped instruction/symbol reads bounded and correct.",
+      "oracleFiles": [
+        {
+          "path": "packages/context/src/scoped-instruction-read.regressions.test.ts",
+          "sha256": "030fe9547a217dd65f4d194f9828c8ee3f85a8d6fae785178b3d3cdd03d936cb",
+          "bytes": 12039
+        },
+        {
+          "path": "packages/model/src/openai-stream-footer.regressions.test.ts",
+          "sha256": "9dfcd44d0a645b262489cfe6a17c9fff77bc2c45fa20782ef68c270ffccf2ca6",
+          "bytes": 15095
+        }
+      ],
+      "historicalChangedPaths": [
+        "packages/context/src/path-scoped-discovery.ts",
+        "packages/model/src/openai.ts",
+        "packages/tools/src/navigate.ts",
+        "packages/tools/src/symbol-index.ts",
+        "packages/tools/src/tools/navigation-tools.ts"
+      ],
+      "verification": {
+        "command": "pnpm",
+        "args": [
+          "exec",
+          "vitest",
+          "run",
+          "packages/context/src/scoped-instruction-read.regressions.test.ts",
+          "packages/model/src/openai-stream-footer.regressions.test.ts"
+        ]
+      },
+      "qualification": {
+        "sourceAndOracleIntegrity": "PINNED",
+        "baselineRed": "ASSERTION_RED",
+        "fixedGreen": "PASS",
+        "platform": "Linux x64; real Windows NOT_RUN",
+        "evidence": "docs/evidence/coding-evolution-20261015/historical/initial/qualification.json"
+      },
+      "platform": "portable"
+    },
+    {
+      "id": "coding-history-17",
+      "category": "recovery",
+      "baseSha": "f48d7d7335a238b1c8883d6bf6ddec0e73703d9a",
+      "fixedSha": "97928f1532a3d8c7fc815a197ead9243550ed883",
+      "request": "Preserve typed overflow recovery and prove progress after a coding follow-up.",
+      "oracleFiles": [
+        {
+          "path": "packages/core/src/runtime/gen1-model-recovery.regressions.test.ts",
+          "sha256": "945dd77fb54659984470e6b9b17d5d3be2817434ce358ab8100631e76458d209",
+          "bytes": 9000
+        },
+        {
+          "path": "packages/gateway/src/rpc.test.ts",
+          "sha256": "2b3e3c51930cb8417f47bffddeead682b65c758b09bdab9591a6d7071856b77c",
+          "bytes": 29002
+        }
+      ],
+      "historicalChangedPaths": [
+        "packages/core/src/runtime/turn-helpers.ts"
+      ],
+      "verification": {
+        "command": "pnpm",
+        "args": [
+          "exec",
+          "vitest",
+          "run",
+          "packages/core/src/runtime/gen1-model-recovery.regressions.test.ts",
+          "packages/gateway/src/rpc.test.ts"
+        ]
+      },
+      "qualification": {
+        "sourceAndOracleIntegrity": "PINNED",
+        "baselineRed": "ASSERTION_RED",
+        "fixedGreen": "PASS",
+        "platform": "Linux x64; real Windows NOT_RUN",
+        "evidence": "docs/evidence/coding-evolution-20261015/historical/initial/qualification.json"
+      },
+      "platform": "portable"
+    },
+    {
+      "id": "coding-history-18",
+      "category": "recovery",
+      "baseSha": "083b38cfba87cd1ce3fc3fd80f1515f9fe977218",
+      "fixedSha": "4ebfcf7cd59c09aad0818c365f4a3673350eaf2e",
+      "request": "Report recovery and tool denials truthfully in the durable event journal.",
+      "oracleFiles": [
+        {
+          "path": "packages/core/src/runtime/pr-harness-fault-recovery.regressions.test.ts",
+          "sha256": "f5a722e48d7be0c97510a97caf2b03e63956da2f99702d5ab3cba36764978107",
+          "bytes": 43163
+        },
+        {
+          "path": "packages/core/src/runtime/recovery-trace-and-security-events.regressions.test.ts",
+          "sha256": "c59e8a26ae689ab18799c4d827fc7d490bb101eb7143d02a79690db2268d8cbc",
+          "bytes": 12158
+        }
+      ],
+      "historicalChangedPaths": [
+        "packages/core/src/runtime/tool-call-controller.ts"
+      ],
+      "verification": {
+        "command": "pnpm",
+        "args": [
+          "exec",
+          "vitest",
+          "run",
+          "packages/core/src/runtime/pr-harness-fault-recovery.regressions.test.ts",
+          "packages/core/src/runtime/recovery-trace-and-security-events.regressions.test.ts"
+        ]
+      },
+      "qualification": {
+        "sourceAndOracleIntegrity": "PINNED",
+        "baselineRed": "ASSERTION_RED",
+        "fixedGreen": "PASS",
+        "platform": "Linux x64; real Windows NOT_RUN",
+        "evidence": "docs/evidence/coding-evolution-20261015/historical/initial/qualification.json"
+      },
+      "platform": "portable"
+    },
+    {
+      "id": "coding-history-19",
+      "category": "long-state",
+      "baseSha": "272ace5cfdca85dd0948562314fafcac08d936ec",
+      "fixedSha": "88504f013eec54f1ae0328783345c8c4cf8265e3",
+      "request": "Serialize user-question handoff with the original paused turn.",
+      "oracleFiles": [
+        {
+          "path": "packages/core/src/runtime/ask-user-callback.regressions.test.ts",
+          "sha256": "0ce84e0407cf6467fdc309b40d1c6ac4892dae61edd3b38e65900cebc9a321e1",
+          "bytes": 4356
+        },
+        {
+          "path": "apps/web/src/deepseek/session.test.ts",
+          "sha256": "4c3fe62a1125b874b580c8662cc8f06cd93f7c694d9e47a6ea5966d92ba5a6b7",
+          "bytes": 39470
+        }
+      ],
+      "historicalChangedPaths": [
+        "apps/web/src/deepseek/session.ts",
+        "packages/core/src/runtime/runtime.ts"
+      ],
+      "verification": {
+        "command": "pnpm",
+        "args": [
+          "exec",
+          "vitest",
+          "run",
+          "packages/core/src/runtime/ask-user-callback.regressions.test.ts",
+          "apps/web/src/deepseek/session.test.ts"
+        ]
+      },
+      "qualification": {
+        "sourceAndOracleIntegrity": "PINNED",
+        "baselineRed": "ASSERTION_RED",
+        "fixedGreen": "PASS",
+        "platform": "Linux x64; real Windows NOT_RUN",
+        "evidence": "docs/evidence/coding-evolution-20261015/historical/initial/qualification.json"
+      },
+      "platform": "portable"
+    },
+    {
+      "id": "coding-history-20",
+      "category": "long-state",
+      "baseSha": "7e0295a3577e55e7550e0b4b218d38dc45d1dea3",
+      "fixedSha": "272ace5cfdca85dd0948562314fafcac08d936ec",
+      "request": "Contain asynchronous host question callback failures without losing the active turn.",
+      "oracleFiles": [
+        {
+          "path": "packages/core/src/runtime/ask-user-callback.regressions.test.ts",
+          "sha256": "eb91f2501bb5f27c63987c3b89ae4d81abcfed274b3436b62664a2e1b1ad1083",
+          "bytes": 3665
+        }
+      ],
+      "historicalChangedPaths": [
+        "packages/core/src/runtime/recovery-controller.ts"
+      ],
+      "verification": {
+        "command": "pnpm",
+        "args": [
+          "exec",
+          "vitest",
+          "run",
+          "packages/core/src/runtime/ask-user-callback.regressions.test.ts"
+        ]
+      },
+      "qualification": {
+        "sourceAndOracleIntegrity": "PINNED",
+        "baselineRed": "ASSERTION_RED",
+        "fixedGreen": "PASS",
+        "platform": "Linux x64; real Windows NOT_RUN",
+        "evidence": "docs/evidence/coding-evolution-20261015/historical/initial/qualification.json"
+      },
+      "platform": "portable"
+    },
+    {
+      "id": "coding-history-21",
+      "category": "long-state",
+      "baseSha": "7ba9eee0daedb6f0ae02a8cd0892a93e62677286",
+      "fixedSha": "9c02f1b101b78f90c09a8479276a2a4d38871bb1",
+      "request": "Drain terminal inbox acknowledgements before closing the session actor.",
+      "oracleFiles": [
+        {
+          "path": "packages/core/src/runtime/session-actor.test.ts",
+          "sha256": "9e7098634f4f6d1bafbdb8bd353a3c07fb08bafaa7c54a35e35c32ea2efec5d3",
+          "bytes": 96165
+        }
+      ],
+      "historicalChangedPaths": [
+        "packages/core/src/runtime/session-actor.ts"
+      ],
+      "verification": {
+        "command": "pnpm",
+        "args": [
+          "exec",
+          "vitest",
+          "run",
+          "packages/core/src/runtime/session-actor.test.ts"
+        ]
+      },
+      "qualification": {
+        "sourceAndOracleIntegrity": "PINNED",
+        "baselineRed": "ASSERTION_RED",
+        "fixedGreen": "PASS",
+        "platform": "Linux x64; real Windows NOT_RUN",
+        "evidence": "docs/evidence/coding-evolution-20261015/historical/corrected-task21/qualification.json"
+      },
+      "platform": "portable"
+    },
+    {
+      "id": "coding-history-22",
+      "category": "long-state",
+      "baseSha": "facf13fa5ed4f545348b7de78c230603c54f9bf1",
+      "fixedSha": "7ba9eee0daedb6f0ae02a8cd0892a93e62677286",
+      "request": "Drain durable answer finalization before closing the owning Web session.",
+      "oracleFiles": [
+        {
+          "path": "apps/web/src/deepseek/session.test.ts",
+          "sha256": "6ff2d68fe445490b6003b41d2e22326c7ab3042c144f8de70326bce41028c3a8",
+          "bytes": 35831
+        }
+      ],
+      "historicalChangedPaths": [
+        "apps/web/src/deepseek/composition.ts",
+        "apps/web/src/deepseek/metadata.ts",
+        "apps/web/src/deepseek/session.ts"
+      ],
+      "verification": {
+        "command": "pnpm",
+        "args": [
+          "exec",
+          "vitest",
+          "run",
+          "apps/web/src/deepseek/session.test.ts"
+        ]
+      },
+      "qualification": {
+        "sourceAndOracleIntegrity": "PINNED",
+        "baselineRed": "REVIEWED_FEATURE_ABSENCE_BUILD_RED",
+        "fixedGreen": "PASS",
+        "platform": "Linux x64; real Windows NOT_RUN",
+        "evidence": "docs/evidence/coding-evolution-20261015/historical/initial/qualification.json",
+        "review": "Oracle calls composition.close, the lifecycle API introduced by this change; base type lacks that member."
+      },
+      "platform": "portable"
+    },
+    {
+      "id": "coding-history-23",
+      "category": "long-state",
+      "baseSha": "9c02f1b101b78f90c09a8479276a2a4d38871bb1",
+      "fixedSha": "b38566d5c370509db58cbb495aaf4eb68cbe3ce3",
+      "request": "Preserve resumed role labels and bounded atomic replacement contention on Windows.",
+      "oracleFiles": [
+        {
+          "path": "packages/store-integrity/src/windows-atomic-write.regressions.test.ts",
+          "sha256": "ffb7c4571be97cf6aa2162c01060b39d6862823cd6a632fe7aec2202bc8aa849",
+          "bytes": 4610
+        },
+        {
+          "path": "apps/web/src/deepseek/session.test.ts",
+          "sha256": "9aff8bc5de019d5ef0617fdeb3203cbed427f3fd0046d7133f20ae37f737817e",
+          "bytes": 35898
+        }
+      ],
+      "historicalChangedPaths": [
+        "packages/core/src/runtime/runtime.ts",
+        "packages/store-integrity/src/index.ts"
+      ],
+      "verification": {
+        "command": "pnpm",
+        "args": [
+          "exec",
+          "vitest",
+          "run",
+          "packages/store-integrity/src/windows-atomic-write.regressions.test.ts",
+          "apps/web/src/deepseek/session.test.ts"
+        ]
+      },
+      "qualification": {
+        "sourceAndOracleIntegrity": "PINNED",
+        "baselineRed": "ASSERTION_RED",
+        "fixedGreen": "PASS",
+        "platform": "Linux x64; real Windows NOT_RUN",
+        "evidence": "docs/evidence/coding-evolution-20261015/historical/initial/qualification.json"
+      },
+      "platform": "windows-sensitive"
+    },
+    {
+      "id": "coding-history-24",
+      "category": "long-state",
+      "baseSha": "b016dc3ccbb1808728617374745fae46d5c3ee87",
+      "fixedSha": "3adbebe8af87a8490e63365a077840b6765296ea",
+      "request": "Cancel queued agent turns and keep tool-call conversation history protocol-complete.",
+      "oracleFiles": [
+        {
+          "path": "apps/web/src/harness.integration.test.ts",
+          "sha256": "079d35c189c165f506d9cacbb3bf5d817115ed96ea061b15b80b160bfae98159",
+          "bytes": 15095
+        },
+        {
+          "path": "packages/gateway/src/gateway.test.ts",
+          "sha256": "483a2b9a9f69d7d6c7260a72c91b4531163ad313dec2fef279aa1d765f408ffc",
+          "bytes": 39382
+        }
+      ],
+      "historicalChangedPaths": [
+        "apps/web/public/app.js",
+        "packages/gateway/src/gateway.ts"
+      ],
+      "verification": {
+        "command": "pnpm",
+        "args": [
+          "exec",
+          "vitest",
+          "run",
+          "apps/web/src/harness.integration.test.ts",
+          "packages/gateway/src/gateway.test.ts"
+        ]
+      },
+      "qualification": {
+        "sourceAndOracleIntegrity": "PINNED",
+        "baselineRed": "ASSERTION_RED",
+        "fixedGreen": "PASS",
+        "platform": "Linux x64; real Windows NOT_RUN",
+        "evidence": "docs/evidence/coding-evolution-20261015/historical/initial/qualification.json"
+      },
+      "platform": "portable"
+    }
+  ]
+}

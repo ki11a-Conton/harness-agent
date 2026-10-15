@@ -42,6 +42,6 @@ export class RequestPrefixObserver {
     this.previous.delete(sessionHash);
     if (system.length <= 256 * 1024 && messageHashes.length <= 4096) this.previous.set(sessionHash, { system, messages: messageHashes, tools });
     if (this.previous.size > 16) this.previous.delete(this.previous.keys().next().value!);
-    try { this.onObservation(observation); } catch { /* Diagnostics cannot trigger retries or affect a model request. */ }
+    try { this.onObservation(observation); } catch { process.stderr.write("[degraded] cache-diagnostics: observation callback failed\n"); }
   }
 }

@@ -9,7 +9,7 @@ export interface RemoteEventHost {
   home?: string;
   /** Must inject the original ask reply and continue its actual turn through the actor owner. */
   answerAsk(request: AskUserRequest, text: string): Promise<void>;
-  summary?(sessionId: SessionId): Promise<unknown>;
+  summary?(sessionId: SessionId, signal?: AbortSignal): Promise<unknown>;
 }
 type Pending = { kind: "approval" | "ask"; id: string; sessionId: SessionId; turnId?: string; question?: AskUserRequest };
 type Delivery = { pending: Pending; completed?: string; inflight?: Promise<void> };
@@ -178,6 +178,11 @@ export function createEventsService(host: RemoteEventHost) {
       generations.set(clientId, generation);
       const seen = new Map<string, string>();
       const summaries = new Map<string, string>();
+      let summaryScan: Promise<void> | undefined;
+      function enqueueSummary(event: string, args: readonly unknown[]) {
+        if (generation.notices.length >= 256) throw new Error("Session summary notification queue overflow; reconnect for current state");
+        generation.notices.push({ type: "emit", event, args });
+      }
       try {
         yield { type: "ready", clientId, host: { home: host.home ?? homedir() } };
         while (!signal.aborted) {
@@ -209,25 +214,33 @@ export function createEventsService(host: RemoteEventHost) {
                   reason: `${request.reason}\n${request.target}` } };
             }
           }
-          if (host.summary !== undefined) {
-            for (const session of (await host.harness.store.listSessions()).filter(session => session.status !== "failed")) {
-              let summary: unknown;
-              try { summary = await host.summary(session.id); }
-              catch (error) {
-                // A row may disappear or become unavailable between the list
-                // and its summary read. Only that verified lifecycle race is
-                // contained; IO/corruption/internal failures remain visible.
-                const current = await host.harness.store.getSession(session.id);
-                if ((error as { code?: unknown }).code !== "session/not-found" || (current !== undefined && current.status !== "failed")) throw error;
-                if (summaries.delete(session.id)) yield { type: "emit", event: "api-session/removed", args: [session.id] };
-                continue;
+          // A summary can wait for the ownership lock held by a private tool
+          // awaiting human approval. Never let that read block the waterfall
+          // which is the only route to answering the approval.
+          if (host.summary !== undefined && summaryScan === undefined) {
+            summaryScan = (async () => {
+              for (const session of (await host.harness.store.listSessions()).filter(session => session.status !== "failed")) {
+                if (!generation.active || signal.aborted) return;
+                let summary: unknown;
+                try { summary = await host.summary!(session.id, signal); }
+                catch (error) {
+                  if (!generation.active || signal.aborted) return;
+                  const current = await host.harness.store.getSession(session.id);
+                  if ((error as { code?: unknown }).code !== "session/not-found" || (current !== undefined && current.status !== "failed")) throw error;
+                  if (summaries.delete(session.id)) enqueueSummary("api-session/removed", [session.id]);
+                  continue;
+                }
+                if (!generation.active || signal.aborted) return;
+                const encoded = JSON.stringify(summary);
+                if (summaries.get(session.id) !== encoded) {
+                  summaries.set(session.id, encoded);
+                  enqueueSummary("api-session/added", [summary]);
+                }
               }
-              const encoded = JSON.stringify(summary);
-              if (summaries.get(session.id) !== encoded) {
-                summaries.set(session.id, encoded);
-                yield { type: "emit", event: "api-session/added", args: [summary] };
-              }
-            }
+            })().then(() => { summaryScan = undefined; }, error => {
+              if (generation.active && !signal.aborted) generation.failure = error instanceof Error ? error : new Error("Session summary scan failed");
+              summaryScan = undefined;
+            });
           }
           await pause(host.pollDelayMs ?? 25, signal);
         }

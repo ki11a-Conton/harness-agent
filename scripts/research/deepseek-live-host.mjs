@@ -66,7 +66,7 @@ async function serve(req, res) {
     const answer = "# Actual Harness browser answer\n\n**Bold result** and [local documentation](https://example.invalid/docs).\n\n- First item\n- Second item\n\n| File | Status |\n| --- | --- |\n| demo.js | reviewed |\n\n```js\nexport const value = 1;\n```\n\n" +
       (hasTool ? "The actual tool result was received.\n" : "") + (hasAnsweredQuestion ? "The browser answer was received.\n" : "");
     for (const chunk of [answer.slice(0, 30), answer.slice(30, 95), answer.slice(95)]) {
-      if (res.destroyed) break; frame({ content: chunk }); await new Promise(done => setTimeout(done, 250));
+      if (res.destroyed) break; frame({ content: chunk }); await new Promise(done => setTimeout(done, /\[fixture:slow\]/.test(text) ? 2500 : 250));
     }
     if (!res.destroyed) frame({}, "stop", { prompt_tokens: 32, completion_tokens: 40, total_tokens: 72 });
   }
