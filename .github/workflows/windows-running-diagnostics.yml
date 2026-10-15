@@ -9,123 +9,52 @@ permissions:
   actions: read
 jobs:
   inspect:
-    runs-on: windows-latest
-    timeout-minutes: 35
-    env:
-      OPENAI_API_KEY: ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: 6e81e2e976e678ab78f610ea3cd699d35d9e1986
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 11.21.0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: pnpm
       - uses: actions/download-artifact@v4
         with:
           github-token: ${{ github.token }}
-          run-id: '38761338730'
-          name: test-report-windows-latest
-          path: .ci/windows-timeout/original
-      - name: Publish original test failure excerpts
+          run-id: '38776733403'
+          name: windows-status-diagnostics-38776733403
+          path: diagnostic
+      - name: Recover a bounded receipt from existing Windows diagnostic bytes without rerunning tests
         shell: bash
         run: |
           node --input-type=module <<'NODE'
-          import { readFile } from 'node:fs/promises';
-          import { gzipSync } from 'node:zlib';
-          import { createHash } from 'node:crypto';
-          const bytes = await readFile('.ci/windows-timeout/original/test-report.log');
-          const lines = bytes.toString('utf8').replace(/\x1b\[[0-9;]*m/g, '').split('\n');
-          const excerpts = [];
-          for (let i = 0; i < lines.length; i++) if (/session-running-status.regressions.test.ts|FAIL |Test timed out/.test(lines[i])) {
-            excerpts.push({ line: i + 1, text: lines.slice(Math.max(0, i - 4), Math.min(lines.length, i + 18)).join('\n') });
-          }
-          const record = { sourceSha: '6e81e2e976e678ab78f610ea3cd699d35d9e1986', originalRun: '38761338730',
-            rawBytes: bytes.length, rawSha256: createHash('sha256').update(bytes).digest('hex'), excerpts };
-          const data = gzipSync(Buffer.from(JSON.stringify(record))).toString('base64');
-          const total = Math.ceil(data.length / 3500);
-          if (total > 7) throw new Error('Original excerpt projection exceeds annotation budget');
-          for (let index = 0; index < total; index++) console.log('::notice title=Original Windows test report chunk::' +
-            JSON.stringify({ index, total, encoding: 'gzip+base64', data: data.slice(index * 3500, (index + 1) * 3500) }));
-          NODE
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm typecheck
-      - name: Repeat independent fixtures with diagnostic phase logging and original deadlines
-        shell: bash
-        run: |
-          node --input-type=module <<'NODE'
-          import assert from 'node:assert/strict';
           import { readFile, writeFile } from 'node:fs/promises';
-          import { createHash } from 'node:crypto';
-          const file = 'apps/web/src/deepseek/session-running-status.regressions.test.ts';
-          const original = await readFile(file);
-          let text = original.toString('utf8').replace(/\r\n/g, '\n');
-          function replace(before, after) { assert.equal(text.split(before).length, 2, before); text = text.replace(before, after); }
-          replace('type Client = {', 'const phase = (value: string) => console.error("WINDOWS_STATUS_PHASE " + Date.now() + " " + value);\n\ntype Client = {');
-          replace('    yield { type: "text_delta", text: "Actual answer", timestamp: 0 };', '    phase("model-before-first-delta");\n    yield { type: "text_delta", text: "Actual answer", timestamp: 0 };');
-          replace('    entered(); await gate;', '    phase("model-after-first-delta"); entered(); await gate; phase("model-gate-released");');
-          replace('  const base = await createHarness', '  phase("create-base");\n  const base = await createHarness');
-          replace('  let composition:', '  phase("base-created");\n  let composition:');
-          replace('    composition = await createDeepseekComposition', '    phase("create-composition");\n    composition = await createDeepseekComposition');
-          replace('    const service = composition.sessions, signal = controller.signal;', '    phase("composition-created");\n    const service = composition.sessions, signal = controller.signal;');
-          replace('    await service.call("session/prompt",', '    phase("session-created-prompt-start");\n    await service.call("session/prompt",');
-          replace('    await generating;', '    phase("prompt-returned-wait-model"); await generating; phase("model-entered-client-create");');
-          replace('    await client.refreshList();', '    phase("client-list-start"); await client.refreshList(); phase("client-list-returned");');
-          replace('    const stream = service.stream', '    phase("resident-running-asserted");\n    const stream = service.stream');
-          replace('    release();\n    // Wait', '    phase("running-notice-seen-release-model"); release();\n    // Wait');
-          replace('    await vi.waitFor(() => expect(resident.getSnapshot().running)', '    phase("finished-summary-seen-wait-client");\n    await vi.waitFor(() => expect(resident.getSnapshot().running)');
-          replace('  } finally {\n    release(); controller.abort(); await pump;\n    await client?.dispose(); await composition?.close(); await base.close();',
-            '  } catch (error) { phase("body-error " + String(error)); throw error; } finally {\n    phase("cleanup-pump"); release(); controller.abort(); await pump;\n    phase("cleanup-client"); await client?.dispose();\n    phase("cleanup-composition"); await composition?.close();\n    phase("cleanup-base"); await base.close(); phase("cleanup-files");');
-          replace('}, 25_000);', '  phase("test-finished");\n}, 25_000);');
-          replace('it("production event notifications', 'it.each(Array.from({ length: 30 }, (_, index) => index))("iteration %i: production event notifications');
-          await writeFile(file, text);
-          await writeFile('.ci/windows-timeout/instrumentation.json', JSON.stringify({
-            sourceSha: '6e81e2e976e678ab78f610ea3cd699d35d9e1986', originalSha256: createHash('sha256').update(original).digest('hex'),
-            instrumentedSha256: createHash('sha256').update(text).digest('hex'), sourceTreeDirtyForDiagnosis: true,
-            changed: '30 sequential independent fixture instances plus phase logging; original assertions, 25-second per-case deadline, model gate and cleanup ordering retained',
-          }, null, 2));
-          NODE
-      - name: Run focused and full diagnostic profiles and preserve actual exits
-        shell: bash
-        run: |
-          node --input-type=module <<'NODE'
-          import { spawnSync } from 'node:child_process';
-          import { writeFile } from 'node:fs/promises';
           import { gzipSync } from 'node:zlib';
-          const records = [];
-          for (const [profile, command] of [
-            ['focused', 'pnpm exec vitest run apps/web/src/deepseek/session-running-status.regressions.test.ts'],
-            ['full-suite', 'pnpm test'],
-          ]) {
-            const run = spawnSync(command, { shell: true, encoding: 'utf8', windowsHide: true, timeout: 20 * 60_000,
-              maxBuffer: 64 * 1024 * 1024, env: { ...process.env, OPENAI_API_KEY: '',
-                E2E_OBSERVATION_RUN_ID: `windows-status-diagnostic-${process.env.GITHUB_RUN_ID}-${profile}`,
-                E2E_OBSERVATION_EVIDENCE_DIR: '.ci/windows-timeout/observation-' + profile } });
-            const output = String(run.stdout ?? '') + '\n' + String(run.stderr ?? '');
-            await writeFile('.ci/windows-timeout/' + profile + '.log', output);
-            const lines = output.replace(/\x1b\[[0-9;]*m/g, '').split('\n');
-            const excerpts = [];
-            for (let i = 0; i < lines.length; i++) if (/WINDOWS_STATUS_PHASE|session-running-status.regressions.test.ts|FAIL |Test timed out|DataDirLeaseError|HARNESS_DATA_DIR_IN_USE/.test(lines[i]))
-              excerpts.push({ line: i + 1, text: lines.slice(Math.max(0, i - 1), Math.min(lines.length, i + 7)).join('\n') });
-            const record = { profile, command, exitCode: run.status, signal: run.signal, error: run.error?.message,
-              sourceSha: '6e81e2e976e678ab78f610ea3cd699d35d9e1986', sourceTreeDirtyForDiagnosis: true, excerpts,
-              limitation: 'Diagnostic collection, not an acceptance PASS; original assertions/deadline remain active.' };
-            records.push(record);
-            const data = gzipSync(Buffer.from(JSON.stringify(record))).toString('base64');
-            const total = Math.ceil(data.length / 3500);
-            if (total > 25) throw new Error('Diagnostic projection exceeds annotation budget');
-            for (let index = 0; index < total; index++) console.log('::notice title=Windows status diagnostic ' + profile + ' chunk::' +
-              JSON.stringify({ index, total, encoding: 'gzip+base64', data: data.slice(index * 3500, (index + 1) * 3500) }));
-            console.log(JSON.stringify({ profile, exitCode: run.status, signal: run.signal, diagnosticOnly: true }));
+          import { createHash } from 'node:crypto';
+          const bytes = await readFile('diagnostic/full-suite.log');
+          const lines = bytes.toString('utf8').replace(/\x1b\[[0-9;]*m/g, '').split('\n');
+          const original = JSON.parse(await readFile('diagnostic/result.json', 'utf8')).find(row => row.profile === 'full-suite');
+          const cases = new Map(); let current;
+          for (const line of lines) {
+            const match = /stderr \| .*session-running-status.regressions.test.ts > (.*)/.exec(line);
+            if (match) { current = match[1]; if (!cases.has(current)) cases.set(current, []); }
+            const phase = /WINDOWS_STATUS_PHASE (\d+) (.*)/.exec(line);
+            if (phase && current) cases.get(current).push({ atMs: Number(phase[1]), phase: phase[2] });
           }
-          await writeFile('.ci/windows-timeout/result.json', JSON.stringify(records, null, 2));
+          const failures = [];
+          for (let i = 0; i < lines.length; i++) if (/^ FAIL |Test timed out|body-error/.test(lines[i]))
+            failures.push({ line: i + 1, text: lines.slice(Math.max(0,i-1),Math.min(lines.length,i+15)).join('\n') });
+          const record = { originalRun: '38776733403', sourceSha: original.sourceSha, exitCode: original.exitCode,
+            signal: original.signal, sourceTreeDirtyForDiagnosis: true,
+            rawBytes: bytes.length, rawSha256: createHash('sha256').update(bytes).digest('hex'),
+            summary: lines.filter(line => /Test Files |Tests  |Duration |session-running-status.regressions.test.ts \(30 tests/.test(line)),
+            cases: [...cases].map(([name,phases]) => ({ name, elapsedMs: phases.length > 1 ? phases.at(-1).atMs-phases[0].atMs : null,
+              lastPhase: phases.at(-1), errors: phases.filter(p => p.phase.includes('error')) })),
+            failures, limitation: 'Existing instrumented Windows log projection only; no test rerun and no acceptance PASS.' };
+          await writeFile('diagnostic/bounded-full-receipt.json',JSON.stringify(record,null,2));
+          const data = gzipSync(Buffer.from(JSON.stringify(record))).toString('base64');
+          const total = Math.ceil(data.length/3500);
+          if (total > 8) throw new Error('Bounded receipt exceeds annotation budget');
+          for (let index = 0; index < total; index++) console.log('::notice title=Repeated Windows full receipt chunk::'+
+            JSON.stringify({index,total,encoding:'gzip+base64',data:data.slice(index*3500,(index+1)*3500)}));
           NODE
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: windows-status-diagnostics-${{ github.run_id }}
-          path: .ci/windows-timeout/
+          name: windows-status-bounded-receipt-${{ github.run_id }}
+          path: diagnostic/bounded-full-receipt.json
           if-no-files-found: error
