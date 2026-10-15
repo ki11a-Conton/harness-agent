@@ -178,6 +178,8 @@ export function createEventsService(host: RemoteEventHost) {
       generations.set(clientId, generation);
       const seen = new Map<string, string>();
       const summaries = new Map<string, string>();
+      const summaryController = new AbortController();
+      const summarySignal = AbortSignal.any([signal, summaryController.signal]);
       let summaryScan: Promise<void> | undefined;
       function enqueueSummary(event: string, args: readonly unknown[]) {
         if (generation.notices.length >= 256) throw new Error("Session summary notification queue overflow; reconnect for current state");
@@ -222,7 +224,7 @@ export function createEventsService(host: RemoteEventHost) {
               for (const session of (await host.harness.store.listSessions()).filter(session => session.status !== "failed")) {
                 if (!generation.active || signal.aborted) return;
                 let summary: unknown;
-                try { summary = await host.summary!(session.id, signal); }
+                try { summary = await host.summary!(session.id, summarySignal); }
                 catch (error) {
                   if (!generation.active || signal.aborted) return;
                   const current = await host.harness.store.getSession(session.id);
@@ -246,6 +248,10 @@ export function createEventsService(host: RemoteEventHost) {
         }
       } finally {
         generation.active = false;
+        summaryController.abort();
+        // Drain owned reads/writes before releasing the stream. In particular,
+        // Windows must not remove a state directory while metadata IO is live.
+        await summaryScan;
         generation.deliveries.clear();
         generation.notices.length = 0;
         generations.delete(clientId);

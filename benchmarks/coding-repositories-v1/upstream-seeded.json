@@ -1,0 +1,138 @@
+{
+  "version": "upstream-seeded-v1",
+  "scope": "Two supplemental seeded tasks on a second real repository/Python; not historical upstream defects, model success, or unseen benchmark evidence. Use the same EvalRunner adapter and paired protocol as the 24 Harness history tasks.",
+  "tasks": [
+    {
+      "id": "hermes-routing-01",
+      "category": "cross-file",
+      "request": "Provider routing must match actual domains and subdomains, never attacker-controlled URL paths or lookalike suffixes. Repair the seeded regression and run the existing tests without changing them.",
+      "kind": "seeded-defect-in-real-upstream-snapshot",
+      "language": "Python",
+      "project": "hermes-agent",
+      "source": {
+        "repository": "https://github.com/ki11a-Conton/HARNESS-SRC-FORK",
+        "snapshotSha": "1a46ea13de9a3f5e6987c5dd0319b2000fe49c92",
+        "subdirectory": "hermes-agent-main",
+        "identityCaveat": "Aggregate snapshot SHA, not Hermes official upstream SHA"
+      },
+      "seed": {
+        "path": "utils.py",
+        "before": "return hostname == domain or hostname.endswith(\".\" + domain)",
+        "after": "return domain in (base_url or \"\")",
+        "originalSha256": "3fb4dad7de1ba52dce672a4b05ff422effc266480e396c352bd07e874ddbf526",
+        "seededSha256": "3de58f7e56f5e156a0595c66cf5079496f2815f040b63ee7e72af07ac021815e"
+      },
+      "oracleFiles": [
+        {
+          "path": "tests/test_base_url_hostname.py",
+          "sha256": "79175911eb5fcfe9d49ffd9cc34e89b8bec1625911881990de99508e506cb359"
+        }
+      ],
+      "verification": {
+        "command": "bash",
+        "args": [
+          "scripts/run_tests.sh",
+          "tests/test_base_url_hostname.py",
+          "-j",
+          "1",
+          "--file-retries",
+          "0",
+          "-q"
+        ]
+      },
+      "bootstrap": {
+        "python": "3.12",
+        "requirements": [
+          "pytest==9.1.1",
+          "pyyaml==6.0.3",
+          "httpx==0.28.1",
+          "rich==14.3.3",
+          "python-dotenv==1.2.2",
+          "requests==2.33.0"
+        ],
+        "scope": "Selected utility-test dependency subset; not a full Hermes installation or suite claim"
+      },
+      "initialUserChanges": {
+        "trackedPath": "README.md",
+        "append": "\nLocal user note: preserve this working-tree change.\n",
+        "untrackedPath": "local-user-notes.txt",
+        "content": "Pre-existing local note; preserve exact bytes.\n"
+      },
+      "platform": "portable",
+      "qualification": {
+        "linux": "SEEDED_ASSERTION_RED_FIXED_GREEN",
+        "fixedPassed": 14,
+        "seededFailed": 5,
+        "userTrackedAndUntrackedGuards": "PASS",
+        "evidence": "docs/evidence/coding-evolution-20261015/followup/hermes-routing-01-fixed-test.log",
+        "realModelTaskCompletion": "NOT_PROVEN"
+      }
+    },
+    {
+      "id": "hermes-write-metadata-02",
+      "category": "recovery",
+      "request": "Atomic rewrites of existing user files must preserve requested permission metadata without weakening the no-preservation default or create_mode behavior. Repair the seeded regression and verify the existing tests.",
+      "kind": "seeded-defect-in-real-upstream-snapshot",
+      "language": "Python",
+      "project": "hermes-agent",
+      "source": {
+        "repository": "https://github.com/ki11a-Conton/HARNESS-SRC-FORK",
+        "snapshotSha": "1a46ea13de9a3f5e6987c5dd0319b2000fe49c92",
+        "subdirectory": "hermes-agent-main",
+        "identityCaveat": "Aggregate snapshot SHA, not Hermes official upstream SHA"
+      },
+      "seed": {
+        "path": "utils.py",
+        "before": "original_mode = _preserve_file_mode(path) if preserve_mode else None",
+        "after": "original_mode = None",
+        "originalSha256": "3fb4dad7de1ba52dce672a4b05ff422effc266480e396c352bd07e874ddbf526",
+        "seededSha256": "0cdf6ae783f1bb7bfeaec57ca467d309238d32eaa957318e4c2d4e8d483275dc"
+      },
+      "oracleFiles": [
+        {
+          "path": "tests/test_atomic_write_text_metadata.py",
+          "sha256": "3611a2570c4321e06672bd3a945934e37a1a29679e320ed3cb654ef6f1a32921"
+        }
+      ],
+      "verification": {
+        "command": "bash",
+        "args": [
+          "scripts/run_tests.sh",
+          "tests/test_atomic_write_text_metadata.py",
+          "-j",
+          "1",
+          "--file-retries",
+          "0",
+          "-q"
+        ]
+      },
+      "bootstrap": {
+        "python": "3.12",
+        "requirements": [
+          "pytest==9.1.1",
+          "pyyaml==6.0.3",
+          "httpx==0.28.1",
+          "rich==14.3.3",
+          "python-dotenv==1.2.2",
+          "requests==2.33.0"
+        ],
+        "scope": "Selected utility-test dependency subset; not a full Hermes installation or suite claim"
+      },
+      "initialUserChanges": {
+        "trackedPath": "README.md",
+        "append": "\nLocal user note: preserve this working-tree change.\n",
+        "untrackedPath": "local-user-notes.txt",
+        "content": "Pre-existing local note; preserve exact bytes.\n"
+      },
+      "platform": "POSIX permission bits; Windows not applicable",
+      "qualification": {
+        "linux": "SEEDED_ASSERTION_RED_FIXED_GREEN",
+        "fixedPassed": 11,
+        "seededFailed": 3,
+        "userTrackedAndUntrackedGuards": "PASS",
+        "evidence": "docs/evidence/coding-evolution-20261015/followup/hermes-write-metadata-02-fixed-test.log",
+        "realModelTaskCompletion": "NOT_PROVEN"
+      }
+    }
+  ]
+}

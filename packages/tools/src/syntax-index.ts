@@ -137,7 +137,7 @@ export async function buildSyntaxIndex(root: string, path = ".", signal?: AbortS
   const deadline = performance.now() + 10000;
   const visit = async (name: string, depth = 0): Promise<void> => {
     signal?.throwIfAborted();
-    if (result.files.length >= maxFiles || bytesTotal > 16 * 1024 * 1024 || tagsTotal > 100000 || entriesVisited++ >= 50000 || depth > 64 || performance.now() > deadline) { result.complete = false; return; }
+    if (result.files.length >= maxFiles || bytesTotal >= 16 * 1024 * 1024 || tagsTotal >= 100000 || entriesVisited++ >= 50000 || depth > 64 || performance.now() > deadline) { result.complete = false; return; }
     let stat;
     try { stat = await lstat(name); } catch { result.complete = false; return; }
     if (stat.isSymbolicLink() || ignored(name, stat.isDirectory())) return;
@@ -149,7 +149,7 @@ export async function buildSyntaxIndex(root: string, path = ".", signal?: AbortS
         const entries = (await readdir(name, { withFileTypes: true })).sort((a, b) => a.name.localeCompare(b.name, "en"));
         if (!samePath(await realpath(name), expectedPath(name))) { result.complete = false; return; }
         for (const entry of entries) {
-          if (result.files.length >= maxFiles || tagsTotal > 100000 || performance.now() > deadline) { result.complete = false; break; }
+          if (result.files.length >= maxFiles || tagsTotal >= 100000 || performance.now() > deadline) { result.complete = false; break; }
           if (!entry.isSymbolicLink() && !skipped.has(entry.name)) await visit(join(name, entry.name), depth + 1);
         }
       } catch { result.complete = false; }
@@ -160,9 +160,11 @@ export async function buildSyntaxIndex(root: string, path = ".", signal?: AbortS
     try {
       const bytes = await boundedRead(name, MAX_BYTES, expectedPath(name));
       if (!bytes || bytes.includes(0)) { result.skippedFiles++; result.complete = false; return; }
+      if (bytesTotal + bytes.length > 16 * 1024 * 1024) { result.skippedFiles++; result.complete = false; return; }
       bytesTotal += bytes.length;
       const parsed = await parseTags(bytes.toString("utf8"), language, signal);
       result.complete &&= parsed.complete;
+      if (tagsTotal + parsed.tags.length > 100000) { result.skippedFiles++; result.complete = false; return; }
       tagsTotal += parsed.tags.length;
       result.files.push({ file: slash(relative(scope.root, name)), sha256: hash(bytes), language, tags: parsed.tags });
     } catch (error) { if (signal?.aborted) throw error; result.skippedFiles++; result.complete = false; }

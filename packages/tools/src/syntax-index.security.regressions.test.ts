@@ -39,3 +39,15 @@ it("C5 an unreadable ignore file cannot silently broaden the index", async () =>
     const result = await buildSyntaxIndex(root); expect(result.files).toEqual([]); expect(result.complete).toBe(false);
   } finally { await rm(root, { recursive: true, force: true }); }
 });
+
+it("C5 the aggregate source budget cannot admit an extra full file at its exact boundary", async () => {
+  const root = await mkdtemp(join(tmpdir(), "syntax-byte-budget-"));
+  const content = "//" + "x".repeat(512 * 1024 - 3) + "\n";
+  try {
+    for (let index = 0; index < 33; index++) await writeFile(join(root, `source-${String(index).padStart(2, "0")}.ts`), content);
+    const result = await buildSyntaxIndex(root);
+    expect(result.complete).toBe(false);
+    expect(result.files.length * Buffer.byteLength(content)).toBeLessThanOrEqual(16 * 1024 * 1024);
+    expect(result.files.length).toBeGreaterThan(0);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});

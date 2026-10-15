@@ -529,3 +529,31 @@ it("approval waterfall stays live while a session summary is blocked on its owne
     expect(await readFile(join(stack.directory, "unblocked.txt"), "utf8")).toBe("approved bytes");
   } finally { release(); controller.abort(); await stream.return?.(); }
 });
+
+it("closing an event generation drains its in-flight summary metadata work", async () => {
+  const stack = await setup(), controller = new AbortController();
+  let entered!: () => void, release!: () => void;
+  const reading = new Promise<void>(done => { entered = done; });
+  const gate = new Promise<void>(done => { release = done; });
+  let finished = false;
+  const events = createEventsService({ harness: stack.harness, pollDelayMs: 1,
+    answerAsk: async () => { throw new Error("unused"); },
+    summary: async (_id, signal) => {
+      entered(); await gate;
+      // The actual metadata write represents an already-started IO operation;
+      // cancelling the notification does not prove that IO has settled.
+      expect(signal?.aborted).toBe(true);
+      await stack.service.metadata.update(stack.id, row => { row.title = "drained summary"; });
+      finished = true; return { sessionId: stack.id };
+    } });
+  const stream = events.stream("$events", {}, controller.signal)[Symbol.asyncIterator]();
+  await stream.next();
+  const next = stream.next();
+  try {
+    await reading; controller.abort();
+    let closed = false; const closing = next.then(() => { closed = true; });
+    await new Promise(done => setTimeout(done, 20)); expect(closed).toBe(false);
+    release(); await closing; expect(finished).toBe(true);
+    expect((await stack.service.metadata.read(stack.id)).title).toBe("drained summary");
+  } finally { release(); controller.abort(); await stream.return?.(); }
+});

@@ -1,0 +1,29 @@
+{
+  "task": "hermes-routing-01",
+  "catalogSha256": "0b41285e9ddb80bb77f6743e963aef4ad80965a324a00254b8ee25179de83fb3",
+  "source": {
+    "repository": "https://github.com/ki11a-Conton/HARNESS-SRC-FORK",
+    "snapshotSha": "1a46ea13de9a3f5e6987c5dd0319b2000fe49c92",
+    "subdirectory": "hermes-agent-main",
+    "identityCaveat": "Aggregate snapshot SHA, not Hermes official upstream SHA"
+  },
+  "revision": "seeded",
+  "preparedGitSha": "04f1af1eb6e2d35f403d69b0996139f870eb58a1",
+  "oracleFiles": [
+    {
+      "path": "tests/test_base_url_hostname.py",
+      "sha256": "79175911eb5fcfe9d49ffd9cc34e89b8bec1625911881990de99508e506cb359"
+    }
+  ],
+  "userGuards": [
+    {
+      "path": "README.md",
+      "sha256": "9b0c60405e5d28943b370a99770327aa04b3c68f1e798d770359e280fde819be"
+    },
+    {
+      "path": "local-user-notes.txt",
+      "sha256": "515afc16490c37f0850dae873b65952cd08cba758e9c6c23d9f66439e29c7f0e"
+    }
+  ],
+  "paidModelCalls": 0
+}

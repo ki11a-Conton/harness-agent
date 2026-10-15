@@ -1,0 +1,602 @@
+{
+  "sourceSha": "2403bac47c27d419ce1f3ee558fb9fc0d939fbe8",
+  "sourceClean": false,
+  "fixtureSha256": "13227b720af6ae51c877f5fae68b46975c3201572a868d342f78ec1fa6c80e73",
+  "paidModelCalls": 0,
+  "environment": {
+    "platform": "linux",
+    "release": "6.18.44",
+    "node": "v24.19.0",
+    "cpu": "AMD EPYC 9V74 80-Core Processor",
+    "logicalCpus": 3,
+    "totalMemoryBytes": 10452496384
+  },
+  "corpus": {
+    "files": 60,
+    "bytes": 4200,
+    "queries": 30
+  },
+  "coldMs": {
+    "lexical": 4.807261000000011,
+    "syntax": 119.001957,
+    "relevantMap": 31.89649799999998
+  },
+  "warmP95Ms": {
+    "lexical": 59.6836559999997,
+    "syntax": 37.67414999999983,
+    "relevantMap": 43.809266999999636
+  },
+  "processMemory": {
+    "rssBytes": 120344576,
+    "maxRssKiB": 139184
+  },
+  "families": [
+    {
+      "family": "typescript",
+      "queries": 10,
+      "lexicalGoldAndCaller": 10,
+      "syntaxGoldAndCaller": 10,
+      "exactDefinitions": 10,
+      "relevantRecallAt5": 1
+    },
+    {
+      "family": "python",
+      "queries": 10,
+      "lexicalGoldAndCaller": 0,
+      "syntaxGoldAndCaller": 10,
+      "exactDefinitions": 10,
+      "relevantRecallAt5": 1
+    },
+    {
+      "family": "rust-go",
+      "queries": 10,
+      "lexicalGoldAndCaller": 0,
+      "syntaxGoldAndCaller": 10,
+      "exactDefinitions": 10,
+      "relevantRecallAt5": 1
+    }
+  ],
+  "rows": [
+    {
+      "id": "typescript-01",
+      "family": "typescript",
+      "lexical": {
+        "ms": 3.7907419999999945,
+        "goldAndCallerFound": true
+      },
+      "syntax": {
+        "ms": 20.669386000000003,
+        "goldAndCallerFound": true,
+        "exactDefinitionFound": true
+      },
+      "relevantMap": {
+        "ms": 41.73043099999998,
+        "recallAt5": true,
+        "bytes": 3739
+      }
+    },
+    {
+      "id": "typescript-02",
+      "family": "typescript",
+      "lexical": {
+        "ms": 1.266764999999964,
+        "goldAndCallerFound": true
+      },
+      "syntax": {
+        "ms": 17.195565999999985,
+        "goldAndCallerFound": true,
+        "exactDefinitionFound": true
+      },
+      "relevantMap": {
+        "ms": 25.088737999999978,
+        "recallAt5": true,
+        "bytes": 3742
+      }
+    },
+    {
+      "id": "typescript-03",
+      "family": "typescript",
+      "lexical": {
+        "ms": 1.0603849999999966,
+        "goldAndCallerFound": true
+      },
+      "syntax": {
+        "ms": 21.476865999999973,
+        "goldAndCallerFound": true,
+        "exactDefinitionFound": true
+      },
+      "relevantMap": {
+        "ms": 26.09469100000001,
+        "recallAt5": true,
+        "bytes": 3778
+      }
+    },
+    {
+      "id": "typescript-04",
+      "family": "typescript",
+      "lexical": {
+        "ms": 0.8343649999999911,
+        "goldAndCallerFound": true
+      },
+      "syntax": {
+        "ms": 14.620480999999984,
+        "goldAndCallerFound": true,
+        "exactDefinitionFound": true
+      },
+      "relevantMap": {
+        "ms": 20.324202000000014,
+        "recallAt5": true,
+        "bytes": 3776
+      }
+    },
+    {
+      "id": "typescript-05",
+      "family": "typescript",
+      "lexical": {
+        "ms": 1.1410170000000335,
+        "goldAndCallerFound": true
+      },
+      "syntax": {
+        "ms": 23.075278999999966,
+        "goldAndCallerFound": true,
+        "exactDefinitionFound": true
+      },
+      "relevantMap": {
+        "ms": 14.230224999999962,
+        "recallAt5": true,
+        "bytes": 3755
+      }
+    },
+    {
+      "id": "typescript-06",
+      "family": "typescript",
+      "lexical": {
+        "ms": 0.5967669999999998,
+        "goldAndCallerFound": true
+      },
+      "syntax": {
+        "ms": 15.27957299999997,
+        "goldAndCallerFound": true,
+        "exactDefinitionFound": true
+      },
+      "relevantMap": {
+        "ms": 17.604280000000017,
+        "recallAt5": true,
+        "bytes": 3710
+      }
+    },
+    {
+      "id": "typescript-07",
+      "family": "typescript",
+      "lexical": {
+        "ms": 0.6310289999999554,
+        "goldAndCallerFound": true
+      },
+      "syntax": {
+        "ms": 16.331545000000006,
+        "goldAndCallerFound": true,
+        "exactDefinitionFound": true
+      },
+      "relevantMap": {
+        "ms": 12.138779,
+        "recallAt5": true,
+        "bytes": 3716
+      }
+    },
+    {
+      "id": "typescript-08",
+      "family": "typescript",
+      "lexical": {
+        "ms": 0.6801430000000437,
+        "goldAndCallerFound": true
+      },
+      "syntax": {
+        "ms": 13.093916000000036,
+        "goldAndCallerFound": true,
+        "exactDefinitionFound": true
+      },
+      "relevantMap": {
+        "ms": 17.76899800000001,
+        "recallAt5": true,
+        "bytes": 3754
+      }
+    },
+    {
+      "id": "typescript-09",
+      "family": "typescript",
+      "lexical": {
+        "ms": 0.5201620000000275,
+        "goldAndCallerFound": true
+      },
+      "syntax": {
+        "ms": 9.531577000000084,
+        "goldAndCallerFound": true,
+        "exactDefinitionFound": true
+      },
+      "relevantMap": {
+        "ms": 11.166616999999974,
+        "recallAt5": true,
+        "bytes": 3715
+      }
+    },
+    {
+      "id": "typescript-10",
+      "family": "typescript",
+      "lexical": {
+        "ms": 0.6776290000000245,
+        "goldAndCallerFound": true
+      },
+      "syntax": {
+        "ms": 10.604611999999975,
+        "goldAndCallerFound": true,
+        "exactDefinitionFound": true
+      },
+      "relevantMap": {
+        "ms": 14.93255099999999,
+        "recallAt5": true,
+        "bytes": 3734
+      }
+    },
+    {
+      "id": "python-01",
+      "family": "python",
+      "lexical": {
+        "ms": 49.10977200000002,
+        "goldAndCallerFound": false
+      },
+      "syntax": {
+        "ms": 15.80306100000007,
+        "goldAndCallerFound": true,
+        "exactDefinitionFound": true
+      },
+      "relevantMap": {
+        "ms": 11.555480999999986,
+        "recallAt5": true,
+        "bytes": 3252
+      }
+    },
+    {
+      "id": "python-02",
+      "family": "python",
+      "lexical": {
+        "ms": 39.24534300000005,
+        "goldAndCallerFound": false
+      },
+      "syntax": {
+        "ms": 19.042513999999983,
+        "goldAndCallerFound": true,
+        "exactDefinitionFound": true
+      },
+      "relevantMap": {
+        "ms": 14.20065999999997,
+        "recallAt5": true,
+        "bytes": 3252
+      }
+    },
+    {
+      "id": "python-03",
+      "family": "python",
+      "lexical": {
+        "ms": 38.19402100000002,
+        "goldAndCallerFound": false
+      },
+      "syntax": {
+        "ms": 15.173162999999931,
+        "goldAndCallerFound": true,
+        "exactDefinitionFound": true
+      },
+      "relevantMap": {
+        "ms": 16.892139000000043,
+        "recallAt5": true,
+        "bytes": 3262
+      }
+    },
+    {
+      "id": "python-04",
+      "family": "python",
+      "lexical": {
+        "ms": 38.1001,
+        "goldAndCallerFound": false
+      },
+      "syntax": {
+        "ms": 14.701634000000013,
+        "goldAndCallerFound": true,
+        "exactDefinitionFound": true
+      },
+      "relevantMap": {
+        "ms": 30.826789000000076,
+        "recallAt5": true,
+        "bytes": 3262
+      }
+    },
+    {
+      "id": "python-05",
+      "family": "python",
+      "lexical": {
+        "ms": 40.5496149999999,
+        "goldAndCallerFound": false
+      },
+      "syntax": {
+        "ms": 28.731828000000064,
+        "goldAndCallerFound": true,
+        "exactDefinitionFound": true
+      },
+      "relevantMap": {
+        "ms": 20.29223300000001,
+        "recallAt5": true,
+        "bytes": 3253
+      }
+    },
+    {
+      "id": "python-06",
+      "family": "python",
+      "lexical": {
+        "ms": 42.04627599999992,
+        "goldAndCallerFound": false
+      },
+      "syntax": {
+        "ms": 21.868224000000055,
+        "goldAndCallerFound": true,
+        "exactDefinitionFound": true
+      },
+      "relevantMap": {
+        "ms": 45.97683300000017,
+        "recallAt5": true,
+        "bytes": 3247
+      }
+    },
+    {
+      "id": "python-07",
+      "family": "python",
+      "lexical": {
+        "ms": 51.97295299999996,
+        "goldAndCallerFound": false
+      },
+      "syntax": {
+        "ms": 17.60624299999995,
+        "goldAndCallerFound": true,
+        "exactDefinitionFound": true
+      },
+      "relevantMap": {
+        "ms": 11.370613000000048,
+        "recallAt5": true,
+        "bytes": 3247
+      }
+    },
+    {
+      "id": "python-08",
+      "family": "python",
+      "lexical": {
+        "ms": 52.611969000000045,
+        "goldAndCallerFound": false
+      },
+      "syntax": {
+        "ms": 21.269919999999956,
+        "goldAndCallerFound": true,
+        "exactDefinitionFound": true
+      },
+      "relevantMap": {
+        "ms": 19.497603000000026,
+        "recallAt5": true,
+        "bytes": 3257
+      }
+    },
+    {
+      "id": "python-09",
+      "family": "python",
+      "lexical": {
+        "ms": 54.5642049999999,
+        "goldAndCallerFound": false
+      },
+      "syntax": {
+        "ms": 27.88860999999997,
+        "goldAndCallerFound": true,
+        "exactDefinitionFound": true
+      },
+      "relevantMap": {
+        "ms": 37.27477799999997,
+        "recallAt5": true,
+        "bytes": 3247
+      }
+    },
+    {
+      "id": "python-10",
+      "family": "python",
+      "lexical": {
+        "ms": 52.13311900000008,
+        "goldAndCallerFound": false
+      },
+      "syntax": {
+        "ms": 19.538600000000088,
+        "goldAndCallerFound": true,
+        "exactDefinitionFound": true
+      },
+      "relevantMap": {
+        "ms": 28.83218799999986,
+        "recallAt5": true,
+        "bytes": 3252
+      }
+    },
+    {
+      "id": "rust-go-01",
+      "family": "rust-go",
+      "lexical": {
+        "ms": 47.30454500000019,
+        "goldAndCallerFound": false
+      },
+      "syntax": {
+        "ms": 21.137766000000056,
+        "goldAndCallerFound": true,
+        "exactDefinitionFound": true
+      },
+      "relevantMap": {
+        "ms": 35.582623999999896,
+        "recallAt5": true,
+        "bytes": 3557
+      }
+    },
+    {
+      "id": "rust-go-02",
+      "family": "rust-go",
+      "lexical": {
+        "ms": 77.28699400000005,
+        "goldAndCallerFound": false
+      },
+      "syntax": {
+        "ms": 68.42553500000008,
+        "goldAndCallerFound": true,
+        "exactDefinitionFound": true
+      },
+      "relevantMap": {
+        "ms": 24.45026800000005,
+        "recallAt5": true,
+        "bytes": 3558
+      }
+    },
+    {
+      "id": "rust-go-03",
+      "family": "rust-go",
+      "lexical": {
+        "ms": 42.26282200000014,
+        "goldAndCallerFound": false
+      },
+      "syntax": {
+        "ms": 23.382261999999855,
+        "goldAndCallerFound": true,
+        "exactDefinitionFound": true
+      },
+      "relevantMap": {
+        "ms": 22.47237300000006,
+        "recallAt5": true,
+        "bytes": 3567
+      }
+    },
+    {
+      "id": "rust-go-04",
+      "family": "rust-go",
+      "lexical": {
+        "ms": 39.53438700000015,
+        "goldAndCallerFound": false
+      },
+      "syntax": {
+        "ms": 16.013167000000067,
+        "goldAndCallerFound": true,
+        "exactDefinitionFound": true
+      },
+      "relevantMap": {
+        "ms": 27.254135000000133,
+        "recallAt5": true,
+        "bytes": 3567
+      }
+    },
+    {
+      "id": "rust-go-05",
+      "family": "rust-go",
+      "lexical": {
+        "ms": 44.09139200000004,
+        "goldAndCallerFound": false
+      },
+      "syntax": {
+        "ms": 16.948853999999983,
+        "goldAndCallerFound": true,
+        "exactDefinitionFound": true
+      },
+      "relevantMap": {
+        "ms": 19.575804999999946,
+        "recallAt5": true,
+        "bytes": 3560
+      }
+    },
+    {
+      "id": "rust-go-06",
+      "family": "rust-go",
+      "lexical": {
+        "ms": 45.14109099999996,
+        "goldAndCallerFound": false
+      },
+      "syntax": {
+        "ms": 17.058529000000362,
+        "goldAndCallerFound": true,
+        "exactDefinitionFound": true
+      },
+      "relevantMap": {
+        "ms": 43.809266999999636,
+        "recallAt5": true,
+        "bytes": 3579
+      }
+    },
+    {
+      "id": "rust-go-07",
+      "family": "rust-go",
+      "lexical": {
+        "ms": 49.52851099999998,
+        "goldAndCallerFound": false
+      },
+      "syntax": {
+        "ms": 18.91574300000002,
+        "goldAndCallerFound": true,
+        "exactDefinitionFound": true
+      },
+      "relevantMap": {
+        "ms": 40.01062400000001,
+        "recallAt5": true,
+        "bytes": 3586
+      }
+    },
+    {
+      "id": "rust-go-08",
+      "family": "rust-go",
+      "lexical": {
+        "ms": 59.6836559999997,
+        "goldAndCallerFound": false
+      },
+      "syntax": {
+        "ms": 33.00322300000016,
+        "goldAndCallerFound": true,
+        "exactDefinitionFound": true
+      },
+      "relevantMap": {
+        "ms": 31.674614999999903,
+        "recallAt5": true,
+        "bytes": 3624
+      }
+    },
+    {
+      "id": "rust-go-09",
+      "family": "rust-go",
+      "lexical": {
+        "ms": 48.266031999999996,
+        "goldAndCallerFound": false
+      },
+      "syntax": {
+        "ms": 22.047743999999966,
+        "goldAndCallerFound": true,
+        "exactDefinitionFound": true
+      },
+      "relevantMap": {
+        "ms": 37.44079799999963,
+        "recallAt5": true,
+        "bytes": 3584
+      }
+    },
+    {
+      "id": "rust-go-10",
+      "family": "rust-go",
+      "lexical": {
+        "ms": 50.37625600000001,
+        "goldAndCallerFound": false
+      },
+      "syntax": {
+        "ms": 37.67414999999983,
+        "goldAndCallerFound": true,
+        "exactDefinitionFound": true
+      },
+      "relevantMap": {
+        "ms": 25.28827799999999,
+        "recallAt5": true,
+        "bytes": 3604
+      }
+    }
+  ],
+  "limits": "Hand-labelled retrieval corpus, not a multi-repository model-success benchmark. Cold means fresh in-process index caches, not cold OS disk caches. Shared cloud host; time/memory are descriptive, not an uncontended-hardware SLO. Existing lexical can also retrieve these identifiers; report both arms."
+}

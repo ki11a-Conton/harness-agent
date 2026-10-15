@@ -255,7 +255,7 @@ export async function buildPortable({ repo, out, version, sourceSha, offline = f
         void range; await copyExternal(dependency, resolved);
       }
       if (!Object.keys(metadata).some(key => /license/i.test(key))) throw new Error(`external license missing: ${name}`);
-      if (!(await filesIn(resolved)).some(path => /(?:^|\/)licen[sc]e(?:\.|$)/i.test(path))) {
+      if (!(await filesIn(resolved)).some(path => /(?:^|\/)licen[sc]e(?:[.-]|$)/i.test(path))) {
         await copyReviewedExternalNotice(name, metadata, snapshot, join(payload, 'node_modules', ...name.split('/')));
       }
     }
