@@ -53,7 +53,7 @@ jobs:
           NODE
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
-      - name: Add diagnostic phase logging without changing assertions or deadlines
+      - name: Repeat independent fixtures with diagnostic phase logging and original deadlines
         shell: bash
         run: |
           node --input-type=module <<'NODE'
@@ -80,11 +80,12 @@ jobs:
           replace('  } finally {\n    release(); controller.abort(); await pump;\n    await client?.dispose(); await composition?.close(); await base.close();',
             '  } catch (error) { phase("body-error " + String(error)); throw error; } finally {\n    phase("cleanup-pump"); release(); controller.abort(); await pump;\n    phase("cleanup-client"); await client?.dispose();\n    phase("cleanup-composition"); await composition?.close();\n    phase("cleanup-base"); await base.close(); phase("cleanup-files");');
           replace('}, 25_000);', '  phase("test-finished");\n}, 25_000);');
+          replace('it("production event notifications', 'it.each(Array.from({ length: 30 }, (_, index) => index))("iteration %i: production event notifications');
           await writeFile(file, text);
           await writeFile('.ci/windows-timeout/instrumentation.json', JSON.stringify({
             sourceSha: '6e81e2e976e678ab78f610ea3cd699d35d9e1986', originalSha256: createHash('sha256').update(original).digest('hex'),
             instrumentedSha256: createHash('sha256').update(text).digest('hex'), sourceTreeDirtyForDiagnosis: true,
-            changed: 'phase logging only; original assertions, 25-second deadline, model gate and cleanup ordering retained',
+            changed: '30 sequential independent fixture instances plus phase logging; original assertions, 25-second per-case deadline, model gate and cleanup ordering retained',
           }, null, 2));
           NODE
       - name: Run focused and full diagnostic profiles and preserve actual exits
@@ -115,7 +116,7 @@ jobs:
             records.push(record);
             const data = gzipSync(Buffer.from(JSON.stringify(record))).toString('base64');
             const total = Math.ceil(data.length / 3500);
-            if (total > 7) throw new Error('Diagnostic projection exceeds annotation budget');
+            if (total > 25) throw new Error('Diagnostic projection exceeds annotation budget');
             for (let index = 0; index < total; index++) console.log('::notice title=Windows status diagnostic ' + profile + ' chunk::' +
               JSON.stringify({ index, total, encoding: 'gzip+base64', data: data.slice(index * 3500, (index + 1) * 3500) }));
             console.log(JSON.stringify({ profile, exitCode: run.status, signal: run.signal, diagnosticOnly: true }));
