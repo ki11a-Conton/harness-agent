@@ -237,6 +237,13 @@ export function createEventsService(host: RemoteEventHost) {
                 if (summaries.get(session.id) !== encoded) {
                   summaries.set(session.id, encoded);
                   enqueueSummary("api-session/added", [summary]);
+                  // The client applies added summaries to its list/projections,
+                  // but resident Session.running is owned by the status topic.
+                  // A list loaded during generation otherwise stays busy after
+                  // the durable turn and conversation have already completed.
+                  if (typeof summary === "object" && summary !== null && "running" in summary && typeof summary.running === "boolean") {
+                    enqueueSummary("api-session/status", [session.id, summary.running]);
+                  }
                 }
               }
             })().then(() => { summaryScan = undefined; }, error => {
