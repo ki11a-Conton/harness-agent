@@ -573,9 +573,12 @@ function usageOf(value: unknown): JsonValue | undefined {
   const record = value as Record<string, unknown>;
   if (record.source !== undefined && record.source !== "measured") return undefined;
   const usage: Record<string, JsonValue> = {};
-  for (const key of ["inputTokens", "outputTokens"]) {
+  for (const key of ["inputTokens", "outputTokens", "cacheReadTokens", "cacheCreationTokens"]) {
     const count = record[key];
-    if (typeof count === "number" && Number.isSafeInteger(count) && count >= 0) usage[key] = count;
+    if (typeof count === "number" && Number.isSafeInteger(count) && count >= 0
+      && !(key.startsWith("cache") && record.cacheUsageIssue !== undefined)) {
+      usage[key === "cacheCreationTokens" ? "cacheWriteTokens" : key] = count;
+    }
   }
   return Object.keys(usage).length === 0 ? undefined : usage;
 }

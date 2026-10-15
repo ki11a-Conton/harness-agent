@@ -1,3 +1,4 @@
+import { parseOpenAIUsage } from "./openai-usage.js";
 import type {
   FinishReason,
   Message,
@@ -127,7 +128,7 @@ interface ChatChunk {
     };
     finish_reason?: string | null;
   }>;
-  usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
+  usage?: unknown;
 }
 
 /** OpenAI chat-message shape built from contracts Message. */
@@ -612,11 +613,17 @@ async function* streamChatCompletion(
     const events: ModelEvent[] = [];
     const choice = chunk.choices?.[0];
     if (chunk.usage) {
-      usage = {
-        inputTokens: chunk.usage.prompt_tokens ?? 0,
-        outputTokens: chunk.usage.completion_tokens ?? 0,
-      };
-      events.push({ type: "usage", usage, timestamp: Date.now() });
+      const snapshot = parseOpenAIUsage(chunk.usage);
+      if (snapshot !== undefined) {
+        usage = { ...usage, ...snapshot };
+        if (snapshot.cacheUsageIssue !== undefined) {
+          delete usage.cacheReadTokens;
+          delete usage.cacheUsageSource;
+        } else if (snapshot.cacheReadTokens !== undefined) {
+          delete usage.cacheUsageIssue;
+        }
+        events.push({ type: "usage", usage, timestamp: Date.now() });
+      }
     }
     if (normalReason !== undefined) {
       // The output boundary is immutable. Only a final usage snapshot may

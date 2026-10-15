@@ -1,6 +1,6 @@
 # Harness Agent 当前执行计划入口
 
-当前执行任务：[Coding agent 源码研究与后续优化规格](plan(20261015-104912).md)，合同：[CODING-AGENT-RESEARCH-20261015](tasks/CODING-AGENT-RESEARCH-20261015.md)。本轮研究、71 文件来源复核与生产路径离线观察已完成，见[源码比较报告](docs/coding-agent-research-20261015.md)；C1–C7 优化项仍待实施，没有修改默认策略、产品代码或发布版本。做什么、怎么做、怎么验收见上述规格。
+当前执行任务：[全面实施 coding agent 优化](plan(20261015-114843).md)，合同：[CODING-EVOLUTION-20261015](tasks/CODING-EVOLUTION-20261015.md)。按研究规格 C1–C7 实施缓存观测、评测基线、coding-v2、长任务记忆、跨语言检索、稳定前缀与工作流展示；实际进度和验收记录在上述规格。研究原件与冻结实验保留。
 
 上一任务（已完成）：[PR 集成与 Web 连接修复](plan(20261014-214704).md)，合同：[PR-INTEGRATION-WEB-20261014](tasks/PR-INTEGRATION-WEB-20261014.md)。关闭开放 PR 的实证缺陷后合并 main，并修复源码启动时右下角持续“重新连接中”；做什么、怎么做和怎么验收见该规格。已完成：产品源码 `3af15705` 全量 9,707 PASS / 15 SKIP，完整 CI 10 项成功，PR #3–#7 merged=true；见[审查与验收报告](docs/pr-integration-web-20261014.md)。旧发布记录保持原源码绑定。
 

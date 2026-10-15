@@ -38,11 +38,8 @@ export interface ModelRequest {
   maxTokens?: number;
 }
 
-export interface Usage {
-  inputTokens: number;
-  outputTokens: number;
-  estimatedCostUsd?: number;
-}
+/** Provider usage may be partial; missing counters are unknown, never zero. */
+export interface Usage extends UsageSnapshot {}
 
 /**
  * P0-9: a partial usage snapshot as delivered by usage events / a model's
@@ -67,6 +64,10 @@ export interface UsageSnapshot {
   cacheReadTokens?: number;
   /** P20-1: prompt-cache writes (tokens stored into cache). */
   cacheCreationTokens?: number;
+  /** Dialect of the measured cache subset; inputTokens already includes it. */
+  cacheUsageSource?: "openai-details" | "deepseek";
+  /** An invalid/conflicting observation is not a measured cache hit. */
+  cacheUsageIssue?: "invalid" | "conflict";
   estimatedCostUsd?: number;
   source?: "measured" | "estimated" | "unknown";
 }

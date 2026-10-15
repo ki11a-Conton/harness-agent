@@ -39,6 +39,14 @@ export interface RunMetrics {
   cache_tokens_read: number;
   /** P20-1: total prompt-cache writes across model.completed usage records. */
   cache_tokens_created: number;
+  /** Cache coverage is independent of total token usage; absent is unknown. */
+  cache_observed_calls?: number;
+  cache_unknown_calls?: number;
+  cache_conflicting_calls?: number;
+  cache_measured_prompt_tokens?: number;
+  cache_measured_read_tokens?: number;
+  /** Only observed prompts form the denominator; absent when it is zero. */
+  cache_hit_rate?: number;
   /** P20-1: model calls with a completed usage record (per-call identity;
    *  every record is attributable by its callId). */
   model_call_count: number;
@@ -188,16 +196,23 @@ export function computeMetrics(events: AgentEvent[]): RunMetrics {
   let cacheRead = 0;
   let cacheCreated = 0;
   let modelCallCount = 0;
+  let cacheMeasured = 0, cacheUnknown = 0, cacheConflicting = 0, measuredPrompt = 0, measuredRead = 0;
   for (const event of events) {
     if (event.type !== "model.completed") continue;
     modelCallCount += 1;
     const usage = usageOf(event.payload);
     if (usage === undefined) {
       usageUnknown += 1;
+      cacheUnknown += 1;
       continue;
     }
-    if (usage.source === "unknown") usageUnknown += 1;
-    const read = asNumber(usage.cacheReadTokens);
+    const validCount = (value: unknown): value is number => typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+    if (usage.source === "unknown" || !validCount(usage.inputTokens) || !validCount(usage.outputTokens)) usageUnknown += 1;
+    const read = usage.cacheUsageIssue === undefined ? asNumber(usage.cacheReadTokens) : undefined;
+    if (usage.cacheUsageIssue !== undefined) cacheConflicting += 1;
+    if (validCount(read) && validCount(usage.inputTokens) && read <= usage.inputTokens && usage.source !== "unknown") {
+      cacheMeasured += 1; measuredPrompt += usage.inputTokens; measuredRead += read;
+    } else cacheUnknown += 1;
     if (read !== undefined) cacheRead += read;
     const created = asNumber(usage.cacheCreationTokens);
     if (created !== undefined) cacheCreated += created;
@@ -218,6 +233,11 @@ export function computeMetrics(events: AgentEvent[]): RunMetrics {
     usage_unknown: usageUnknown,
     cache_tokens_read: cacheRead,
     cache_tokens_created: cacheCreated,
+    ...(modelCallCount > 0 ? {
+      cache_observed_calls: cacheMeasured, cache_unknown_calls: cacheUnknown, cache_conflicting_calls: cacheConflicting,
+      cache_measured_prompt_tokens: measuredPrompt, cache_measured_read_tokens: measuredRead,
+      ...(measuredPrompt > 0 ? { cache_hit_rate: measuredRead / measuredPrompt } : {}),
+    } : {}),
     model_call_count: modelCallCount,
     ...(count(events, "stall.progress_detected") > 0
       ? { stall_progress_cancellations: count(events, "stall.progress_detected") }

@@ -2258,9 +2258,9 @@ export function createFormalBudgetedProvider(opts: {
                 attemptLedgerIds.push(retryReservation.reservationId);
                 stats.logicalCalls += 1;
               } else if (ev.type === "usage") {
-                measuredUsage = Number.isSafeInteger(ev.usage.inputTokens) && ev.usage.inputTokens >= 0 && Number.isSafeInteger(ev.usage.outputTokens) && ev.usage.outputTokens >= 0;
-                inputTokens = ev.usage.inputTokens;
-                outputTokens = ev.usage.outputTokens;
+                measuredUsage = typeof ev.usage.inputTokens === "number" && Number.isSafeInteger(ev.usage.inputTokens) && ev.usage.inputTokens >= 0 && typeof ev.usage.outputTokens === "number" && Number.isSafeInteger(ev.usage.outputTokens) && ev.usage.outputTokens >= 0;
+                inputTokens = ev.usage.inputTokens ?? 0;
+                outputTokens = ev.usage.outputTokens ?? 0;
                 if (typeof ev.usage.estimatedCostUsd === "number" && ev.usage.estimatedCostUsd > 0) {
                   usdMicros = Math.round(ev.usage.estimatedCostUsd * 1_000_000);
                 }
@@ -2269,9 +2269,9 @@ export function createFormalBudgetedProvider(opts: {
                 completion = ev;
                 if (ev.result.usage) {
                   const usage = ev.result.usage;
-                  measuredUsage = Number.isSafeInteger(usage.inputTokens) && usage.inputTokens >= 0 && Number.isSafeInteger(usage.outputTokens) && usage.outputTokens >= 0;
-                  inputTokens = usage.inputTokens;
-                  outputTokens = usage.outputTokens;
+                  measuredUsage = typeof usage.inputTokens === "number" && Number.isSafeInteger(usage.inputTokens) && usage.inputTokens >= 0 && typeof usage.outputTokens === "number" && Number.isSafeInteger(usage.outputTokens) && usage.outputTokens >= 0;
+                  inputTokens = usage.inputTokens ?? 0;
+                  outputTokens = usage.outputTokens ?? 0;
                   if (typeof usage.estimatedCostUsd === "number" && usage.estimatedCostUsd > 0) usdMicros = Math.max(usdMicros, Math.round(usage.estimatedCostUsd * 1_000_000));
                 }
                 // R3/F4 — "how many tools the model DECLARED" is a DIAGNOSTIC. It is

@@ -17,6 +17,23 @@ function completed(
 }
 
 describe("P20-1 metrics usage accounting", () => {
+  it("C1 reports cache coverage separately from missing and zero observations", () => {
+    const m = computeMetrics([
+      completed({ inputTokens: 200, outputTokens: 20, cacheReadTokens: 128, source: "measured" }),
+      completed({ inputTokens: 200, outputTokens: 20, cacheReadTokens: 0, source: "measured" }),
+      completed({ inputTokens: 200, outputTokens: 20, source: "measured" }),
+      completed({ inputTokens: 200, outputTokens: 20, cacheUsageIssue: "conflict", source: "measured" }),
+    ]);
+    expect(m).toMatchObject({ tokens_input: 800, tokens_output: 80, cache_tokens_read: 128,
+      cache_observed_calls: 2, cache_unknown_calls: 2, cache_conflicting_calls: 1,
+      cache_measured_prompt_tokens: 400, cache_hit_rate: .32 });
+  });
+  it("C1 partial usage cannot certify a fully measured call or a cache hit rate", () => {
+    const m = computeMetrics([completed({ outputTokens: 20, source: "measured" })]);
+    expect(m.usage_unknown).toBe(1);
+    expect(m.cache_unknown_calls).toBe(1);
+    expect(m.cache_hit_rate).toBeUndefined();
+  });
   it("tokens come from the nested usage record; provenance rides along", () => {
     const m = computeMetrics([
       completed({ inputTokens: 100, outputTokens: 50, source: "measured" }),

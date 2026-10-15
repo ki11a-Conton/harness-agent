@@ -76,6 +76,14 @@ export function mergeUsage(current: UsageSnapshot | undefined, snap: UsageSnapsh
   // P20-1: cache accounting rides the same cumulative-snapshot contract.
   if (snap.cacheReadTokens !== undefined) next.cacheReadTokens = snap.cacheReadTokens;
   if (snap.cacheCreationTokens !== undefined) next.cacheCreationTokens = snap.cacheCreationTokens;
+  if (snap.cacheUsageSource !== undefined) next.cacheUsageSource = snap.cacheUsageSource;
+  if (snap.cacheUsageIssue !== undefined) {
+    next.cacheUsageIssue = snap.cacheUsageIssue;
+    delete next.cacheReadTokens;
+    delete next.cacheUsageSource;
+  } else if (snap.cacheReadTokens !== undefined) {
+    delete next.cacheUsageIssue;
+  }
   if (snap.estimatedCostUsd !== undefined) next.estimatedCostUsd = snap.estimatedCostUsd;
   // P20-1: provenance is sticky — a later snapshot may carry it explicitly;
   // once "measured" it stays measured (real data beats an earlier guess).
