@@ -103,6 +103,16 @@ export interface SessionProjectionInput {
   /** Read messages before events, so every visible message has its complete event prefix. */
   readonly messages: readonly Message[];
   readonly events: readonly AgentEvent[];
+  /** Declared baseline of the source-event coordinate space, defaulting to 0.
+   *
+   * A plain native journal is dense from 0 and needs nothing here. An owner-aware
+   * caller (deepseek/owners.ts projectEvent) instead receives the GLOBAL space
+   * that concatenates a session's retired owners' journals with the live one, so
+   * its first delivered sequence is the retired prefix length (> 0). Such a
+   * caller knows the baseline and declares it; every other caller keeps the
+   * strict 0-based contract unchanged. Contiguity itself is never relaxed: a gap
+   * is still rejected, so a genuinely dropped event stays detectable. */
+  readonly sourceBaseline?: number;
   readonly title?: string;
   /** Accepted prompt correlation, keyed by durable message id or inbox prompt id. */
   readonly requestIds?: Readonly<Record<string, string>>;
@@ -520,10 +530,22 @@ function planMessageAnchors(input: SessionProjectionInput): AnchorPlan {
 
 function validateSources(input: SessionProjectionInput): void {
   const eventIds = new Set<string>();
+  // The baseline is 0 unless the caller declares one. Only an owner-aware caller
+  // (deepseek/owners.ts projectEvent) legitimately starts above 0, because it
+  // hands over the global coordinate space that concatenates a session's retired
+  // owners' journals with the live one. Contiguity is still enforced relative to
+  // that baseline, so a gap - a genuinely dropped event - remains detectable.
+  const baseline = input.sourceBaseline ?? 0;
+  if (!Number.isSafeInteger(baseline) || baseline < 0 || Object.is(baseline, -0)) {
+    throw new Error(`source event baseline must be a non-negative safe integer, received ${baseline}`);
+  }
+  if (input.events.length > 0 && input.events[0]!.sequence !== baseline) {
+    throw new Error(`source event sequence is not contiguous: expected ${baseline}, received ${input.events[0]!.sequence}`);
+  }
   for (let index = 0; index < input.events.length; index++) {
     const event = input.events[index]!;
     if (event.sessionId !== input.session.id) throw new Error(`event ${event.id} belongs to another session`);
-    if (event.sequence !== index || Object.is(event.sequence, -0)) throw new Error(`source event sequence is not contiguous: expected ${index}, received ${event.sequence}`);
+    if (event.sequence !== baseline + index || Object.is(event.sequence, -0)) throw new Error(`source event sequence is not contiguous: expected ${baseline + index}, received ${event.sequence}`);
     if (eventIds.has(event.id)) throw new Error(`duplicate source event id ${event.id}`);
     eventIds.add(event.id);
     if (!Number.isSafeInteger(event.timestamp)) throw new Error(`event ${event.id} has an invalid timestamp`);
