@@ -1,0 +1,21 @@
+$ vitest run packages/core/src/runtime/race-split.test.ts packages/core/src/runtime/race-part0.test.ts packages/core/src/runtime/race-part1.test.ts packages/core/src/runtime/race-part2.test.ts packages/core/src/runtime/race-part3.test.ts packages/core/src/runtime/race-part4.test.ts packages/core/src/runtime/race-bisect.test.ts packages/core/src/runtime/race-bisect3.test.ts packages/core/src/runtime/race-bisect5.test.ts packages/core/src/runtime/session-race.test.ts packages/core/src/runtime/session-race2.test.ts
+
+ RUN  v4.1.11 /workspace/harness-agent-windows-resource-fix-20261015
+
+ ✓ packages/core/src/runtime/race-split.test.ts (5 tests) 43ms
+ ✓ packages/core/src/runtime/session-race2.test.ts (5 tests) 31ms
+ ✓ packages/core/src/runtime/session-race.test.ts (5 tests) 20ms
+ ✓ packages/core/src/runtime/race-part2.test.ts (1 test) 15ms
+ ✓ packages/core/src/runtime/race-part4.test.ts (1 test) 21ms
+ ✓ packages/core/src/runtime/race-part1.test.ts (1 test) 19ms
+ ✓ packages/core/src/runtime/race-part3.test.ts (1 test) 13ms
+ ✓ packages/core/src/runtime/race-part0.test.ts (1 test) 11ms
+ ✓ packages/core/src/runtime/race-bisect3.test.ts (1 test) 11ms
+ ✓ packages/core/src/runtime/race-bisect5.test.ts (1 test) 19ms
+ ✓ packages/core/src/runtime/race-bisect.test.ts (1 test) 5ms
+
+ Test Files  11 passed (11)
+      Tests  23 passed (23)
+   Start at  17:53:05
+   Duration  4.59s (transform 1.20s, setup 0ms, import 2.72s, tests 209ms, environment 1ms)
+

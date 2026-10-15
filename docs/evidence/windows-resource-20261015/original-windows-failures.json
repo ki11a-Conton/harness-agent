@@ -1,0 +1,55 @@
+{
+  "runId": "38777915854",
+  "sourceSha": "f2eb7f87f09558ce172c83086112ddccaf0b4059",
+  "records": [
+    {
+      "file": "original/formal/test.log",
+      "rawBytes": 305247,
+      "rawSha256": "27f74583a2313e5523d0287235c3593ad3a3ea7e12b47ae7b80ccfb01de13397",
+      "summary": [
+        " Test Files  1 failed | 582 passed (583)",
+        "      Tests  1 failed | 9805 passed | 9 skipped (9815)",
+        "   Duration  607.10s (transform 20.80s, setup 0ms, import 109.25s, tests 1606.65s, environment 71ms)"
+      ],
+      "excerpts": [
+        {
+          "line": 2679,
+          "text": "⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  apps/web/src/deepseek/activity.test.ts > stopping one session's actual schedules never disables a different session's timers\nError: ENOTEMPTY: directory not empty, rmdir 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\dsh-activity-real-yyTc9j\\state'\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n\n"
+        },
+        {
+          "line": 2680,
+          "text": "\n FAIL  apps/web/src/deepseek/activity.test.ts > stopping one session's actual schedules never disables a different session's timers\nError: ENOTEMPTY: directory not empty, rmdir 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\dsh-activity-real-yyTc9j\\state'\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n\n"
+        }
+      ]
+    },
+    {
+      "file": "original/windows/test-report.log",
+      "rawBytes": 303823,
+      "rawSha256": "d94b4f45a0c8b19d21ea4ec68351a4f9d0426238dca6ed1c4d2e090c4ae40024",
+      "summary": [
+        " Test Files  1 failed | 581 passed | 1 skipped (583)",
+        "      Tests  1 failed | 9803 passed | 11 skipped (9815)",
+        "   Duration  532.81s (transform 26.82s, setup 0ms, import 157.96s, tests 1276.25s, environment 127ms)"
+      ],
+      "excerpts": [
+        {
+          "line": 2630,
+          "text": "⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  apps/web/src/deepseek/composition.integration.test.ts > configured model window and output limit affect the actual owner and provider requests\nDataDirLeaseError: HARNESS_DATA_DIR_IN_USE: \"C:\\\\Users\\\\runneradmin\\\\AppData\\\\Local\\\\Temp\\\\dsh-composition-544ove\\\\data\\\\deepseek\\\\owners\\\\ad5efce42ca230c9c6a23276bd8069c95559566e93675c9a92cae4f572759761\": another local CLI/Web host or service already owns the directory's fixed lock port (127.0.0.1:49666). Close the owning host or choose a different HARNESS_DATA_DIR. No random port fallback is allowed. This lease requires all writers to share one local network namespace.\n ❯ acquireDataDirLease apps/cli/src/data-dir-lease.ts:83:28\n     81|           peer.once(\"error\", (failure: NodeJS.ErrnoException) => { cle…\n     82|         });\n     83|         if (!absent) throw new DataDirLeaseError(\"HARNESS_DATA_DIR_IN_…\n       |                            ^\n     84|       }\n     85|     }\n ❯ apps/web/src/deepseek/owners.ts:320:21\n ❯ openOwner apps/web/src/deepseek/owners.ts:344:18\n ❯ Object.createSession apps/web/src/deepseek/owners.ts:388:88\n ❯ apps/web/src/deepseek/composition.integration.test.ts:31:21\n\nCaused by: DataDirLeaseError: HARNESS_DATA_DIR_LEASE_FAILED: \"C:\\\\Users\\\\runneradmin\\\\AppData\\\\Local\\\\Temp\\\\dsh-composition-544ove\\\\data\\\\deepseek\\\\owners\\\\ad5efce42ca230c9c6a23276bd8069c95559566e93675c9a92cae4f572759761\": the local directory ownership listener could not start (127.0.0.1:49666). Close the owning host or choose a different HARNESS_DATA_DIR. No random port fallback is allowed. This lease requires all writers to share one local network namespace.\n ❯ Server.failed apps/cli/src/data-dir-lease.ts:54:14\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\nSerialized Error: { code: 'HARNESS_DATA_DIR_LEASE_FAILED' }\nCaused by: Error: listen EACCES: permission denied 127.0.0.1:49666\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\nSerialized Error: { code: 'EACCES', errno: -4092, syscall: 'listen', address: '127.0.0.1', port: 49666 }\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n\n Test Files  1 failed | 581 passed | 1 skipped (583)\n      Tests  1 failed | 9803 passed | 11 skipped (9815)\n   Start at  17:32:22\n   Duration  532.81s (transform 26.82s, setup 0ms, import 157.96s, tests 1276.25s, environment 127ms)\n"
+        },
+        {
+          "line": 2631,
+          "text": "\n FAIL  apps/web/src/deepseek/composition.integration.test.ts > configured model window and output limit affect the actual owner and provider requests\nDataDirLeaseError: HARNESS_DATA_DIR_IN_USE: \"C:\\\\Users\\\\runneradmin\\\\AppData\\\\Local\\\\Temp\\\\dsh-composition-544ove\\\\data\\\\deepseek\\\\owners\\\\ad5efce42ca230c9c6a23276bd8069c95559566e93675c9a92cae4f572759761\": another local CLI/Web host or service already owns the directory's fixed lock port (127.0.0.1:49666). Close the owning host or choose a different HARNESS_DATA_DIR. No random port fallback is allowed. This lease requires all writers to share one local network namespace.\n ❯ acquireDataDirLease apps/cli/src/data-dir-lease.ts:83:28\n     81|           peer.once(\"error\", (failure: NodeJS.ErrnoException) => { cle…\n     82|         });\n     83|         if (!absent) throw new DataDirLeaseError(\"HARNESS_DATA_DIR_IN_…\n       |                            ^\n     84|       }\n     85|     }\n ❯ apps/web/src/deepseek/owners.ts:320:21\n ❯ openOwner apps/web/src/deepseek/owners.ts:344:18\n ❯ Object.createSession apps/web/src/deepseek/owners.ts:388:88\n ❯ apps/web/src/deepseek/composition.integration.test.ts:31:21\n\nCaused by: DataDirLeaseError: HARNESS_DATA_DIR_LEASE_FAILED: \"C:\\\\Users\\\\runneradmin\\\\AppData\\\\Local\\\\Temp\\\\dsh-composition-544ove\\\\data\\\\deepseek\\\\owners\\\\ad5efce42ca230c9c6a23276bd8069c95559566e93675c9a92cae4f572759761\": the local directory ownership listener could not start (127.0.0.1:49666). Close the owning host or choose a different HARNESS_DATA_DIR. No random port fallback is allowed. This lease requires all writers to share one local network namespace.\n ❯ Server.failed apps/cli/src/data-dir-lease.ts:54:14\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\nSerialized Error: { code: 'HARNESS_DATA_DIR_LEASE_FAILED' }\nCaused by: Error: listen EACCES: permission denied 127.0.0.1:49666\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\nSerialized Error: { code: 'EACCES', errno: -4092, syscall: 'listen', address: '127.0.0.1', port: 49666 }\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n\n Test Files  1 failed | 581 passed | 1 skipped (583)\n      Tests  1 failed | 9803 passed | 11 skipped (9815)\n   Start at  17:32:22\n   Duration  532.81s (transform 26.82s, setup 0ms, import 157.96s, tests 1276.25s, environment 127ms)\n\n[observation] run e4-r24-windows-latest-38777915854: committed 7 row(s), dropped 0 candidate(s)"
+        },
+        {
+          "line": 2635,
+          "text": "     81|           peer.once(\"error\", (failure: NodeJS.ErrnoException) => { cle…\n     82|         });\n     83|         if (!absent) throw new DataDirLeaseError(\"HARNESS_DATA_DIR_IN_…\n       |                            ^\n     84|       }\n     85|     }\n ❯ apps/web/src/deepseek/owners.ts:320:21\n ❯ openOwner apps/web/src/deepseek/owners.ts:344:18\n ❯ Object.createSession apps/web/src/deepseek/owners.ts:388:88\n ❯ apps/web/src/deepseek/composition.integration.test.ts:31:21\n\nCaused by: DataDirLeaseError: HARNESS_DATA_DIR_LEASE_FAILED: \"C:\\\\Users\\\\runneradmin\\\\AppData\\\\Local\\\\Temp\\\\dsh-composition-544ove\\\\data\\\\deepseek\\\\owners\\\\ad5efce42ca230c9c6a23276bd8069c95559566e93675c9a92cae4f572759761\": the local directory ownership listener could not start (127.0.0.1:49666). Close the owning host or choose a different HARNESS_DATA_DIR. No random port fallback is allowed. This lease requires all writers to share one local network namespace.\n ❯ Server.failed apps/cli/src/data-dir-lease.ts:54:14\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\nSerialized Error: { code: 'HARNESS_DATA_DIR_LEASE_FAILED' }\nCaused by: Error: listen EACCES: permission denied 127.0.0.1:49666\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\nSerialized Error: { code: 'EACCES', errno: -4092, syscall: 'listen', address: '127.0.0.1', port: 49666 }\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n\n Test Files  1 failed | 581 passed | 1 skipped (583)\n      Tests  1 failed | 9803 passed | 11 skipped (9815)\n   Start at  17:32:22\n   Duration  532.81s (transform 26.82s, setup 0ms, import 157.96s, tests 1276.25s, environment 127ms)\n\n[observation] run e4-r24-windows-latest-38777915854: committed 7 row(s), dropped 0 candidate(s)\n[ELIFECYCLE] Test failed. See above for more details.\n"
+        },
+        {
+          "line": 2644,
+          "text": " ❯ apps/web/src/deepseek/composition.integration.test.ts:31:21\n\nCaused by: DataDirLeaseError: HARNESS_DATA_DIR_LEASE_FAILED: \"C:\\\\Users\\\\runneradmin\\\\AppData\\\\Local\\\\Temp\\\\dsh-composition-544ove\\\\data\\\\deepseek\\\\owners\\\\ad5efce42ca230c9c6a23276bd8069c95559566e93675c9a92cae4f572759761\": the local directory ownership listener could not start (127.0.0.1:49666). Close the owning host or choose a different HARNESS_DATA_DIR. No random port fallback is allowed. This lease requires all writers to share one local network namespace.\n ❯ Server.failed apps/cli/src/data-dir-lease.ts:54:14\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\nSerialized Error: { code: 'HARNESS_DATA_DIR_LEASE_FAILED' }\nCaused by: Error: listen EACCES: permission denied 127.0.0.1:49666\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\nSerialized Error: { code: 'EACCES', errno: -4092, syscall: 'listen', address: '127.0.0.1', port: 49666 }\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n\n Test Files  1 failed | 581 passed | 1 skipped (583)\n      Tests  1 failed | 9803 passed | 11 skipped (9815)\n   Start at  17:32:22\n   Duration  532.81s (transform 26.82s, setup 0ms, import 157.96s, tests 1276.25s, environment 127ms)\n\n[observation] run e4-r24-windows-latest-38777915854: committed 7 row(s), dropped 0 candidate(s)\n[ELIFECYCLE] Test failed. See above for more details.\n"
+        }
+      ]
+    }
+  ],
+  "limitation": "Bounded projections of existing original Windows test logs. No rerun or acceptance claim."
+}

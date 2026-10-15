@@ -727,6 +727,10 @@ export class DefaultSessionActor implements SessionActor {
    *  settle-triggered drain when `await this.runTurn(...)` is in a `while`
    *  loop inside the same drain. */
   private _draining = false;
+  /** A background promotion may still own store IO while the actor is only
+   * starting (or discovering recovery). Shutdown must drain it before the
+   * host releases stores, directory leases or temporary resources. */
+  private _drainSettled: Promise<void> | undefined;
   /** New admitted work or a successful terminal ACK requests this wake.
    * Settle/recovery failures do not set it, so a failed promotion cannot
    * create an unbounded loop. */
@@ -1505,6 +1509,7 @@ export class DefaultSessionActor implements SessionActor {
         ),
       });
     }
+    await this._drainSettled;
     await Promise.allSettled([...this.terminalAcknowledgements, ...(this.cancellingWait ? [this.cancellingWait] : [])]);
     this.resourceScope.release();
     this.deps.onClosed?.(this.sessionId);
@@ -1673,10 +1678,15 @@ export class DefaultSessionActor implements SessionActor {
     if (this._draining) return;
     this._draining = true;
     this._followupWakeRequested = false;
+    let settleDrain!: () => void;
+    const drained = new Promise<void>(resolve => { settleDrain = resolve; });
+    this._drainSettled = drained;
     try {
       await this.drainFollowupsInner(queue);
     } finally {
       this._draining = false;
+      if (this._drainSettled === drained) this._drainSettled = undefined;
+      settleDrain();
       if (this._followupWakeRequested && !this.closed && this.state.kind === "idle") {
         void this.drainFollowups();
       }
@@ -1712,6 +1722,8 @@ export class DefaultSessionActor implements SessionActor {
         return; // head unresolved or the queue is frozen at a dead-letter
       }
     }
+    // close may have revoked ownership during recovery/discovery IO.
+    if (this.closed) return;
     // P38-1 (INV-P38-001): RESERVE the actor slot BEFORE the awaited dequeue.
     // A concurrent startTurn will see "starting" and be refused — no
     // reservation overwrite.
@@ -1763,6 +1775,10 @@ export class DefaultSessionActor implements SessionActor {
         return;
       }
       reservedId = entry.id;
+      if (this.closed || controller.signal.aborted) {
+        await failPromotion(entry.id, "followup promotion cancelled during dequeue");
+        return;
+      }
 
       let turn: Turn;
       try {

@@ -1,0 +1,90 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-windows-resource-fix-20261015
+
+[degraded] session session_b9578138-6866-4e0f-b927-c27e8c1bc7d3 durable followup consume failed for fup-1 (prompt remains bound to turn turn_ac1631f4-f3e4-47f3-99a7-4990edd85d35): durable ack down
+[degraded] session session_459d1d31-2b8e-469b-a5d8-548370dc6eb7 durable followup bind failed for fup-1 (created turn turn_c0f69e6a-9815-4399-86d8-c4d4e4a370a1 will not execute): bind down
+[degraded] inbox.promotion-identity-missing: session session_07b5289a-950f-4a72-b97f-ee5eb1c03921 prompt prompt_73f26829-2141-4e2c-907d-22081293830d is promoted but has no promotedTurnId — recovery-required, not replayed
+[degraded] session session_893e16a1-8314-4a8c-92dd-88f88d4154aa failed to persist turn turn_f50f6df0-2ce2-4df1-ab7d-16d6641287b8 as cancelled: P38.2-9 simulated updateTurn failure
+[degraded] session session_ebc426b7-f087-4f6b-879b-f34555931ae4 failed to persist turn turn_45066a18-f882-4743-8f50-df5448cf5427 as cancelled: P38.2-9 simulated updateTurn failure
+[degraded] session session_ebc426b7-f087-4f6b-879b-f34555931ae4 failed to emit turn.cancelled for turn_45066a18-f882-4743-8f50-df5448cf5427: P38.2-9 simulated emit failure
+[degraded] session session_b1793cae-04e2-469c-a9ee-d99510494808 failed to persist turn turn_a5b090b0-da26-468b-8861-c4300203f92a as cancelled: P38.2-9 simulated updateTurn failure
+[degraded] session session_57197150-df6a-48ba-83c6-c8374768e2b9 failed to persist turn turn_f36a995f-f826-4f37-99d1-4e7ead584a33 as cancelled: P38.3-8 simulated updateTurn failure
+ ✓ packages/core/src/runtime/session-actor.test.ts (69 tests) 95ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+stderr | apps/web/src/deepseek/activity.test.ts > an uncertain admission is retained as unresolved and never silently retried or shown as delivered
+Web scheduled task delivery failed schedule-9158068e-d455-41b1-acb2-23aa18147855 Lost admission acknowledgement
+
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for precise-child-job/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for timer/actual-timer-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ apps/web/src/deepseek/activity.test.ts (26 tests) 4029ms
+   ✓ the real wall-clock timer durably admits one reminder and the actual actor executes it  1058ms
+   ✓ a replaced Web draft schedules through its native model context and the real timer returns to the stable owner's inbox  2069ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for gateway/fresh-coding — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for local-coding/selected-coding — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for memory-only/memory-only-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for review/model-a — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for review/model-b — using conservative fallback 32000
+ ✓ apps/web/src/deepseek/composition.integration.test.ts (9 tests) 1030ms
+ ✓ packages/core/src/runtime/followup-recovery.test.ts (7 tests) 27ms
+[degraded] session session_76f6f1a9-9ec3-4187-8bf5-33475d0a1400 durable followup consume failed for fup-1 (prompt remains bound to turn turn_4a0e3ee1-c4d8-4825-9881-343121919420): injected consume failure
+[degraded] session session_f548a8e2-39fe-4823-a758-0b17aa283979 durable followup bind failed for fup-1 (created turn turn_ab45762f-dcab-499d-ad5f-2ecacb183179 will not execute): injected bind failure
+ ✓ packages/core/src/runtime/followup-crash-matrix.test.ts (9 tests) 22ms
+ ✓ packages/core/src/runtime/gen1-followup-wakeup.regressions.test.ts (8 tests) 32ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ apps/web/src/deepseek/session-running-status.regressions.test.ts (1 test) 267ms
+ ✓ packages/core/src/runtime/session-close-drain.regressions.test.ts (4 tests) 12ms
+ ✓ apps/cli/src/windows-reserved-lease.regressions.test.ts (2 tests) 27ms
+
+ Test Files  9 passed (9)
+      Tests  135 passed (135)
+   Start at  17:51:46
+   Duration  12.38s (transform 2.89s, setup 0ms, import 5.55s, tests 5.54s, environment 1ms)
+

@@ -1,0 +1,39 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-windows-resource-fix-20261015
+
+ ❯ packages/core/src/runtime/session-close-drain.regressions.test.ts (4 tests | 4 failed) 25ms
+   × close retains its resources until the in-flight followup scan finishes 20ms
+   × close retains its resources until the in-flight followup dequeue finishes 2ms
+   × close retains its resources until the in-flight followup start finishes 1ms
+   × close retains its resources until the in-flight followup bind finishes 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/core/src/runtime/session-close-drain.regressions.test.ts > close retains its resources until the in-flight followup scan finishes
+ FAIL  packages/core/src/runtime/session-close-drain.regressions.test.ts > close retains its resources until the in-flight followup dequeue finishes
+ FAIL  packages/core/src/runtime/session-close-drain.regressions.test.ts > close retains its resources until the in-flight followup start finishes
+ FAIL  packages/core/src/runtime/session-close-drain.regressions.test.ts > close retains its resources until the in-flight followup bind finishes
+AssertionError: close returned while owned promotion IO was still blocked: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ packages/core/src/runtime/session-close-drain.regressions.test.ts:67:82
+     65|     // close continuation. The held operation cannot finish before rel…
+     66|     await immediate();
+     67|     expect(settled, "close returned while owned promotion IO was still…
+       |                                                                                  ^
+     68|     expect(resourcesReleased).toBe(false);
+     69|     release.open(); await closing;
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed (4)
+   Start at  17:53:39
+   Duration  915ms (transform 594ms, setup 0ms, import 754ms, tests 25ms, environment 0ms)
+

@@ -21,7 +21,9 @@ it("configured model window and output limit affect the actual owner and provide
   });
   await new Promise<void>(done => server.listen(0, "127.0.0.1", done));
   cleanup.push(() => new Promise<void>(done => server.close(() => done())));
-  const stack = await fixture();
+  // Model request limits do not depend on persistence. Cover the supported
+  // memory host here; durable owner/lease and restart coverage lives below.
+  const stack = await fixture(undefined, { durableStorage: false });
   await stack.composition.catalog.call("credentials/set", { ref: "LIMITS_FIXTURE", value: "local-limits-fixture" }, signal());
   await stack.composition.catalog.call("settings/update", { ns: "llm-pi-ai", patch: { providers: { limits: {
     api: "openai-completions", baseURL: `http://127.0.0.1:${(server.address() as { port: number }).port}/v1`, apiKeyEnv: "LIMITS_FIXTURE",
