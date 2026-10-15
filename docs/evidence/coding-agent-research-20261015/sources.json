@@ -1,0 +1,611 @@
+{
+  "schemaVersion": 1,
+  "scope": "Selected prompt, composition, context, memory, retrieval, provider and verification paths; not an exhaustive audit of every file in these repositories.",
+  "repositories": [
+    {
+      "id": "harness",
+      "checkoutDirectory": "harness-agent-coding-research-20261015",
+      "url": "https://github.com/ki11a-Conton/harness-agent",
+      "revision": "2a141309f01acae3707060faf1fab8aa247ed31d",
+      "provenance": "project baseline"
+    },
+    {
+      "id": "collection",
+      "checkoutDirectory": "HARNESS-SRC-FORK",
+      "url": "https://github.com/ki11a-Conton/HARNESS-SRC-FORK",
+      "revision": "1a46ea13de9a3f5e6987c5dd0319b2000fe49c92",
+      "provenance": "aggregated snapshots; not individual upstream commit identities"
+    },
+    {
+      "id": "deepseek",
+      "checkoutDirectory": "deepseek-harness",
+      "url": "https://github.com/deepseek-ai/deepseek-harness",
+      "revision": "5badb15009ae1756c3afe0ae0cef1faafc290ccc",
+      "provenance": "upstream checkout"
+    },
+    {
+      "id": "zcode",
+      "checkoutDirectory": "zcode-source-20261015",
+      "url": "https://github.com/zai-org/ZCode",
+      "revision": "aac4755666d09fdcd70272fcf063c077a639015f",
+      "provenance": "upstream checkout; v3.15.1 in package.json"
+    },
+    {
+      "id": "aider",
+      "checkoutDirectory": "aider-source-20261015",
+      "url": "https://github.com/Aider-AI/aider",
+      "revision": "5dc9490bb35f9729ef2c95d00a19ccd30c26339c",
+      "provenance": "supplementary retrieval/editing comparison"
+    }
+  ],
+  "files": [
+    {
+      "id": "H01",
+      "repository": "harness",
+      "path": "packages/agents/src/coding-prompt.ts",
+      "bytes": 7657,
+      "sha256": "6d1b194e5e71a4b2724697dbd7fa661d94708574f9396aa02f52de27a8284c43",
+      "url": "https://github.com/ki11a-Conton/harness-agent/blob/2a141309f01acae3707060faf1fab8aa247ed31d/packages/agents/src/coding-prompt.ts"
+    },
+    {
+      "id": "H02",
+      "repository": "harness",
+      "path": "packages/harness/src/coding-prompt-policy.ts",
+      "bytes": 1402,
+      "sha256": "9183b8ba6df45fcf4126cf7482341684c0b5858cdd3955cec3da85803ed1c9aa",
+      "url": "https://github.com/ki11a-Conton/harness-agent/blob/2a141309f01acae3707060faf1fab8aa247ed31d/packages/harness/src/coding-prompt-policy.ts"
+    },
+    {
+      "id": "H03",
+      "repository": "harness",
+      "path": "packages/harness/src/create-harness.ts",
+      "bytes": 43504,
+      "sha256": "ddb2f54816625b7fe3c13b24261918f66e6ff45dce266b55f53200f17d861c30",
+      "url": "https://github.com/ki11a-Conton/harness-agent/blob/2a141309f01acae3707060faf1fab8aa247ed31d/packages/harness/src/create-harness.ts"
+    },
+    {
+      "id": "H04",
+      "repository": "harness",
+      "path": "packages/harness/src/tool-names.ts",
+      "bytes": 842,
+      "sha256": "a826ddf9513aff60df2b8d451fce9ca45ca41c4ae73a5cf73a0858a1673d7e5d",
+      "url": "https://github.com/ki11a-Conton/harness-agent/blob/2a141309f01acae3707060faf1fab8aa247ed31d/packages/harness/src/tool-names.ts"
+    },
+    {
+      "id": "H05",
+      "repository": "harness",
+      "path": "packages/harness/src/profiles.ts",
+      "bytes": 5257,
+      "sha256": "8dc5751d7d576b4a69603270a76f59e01639262b578789f8e0a1ace7635dae29",
+      "url": "https://github.com/ki11a-Conton/harness-agent/blob/2a141309f01acae3707060faf1fab8aa247ed31d/packages/harness/src/profiles.ts"
+    },
+    {
+      "id": "H06",
+      "repository": "harness",
+      "path": "packages/harness/src/compose/compose-tools.ts",
+      "bytes": 4804,
+      "sha256": "09d959256d953f3bae45764cfdd6c402f964979887d490e11d5ab092c02fce7f",
+      "url": "https://github.com/ki11a-Conton/harness-agent/blob/2a141309f01acae3707060faf1fab8aa247ed31d/packages/harness/src/compose/compose-tools.ts"
+    },
+    {
+      "id": "H07",
+      "repository": "harness",
+      "path": "packages/harness/src/compose/compose-context.ts",
+      "bytes": 6695,
+      "sha256": "4cfd5671140bb1301e533a527bf42ad4d07ee138c69ac676b62bc9e4d41046b2",
+      "url": "https://github.com/ki11a-Conton/harness-agent/blob/2a141309f01acae3707060faf1fab8aa247ed31d/packages/harness/src/compose/compose-context.ts"
+    },
+    {
+      "id": "H08",
+      "repository": "harness",
+      "path": "packages/context/src/compaction.ts",
+      "bytes": 17916,
+      "sha256": "99f85d898514c495be9cd2c2414333c191d4c715cd845f4c32fd0c0446d3c186",
+      "url": "https://github.com/ki11a-Conton/harness-agent/blob/2a141309f01acae3707060faf1fab8aa247ed31d/packages/context/src/compaction.ts"
+    },
+    {
+      "id": "H09",
+      "repository": "harness",
+      "path": "packages/context/src/pipeline.ts",
+      "bytes": 25046,
+      "sha256": "ba80475151326f65eb23d507c9c997e738daa972d570c8c5c5aa69448879bc0f",
+      "url": "https://github.com/ki11a-Conton/harness-agent/blob/2a141309f01acae3707060faf1fab8aa247ed31d/packages/context/src/pipeline.ts"
+    },
+    {
+      "id": "H10",
+      "repository": "harness",
+      "path": "packages/context/src/rehydration.ts",
+      "bytes": 3769,
+      "sha256": "0d6c7077a9f6e207b51db023bcc0f2f4d9dde90cc94a3f0361090ce119fe8bc1",
+      "url": "https://github.com/ki11a-Conton/harness-agent/blob/2a141309f01acae3707060faf1fab8aa247ed31d/packages/context/src/rehydration.ts"
+    },
+    {
+      "id": "H11",
+      "repository": "harness",
+      "path": "packages/contracts/src/working-state.ts",
+      "bytes": 4562,
+      "sha256": "6ec251db4bf478995ad702ad64492a64bb4ac52bee999c6cb0156136feefbf94",
+      "url": "https://github.com/ki11a-Conton/harness-agent/blob/2a141309f01acae3707060faf1fab8aa247ed31d/packages/contracts/src/working-state.ts"
+    },
+    {
+      "id": "H12",
+      "repository": "harness",
+      "path": "packages/core/src/runtime/context-controller.ts",
+      "bytes": 33514,
+      "sha256": "22fe6661072b6674e0ab75a9535a6530de8700cec1a596d6ba858a3d0bda9bfd",
+      "url": "https://github.com/ki11a-Conton/harness-agent/blob/2a141309f01acae3707060faf1fab8aa247ed31d/packages/core/src/runtime/context-controller.ts"
+    },
+    {
+      "id": "H13",
+      "repository": "harness",
+      "path": "packages/memory/src/retrieval.ts",
+      "bytes": 9968,
+      "sha256": "fb1a15b6eab12ee44d0d4e89fce49f6d84b4568c52c85eed32dd2a7f6d77c3c4",
+      "url": "https://github.com/ki11a-Conton/harness-agent/blob/2a141309f01acae3707060faf1fab8aa247ed31d/packages/memory/src/retrieval.ts"
+    },
+    {
+      "id": "H14",
+      "repository": "harness",
+      "path": "packages/harness/src/memory-search-production.regressions.test.ts",
+      "bytes": 4083,
+      "sha256": "2b8ca8f48137f3fcca4b69ab42c17d43595e37c9b22b0d221977ac365b6f1078",
+      "url": "https://github.com/ki11a-Conton/harness-agent/blob/2a141309f01acae3707060faf1fab8aa247ed31d/packages/harness/src/memory-search-production.regressions.test.ts"
+    },
+    {
+      "id": "H15",
+      "repository": "harness",
+      "path": "packages/tools/src/symbol-index.ts",
+      "bytes": 9797,
+      "sha256": "9eecaefa588417f1e5ab913c85e3fe509e234b7e1a17a0209bba0bc48041762d",
+      "url": "https://github.com/ki11a-Conton/harness-agent/blob/2a141309f01acae3707060faf1fab8aa247ed31d/packages/tools/src/symbol-index.ts"
+    },
+    {
+      "id": "H16",
+      "repository": "harness",
+      "path": "packages/tools/src/navigate.ts",
+      "bytes": 16327,
+      "sha256": "e5265e293abc567389792ca07e8128e12cc1e8659b04078c1092eabed48765bf",
+      "url": "https://github.com/ki11a-Conton/harness-agent/blob/2a141309f01acae3707060faf1fab8aa247ed31d/packages/tools/src/navigate.ts"
+    },
+    {
+      "id": "H17",
+      "repository": "harness",
+      "path": "packages/contracts/src/model.ts",
+      "bytes": 7250,
+      "sha256": "cbf0edf30a673bcca0fd8229384c6ab452a317c55275bef7bd2edf9077518022",
+      "url": "https://github.com/ki11a-Conton/harness-agent/blob/2a141309f01acae3707060faf1fab8aa247ed31d/packages/contracts/src/model.ts"
+    },
+    {
+      "id": "H18",
+      "repository": "harness",
+      "path": "packages/model/src/openai.ts",
+      "bytes": 35804,
+      "sha256": "9b1ca9647a3d8105fb8803ba476358a48039c49709fda24fa72951d9bccd65a5",
+      "url": "https://github.com/ki11a-Conton/harness-agent/blob/2a141309f01acae3707060faf1fab8aa247ed31d/packages/model/src/openai.ts"
+    },
+    {
+      "id": "H19",
+      "repository": "harness",
+      "path": "docs/coding-prompts.md",
+      "bytes": 7806,
+      "sha256": "8400233025daea05165406734e59292a5891b9db37e54a8ec90c9a5dabfa2fd4",
+      "url": "https://github.com/ki11a-Conton/harness-agent/blob/2a141309f01acae3707060faf1fab8aa247ed31d/docs/coding-prompts.md"
+    },
+    {
+      "id": "CX01",
+      "repository": "collection",
+      "path": "codex-main/LICENSE",
+      "bytes": 10926,
+      "sha256": "d17f227e4df5da1600391338865ce0f3055211760a36688f816941d58232d8dc",
+      "url": "https://github.com/ki11a-Conton/HARNESS-SRC-FORK/blob/1a46ea13de9a3f5e6987c5dd0319b2000fe49c92/codex-main/LICENSE"
+    },
+    {
+      "id": "CX02",
+      "repository": "collection",
+      "path": "codex-main/codex-rs/core/gpt-5.2-codex_prompt.md",
+      "bytes": 7589,
+      "sha256": "1b3dd697043a7f613c691a3721a450251626685b3e97ac3ad3d35ea62758a31e",
+      "url": "https://github.com/ki11a-Conton/HARNESS-SRC-FORK/blob/1a46ea13de9a3f5e6987c5dd0319b2000fe49c92/codex-main/codex-rs/core/gpt-5.2-codex_prompt.md"
+    },
+    {
+      "id": "CX03",
+      "repository": "collection",
+      "path": "codex-main/codex-rs/prompts/templates/compact/prompt.md",
+      "bytes": 426,
+      "sha256": "ab0c334d4faca17e3afbb9b16967c1b2fdcc7242a9a0880af57949fa236d6d07",
+      "url": "https://github.com/ki11a-Conton/HARNESS-SRC-FORK/blob/1a46ea13de9a3f5e6987c5dd0319b2000fe49c92/codex-main/codex-rs/prompts/templates/compact/prompt.md"
+    },
+    {
+      "id": "CX04",
+      "repository": "collection",
+      "path": "codex-main/codex-rs/core/src/compact.rs",
+      "bytes": 28346,
+      "sha256": "165601dfa5afe454e172a33690d1ce14ffc73739d818e495166160d10ae8ad80",
+      "url": "https://github.com/ki11a-Conton/HARNESS-SRC-FORK/blob/1a46ea13de9a3f5e6987c5dd0319b2000fe49c92/codex-main/codex-rs/core/src/compact.rs"
+    },
+    {
+      "id": "CX05",
+      "repository": "collection",
+      "path": "codex-main/codex-rs/core/src/client.rs",
+      "bytes": 98893,
+      "sha256": "4b4d00234a7fb649525fdcc913ffe288e4ef3348a916acbd265c22607fd8652d",
+      "url": "https://github.com/ki11a-Conton/HARNESS-SRC-FORK/blob/1a46ea13de9a3f5e6987c5dd0319b2000fe49c92/codex-main/codex-rs/core/src/client.rs"
+    },
+    {
+      "id": "CX06",
+      "repository": "collection",
+      "path": "codex-main/codex-rs/ext/memories/templates/memories/read_path.md",
+      "bytes": 6593,
+      "sha256": "2bc7736029884b714860a6f0d6b2fd26598bba58f2213b787f01fe2a491f4326",
+      "url": "https://github.com/ki11a-Conton/HARNESS-SRC-FORK/blob/1a46ea13de9a3f5e6987c5dd0319b2000fe49c92/codex-main/codex-rs/ext/memories/templates/memories/read_path.md"
+    },
+    {
+      "id": "HM01",
+      "repository": "collection",
+      "path": "hermes-agent-main/LICENSE",
+      "bytes": 1070,
+      "sha256": "821556e6336796450ab852d375117b48a4887e71d255794fd6318d99982a5ab6",
+      "url": "https://github.com/ki11a-Conton/HARNESS-SRC-FORK/blob/1a46ea13de9a3f5e6987c5dd0319b2000fe49c92/hermes-agent-main/LICENSE"
+    },
+    {
+      "id": "HM02",
+      "repository": "collection",
+      "path": "hermes-agent-main/agent/system_prompt.py",
+      "bytes": 32321,
+      "sha256": "9c6c765048776629148d6a69b85ad77c144f8d6265e736efe5e911a864ca91ba",
+      "url": "https://github.com/ki11a-Conton/HARNESS-SRC-FORK/blob/1a46ea13de9a3f5e6987c5dd0319b2000fe49c92/hermes-agent-main/agent/system_prompt.py"
+    },
+    {
+      "id": "HM03",
+      "repository": "collection",
+      "path": "hermes-agent-main/agent/prompt_builder.py",
+      "bytes": 114702,
+      "sha256": "a7d100794f9eb9341b691fd8c563916cf6b9963e54ccb8b0087a94910a0a4331",
+      "url": "https://github.com/ki11a-Conton/HARNESS-SRC-FORK/blob/1a46ea13de9a3f5e6987c5dd0319b2000fe49c92/hermes-agent-main/agent/prompt_builder.py"
+    },
+    {
+      "id": "HM04",
+      "repository": "collection",
+      "path": "hermes-agent-main/agent/coding_context.py",
+      "bytes": 39585,
+      "sha256": "6bb11fb0e6cdcd36045cebed03f8c75f4b8ce7de1a4cda6e05a2bb93b6f89c8d",
+      "url": "https://github.com/ki11a-Conton/HARNESS-SRC-FORK/blob/1a46ea13de9a3f5e6987c5dd0319b2000fe49c92/hermes-agent-main/agent/coding_context.py"
+    },
+    {
+      "id": "HM05",
+      "repository": "collection",
+      "path": "hermes-agent-main/agent/prompt_cache_boundary.py",
+      "bytes": 4291,
+      "sha256": "61eda93e443b4084f0a21affb36948ac5be6c50545c3c072098659c29c89a876",
+      "url": "https://github.com/ki11a-Conton/HARNESS-SRC-FORK/blob/1a46ea13de9a3f5e6987c5dd0319b2000fe49c92/hermes-agent-main/agent/prompt_cache_boundary.py"
+    },
+    {
+      "id": "HM06",
+      "repository": "collection",
+      "path": "hermes-agent-main/agent/prompt_caching.py",
+      "bytes": 16864,
+      "sha256": "6c208c911b3f4576a7a008b1b76858ab46ab67718e0a4bfe3a7d4e05953017ce",
+      "url": "https://github.com/ki11a-Conton/HARNESS-SRC-FORK/blob/1a46ea13de9a3f5e6987c5dd0319b2000fe49c92/hermes-agent-main/agent/prompt_caching.py"
+    },
+    {
+      "id": "HM07",
+      "repository": "collection",
+      "path": "hermes-agent-main/agent/context_compressor.py",
+      "bytes": 368399,
+      "sha256": "e3522c31108dcc7dae3e214d2440859fa60fd3b49c80c80ec3b0f002c3ef29a5",
+      "url": "https://github.com/ki11a-Conton/HARNESS-SRC-FORK/blob/1a46ea13de9a3f5e6987c5dd0319b2000fe49c92/hermes-agent-main/agent/context_compressor.py"
+    },
+    {
+      "id": "HM08",
+      "repository": "collection",
+      "path": "hermes-agent-main/agent/memory_manager.py",
+      "bytes": 50027,
+      "sha256": "99be35bdb240393ec52f56e204465622e877ecce24deb450b0cbcf0ef7c87ce7",
+      "url": "https://github.com/ki11a-Conton/HARNESS-SRC-FORK/blob/1a46ea13de9a3f5e6987c5dd0319b2000fe49c92/hermes-agent-main/agent/memory_manager.py"
+    },
+    {
+      "id": "HM09",
+      "repository": "collection",
+      "path": "hermes-agent-main/tools/memory_tool.py",
+      "bytes": 55679,
+      "sha256": "c57a3450f2cbf00ef19e8805866d01f74e875a03713b873e7dba05e503abf79a",
+      "url": "https://github.com/ki11a-Conton/HARNESS-SRC-FORK/blob/1a46ea13de9a3f5e6987c5dd0319b2000fe49c92/hermes-agent-main/tools/memory_tool.py"
+    },
+    {
+      "id": "PI01",
+      "repository": "collection",
+      "path": "pi-main/LICENSE",
+      "bytes": 1069,
+      "sha256": "0457f5bcec3b3b211605dfb5d1a49042fd638f3686a410fe099c24a25af13c48",
+      "url": "https://github.com/ki11a-Conton/HARNESS-SRC-FORK/blob/1a46ea13de9a3f5e6987c5dd0319b2000fe49c92/pi-main/LICENSE"
+    },
+    {
+      "id": "PI02",
+      "repository": "collection",
+      "path": "pi-main/packages/coding-agent/src/core/system-prompt.ts",
+      "bytes": 5875,
+      "sha256": "677c3cf2ca259d15c27466961702a489244e9505829a6c994d0de314b2a469ef",
+      "url": "https://github.com/ki11a-Conton/HARNESS-SRC-FORK/blob/1a46ea13de9a3f5e6987c5dd0319b2000fe49c92/pi-main/packages/coding-agent/src/core/system-prompt.ts"
+    },
+    {
+      "id": "PI03",
+      "repository": "collection",
+      "path": "pi-main/packages/coding-agent/src/core/tools/read.ts",
+      "bytes": 15149,
+      "sha256": "c8c123fca9c8858dbd9bca347565768767a45a85c8d559aa6970f9969ed26224",
+      "url": "https://github.com/ki11a-Conton/HARNESS-SRC-FORK/blob/1a46ea13de9a3f5e6987c5dd0319b2000fe49c92/pi-main/packages/coding-agent/src/core/tools/read.ts"
+    },
+    {
+      "id": "PI04",
+      "repository": "collection",
+      "path": "pi-main/packages/coding-agent/src/core/compaction/compaction.ts",
+      "bytes": 29484,
+      "sha256": "0ce643e2e3c97e4dc160e888e93cb8b5b53914e609a6d333765493d630b6b731",
+      "url": "https://github.com/ki11a-Conton/HARNESS-SRC-FORK/blob/1a46ea13de9a3f5e6987c5dd0319b2000fe49c92/pi-main/packages/coding-agent/src/core/compaction/compaction.ts"
+    },
+    {
+      "id": "PI05",
+      "repository": "collection",
+      "path": "pi-main/packages/ai/src/api/openai-prompt-cache.ts",
+      "bytes": 358,
+      "sha256": "78727b9b42d5c5cdc47d17f44d532cdf951cbee3b158cacfb3e640d8f792e8a4",
+      "url": "https://github.com/ki11a-Conton/HARNESS-SRC-FORK/blob/1a46ea13de9a3f5e6987c5dd0319b2000fe49c92/pi-main/packages/ai/src/api/openai-prompt-cache.ts"
+    },
+    {
+      "id": "CC01",
+      "repository": "collection",
+      "path": "claude-code-fork-main/README.md",
+      "bytes": 9843,
+      "sha256": "2b808f0cfaea9ef8760b7bdc88802d501401f0cf51f1051af43a5727aa666615",
+      "url": "https://github.com/ki11a-Conton/HARNESS-SRC-FORK/blob/1a46ea13de9a3f5e6987c5dd0319b2000fe49c92/claude-code-fork-main/README.md"
+    },
+    {
+      "id": "CC02",
+      "repository": "collection",
+      "path": "claude-code-fork-main/src/constants/prompts.ts",
+      "bytes": 54320,
+      "sha256": "7dac778e089a7f002403df2a2efb6f0b9e4a450af21766680ab8948596c10f25",
+      "url": "https://github.com/ki11a-Conton/HARNESS-SRC-FORK/blob/1a46ea13de9a3f5e6987c5dd0319b2000fe49c92/claude-code-fork-main/src/constants/prompts.ts"
+    },
+    {
+      "id": "CC03",
+      "repository": "collection",
+      "path": "claude-code-fork-main/src/constants/systemPromptSections.ts",
+      "bytes": 1794,
+      "sha256": "f5c212360a8285656f0362295dd53c496c329341da36409d2a904d701400bc5c",
+      "url": "https://github.com/ki11a-Conton/HARNESS-SRC-FORK/blob/1a46ea13de9a3f5e6987c5dd0319b2000fe49c92/claude-code-fork-main/src/constants/systemPromptSections.ts"
+    },
+    {
+      "id": "CC04",
+      "repository": "collection",
+      "path": "claude-code-fork-main/src/services/compact/prompt.ts",
+      "bytes": 16278,
+      "sha256": "7e676e4003a0c1dd4c5b3ca9e7fa413dc957bf03e937da17d2ed900876708c55",
+      "url": "https://github.com/ki11a-Conton/HARNESS-SRC-FORK/blob/1a46ea13de9a3f5e6987c5dd0319b2000fe49c92/claude-code-fork-main/src/services/compact/prompt.ts"
+    },
+    {
+      "id": "CC05",
+      "repository": "collection",
+      "path": "claude-code-fork-main/src/services/compact/microCompact.ts",
+      "bytes": 19544,
+      "sha256": "4509572de2be2f8024820df3e1e1f79e32074c708e56b3f5de0b37764f0d7bf2",
+      "url": "https://github.com/ki11a-Conton/HARNESS-SRC-FORK/blob/1a46ea13de9a3f5e6987c5dd0319b2000fe49c92/claude-code-fork-main/src/services/compact/microCompact.ts"
+    },
+    {
+      "id": "DS01",
+      "repository": "deepseek",
+      "path": "packages/core/system-prompt/src/index.ts",
+      "bytes": 26532,
+      "sha256": "9e31442544109b3ff9be13458e826e0dcacbe31d9f59ddd96a6498ab20b1574e",
+      "url": "https://github.com/deepseek-ai/deepseek-harness/blob/5badb15009ae1756c3afe0ae0cef1faafc290ccc/packages/core/system-prompt/src/index.ts"
+    },
+    {
+      "id": "DS02",
+      "repository": "deepseek",
+      "path": "packages/preset/persona/src/index.ts",
+      "bytes": 3093,
+      "sha256": "16dc065551de44f581868b029ef1883aca8b990aa724283466f26edfb736db76",
+      "url": "https://github.com/deepseek-ai/deepseek-harness/blob/5badb15009ae1756c3afe0ae0cef1faafc290ccc/packages/preset/persona/src/index.ts"
+    },
+    {
+      "id": "DS03",
+      "repository": "deepseek",
+      "path": "packages/compaction/compaction-basic/src/summarizer.ts",
+      "bytes": 9242,
+      "sha256": "03ef6eb0b6a011530829820e30ff709c2c1b34cfa37a98c19c0037432b9d2f55",
+      "url": "https://github.com/deepseek-ai/deepseek-harness/blob/5badb15009ae1756c3afe0ae0cef1faafc290ccc/packages/compaction/compaction-basic/src/summarizer.ts"
+    },
+    {
+      "id": "DS04",
+      "repository": "deepseek",
+      "path": "packages/compaction/compaction/src/tool-pairing.ts",
+      "bytes": 5194,
+      "sha256": "30916d32b421553a7753aa56f5e5890bdfa2bf41b0ce3c8f42bd529fd2da4b9a",
+      "url": "https://github.com/deepseek-ai/deepseek-harness/blob/5badb15009ae1756c3afe0ae0cef1faafc290ccc/packages/compaction/compaction/src/tool-pairing.ts"
+    },
+    {
+      "id": "DS05",
+      "repository": "deepseek",
+      "path": "packages/compaction/compaction-tool-result-pruner/src/config.ts",
+      "bytes": 2559,
+      "sha256": "8538c8b2b3bd7b2b085a86119b694f7934e308a5c4b7f4406e963b190b6eaa98",
+      "url": "https://github.com/deepseek-ai/deepseek-harness/blob/5badb15009ae1756c3afe0ae0cef1faafc290ccc/packages/compaction/compaction-tool-result-pruner/src/config.ts"
+    },
+    {
+      "id": "DS06",
+      "repository": "deepseek",
+      "path": "packages/compaction/compaction-tool-result-pruner/src/index.ts",
+      "bytes": 7301,
+      "sha256": "2890f336ca42f9d8259794eebbc4a9423f69a7394c41796b9981216ed29ed536",
+      "url": "https://github.com/deepseek-ai/deepseek-harness/blob/5badb15009ae1756c3afe0ae0cef1faafc290ccc/packages/compaction/compaction-tool-result-pruner/src/index.ts"
+    },
+    {
+      "id": "Z01",
+      "repository": "zcode",
+      "path": "LICENSE",
+      "bytes": 11344,
+      "sha256": "606c36baf38b973227273df12a74930e4b4137280eea835c5cd623aa4553c13b",
+      "url": "https://github.com/zai-org/ZCode/blob/aac4755666d09fdcd70272fcf063c077a639015f/LICENSE"
+    },
+    {
+      "id": "Z02",
+      "repository": "zcode",
+      "path": "NOTICE.md",
+      "bytes": 28872,
+      "sha256": "6bd5e85b48a192ce100a9e5e0636e3a90d3f6e1ac1c4fe74369e13bd79bb4c45",
+      "url": "https://github.com/zai-org/ZCode/blob/aac4755666d09fdcd70272fcf063c077a639015f/NOTICE.md"
+    },
+    {
+      "id": "Z03",
+      "repository": "zcode",
+      "path": "apps/zcode-cli/docs/design/v2/loop/system-prompt-contract.md",
+      "bytes": 14223,
+      "sha256": "b8f93b8f99df0697cf7d356df8dbf697db14b52f6cbbac8e57f5ef780bde5a79",
+      "url": "https://github.com/zai-org/ZCode/blob/aac4755666d09fdcd70272fcf063c077a639015f/apps/zcode-cli/docs/design/v2/loop/system-prompt-contract.md"
+    },
+    {
+      "id": "Z04",
+      "repository": "zcode",
+      "path": "apps/zcode-cli/packages/core/src/context/builder.ts",
+      "bytes": 12845,
+      "sha256": "d2ac7a06fd2498e34c0e0e2864b9a8659541b3c02114ab4bc862bd438a28e8a2",
+      "url": "https://github.com/zai-org/ZCode/blob/aac4755666d09fdcd70272fcf063c077a639015f/apps/zcode-cli/packages/core/src/context/builder.ts"
+    },
+    {
+      "id": "Z05",
+      "repository": "zcode",
+      "path": "apps/zcode-cli/packages/core/src/context/sections/identity.ts",
+      "bytes": 2820,
+      "sha256": "5828c184c999c2eca969bd16529de42c4994dd84b99ca764e795cf1c557453e8",
+      "url": "https://github.com/zai-org/ZCode/blob/aac4755666d09fdcd70272fcf063c077a639015f/apps/zcode-cli/packages/core/src/context/sections/identity.ts"
+    },
+    {
+      "id": "Z06",
+      "repository": "zcode",
+      "path": "apps/zcode-cli/packages/core/src/context/sections/cli-prefix.ts",
+      "bytes": 663,
+      "sha256": "6be0dcda661415ec5c1d13c97b3a3a8ad59b54af887d5d5c5dff516b66962fd2",
+      "url": "https://github.com/zai-org/ZCode/blob/aac4755666d09fdcd70272fcf063c077a639015f/apps/zcode-cli/packages/core/src/context/sections/cli-prefix.ts"
+    },
+    {
+      "id": "Z07",
+      "repository": "zcode",
+      "path": "apps/zcode-cli/packages/adapters/src/model/system-message-compat.ts",
+      "bytes": 1184,
+      "sha256": "b87bea79e20dd5f6e8a4a792b9f7924c7d47260fc5c27a561690340687b7f0df",
+      "url": "https://github.com/zai-org/ZCode/blob/aac4755666d09fdcd70272fcf063c077a639015f/apps/zcode-cli/packages/adapters/src/model/system-message-compat.ts"
+    },
+    {
+      "id": "Z08",
+      "repository": "zcode",
+      "path": "apps/zcode-cli/packages/adapters/src/model/transform.ts",
+      "bytes": 17607,
+      "sha256": "8c4903a2a2883535cc3e7589b42354fdc4810bc5cba00c2c99bc232455be613d",
+      "url": "https://github.com/zai-org/ZCode/blob/aac4755666d09fdcd70272fcf063c077a639015f/apps/zcode-cli/packages/adapters/src/model/transform.ts"
+    },
+    {
+      "id": "Z09",
+      "repository": "zcode",
+      "path": "apps/zcode-cli/packages/adapters/src/model/runner-normalization.ts",
+      "bytes": 9407,
+      "sha256": "fdaa35f9134b9f7e2503dd31d42a69a531f19dae22e7f57f5c8f73d2570a8fac",
+      "url": "https://github.com/zai-org/ZCode/blob/aac4755666d09fdcd70272fcf063c077a639015f/apps/zcode-cli/packages/adapters/src/model/runner-normalization.ts"
+    },
+    {
+      "id": "Z10",
+      "repository": "zcode",
+      "path": "apps/zcode-cli/packages/adapters/tests/openai-compatible-stream-usage-wire.test.ts",
+      "bytes": 5629,
+      "sha256": "71aae808adfb9226f57190cc8c114a246c4d84067cf8025ae7e4bd6b3da624b8",
+      "url": "https://github.com/zai-org/ZCode/blob/aac4755666d09fdcd70272fcf063c077a639015f/apps/zcode-cli/packages/adapters/tests/openai-compatible-stream-usage-wire.test.ts"
+    },
+    {
+      "id": "Z11",
+      "repository": "zcode",
+      "path": "apps/zcode-cli/packages/adapters/tests/model-transform-deepseek-anthropic.test.ts",
+      "bytes": 776,
+      "sha256": "f2ca8ab7604c3f7d98d9187ec4e2dd07f3313af6545918bbd77ddba5b148f34c",
+      "url": "https://github.com/zai-org/ZCode/blob/aac4755666d09fdcd70272fcf063c077a639015f/apps/zcode-cli/packages/adapters/tests/model-transform-deepseek-anthropic.test.ts"
+    },
+    {
+      "id": "A01",
+      "repository": "aider",
+      "path": "LICENSE.txt",
+      "bytes": 11358,
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "url": "https://github.com/Aider-AI/aider/blob/5dc9490bb35f9729ef2c95d00a19ccd30c26339c/LICENSE.txt"
+    },
+    {
+      "id": "A02",
+      "repository": "aider",
+      "path": "aider/repomap.py",
+      "bytes": 27306,
+      "sha256": "a5d4befe70445114b9f62da47b0eeb2a5384f9e84a0c083c77a4b339caf61ecd",
+      "url": "https://github.com/Aider-AI/aider/blob/5dc9490bb35f9729ef2c95d00a19ccd30c26339c/aider/repomap.py"
+    },
+    {
+      "id": "A03",
+      "repository": "aider",
+      "path": "aider/coders/editblock_prompts.py",
+      "bytes": 5723,
+      "sha256": "b1a024c3af7450d76500d144f2ae5ef2821cf9f1bcba009f20c4332db3ed9a28",
+      "url": "https://github.com/Aider-AI/aider/blob/5dc9490bb35f9729ef2c95d00a19ccd30c26339c/aider/coders/editblock_prompts.py"
+    },
+    {
+      "id": "A04",
+      "repository": "aider",
+      "path": "aider/coders/architect_prompts.py",
+      "bytes": 1469,
+      "sha256": "4cf04aa8819a4f4d7ad46d5e2d463c13505df3af6b5a8e7eaf724b27b3993e4c",
+      "url": "https://github.com/Aider-AI/aider/blob/5dc9490bb35f9729ef2c95d00a19ccd30c26339c/aider/coders/architect_prompts.py"
+    },
+    {
+      "id": "A05",
+      "repository": "aider",
+      "path": "aider/coders/base_coder.py",
+      "bytes": 86302,
+      "sha256": "04a7b38c4f1d2b1684ac958f40bcd81a28b00139eae88afed59d2c970bef1ee1",
+      "url": "https://github.com/Aider-AI/aider/blob/5dc9490bb35f9729ef2c95d00a19ccd30c26339c/aider/coders/base_coder.py"
+    },
+    {
+      "id": "PI06",
+      "repository": "collection",
+      "path": "pi-main/packages/ai/src/api/openai-responses.ts",
+      "bytes": 13287,
+      "sha256": "cdade1f246ed9be3a1298c99f6bbce7b75e87a016ca7e357a536b963b39a3536",
+      "url": "https://github.com/ki11a-Conton/HARNESS-SRC-FORK/blob/1a46ea13de9a3f5e6987c5dd0319b2000fe49c92/pi-main/packages/ai/src/api/openai-responses.ts"
+    },
+    {
+      "id": "PI07",
+      "repository": "collection",
+      "path": "pi-main/packages/ai/src/api/openai-responses-shared.ts",
+      "bytes": 29363,
+      "sha256": "80435788ca7bcb403990d85aaefb00fd607af946efc39be9f4ae2adc6d7d446b",
+      "url": "https://github.com/ki11a-Conton/HARNESS-SRC-FORK/blob/1a46ea13de9a3f5e6987c5dd0319b2000fe49c92/pi-main/packages/ai/src/api/openai-responses-shared.ts"
+    },
+    {
+      "id": "PI08",
+      "repository": "collection",
+      "path": "pi-main/packages/ai/src/api/anthropic-messages.ts",
+      "bytes": 43252,
+      "sha256": "131be44f2c0a1d408fe627d078d2040fdbb6c6bf6a5ed493ea644ab9334042b2",
+      "url": "https://github.com/ki11a-Conton/HARNESS-SRC-FORK/blob/1a46ea13de9a3f5e6987c5dd0319b2000fe49c92/pi-main/packages/ai/src/api/anthropic-messages.ts"
+    },
+    {
+      "id": "DS07",
+      "repository": "deepseek",
+      "path": "packages/core/system-prompt/package.json",
+      "bytes": 1091,
+      "sha256": "5a8a00107ba5e277876c772cb199156b77f86c02de5148df4f9882f7f62add0e",
+      "url": "https://github.com/deepseek-ai/deepseek-harness/blob/5badb15009ae1756c3afe0ae0cef1faafc290ccc/packages/core/system-prompt/package.json"
+    },
+    {
+      "id": "DS08",
+      "repository": "deepseek",
+      "path": "packages/preset/persona/package.json",
+      "bytes": 1072,
+      "sha256": "67fb6fce74f39d87e937d52e76999cdebf9c4afe12a1fb2e92d8fc985706929f",
+      "url": "https://github.com/deepseek-ai/deepseek-harness/blob/5badb15009ae1756c3afe0ae0cef1faafc290ccc/packages/preset/persona/package.json"
+    }
+  ]
+}

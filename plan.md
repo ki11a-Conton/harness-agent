@@ -1,6 +1,8 @@
 # Harness Agent 当前执行计划入口
 
-当前执行任务：[PR 集成与 Web 连接修复](plan(20261014-214704).md)，合同：[PR-INTEGRATION-WEB-20261014](tasks/PR-INTEGRATION-WEB-20261014.md)。关闭开放 PR 的实证缺陷后合并 main，并修复源码启动时右下角持续“重新连接中”；做什么、怎么做和怎么验收见该规格。已完成：产品源码 `3af15705` 全量 9,707 PASS / 15 SKIP，完整 CI 10 项成功，PR #3–#7 merged=true；见[审查与验收报告](docs/pr-integration-web-20261014.md)。旧发布记录保持原源码绑定。
+当前执行任务：[Coding agent 源码研究与后续优化规格](plan(20261015-104912).md)，合同：[CODING-AGENT-RESEARCH-20261015](tasks/CODING-AGENT-RESEARCH-20261015.md)。本轮研究、71 文件来源复核与生产路径离线观察已完成，见[源码比较报告](docs/coding-agent-research-20261015.md)；C1–C7 优化项仍待实施，没有修改默认策略、产品代码或发布版本。做什么、怎么做、怎么验收见上述规格。
+
+上一任务（已完成）：[PR 集成与 Web 连接修复](plan(20261014-214704).md)，合同：[PR-INTEGRATION-WEB-20261014](tasks/PR-INTEGRATION-WEB-20261014.md)。关闭开放 PR 的实证缺陷后合并 main，并修复源码启动时右下角持续“重新连接中”；做什么、怎么做和怎么验收见该规格。已完成：产品源码 `3af15705` 全量 9,707 PASS / 15 SKIP，完整 CI 10 项成功，PR #3–#7 merged=true；见[审查与验收报告](docs/pr-integration-web-20261014.md)。旧发布记录保持原源码绑定。
 
 上一任务：[发布前最终大审查](plan(20261014-003000).md)，任务合同：[FINAL-AUDIT-20261014](tasks/FINAL-AUDIT-20261014.md)。按用户追加授权，移除 Preview Notice、修复剩余确认缺陷并完成固定源码验收后，已发布 [v1.10.0](https://github.com/ki11a-Conton/harness-agent/releases/tag/v1.10.0)。此前[品牌统一](plan(20261013-232547).md)、[上一轮规格](plan(20261013-194000).md)及[完整 UI 迁移计划](plan(20261008-web-deepseek-parity).md)保留。各项包含做什么、怎么做与怎么验收。
 

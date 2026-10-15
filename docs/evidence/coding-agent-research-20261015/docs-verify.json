@@ -1,0 +1,75 @@
+{
+  "checks": [
+    {
+      "name": "benchmark suite: regression",
+      "truthful": true,
+      "reason": "30 case(s) on disk matches README claim 30"
+    },
+    {
+      "name": "benchmark suite: holdout",
+      "truthful": true,
+      "reason": "32 case(s) on disk matches README claim 32"
+    },
+    {
+      "name": "benchmark suite: adversarial",
+      "truthful": true,
+      "reason": "13 case(s) on disk matches README claim 13"
+    },
+    {
+      "name": "benchmark suite: stress",
+      "truthful": true,
+      "reason": "11 case(s) on disk matches README claim 11"
+    },
+    {
+      "name": "package count",
+      "truthful": true,
+      "reason": "24 packages/ on disk matches the HANDOVER claim 24"
+    },
+    {
+      "name": "CI gates",
+      "truthful": true,
+      "reason": ".github/workflows/ci.yml runs test and coverage"
+    },
+    {
+      "name": "HANDOVER static truth (P38.4-10)",
+      "truthful": true,
+      "reason": "HANDOVER.md canonical section contains no volatile SHA/run-id — a new commit does not make it stale"
+    },
+    {
+      "name": "CAPABILITY_MATRIX.md machine-generated",
+      "truthful": true,
+      "reason": "CAPABILITY_MATRIX.md carries generatedAt + the audit records table"
+    },
+    {
+      "name": "CAPABILITY_MATRIX marked informational (P38.2-11)",
+      "truthful": true,
+      "reason": "tracked matrix is explicitly NOT RELEASE EVIDENCE (informational snapshot)"
+    },
+    {
+      "name": "capability profiles present",
+      "truthful": true,
+      "reason": "CAPABILITY_MATRIX.json carries the per-profile byProfile view"
+    },
+    {
+      "name": "evolution ledger consistent (E2-12)",
+      "truthful": true,
+      "reason": "evolution-ledger.json verifies: refs exist, digests match, summaries recompute, one active champion"
+    },
+    {
+      "name": "current plan entry (E4-00)",
+      "truthful": true,
+      "reason": "plan.md is the current entry and references an existing spec plan(20261015-104912).md"
+    },
+    {
+      "name": "release gate commands exist in package.json (E4-10)",
+      "truthful": true,
+      "reason": "every release-gate command maps to a real package.json script"
+    },
+    {
+      "name": "documented pnpm scripts exist in package.json (E4-10 #6)",
+      "truthful": true,
+      "reason": "every pnpm command documented in 2 README file(s) maps to a real package.json script"
+    }
+  ],
+  "ok": true
+}

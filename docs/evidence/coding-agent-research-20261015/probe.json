@@ -1,0 +1,196 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-15T02:51:48.685Z",
+  "baseline": "2a141309f01acae3707060faf1fab8aa247ed31d",
+  "paidCalls": 0,
+  "transport": "real loopback HTTP/SSE; production provider; no fetch replacement",
+  "limits": [
+    "Synthetic responses do not measure model quality or real provider cache hit rate.",
+    "SDK composition is not CLI/Web end-to-end or a paid coding benchmark."
+  ],
+  "sourceHashes": [
+    {
+      "path": "packages/model/src/openai.ts",
+      "sha256": "9b1ca9647a3d8105fb8803ba476358a48039c49709fda24fa72951d9bccd65a5"
+    },
+    {
+      "path": "packages/contracts/src/model.ts",
+      "sha256": "cbf0edf30a673bcca0fd8229384c6ab452a317c55275bef7bd2edf9077518022"
+    },
+    {
+      "path": "packages/agents/src/coding-prompt.ts",
+      "sha256": "6d1b194e5e71a4b2724697dbd7fa661d94708574f9396aa02f52de27a8284c43"
+    },
+    {
+      "path": "packages/harness/src/create-harness.ts",
+      "sha256": "ddb2f54816625b7fe3c13b24261918f66e6ff45dce266b55f53200f17d861c30"
+    },
+    {
+      "path": "packages/harness/src/coding-prompt-policy.ts",
+      "sha256": "9183b8ba6df45fcf4126cf7482341684c0b5858cdd3955cec3da85803ed1c9aa"
+    },
+    {
+      "path": "packages/harness/src/tool-names.ts",
+      "sha256": "a826ddf9513aff60df2b8d451fce9ca45ca41c4ae73a5cf73a0858a1673d7e5d"
+    },
+    {
+      "path": "packages/harness/src/profiles.ts",
+      "sha256": "8dc5751d7d576b4a69603270a76f59e01639262b578789f8e0a1ace7635dae29"
+    },
+    {
+      "path": "packages/harness/src/compose/compose-tools.ts",
+      "sha256": "09d959256d953f3bae45764cfdd6c402f964979887d490e11d5ab092c02fce7f"
+    }
+  ],
+  "cacheUsage": [
+    {
+      "name": "openai-details-hit",
+      "inputUsage": {
+        "prompt_tokens": 200,
+        "completion_tokens": 20,
+        "total_tokens": 220,
+        "prompt_tokens_details": {
+          "cached_tokens": 128
+        }
+      },
+      "returnedUsage": {
+        "inputTokens": 200,
+        "outputTokens": 20
+      },
+      "usageEvents": [
+        {
+          "inputTokens": 200,
+          "outputTokens": 20
+        }
+      ],
+      "expectedCacheReadTokens": 128,
+      "actualCacheReadTokens": null,
+      "verdict": "OBSERVED_GAP"
+    },
+    {
+      "name": "deepseek-hit-miss",
+      "inputUsage": {
+        "prompt_tokens": 200,
+        "completion_tokens": 20,
+        "total_tokens": 220,
+        "prompt_cache_hit_tokens": 128,
+        "prompt_cache_miss_tokens": 72
+      },
+      "returnedUsage": {
+        "inputTokens": 200,
+        "outputTokens": 20
+      },
+      "usageEvents": [
+        {
+          "inputTokens": 200,
+          "outputTokens": 20
+        }
+      ],
+      "expectedCacheReadTokens": 128,
+      "actualCacheReadTokens": null,
+      "verdict": "OBSERVED_GAP"
+    },
+    {
+      "name": "openai-explicit-zero",
+      "inputUsage": {
+        "prompt_tokens": 200,
+        "completion_tokens": 20,
+        "total_tokens": 220,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "returnedUsage": {
+        "inputTokens": 200,
+        "outputTokens": 20
+      },
+      "usageEvents": [
+        {
+          "inputTokens": 200,
+          "outputTokens": 20
+        }
+      ],
+      "expectedCacheReadTokens": 0,
+      "actualCacheReadTokens": null,
+      "verdict": "OBSERVED_GAP"
+    },
+    {
+      "name": "cache-details-absent",
+      "inputUsage": {
+        "prompt_tokens": 200,
+        "completion_tokens": 20,
+        "total_tokens": 220
+      },
+      "returnedUsage": {
+        "inputTokens": 200,
+        "outputTokens": 20
+      },
+      "usageEvents": [
+        {
+          "inputTokens": 200,
+          "outputTokens": 20
+        }
+      ],
+      "expectedCacheReadTokens": null,
+      "actualCacheReadTokens": null,
+      "verdict": "PASS_CONTROL"
+    }
+  ],
+  "promptComposition": [
+    {
+      "selection": "legacy",
+      "verdict": "PASS_CONTROL",
+      "policyChars": 517,
+      "policySha256": "66cd48195dc8b44cb40922d0b4072a940b0b649ab2c419f98465e71d24486e14",
+      "requestContainsSelectedPolicy": true,
+      "actualToolNames": [
+        "read_file",
+        "write_file",
+        "edit_file",
+        "search_files",
+        "grep_search",
+        "repo_tree",
+        "symbol_search",
+        "repo_map",
+        "discover_commands",
+        "env_snapshot",
+        "exec",
+        "update_plan",
+        "ask_user"
+      ],
+      "memoryStorePresentByDefaultInTestProfile": false,
+      "modelCallableMemoryToolPresent": false
+    },
+    {
+      "selection": "coding-v1",
+      "verdict": "PASS_CONTROL",
+      "policyChars": 4403,
+      "policySha256": "12233460b23efefc95a2f32812badbcacaf08f16a9de1a8acf9ba3acb5152f1e",
+      "requestContainsSelectedPolicy": true,
+      "actualToolNames": [
+        "read_file",
+        "write_file",
+        "edit_file",
+        "search_files",
+        "grep_search",
+        "repo_tree",
+        "symbol_search",
+        "repo_map",
+        "discover_commands",
+        "env_snapshot",
+        "exec",
+        "update_plan",
+        "ask_user"
+      ],
+      "memoryStorePresentByDefaultInTestProfile": false,
+      "modelCallableMemoryToolPresent": false
+    }
+  ],
+  "summary": {
+    "execution": "PASS",
+    "observedGaps": 3,
+    "realModelQuality": "NOT_PROVEN",
+    "realDeepSeekCacheHitRate": "NOT_MEASURED",
+    "productionChanges": false
+  }
+}
