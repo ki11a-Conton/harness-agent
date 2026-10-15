@@ -67,14 +67,19 @@ export class MemSessionStore implements SessionStore {
 
 export class MemEventStore implements EventStore {
   events: AgentEvent[] = [];
-  private seq = 0;
+  /** P26-1: sequences are per session and start at 0, exactly like the durable
+   *  stores (@ar/events JSONL, @ar/store SQLite). A store-wide counter would
+   *  hand a session a non-dense prefix, which read-side invariants (the Web
+   *  owner's draft-journal check) legitimately reject. */
+  private readonly allocated = new Map<SessionId, number>();
 
-  async nextSequence(_sessionId: SessionId): Promise<number> {
-    return this.seq + 1;
+  async nextSequence(sessionId: SessionId): Promise<number> {
+    return this.allocated.get(sessionId) ?? 0;
   }
   async append(event: AgentEvent): Promise<AgentEvent> {
-    const seq = ++this.seq;
+    const seq = this.allocated.get(event.sessionId) ?? 0;
     const stored = { ...event, sequence: seq };
+    this.allocated.set(event.sessionId, seq + 1);
     this.events.push(stored);
     return stored;
   }
