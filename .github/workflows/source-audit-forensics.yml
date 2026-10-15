@@ -21,8 +21,38 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           github-token: ${{ github.token }}
-          run-id: '37615393968'
-          name: n6-real-formal-windows-latest-21fa7436b1abdcbc0dcd4f8a300f171b1a35f8e0-37615393968-attempt-1
+          run-id: '38703968309'
+          name: n6-real-formal-windows-latest-4ee217767c35b3a3fd5a44b1a59ce04581ef25d9-38703968309-attempt-1
           path: .ci/historical-formal-failure
       - name: Publish original command receipt and failure excerpt
-        run: node scripts/ci/formal-failure-forensics.mjs .ci/historical-formal-failure
+        run: |
+          node --input-type=module <<'JS'
+          import { readFileSync, readdirSync, lstatSync } from 'node:fs';
+          import { join } from 'node:path';
+          import { createHash } from 'node:crypto';
+          import { gzipSync } from 'node:zlib';
+          const root = '.ci/historical-formal-failure', files = [];
+          function walk(dir) {
+            for (const entry of readdirSync(dir, { withFileTypes: true })) {
+              const path = join(dir, entry.name), stat = lstatSync(path);
+              if (stat.isSymbolicLink()) throw new Error('artifact symlink refused');
+              if (entry.isDirectory()) { walk(path); continue; }
+              if (!entry.isFile() || stat.size > 8 * 1024 * 1024 || !/^(test\.log|commands\.json|result\.json)$/.test(entry.name)) continue;
+              const bytes = readFileSync(path), text = bytes.toString('utf8');
+              const lines = text.split(/\r?\n/);
+              const selected = entry.name === 'test.log'
+                ? lines.flatMap((line, i) => /Web question continuation failed|write failed for|Failed Tests|Real Harness owner did not settle|^\s*FAIL\s/.test(line)
+                    ? [{ line: i + 1, text: lines.slice(Math.max(0, i - 2), Math.min(lines.length, i + 7)).join('\n') }] : [])
+                : text;
+              files.push({ path: path.slice(root.length + 1), bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex'), selected });
+            }
+          }
+          walk(root);
+          if (!files.some(file => file.path.endsWith('test.log'))) throw new Error('original test.log absent');
+          const receipt = { originalRunId: '38703968309', originalRunAttempt: 1,
+            originalSourceSha: '4ee217767c35b3a3fd5a44b1a59ce04581ef25d9', observedBy: process.env.GITHUB_SHA,
+            purpose: 'Read-only original failure extraction; no rerun or PASS substitution', paidModelCalls: 0, files };
+          const encoded = gzipSync(Buffer.from(JSON.stringify(receipt))).toString('base64'), size = 2500, total = Math.ceil(encoded.length / size);
+          if (total > 20) throw new Error('bounded forensic report exceeded');
+          for (let index = 0; index < total; index++) console.log(`::notice title=Frozen Windows failure ${index + 1}/${total}::${JSON.stringify({ encoding: 'gzip+base64', index, total, data: encoded.slice(index * size, (index + 1) * size) })}`);
+          JS
