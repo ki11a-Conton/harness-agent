@@ -16,7 +16,10 @@ const cleanup: Array<() => Promise<void>> = [];
 afterEach(async () => { for (const action of cleanup.splice(0).reverse()) await action(); });
 async function setup(overrides: Partial<CatalogHost> = {}) {
   const directory = await realpath(await mkdtemp(join(tmpdir(), "dsh-catalog-real-")));
-  cleanup.push(() => rm(directory, { recursive: true, force: true }));
+  // The discovered route's sandbox and ledger writes can still be settling when
+  // the case ends, so Windows would intermittently fail the teardown itself with
+  // ENOTEMPTY instead of reporting the behaviour under test.
+  cleanup.push(() => rm(directory, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 }));
   const provider = new ScriptedModelProvider([ScriptedModelProvider.text("actual answer")]);
   const harness = await createHarness({ cwd: directory, dataDir: directory, profile: "interactive", modelProvider: provider,
     model: { providerId: provider.id, modelId: "scripted-model" } });
