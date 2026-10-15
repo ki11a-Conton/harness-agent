@@ -26,3 +26,5 @@ export * from "./production-tools.js";
 export { decideSchemaAdvert, stubSpec, DEFAULT_MAX_INLINE_SCHEMA_TOKENS, DEFERRED_STUB_DESCRIPTION_MAX, estimateSpecTokens, estimateSpecsTokens } from "@ar/contracts";
 export type { SchemaAdvertDecision, SchemaAdvertPolicy } from "@ar/contracts";
 export * from "./tool-lookup.js";
+export * from "./syntax-index.js";
+export * from "./relevant-code-map.js";

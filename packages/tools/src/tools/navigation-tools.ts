@@ -3,6 +3,7 @@ import type { ToolDefinition, ToolExecutionContext, ToolResult } from "@ar/contr
 import { errorInfo } from "@ar/contracts";
 import { createGrepScanSummary, grepFiles, repoTree, symbolSearch, type GrepScanSummary, type GrepHit, type SymbolHit, type RepoTreeEntry } from "../navigate.js";
 import { indexedSymbolSearch } from "../symbol-index.js";
+import { syntaxSymbolSearch } from "../syntax-index.js";
 
 /**
  * P2-29 navigation tools. Read-only; policy (permission + sandbox path scoping)
@@ -144,6 +145,7 @@ export interface SymbolSearchToolInput {
   symbol: string;
   path?: string;
   maxResults?: number;
+  mode?: "lexical" | "syntax";
 }
 
 export const symbolSearchTool: ToolDefinition<
@@ -152,11 +154,12 @@ export const symbolSearchTool: ToolDefinition<
 > = {
   name: "symbol_search",
   description:
-    "Find symbols (functions/classes/types/consts/imports) by name within the selected file or directory. Prefers matching TypeScript/JavaScript index hits (fallback:false); otherwise uses a heuristic regex fallback (fallback:true).",
+    "Find symbols by name in the selected file/directory. mode:syntax uses bounded Tree-sitter AST tags for TS/JS, Python, Rust and Go with source hashes, ignoring comments/strings; references are candidates, not LSP resolution. Default lexical mode preserves the lightweight TS/JS index and regex fallback.",
   inputSchema: z.object({
     symbol: z.string().min(1),
     path: z.string().optional(),
     maxResults: z.number().int().positive().max(5000).optional(),
+    mode: z.enum(["lexical", "syntax"]).optional(),
   }),
   risk: "readonly",
   metadata: {
@@ -178,6 +181,10 @@ export const symbolSearchTool: ToolDefinition<
       context.signal.throwIfAborted();
       // P7-4 (EXPERIMENT): prefer matching TS/JS hits. Unrelated indexed files
       // must not mask other languages' existing heuristic fallback.
+      if (input.mode === "syntax") {
+        return { status: "success", output: await syntaxSymbolSearch({ root: context.cwd,
+          path: input.path, symbol: input.symbol, maxResults: input.maxResults, signal: context.signal }) };
+      }
       const indexed = await indexedSymbolSearch({
         symbol: input.symbol,
         root: context.cwd,

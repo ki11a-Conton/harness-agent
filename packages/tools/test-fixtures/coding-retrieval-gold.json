@@ -1,0 +1,366 @@
+{
+  "version": 1,
+  "scope": "Hand-labelled cross-file retrieval fixtures, not a real-model task-success benchmark",
+  "cases": [
+    {
+      "id": "typescript-01",
+      "query": "typescript tsResolvePort callers and definition",
+      "symbol": "tsResolvePort",
+      "goldFile": "typescript/resolve_port.ts",
+      "goldLine": 1,
+      "callerFile": "typescript/resolve_port.caller.ts",
+      "files": {
+        "typescript/resolve_port.ts": "export function tsResolvePort(value: number): number { return value + 1; }\n",
+        "typescript/resolve_port.caller.ts": "import { tsResolvePort } from \"./resolve_port\";\nexport const result = tsResolvePort(1);\n"
+      }
+    },
+    {
+      "id": "typescript-02",
+      "query": "typescript tsParseConfig callers and definition",
+      "symbol": "tsParseConfig",
+      "goldFile": "typescript/parse_config.ts",
+      "goldLine": 1,
+      "callerFile": "typescript/parse_config.caller.ts",
+      "files": {
+        "typescript/parse_config.ts": "export function tsParseConfig(value: number): number { return value + 1; }\n",
+        "typescript/parse_config.caller.ts": "import { tsParseConfig } from \"./parse_config\";\nexport const result = tsParseConfig(1);\n"
+      }
+    },
+    {
+      "id": "typescript-03",
+      "query": "typescript tsValidateToken callers and definition",
+      "symbol": "tsValidateToken",
+      "goldFile": "typescript/validate_token.ts",
+      "goldLine": 1,
+      "callerFile": "typescript/validate_token.caller.ts",
+      "files": {
+        "typescript/validate_token.ts": "export function tsValidateToken(value: number): number { return value + 1; }\n",
+        "typescript/validate_token.caller.ts": "import { tsValidateToken } from \"./validate_token\";\nexport const result = tsValidateToken(1);\n"
+      }
+    },
+    {
+      "id": "typescript-04",
+      "query": "typescript tsLoadWorkspace callers and definition",
+      "symbol": "tsLoadWorkspace",
+      "goldFile": "typescript/load_workspace.ts",
+      "goldLine": 1,
+      "callerFile": "typescript/load_workspace.caller.ts",
+      "files": {
+        "typescript/load_workspace.ts": "export function tsLoadWorkspace(value: number): number { return value + 1; }\n",
+        "typescript/load_workspace.caller.ts": "import { tsLoadWorkspace } from \"./load_workspace\";\nexport const result = tsLoadWorkspace(1);\n"
+      }
+    },
+    {
+      "id": "typescript-05",
+      "query": "typescript tsBuildRequest callers and definition",
+      "symbol": "tsBuildRequest",
+      "goldFile": "typescript/build_request.ts",
+      "goldLine": 1,
+      "callerFile": "typescript/build_request.caller.ts",
+      "files": {
+        "typescript/build_request.ts": "export function tsBuildRequest(value: number): number { return value + 1; }\n",
+        "typescript/build_request.caller.ts": "import { tsBuildRequest } from \"./build_request\";\nexport const result = tsBuildRequest(1);\n"
+      }
+    },
+    {
+      "id": "typescript-06",
+      "query": "typescript tsRetryDelay callers and definition",
+      "symbol": "tsRetryDelay",
+      "goldFile": "typescript/retry_delay.ts",
+      "goldLine": 1,
+      "callerFile": "typescript/retry_delay.caller.ts",
+      "files": {
+        "typescript/retry_delay.ts": "export function tsRetryDelay(value: number): number { return value + 1; }\n",
+        "typescript/retry_delay.caller.ts": "import { tsRetryDelay } from \"./retry_delay\";\nexport const result = tsRetryDelay(1);\n"
+      }
+    },
+    {
+      "id": "typescript-07",
+      "query": "typescript tsMergeUsage callers and definition",
+      "symbol": "tsMergeUsage",
+      "goldFile": "typescript/merge_usage.ts",
+      "goldLine": 1,
+      "callerFile": "typescript/merge_usage.caller.ts",
+      "files": {
+        "typescript/merge_usage.ts": "export function tsMergeUsage(value: number): number { return value + 1; }\n",
+        "typescript/merge_usage.caller.ts": "import { tsMergeUsage } from \"./merge_usage\";\nexport const result = tsMergeUsage(1);\n"
+      }
+    },
+    {
+      "id": "typescript-08",
+      "query": "typescript tsRenderPrompt callers and definition",
+      "symbol": "tsRenderPrompt",
+      "goldFile": "typescript/render_prompt.ts",
+      "goldLine": 1,
+      "callerFile": "typescript/render_prompt.caller.ts",
+      "files": {
+        "typescript/render_prompt.ts": "export function tsRenderPrompt(value: number): number { return value + 1; }\n",
+        "typescript/render_prompt.caller.ts": "import { tsRenderPrompt } from \"./render_prompt\";\nexport const result = tsRenderPrompt(1);\n"
+      }
+    },
+    {
+      "id": "typescript-09",
+      "query": "typescript tsFormatDiff callers and definition",
+      "symbol": "tsFormatDiff",
+      "goldFile": "typescript/format_diff.ts",
+      "goldLine": 1,
+      "callerFile": "typescript/format_diff.caller.ts",
+      "files": {
+        "typescript/format_diff.ts": "export function tsFormatDiff(value: number): number { return value + 1; }\n",
+        "typescript/format_diff.caller.ts": "import { tsFormatDiff } from \"./format_diff\";\nexport const result = tsFormatDiff(1);\n"
+      }
+    },
+    {
+      "id": "typescript-10",
+      "query": "typescript tsCheckBudget callers and definition",
+      "symbol": "tsCheckBudget",
+      "goldFile": "typescript/check_budget.ts",
+      "goldLine": 1,
+      "callerFile": "typescript/check_budget.caller.ts",
+      "files": {
+        "typescript/check_budget.ts": "export function tsCheckBudget(value: number): number { return value + 1; }\n",
+        "typescript/check_budget.caller.ts": "import { tsCheckBudget } from \"./check_budget\";\nexport const result = tsCheckBudget(1);\n"
+      }
+    },
+    {
+      "id": "python-01",
+      "query": "python py_resolve_port callers and definition",
+      "symbol": "py_resolve_port",
+      "goldFile": "python/resolve_port.py",
+      "goldLine": 1,
+      "callerFile": "python/resolve_port_caller.py",
+      "files": {
+        "python/resolve_port.py": "def py_resolve_port(value):\n    return value + 1\n",
+        "python/resolve_port_caller.py": "from resolve_port import py_resolve_port\nresult = py_resolve_port(1)\n"
+      }
+    },
+    {
+      "id": "python-02",
+      "query": "python py_parse_config callers and definition",
+      "symbol": "py_parse_config",
+      "goldFile": "python/parse_config.py",
+      "goldLine": 1,
+      "callerFile": "python/parse_config_caller.py",
+      "files": {
+        "python/parse_config.py": "def py_parse_config(value):\n    return value + 1\n",
+        "python/parse_config_caller.py": "from parse_config import py_parse_config\nresult = py_parse_config(1)\n"
+      }
+    },
+    {
+      "id": "python-03",
+      "query": "python py_validate_token callers and definition",
+      "symbol": "py_validate_token",
+      "goldFile": "python/validate_token.py",
+      "goldLine": 1,
+      "callerFile": "python/validate_token_caller.py",
+      "files": {
+        "python/validate_token.py": "def py_validate_token(value):\n    return value + 1\n",
+        "python/validate_token_caller.py": "from validate_token import py_validate_token\nresult = py_validate_token(1)\n"
+      }
+    },
+    {
+      "id": "python-04",
+      "query": "python py_load_workspace callers and definition",
+      "symbol": "py_load_workspace",
+      "goldFile": "python/load_workspace.py",
+      "goldLine": 1,
+      "callerFile": "python/load_workspace_caller.py",
+      "files": {
+        "python/load_workspace.py": "def py_load_workspace(value):\n    return value + 1\n",
+        "python/load_workspace_caller.py": "from load_workspace import py_load_workspace\nresult = py_load_workspace(1)\n"
+      }
+    },
+    {
+      "id": "python-05",
+      "query": "python py_build_request callers and definition",
+      "symbol": "py_build_request",
+      "goldFile": "python/build_request.py",
+      "goldLine": 1,
+      "callerFile": "python/build_request_caller.py",
+      "files": {
+        "python/build_request.py": "def py_build_request(value):\n    return value + 1\n",
+        "python/build_request_caller.py": "from build_request import py_build_request\nresult = py_build_request(1)\n"
+      }
+    },
+    {
+      "id": "python-06",
+      "query": "python py_retry_delay callers and definition",
+      "symbol": "py_retry_delay",
+      "goldFile": "python/retry_delay.py",
+      "goldLine": 1,
+      "callerFile": "python/retry_delay_caller.py",
+      "files": {
+        "python/retry_delay.py": "def py_retry_delay(value):\n    return value + 1\n",
+        "python/retry_delay_caller.py": "from retry_delay import py_retry_delay\nresult = py_retry_delay(1)\n"
+      }
+    },
+    {
+      "id": "python-07",
+      "query": "python py_merge_usage callers and definition",
+      "symbol": "py_merge_usage",
+      "goldFile": "python/merge_usage.py",
+      "goldLine": 1,
+      "callerFile": "python/merge_usage_caller.py",
+      "files": {
+        "python/merge_usage.py": "def py_merge_usage(value):\n    return value + 1\n",
+        "python/merge_usage_caller.py": "from merge_usage import py_merge_usage\nresult = py_merge_usage(1)\n"
+      }
+    },
+    {
+      "id": "python-08",
+      "query": "python py_render_prompt callers and definition",
+      "symbol": "py_render_prompt",
+      "goldFile": "python/render_prompt.py",
+      "goldLine": 1,
+      "callerFile": "python/render_prompt_caller.py",
+      "files": {
+        "python/render_prompt.py": "def py_render_prompt(value):\n    return value + 1\n",
+        "python/render_prompt_caller.py": "from render_prompt import py_render_prompt\nresult = py_render_prompt(1)\n"
+      }
+    },
+    {
+      "id": "python-09",
+      "query": "python py_format_diff callers and definition",
+      "symbol": "py_format_diff",
+      "goldFile": "python/format_diff.py",
+      "goldLine": 1,
+      "callerFile": "python/format_diff_caller.py",
+      "files": {
+        "python/format_diff.py": "def py_format_diff(value):\n    return value + 1\n",
+        "python/format_diff_caller.py": "from format_diff import py_format_diff\nresult = py_format_diff(1)\n"
+      }
+    },
+    {
+      "id": "python-10",
+      "query": "python py_check_budget callers and definition",
+      "symbol": "py_check_budget",
+      "goldFile": "python/check_budget.py",
+      "goldLine": 1,
+      "callerFile": "python/check_budget_caller.py",
+      "files": {
+        "python/check_budget.py": "def py_check_budget(value):\n    return value + 1\n",
+        "python/check_budget_caller.py": "from check_budget import py_check_budget\nresult = py_check_budget(1)\n"
+      }
+    },
+    {
+      "id": "rust-go-01",
+      "query": "rust-go rs_resolve_port callers and definition",
+      "symbol": "rs_resolve_port",
+      "goldFile": "rust-go/resolve_port.rs",
+      "goldLine": 1,
+      "callerFile": "rust-go/resolve_port_caller.rs",
+      "files": {
+        "rust-go/resolve_port.rs": "pub fn rs_resolve_port(value: i32) -> i32 { value + 1 }\n",
+        "rust-go/resolve_port_caller.rs": "use crate::resolve_port::rs_resolve_port;\npub fn run() -> i32 { rs_resolve_port(1) }\n"
+      }
+    },
+    {
+      "id": "rust-go-02",
+      "query": "rust-go rs_parse_config callers and definition",
+      "symbol": "rs_parse_config",
+      "goldFile": "rust-go/parse_config.rs",
+      "goldLine": 1,
+      "callerFile": "rust-go/parse_config_caller.rs",
+      "files": {
+        "rust-go/parse_config.rs": "pub fn rs_parse_config(value: i32) -> i32 { value + 1 }\n",
+        "rust-go/parse_config_caller.rs": "use crate::parse_config::rs_parse_config;\npub fn run() -> i32 { rs_parse_config(1) }\n"
+      }
+    },
+    {
+      "id": "rust-go-03",
+      "query": "rust-go rs_validate_token callers and definition",
+      "symbol": "rs_validate_token",
+      "goldFile": "rust-go/validate_token.rs",
+      "goldLine": 1,
+      "callerFile": "rust-go/validate_token_caller.rs",
+      "files": {
+        "rust-go/validate_token.rs": "pub fn rs_validate_token(value: i32) -> i32 { value + 1 }\n",
+        "rust-go/validate_token_caller.rs": "use crate::validate_token::rs_validate_token;\npub fn run() -> i32 { rs_validate_token(1) }\n"
+      }
+    },
+    {
+      "id": "rust-go-04",
+      "query": "rust-go rs_load_workspace callers and definition",
+      "symbol": "rs_load_workspace",
+      "goldFile": "rust-go/load_workspace.rs",
+      "goldLine": 1,
+      "callerFile": "rust-go/load_workspace_caller.rs",
+      "files": {
+        "rust-go/load_workspace.rs": "pub fn rs_load_workspace(value: i32) -> i32 { value + 1 }\n",
+        "rust-go/load_workspace_caller.rs": "use crate::load_workspace::rs_load_workspace;\npub fn run() -> i32 { rs_load_workspace(1) }\n"
+      }
+    },
+    {
+      "id": "rust-go-05",
+      "query": "rust-go rs_build_request callers and definition",
+      "symbol": "rs_build_request",
+      "goldFile": "rust-go/build_request.rs",
+      "goldLine": 1,
+      "callerFile": "rust-go/build_request_caller.rs",
+      "files": {
+        "rust-go/build_request.rs": "pub fn rs_build_request(value: i32) -> i32 { value + 1 }\n",
+        "rust-go/build_request_caller.rs": "use crate::build_request::rs_build_request;\npub fn run() -> i32 { rs_build_request(1) }\n"
+      }
+    },
+    {
+      "id": "rust-go-06",
+      "query": "rust-go GoRetryDelay callers and definition",
+      "symbol": "GoRetryDelay",
+      "goldFile": "rust-go/retry_delay.go",
+      "goldLine": 2,
+      "callerFile": "rust-go/retry_delay_caller.go",
+      "files": {
+        "rust-go/retry_delay.go": "package sample\nfunc GoRetryDelay(value int) int { return value + 1 }\n",
+        "rust-go/retry_delay_caller.go": "package sample\nfunc Use5() int { return GoRetryDelay(1) }\n"
+      }
+    },
+    {
+      "id": "rust-go-07",
+      "query": "rust-go GoMergeUsage callers and definition",
+      "symbol": "GoMergeUsage",
+      "goldFile": "rust-go/merge_usage.go",
+      "goldLine": 2,
+      "callerFile": "rust-go/merge_usage_caller.go",
+      "files": {
+        "rust-go/merge_usage.go": "package sample\nfunc GoMergeUsage(value int) int { return value + 1 }\n",
+        "rust-go/merge_usage_caller.go": "package sample\nfunc Use6() int { return GoMergeUsage(1) }\n"
+      }
+    },
+    {
+      "id": "rust-go-08",
+      "query": "rust-go GoRenderPrompt callers and definition",
+      "symbol": "GoRenderPrompt",
+      "goldFile": "rust-go/render_prompt.go",
+      "goldLine": 2,
+      "callerFile": "rust-go/render_prompt_caller.go",
+      "files": {
+        "rust-go/render_prompt.go": "package sample\nfunc GoRenderPrompt(value int) int { return value + 1 }\n",
+        "rust-go/render_prompt_caller.go": "package sample\nfunc Use7() int { return GoRenderPrompt(1) }\n"
+      }
+    },
+    {
+      "id": "rust-go-09",
+      "query": "rust-go GoFormatDiff callers and definition",
+      "symbol": "GoFormatDiff",
+      "goldFile": "rust-go/format_diff.go",
+      "goldLine": 2,
+      "callerFile": "rust-go/format_diff_caller.go",
+      "files": {
+        "rust-go/format_diff.go": "package sample\nfunc GoFormatDiff(value int) int { return value + 1 }\n",
+        "rust-go/format_diff_caller.go": "package sample\nfunc Use8() int { return GoFormatDiff(1) }\n"
+      }
+    },
+    {
+      "id": "rust-go-10",
+      "query": "rust-go GoCheckBudget callers and definition",
+      "symbol": "GoCheckBudget",
+      "goldFile": "rust-go/check_budget.go",
+      "goldLine": 2,
+      "callerFile": "rust-go/check_budget_caller.go",
+      "files": {
+        "rust-go/check_budget.go": "package sample\nfunc GoCheckBudget(value int) int { return value + 1 }\n",
+        "rust-go/check_budget_caller.go": "package sample\nfunc Use9() int { return GoCheckBudget(1) }\n"
+      }
+    }
+  ]
+}

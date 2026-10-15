@@ -119,6 +119,7 @@ export interface PackageDependency {
 }
 
 export interface RepositoryMap {
+  relevantCode?: import("./relevant-code-map.js").RelevantCodeMap;
   root: string;
   fileCount: number;
   files: RepoFile[];

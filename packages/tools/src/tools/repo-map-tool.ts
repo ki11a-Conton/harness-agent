@@ -3,6 +3,7 @@ import type { ToolDefinition, ToolExecutionContext, ToolResult } from "@ar/contr
 import { errorInfo } from "@ar/contracts";
 import { resolve } from "node:path";
 import { DEFAULT_MAX_FILES, RepositoryMapCache, type RepositoryMap } from "../repo-map.js";
+import { buildRelevantCodeMap } from "../relevant-code-map.js";
 
 /**
  * P2-30 repo_map tool. Read-only; policy (permission + sandbox path scoping)
@@ -14,11 +15,15 @@ import { DEFAULT_MAX_FILES, RepositoryMapCache, type RepositoryMap } from "../re
 export interface RepoMapToolInput {
   refresh?: boolean;
   maxFiles?: number;
+  query?: string;
+  maxCodeTokens?: number;
 }
 
 const repoMapSchema = z.object({
   refresh: z.boolean().optional(),
   maxFiles: z.number().int().positive().max(500_000).optional(),
+  query: z.string().trim().min(1).max(512).optional(),
+  maxCodeTokens: z.number().int().min(128).max(4000).optional(),
 });
 
 /** A resolver created once by `makeRepoMapResolver` (plan.md P0-6: never a
@@ -67,7 +72,7 @@ export function createRepoMapTool(
   return {
     name: "repo_map",
     description:
-      "Return the cached repository map: file tree, package manifests, entrypoints, test-command hints and languages. Serves incremental invalidation on repo change; pass refresh:true to force a rebuild.",
+      "Return the cached repository overview. query additionally produces a task-related Tree-sitter symbol/reference graph for TS/JS, Python, Rust and Go; maxCodeTokens bounds that additional section (default 1600). References are candidates, not semantic resolution. refresh:true rebuilds the overview.",
     inputSchema: repoMapSchema,
     risk: "readonly",
     metadata: {
@@ -84,9 +89,12 @@ export function createRepoMapTool(
     async execute(input: RepoMapToolInput, context: ToolExecutionContext): Promise<ToolResult<RepositoryMap>> {
       try {
         const map = await resolver.resolve(input, context.cwd);
+        const relevantCode = input.query === undefined ? undefined : await buildRelevantCodeMap({
+          root: context.cwd, query: input.query, maxTokens: input.maxCodeTokens, signal: context.signal,
+        });
         return {
           status: "success",
-          output: map,
+          output: relevantCode === undefined ? map : { ...map, relevantCode },
           evidence: [{ type: "file", description: `repo_map: ${map.fileCount} file(s), ${map.packages.length} package(s)`, source: map.root, timestamp: Date.now() }],
         };
       } catch (err) {
