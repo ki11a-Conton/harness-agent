@@ -1,0 +1,1860 @@
+{
+  "total_count": 10,
+  "jobs": [
+    {
+      "id": 116513095722,
+      "run_id": 38761338730,
+      "workflow_name": "ci",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/runs/38761338730",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOT8gONs8AAAAbILjAKg",
+      "head_sha": "6e81e2e976e678ab78f610ea3cd699d35d9e1986",
+      "url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/jobs/116513095722",
+      "html_url": "https://github.com/ki11a-Conton/harness-agent/actions/runs/38761338730/job/116513095722",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-15T15:33:13Z",
+      "started_at": "2026-10-15T15:33:15Z",
+      "completed_at": "2026-10-15T15:43:49Z",
+      "name": "coverage gate (ubuntu)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-15T15:33:16Z",
+          "completed_at": "2026-10-15T15:33:17Z"
+        },
+        {
+          "name": "Check out the repository",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-15T15:33:17Z",
+          "completed_at": "2026-10-15T15:33:23Z"
+        },
+        {
+          "name": "Set up pnpm",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-15T15:33:23Z",
+          "completed_at": "2026-10-15T15:33:25Z"
+        },
+        {
+          "name": "Set up Node",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-15T15:33:25Z",
+          "completed_at": "2026-10-15T15:33:33Z"
+        },
+        {
+          "name": "Install dependencies (frozen lockfile)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-15T15:33:33Z",
+          "completed_at": "2026-10-15T15:33:36Z"
+        },
+        {
+          "name": "Build the release gate entry",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-10-15T15:33:36Z",
+          "completed_at": "2026-10-15T15:33:42Z"
+        },
+        {
+          "name": "Check the coverage report publisher",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-10-15T15:33:42Z",
+          "completed_at": "2026-10-15T15:33:43Z"
+        },
+        {
+          "name": "Coverage gate (thresholds fail the job)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-10-15T15:33:43Z",
+          "completed_at": "2026-10-15T15:43:44Z"
+        },
+        {
+          "name": "Publish the actual coverage gate result",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-10-15T15:43:44Z",
+          "completed_at": "2026-10-15T15:43:44Z"
+        },
+        {
+          "name": "Upload coverage summary (P20-4)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-10-15T15:43:44Z",
+          "completed_at": "2026-10-15T15:43:45Z"
+        },
+        {
+          "name": "Upload coverage gate evidence (P38-12)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-10-15T15:43:45Z",
+          "completed_at": "2026-10-15T15:43:46Z"
+        },
+        {
+          "name": "Post Set up Node",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 20,
+          "started_at": "2026-10-15T15:43:46Z",
+          "completed_at": "2026-10-15T15:43:47Z"
+        },
+        {
+          "name": "Post Set up pnpm",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 21,
+          "started_at": "2026-10-15T15:43:47Z",
+          "completed_at": "2026-10-15T15:43:47Z"
+        },
+        {
+          "name": "Post Check out the repository",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 22,
+          "started_at": "2026-10-15T15:43:47Z",
+          "completed_at": "2026-10-15T15:43:47Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 23,
+          "started_at": "2026-10-15T15:43:47Z",
+          "completed_at": "2026-10-15T15:43:47Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/check-runs/116513095722",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000003442,
+      "runner_name": "GitHub Actions 1000003442",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 116513096211,
+      "run_id": 38761338730,
+      "workflow_name": "ci",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/runs/38761338730",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOT8gONs8AAAAbILjCEw",
+      "head_sha": "6e81e2e976e678ab78f610ea3cd699d35d9e1986",
+      "url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/jobs/116513096211",
+      "html_url": "https://github.com/ki11a-Conton/harness-agent/actions/runs/38761338730/job/116513096211",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-15T15:33:13Z",
+      "started_at": "2026-10-15T15:33:15Z",
+      "completed_at": "2026-10-15T15:33:45Z",
+      "name": "offline cold-start (ubuntu)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-15T15:33:16Z",
+          "completed_at": "2026-10-15T15:33:17Z"
+        },
+        {
+          "name": "Check out the repository (into a path containing a space)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-15T15:33:17Z",
+          "completed_at": "2026-10-15T15:33:22Z"
+        },
+        {
+          "name": "Set up pnpm",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-15T15:33:22Z",
+          "completed_at": "2026-10-15T15:33:24Z"
+        },
+        {
+          "name": "Set up Node",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-15T15:33:24Z",
+          "completed_at": "2026-10-15T15:33:26Z"
+        },
+        {
+          "name": "Assert the tested HEAD is the workflow SHA",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-15T15:33:26Z",
+          "completed_at": "2026-10-15T15:33:26Z"
+        },
+        {
+          "name": "Assert this is a genuine cold start (no node_modules, no dist)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-10-15T15:33:26Z",
+          "completed_at": "2026-10-15T15:33:26Z"
+        },
+        {
+          "name": "README step 1 — install (frozen lockfile)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-10-15T15:33:26Z",
+          "completed_at": "2026-10-15T15:33:28Z"
+        },
+        {
+          "name": "README step 2 — build",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-10-15T15:33:28Z",
+          "completed_at": "2026-10-15T15:33:35Z"
+        },
+        {
+          "name": "Verify the workflow itself cannot authorize a paid run",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-10-15T15:33:35Z",
+          "completed_at": "2026-10-15T15:33:35Z"
+        },
+        {
+          "name": "README step 3 — doctor",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-10-15T15:33:35Z",
+          "completed_at": "2026-10-15T15:33:36Z"
+        },
+        {
+          "name": "README step 4 — single adversarial case with the stub provider",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-10-15T15:33:36Z",
+          "completed_at": "2026-10-15T15:33:38Z"
+        },
+        {
+          "name": "README step 5 — frozen baseline plan (dry-run, no key, 0 provider calls)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-10-15T15:33:38Z",
+          "completed_at": "2026-10-15T15:33:38Z"
+        },
+        {
+          "name": "Machine-check the artifacts (not just exit codes)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-10-15T15:33:38Z",
+          "completed_at": "2026-10-15T15:33:38Z"
+        },
+        {
+          "name": "Linux oracle — the REAL TaskVerifier on the frozen baseline",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 14,
+          "started_at": "2026-10-15T15:33:38Z",
+          "completed_at": "2026-10-15T15:33:42Z"
+        },
+        {
+          "name": "Write the reduced cold-start evidence bundle",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15,
+          "started_at": "2026-10-15T15:33:42Z",
+          "completed_at": "2026-10-15T15:33:42Z"
+        },
+        {
+          "name": "Upload cold-start evidence (E4-R82)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 16,
+          "started_at": "2026-10-15T15:33:42Z",
+          "completed_at": "2026-10-15T15:33:43Z"
+        },
+        {
+          "name": "Post Set up Node",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 30,
+          "started_at": "2026-10-15T15:33:43Z",
+          "completed_at": "2026-10-15T15:33:43Z"
+        },
+        {
+          "name": "Post Set up pnpm",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 31,
+          "started_at": "2026-10-15T15:33:43Z",
+          "completed_at": "2026-10-15T15:33:43Z"
+        },
+        {
+          "name": "Post Check out the repository (into a path containing a space)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 32,
+          "started_at": "2026-10-15T15:33:43Z",
+          "completed_at": "2026-10-15T15:33:44Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 33,
+          "started_at": "2026-10-15T15:33:44Z",
+          "completed_at": "2026-10-15T15:33:44Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/check-runs/116513096211",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000003444,
+      "runner_name": "GitHub Actions 1000003444",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 116513096224,
+      "run_id": 38761338730,
+      "workflow_name": "ci",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/runs/38761338730",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOT8gONs8AAAAbILjCIA",
+      "head_sha": "6e81e2e976e678ab78f610ea3cd699d35d9e1986",
+      "url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/jobs/116513096224",
+      "html_url": "https://github.com/ki11a-Conton/harness-agent/actions/runs/38761338730/job/116513096224",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-15T15:33:13Z",
+      "started_at": "2026-10-15T15:33:15Z",
+      "completed_at": "2026-10-15T15:41:41Z",
+      "name": "r97-r98 closed loop (windows-latest)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-15T15:33:16Z",
+          "completed_at": "2026-10-15T15:33:17Z"
+        },
+        {
+          "name": "Check out the repository",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-15T15:33:17Z",
+          "completed_at": "2026-10-15T15:33:31Z"
+        },
+        {
+          "name": "Set up pnpm",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-15T15:33:31Z",
+          "completed_at": "2026-10-15T15:33:37Z"
+        },
+        {
+          "name": "Set up Node",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-15T15:33:37Z",
+          "completed_at": "2026-10-15T15:33:48Z"
+        },
+        {
+          "name": "Install dependencies (frozen lockfile)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-15T15:33:48Z",
+          "completed_at": "2026-10-15T15:33:52Z"
+        },
+        {
+          "name": "Build the tested revision",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-10-15T15:33:52Z",
+          "completed_at": "2026-10-15T15:34:00Z"
+        },
+        {
+          "name": "A7a — release-CLI POS-REFUSE + 0-provider certification (real selection/observer/executor + fake transport, 0 external requests)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-10-15T15:34:00Z",
+          "completed_at": "2026-10-15T15:34:45Z"
+        },
+        {
+          "name": "Run the offline closed loop (setup -> acceptance -> suite -> matrix -> identity)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-10-15T15:34:45Z",
+          "completed_at": "2026-10-15T15:37:22Z"
+        },
+        {
+          "name": "N5 — run the offline pre-registration closed loop (0 provider calls)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-10-15T15:37:22Z",
+          "completed_at": "2026-10-15T15:38:18Z"
+        },
+        {
+          "name": "N7 — separated readiness levels (no single overall PASS)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-10-15T15:38:18Z",
+          "completed_at": "2026-10-15T15:38:34Z"
+        },
+        {
+          "name": "Upload CI readiness artifact",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-10-15T15:38:34Z",
+          "completed_at": "2026-10-15T15:38:36Z"
+        },
+        {
+          "name": "Publish the closed-loop phase + failing tests to the public summary",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 12,
+          "started_at": "2026-10-15T15:38:36Z",
+          "completed_at": "2026-10-15T15:38:36Z"
+        },
+        {
+          "name": "Prove the suite CATCHES the thirty anti-cheat mutations (T6's five + A7's fourteen + N2's one + N5's five + S0's two + S7's three)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-10-15T15:38:36Z",
+          "completed_at": "2026-10-15T15:41:35Z"
+        },
+        {
+          "name": "Upload the closed-loop evidence (E4-R101)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 14,
+          "started_at": "2026-10-15T15:41:35Z",
+          "completed_at": "2026-10-15T15:41:36Z"
+        },
+        {
+          "name": "Post Set up Node",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 26,
+          "started_at": "2026-10-15T15:41:36Z",
+          "completed_at": "2026-10-15T15:41:36Z"
+        },
+        {
+          "name": "Post Set up pnpm",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 27,
+          "started_at": "2026-10-15T15:41:36Z",
+          "completed_at": "2026-10-15T15:41:36Z"
+        },
+        {
+          "name": "Post Check out the repository",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 28,
+          "started_at": "2026-10-15T15:41:36Z",
+          "completed_at": "2026-10-15T15:41:39Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 29,
+          "started_at": "2026-10-15T15:41:39Z",
+          "completed_at": "2026-10-15T15:41:39Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/check-runs/116513096224",
+      "labels": [
+        "windows-latest"
+      ],
+      "runner_id": 1000003448,
+      "runner_name": "GitHub Actions 1000003448",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 116513096236,
+      "run_id": 38761338730,
+      "workflow_name": "ci",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/runs/38761338730",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOT8gONs8AAAAbILjCLA",
+      "head_sha": "6e81e2e976e678ab78f610ea3cd699d35d9e1986",
+      "url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/jobs/116513096236",
+      "html_url": "https://github.com/ki11a-Conton/harness-agent/actions/runs/38761338730/job/116513096236",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-15T15:33:13Z",
+      "started_at": "2026-10-15T15:33:15Z",
+      "completed_at": "2026-10-15T15:37:13Z",
+      "name": "r97-r98 closed loop (ubuntu-latest)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-15T15:33:16Z",
+          "completed_at": "2026-10-15T15:33:18Z"
+        },
+        {
+          "name": "Check out the repository",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-15T15:33:18Z",
+          "completed_at": "2026-10-15T15:33:24Z"
+        },
+        {
+          "name": "Set up pnpm",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-15T15:33:24Z",
+          "completed_at": "2026-10-15T15:33:25Z"
+        },
+        {
+          "name": "Set up Node",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-15T15:33:25Z",
+          "completed_at": "2026-10-15T15:33:29Z"
+        },
+        {
+          "name": "Install dependencies (frozen lockfile)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-15T15:33:29Z",
+          "completed_at": "2026-10-15T15:33:31Z"
+        },
+        {
+          "name": "Build the tested revision",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-10-15T15:33:31Z",
+          "completed_at": "2026-10-15T15:33:37Z"
+        },
+        {
+          "name": "A7a — release-CLI POS-REFUSE + 0-provider certification (real selection/observer/executor + fake transport, 0 external requests)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-10-15T15:33:37Z",
+          "completed_at": "2026-10-15T15:34:10Z"
+        },
+        {
+          "name": "Run the offline closed loop (setup -> acceptance -> suite -> matrix -> identity)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-10-15T15:34:10Z",
+          "completed_at": "2026-10-15T15:35:21Z"
+        },
+        {
+          "name": "N5 — run the offline pre-registration closed loop (0 provider calls)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-10-15T15:35:21Z",
+          "completed_at": "2026-10-15T15:35:35Z"
+        },
+        {
+          "name": "N7 — separated readiness levels (no single overall PASS)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-10-15T15:35:35Z",
+          "completed_at": "2026-10-15T15:35:42Z"
+        },
+        {
+          "name": "Upload CI readiness artifact",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-10-15T15:35:42Z",
+          "completed_at": "2026-10-15T15:35:44Z"
+        },
+        {
+          "name": "Publish the closed-loop phase + failing tests to the public summary",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 12,
+          "started_at": "2026-10-15T15:35:44Z",
+          "completed_at": "2026-10-15T15:35:44Z"
+        },
+        {
+          "name": "Prove the suite CATCHES the thirty anti-cheat mutations (T6's five + A7's fourteen + N2's one + N5's five + S0's two + S7's three)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-10-15T15:35:44Z",
+          "completed_at": "2026-10-15T15:37:07Z"
+        },
+        {
+          "name": "Upload the closed-loop evidence (E4-R101)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 14,
+          "started_at": "2026-10-15T15:37:07Z",
+          "completed_at": "2026-10-15T15:37:08Z"
+        },
+        {
+          "name": "Post Set up Node",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 26,
+          "started_at": "2026-10-15T15:37:08Z",
+          "completed_at": "2026-10-15T15:37:08Z"
+        },
+        {
+          "name": "Post Set up pnpm",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 27,
+          "started_at": "2026-10-15T15:37:08Z",
+          "completed_at": "2026-10-15T15:37:08Z"
+        },
+        {
+          "name": "Post Check out the repository",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 28,
+          "started_at": "2026-10-15T15:37:08Z",
+          "completed_at": "2026-10-15T15:37:08Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 29,
+          "started_at": "2026-10-15T15:37:08Z",
+          "completed_at": "2026-10-15T15:37:08Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/check-runs/116513096236",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000003446,
+      "runner_name": "GitHub Actions 1000003446",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 116513096295,
+      "run_id": 38761338730,
+      "workflow_name": "ci",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/runs/38761338730",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOT8gONs8AAAAbILjCZw",
+      "head_sha": "6e81e2e976e678ab78f610ea3cd699d35d9e1986",
+      "url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/jobs/116513096295",
+      "html_url": "https://github.com/ki11a-Conton/harness-agent/actions/runs/38761338730/job/116513096295",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-10-15T15:33:13Z",
+      "started_at": "2026-10-15T15:33:16Z",
+      "completed_at": "2026-10-15T15:48:58Z",
+      "name": "real formal offline (windows)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-15T15:33:17Z",
+          "completed_at": "2026-10-15T15:33:19Z"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-15T15:33:19Z",
+          "completed_at": "2026-10-15T15:33:37Z"
+        },
+        {
+          "name": "Run pnpm/action-setup@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-15T15:33:37Z",
+          "completed_at": "2026-10-15T15:33:51Z"
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-15T15:33:51Z",
+          "completed_at": "2026-10-15T15:34:38Z"
+        },
+        {
+          "name": "Install dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-15T15:34:38Z",
+          "completed_at": "2026-10-15T15:34:43Z"
+        },
+        {
+          "name": "Build the driver",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-10-15T15:34:43Z",
+          "completed_at": "2026-10-15T15:34:50Z"
+        },
+        {
+          "name": "Real formal + release CLI + measured readiness (zero paid requests)",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 7,
+          "started_at": "2026-10-15T15:34:50Z",
+          "completed_at": "2026-10-15T15:48:52Z"
+        },
+        {
+          "name": "Upload formal leg and raw bundles (including failures)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-10-15T15:48:52Z",
+          "completed_at": "2026-10-15T15:48:53Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 14,
+          "started_at": "2026-10-15T15:48:53Z",
+          "completed_at": "2026-10-15T15:48:53Z"
+        },
+        {
+          "name": "Post Run pnpm/action-setup@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15,
+          "started_at": "2026-10-15T15:48:53Z",
+          "completed_at": "2026-10-15T15:48:53Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 16,
+          "started_at": "2026-10-15T15:48:53Z",
+          "completed_at": "2026-10-15T15:48:56Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 17,
+          "started_at": "2026-10-15T15:48:56Z",
+          "completed_at": "2026-10-15T15:48:56Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/check-runs/116513096295",
+      "labels": [
+        "windows-latest"
+      ],
+      "runner_id": 1000003447,
+      "runner_name": "GitHub Actions 1000003447",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 116513096423,
+      "run_id": 38761338730,
+      "workflow_name": "ci",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/runs/38761338730",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOT8gONs8AAAAbILjC5w",
+      "head_sha": "6e81e2e976e678ab78f610ea3cd699d35d9e1986",
+      "url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/jobs/116513096423",
+      "html_url": "https://github.com/ki11a-Conton/harness-agent/actions/runs/38761338730/job/116513096423",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-15T15:33:13Z",
+      "started_at": "2026-10-15T15:33:15Z",
+      "completed_at": "2026-10-15T15:46:04Z",
+      "name": "real formal offline (ubuntu)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-15T15:33:16Z",
+          "completed_at": "2026-10-15T15:33:17Z"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-15T15:33:17Z",
+          "completed_at": "2026-10-15T15:33:21Z"
+        },
+        {
+          "name": "Run pnpm/action-setup@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-15T15:33:21Z",
+          "completed_at": "2026-10-15T15:33:22Z"
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-15T15:33:22Z",
+          "completed_at": "2026-10-15T15:33:24Z"
+        },
+        {
+          "name": "Install dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-15T15:33:24Z",
+          "completed_at": "2026-10-15T15:33:27Z"
+        },
+        {
+          "name": "Build the driver",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-10-15T15:33:27Z",
+          "completed_at": "2026-10-15T15:33:33Z"
+        },
+        {
+          "name": "Real formal + release CLI + measured readiness (zero paid requests)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-10-15T15:33:33Z",
+          "completed_at": "2026-10-15T15:46:01Z"
+        },
+        {
+          "name": "Upload formal leg and raw bundles (including failures)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-10-15T15:46:01Z",
+          "completed_at": "2026-10-15T15:46:02Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 14,
+          "started_at": "2026-10-15T15:46:02Z",
+          "completed_at": "2026-10-15T15:46:03Z"
+        },
+        {
+          "name": "Post Run pnpm/action-setup@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15,
+          "started_at": "2026-10-15T15:46:03Z",
+          "completed_at": "2026-10-15T15:46:03Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 16,
+          "started_at": "2026-10-15T15:46:03Z",
+          "completed_at": "2026-10-15T15:46:03Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 17,
+          "started_at": "2026-10-15T15:46:03Z",
+          "completed_at": "2026-10-15T15:46:03Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/check-runs/116513096423",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000003445,
+      "runner_name": "GitHub Actions 1000003445",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 116513096437,
+      "run_id": 38761338730,
+      "workflow_name": "ci",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/runs/38761338730",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOT8gONs8AAAAbILjC9Q",
+      "head_sha": "6e81e2e976e678ab78f610ea3cd699d35d9e1986",
+      "url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/jobs/116513096437",
+      "html_url": "https://github.com/ki11a-Conton/harness-agent/actions/runs/38761338730/job/116513096437",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-10-15T15:33:13Z",
+      "started_at": "2026-10-15T15:33:15Z",
+      "completed_at": "2026-10-15T15:44:34Z",
+      "name": "install · typecheck · test · build · benchmark-smoke · audit (windows-latest, windows)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-15T15:33:16Z",
+          "completed_at": "2026-10-15T15:33:18Z"
+        },
+        {
+          "name": "Check out the repository",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-15T15:33:18Z",
+          "completed_at": "2026-10-15T15:33:34Z"
+        },
+        {
+          "name": "Set up pnpm",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-15T15:33:34Z",
+          "completed_at": "2026-10-15T15:33:38Z"
+        },
+        {
+          "name": "Set up Node",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-15T15:33:38Z",
+          "completed_at": "2026-10-15T15:33:51Z"
+        },
+        {
+          "name": "Install dependencies (frozen lockfile)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-15T15:33:51Z",
+          "completed_at": "2026-10-15T15:33:55Z"
+        },
+        {
+          "name": "Typecheck",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-10-15T15:33:55Z",
+          "completed_at": "2026-10-15T15:34:03Z"
+        },
+        {
+          "name": "Real CLI and Web coding acceptance (scripted local HTTP, no paid calls)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-10-15T15:34:03Z",
+          "completed_at": "2026-10-15T15:34:21Z"
+        },
+        {
+          "name": "Opt-in coding prompt on actual CLI and Web HTTP requests",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-10-15T15:34:21Z",
+          "completed_at": "2026-10-15T15:34:34Z"
+        },
+        {
+          "name": "Upload exact prompt and coding acceptance evidence",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-10-15T15:34:34Z",
+          "completed_at": "2026-10-15T15:34:35Z"
+        },
+        {
+          "name": "Coding-v2 actual CLI and Web request acceptance",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-10-15T15:34:35Z",
+          "completed_at": "2026-10-15T15:34:48Z"
+        },
+        {
+          "name": "Upload coding-v2 evidence",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-10-15T15:34:48Z",
+          "completed_at": "2026-10-15T15:34:49Z"
+        },
+        {
+          "name": "Unit and integration tests",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 12,
+          "started_at": "2026-10-15T15:34:49Z",
+          "completed_at": "2026-10-15T15:44:27Z"
+        },
+        {
+          "name": "Publish failing test names to the public job summary",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-10-15T15:44:27Z",
+          "completed_at": "2026-10-15T15:44:28Z"
+        },
+        {
+          "name": "Build",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 14,
+          "started_at": "2026-10-15T15:44:28Z",
+          "completed_at": "2026-10-15T15:44:28Z"
+        },
+        {
+          "name": "Strict usage audit of the named run (E4-R24 independent stage)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 15,
+          "started_at": "2026-10-15T15:44:28Z",
+          "completed_at": "2026-10-15T15:44:28Z"
+        },
+        {
+          "name": "Upload observation evidence (E4-R24)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 16,
+          "started_at": "2026-10-15T15:44:28Z",
+          "completed_at": "2026-10-15T15:44:28Z"
+        },
+        {
+          "name": "N7 — N0 behavioural gate (12 counterexamples, all GREEN) + legacy R97 cases (14)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 17,
+          "started_at": "2026-10-15T15:44:28Z",
+          "completed_at": "2026-10-15T15:44:28Z"
+        },
+        {
+          "name": "N7 — documentation smoke (approval template, read-only build input, portable links)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 18,
+          "started_at": "2026-10-15T15:44:28Z",
+          "completed_at": "2026-10-15T15:44:28Z"
+        },
+        {
+          "name": "R7 — F6/F3 readiness classification + F5-pricing counterexamples (37 tests, all GREEN)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 19,
+          "started_at": "2026-10-15T15:44:28Z",
+          "completed_at": "2026-10-15T15:44:28Z"
+        },
+        {
+          "name": "Benchmark smoke (stub/fake provider — no paid model)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 20,
+          "started_at": "2026-10-15T15:44:28Z",
+          "completed_at": "2026-10-15T15:44:28Z"
+        },
+        {
+          "name": "Upload benchmark smoke report (P12-5)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 21,
+          "started_at": "2026-10-15T15:44:28Z",
+          "completed_at": "2026-10-15T15:44:28Z"
+        },
+        {
+          "name": "Campaign evidence chain — synthetic fixture validates (E4-R84)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 22,
+          "started_at": "2026-10-15T15:44:28Z",
+          "completed_at": "2026-10-15T15:44:28Z"
+        },
+        {
+          "name": "Campaign failure triage — offline, deterministic digest (E4-R85)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 23,
+          "started_at": "2026-10-15T15:44:28Z",
+          "completed_at": "2026-10-15T15:44:28Z"
+        },
+        {
+          "name": "Stall-gate fix — structured evidence is observable (E4-R86)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 24,
+          "started_at": "2026-10-15T15:44:28Z",
+          "completed_at": "2026-10-15T15:44:28Z"
+        },
+        {
+          "name": "Zero-call replay A/B over frozen cases, digest-bound (E4-R87 Phase A)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 25,
+          "started_at": "2026-10-15T15:44:28Z",
+          "completed_at": "2026-10-15T15:44:28Z"
+        },
+        {
+          "name": "Incomplete/foreign evidence is refused by the A/B gate (E4-R88)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 26,
+          "started_at": "2026-10-15T15:44:28Z",
+          "completed_at": "2026-10-15T15:44:28Z"
+        },
+        {
+          "name": "Evidence-grade correction — executed identity, emulated baseline, raw-byte audit (E4-R90)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 27,
+          "started_at": "2026-10-15T15:44:28Z",
+          "completed_at": "2026-10-15T15:44:28Z"
+        },
+        {
+          "name": "Windows script-shim determinism — real launches, no injection (E4-R91)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 28,
+          "started_at": "2026-10-15T15:44:28Z",
+          "completed_at": "2026-10-15T15:44:28Z"
+        },
+        {
+          "name": "Campaign runner self-check — offline, 0 provider calls (E4-R84)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 29,
+          "started_at": "2026-10-15T15:44:28Z",
+          "completed_at": "2026-10-15T15:44:28Z"
+        },
+        {
+          "name": "Campaign runner interruption-recovery contract (E4-R94)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 30,
+          "started_at": "2026-10-15T15:44:28Z",
+          "completed_at": "2026-10-15T15:44:28Z"
+        },
+        {
+          "name": "Campaign runner authorization/identity/argv contract (E4-R89)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 31,
+          "started_at": "2026-10-15T15:44:28Z",
+          "completed_at": "2026-10-15T15:44:28Z"
+        },
+        {
+          "name": "Upload campaign evidence fixture report (E4-R84)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 32,
+          "started_at": "2026-10-15T15:44:28Z",
+          "completed_at": "2026-10-15T15:44:28Z"
+        },
+        {
+          "name": "Upload test report (P12-5)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 33,
+          "started_at": "2026-10-15T15:44:28Z",
+          "completed_at": "2026-10-15T15:44:29Z"
+        },
+        {
+          "name": "Upload e4-09 diagnostic bundles (E4-R40, failure only)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 34,
+          "started_at": "2026-10-15T15:44:29Z",
+          "completed_at": "2026-10-15T15:44:30Z"
+        },
+        {
+          "name": "Upload R55 parent-verifier diagnostics (E4-R60, failure only)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 35,
+          "started_at": "2026-10-15T15:44:30Z",
+          "completed_at": "2026-10-15T15:44:30Z"
+        },
+        {
+          "name": "Generate gate execution evidence (P38.2-4/10, E4-R09 unified V2)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 36,
+          "started_at": "2026-10-15T15:44:30Z",
+          "completed_at": "2026-10-15T15:44:30Z"
+        },
+        {
+          "name": "Generate capability matrix (P12-5, P38.2-11 real wiring evidence)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 37,
+          "started_at": "2026-10-15T15:44:30Z",
+          "completed_at": "2026-10-15T15:44:30Z"
+        },
+        {
+          "name": "Upload capability matrix (P12-5, P38.2-11)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 38,
+          "started_at": "2026-10-15T15:44:30Z",
+          "completed_at": "2026-10-15T15:44:30Z"
+        },
+        {
+          "name": "Upload gate evidence (P38.2-10)",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 39,
+          "started_at": "2026-10-15T15:44:30Z",
+          "completed_at": "2026-10-15T15:44:30Z"
+        },
+        {
+          "name": "Post Set up Node",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 76,
+          "started_at": "2026-10-15T15:44:30Z",
+          "completed_at": "2026-10-15T15:44:30Z"
+        },
+        {
+          "name": "Post Set up pnpm",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 77,
+          "started_at": "2026-10-15T15:44:30Z",
+          "completed_at": "2026-10-15T15:44:31Z"
+        },
+        {
+          "name": "Post Check out the repository",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 78,
+          "started_at": "2026-10-15T15:44:31Z",
+          "completed_at": "2026-10-15T15:44:33Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 79,
+          "started_at": "2026-10-15T15:44:33Z",
+          "completed_at": "2026-10-15T15:44:33Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/check-runs/116513096437",
+      "labels": [
+        "windows-latest"
+      ],
+      "runner_id": 1000003449,
+      "runner_name": "GitHub Actions 1000003449",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 116513096617,
+      "run_id": 38761338730,
+      "workflow_name": "ci",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/runs/38761338730",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOT8gONs8AAAAbILjDqQ",
+      "head_sha": "6e81e2e976e678ab78f610ea3cd699d35d9e1986",
+      "url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/jobs/116513096617",
+      "html_url": "https://github.com/ki11a-Conton/harness-agent/actions/runs/38761338730/job/116513096617",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-15T15:33:13Z",
+      "started_at": "2026-10-15T15:33:15Z",
+      "completed_at": "2026-10-15T16:03:37Z",
+      "name": "install · typecheck · test · build · benchmark-smoke · audit (ubuntu-latest, ubuntu)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-15T15:33:16Z",
+          "completed_at": "2026-10-15T15:33:18Z"
+        },
+        {
+          "name": "Check out the repository",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-15T15:33:18Z",
+          "completed_at": "2026-10-15T15:33:25Z"
+        },
+        {
+          "name": "Set up pnpm",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-15T15:33:25Z",
+          "completed_at": "2026-10-15T15:33:27Z"
+        },
+        {
+          "name": "Set up Node",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-15T15:33:27Z",
+          "completed_at": "2026-10-15T15:33:30Z"
+        },
+        {
+          "name": "Install dependencies (frozen lockfile)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-15T15:33:30Z",
+          "completed_at": "2026-10-15T15:33:32Z"
+        },
+        {
+          "name": "Typecheck",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-10-15T15:33:32Z",
+          "completed_at": "2026-10-15T15:33:37Z"
+        },
+        {
+          "name": "Real CLI and Web coding acceptance (scripted local HTTP, no paid calls)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-10-15T15:33:37Z",
+          "completed_at": "2026-10-15T15:33:47Z"
+        },
+        {
+          "name": "Opt-in coding prompt on actual CLI and Web HTTP requests",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-10-15T15:33:47Z",
+          "completed_at": "2026-10-15T15:33:57Z"
+        },
+        {
+          "name": "Upload exact prompt and coding acceptance evidence",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-10-15T15:33:57Z",
+          "completed_at": "2026-10-15T15:33:58Z"
+        },
+        {
+          "name": "Coding-v2 actual CLI and Web request acceptance",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-10-15T15:33:58Z",
+          "completed_at": "2026-10-15T15:34:09Z"
+        },
+        {
+          "name": "Upload coding-v2 evidence",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-10-15T15:34:09Z",
+          "completed_at": "2026-10-15T15:34:10Z"
+        },
+        {
+          "name": "Unit and integration tests",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-10-15T15:34:10Z",
+          "completed_at": "2026-10-15T15:41:46Z"
+        },
+        {
+          "name": "Publish failing test names to the public job summary",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 13,
+          "started_at": "2026-10-15T15:41:46Z",
+          "completed_at": "2026-10-15T15:41:46Z"
+        },
+        {
+          "name": "Build",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 14,
+          "started_at": "2026-10-15T15:41:46Z",
+          "completed_at": "2026-10-15T15:41:47Z"
+        },
+        {
+          "name": "Strict usage audit of the named run (E4-R24 independent stage)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15,
+          "started_at": "2026-10-15T15:41:47Z",
+          "completed_at": "2026-10-15T15:41:47Z"
+        },
+        {
+          "name": "Upload observation evidence (E4-R24)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 16,
+          "started_at": "2026-10-15T15:41:47Z",
+          "completed_at": "2026-10-15T15:41:48Z"
+        },
+        {
+          "name": "N7 — N0 behavioural gate (12 counterexamples, all GREEN) + legacy R97 cases (14)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 17,
+          "started_at": "2026-10-15T15:41:48Z",
+          "completed_at": "2026-10-15T15:41:54Z"
+        },
+        {
+          "name": "N7 — documentation smoke (approval template, read-only build input, portable links)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 18,
+          "started_at": "2026-10-15T15:41:54Z",
+          "completed_at": "2026-10-15T15:41:56Z"
+        },
+        {
+          "name": "R7 — F6/F3 readiness classification + F5-pricing counterexamples (37 tests, all GREEN)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 19,
+          "started_at": "2026-10-15T15:41:56Z",
+          "completed_at": "2026-10-15T15:47:48Z"
+        },
+        {
+          "name": "Benchmark smoke (stub/fake provider — no paid model)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 20,
+          "started_at": "2026-10-15T15:47:48Z",
+          "completed_at": "2026-10-15T15:47:49Z"
+        },
+        {
+          "name": "Upload benchmark smoke report (P12-5)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 21,
+          "started_at": "2026-10-15T15:47:49Z",
+          "completed_at": "2026-10-15T15:47:50Z"
+        },
+        {
+          "name": "Campaign evidence chain — synthetic fixture validates (E4-R84)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 22,
+          "started_at": "2026-10-15T15:47:50Z",
+          "completed_at": "2026-10-15T15:47:58Z"
+        },
+        {
+          "name": "Campaign failure triage — offline, deterministic digest (E4-R85)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 23,
+          "started_at": "2026-10-15T15:47:58Z",
+          "completed_at": "2026-10-15T15:47:59Z"
+        },
+        {
+          "name": "Stall-gate fix — structured evidence is observable (E4-R86)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 24,
+          "started_at": "2026-10-15T15:47:59Z",
+          "completed_at": "2026-10-15T15:48:05Z"
+        },
+        {
+          "name": "Zero-call replay A/B over frozen cases, digest-bound (E4-R87 Phase A)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 25,
+          "started_at": "2026-10-15T15:48:05Z",
+          "completed_at": "2026-10-15T15:48:07Z"
+        },
+        {
+          "name": "Incomplete/foreign evidence is refused by the A/B gate (E4-R88)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 26,
+          "started_at": "2026-10-15T15:48:07Z",
+          "completed_at": "2026-10-15T15:48:10Z"
+        },
+        {
+          "name": "Evidence-grade correction — executed identity, emulated baseline, raw-byte audit (E4-R90)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 27,
+          "started_at": "2026-10-15T15:48:10Z",
+          "completed_at": "2026-10-15T15:48:13Z"
+        },
+        {
+          "name": "Windows script-shim determinism — real launches, no injection (E4-R91)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 28,
+          "started_at": "2026-10-15T15:48:13Z",
+          "completed_at": "2026-10-15T15:48:16Z"
+        },
+        {
+          "name": "Campaign runner self-check — offline, 0 provider calls (E4-R84)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 29,
+          "started_at": "2026-10-15T15:48:16Z",
+          "completed_at": "2026-10-15T15:48:16Z"
+        },
+        {
+          "name": "Campaign runner interruption-recovery contract (E4-R94)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 30,
+          "started_at": "2026-10-15T15:48:16Z",
+          "completed_at": "2026-10-15T15:49:04Z"
+        },
+        {
+          "name": "Campaign runner authorization/identity/argv contract (E4-R89)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 31,
+          "started_at": "2026-10-15T15:49:04Z",
+          "completed_at": "2026-10-15T15:55:56Z"
+        },
+        {
+          "name": "Upload campaign evidence fixture report (E4-R84)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 32,
+          "started_at": "2026-10-15T15:55:56Z",
+          "completed_at": "2026-10-15T15:55:57Z"
+        },
+        {
+          "name": "Upload test report (P12-5)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 33,
+          "started_at": "2026-10-15T15:55:57Z",
+          "completed_at": "2026-10-15T15:55:58Z"
+        },
+        {
+          "name": "Upload e4-09 diagnostic bundles (E4-R40, failure only)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 34,
+          "started_at": "2026-10-15T15:55:58Z",
+          "completed_at": "2026-10-15T15:55:58Z"
+        },
+        {
+          "name": "Upload R55 parent-verifier diagnostics (E4-R60, failure only)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 35,
+          "started_at": "2026-10-15T15:55:58Z",
+          "completed_at": "2026-10-15T15:55:58Z"
+        },
+        {
+          "name": "Generate gate execution evidence (P38.2-4/10, E4-R09 unified V2)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 36,
+          "started_at": "2026-10-15T15:55:58Z",
+          "completed_at": "2026-10-15T16:03:31Z"
+        },
+        {
+          "name": "Generate capability matrix (P12-5, P38.2-11 real wiring evidence)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 37,
+          "started_at": "2026-10-15T16:03:31Z",
+          "completed_at": "2026-10-15T16:03:31Z"
+        },
+        {
+          "name": "Upload capability matrix (P12-5, P38.2-11)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 38,
+          "started_at": "2026-10-15T16:03:31Z",
+          "completed_at": "2026-10-15T16:03:32Z"
+        },
+        {
+          "name": "Upload gate evidence (P38.2-10)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 39,
+          "started_at": "2026-10-15T16:03:32Z",
+          "completed_at": "2026-10-15T16:03:33Z"
+        },
+        {
+          "name": "Post Set up Node",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 76,
+          "started_at": "2026-10-15T16:03:33Z",
+          "completed_at": "2026-10-15T16:03:34Z"
+        },
+        {
+          "name": "Post Set up pnpm",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 77,
+          "started_at": "2026-10-15T16:03:34Z",
+          "completed_at": "2026-10-15T16:03:34Z"
+        },
+        {
+          "name": "Post Check out the repository",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 78,
+          "started_at": "2026-10-15T16:03:34Z",
+          "completed_at": "2026-10-15T16:03:34Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 79,
+          "started_at": "2026-10-15T16:03:34Z",
+          "completed_at": "2026-10-15T16:03:34Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/check-runs/116513096617",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000003450,
+      "runner_name": "GitHub Actions 1000003450",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 116528407859,
+      "run_id": 38761338730,
+      "workflow_name": "ci",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/runs/38761338730",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOT8gONs8AAAAbIaJlMw",
+      "head_sha": "6e81e2e976e678ab78f610ea3cd699d35d9e1986",
+      "url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/jobs/116528407859",
+      "html_url": "https://github.com/ki11a-Conton/harness-agent/actions/runs/38761338730/job/116528407859",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-10-15T16:03:37Z",
+      "started_at": "2026-10-15T16:03:40Z",
+      "completed_at": "2026-10-15T16:04:04Z",
+      "name": "dual-platform acceptance (same SHA)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-15T16:03:40Z",
+          "completed_at": "2026-10-15T16:03:42Z"
+        },
+        {
+          "name": "Check out the repository",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-15T16:03:42Z",
+          "completed_at": "2026-10-15T16:03:47Z"
+        },
+        {
+          "name": "Set up pnpm",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-15T16:03:47Z",
+          "completed_at": "2026-10-15T16:03:48Z"
+        },
+        {
+          "name": "Set up Node",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-15T16:03:48Z",
+          "completed_at": "2026-10-15T16:03:50Z"
+        },
+        {
+          "name": "Install dependencies (frozen lockfile)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-15T16:03:50Z",
+          "completed_at": "2026-10-15T16:03:53Z"
+        },
+        {
+          "name": "Build (the verifier needs packages/evaluation/dist)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-10-15T16:03:53Z",
+          "completed_at": "2026-10-15T16:04:00Z"
+        },
+        {
+          "name": "Download ubuntu readiness leg",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-10-15T16:04:00Z",
+          "completed_at": "2026-10-15T16:04:01Z"
+        },
+        {
+          "name": "Download windows readiness leg",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-10-15T16:04:01Z",
+          "completed_at": "2026-10-15T16:04:01Z"
+        },
+        {
+          "name": "Show what each leg actually downloaded",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-10-15T16:04:01Z",
+          "completed_at": "2026-10-15T16:04:01Z"
+        },
+        {
+          "name": "Reduce both legs to one same-SHA verdict",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-10-15T16:04:01Z",
+          "completed_at": "2026-10-15T16:04:01Z"
+        },
+        {
+          "name": "Upload dual-platform verdict (always)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-10-15T16:04:01Z",
+          "completed_at": "2026-10-15T16:04:02Z"
+        },
+        {
+          "name": "Fail job when the two legs are not one acceptance unit (S7)",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 12,
+          "started_at": "2026-10-15T16:04:02Z",
+          "completed_at": "2026-10-15T16:04:02Z"
+        },
+        {
+          "name": "Post Set up Node",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 22,
+          "started_at": "2026-10-15T16:04:02Z",
+          "completed_at": "2026-10-15T16:04:02Z"
+        },
+        {
+          "name": "Post Set up pnpm",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 23,
+          "started_at": "2026-10-15T16:04:02Z",
+          "completed_at": "2026-10-15T16:04:02Z"
+        },
+        {
+          "name": "Post Check out the repository",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 24,
+          "started_at": "2026-10-15T16:04:02Z",
+          "completed_at": "2026-10-15T16:04:02Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 25,
+          "started_at": "2026-10-15T16:04:02Z",
+          "completed_at": "2026-10-15T16:04:02Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/check-runs/116528407859",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000003465,
+      "runner_name": "GitHub Actions 1000003465",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 116528631636,
+      "run_id": 38761338730,
+      "workflow_name": "ci",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/runs/38761338730",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOT8gONs8AAAAbIaXPVA",
+      "head_sha": "6e81e2e976e678ab78f610ea3cd699d35d9e1986",
+      "url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/jobs/116528631636",
+      "html_url": "https://github.com/ki11a-Conton/harness-agent/actions/runs/38761338730/job/116528631636",
+      "status": "completed",
+      "conclusion": "skipped",
+      "created_at": "2026-10-15T16:04:05Z",
+      "started_at": "2026-10-15T16:04:05Z",
+      "completed_at": "2026-10-15T16:04:04Z",
+      "name": "release attestation (P38-12)",
+      "steps": [],
+      "check_run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/check-runs/116528631636",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": null,
+      "runner_name": null,
+      "runner_group_id": null,
+      "runner_group_name": null
+    }
+  ]
+}

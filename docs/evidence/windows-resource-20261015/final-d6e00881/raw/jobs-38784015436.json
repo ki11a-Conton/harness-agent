@@ -1,0 +1,385 @@
+{
+  "total_count": 3,
+  "jobs": [
+    {
+      "id": 116591227063,
+      "run_id": 38784015436,
+      "workflow_name": "official DeepSeek UI installed acceptance",
+      "head_branch": "fix/windows-fixture-scope-20261015",
+      "run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/runs/38784015436",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOT8gONs8AAAAbJWDwtw",
+      "head_sha": "d6e00881dc804371165170c2a9a0697e34ff7b54",
+      "url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/jobs/116591227063",
+      "html_url": "https://github.com/ki11a-Conton/harness-agent/actions/runs/38784015436/job/116591227063",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-15T18:14:47Z",
+      "started_at": "2026-10-15T18:14:49Z",
+      "completed_at": "2026-10-15T18:15:35Z",
+      "name": "archive",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-15T18:14:49Z",
+          "completed_at": "2026-10-15T18:14:50Z"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-15T18:14:50Z",
+          "completed_at": "2026-10-15T18:14:55Z"
+        },
+        {
+          "name": "Run pnpm/action-setup@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-15T18:14:55Z",
+          "completed_at": "2026-10-15T18:14:56Z"
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-15T18:14:56Z",
+          "completed_at": "2026-10-15T18:14:57Z"
+        },
+        {
+          "name": "Verify pinned UI navigation regressions",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-15T18:14:57Z",
+          "completed_at": "2026-10-15T18:14:57Z"
+        },
+        {
+          "name": "Build the pinned clean source once",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-10-15T18:14:57Z",
+          "completed_at": "2026-10-15T18:15:30Z"
+        },
+        {
+          "name": "Run actions/upload-artifact@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-10-15T18:15:30Z",
+          "completed_at": "2026-10-15T18:15:33Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-10-15T18:15:33Z",
+          "completed_at": "2026-10-15T18:15:33Z"
+        },
+        {
+          "name": "Post Run pnpm/action-setup@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-10-15T18:15:33Z",
+          "completed_at": "2026-10-15T18:15:33Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 14,
+          "started_at": "2026-10-15T18:15:33Z",
+          "completed_at": "2026-10-15T18:15:33Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15,
+          "started_at": "2026-10-15T18:15:33Z",
+          "completed_at": "2026-10-15T18:15:33Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/check-runs/116591227063",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000003528,
+      "runner_name": "GitHub Actions 1000003528",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 116591614349,
+      "run_id": 38784015436,
+      "workflow_name": "official DeepSeek UI installed acceptance",
+      "head_branch": "fix/windows-fixture-scope-20261015",
+      "run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/runs/38784015436",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOT8gONs8AAAAbJWbZjQ",
+      "head_sha": "d6e00881dc804371165170c2a9a0697e34ff7b54",
+      "url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/jobs/116591614349",
+      "html_url": "https://github.com/ki11a-Conton/harness-agent/actions/runs/38784015436/job/116591614349",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-15T18:15:36Z",
+      "started_at": "2026-10-15T18:15:38Z",
+      "completed_at": "2026-10-15T18:20:25Z",
+      "name": "installed (windows-latest)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-15T18:15:39Z",
+          "completed_at": "2026-10-15T18:15:40Z"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-15T18:15:40Z",
+          "completed_at": "2026-10-15T18:15:51Z"
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-15T18:15:51Z",
+          "completed_at": "2026-10-15T18:15:56Z"
+        },
+        {
+          "name": "Run actions/download-artifact@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-15T18:15:56Z",
+          "completed_at": "2026-10-15T18:15:57Z"
+        },
+        {
+          "name": "Install browser test tooling outside the application",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-15T18:15:57Z",
+          "completed_at": "2026-10-15T18:16:05Z"
+        },
+        {
+          "name": "Install Chromium test browser",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-10-15T18:16:05Z",
+          "completed_at": "2026-10-15T18:16:20Z"
+        },
+        {
+          "name": "Run the same installed archive through the real official UI",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-10-15T18:16:20Z",
+          "completed_at": "2026-10-15T18:19:18Z"
+        },
+        {
+          "name": "Run actual CLI coding and tamper checks on the same archive",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-10-15T18:19:18Z",
+          "completed_at": "2026-10-15T18:20:19Z"
+        },
+        {
+          "name": "Run actions/upload-artifact@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-10-15T18:20:19Z",
+          "completed_at": "2026-10-15T18:20:20Z"
+        },
+        {
+          "name": "Run actions/upload-artifact@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-10-15T18:20:20Z",
+          "completed_at": "2026-10-15T18:20:21Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 19,
+          "started_at": "2026-10-15T18:20:21Z",
+          "completed_at": "2026-10-15T18:20:21Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 20,
+          "started_at": "2026-10-15T18:20:21Z",
+          "completed_at": "2026-10-15T18:20:24Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 21,
+          "started_at": "2026-10-15T18:20:24Z",
+          "completed_at": "2026-10-15T18:20:24Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/check-runs/116591614349",
+      "labels": [
+        "windows-latest"
+      ],
+      "runner_id": 1000003539,
+      "runner_name": "GitHub Actions 1000003539",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 116591614530,
+      "run_id": 38784015436,
+      "workflow_name": "official DeepSeek UI installed acceptance",
+      "head_branch": "fix/windows-fixture-scope-20261015",
+      "run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/runs/38784015436",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOT8gONs8AAAAbJWbaQg",
+      "head_sha": "d6e00881dc804371165170c2a9a0697e34ff7b54",
+      "url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/jobs/116591614530",
+      "html_url": "https://github.com/ki11a-Conton/harness-agent/actions/runs/38784015436/job/116591614530",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-15T18:15:36Z",
+      "started_at": "2026-10-15T18:15:38Z",
+      "completed_at": "2026-10-15T18:17:56Z",
+      "name": "installed (ubuntu-latest)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-15T18:15:39Z",
+          "completed_at": "2026-10-15T18:15:40Z"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-15T18:15:40Z",
+          "completed_at": "2026-10-15T18:15:43Z"
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-15T18:15:43Z",
+          "completed_at": "2026-10-15T18:15:44Z"
+        },
+        {
+          "name": "Run actions/download-artifact@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-15T18:15:44Z",
+          "completed_at": "2026-10-15T18:15:47Z"
+        },
+        {
+          "name": "Install browser test tooling outside the application",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-15T18:15:47Z",
+          "completed_at": "2026-10-15T18:15:49Z"
+        },
+        {
+          "name": "Install Chromium test browser",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-10-15T18:15:49Z",
+          "completed_at": "2026-10-15T18:15:55Z"
+        },
+        {
+          "name": "Run the same installed archive through the real official UI",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-10-15T18:15:55Z",
+          "completed_at": "2026-10-15T18:17:30Z"
+        },
+        {
+          "name": "Run actual CLI coding and tamper checks on the same archive",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-10-15T18:17:30Z",
+          "completed_at": "2026-10-15T18:17:51Z"
+        },
+        {
+          "name": "Run actions/upload-artifact@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-10-15T18:17:51Z",
+          "completed_at": "2026-10-15T18:17:52Z"
+        },
+        {
+          "name": "Run actions/upload-artifact@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-10-15T18:17:52Z",
+          "completed_at": "2026-10-15T18:17:53Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 19,
+          "started_at": "2026-10-15T18:17:53Z",
+          "completed_at": "2026-10-15T18:17:53Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 20,
+          "started_at": "2026-10-15T18:17:53Z",
+          "completed_at": "2026-10-15T18:17:53Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 21,
+          "started_at": "2026-10-15T18:17:53Z",
+          "completed_at": "2026-10-15T18:17:53Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/check-runs/116591614530",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000003540,
+      "runner_name": "GitHub Actions 1000003540",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    }
+  ]
+}

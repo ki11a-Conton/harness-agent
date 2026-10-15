@@ -17,3 +17,5 @@ session-isolation fixture 清理时出现 ENOTEMPTY。保留原失败，不重�
 将 composition 功能 fixture 默认设为 memory host，只有明确验证恢复的测试启用
 durableStorage:true；不改任何业务断言、产品租约或 Runtime。强制冲突下基线
 3 fail/1 pass，修正后功能 4 pass，持久化恢复仍按预期拒绝；正常 9 项与精确 CI 待复核。
+
+固定源码最终验收：`d6e00881dc804371165170c2a9a0697e34ff7b54` 四个 CI 工作流与十个主 CI 任务全部通过。原始失败保留，原单次会话超时仍是未复现项；主分支归档提交单独监听，不发布 release。

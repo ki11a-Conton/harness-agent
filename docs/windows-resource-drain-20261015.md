@@ -57,3 +57,21 @@ Runtime 与租约产品文件和 00a6219d 字节一致，本补充只改 fixture
 复现时将 conflict.config.ts 复制到 .ci/windows-fixture/，设置
 WINDOWS_FIXTURE_BASELINE_SOURCE=1 可运行精确 00a6219d 的旧测试 fixture。
 注入测试用于诊断，不冒充完整或 Windows 验收。最终精确源码 CI 仍待完成。
+
+
+## 固定源码最终验收
+
+固定源码 `d6e00881dc804371165170c2a9a0697e34ff7b54` 的四个原始 CI 工作流全部完成并成功，主 CI 十个任务全部成功，
+包含 Windows/Ubuntu 完整测试、正式离线验收、双平台汇总和发布证明。原生 Windows、
+普通安装包、同一便携包跨平台及 Web UI 安装验收成功。逐项 SHA、attempt、原生
+REST 记录及本地校验器见[最终 CI 复核](evidence/windows-resource-20261015/final-d6e00881/README.md)。
+
+关闭竞态、审批同步、预算时序均有修复前反例与修复后验证；composition 功能
+测试使用受支持的 memory host，持久化恢复和真实租约拒绝另行覆盖。产品租约
+算法未修改。固定端口被其他监听占用仍会拒绝启动，保留单写者边界。
+
+本地 f2 完整 9800 passed/15 skipped 只绑定 f2；00a 本地完整套件被执行环境
+重启中断，没有最终结果，不计为通过。最终完整验收以精确 d6 的远端执行为准。
+原始25s超时在60次 Windows 诊断中未复现，根因仍未确立，旧失败保留。
+付费模型质量仍 NOT_PROVEN。本轮未发布 release。归档提交自身的主分支 CI
+与本段固定源码验收分别核对，以 GitHub Checks 和最终汇报为准。

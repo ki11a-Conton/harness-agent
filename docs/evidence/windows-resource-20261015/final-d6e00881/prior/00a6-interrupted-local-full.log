@@ -1,0 +1,297 @@
+$ tsc -b && vitest run --exclude '**/*.perf.test.ts' --exclude '**/*.soak.test.ts' --exclude '**/e3-repro-current-defects.test.ts' --exclude '**/e4-r40-forensics.test.ts' --exclude '**/r97-driver-closed-loop.test.ts'
+
+ RUN  v4.1.11 /workspace/harness-agent-windows-resource-fix-20261015
+
+[harness] context budget: model capabilities unknown for stub/m — using conservative fallback 32000
+ ✓ apps/cli/src/benchmark-command.test.ts (103 tests) 26184ms
+     ✓ runs a case end-to-end with a scripted model (real tools + verification gate)  399ms
+     ✓ E4-04: runCase produces a real security_outcome (clean vs missing-evidence)  380ms
+     ✓ supports --shuffle/--seed: randomized execution, fixed report order  515ms
+     ✓ prevents cross-case contamination: case B cannot read case A's workspace file  1469ms
+     ✓ runs --suite holdout from benchmarks/holdout and writes holdout.json  550ms
+     ✓ records a verification failure when the model stops without fixing the task  571ms
+     ✓ wires sources.memory into a real store and the memory.retrieved event fires (judged via expectedEvents)  375ms
+     ✓ P18-2: deferred schema mode still completes (tool_lookup → tool → write) with same success as full  597ms
+     ✓ P4-7: subagent requirement runs the REAL Delegator (subagent.started fires)  1289ms
+     ✓ 1. 2 cases × 1 rep × 2 arms = exactly 4 logical arm runs, artifact finalized  823ms
+     ✓ E4-04: paired candidate carries promotion-grade activationEvidenceV2 from real signals  848ms
+     ✓ N5: tool_call_efficiency_v1 injects its guidance into the model-visible prompt (candidate only)  801ms
+     ✓ P2: activation evidence digest binds the REAL model-visible block bytes  766ms
+     ✓ P3: manifest prompt digest is a pure function of the real request's system prompt  808ms
+     ✓ N6: the candidate injects ITS OWN guidance into the model-visible prompt — never the v2 bytes  805ms
+     ✓ N6: the v2 candidate's bytes, digest and activation fact site are UNCHANGED  823ms
+     ✓ E4-02: paired run emits canonical V3 in-process (no paired-to-v3.mjs), facts from execution  747ms
+     ✓ 2. BA pairs execute the candidate before the baseline (real order in artifact)  799ms
+     ✓ 3. --repeat 2 on 2 cases → exactly 8 logical arm runs (2×2×2)  1361ms
+     ✓ N03: the plan digest changes when model, policy, case CONTENT or source changes  383ms
+     ✓ N03/N05: a real paired run writes the V3 manifest with the FULL confirmed plan, policy and a unique sample grid  1505ms
+     ✓ N04: the journal identity binds REAL arm config hashes — never 'baseline', never the runtime hash  894ms
+     ✓ F05: request capture — the effective budget reaches the real provider request as guidance; temperature is NOT a request parameter (manifest-only provenance)  581ms
+     ✓ refuses a promotion run (no provider call) when captureHostState returns an UNVERIFIED state  392ms
+     ✓ F1 FIX: the offline (stub) dry-run makes 0 provider calls and is not blocked by its own gate  377ms
+     ✓ F81-2: endpoint normalization — equivalent spellings agree, real differences do not  623ms
+     ✓ a billed --endpoint/--model run requests the flagged URL with the flagged model (real resolution path)  413ms
+ ✓ packages/core/src/runtime/runtime.test.ts (83 tests) 174ms
+[degraded] e4-r60 taskkill spawn: spawn taskkill ENOENT
+[degraded] e4-r60 taskkill exit: taskkill exited with 1
+[degraded] e4-r60 taskkill spawn: boom
+[degraded] e4-r60 taskkill exit: taskkill exited with 1
+[degraded] e4-r60 taskkill: sync spawn failure
+[degraded] e4-r60 taskkill spawn: nope
+[degraded] e4-r60 taskkill spawn: injected taskkill failure
+[degraded] e4-r55 evidence root: ENOTDIR: not a directory, mkdir '/tmp/e4-r65-root-wH70FZ/a-file/child'
+[degraded] e4-r55 evidence write child.stdout.txt: EIO: injected write failure for child.stdout.txt
+[degraded] e4-r55 evidence write child.stderr.txt: EACCES: injected write failure for child.stderr.txt
+[degraded] e4-r55 evidence write child-report.json: EIO: injected write failure for child-report.json
+[degraded] e4-r55 evidence write run.json: EIO: injected write failure for run.json
+[degraded] e4-r55 evidence write child.stdout.txt: EIO: injected write failure for child.stdout.txt
+
+R68_SYMLINK_CAPABILITY={"ok":true,"detail":"fs.symlink created a link that lstat reports as a symlink"}
+
+R68_LINK_DIRENT={"isSymbolicLink":true,"isFile":false}
+ ✓ apps/cli/src/e4-r55-failure-wiring.test.ts (65 tests) 22510ms
+     ✓ terminates a never-ending child's whole tree at the deadline and returns a structured timeout  4017ms
+     ✓ drives the real chain, judges its failure evidence, and requires an order mutation to break the acceptance  17807ms
+     ✓ I: a kill that never produces a terminal event resolves as UNCONFIRMED instead of hanging  455ms
+usage: node scripts/e4/r97-arm-worker.mjs --checkout <arm dir> --case <caseId> --suite <suite> --arm <arm>
+                                                --provider <id> --model <id> [--endpoint <url>]
+                                                --plan-digest <hex> --state <execution state dir> --ledger <ledger dir>
+                                                [--source-sha <40-hex>] [--script-shape write-then-stop|text-only] [--json]
+
+The approved --provider/--model are REQUIRED: a worker that defaulted them would execute a
+different identity than the plan approved (plan T4 怎么做 6).
+usage: node scripts/e4/r97-arm-worker.mjs --checkout <arm dir> --case <caseId> --suite <suite> --arm <arm>
+                                                --provider <id> --model <id> [--endpoint <url>]
+                                                --plan-digest <hex> --state <execution state dir> --ledger <ledger dir>
+                                                [--source-sha <40-hex>] [--script-shape write-then-stop|text-only] [--json]
+
+The approved --provider/--model are REQUIRED: a worker that defaulted them would execute a
+different identity than the plan approved (plan T4 怎么做 6).
+usage: node scripts/e4/r97-arm-worker.mjs --checkout <arm dir> --case <caseId> --suite <suite> --arm <arm>
+                                                --provider <id> --model <id> [--endpoint <url>]
+                                                --plan-digest <hex> --state <execution state dir> --ledger <ledger dir>
+                                                [--source-sha <40-hex>] [--script-shape write-then-stop|text-only] [--json]
+
+The approved --provider/--model are REQUIRED: a worker that defaulted them would execute a
+different identity than the plan approved (plan T4 怎么做 6).
+usage: node scripts/e4/r97-arm-worker.mjs --checkout <arm dir> --case <caseId> --suite <suite> --arm <arm>
+                                                --provider <id> --model <id> [--endpoint <url>]
+                                                --plan-digest <hex> --state <execution state dir> --ledger <ledger dir>
+                                                [--source-sha <40-hex>] [--script-shape write-then-stop|text-only] [--json]
+
+The approved --provider/--model are REQUIRED: a worker that defaulted them would execute a
+different identity than the plan approved (plan T4 怎么做 6).
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts (48 tests) 30358ms
+     ✓ executes the case and records a verdict that can ONLY come from the real report  1848ms
+     ✓ TWO DIFFERENT CASES each enter their OWN context — no single placeholder request  2095ms
+     ✓ a case MISSING from the arm is refused — never borrowed from the driver repo (T4 怎么做 7)  435ms
+     ✓ leaves a real evidence file on disk after the worker returns  1039ms
+     ✓ keeps the staging scratch out of the evidence, and only the scratch  1191ms
+     ✓ the stored evidence row is REDACTED: no credential-shaped text reaches it  1030ms
+     ✓ the record's detail AGREES with its own evidence on a REAL unit  1036ms
+     ✓ grant=1, the consumer breaks mid-stream and the CLI throws: innerCalls=1, NOT abandoned, remaining=0, second reserve refused  494ms
+     ✓ a SETTLEMENT write failure on an ENTERED call is refused as `budget` and the allowance is NOT refunded  512ms
+     ✓ PROTOCOL FIXTURE: the runtime's model ref disagrees with the approval, and the synthetic PASS report must not win  580ms
+     ✓ PROTOCOL FIXTURE: a NULL runtime model ref is a refusal, never 'no drift'  618ms
+     ✓ PROTOCOL FIXTURE: a FAILED dry run ends the unit BEFORE any dispatch  462ms
+     ✓ PROTOCOL FIXTURE: an APPROVED-and-matching unit still reaches a verified PASS  461ms
+     ✓ PROTOCOL FIXTURE: a LEGITIMATE negative stays `case_failed`, not infrastructure  499ms
+     ✓ a dry run that never returns is stopped by the unit deadline, and its code does NOT outlive the unit  10721ms
+     ✓ a DISPATCH that never returns is stopped too, and the admitted call is NOT refunded  6734ms
+ ✓ packages/evaluation/src/r97-plan.test.ts (67 tests) 5691ms
+     ✓ 4. a selection whose case list was edited while keeping the OLD digest is REFUSED  777ms
+[degraded] session session_bdb5cad6-8070-4c66-b341-ffa2ef45f5ed failed to persist recovery record for turn_a5a3c95c-4b1e-42b6-a787-2a05ed213a32: store down
+[degraded] session session_bdb5cad6-8070-4c66-b341-ffa2ef45f5ed recovery lease failed for turn_a5a3c95c-4b1e-42b6-a787-2a05ed213a32: store down
+[degraded] session session_dded45d9-8c22-44c4-af17-3c703ae5e0ec recovery lease failed for turn_fcafa274-c7eb-4ec4-b9e3-ca50823b4ac3: recovery CAS conflict for turn_fcafa274-c7eb-4ec4-b9e3-ca50823b4ac3: expected version 1, stored 2
+[degraded] session session_54979535-139f-427f-9099-bb16eef2d87f terminal recovery ACK failed for turn_017bb118-45a4-4600-8276-102ef13073e0: review terminal ACK failure — entering pending-commit (reconcile), queue frozen
+[degraded] session session_0fdce7a6-b838-4e97-88b4-7f4ae55252a6 terminal recovery ACK failed for turn_8ea84724-60da-42de-8564-dcb6e9f223b9: review terminal ACK failure — entering pending-commit (reconcile), queue frozen
+[degraded] session session_8fbc5035-d672-46d5-a515-6e9d265c6535 terminal recovery ACK failed for turn_c65d2317-085c-4b40-ab61-d16efafb7fb6: review terminal ACK failure — entering pending-commit (reconcile), queue frozen
+[degraded] session session_99fd251a-1907-49ba-97b5-22885405013d terminal recovery ACK failed for turn_61363fd7-933f-4393-aedc-fb2f54696051: compound terminal/marker write outage — entering pending-commit (reconcile), queue frozen
+[degraded] session session_99fd251a-1907-49ba-97b5-22885405013d failed to persist recovery record for turn_61363fd7-933f-4393-aedc-fb2f54696051: compound terminal/marker write outage
+[degraded] session session_b26b74ec-7ad9-455a-aeb0-1100242ce8e1 terminal recovery ACK failed for turn_60eedd53-be3b-4ca6-a3af-da91d79cad10: compound terminal/marker write outage — entering pending-commit (reconcile), queue frozen
+[degraded] session session_b26b74ec-7ad9-455a-aeb0-1100242ce8e1 failed to persist recovery record for turn_60eedd53-be3b-4ca6-a3af-da91d79cad10: compound terminal/marker write outage
+[degraded] session session_ed05a8b9-84a7-48ed-8018-9dbc989bdec0 terminal recovery ACK failed for turn_a0f88e8c-2c5f-41b0-8be3-6986de282f06: compound terminal/marker write outage — entering pending-commit (reconcile), queue frozen
+[degraded] session session_ed05a8b9-84a7-48ed-8018-9dbc989bdec0 failed to persist recovery record for turn_a0f88e8c-2c5f-41b0-8be3-6986de282f06: compound terminal/marker write outage
+[degraded] session session_48446abb-45ca-4096-93e0-5c07a0dd91ec failed to persist recovery record for turn_effa79ed-68b3-4bc7-8a32-61389fa8656a: whole recovery store write outage
+[degraded] session session_48446abb-45ca-4096-93e0-5c07a0dd91ec recovery lease failed for turn_effa79ed-68b3-4bc7-8a32-61389fa8656a: whole recovery store write outage
+[degraded] session session_036ede62-03fa-4c7f-9a40-9e1f5a926eb1 recovery lease failed for turn_0c9b2294-c660-4d72-b0a3-e65689967e81: recovery store temporarily refuses the lease write
+[degraded] session session_951e6f65-0f1a-47b4-bb59-99816665b8ff recovery lease failed for turn_712c08c1-598a-4592-8bdc-afe2b6c6af26: recovery store temporarily refuses the lease write
+[degraded] session session_c4a40e43-b877-43c6-a464-0fa4fdc8188d recovery attempt-intent persist failed for turn_792e05cc-55d9-4303-977d-35eca5295983 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_184ce373-13e8-4107-a545-9114d1e889e2 recovery lease failed for turn_c325e490-2361-4181-af4a-ac524631e95c: recovery CAS conflict for turn_c325e490-2361-4181-af4a-ac524631e95c: expected version 0, stored 1
+[degraded] session session_6de4894b-f0cc-4ac2-aeac-a8780a583f9b recovery lease failed for turn_69d4af2e-b82a-4323-8f01-880f3b6952fa: recovery store temporarily refuses the lease write
+[degraded] session session_b3fba23c-41a8-4999-b4c7-f845409cc523 recovery lease failed for turn_a94df503-4a74-4d0e-8381-0e5534789068: recovery store temporarily refuses the lease write
+[degraded] session session_b3fba23c-41a8-4999-b4c7-f845409cc523 recovery lease failed for turn_a94df503-4a74-4d0e-8381-0e5534789068: recovery store temporarily refuses the lease write
+[degraded] session session_b3fba23c-41a8-4999-b4c7-f845409cc523 recovery lease failed for turn_a94df503-4a74-4d0e-8381-0e5534789068: recovery store temporarily refuses the lease write
+[degraded] session session_b3fba23c-41a8-4999-b4c7-f845409cc523 recovery lease failed for turn_a94df503-4a74-4d0e-8381-0e5534789068: recovery store temporarily refuses the lease write
+[degraded] session session_b3fba23c-41a8-4999-b4c7-f845409cc523 recovery lease failed for turn_a94df503-4a74-4d0e-8381-0e5534789068: recovery store temporarily refuses the lease write
+[degraded] session session_b3fba23c-41a8-4999-b4c7-f845409cc523 recovery lease failed for turn_a94df503-4a74-4d0e-8381-0e5534789068: recovery store temporarily refuses the lease write
+[degraded] session session_a165f7cf-c60f-4f36-abf4-f46de9c1a62b recovery attempt-intent persist failed for turn_7ff005ec-46e4-4dfe-8a36-3cd39883a114 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_a165f7cf-c60f-4f36-abf4-f46de9c1a62b release lease read failed for turn_7ff005ec-46e4-4dfe-8a36-3cd39883a114: recovery read outage
+[degraded] session session_593168cd-0dec-4062-8166-00883e5b6f53 recovery attempt-intent persist failed for turn_4b7fe6b8-7e11-4c2c-b4a8-da3035f5acc5 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_593168cd-0dec-4062-8166-00883e5b6f53 recovery attempt-intent persist failed for turn_4b7fe6b8-7e11-4c2c-b4a8-da3035f5acc5 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_593168cd-0dec-4062-8166-00883e5b6f53 recovery attempt-intent persist failed for turn_4b7fe6b8-7e11-4c2c-b4a8-da3035f5acc5 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_593168cd-0dec-4062-8166-00883e5b6f53 recovery attempt-intent persist failed for turn_4b7fe6b8-7e11-4c2c-b4a8-da3035f5acc5 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_593168cd-0dec-4062-8166-00883e5b6f53 recovery attempt-intent persist failed for turn_4b7fe6b8-7e11-4c2c-b4a8-da3035f5acc5 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_593168cd-0dec-4062-8166-00883e5b6f53 recovery attempt-intent persist failed for turn_4b7fe6b8-7e11-4c2c-b4a8-da3035f5acc5 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_593168cd-0dec-4062-8166-00883e5b6f53 recovery attempt-intent persist failed for turn_4b7fe6b8-7e11-4c2c-b4a8-da3035f5acc5 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_12f46928-6c1c-406f-a990-f5608afeb252 recovery attempt-intent persist failed for turn_32c9ce27-be00-4810-accc-7042f32d61ec — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_12f46928-6c1c-406f-a990-f5608afeb252 release lease read failed for turn_32c9ce27-be00-4810-accc-7042f32d61ec: recovery read outage
+[degraded] session session_12f46928-6c1c-406f-a990-f5608afeb252 recovery record load failed for turn_32c9ce27-be00-4810-accc-7042f32d61ec: recovery read outage
+[degraded] session session_fb7d0af7-1b05-4c1e-9014-3cf2cba4f1ea recovery attempt-intent persist failed for turn_739afbdb-8010-4bff-af90-8f20eca5e63f — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_fb7d0af7-1b05-4c1e-9014-3cf2cba4f1ea release lease read failed for turn_739afbdb-8010-4bff-af90-8f20eca5e63f: recovery read outage
+[degraded] session session_70af369d-fe85-42dc-89db-5dc0597d5a97 recovery discovery: durable read failed — session store temporarily unavailable
+[degraded] session session_82003fb1-10ee-495e-9138-d4bb8ac52ce5 recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_82003fb1-10ee-495e-9138-d4bb8ac52ce5 recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_82003fb1-10ee-495e-9138-d4bb8ac52ce5 recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_82003fb1-10ee-495e-9138-d4bb8ac52ce5 recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_82003fb1-10ee-495e-9138-d4bb8ac52ce5 recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_82003fb1-10ee-495e-9138-d4bb8ac52ce5 recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_82003fb1-10ee-495e-9138-d4bb8ac52ce5 recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_86c55373-8f75-4864-9350-de9d09d1510f recovery discovery: durable read failed — session store unavailable for turn turn_2e90b8f4-fd17-4c9e-9e83-307638bd10f0
+[degraded] session session_4b568143-1794-40a2-b863-947a3a76840d recovery discovery: durable read failed — session store temporarily unavailable
+[degraded] session session_488567a5-ae29-4764-8cf1-0b8921d08f63 terminal recovery ACK failed for turn_33bb2e91-e265-44eb-8867-21760fd15f15: compound terminal/marker write outage — entering pending-commit (reconcile), queue frozen
+[degraded] session session_488567a5-ae29-4764-8cf1-0b8921d08f63 failed to persist recovery record for turn_33bb2e91-e265-44eb-8867-21760fd15f15: compound terminal/marker write outage
+[degraded] session session_488567a5-ae29-4764-8cf1-0b8921d08f63 recovery discovery: durable read failed — recovery store lookup outage
+[degraded] session session_f683be00-d3bc-4bda-beed-1e4bb72f96ed recovery discovery: durable read failed — session store temporarily unavailable
+ ✓ packages/core/src/runtime/recovery-durable.test.ts (29 tests) 107ms
+ ✓ packages/evaluation/src/r97-mutation-check-guard.test.ts (51 tests) 564ms
+     ✓ REAL second OS process: a concurrent rewrite of the file is detected after the build step  403ms
+ ✓ packages/core/src/runtime/pr-harness-security-boundary.regressions.test.ts (20 tests) 2105ms
+     ✓ G1a: a model that skips the test cannot claim completion; grade, termination reason, error code and the injected correction are all preserved  358ms
+     ✓ G3: hostile instructions in a command result are carried by the tool, DENIED with an audit event, and never reach the model  317ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for openai/model-original — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for openai/model-selected — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for openai/coding — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for openai/coding — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for openai/model-original — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for openai/model-original — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for openai/model-selected — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for openai/model-original — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for openai/model-original — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for openai/model-selected — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/one — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/two — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/new — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/new — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/selected — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/selected — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/selected — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/selected — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/typed-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/file-next — using conservative fallback 32000
+ ✓ apps/web/src/deepseek/owners.test.ts (21 tests) 1201ms
+ ✓ packages/core/src/runtime/pr-harness-fault-recovery.regressions.test.ts (12 tests) 83ms
+ ✓ packages/core/src/runtime/fault-injection-v2.test.ts (17 tests) 67ms
+ ✓ packages/core/src/runtime/loop-integration.test.ts (26 tests) 62ms
+ ✓ packages/core/src/runtime/step-snapshot.test.ts (28 tests) 37ms
+ ✓ packages/evaluation/src/artifact-v3/artifact-v3.test.ts (40 tests) 70ms
+ ✓ packages/tools/src/process/executor.test.ts (30 tests | 7 skipped) 1450ms
+     ✓ kills the process tree on timeout (no orphan)  303ms
+     ✓ honors timeout, cancellation, output cap and env on the argv path  424ms
+ ✓ packages/tools/src/process/sandbox-executor.test.ts (33 tests) 226ms
+ ✓ packages/core/src/runtime/wire-protocol-e2e.test.ts (8 tests) 133ms
+ ✓ packages/tools/src/process/r96-windows-execution-boundary.test.ts (25 tests | 3 skipped) 15ms
+ ✓ packages/evaluation/src/artifact-v3/security-consistency.regressions.test.ts (18 tests) 39ms
+ ✓ packages/core/src/runtime/tool-output-boundary.regressions.test.ts (21 tests) 33ms
+ ✓ packages/tools/src/process/windows-fixture-guard.test.ts (17 tests) 28ms
+ ✓ packages/core/src/runtime/step-snapshot.invariant.test.ts (10 tests) 26ms
+ ✓ packages/tools/src/verification/task-verifier.test.ts (20 tests) 133ms
+ ✓ packages/core/src/runtime/session-race2.test.ts (5 tests) 39ms
+ ✓ packages/tools/src/process/utf8-output.regressions.test.ts (34 tests) 89ms
+ ✓ packages/core/src/runtime/session-race.test.ts (5 tests) 22ms
+ ✓ packages/core/src/runtime/world-snapshot.conformance.test.ts (8 tests) 19ms
+ ✓ packages/core/src/verification/runtime-verifier.test.ts (13 tests) 9ms
+ ✓ packages/core/src/runtime/skill-instruction-snapshot.p32.test.ts (10 tests) 13ms
+ ✓ packages/core/src/state/projections.test.ts (6 tests) 7ms
+ ✓ packages/core/src/runtime/structured-output-security.regressions.test.ts (26 tests) 30ms
+ ✓ packages/core/src/runtime/session-close-drain.regressions.test.ts (4 tests) 10ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+stderr | apps/web/src/deepseek/activity.test.ts > an uncertain admission is retained as unresolved and never silently retried or shown as delivered
+Web scheduled task delivery failed schedule-2332d37a-9de2-42e1-8731-1c246e313a35 Lost admission acknowledgement
+
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for precise-child-job/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for timer/actual-timer-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ apps/web/src/deepseek/activity.test.ts (26 tests) 3930ms
+   ✓ the real wall-clock timer durably admits one reminder and the actual actor executes it  1063ms
+   ✓ a replaced Web draft schedules through its native model context and the real timer returns to the stable owner's inbox  2059ms
+[degraded] session session_908f5618-f333-4a94-88e3-bf0765b64d9d durable followup consume failed for fup-1 (prompt remains bound to turn turn_b8d350fa-540c-41cf-8fca-dec7ec4576bb): durable ack down
+[degraded] session session_bec20968-997c-4cf5-8bc1-653eda65cfce durable followup bind failed for fup-1 (created turn turn_e308430d-83f2-4077-a39c-c87694e78e9a will not execute): bind down
+[degraded] inbox.promotion-identity-missing: session session_62512481-0744-487a-8bea-d2bb74f9dbf5 prompt prompt_2b7e8bf9-0106-49d5-bb98-8ea0d52c0dd9 is promoted but has no promotedTurnId — recovery-required, not replayed
+[degraded] session session_13e957fc-8566-4461-8250-198b2a218e10 failed to persist turn turn_caf9d013-bd9a-4aed-840f-b225d8a8a92d as cancelled: P38.2-9 simulated updateTurn failure
+[degraded] session session_618694f4-6ed7-4261-bfb4-21758065329e failed to persist turn turn_9625d3e2-afe0-4dc3-89b1-2d70130509af as cancelled: P38.2-9 simulated updateTurn failure
+[degraded] session session_618694f4-6ed7-4261-bfb4-21758065329e failed to emit turn.cancelled for turn_9625d3e2-afe0-4dc3-89b1-2d70130509af: P38.2-9 simulated emit failure
+[degraded] session session_823137a7-7afe-4cd4-8c81-21bcbfa2d8a7 failed to persist turn turn_5fe747e7-6abc-4970-bb43-0f690f9dac15 as cancelled: P38.2-9 simulated updateTurn failure
+[degraded] session session_5a2e8f9e-938f-41c2-a84f-23617d42cdd3 failed to persist turn turn_9f813e59-cae4-4e71-be83-4e1299788bd9 as cancelled: P38.3-8 simulated updateTurn failure
+ ✓ packages/core/src/runtime/session-actor.test.ts (69 tests) 112ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts (60 tests) 3707ms
+     ✓ REGRESSION: the first-open grant write happens UNDER the lock, not before it  769ms
+     ✓ a REAL reader process observing a REAL writer sees only COMPLETE versions, never CORRUPT  1735ms
