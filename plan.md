@@ -1,6 +1,6 @@
 # Harness Agent 当前执行计划入口
 
-当前执行任务：[Web 会话生成结束状态修复](plan(20261015-web-session-running).md)，合同：[WEB-SESSION-RUNNING-20261015](tasks/WEB-SESSION-RUNNING-20261015.md)。已确定性复现宿主缺失 api-session/status 导致已打开会话的 running 不复位；真实 composition + 精确客户端回归在原版失败，修正后通过，35 项相关回归通过。仅补齐宿主协议通知，继续完成全量与实际安装验收。
+当前执行任务：[Web 会话生成结束状态修复](plan(20261015-web-session-running).md)，合同：[WEB-SESSION-RUNNING-20261015](tasks/WEB-SESSION-RUNNING-20261015.md)。已确定性复现宿主缺失 api-session/status 导致已打开会话的 running 不复位；真实 composition + 精确客户端回归在原版失败，修正后通过，35 项相关回归通过。仅补齐宿主协议通知；固定 `d29537d6` 全量 9799 通过/15 跳过、安全 2146 通过，实际浏览器对照与 Windows/Ubuntu UI 安装通过，见[根因与验收报告](docs/web-session-running-20261015.md)。
 
 上一任务（已合并并复核 CI）：[模型配置 PR 合并](plan(20261015-212057).md)，合同：[MODEL-CONFIG-PR-MERGE-20261015](tasks/MODEL-CONFIG-PR-MERGE-20261015.md)。按用户授权，#10 的 P2 与三项回归已补齐并推送原 PR 分支，#9/#10 已保留完整历史合入组合源码 `e3233deb`；全量 9798 通过/15 跳过、安全 2146 通过，类型与真实 CLI/Web 验收通过，按正常 Git 推送交付 main。远端结果及额外本地审计的证据缺口见[本次合并验收](docs/model-config-pr-merge-20261015.md)。
 

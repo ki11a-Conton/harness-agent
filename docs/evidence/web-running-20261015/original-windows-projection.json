@@ -1,0 +1,1646 @@
+{
+  "schemaVersion": 1,
+  "runId": "38744997186",
+  "sourceSha": "847e245228ffb24fce6eb99400a8f04b5f302b4f",
+  "rawReportSha256": "ae5d8a7a40910974e45b233ab000aafcba07a1b232dfc8af30f980c31349d3a2",
+  "rawReportBytes": 1108749,
+  "requestLogSha256": "99bd2a22fc6b283ac6f2b5f6c7c2a34ef58b7aea4c9983bbc85bfcdc3c501e03",
+  "requestLogBytes": 47497,
+  "hostStderr": "(node:5768) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[harness] context budget: model capabilities unknown for openai/web-loopback-fixture — using conservative fallback 32000\n[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically\n[harness] context budget: model capabilities unknown for openai/web-loopback-fixture — using conservative fallback 32000\n",
+  "modelRequests": [
+    {
+      "call": 1,
+      "model": "web-loopback-fixture",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Render the fixture before testing actual session lifecycle."
+        }
+      ]
+    },
+    {
+      "call": 2,
+      "model": "web-loopback-fixture",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Render the real Markdown fixture for browser acceptance."
+        }
+      ]
+    },
+    {
+      "call": 3,
+      "model": "web-loopback-fixture",
+      "messages": [
+        {
+          "role": "user",
+          "content": "[fixture:read] Read the actual demo.js in this workspace."
+        }
+      ]
+    },
+    {
+      "call": 4,
+      "model": "web-loopback-fixture",
+      "messages": [
+        {
+          "role": "user",
+          "content": "[fixture:read] Read the actual demo.js in this workspace."
+        }
+      ]
+    },
+    {
+      "call": 5,
+      "model": "web-loopback-fixture",
+      "messages": [
+        {
+          "role": "user",
+          "content": "[fixture:write] Write the actual browser-created.txt, waiting for my approval."
+        }
+      ]
+    },
+    {
+      "call": 6,
+      "model": "web-loopback-fixture",
+      "messages": [
+        {
+          "role": "user",
+          "content": "[fixture:write] Write the actual browser-created.txt, waiting for my approval."
+        }
+      ]
+    },
+    {
+      "call": 7,
+      "model": "web-loopback-fixture",
+      "messages": [
+        {
+          "role": "user",
+          "content": "[fixture:write-deny] Attempt browser-rejected.txt and wait for my approval."
+        }
+      ]
+    },
+    {
+      "call": 8,
+      "model": "web-loopback-fixture",
+      "messages": [
+        {
+          "role": "user",
+          "content": "[fixture:write-deny] Attempt browser-rejected.txt and wait for my approval."
+        }
+      ]
+    },
+    {
+      "call": 9,
+      "model": "web-loopback-fixture",
+      "messages": [
+        {
+          "role": "user",
+          "content": "[fixture:ask] Ask me which browser target, and wait for my answer."
+        }
+      ]
+    },
+    {
+      "call": 10,
+      "model": "web-loopback-fixture",
+      "messages": [
+        {
+          "role": "user",
+          "content": "[fixture:ask] Ask me which browser target, and wait for my answer."
+        },
+        {
+          "role": "user",
+          "content": "[user reply to your question]\ntarget-blue"
+        }
+      ]
+    },
+    {
+      "call": 11,
+      "model": "web-loopback-fixture",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Render the fixture before testing actual session lifecycle."
+        }
+      ]
+    },
+    {
+      "call": 12,
+      "model": "web-loopback-fixture",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Render the real Markdown fixture for browser acceptance."
+        }
+      ]
+    },
+    {
+      "call": 13,
+      "model": "web-loopback-fixture",
+      "messages": [
+        {
+          "role": "user",
+          "content": "[fixture:read] Read the actual demo.js in this workspace."
+        }
+      ]
+    },
+    {
+      "call": 14,
+      "model": "web-loopback-fixture",
+      "messages": [
+        {
+          "role": "user",
+          "content": "[fixture:read] Read the actual demo.js in this workspace."
+        }
+      ]
+    },
+    {
+      "call": 15,
+      "model": "web-loopback-fixture",
+      "messages": [
+        {
+          "role": "user",
+          "content": "[fixture:write] Write the actual browser-created.txt, waiting for my approval."
+        }
+      ]
+    },
+    {
+      "call": 16,
+      "model": "web-loopback-fixture",
+      "messages": [
+        {
+          "role": "user",
+          "content": "[fixture:write] Write the actual browser-created.txt, waiting for my approval."
+        }
+      ]
+    },
+    {
+      "call": 17,
+      "model": "web-loopback-fixture",
+      "messages": [
+        {
+          "role": "user",
+          "content": "[fixture:write-deny] Attempt browser-rejected.txt and wait for my approval."
+        }
+      ]
+    },
+    {
+      "call": 18,
+      "model": "web-loopback-fixture",
+      "messages": [
+        {
+          "role": "user",
+          "content": "[fixture:write-deny] Attempt browser-rejected.txt and wait for my approval."
+        }
+      ]
+    },
+    {
+      "call": 19,
+      "model": "web-loopback-fixture",
+      "messages": [
+        {
+          "role": "user",
+          "content": "[fixture:ask] Ask me which browser target, and wait for my answer."
+        }
+      ]
+    },
+    {
+      "call": 20,
+      "model": "web-loopback-fixture",
+      "messages": [
+        {
+          "role": "user",
+          "content": "[fixture:ask] Ask me which browser target, and wait for my answer."
+        },
+        {
+          "role": "user",
+          "content": "[user reply to your question]\ntarget-blue"
+        }
+      ]
+    },
+    {
+      "call": 21,
+      "model": "web-loopback-fixture",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Render the fixture before testing actual session lifecycle."
+        }
+      ]
+    },
+    {
+      "call": 22,
+      "model": "web-loopback-fixture",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Render the real Markdown fixture for browser acceptance."
+        }
+      ]
+    },
+    {
+      "call": 23,
+      "model": "web-loopback-fixture",
+      "messages": [
+        {
+          "role": "user",
+          "content": "[fixture:read] Read the actual demo.js in this workspace."
+        }
+      ]
+    },
+    {
+      "call": 24,
+      "model": "web-loopback-fixture",
+      "messages": [
+        {
+          "role": "user",
+          "content": "[fixture:read] Read the actual demo.js in this workspace."
+        }
+      ]
+    },
+    {
+      "call": 25,
+      "model": "web-loopback-fixture",
+      "messages": [
+        {
+          "role": "user",
+          "content": "[fixture:write] Write the actual browser-created.txt, waiting for my approval."
+        }
+      ]
+    },
+    {
+      "call": 26,
+      "model": "web-loopback-fixture",
+      "messages": [
+        {
+          "role": "user",
+          "content": "[fixture:write] Write the actual browser-created.txt, waiting for my approval."
+        }
+      ]
+    },
+    {
+      "call": 27,
+      "model": "web-loopback-fixture",
+      "messages": [
+        {
+          "role": "user",
+          "content": "[fixture:write-deny] Attempt browser-rejected.txt and wait for my approval."
+        }
+      ]
+    },
+    {
+      "call": 28,
+      "model": "web-loopback-fixture",
+      "messages": [
+        {
+          "role": "user",
+          "content": "[fixture:write-deny] Attempt browser-rejected.txt and wait for my approval."
+        }
+      ]
+    },
+    {
+      "call": 29,
+      "model": "web-loopback-fixture",
+      "messages": [
+        {
+          "role": "user",
+          "content": "[fixture:ask] Ask me which browser target, and wait for my answer."
+        }
+      ]
+    },
+    {
+      "call": 30,
+      "model": "web-loopback-fixture",
+      "messages": [
+        {
+          "role": "user",
+          "content": "[fixture:ask] Ask me which browser target, and wait for my answer."
+        },
+        {
+          "role": "user",
+          "content": "[user reply to your question]\ntarget-blue"
+        }
+      ]
+    }
+  ],
+  "failedCaseRecords": [
+    {
+      "name": "session-lifecycle",
+      "viewport": "narrow-tall",
+      "status": "FAIL",
+      "failure": "TimeoutError: locator.waitFor: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Stop generating', exact: true }) to be hidden\u001b[22m\n\u001b[2m    35 × locator resolved to visible <button type=\"button\" class=\"uV2eYG_primary\" aria-label=\"Stop generating\">…</button>\u001b[22m\n",
+      "calls": [
+        {
+          "carrier": "websocket",
+          "endpoint": "settings/describe",
+          "status": 200,
+          "ok": true
+        },
+        {
+          "carrier": "websocket",
+          "endpoint": "dynamicCordisRunner/syncInspectManifest",
+          "status": 200,
+          "ok": true
+        },
+        {
+          "carrier": "websocket",
+          "endpoint": "dynamicCordisRunner/inventory",
+          "status": 200,
+          "ok": true
+        },
+        {
+          "carrier": "websocket",
+          "endpoint": "credentials/describe",
+          "status": 200,
+          "ok": true
+        },
+        {
+          "carrier": "websocket",
+          "endpoint": "session/modelCatalog",
+          "status": 200,
+          "ok": true
+        },
+        {
+          "carrier": "websocket",
+          "endpoint": "dynamicCordisRunner/inventory",
+          "status": 200,
+          "ok": true
+        },
+        {
+          "carrier": "websocket",
+          "endpoint": "agentPresets/list",
+          "status": 200,
+          "ok": true
+        },
+        {
+          "carrier": "websocket",
+          "endpoint": "permissionPresets/catalog",
+          "status": 200,
+          "ok": true
+        },
+        {
+          "carrier": "websocket",
+          "endpoint": "agentPresets/list",
+          "status": 200,
+          "ok": true
+        },
+        {
+          "carrier": "websocket",
+          "endpoint": "agentPresets/list",
+          "status": 200,
+          "ok": true
+        },
+        {
+          "carrier": "websocket",
+          "endpoint": "dynamicCordisRunner/inventory",
+          "status": 200,
+          "ok": true
+        },
+        {
+          "carrier": "websocket",
+          "endpoint": "dynamicCordisRunner/syncInspectManifest",
+          "status": 200,
+          "ok": true
+        },
+        {
+          "carrier": "websocket",
+          "endpoint": "session/modelCatalog",
+          "status": 200,
+          "ok": true
+        },
+        {
+          "carrier": "websocket",
+          "endpoint": "settings/describe",
+          "status": 200,
+          "ok": true
+        },
+        {
+          "carrier": "websocket",
+          "endpoint": "session/create",
+          "status": 200,
+          "ok": true,
+          "value": {
+            "sessionId": "session_96147d11-e951-4737-8d91-2048bcb67382"
+          }
+        },
+        {
+          "carrier": "websocket",
+          "endpoint": "agentPresets/list",
+          "status": 200,
+          "ok": true
+        },
+        {
+          "carrier": "websocket",
+          "endpoint": "commands/list",
+          "status": 200,
+          "ok": true
+        },
+        {
+          "carrier": "websocket",
+          "endpoint": "skills/list",
+          "status": 200,
+          "ok": true
+        },
+        {
+          "carrier": "websocket",
+          "endpoint": "agentPresets/list",
+          "status": 200,
+          "ok": true
+        },
+        {
+          "carrier": "websocket",
+          "endpoint": "schedule/list",
+          "status": 200,
+          "ok": true
+        },
+        {
+          "carrier": "websocket",
+          "endpoint": "session/prompt",
+          "status": 200,
+          "ok": true
+        },
+        {
+          "carrier": "websocket",
+          "endpoint": "session/list",
+          "status": 200,
+          "ok": true
+        }
+      ],
+      "rpcRequests": [
+        {
+          "carrier": "websocket",
+          "route": "call",
+          "endpoint": "settings/describe",
+          "argsKeys": [],
+          "uplink": false,
+          "uplinkDone": false,
+          "state": "settled"
+        },
+        {
+          "carrier": "websocket",
+          "route": "open",
+          "endpoint": "workspace/follow",
+          "argsKeys": [],
+          "uplink": false,
+          "uplinkDone": false,
+          "state": "opened"
+        },
+        {
+          "carrier": "websocket",
+          "route": "call",
+          "endpoint": "dynamicCordisRunner/syncInspectManifest",
+          "argsKeys": [
+            "providers"
+          ],
+          "uplink": false,
+          "uplinkDone": false,
+          "state": "settled"
+        },
+        {
+          "carrier": "websocket",
+          "route": "call",
+          "endpoint": "dynamicCordisRunner/inventory",
+          "argsKeys": [],
+          "uplink": false,
+          "uplinkDone": false,
+          "state": "settled"
+        },
+        {
+          "carrier": "websocket",
+          "route": "call",
+          "endpoint": "credentials/describe",
+          "argsKeys": [
+            "refs"
+          ],
+          "uplink": false,
+          "uplinkDone": false,
+          "state": "settled"
+        },
+        {
+          "carrier": "websocket",
+          "route": "call",
+          "endpoint": "session/modelCatalog",
+          "argsKeys": [],
+          "uplink": false,
+          "uplinkDone": false,
+          "state": "settled"
+        },
+        {
+          "carrier": "websocket",
+          "route": "open",
+          "endpoint": "$events",
+          "argsKeys": [],
+          "uplink": false,
+          "uplinkDone": false,
+          "state": "opened"
+        },
+        {
+          "carrier": "websocket",
+          "route": "call",
+          "endpoint": "dynamicCordisRunner/inventory",
+          "argsKeys": [],
+          "uplink": false,
+          "uplinkDone": false,
+          "state": "settled"
+        },
+        {
+          "carrier": "websocket",
+          "route": "call",
+          "endpoint": "agentPresets/list",
+          "argsKeys": [],
+          "uplink": false,
+          "uplinkDone": false,
+          "state": "settled"
+        },
+        {
+          "carrier": "websocket",
+          "route": "call",
+          "endpoint": "session/list",
+          "argsKeys": [
+            "_request"
+          ],
+          "uplink": false,
+          "uplinkDone": false,
+          "state": "settled"
+        },
+        {
+          "carrier": "websocket",
+          "route": "open",
+          "endpoint": "session/control",
+          "argsKeys": [],
+          "uplink": false,
+          "uplinkDone": false,
+          "state": "opened"
+        },
+        {
+          "carrier": "websocket",
+          "route": "call",
+          "endpoint": "permissionPresets/catalog",
+          "argsKeys": [],
+          "uplink": false,
+          "uplinkDone": false,
+          "state": "settled"
+        },
+        {
+          "carrier": "websocket",
+          "route": "call",
+          "endpoint": "agentPresets/list",
+          "argsKeys": [],
+          "uplink": false,
+          "uplinkDone": false,
+          "state": "settled"
+        },
+        {
+          "carrier": "websocket",
+          "route": "call",
+          "endpoint": "agentPresets/list",
+          "argsKeys": [],
+          "uplink": false,
+          "uplinkDone": false,
+          "state": "settled"
+        },
+        {
+          "carrier": "websocket",
+          "route": "call",
+          "endpoint": "dynamicCordisRunner/inventory",
+          "argsKeys": [],
+          "uplink": false,
+          "uplinkDone": false,
+          "state": "settled"
+        },
+        {
+          "carrier": "websocket",
+          "route": "call",
+          "endpoint": "session/modelCatalog",
+          "argsKeys": [],
+          "uplink": false,
+          "uplinkDone": false,
+          "state": "settled"
+        },
+        {
+          "carrier": "websocket",
+          "route": "call",
+          "endpoint": "settings/describe",
+          "argsKeys": [],
+          "uplink": false,
+          "uplinkDone": false,
+          "state": "settled"
+        },
+        {
+          "carrier": "websocket",
+          "route": "call",
+          "endpoint": "dynamicCordisRunner/syncInspectManifest",
+          "argsKeys": [
+            "providers"
+          ],
+          "uplink": false,
+          "uplinkDone": false,
+          "state": "settled"
+        },
+        {
+          "carrier": "websocket",
+          "route": "call",
+          "endpoint": "session/create",
+          "argsKeys": [
+            "request"
+          ],
+          "uplink": false,
+          "uplinkDone": false,
+          "state": "settled"
+        },
+        {
+          "carrier": "websocket",
+          "route": "open",
+          "endpoint": "session/follow",
+          "argsKeys": [
+            "request"
+          ],
+          "uplink": false,
+          "uplinkDone": false,
+          "state": "opened"
+        },
+        {
+          "carrier": "websocket",
+          "route": "call",
+          "endpoint": "agentPresets/list",
+          "argsKeys": [],
+          "uplink": false,
+          "uplinkDone": false,
+          "state": "settled"
+        },
+        {
+          "carrier": "websocket",
+          "route": "call",
+          "endpoint": "commands/list",
+          "argsKeys": [
+            "agentId"
+          ],
+          "uplink": false,
+          "uplinkDone": false,
+          "state": "settled"
+        },
+        {
+          "carrier": "websocket",
+          "route": "call",
+          "endpoint": "skills/list",
+          "argsKeys": [
+            "request"
+          ],
+          "uplink": false,
+          "uplinkDone": false,
+          "state": "settled"
+        },
+        {
+          "carrier": "websocket",
+          "route": "call",
+          "endpoint": "agentPresets/list",
+          "argsKeys": [],
+          "uplink": false,
+          "uplinkDone": false,
+          "state": "settled"
+        },
+        {
+          "carrier": "websocket",
+          "route": "open",
+          "endpoint": "job/list",
+          "argsKeys": [
+            "request"
+          ],
+          "uplink": false,
+          "uplinkDone": false,
+          "state": "opened"
+        },
+        {
+          "carrier": "websocket",
+          "route": "call",
+          "endpoint": "schedule/list",
+          "argsKeys": [
+            "request"
+          ],
+          "uplink": false,
+          "uplinkDone": false,
+          "state": "settled"
+        },
+        {
+          "carrier": "websocket",
+          "route": "call",
+          "endpoint": "session/prompt",
+          "argsKeys": [
+            "request"
+          ],
+          "uplink": false,
+          "uplinkDone": false,
+          "state": "settled"
+        }
+      ],
+      "sockets": [
+        {
+          "url": "ws://127.0.0.1:64149/api/deepseek/socket",
+          "sent": 27,
+          "received": 86,
+          "streamFrames": 59,
+          "closed": false,
+          "errors": []
+        }
+      ],
+      "observation": {
+        "text": "Render the fixture before testing actual session lifecycle.\nChat\nTrajectory\nRender the fixture before testing actual session lifecycle.\n13:46\nCompleted\nCompleted in 1s\nActual Harness browser answer\n\nBold result and local documentation.\n\nFirst item\nSecond item\nFile\tStatus\ndemo.js\treviewed\njs\nexport const value = 1;\n13:46\nDeep diving\nDeep diving\nMessage or run a task, / commands, @ files or sessions\nweb-loopback-fixture\n1 turns 1 steps",
+        "controls": [
+          {
+            "tag": "BUTTON",
+            "text": "",
+            "label": "Open sidebar",
+            "placeholder": null,
+            "disabled": false
+          },
+          {
+            "tag": "BUTTON",
+            "text": "",
+            "label": "New session",
+            "placeholder": null,
+            "disabled": false
+          },
+          {
+            "tag": "BUTTON",
+            "text": "",
+            "label": "Plugins",
+            "placeholder": null,
+            "disabled": false
+          },
+          {
+            "tag": "BUTTON",
+            "text": "",
+            "label": "Automation tasks",
+            "placeholder": null,
+            "disabled": false
+          },
+          {
+            "tag": "BUTTON",
+            "text": "",
+            "label": "Add workspace",
+            "placeholder": null,
+            "disabled": false
+          },
+          {
+            "tag": "BUTTON",
+            "text": "",
+            "label": "Search sessions",
+            "placeholder": null,
+            "disabled": false
+          },
+          {
+            "tag": "BUTTON",
+            "text": "",
+            "label": "Settings",
+            "placeholder": null,
+            "disabled": false
+          },
+          {
+            "tag": "BUTTON",
+            "text": "",
+            "label": "More actions",
+            "placeholder": null,
+            "disabled": false
+          },
+          {
+            "tag": "BUTTON",
+            "text": "",
+            "label": "Open right sidebar",
+            "placeholder": null,
+            "disabled": false
+          },
+          {
+            "tag": "BUTTON",
+            "text": "Chat",
+            "label": null,
+            "placeholder": null,
+            "disabled": false
+          },
+          {
+            "tag": "BUTTON",
+            "text": "Trajectory",
+            "label": null,
+            "placeholder": null,
+            "disabled": false
+          },
+          {
+            "tag": "BUTTON",
+            "text": "",
+            "label": "Copy",
+            "placeholder": null,
+            "disabled": false
+          },
+          {
+            "tag": "BUTTON",
+            "text": "Completed in 1s",
+            "label": null,
+            "placeholder": null,
+            "disabled": true
+          },
+          {
+            "tag": "BUTTON",
+            "text": "",
+            "label": "Wrap lines",
+            "placeholder": null,
+            "disabled": false
+          },
+          {
+            "tag": "BUTTON",
+            "text": "",
+            "label": "Copy",
+            "placeholder": null,
+            "disabled": false
+          },
+          {
+            "tag": "BUTTON",
+            "text": "",
+            "label": "Copy",
+            "placeholder": null,
+            "disabled": false
+          },
+          {
+            "tag": "BUTTON",
+            "text": "",
+            "label": "Good response",
+            "placeholder": null,
+            "disabled": false
+          },
+          {
+            "tag": "BUTTON",
+            "text": "",
+            "label": "Bad response",
+            "placeholder": null,
+            "disabled": false
+          },
+          {
+            "tag": "BUTTON",
+            "text": "",
+            "label": "Branch into a new conversation",
+            "placeholder": null,
+            "disabled": false
+          },
+          {
+            "tag": "BUTTON",
+            "text": "Usage 72 tok",
+            "label": null,
+            "placeholder": null,
+            "disabled": false
+          },
+          {
+            "tag": "DIV",
+            "text": "",
+            "label": "Message or run a task, / commands, @ files or sessions",
+            "placeholder": null,
+            "disabled": false
+          },
+          {
+            "tag": "BUTTON",
+            "text": "",
+            "label": "Add files or run commands",
+            "placeholder": null,
+            "disabled": false
+          },
+          {
+            "tag": "BUTTON",
+            "text": "web-loopback-fixture",
+            "label": "Select model, current web-loopback-fixture",
+            "placeholder": null,
+            "disabled": false
+          },
+          {
+            "tag": "BUTTON",
+            "text": "",
+            "label": "Stop generating",
+            "placeholder": null,
+            "disabled": false
+          },
+          {
+            "tag": "BUTTON",
+            "text": "1 turns 1 steps",
+            "label": "1 turns 1 steps",
+            "placeholder": null,
+            "disabled": false
+          },
+          {
+            "tag": "BUTTON",
+            "text": "",
+            "label": "New tab",
+            "placeholder": null,
+            "disabled": false
+          },
+          {
+            "tag": "BUTTON",
+            "text": "",
+            "label": "Split",
+            "placeholder": null,
+            "disabled": true
+          },
+          {
+            "tag": "BUTTON",
+            "text": "",
+            "label": "Exit fullscreen",
+            "placeholder": null,
+            "disabled": false
+          },
+          {
+            "tag": "BUTTON",
+            "text": "",
+            "label": "Collapse right sidebar",
+            "placeholder": null,
+            "disabled": false
+          }
+        ],
+        "horizontalOverflow": false
+      }
+    }
+  ],
+  "complete": false,
+  "results": [
+    {
+      "name": "settings-general",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "official General settings are usable",
+          "status": "PASS"
+        },
+        {
+          "label": "appearance persisted across actual page reload",
+          "status": "PASS"
+        }
+      ],
+      "errors": [],
+      "externalRequests": [],
+      "failedHttp": [],
+      "rpcFailures": []
+    },
+    {
+      "name": "models-editor",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "model editor renders actual launch route without exposing launch credential",
+          "status": "PASS"
+        }
+      ],
+      "errors": [],
+      "externalRequests": [],
+      "failedHttp": [],
+      "rpcFailures": []
+    },
+    {
+      "name": "workspace-directory-picker",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "real directory chooser opened and cancelled",
+          "status": "PASS"
+        }
+      ],
+      "errors": [],
+      "externalRequests": [],
+      "failedHttp": [],
+      "rpcFailures": []
+    },
+    {
+      "name": "workspace-files",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "actual session workspace tree returned demo.js",
+          "status": "PASS"
+        },
+        {
+          "label": "actual UTF-8 file preview rendered original project contents",
+          "status": "PASS"
+        }
+      ],
+      "errors": [],
+      "externalRequests": [],
+      "failedHttp": [],
+      "rpcFailures": []
+    },
+    {
+      "name": "session-lifecycle",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "UI prompt reached production admission and returned success",
+          "status": "PASS"
+        },
+        {
+          "label": "real session rename persisted across page reload",
+          "status": "PASS"
+        },
+        {
+          "label": "actual fork owns a distinct session and retained conversation",
+          "status": "PASS"
+        },
+        {
+          "label": "actual fork archive and undo restored the same session",
+          "status": "PASS"
+        }
+      ],
+      "errors": [],
+      "externalRequests": [],
+      "failedHttp": [],
+      "rpcFailures": []
+    },
+    {
+      "name": "markdown-stream-reload",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "UI prompt reached production admission and returned success",
+          "status": "PASS"
+        },
+        {
+          "label": "official Markdown rendered heading, strong, list, table, link and code",
+          "status": "PASS"
+        },
+        {
+          "label": "real streamed assistant text visibly changed before completion",
+          "status": "PASS",
+          "samples": [
+            {
+              "time": 1857.5,
+              "length": 28,
+              "text": "Actual Harness browser answe",
+              "streaming": true
+            },
+            {
+              "time": 2070.9000000000233,
+              "length": 89,
+              "text": "Actual Harness browser answer\n\nBold result and [local documentation](https://example.inva",
+              "streaming": true
+            },
+            {
+              "time": 2345,
+              "length": 147,
+              "text": "Actual Harness browser answer\n\nBold result and local documentation.\n\nFirst item\nSecond item\nFile\tStatus\ndemo.js\treviewed\njs\nexport const value = 1;",
+              "streaming": true
+            }
+          ]
+        },
+        {
+          "label": "durable conversation survived actual reload",
+          "status": "PASS"
+        }
+      ],
+      "errors": [],
+      "externalRequests": [],
+      "failedHttp": [],
+      "rpcFailures": []
+    },
+    {
+      "name": "read-tool",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "UI prompt reached production admission and returned success",
+          "status": "PASS"
+        },
+        {
+          "label": "real read_file executed and actual file contents reached the model",
+          "status": "PASS"
+        },
+        {
+          "label": "official tool details control was clicked",
+          "status": "PASS"
+        }
+      ],
+      "errors": [],
+      "externalRequests": [],
+      "failedHttp": [],
+      "rpcFailures": []
+    },
+    {
+      "name": "write-approval",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "UI prompt reached production admission and returned success",
+          "status": "PASS"
+        },
+        {
+          "label": "actual write stayed blocked before human approval",
+          "status": "PASS"
+        },
+        {
+          "label": "actual approval resumed tool and persisted the requested coding file",
+          "status": "PASS"
+        }
+      ],
+      "errors": [],
+      "externalRequests": [],
+      "failedHttp": [],
+      "rpcFailures": []
+    },
+    {
+      "name": "write-rejection",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "UI prompt reached production admission and returned success",
+          "status": "PASS"
+        },
+        {
+          "label": "actual browser rejection returned a denied tool outcome with no target file",
+          "status": "PASS"
+        }
+      ],
+      "errors": [],
+      "externalRequests": [],
+      "failedHttp": [],
+      "rpcFailures": []
+    },
+    {
+      "name": "ask-reload-answer",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "UI prompt reached production admission and returned success",
+          "status": "PASS"
+        },
+        {
+          "label": "actual pending question survived reload",
+          "status": "PASS"
+        },
+        {
+          "label": "official question answer durably resumed and completed the original actual turn exactly once",
+          "status": "PASS",
+          "sessionId": "session_c7a5c80b-2157-4560-bee7-362a9416ea9f",
+          "turnId": "turn_0dfc2488-ab26-4b07-b56b-0595ed593d37",
+          "askId": "ask_1ded5991-5147-4145-9f85-32b8208cd1e9"
+        }
+      ],
+      "errors": [],
+      "externalRequests": [],
+      "failedHttp": [],
+      "rpcFailures": []
+    },
+    {
+      "name": "settings-general",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "official General settings are usable",
+          "status": "PASS"
+        },
+        {
+          "label": "appearance persisted across actual page reload",
+          "status": "PASS"
+        }
+      ],
+      "errors": [],
+      "externalRequests": [],
+      "failedHttp": [],
+      "rpcFailures": []
+    },
+    {
+      "name": "models-editor",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "model editor renders actual launch route without exposing launch credential",
+          "status": "PASS"
+        }
+      ],
+      "errors": [],
+      "externalRequests": [],
+      "failedHttp": [],
+      "rpcFailures": []
+    },
+    {
+      "name": "workspace-directory-picker",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "real directory chooser opened and cancelled",
+          "status": "PASS"
+        }
+      ],
+      "errors": [],
+      "externalRequests": [],
+      "failedHttp": [],
+      "rpcFailures": []
+    },
+    {
+      "name": "workspace-files",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "actual session workspace tree returned demo.js",
+          "status": "PASS"
+        },
+        {
+          "label": "actual UTF-8 file preview rendered original project contents",
+          "status": "PASS"
+        }
+      ],
+      "errors": [],
+      "externalRequests": [],
+      "failedHttp": [],
+      "rpcFailures": []
+    },
+    {
+      "name": "session-lifecycle",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "UI prompt reached production admission and returned success",
+          "status": "PASS"
+        },
+        {
+          "label": "real session rename persisted across page reload",
+          "status": "PASS"
+        },
+        {
+          "label": "actual fork owns a distinct session and retained conversation",
+          "status": "PASS"
+        },
+        {
+          "label": "actual fork archive and undo restored the same session",
+          "status": "PASS"
+        }
+      ],
+      "errors": [],
+      "externalRequests": [],
+      "failedHttp": [],
+      "rpcFailures": []
+    },
+    {
+      "name": "markdown-stream-reload",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "UI prompt reached production admission and returned success",
+          "status": "PASS"
+        },
+        {
+          "label": "official Markdown rendered heading, strong, list, table, link and code",
+          "status": "PASS"
+        },
+        {
+          "label": "real streamed assistant text visibly changed before completion",
+          "status": "PASS",
+          "samples": [
+            {
+              "time": 2104.5,
+              "length": 28,
+              "text": "Actual Harness browser answe",
+              "streaming": true
+            },
+            {
+              "time": 2352.2000000000116,
+              "length": 89,
+              "text": "Actual Harness browser answer\n\nBold result and [local documentation](https://example.inva",
+              "streaming": true
+            },
+            {
+              "time": 2610.5999999999767,
+              "length": 147,
+              "text": "Actual Harness browser answer\n\nBold result and local documentation.\n\nFirst item\nSecond item\nFile\tStatus\ndemo.js\treviewed\njs\nexport const value = 1;",
+              "streaming": true
+            }
+          ]
+        },
+        {
+          "label": "durable conversation survived actual reload",
+          "status": "PASS"
+        }
+      ],
+      "errors": [],
+      "externalRequests": [],
+      "failedHttp": [],
+      "rpcFailures": []
+    },
+    {
+      "name": "read-tool",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "UI prompt reached production admission and returned success",
+          "status": "PASS"
+        },
+        {
+          "label": "real read_file executed and actual file contents reached the model",
+          "status": "PASS"
+        },
+        {
+          "label": "official tool details control was clicked",
+          "status": "PASS"
+        }
+      ],
+      "errors": [],
+      "externalRequests": [],
+      "failedHttp": [],
+      "rpcFailures": []
+    },
+    {
+      "name": "write-approval",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "UI prompt reached production admission and returned success",
+          "status": "PASS"
+        },
+        {
+          "label": "actual write stayed blocked before human approval",
+          "status": "PASS"
+        },
+        {
+          "label": "actual approval resumed tool and persisted the requested coding file",
+          "status": "PASS"
+        }
+      ],
+      "errors": [],
+      "externalRequests": [],
+      "failedHttp": [],
+      "rpcFailures": []
+    },
+    {
+      "name": "write-rejection",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "UI prompt reached production admission and returned success",
+          "status": "PASS"
+        },
+        {
+          "label": "actual browser rejection returned a denied tool outcome with no target file",
+          "status": "PASS"
+        }
+      ],
+      "errors": [],
+      "externalRequests": [],
+      "failedHttp": [],
+      "rpcFailures": []
+    },
+    {
+      "name": "ask-reload-answer",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "UI prompt reached production admission and returned success",
+          "status": "PASS"
+        },
+        {
+          "label": "actual pending question survived reload",
+          "status": "PASS"
+        },
+        {
+          "label": "official question answer durably resumed and completed the original actual turn exactly once",
+          "status": "PASS",
+          "sessionId": "session_2eabcd25-71a8-424b-b0b8-e4ea745c64a8",
+          "turnId": "turn_94f0519d-eb34-40c2-afac-50d2e17c88a4",
+          "askId": "ask_c6ffa256-b472-4fd2-9fc2-e6830581567b"
+        }
+      ],
+      "errors": [],
+      "externalRequests": [],
+      "failedHttp": [],
+      "rpcFailures": []
+    },
+    {
+      "name": "settings-general",
+      "viewport": "narrow-tall",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "official General settings are usable",
+          "status": "PASS"
+        },
+        {
+          "label": "appearance persisted across actual page reload",
+          "status": "PASS"
+        }
+      ],
+      "errors": [],
+      "externalRequests": [],
+      "failedHttp": [],
+      "rpcFailures": []
+    },
+    {
+      "name": "models-editor",
+      "viewport": "narrow-tall",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "model editor renders actual launch route without exposing launch credential",
+          "status": "PASS"
+        }
+      ],
+      "errors": [],
+      "externalRequests": [],
+      "failedHttp": [],
+      "rpcFailures": []
+    },
+    {
+      "name": "workspace-directory-picker",
+      "viewport": "narrow-tall",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "real directory chooser opened and cancelled",
+          "status": "PASS"
+        }
+      ],
+      "errors": [],
+      "externalRequests": [],
+      "failedHttp": [],
+      "rpcFailures": []
+    },
+    {
+      "name": "workspace-files",
+      "viewport": "narrow-tall",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "actual session workspace tree returned demo.js",
+          "status": "PASS"
+        },
+        {
+          "label": "actual UTF-8 file preview rendered original project contents",
+          "status": "PASS"
+        }
+      ],
+      "errors": [],
+      "externalRequests": [],
+      "failedHttp": [],
+      "rpcFailures": []
+    },
+    {
+      "name": "session-lifecycle",
+      "viewport": "narrow-tall",
+      "status": "FAIL",
+      "failure": "TimeoutError: locator.waitFor: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Stop generating', exact: true }) to be hidden\u001b[22m\n\u001b[2m    35 × locator resolved to visible <button type=\"button\" class=\"uV2eYG_primary\" aria-label=\"Stop generating\">…</button>\u001b[22m\n",
+      "checks": [
+        {
+          "label": "UI prompt reached production admission and returned success",
+          "status": "PASS"
+        }
+      ],
+      "errors": [],
+      "externalRequests": [],
+      "failedHttp": [],
+      "rpcFailures": []
+    },
+    {
+      "name": "markdown-stream-reload",
+      "viewport": "narrow-tall",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "UI prompt reached production admission and returned success",
+          "status": "PASS"
+        },
+        {
+          "label": "official Markdown rendered heading, strong, list, table, link and code",
+          "status": "PASS"
+        },
+        {
+          "label": "real streamed assistant text visibly changed before completion",
+          "status": "PASS",
+          "samples": [
+            {
+              "time": 2149.2999999999884,
+              "length": 28,
+              "text": "Actual Harness browser answe",
+              "streaming": true
+            },
+            {
+              "time": 2414.0999999999767,
+              "length": 89,
+              "text": "Actual Harness browser answer\n\nBold result and [local documentation](https://example.inva",
+              "streaming": true
+            },
+            {
+              "time": 2672.7000000000116,
+              "length": 147,
+              "text": "Actual Harness browser answer\n\nBold result and local documentation.\n\nFirst item\nSecond item\nFile\tStatus\ndemo.js\treviewed\njs\nexport const value = 1;",
+              "streaming": true
+            }
+          ]
+        },
+        {
+          "label": "durable conversation survived actual reload",
+          "status": "PASS"
+        }
+      ],
+      "errors": [],
+      "externalRequests": [],
+      "failedHttp": [],
+      "rpcFailures": []
+    },
+    {
+      "name": "read-tool",
+      "viewport": "narrow-tall",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "UI prompt reached production admission and returned success",
+          "status": "PASS"
+        },
+        {
+          "label": "real read_file executed and actual file contents reached the model",
+          "status": "PASS"
+        },
+        {
+          "label": "official tool details control was clicked",
+          "status": "PASS"
+        }
+      ],
+      "errors": [],
+      "externalRequests": [],
+      "failedHttp": [],
+      "rpcFailures": []
+    },
+    {
+      "name": "write-approval",
+      "viewport": "narrow-tall",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "UI prompt reached production admission and returned success",
+          "status": "PASS"
+        },
+        {
+          "label": "actual write stayed blocked before human approval",
+          "status": "PASS"
+        },
+        {
+          "label": "actual approval resumed tool and persisted the requested coding file",
+          "status": "PASS"
+        }
+      ],
+      "errors": [],
+      "externalRequests": [],
+      "failedHttp": [],
+      "rpcFailures": []
+    },
+    {
+      "name": "write-rejection",
+      "viewport": "narrow-tall",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "UI prompt reached production admission and returned success",
+          "status": "PASS"
+        },
+        {
+          "label": "actual browser rejection returned a denied tool outcome with no target file",
+          "status": "PASS"
+        }
+      ],
+      "errors": [],
+      "externalRequests": [],
+      "failedHttp": [],
+      "rpcFailures": []
+    },
+    {
+      "name": "ask-reload-answer",
+      "viewport": "narrow-tall",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "UI prompt reached production admission and returned success",
+          "status": "PASS"
+        },
+        {
+          "label": "actual pending question survived reload",
+          "status": "PASS"
+        },
+        {
+          "label": "official question answer durably resumed and completed the original actual turn exactly once",
+          "status": "PASS",
+          "sessionId": "session_6c3059a0-5abe-45d6-bf60-6d5a444523bd",
+          "turnId": "turn_d1b453f4-0ee9-4c88-adfd-3a689959c1ce",
+          "askId": "ask_dcf24c59-6867-4ad1-990e-28ce46aca681"
+        }
+      ],
+      "errors": [],
+      "externalRequests": [],
+      "failedHttp": [],
+      "rpcFailures": []
+    }
+  ]
+}

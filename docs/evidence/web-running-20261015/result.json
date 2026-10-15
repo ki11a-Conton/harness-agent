@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-15T23:32:16.470407+08:00",
+  "sourceSha": "d29537d652d35556251ac4cacdd47a7e7583b7b8",
+  "sourceClean": true,
+  "originalSha": "847e245228ffb24fce6eb99400a8f04b5f302b4f",
+  "rootCause": "Host emitted api-session/added but omitted api-session/status; existing client summaries do not update resident Session.running",
+  "regressionBefore": {
+    "failed": 1,
+    "failure": "Expected false, received true after the authoritative completed summary"
+  },
+  "regressionsAfter": {
+    "passed": 35,
+    "failed": 0
+  },
+  "fullSuite": {
+    "exitCode": 0,
+    "passed": 9799,
+    "skipped": 15,
+    "failed": 0
+  },
+  "security": {
+    "exitCode": 0,
+    "passed": 2146
+  },
+  "typecheck": "PASS",
+  "docs": "PASS",
+  "realBrowser": {
+    "baselineStuck": true,
+    "fixedStuck": false,
+    "actualRunningListObservedInBothArms": true,
+    "productionHttp": true,
+    "rpcMocks": false
+  },
+  "ci": {
+    "windows": {
+      "run": 38758773791,
+      "conclusion": "success"
+    },
+    "uiInstalled": {
+      "run": 38758773677,
+      "linux": "success",
+      "windows": "success"
+    },
+    "allBranchRunsSnapshot": "branch-runs.json"
+  },
+  "paidModelCalls": 0,
+  "releasePublished": false,
+  "limits": "Original CI payload omits the list running value; the captured response order matches the window. Controlled tests prove the protocol defect and same visible failure. Branch CI is bound to this source SHA, not a later archival commit. Fresh main CI must be checked independently."
+}
