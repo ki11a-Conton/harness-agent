@@ -108,7 +108,22 @@ export function createHostTools(harness: Harness, cwd: string, dataDir?: string,
         context = { ...context, cwd: dirname(resolve(args.path)), permissions: { defaultEffect: "deny", rules: [{ action: "edit", resource: "file", effect: "allow" }] },
           sandboxPolicy: { filesystem: { mode: "workspace-write", allowedPaths: [resolve(args.path)] }, network: { mode: "deny" }, process: { allowedCommands: [] } } };
       }
+      if (sessionId === undefined && name === "web_model_discovery" && typeof args.url === "string") {
+        // The models dialog verifies the endpoint the local human just typed. That
+        // call belongs to the invisible host session, so the approval it would
+        // otherwise raise has no surface to appear on: the dialog can only wait the
+        // approval out and then report a failure. The click is the authorisation, so
+        // allow this one call and pin the sandbox to exactly the requested host.
+        const endpoint = hostOf(args.url);
+        if (endpoint !== undefined) context = { ...context, permissions: { defaultEffect: "deny", rules: [{ action: "exec", resource: "network", effect: "allow", scope: "call" }] },
+          sandboxPolicy: { filesystem: { mode: "read-only", allowedPaths: [root] }, network: { mode: "allowlist", hosts: [endpoint] }, process: { allowedCommands: [] } } };
+      }
       return projectOrchestrator(context.cwd, actualOwner).executeBound(bound(definition, physicalId, agent.id, args), context);
     },
   };
+}
+
+/** Host of an absolute endpoint URL; undefined when the argument is not one. */
+function hostOf(url: string): string | undefined {
+  try { return new URL(url).hostname; } catch { return undefined; }
 }
