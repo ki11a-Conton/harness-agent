@@ -1,28 +1,47 @@
-name: source audit historical failure forensics
+name: inspect existing CI job log
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - '.github/workflows/source-audit-forensics.yml'
-      - 'scripts/ci/formal-failure-forensics.mjs'
 permissions:
   contents: read
   actions: read
 jobs:
-  recover:
+  inspect:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Read the existing Windows formal job log
+        env:
+          LOG_READ_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY'
+          import os,urllib.request,urllib.error,urllib.parse,json,gzip,base64,hashlib,re
+          from pathlib import Path
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+            def redirect_request(self,*args,**kwargs):return None
+          q=urllib.request.Request('https://api.github.com/repos/ki11a-Conton/harness-agent/actions/jobs/116591228359/logs',headers={'Authorization':'Bearer '+os.environ['LOG_READ_TOKEN'],'Accept':'application/vnd.github+json'})
+          try:
+            with urllib.request.build_opener(NoRedirect).open(q,timeout=30) as r:body=r.read()
+          except urllib.error.HTTPError as e:
+            if e.code!=302:print('::error::GitHub log API HTTP '+str(e.code));raise SystemExit(1)
+            location=e.headers.get('location','');host=urllib.parse.urlparse(location)
+            if host.scheme!='https' or not host.hostname.endswith('.blob.core.windows.net'):raise RuntimeError('Unexpected log destination')
+            try:
+              with urllib.request.urlopen(location,timeout=30) as r:body=r.read()
+            except urllib.error.HTTPError as e:print('::error::Log storage HTTP '+str(e.code));raise SystemExit(1)
+          if re.search(rb'gh[pousr]_[A-Za-z0-9]{20,}',body):raise RuntimeError('Credential-shaped log content refused')
+          Path('original-job.log').write_bytes(body)
+          lines=re.sub(r'\x1b\[[0-9;]*m','',body.decode('utf-8',errors='replace')).splitlines()
+          result={'jobId':116591228359,'runId':38784015304,'sourceSha':'d6e00881dc804371165170c2a9a0697e34ff7b54','rawBytes':len(body),'rawSha256':hashlib.sha256(body).hexdigest(),'lastLines':lines[-120:],'limitation':'Snapshot of existing job log only; original job not rerun.'}
+          Path('job-log-projection.json').write_text(json.dumps(result,indent=2)+'\n')
+          data=base64.b64encode(gzip.compress(json.dumps(result).encode())).decode();total=(len(data)+3499)//3500
+          if total>8:raise RuntimeError('Log projection exceeds annotation budget')
+          for index in range(total):print('::notice title=Existing Windows formal log chunk::'+json.dumps({'index':index,'total':total,'encoding':'gzip+base64','data':data[index*3500:(index+1)*3500]}))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          node-version: '22'
-      - name: Recover the exact failed Windows formal bundle
-        uses: actions/download-artifact@v4
-        with:
-          github-token: ${{ github.token }}
-          run-id: '37615393968'
-          name: n6-real-formal-windows-latest-21fa7436b1abdcbc0dcd4f8a300f171b1a35f8e0-37615393968-attempt-1
-          path: .ci/historical-formal-failure
-      - name: Publish original command receipt and failure excerpt
-        run: node scripts/ci/formal-failure-forensics.mjs .ci/historical-formal-failure
+          name: existing-windows-formal-log-${{ github.run_id }}
+          path: |
+            original-job.log
+            job-log-projection.json
+          if-no-files-found: warn
