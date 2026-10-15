@@ -1,0 +1,62 @@
+[
+  {
+    "path": ".github",
+    "blob_href": "https://github.com/ki11a-Conton/harness-agent/blob/7e199f2af93ba9ba884da934e2fc6d3008fb9ef6/.github",
+    "start_line": 2,
+    "start_column": null,
+    "end_line": 2,
+    "end_column": null,
+    "annotation_level": "warning",
+    "title": "",
+    "message": "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/download-artifact@v4, actions/setup-node@v4, actions/upload-artifact@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/",
+    "raw_details": ""
+  },
+  {
+    "path": ".github",
+    "blob_href": "https://github.com/ki11a-Conton/harness-agent/blob/7e199f2af93ba9ba884da934e2fc6d3008fb9ef6/.github",
+    "start_line": 17,
+    "start_column": null,
+    "end_line": 17,
+    "end_column": null,
+    "annotation_level": "failure",
+    "title": "",
+    "message": "No files were found with the provided path: .ci/deepseek/cli-installed/. No artifacts will be uploaded.",
+    "raw_details": ""
+  },
+  {
+    "path": ".github",
+    "blob_href": "https://github.com/ki11a-Conton/harness-agent/blob/7e199f2af93ba9ba884da934e2fc6d3008fb9ef6/.github",
+    "start_line": 309,
+    "start_column": null,
+    "end_line": 309,
+    "end_column": null,
+    "annotation_level": "failure",
+    "title": "",
+    "message": "Process completed with exit code 1.",
+    "raw_details": ""
+  },
+  {
+    "path": ".github",
+    "blob_href": "https://github.com/ki11a-Conton/harness-agent/blob/7e199f2af93ba9ba884da934e2fc6d3008fb9ef6/.github",
+    "start_line": 103,
+    "start_column": null,
+    "end_line": 103,
+    "end_column": null,
+    "annotation_level": "failure",
+    "title": "Installed UI case failed",
+    "message": "{\"name\":\"session-lifecycle\",\"viewport\":\"mobile\",\"status\":\"FAIL\",\"failure\":\"TimeoutError: locator.click: Timeout 4000ms exceeded.\\nCall log:\\n\\u001b[2m  - waiting for locator('[data-row-key=\\\"session:session_f0719ba2-cb32-4cac-a871-e6879bd2a7f2\\\"]').getByRole('button', { name: /^Session actions for / })\\u001b[22m\\n\\u001b[2m    - locator resolved to <button type=\\\"button\\\" class=\\\"YDXeBa_iconButton\\\" aria-label=\\\"Session actions for Browser lifecycle 1792067800813\\\">\u2026</button>\\u001b[22m\\n\\u001b[2m  - attempting click action\\u001b[22m\\n\\u001b[2m    2 \u00d7 waiting for element to be visible, enabled and stable\\u001b[22m\\n\\u001b[2m      - element is not stable\\u001b[22m\\n\\u001b[2m    - retrying click action\\u001b[22m\\n\\u001b[2m    - waiting 20ms\\u001b[22m\\n\\u001b[2m    - waiting for element to be visible, enabled and stable\\u001b[22m\\n\\u001b[2m    - element is not stable\\u001b[22m\\n\\u001b[2m  - retrying click action\\u001b[22m\\n\\u001b[2m    - waiting 100ms\\u001b[22m\\n\\u001b[2m    - waiting for element to be visible, enabled and stable\\u001b[22m\\n\\u001b[2m    - element is visible, enabled and stable\\u001b[22m\\n\\u001b[2m    - scrolling into view if needed\\u001b[22m\\n\\u001b[2m    - done scrolling\\u001b[22m\\n\\u001b[2m    - element is not visible\\u001b[22m\\n\\u001b[2m  - retrying click action\\u001b[22m\\n\\u001b[2m    - waiting 100ms\\u001b[22m\\n\\u001b[2m    7 \u00d7 waiting for element to be visible, enabled and stable\\u001b[22m\\n\\u001b[2m      - element is not visible\\u001b[22m\\n\\u001b[2m    - retrying click action\\u001b[22m\\n\\u001b[2m      - waiting 500ms\\u001b[22m\\n\"}",
+    "raw_details": ""
+  },
+  {
+    "path": ".github",
+    "blob_href": "https://github.com/ki11a-Conton/harness-agent/blob/7e199f2af93ba9ba884da934e2fc6d3008fb9ef6/.github",
+    "start_line": 10,
+    "start_column": null,
+    "end_line": 10,
+    "end_column": null,
+    "annotation_level": "failure",
+    "title": "Installed UI acceptance failed",
+    "message": "AssertionError [ERR_ASSERTION]: {\n  \"output\": \"D:\\\\a\\\\harness-agent\\\\harness-agent\\\\.ci\\\\deepseek\\\\installed\\\\browser\",\n  \"complete\": false,\n  \"results\": [\n    {\n      \"name\": \"settings-general\",\n      \"viewport\": \"desktop\",\n      \"status\": \"PASS\",\n      \"assertions\": 2\n    },\n    {\n      \"name\": \"models-editor\",\n      \"viewport\": \"desktop\",\n      \"status\": \"PASS\",\n      \"assertions\": 1\n    },\n    {\n      \"name\": \"workspace-directory-picker\",\n      \"viewport\": \"desktop\",\n      \"status\": \"PASS\",\n      \"assertions\": 1\n    },\n    {\n      \"name\": \"workspace-files\",\n      \"viewport\": \"desktop\",\n      \"status\": \"PASS\",\n      \"assertions\": 2\n    },\n    {\n      \"name\": \"session-lifecycle\",\n      \"viewport\": \"desktop\",\n      \"status\": \"PASS\",\n      \"assertions\": 4\n    },\n    {\n      \"name\": \"markdown-stream-reload\",\n      \"viewport\": \"desktop\",\n      \"status\": \"PASS\",\n      \"assertions\": 4\n    },\n    {\n      \"name\": \"read-tool\",\n      \"viewport\": \"desktop\",\n      \"status\": \"PASS\",\n      \"assertions\": 3\n    },\n    {\n      \"name\": \"write-approval\",\n      \"viewport\": \"desktop\",\n      \"status\": \"PASS\",\n      \"assertions\": 3\n    },\n    {\n      \"name\": \"write-rejection\",\n      \"viewport\": \"desktop\",\n      \"status\": \"PASS\",\n      \"assertions\": 2\n    },\n    {\n      \"name\": \"ask-reload-answer\",\n      \"viewport\": \"desktop\",\n      \"status\": \"PASS\",\n      \"assertions\": 3\n    },\n    {\n      \"name\": \"settings-general\",\n      \"viewport\": \"mobile\",\n      \"status\": \"PASS\",\n      \"assertions\": 2\n    },\n    {\n      \"name\": \"models-editor\",\n      \"viewport\": \"mobile\",\n      \"status\": \"PASS\",\n      \"assertions\": 1\n    },\n    {\n      \"name\": \"workspace-directory-picker\",\n      \"viewport\": \"mobile\",\n      \"status\": \"PASS\",\n      \"assertions\": 1\n    },\n    {\n      \"name\": \"workspace-files\",\n      \"viewport\": \"mobile\",\n      \"status\": \"PASS\",\n      \"assertions\": 2\n    },\n    {\n      \"name\": \"session-lifecycle\",\n      \"viewport\": \"mobile\",\n      \"status\": \"FAIL\",\n      \"failure\": \"TimeoutError: locat",
+    "raw_details": ""
+  }
+]

@@ -1,0 +1,65 @@
+{
+  "archiveOriginalSha": "d202e952fe55baf9956d4b85428812dc5dc1862e",
+  "archiveFixSha": "7e199f2af93ba9ba884da934e2fc6d3008fb9ef6",
+  "pr9Head": "e55718819fd577e3409343f15237f1e4e0ac2b14",
+  "pr10Head": "ecc73a56138ee0737053ef126045823a7f4ef3ca",
+  "combinedSourceSha": "efcac4601bea7f56600a2244c95318fb966aecc6",
+  "combinedSourceClean": true,
+  "combinedTests": {
+    "passed": 9795,
+    "skipped": 15,
+    "failed": 0
+  },
+  "securityTests": {
+    "passed": 2146,
+    "failed": 0
+  },
+  "reviewFinding": "P2: configured durable storage with missing executeHostTool must refuse, not report empty/stopped tasks",
+  "regression": {
+    "exactMain": "PASS",
+    "originalPR10": "FAIL",
+    "proposedFix": "PASS",
+    "focusedWithFix": 36
+  },
+  "node": "24.19.0",
+  "localPnpm": "11.19.0",
+  "declaredPnpm": "11.21.0",
+  "paidModelCalls": 0,
+  "prBranchesChanged": false,
+  "ciOverall": "NOT_GREEN: Windows installed UI acceptance failed twice",
+  "reviewedAt": "2026-10-15T20:56:11.894810+08:00",
+  "ciRuns": [
+    {
+      "id": 38735564822,
+      "name": "official DeepSeek UI installed acceptance",
+      "status": "completed",
+      "conclusion": "failure",
+      "attempt": 2,
+      "sourceSha": "7e199f2af93ba9ba884da934e2fc6d3008fb9ef6"
+    },
+    {
+      "id": 38735561694,
+      "name": "first-generation installed acceptance",
+      "status": "completed",
+      "conclusion": "success",
+      "attempt": 1,
+      "sourceSha": "7e199f2af93ba9ba884da934e2fc6d3008fb9ef6"
+    },
+    {
+      "id": 38735558264,
+      "name": "genuine Windows acceptance",
+      "status": "completed",
+      "conclusion": "success",
+      "attempt": 1,
+      "sourceSha": "7e199f2af93ba9ba884da934e2fc6d3008fb9ef6"
+    },
+    {
+      "id": 38735187914,
+      "name": "ci",
+      "status": "in_progress",
+      "conclusion": null,
+      "attempt": 1,
+      "sourceSha": "7e199f2af93ba9ba884da934e2fc6d3008fb9ef6"
+    }
+  ]
+}

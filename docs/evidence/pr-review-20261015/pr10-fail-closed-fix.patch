@@ -1,0 +1,55 @@
+diff --git a/apps/web/src/deepseek/activity.test.ts b/apps/web/src/deepseek/activity.test.ts
+index c195ff59..b4fb29a6 100644
+--- a/apps/web/src/deepseek/activity.test.ts
++++ b/apps/web/src/deepseek/activity.test.ts
+@@ -15,6 +15,20 @@ import { createOwnerManager } from "./owners.js";
+ import { createDeepseekComposition } from "./composition.js";
+ 
+ const cleanup: Array<() => Promise<void>> = [];
++it("review: configured durable tasks must not become empty when the host executor is unavailable", async () => {
++  const stack = await setup(); await stack.create({ every_seconds: 60 });
++  expect(await stack.activity.sessionActivity(stack.id, stack.signal)).toMatchObject({ activeSchedules: 1 });
++  const bytes = await readFile(stack.path), execute = stack.host.executeHostTool;
++  stack.host.executeHostTool = undefined;
++  const observed = await Promise.allSettled([
++    stack.activity.sessionActivity(stack.id, stack.signal),
++    stack.activity.stopSessionActivity(stack.id, stack.signal),
++  ]);
++  stack.host.executeHostTool = execute;
++  expect(await readFile(stack.path)).toEqual(bytes);
++  expect(await stack.activity.sessionActivity(stack.id, stack.signal)).toMatchObject({ activeSchedules: 1 });
++  for (const result of observed) expect(result).toMatchObject({ status: "rejected", reason: { code: "schedule/unavailable" } });
++});
+ afterEach(async () => { for (const action of cleanup.splice(0).reverse()) await action(); vi.unstubAllEnvs(); });
+ async function setup(options: { provider?: ModelProvider; clock?: "real"; denyModelEdits?: boolean; admitTaskPath?: boolean } = {}) {
+   const directory = await realpath(await mkdtemp(join(tmpdir(), "dsh-activity-real-"))); cleanup.push(() => rm(directory, { recursive: true, force: true }));
+diff --git a/apps/web/src/deepseek/activity.ts b/apps/web/src/deepseek/activity.ts
+index a2b914fd..12eb0db5 100644
+--- a/apps/web/src/deepseek/activity.ts
++++ b/apps/web/src/deepseek/activity.ts
+@@ -333,14 +333,14 @@ export function createActivityService(host: ActivityHost) {
+     endpoints, modelTools, schedulePath,
+     async sessionActivity(sessionId: string, signal: AbortSignal) {
+       const owner = await session(sessionId);
+-      if (!durableStorage()) return { activeSchedules: 0, pendingDispatches: 0, unresolvedClaims: 0, jobs: (await jobs(owner)).map(item => item.view) };
++      if (host.dataDir === undefined) return { activeSchedules: 0, pendingDispatches: 0, unresolvedClaims: 0, jobs: (await jobs(owner)).map(item => item.view) };
+       const tasks = Object.values((await read(owner.id, signal)).tasks).filter(task => task.sessionId === owner.id);
+       return { activeSchedules: tasks.filter(task => task.status === "active").length, pendingDispatches: [...dispatches.values()].filter(item => item.sessionId === owner.id).length,
+         unresolvedClaims: tasks.filter(task => task.claim !== undefined).length, jobs: (await jobs(owner)).map(item => item.view) };
+     },
+     async stopSessionActivity(sessionId: string, signal: AbortSignal) {
+       const owner = await session(sessionId);
+-      if (!durableStorage()) return { activeSchedules: 0, pendingDispatches: 0, unresolvedClaims: 0, jobs: (await jobs(owner)).map(item => item.view) };
++      if (host.dataDir === undefined) return { activeSchedules: 0, pendingDispatches: 0, unresolvedClaims: 0, jobs: (await jobs(owner)).map(item => item.view) };
+       stoppingSessions.set(owner.id, (stoppingSessions.get(owner.id) ?? 0) + 1);
+       try {
+         const active = [...dispatches.values()].filter(item => item.sessionId === owner.id);
+@@ -357,7 +357,7 @@ export function createActivityService(host: ActivityHost) {
+       }
+     },
+     async start(): Promise<void> {
+-      if (timer !== undefined || !durableStorage() || host.submitPrompt === undefined) return;
++      if (timer !== undefined || host.dataDir === undefined || host.submitPrompt === undefined) return;
+       await read(undefined, lifetime.signal);
+       const tick = () => { if (driving === undefined && !lifetime.signal.aborted) { driving = drive().finally(() => { driving = undefined; }); driving.catch(error => { if (!lifetime.signal.aborted) console.error("Web task drive failed", error instanceof Error ? error.message : String(error)); }); } };
+       timer = setInterval(tick, Math.max(10, host.pollDelayMs ?? 1000)); timer.unref(); tick();

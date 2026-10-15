@@ -1,0 +1,65 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-pr10-review-20261015
+
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ❯ apps/web/src/deepseek/activity.test.ts (26 tests | 1 failed | 25 skipped) 104ms
+   × review: configured durable tasks must not become empty when the host executor is unavailable 102ms
+   ↓ presents Harness Agent component metadata while retaining actual module identities
+   ↓ the real wall-clock timer durably admits one reminder and the actual actor executes it
+   ↓ concurrent drives share their durable claim and never enqueue a duplicate model turn
+   ↓ shutdown after durable inbox admission but before task receipt recovers only the same admission identity
+   ↓ an uncertain admission is retained as unresolved and never silently retried or shown as delivered
+   ↓ task CAS persists one edit, preserves equivalent targets, and fences another session's task
+   ↓ an unknown schedule namespace cannot fall through into a real durable task update
+   ↓ a task postponed after the timer snapshot is never admitted before its current committed target
+   ↓ stop owns the gap after a durable claim commit and before its carrier receives that claim
+   ↓ two browser generations independently receive only committed task invalidations
+   ↓ stopping one session's actual schedules never disables a different session's timers
+   ↓ model task writes obey the actual frozen deny policy and never dispatch the inner metadata write
+   ↓ model task creation requires the real outer approval and denial leaves no task
+   ↓ a granted model approval persists the true task, while an absent sandbox capability still refuses it
+   ↓ the model cannot replace the server-owned schedule path through extra tool arguments
+   ↓ upstream calendar rules skip a DST gap and use the earlier instant of an overlap
+   ↓ real child-turn jobs expose retained UTF-8 output and reject a foreign parent and split-byte resume
+   ↓ killing an old waiting child job never cancels a different running turn in that child
+   ↓ official boot catalog DTOs use real native roles and validate the observed inspect directory
+   ↓ native preset identity is projected and selecting that same frozen preset is idempotent
+   ↓ the process permission catalog describes the actual registered default agent policy
+   ↓ the displayed todo timeline is derived from actual successful native update_plan calls
+   ↓ a real secondary workspace skill catalog resolves its own captured Harness roots
+   ↓ a replaced Web draft schedules through its native model context and the real timer returns to the stable owner's inbox
+   ↓ a human task commit holds the real owner's draft lock until its durable acknowledgement and fences model replacement
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  apps/web/src/deepseek/activity.test.ts > review: configured durable tasks must not become empty when the host executor is unavailable
+AssertionError: expected { Object (status, value) } to match object { status: 'rejected', …(1) }
+(5 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "reason": {
+-     "code": "schedule/unavailable",
+-   },
+-   "status": "rejected",
++   "status": "fulfilled",
+  }
+
+ ❯ apps/web/src/deepseek/activity.test.ts:30:49
+     28|   expect(await readFile(stack.path)).toEqual(bytes);
+     29|   expect(await stack.activity.sessionActivity(stack.id, stack.signal))…
+     30|   for (const result of observed) expect(result).toMatchObject({ status…
+       |                                                 ^
+     31| });
+     32| afterEach(async () => { for (const action of cleanup.splice(0).reverse…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 25 skipped (26)
+   Start at  12:40:11
+   Duration  5.73s (transform 4.28s, setup 0ms, import 5.45s, tests 104ms, environment 0ms)
+

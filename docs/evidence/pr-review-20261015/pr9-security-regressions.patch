@@ -1,0 +1,57 @@
+diff --git a/apps/web/src/deepseek/catalog.test.ts b/apps/web/src/deepseek/catalog.test.ts
+index e3a142cd..7b4a2dee 100644
+--- a/apps/web/src/deepseek/catalog.test.ts
++++ b/apps/web/src/deepseek/catalog.test.ts
+@@ -1,4 +1,4 @@
+-import { createServer } from "node:http";
++import { createServer, type RequestListener } from "node:http";
+ import { mkdtemp, readFile, rm, stat, symlink, writeFile, realpath } from "node:fs/promises";
+ import { tmpdir } from "node:os";
+ import { join } from "node:path";
+@@ -13,6 +13,46 @@ import { createHostTools } from "./host-tools.js";
+ import { RemoteFailure } from "./transport.js";
+ 
+ const cleanup: Array<() => Promise<void>> = [];
++async function reviewServer(handler: RequestListener) {
++  const server = createServer(handler);
++  await new Promise<void>(done => server.listen(0, "127.0.0.1", done));
++  cleanup.push(() => new Promise<void>((done, reject) => server.close(error => error ? reject(error) : done())));
++  const address = server.address(); if (!address || typeof address === "string") throw new Error("Missing review listener");
++  return `http://127.0.0.1:${address.port}`;
++}
++
++it("review: human discovery does not forward its one-shot credential across a redirect", async () => {
++  let redirected = 0, initial = 0;
++  const destination = await reviewServer((_request, response) => { redirected++; response.end(JSON.stringify({ data: [{ id: "wrong-host" }] })); });
++  const secret = "review-redirect-secret-unique";
++  const origin = await reviewServer((request, response) => {
++    initial++; expect(request.headers.authorization).toBe(`Bearer ${secret}`);
++    response.writeHead(302, { location: `${destination}/models` }); response.end();
++  });
++  const stack = await setup();
++  await expect(stack.call("llm/discoverModels", { settingsNs: "llm-pi-ai", request: { baseURL: origin, apiKey: secret } })).rejects.toMatchObject({ code: "llm/model-discovery-rejected" });
++  expect(initial).toBe(1); expect(redirected).toBe(0);
++  const events = (await Promise.all((await stack.harness.store.listSessions()).map(session => stack.harness.events.list(session.id)))).flat();
++  expect(JSON.stringify(events)).not.toContain(secret);
++});
++
++it("review: a model directory echo cannot expose the one-shot key through DTOs or events", async () => {
++  const secret = "review-catalog-echo-secret-unique";
++  const origin = await reviewServer((_request, response) => { response.end(JSON.stringify({ data: [{ id: secret }, { id: "safe", name: secret }] })); });
++  const stack = await setup();
++  expect(await stack.call("llm/discoverModels", { settingsNs: "llm-pi-ai", request: { baseURL: origin, apiKey: secret } })).toEqual([{ id: "safe" }]);
++  const events = (await Promise.all((await stack.harness.store.listSessions()).map(session => stack.harness.events.list(session.id)))).flat();
++  expect(JSON.stringify(events)).not.toContain(secret);
++  await expect(readFile(join(stack.directory, "deepseek", "credentials.json"))).rejects.toMatchObject({ code: "ENOENT" });
++});
++
++it("review: invalid endpoint schemes and embedded credentials are refused before the network", async () => {
++  const stack = await setup();
++  for (const baseURL of ["file:///tmp/models", "ftp://localhost/models", "http://user:password@localhost/v1", "http://localhost/v1?key=secret", "http://localhost/v1#fragment"]) {
++    await expect(stack.call("llm/discoverModels", { settingsNs: "llm-pi-ai", request: { baseURL } })).rejects.toMatchObject({ code: "settings/rejected" });
++  }
++  expect(stack.harness.approvalStore.listPending()).toHaveLength(0);
++});
+ afterEach(async () => { for (const action of cleanup.splice(0).reverse()) await action(); });
+ async function setup(overrides: Partial<CatalogHost> = {}) {
+   const directory = await realpath(await mkdtemp(join(tmpdir(), "dsh-catalog-real-")));

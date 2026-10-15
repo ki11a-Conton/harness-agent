@@ -1,6 +1,6 @@
 # Harness Agent 当前执行计划入口
 
-补充复核：`d202e952` 归档提交的 Windows checkout 被过长证据路径阻断，正在修复归档可移植性并审查用户指定 PR #9/#10；见[复核记录](docs/archive-ci-pr-review-20261015.md)。产品源码 `4ee21776` 的原成功结论不替代归档提交 CI。
+补充复核：`d202e952` 的 Windows checkout 被过长证据路径阻断，已以 `7e199f2a` 修复并保留字节映射。真实 Windows 与普通安装通过，但 Windows UI 安装两次失败，主 CI 状态见[复核及 PR 审查](docs/archive-ci-pr-review-20261015.md)，整体不能称为全绿。PR #9 无阻塞发现；#10 存在一个已复现的 P2，三行修正与反例附件已验证。两个 PR 组合全量 9795 通过/15 跳过，不能替代新增反例。产品源码 `4ee21776` 的原成功结论保持原有绑定。
 
 当前执行任务：[全面实施 coding agent 优化](plan(20261015-114843).md)，合同：[CODING-EVOLUTION-20261015](tasks/CODING-EVOLUTION-20261015.md)。按研究规格 C1–C7 实施缓存观测、评测基线、coding-v2、长任务记忆、跨语言检索、稳定前缀与工作流展示；已完成 C1–C7 工程实施：固定源码 `4ee21776` 全量 9794 通过/15 跳过，安全 2146 通过，主 CI 第 2 次完整尝试 10 任务成功，真实 Windows 与两种安装包工作流通过。做什么、怎么做、怎么验收及限制见上述规格与[最终证据](docs/evidence/coding-evolution-20261015/final-4ee21776/README.md)。付费模型质量/缓存收益仍 NOT_PROVEN，新策略维持 opt-in；本轮不发布 release。研究原件与首次失败保留。
 

@@ -1,0 +1,300 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-pr10-review-20261015
+
+ ✓ packages/harness/src/delegation-worker.integration.test.ts (13 tests) 473ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for gateway/fresh-coding — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for local-coding/selected-coding — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for memory-only/memory-only-model — using conservative fallback 32000
+ ✓ apps/web/src/deepseek/composition.integration.test.ts (8 tests) 814ms
+[skill denied] detection=required-tools target=/tmp/ar-skill-revision-08WGJm/skills/lint/SKILL.md reasons=required tool not allowed by host policy: exec_command
+[skill denied] detection=injection target=/tmp/ar-skill-revision-DrXVjc/skills/lint/SKILL.md reasons=dismiss-previous-instructions,dismiss-all-instructions,override-own-instructions
+[skill denied] detection=secret target=/tmp/ar-skill-revision-WIP4HE/skills/lint/SKILL.md reasons=openai-key
+ ✓ packages/harness/src/skill-revision-regressions.test.ts (20 tests) 292ms
+ ✓ packages/harness/src/reflection-turn-isolation.regressions.test.ts (18 tests) 137ms
+[skill denied] detection=injection target=/tmp/ar-skill-admission-wSnn5J/skills/blocked-injection/SKILL.md reasons=dismiss-previous-instructions,dismiss-all-instructions,override-own-instructions,extract-system-prompt
+[skill denied] detection=secret target=/tmp/ar-skill-admission-h5W8R1/skills/blocked-secret/SKILL.md reasons=openai-key
+[skill denied] detection=required-tools target=/tmp/ar-skill-admission-iZ9XUo/skills/blocked-tools/SKILL.md reasons=required tool not allowed by host policy: unavailable_tool
+ ✓ packages/harness/src/skill-admission.regressions.test.ts (11 tests) 388ms
+ ✓ packages/harness/src/path-scoped-instructions.regressions.test.ts (9 tests) 182ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ packages/harness/src/mcp-wiring.integration.test.ts (6 tests) 1107ms
+     ✓ connects an http MCP server LAZILY when a step needs it, binds its tool and executes over the real transport  421ms
+     ✓ connects a stdio MCP server lazily (local IPC — default sandbox suffices)  335ms
+     ✓ P24-7: an unreachable NON-needed server does NOT abort startup; needing it yields MCP_CONNECT_FAILED  333ms
+[harness] context budget: model capabilities unknown for fake/unknown-window — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ packages/harness/src/create-harness.test.ts (17 tests) 412ms
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+ ✓ packages/harness/src/memory-feedback-atomic.regressions.test.ts (14 tests) 309ms
+[degraded] reflection.events.list: boom
+ ✓ packages/harness/src/reflection-runner.test.ts (8 tests) 51ms
+[degraded] durable-recovery-store.release-lock (ownership changed, not deleting /tmp/e4-08-rec-3BkFXw/recovery/t10.json.lock): lock token "9999 newer-owner" != mine
+ ✓ packages/harness/src/durable-recovery-store.test.ts (15 tests) 84ms
+ ✓ packages/harness/src/security-regression-matrix.test.ts (12 tests) 21ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ packages/harness/src/session-service-coding.regressions.test.ts (8 tests) 217ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ packages/harness/src/source-audit-boundaries.regressions.test.ts (12 tests) 342ms
+ ✓ packages/harness/src/verification-trust.regressions.test.ts (13 tests) 1344ms
+[skill denied] detection=required-tools target=/tmp/ar-task-skills-Z4AfMS/skills/danger/SKILL.md reasons=required tool not allowed by host policy: ungranted-tool
+[skill denied] detection=injection target=/tmp/ar-task-skills-Z4AfMS/skills/hostile/SKILL.md reasons=dismiss-previous-instructions,dismiss-all-instructions,override-own-instructions,extract-system-prompt
+ ✓ packages/harness/src/task-scoped-skills.integration.test.ts (10 tests) 472ms
+ ✓ packages/harness/src/adversarial-regression.test.ts (12 tests) 15ms
+ ✓ packages/harness/src/config-wiring.test.ts (10 tests) 78ms
+ ✓ packages/harness/src/tool-budget-binding.test.ts (3 tests) 33ms
+ ✓ packages/harness/src/effective-instruction-context.regressions.test.ts (6 tests) 101ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for unknown-provider/unknown-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for unknown-provider/unknown-model — using conservative fallback 32000
+ ✓ packages/harness/src/gen1-provider-config-identity.regressions.test.ts (11 tests) 87ms
+ ✓ packages/harness/src/memory-runtime-bridge.test.ts (7 tests) 36ms
+ ✓ packages/harness/src/trust-envelope.test.ts (8 tests) 29ms
+ ✓ packages/harness/src/candidate-persistence.regressions.test.ts (11 tests) 53ms
+ ✓ packages/harness/src/skill-context.test.ts (7 tests) 38ms
+ ✓ packages/harness/src/config-drift-matrix.test.ts (13 tests) 12ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ packages/harness/src/coding-prompt-policy.test.ts (6 tests) 85ms
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+ ✓ packages/harness/src/memory-prefetch-production.regressions.test.ts (4 tests) 156ms
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+ ✓ packages/harness/src/memory.integration.test.ts (2 tests) 130ms
+[degraded] path-scoped-discovery.close: instruction handle cleanup failed
+ ✓ packages/harness/src/scoped-instruction-read.integration.test.ts (5 tests) 81ms
+ ✓ packages/harness/src/context-wiring.integration.test.ts (3 tests) 626ms
+     ✓ env_snapshot reports the live harness wiring (profile, workspace root, tool list)  588ms
+ ✓ packages/harness/src/workspace-manager.test.ts (6 tests) 49ms
+ ✓ packages/harness/src/verification-wiring.integration.test.ts (4 tests) 164ms
+ ✓ packages/harness/src/delegation-tools.test.ts (7 tests) 11ms
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+ ✓ packages/harness/src/rehydration-headroom.integration.test.ts (6 tests) 242ms
+[harness] context budget: model capabilities unknown for openai/formal-coding — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for openai/formal-coding — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for openai/formal-coding — using conservative fallback 32000
+ ✓ packages/harness/src/ask-advertisement.regressions.test.ts (3 tests) 163ms
+ ✓ packages/harness/src/config-resolver.test.ts (12 tests) 9ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ packages/harness/src/coding-verification.regressions.test.ts (4 tests) 625ms
+ ✓ packages/harness/src/config-drift.test.ts (14 tests) 10ms
+ ✓ packages/harness/src/config-layers.test.ts (10 tests) 8ms
+ ✓ packages/harness/src/skill.integration.test.ts (1 test) 54ms
+ ✓ packages/harness/src/child-merge.test.ts (3 tests) 19ms
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+ ✓ packages/harness/src/memory-search-production.regressions.test.ts (10 tests) 303ms
+stdout | packages/harness/src/perf-suite.perf.test.ts > P11-1: long-session scale (deterministic) > handles 10k messages + 1k events + 500 sessions without corruption
+[P11-1] 10k msgs + 1k events + 500 sessions: 5028ms
+
+stdout | packages/harness/src/perf-suite.perf.test.ts > P11-1: long-session scale (deterministic) > builds context over a 10k-message history deterministically
+[P11-2] context build over 10k-message history: 13.7ms (messagesTokens=309990)
+
+ ✓ packages/harness/src/perf-suite.perf.test.ts (2 tests) 5131ms
+     ✓ handles 10k messages + 1k events + 500 sessions without corruption  5112ms
+ ✓ packages/harness/src/durable-recovery-store-xproc.test.ts (1 test) 2555ms
+     ✓ a live child's old lock is NOT stolen; after the child exits it is reclaimed  2554ms
+ ✓ packages/harness/src/command-discovery-cache.regressions.test.ts (3 tests) 53ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+ ✓ packages/harness/src/memory-search-tools.integration.test.ts (1 test) 113ms
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+ ✓ packages/harness/src/scope-resolver.test.ts (6 tests) 44ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ packages/harness/src/tool-event-security.regressions.test.ts (2 tests) 29ms
+[degraded] candidate-store.corrupt-line: Unexpected token 'o', "not-json" is not valid JSON
+ ✓ packages/harness/src/candidate-store.test.ts (3 tests) 19ms
+ ✓ packages/harness/src/command-discovery-service.test.ts (3 tests) 14ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ packages/harness/src/denial-telemetry.regressions.test.ts (3 tests) 75ms
+[harness] context budget: model capabilities unknown for offline-v2/fixture — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for offline-v2/fixture — using conservative fallback 32000
+ ✓ packages/harness/src/coding-v2.integration.test.ts (1 test) 162ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ packages/harness/src/source-audit-memory.regressions.test.ts (2 tests) 275ms
+ ✓ packages/harness/src/champion-profile.test.ts (5 tests) 4ms
+ ✓ packages/harness/src/source-audit-fixes.regressions.test.ts (21 tests) 2820ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ packages/harness/src/coding-summary-identity.regressions.test.ts (1 test) 43ms
+ ✓ packages/harness/src/source-audit-recovery.regressions.test.ts (3 tests) 1381ms
+
+ Test Files  58 passed (58)
+      Tests  439 passed (439)
+   Start at  12:31:34
+   Duration  51.81s (transform 4.21s, setup 0ms, import 21.14s, tests 22.58s, environment 8ms)
+

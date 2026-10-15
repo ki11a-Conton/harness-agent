@@ -1,0 +1,36 @@
+diff --git a/apps/web/src/deepseek/composition.integration.test.ts b/apps/web/src/deepseek/composition.integration.test.ts
+index 2220a533..92026a5a 100644
+--- a/apps/web/src/deepseek/composition.integration.test.ts
++++ b/apps/web/src/deepseek/composition.integration.test.ts
+@@ -203,3 +203,31 @@ it("a memory-only host still changes a draft model and still refuses durable tas
+   // Claiming a durable answer without durable storage stays a refusal.
+   await expect(stack.composition.activity.call("schedule/catalog", {}, signal())).rejects.toMatchObject({ code: "schedule/unavailable" });
+ });
++
++it("review: repeated memory-only draft selection runs the selected HTTP model and freezes after input", async () => {
++  const requests: Array<Record<string, unknown>> = [];
++  const server = createServer(async (request, response) => {
++    let body = ""; for await (const chunk of request) body += chunk;
++    requests.push(JSON.parse(body)); response.writeHead(200, { "content-type": "text/event-stream" });
++    response.end('data: {"choices":[{"index":0,"delta":{"content":"actual memory model answer"},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n');
++  });
++  await new Promise<void>(done => server.listen(0, "127.0.0.1", done));
++  cleanup.push(() => new Promise<void>((done, reject) => server.close(error => error ? reject(error) : done())));
++  const address = server.address(); if (!address || typeof address === "string") throw new Error("Missing review listener");
++  const stack = await fixture(undefined, { durableStorage: false });
++  await stack.composition.catalog.call("credentials/set", { ref: "REVIEW_KEY", value: "review-local-key" }, signal());
++  await stack.composition.catalog.call("settings/update", { ns: "llm-pi-ai", patch: { providers: { review: {
++    api: "openai-completions", baseURL: `http://127.0.0.1:${address.port}/v1`, apiKeyEnv: "REVIEW_KEY", models: [{ id: "model-a" }, { id: "model-b" }],
++  } } } }, signal());
++  const id = await stack.createSession();
++  for (const model of ["model-a", "model-b", "model-a"]) {
++    await expect(stack.composition.catalog.call("session/selectModel", { request: { sessionId: id, provider: "review", model } }, signal())).resolves.toEqual({ selected: { provider: "review", model } });
++  }
++  await stack.composition.sessions.call("session/prompt", { request: { sessionId: id, requestId: "review-real-memory-turn", mode: "queue", content: [{ type: "text", text: "Give the configured answer" }] } }, signal());
++  const deadline = performance.now() + 10000;
++  while (performance.now() < deadline && !(await stack.composition.harness.store.listTurns(id)).some(turn => turn.status === "completed")) await new Promise(done => setTimeout(done, 10));
++  expect((await stack.composition.harness.store.listTurns(id)).map(turn => turn.status)).toEqual(["completed"]);
++  expect(requests).toHaveLength(1); expect(requests[0]).toHaveProperty("model", "model-a");
++  expect((await stack.composition.harness.store.listMessages(id)).some(message => message.content === "actual memory model answer")).toBe(true);
++  await expect(stack.composition.catalog.call("session/selectModel", { request: { sessionId: id, provider: "review", model: "model-b" } }, signal())).rejects.toMatchObject({ code: "session/model-frozen" });
++});
