@@ -1,6 +1,8 @@
 # Harness Agent 当前执行计划入口
 
-当前执行任务：[Windows 关闭资源收尾](plan(20261015-windows-resource-drain).md)，合同：[WINDOWS-RESOURCE-DRAIN-20261015](tasks/WINDOWS-RESOURCE-DRAIN-20261015.md)。固定源码 `d6e00881dc804371165170c2a9a0697e34ff7b54` 已通过四个原始 CI 工作流，主 CI 十项全部成功，包含真实 Windows、双平台正式/安装/UI 验收；见[最终 CI 复核](docs/evidence/windows-resource-20261015/final-d6e00881/README.md)及[修复报告](docs/windows-resource-drain-20261015.md)。后台关闭竞态、审批/预算同步和功能 fixture 归属已按计划处理。原25s单次超时在60次 Windows 诊断未复现，根因未确立仍保留；本轮未发布 release。主分支归档提交的 CI 另据 GitHub Checks 复核。
+当前执行任务：[Web 验收子进程关闭](plan(20261015-windows-web-acceptance-shutdown).md)，合同：[WINDOWS-WEB-ACCEPTANCE-SHUTDOWN-20261015](tasks/WINDOWS-WEB-ACCEPTANCE-SHUTDOWN-20261015.md)。main ef0cf955 的 Windows 复核出现临时 cwd 清理 EBUSY；已用真实父/孙进程管道复现 exit 早于 close 的窗口，修正进程所有权与错误保留，并用真实租约预检分配新的持久化 fixture。进程回归5项、实际审查验收21项、类型及安全2146通过；精确提交的完整双平台 CI 继续复核，不发布 release。
+
+上一任务：[Windows 关闭资源收尾](plan(20261015-windows-resource-drain).md)，合同：[WINDOWS-RESOURCE-DRAIN-20261015](tasks/WINDOWS-RESOURCE-DRAIN-20261015.md)。固定源码 `d6e00881dc804371165170c2a9a0697e34ff7b54` 已通过四个原始 CI 工作流，主 CI 十项全部成功，包含真实 Windows、双平台正式/安装/UI 验收；见[最终 CI 复核](docs/evidence/windows-resource-20261015/final-d6e00881/README.md)及[修复报告](docs/windows-resource-drain-20261015.md)。后台关闭竞态、审批/预算同步和功能 fixture 归属已按计划处理。原25s单次超时在60次 Windows 诊断未复现，根因未确立仍保留；本轮未发布 release。主分支归档提交的 CI 另据 GitHub Checks 复核。
 
 上一任务：[Web 会话生成结束状态修复](plan(20261015-web-session-running).md)，合同：[WEB-SESSION-RUNNING-20261015](tasks/WEB-SESSION-RUNNING-20261015.md)。已确定性复现宿主缺失 api-session/status 导致已打开会话的 running 不复位；真实 composition + 精确客户端回归在原版失败，修正后通过，35 项相关回归通过。仅补齐宿主协议通知；固定 `d29537d6` 全量 9799 通过/15 跳过、安全 2146 通过，实际浏览器对照与 Windows/Ubuntu UI 安装通过，见[根因与验收报告](docs/web-session-running-20261015.md)。
 
