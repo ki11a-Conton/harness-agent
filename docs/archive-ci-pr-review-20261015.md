@@ -43,3 +43,7 @@ PR 原版的 harness/composition 439 项通过。另补 40 次交错并发事件
 PR #10 的原始 pull_request CI 曾在预算锁的 `held-a` barrier 测试失败，原件保留；它与此处可重现的存储回退问题不同。不能将现有 CI 绿灯或某次环境时序失败代替上述具体源码审查。
 
 附件：[最小修正与反例](evidence/pr-review-20261015/pr10-fail-closed-fix.patch)、[完整证据清单](evidence/pr-review-20261015/inventory.json)。补丁应用目标为 `fix/web-memory-only-model-selection`，不是尚未合入该 PR 的 main。此轮仅对两个 PR 给出审查建议，远端 PR head 保持原值。
+
+## 后续合并授权
+
+用户在上述审查后明确要求合并 main；本次将 #10 的最小修正连同磁盘拒绝、并发序号和实际内存模型请求的回归一起提交，再合入 #9/#10。原审查结论与原失败证据不改写。另已复核 `7e199f2a` 的主 CI 最终成功；Windows UI 安装工作流的两次失败仍是该源码的真实结果。本次进度见 [合并计划](../plan(20261015-212057).md)。
