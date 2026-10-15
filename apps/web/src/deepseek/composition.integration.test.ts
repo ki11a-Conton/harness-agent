@@ -2,10 +2,10 @@ import { createServer } from "node:http";
 import { mkdtemp, mkdir, readFile, rm, writeFile, realpath } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { createHarness, type Harness } from "@ar/harness";
 import { ScriptedModelProvider } from "@ar/model";
-import type { AgentEvent, ModelProvider, SessionId } from "@ar/contracts";
+import type { AgentEvent, ApprovalRequest, ModelProvider, SessionId, TurnId } from "@ar/contracts";
 import { createDeepseekComposition } from "./composition.js";
 
 const cleanup: Array<() => Promise<void>> = [];
@@ -54,9 +54,24 @@ async function fixture(provider: ModelProvider = new ScriptedModelProvider([Scri
   const createSession = async (workspaceId?: string) => (await composition.sessions.call("session/create", { request: workspaceId === undefined ? {} : { workspaceId } }, signal()) as { sessionId: SessionId }).sessionId;
   return { root, cwd, secondary, dataDir, config, base, composition, createSession };
 }
-async function eventually<T>(read: () => Promise<T>, accept: (value: T) => boolean): Promise<T> {
-  for (let i = 0; i < 300; i++) { const value = await read(); if (accept(value)) return value; await new Promise(done => setTimeout(done, 5)); }
-  throw new Error("Real composition owner did not reach the required state");
+/** Subscribe before starting the real actor. The durable store still creates
+ * the actual request; readiness no longer depends on 300 short polling slots.
+ * Own the run through teardown too, so a failed assertion cannot close the
+ * workspace manager underneath an unobserved actor promise. */
+async function runUntilApproval(owner: Harness, actor: Awaited<ReturnType<Harness["sessions"]["load"]>>, turnId: TurnId) {
+  let notify!: (request: ApprovalRequest) => void;
+  const ready = new Promise<ApprovalRequest>(resolve => { notify = resolve; });
+  const create = owner.approvalStore.create.bind(owner.approvalStore);
+  const subscription = vi.spyOn(owner.approvalStore, "create").mockImplementation(request => {
+    const entry = create(request); notify(request); return entry;
+  });
+  const controller = new AbortController();
+  const running = actor.runTurn(turnId, controller.signal);
+  // Install rejection ownership immediately, including before readiness.
+  void running.catch(() => {});
+  cleanup.push(async () => { try { controller.abort(); await running.catch(() => {}); } finally { subscription.mockRestore(); } });
+  await Promise.race([ready, running.then(outcome => { throw new Error(`Turn settled before requesting approval: ${outcome.status}`); })]);
+  return { running };
 }
 
 it("actual composed event generations survive private host identities and emit only visible sessions", async () => {
@@ -97,8 +112,9 @@ it("an external host observer preserves actual deliverable capture on a complete
   const stack = await fixture(provider); const id = await stack.createSession(); const seen: AgentEvent[] = [];
   stack.composition.observe(async event => { seen.push(event); });
   const owner = await stack.composition.owners.ownerOf(id); const actor = await owner.sessions.load(id);
-  const turn = await actor.createTurn({ sessionId: id, text: "Create generated.txt" }); const running = actor.runTurn(turn.id);
-  const pending = await eventually(async () => owner.approvalStore.listPending(id), rows => rows.length > 0);
+  const turn = await actor.createTurn({ sessionId: id, text: "Create generated.txt" });
+  const { running } = await runUntilApproval(owner, actor, turn.id);
+  const pending = owner.approvalStore.listPending(id);
   owner.approvalStore.resolve(pending[0]!.id, "allow", "composition-test");
   expect((await running).status).toBe("completed"); expect(await readFile(join(stack.cwd, "generated.txt"), "utf8")).toBe("real generated content\n");
   expect(seen.some(event => event.type === "turn.completed")).toBe(true);
@@ -155,8 +171,8 @@ it("a production-composed selected coding model edits the actual secondary works
   await stack.composition.catalog.call("session/selectModel", { request: { sessionId: id, provider: "local-coding", model: "selected-coding" } }, signal());
   const native = stack.composition.owners.nativeSessionId(id); const owner = await stack.composition.owners.ownerOf(id);
   const actor = await stack.composition.harness.sessions.load(id); const turn = await actor.createTurn({ sessionId: id, text: "Write generated.txt in this workspace" });
-  const running = actor.runTurn(turn.id);
-  const pending = await eventually(async () => stack.composition.harness.approvalStore.listPending(id), items => items.length > 0);
+  const { running } = await runUntilApproval(owner, actor, turn.id);
+  const pending = stack.composition.harness.approvalStore.listPending(id);
   expect(pending[0]).toMatchObject({ sessionId: id, turnId: turn.id }); expect(owner.approvalStore.listPending(native)[0]?.sessionId).toBe(native);
   stack.composition.harness.approvalStore.resolve(pending[0]!.id, "allow", "selected-model-integration");
   const outcome = await running; expect(outcome.status).toBe("completed"); expect(outcome.turn.sessionId).toBe(id);

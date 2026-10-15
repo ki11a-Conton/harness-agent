@@ -1,0 +1,23 @@
+{
+  "baselineSha": "6e81e2e976e678ab78f610ea3cd699d35d9e1986",
+  "controlledBaselineExitCode": 1,
+  "controlledFixedExitCode": 0,
+  "controlledDelays": {
+    "costReservationMs": 500,
+    "firstHttpResponseMs": 5000
+  },
+  "focused": {
+    "passed": 26,
+    "failed": 0
+  },
+  "security": {
+    "passed": 2146,
+    "failed": 0
+  },
+  "typecheckExitCode": 0,
+  "abortRemovedMutationExitCode": 1,
+  "unresolved": [
+    "original Windows session-running-status 25000ms timeout"
+  ],
+  "limitation": "Controlled reproductions demonstrate timing assumptions and the same symptoms; exact original Windows elapsed timings were not captured. Full suite and exact-source Windows CI pending."
+}

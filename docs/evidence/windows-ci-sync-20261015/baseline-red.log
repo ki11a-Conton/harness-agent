@@ -1,0 +1,107 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-ui-running-fix-20261015
+
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for local-coding/selected-coding — using conservative fallback 32000
+[degraded] session session_7624563b-924e-4484-8410-cb738d3057bd turn outcome rejected during close: Workspace owner manager is closed
+ ❯ apps/web/src/deepseek/composition.integration.test.ts (9 tests | 1 failed | 8 skipped) 1807ms
+   ↓ configured model window and output limit affect the actual owner and provider requests
+   ↓ actual composed event generations survive private host identities and emit only visible sessions
+   ↓ official secondary workspace creation and file read use the actual owner and enforce its boundary
+   ↓ restored child owners register their frozen schedule model tools before loading a session
+   ↓ an external host observer preserves actual deliverable capture on a completed approved coding turn
+   ↓ new valid model profiles are admitted by production composition and their profile identity reaches real HTTP
+   × a production-composed selected coding model edits the actual secondary workspace through its own approval and stable capture coordinates 1805ms
+   ↓ a memory-only host still changes a draft model and still refuses durable task state
+   ↓ repeated memory-only draft selection runs the selected HTTP model and freezes after input
+ ❯ packages/evaluation/src/tool-call-efficiency-tool-budget.test.ts (15 tests | 1 failed | 14 skipped) 542ms
+     ↓ [N4.1] settle refuses a toolCalls actual ABOVE the held reservation and charges nothing
+     ↓ [N4.2] a refused settle is all-or-nothing across dimensions (no partial charge)
+     ↓ [N4.3] charge() refuses a NEGATIVE or NON-INTEGER actual for every dimension and writes nothing
+     ↓ [N4.4] charge() refuses an OVER-CAP tool charge with BUDGET_EXHAUSTED and writes nothing
+     ↓ [N4.5] maxToolCalls=0 admits NO tool call at all
+     ↓ [N4.6/R3] a completed response carrying 2 tool calls records declaredToolCalls=2 and charges 0 to the tool dimension
+     ↓ [N4.7/R3] a declaration OVER the cap no longer freezes anything: the cap is enforced at DISPATCH
+     ↓ [N4.8/R3] TWO arms competing CONCURRENTLY never exceed the cap
+     ↓ [N4.9/R3] an UNKNOWN dispatch is CHARGED, never refunded
+     ↓ [N4.10/R3] a RELEASED dispatch (never executed) refunds its reservation
+     ↓ [N4.11/R3] maxToolCalls=0 ⇒ the dispatch budget refuses EVERY dispatch
+     ↓ [N4.12/R3] the deadline is frozen at creation and REUSED by a later open (a resume keeps only what is left)
+     ↓ [N4.13/R3] a LEGACY budget file without a deadline is treated as EXPIRED, never as a fresh window
+     ↓ [N4.14/R3] after the deadline the provider sends NO request (the fake transport is never entered)
+     × [R3-mid-stream] a provider that stalls PAST the deadline is aborted and the unit converges 541ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/evaluation/src/tool-call-efficiency-tool-budget.test.ts > R3/F4 — ONE campaign deadline, and it is durable > [R3-mid-stream] a provider that stalls PAST the deadline is aborted and the unit converges
+AssertionError: expected +0 to be 1 // Object.is equality
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ packages/evaluation/src/tool-call-efficiency-tool-budget.test.ts:482:21
+    480|     expect(entered).toBe(1); // the request DID leave before the deadl…
+    481|     expect(aborted).toBe(true); // ...and the in-flight stream was can…
+    482|     expect(released).toBe(true);
+       |                     ^
+    483|     expect(String(error)).toMatch(/CAMPAIGN_DEADLINE_EXCEEDED/);
+    484|     // "the process eventually converges" — it must not wait out the 3…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  apps/web/src/deepseek/composition.integration.test.ts > a production-composed selected coding model edits the actual secondary workspace through its own approval and stable capture coordinates
+Error: Real composition owner did not reach the required state
+ ❯ eventually apps/web/src/deepseek/composition.integration.test.ts:59:9
+     57| async function eventually<T>(read: () => Promise<T>, accept: (value: T…
+     58|   for (let i = 0; i < 300; i++) { const value = await read(); if (acce…
+     59|   throw new Error("Real composition owner did not reach the required s…
+       |         ^
+     60| }
+     61|
+ ❯ apps/web/src/deepseek/composition.integration.test.ts:160:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+
+Vitest caught 1 unhandled error during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯ Unhandled Rejection ⎯⎯⎯⎯⎯
+Error: Workspace owner manager is closed
+ ❯ guard apps/web/src/deepseek/owners.ts:112:49
+    110|   const baseView: OwnerView = { id: "base", path: base.config.cwd, har…
+    111|   const all = (): Harness[] => [base, ...[...children.values()].map(ow…
+    112|   const guard = (): void => { if (closed) throw new RemoteFailure("gat…
+       |                                                 ^
+    113|   const nativeSessionId = (id: string): SessionId => (aliases.get(id)?…
+    114|   const externalSessionId = (id: string): SessionId => (nativeAliases.…
+ ❯ findNativeOwner apps/web/src/deepseek/owners.ts:347:5
+ ❯ findOwner apps/web/src/deepseek/owners.ts:358:12
+ ❯ Object.getSession apps/web/src/deepseek/owners.ts:518:57
+ ❯ requireFileSession apps/web/src/deepseek/files.ts:53:44
+ ❯ observe apps/web/src/deepseek/deliverables.ts:212:27
+ ❯ JSONLEventStore.harness.events.appendNew apps/web/src/deepseek/composition.ts:68:15
+ ❯ RecoveryController.finishTurn packages/core/src/runtime/recovery-controller.ts:182:5
+ ❯ ModelCallController.handleModelCompletion packages/core/src/runtime/model-call-controller.ts:213:43
+ ❯ AgentRuntime.runTurnCore packages/core/src/runtime/runtime.ts:1250:28
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'gateway/cancelled', details: {} }
+This error originated in "apps/web/src/deepseek/composition.integration.test.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "a production-composed selected coding model edits the actual secondary workspace through its own approval and stable capture coordinates". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+
+ Test Files  2 failed (2)
+      Tests  2 failed | 22 skipped (24)
+     Errors  1 error
+   Start at  17:26:43
+   Duration  5.81s (transform 2.44s, setup 0ms, import 3.23s, tests 2.35s, environment 0ms)
+

@@ -31,7 +31,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ModelEvent, ModelProvider, ModelRequest, ProviderConfig, ModelRef } from "@ar/contracts";
 import { DEFAULT_DECISION_POLICY_V3 } from "./decision-policy-v3.js";
 import {
@@ -422,6 +422,29 @@ describe("R3/F4 — ONE campaign deadline, and it is durable", () => {
     expect(budget.view().reserved.toolCalls).toBe(0);
   }, 60_000);
 
+  it("[R3-pre-send] durable preparation can exhaust the deadline without entering the provider", async () => {
+    const dir = await tempDir();
+    const budget = await CostBudget.open(dir, artifactWith(), { allowCreate: true });
+    let now = 1_000, entered = 0;
+    const reserve = budget.reserve.bind(budget);
+    const slowPreparation = vi.spyOn(budget, "reserve").mockImplementationOnce(async delta => {
+      const result = await reserve(delta);
+      now = 2_000; // Model slow durable IO without a wall-clock sleep.
+      return result;
+    });
+    const provider: ModelProvider = {
+      id: "r3-preparation-fake", async listModels() { return []; },
+      createClient: () => ({ async *generate() { entered++; yield { type: "completed", result: { finishReason: "stop" }, timestamp: 0 } as ModelEvent; } }),
+    };
+    try {
+      const { stats, error } = await drain(provider, budget, dir, "candidate", { deadlineAtMs: 1_300, now: () => now });
+      expect(entered).toBe(0);
+      expect(stats.refusedCalls).toBe(1);
+      expect(String(error)).toMatch(/CAMPAIGN_DEADLINE_EXCEEDED/);
+      expect(budget.view().reserved).toMatchObject({ inputTokens: 0, outputTokens: 0, durationMs: 0, usdMicros: 0 });
+    } finally { slowPreparation.mockRestore(); }
+  }, 60_000);
+
   /**
    * R3/F4 residual — the MID-STREAM half (§R3 怎么验收: "人为卡住 provider/worker/tool：
    * 截止后没有新的 HTTP 或工具启动，进程最终可收敛").
@@ -429,9 +452,10 @@ describe("R3/F4 — ONE campaign deadline, and it is durable", () => {
    * The pre-send gate above covers a deadline that has ALREADY passed. It does not
    * cover a stream that is entered while the deadline is still in the future and
    * then STALLS past it: nothing aborts the in-flight `AbortSignal`, so the unit
-   * never converges. These two cases pin that gap. Real time is used for the stall
-   * (a real timer must be able to interrupt it); the deadline itself is passed in
-   * explicitly so the case is deterministic apart from one bounded sleep.
+   * never converges. The real abort timer must interrupt the stall. Hold the
+   * injected campaign clock during durable preparation, then let it advance
+   * from transport entry: disk speed cannot turn this into a pre-send refusal.
+   * The separate test above covers expiry during that preparation.
    */
   it("[R3-mid-stream] a provider that stalls PAST the deadline is aborted and the unit converges", async () => {
     const dir = await tempDir();
@@ -439,6 +463,7 @@ describe("R3/F4 — ONE campaign deadline, and it is durable", () => {
     let entered = 0;
     let aborted = false;
     let released = false;
+    let enteredAt: number | undefined;
     const provider: ModelProvider = {
       id: "r3-midstream-fake",
       async listModels() {
@@ -448,6 +473,7 @@ describe("R3/F4 — ONE campaign deadline, and it is durable", () => {
         return {
           async *generate(_req: ModelRequest, signal: AbortSignal): AsyncGenerator<ModelEvent> {
             entered += 1;
+            enteredAt = Date.now();
             // One real event, so the stream is genuinely "in flight" and past the
             // pre-send gate, then a stall that outlives the deadline.
             yield { type: "text_delta", text: "partial" } as never;
@@ -472,8 +498,8 @@ describe("R3/F4 — ONE campaign deadline, and it is durable", () => {
 
     const startedAt = Date.now();
     const { error } = await drain(provider, budget, dir, "candidate", {
-      deadlineAtMs: Date.now() + 300,
-      now: () => Date.now(),
+      deadlineAtMs: 1_300,
+      now: () => 1_000 + (enteredAt === undefined ? 0 : Date.now() - enteredAt),
     });
     const elapsed = Date.now() - startedAt;
 

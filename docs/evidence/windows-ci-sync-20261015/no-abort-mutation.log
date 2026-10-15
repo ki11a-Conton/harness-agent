@@ -1,0 +1,33 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-windows-ci-fix-20261015
+
+ ❯ packages/evaluation/src/tool-call-efficiency-tool-budget.test.ts (16 tests | 1 failed | 15 skipped) 30050ms
+     × [R3-mid-stream] a provider that stalls PAST the deadline is aborted and the unit converges 30048ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/evaluation/src/tool-call-efficiency-tool-budget.test.ts > R3/F4 — ONE campaign deadline, and it is durable > [R3-mid-stream] a provider that stalls PAST the deadline is aborted and the unit converges
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ packages/evaluation/src/tool-call-efficiency-tool-budget.test.ts:507:21
+    505|
+    506|     expect(entered).toBe(1); // the request DID leave before the deadl…
+    507|     expect(aborted).toBe(true); // ...and the in-flight stream was can…
+       |                     ^
+    508|     expect(released).toBe(true);
+    509|     expect(String(error)).toMatch(/CAMPAIGN_DEADLINE_EXCEEDED/);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 15 skipped (16)
+   Start at  17:28:10
+   Duration  30.76s (transform 452ms, setup 0ms, import 573ms, tests 30.05s, environment 0ms)
+

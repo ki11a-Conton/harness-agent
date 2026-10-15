@@ -1,0 +1,16 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-windows-ci-fix-20261015
+
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for local-coding/selected-coding — using conservative fallback 32000
+ ✓ apps/web/src/deepseek/composition.integration.test.ts (9 tests | 8 skipped) 5327ms
+   ✓ a production-composed selected coding model edits the actual secondary workspace through its own approval and stable capture coordinates  5325ms
+ ✓ packages/evaluation/src/tool-call-efficiency-tool-budget.test.ts (16 tests | 15 skipped) 854ms
+     ✓ [R3-mid-stream] a provider that stalls PAST the deadline is aborted and the unit converges  852ms
+
+ Test Files  2 passed (2)
+      Tests  2 passed | 23 skipped (25)
+   Start at  17:25:38
+   Duration  12.21s (transform 4.33s, setup 0ms, import 5.65s, tests 6.18s, environment 0ms)
+
