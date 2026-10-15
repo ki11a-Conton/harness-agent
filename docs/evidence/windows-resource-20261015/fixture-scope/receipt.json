@@ -1,0 +1,27 @@
+{
+  "baselineSha": "00a6219d9dade6e78692123b4a2378b6b2c56cac",
+  "originalCiRun": 38781318519,
+  "originalFailedJob": 116581943213,
+  "controlledBaseline": {
+    "exitCode": 1,
+    "failed": 3,
+    "passed": 1,
+    "skipped": 5
+  },
+  "controlledFixed": {
+    "exitCode": 0,
+    "passed": 4,
+    "skipped": 5
+  },
+  "controlledDurable": {
+    "exitCode": 1,
+    "failed": 1,
+    "skipped": 8,
+    "expectedReason": "controlled occupied fixed lease port"
+  },
+  "typecheckExit": 0,
+  "productRuntimeChangedFrom00a": false,
+  "productLeaseChangedFrom00a": false,
+  "limit": "Failure injection is diagnostic and separate from normal acceptance. Durable recovery keeps actual lease checks. Full exact-source CI pending.",
+  "normalCompositionPassed": 9
+}

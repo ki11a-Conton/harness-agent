@@ -38,3 +38,22 @@ baseline.config.ts 先复制到 `.ci/windows-resource/`，再以该配置运行 
 原始新增会话状态测试 25 秒超时，在 Windows 单独和完整诊断各 30 次未复现，
 full 组最慢 1612ms。诊断插桩使树 dirty，其他六项失败，因此不是全量验收。
 两项早先的审批/预算同步修复已包含在本提交祖先中，见上一报告。未发布 release。
+
+
+## composition 功能 fixture 的后续修正
+
+00a6219d 的 Windows 主单测已通过，Windows formal 则在 external host observer
+功能测试创建 owner 时遇到另一次固定端口租约冲突。该轮仍为失败，annotations
+保存在 fixture-scope 子目录。只调整模型参数那一例还不够，因此 composition
+功能 fixture 默认使用 memory host；真正验证重启恢复的用例显式启用持久化。
+真实 HTTP、审批、文件写入、稳定别名和变更捕获断言全部保留。
+
+[强制冲突证据](evidence/windows-resource-20261015/fixture-scope/receipt.json)：
+在实际 lease 函数的非空目录边界注入 HARNESS_DATA_DIR_IN_USE，基线三项功能
+失败、一项通过；修正后四项功能通过；持久化恢复用例仍以同一注入原因失败。
+该反向检查证明没有关闭持久化测试的租约保护。未注入的九项正常测试另行运行。
+Runtime 与租约产品文件和 00a6219d 字节一致，本补充只改 fixture 和文档。
+
+复现时将 conflict.config.ts 复制到 .ci/windows-fixture/，设置
+WINDOWS_FIXTURE_BASELINE_SOURCE=1 可运行精确 00a6219d 的旧测试 fixture。
+注入测试用于诊断，不冒充完整或 Windows 验收。最终精确源码 CI 仍待完成。

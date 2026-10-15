@@ -48,11 +48,13 @@ async function fixture(provider: ModelProvider = new ScriptedModelProvider([Scri
   const cwd = join(root, "primary"); const secondary = join(root, "secondary"); const dataDir = join(root, "data");
   await Promise.all([mkdir(cwd), mkdir(secondary)]);
   await Promise.all([writeFile(join(cwd, "identity.txt"), "PRIMARY"), writeFile(join(secondary, "identity.txt"), "SECONDARY")]);
-  // `dsh web` runs without a data directory until a launch lease supplies one,
-  // so the fixtures cover both the durable and the memory-only host shape.
-  const config = { cwd, ...(options.durableStorage === false ? {} : { dataDir }), profile: "interactive" as const, modelProvider: provider, model: { providerId: provider.id, modelId: "scripted-model" } };
+  // Functional assertions use the supported memory host. A test of restart
+  // or persistence opts into real directory ownership explicitly; unrelated
+  // tests must not assume a random Windows legacy lock port is available.
+  const durable = options.durableStorage === true;
+  const config = { cwd, ...(durable ? { dataDir } : {}), profile: "interactive" as const, modelProvider: provider, model: { providerId: provider.id, modelId: "scripted-model" } };
   const base = await createHarness(config); cleanup.push(() => base.close());
-  const composition = await createDeepseekComposition(base, options.durableStorage === false ? undefined : dataDir); cleanup.push(() => composition.close());
+  const composition = await createDeepseekComposition(base, durable ? dataDir : undefined); cleanup.push(() => composition.close());
   const createSession = async (workspaceId?: string) => (await composition.sessions.call("session/create", { request: workspaceId === undefined ? {} : { workspaceId } }, signal()) as { sessionId: SessionId }).sessionId;
   return { root, cwd, secondary, dataDir, config, base, composition, createSession };
 }
@@ -98,7 +100,7 @@ it("official secondary workspace creation and file read use the actual owner and
 });
 
 it("restored child owners register their frozen schedule model tools before loading a session", async () => {
-  const stack = await fixture(); const id = await stack.createSession();
+  const stack = await fixture(undefined, { durableStorage: true }); const id = await stack.createSession();
   expect((await stack.composition.owners.ownerOf(id)).registry.has("schedule_create")).toBe(true);
   await stack.composition.close(); await stack.base.close();
   const base = await createHarness(stack.config); cleanup.push(() => base.close());

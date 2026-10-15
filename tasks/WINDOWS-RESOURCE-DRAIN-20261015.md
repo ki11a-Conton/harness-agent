@@ -12,3 +12,8 @@ session-isolation fixture 清理时出现 ENOTEMPTY。保留原失败，不重�
 
 会话状态原始超时在 Windows focused/full 各 30 次均未复现，根因未明仍保留。
 不使用连接器、子 agent、付费模型或 release，不触碰原始脏工作区。
+
+后续 00a6219d 的 Windows formal 又在 external host observer 功能测试遇到租约冲突。
+将 composition 功能 fixture 默认设为 memory host，只有明确验证恢复的测试启用
+durableStorage:true；不改任何业务断言、产品租约或 Runtime。强制冲突下基线
+3 fail/1 pass，修正后功能 4 pass，持久化恢复仍按预期拒绝；正常 9 项与精确 CI 待复核。

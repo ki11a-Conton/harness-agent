@@ -1,0 +1,80 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-windows-resource-fix-20261015
+
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ❯ apps/web/src/deepseek/composition.integration.test.ts (9 tests | 3 failed | 5 skipped) 280ms
+   × an external host observer preserves actual deliverable capture on a completed approved coding turn 54ms
+   × new valid model profiles are admitted by production composition and their profile identity reaches real HTTP 43ms
+   × a production-composed selected coding model edits the actual secondary workspace through its own approval and stable capture coordinates 45ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  apps/web/src/deepseek/composition.integration.test.ts > an external host observer preserves actual deliverable capture on a completed approved coding turn
+Error: controlled occupied fixed lease port
+ ❯ acquireDataDirLease apps/cli/src/data-dir-lease.ts:36:23
+     34| export async function acquireDataDirLease(dataDir: string | undefined)…
+     35|   if (dataDir === undefined || dataDir.length === 0) return undefined;
+     36|   const requested = resolve(dataDir);
+       |                       ^
+     37|   await mkdir(requested, { recursive: true });
+     38|   const canonical = await realpath(requested);
+ ❯ apps/web/src/deepseek/owners.ts:320:27
+ ❯ openOwner apps/web/src/deepseek/owners.ts:344:18
+ ❯ Object.createSession apps/web/src/deepseek/owners.ts:388:88
+ ❯ Object.createSession apps/web/src/deepseek/composition.ts:158:23
+ ❯ Object.call apps/web/src/deepseek/session.ts:351:13
+ ❯ Object.service.call apps/web/src/deepseek/session.ts:493:18
+ ❯ Object.createSession apps/web/src/deepseek/composition.integration.test.ts:56:58
+ ❯ apps/web/src/deepseek/composition.integration.test.ts:114:53
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  apps/web/src/deepseek/composition.integration.test.ts > new valid model profiles are admitted by production composition and their profile identity reaches real HTTP
+Error: controlled occupied fixed lease port
+ ❯ acquireDataDirLease apps/cli/src/data-dir-lease.ts:36:23
+     34| export async function acquireDataDirLease(dataDir: string | undefined)…
+     35|   if (dataDir === undefined || dataDir.length === 0) return undefined;
+     36|   const requested = resolve(dataDir);
+       |                       ^
+     37|   await mkdir(requested, { recursive: true });
+     38|   const canonical = await realpath(requested);
+ ❯ apps/web/src/deepseek/owners.ts:320:27
+ ❯ openOwner apps/web/src/deepseek/owners.ts:344:18
+ ❯ Object.createSession apps/web/src/deepseek/owners.ts:388:88
+ ❯ Object.createSession apps/web/src/deepseek/composition.ts:158:23
+ ❯ Object.call apps/web/src/deepseek/session.ts:351:13
+ ❯ Object.service.call apps/web/src/deepseek/session.ts:493:18
+ ❯ Object.createSession apps/web/src/deepseek/composition.integration.test.ts:56:58
+ ❯ apps/web/src/deepseek/composition.integration.test.ts:140:14
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  apps/web/src/deepseek/composition.integration.test.ts > a production-composed selected coding model edits the actual secondary workspace through its own approval and stable capture coordinates
+Error: controlled occupied fixed lease port
+ ❯ acquireDataDirLease apps/cli/src/data-dir-lease.ts:36:23
+     34| export async function acquireDataDirLease(dataDir: string | undefined)…
+     35|   if (dataDir === undefined || dataDir.length === 0) return undefined;
+     36|   const requested = resolve(dataDir);
+       |                       ^
+     37|   await mkdir(requested, { recursive: true });
+     38|   const canonical = await realpath(requested);
+ ❯ apps/web/src/deepseek/owners.ts:320:27
+ ❯ openOwner apps/web/src/deepseek/owners.ts:344:18
+ ❯ Object.createSession apps/web/src/deepseek/owners.ts:388:88
+ ❯ Object.createSession apps/web/src/deepseek/composition.ts:158:23
+ ❯ Object.call apps/web/src/deepseek/session.ts:351:13
+ ❯ Object.service.call apps/web/src/deepseek/session.ts:493:18
+ ❯ Object.createSession apps/web/src/deepseek/composition.integration.test.ts:56:58
+ ❯ apps/web/src/deepseek/composition.integration.test.ts:172:14
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 1 passed | 5 skipped (9)
+   Start at  18:11:33
+   Duration  4.17s (transform 2.96s, setup 0ms, import 3.76s, tests 280ms, environment 0ms)
+
