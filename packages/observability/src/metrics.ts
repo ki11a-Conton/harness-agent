@@ -210,7 +210,7 @@ export function computeMetrics(events: AgentEvent[]): RunMetrics {
     if (usage.source === "unknown" || !validCount(usage.inputTokens) || !validCount(usage.outputTokens)) usageUnknown += 1;
     const read = usage.cacheUsageIssue === undefined ? asNumber(usage.cacheReadTokens) : undefined;
     if (usage.cacheUsageIssue !== undefined) cacheConflicting += 1;
-    if (validCount(read) && validCount(usage.inputTokens) && read <= usage.inputTokens && usage.source !== "unknown") {
+    if (validCount(read) && validCount(usage.inputTokens) && read <= usage.inputTokens && usage.source === "measured") {
       cacheMeasured += 1; measuredPrompt += usage.inputTokens; measuredRead += read;
     } else cacheUnknown += 1;
     if (read !== undefined) cacheRead += read;

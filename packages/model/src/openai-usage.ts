@@ -21,14 +21,14 @@ export function parseOpenAIUsage(value: unknown): Usage | undefined {
   const openai = count(details.cached_tokens);
   const deepseek = count(raw.prompt_cache_hit_tokens);
   const miss = count(raw.prompt_cache_miss_tokens);
+  const cached = openai ?? deepseek;
   if ((hasOpenAI && openai === undefined) || (hasDeepSeek && deepseek === undefined) || (hasMiss && miss === undefined)
     || (input !== undefined && [openai, deepseek, miss].some(n => n !== undefined && n > input))) {
     usage.cacheUsageIssue = "invalid";
   } else if ((openai !== undefined && deepseek !== undefined && openai !== deepseek)
-    || (input !== undefined && deepseek !== undefined && miss !== undefined && deepseek + miss !== input)) {
+    || (input !== undefined && cached !== undefined && miss !== undefined && cached + miss !== input)) {
     usage.cacheUsageIssue = "conflict";
   } else {
-    const cached = openai ?? deepseek;
     if (cached !== undefined) {
       usage.cacheReadTokens = cached;
       usage.cacheUsageSource = openai !== undefined ? "openai-details" : "deepseek";

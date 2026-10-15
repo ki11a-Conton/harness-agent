@@ -28,6 +28,11 @@ describe("P20-1 metrics usage accounting", () => {
       cache_observed_calls: 2, cache_unknown_calls: 2, cache_conflicting_calls: 1,
       cache_measured_prompt_tokens: 400, cache_hit_rate: .32 });
   });
+  it.each(["estimated", "unknown", undefined])("C1 %s provenance cannot certify a measured cache hit", source => {
+    const m = computeMetrics([completed({ inputTokens: 200, outputTokens: 20, cacheReadTokens: 128, ...(source === undefined ? {} : { source }) })]);
+    expect(m.cache_observed_calls).toBe(0); expect(m.cache_unknown_calls).toBe(1);
+    expect(m.cache_hit_rate).toBeUndefined(); expect(m.cache_measured_read_tokens).toBe(0);
+  });
   it("C1 partial usage cannot certify a fully measured call or a cache hit rate", () => {
     const m = computeMetrics([completed({ outputTokens: 20, source: "measured" })]);
     expect(m.usage_unknown).toBe(1);

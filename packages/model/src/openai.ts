@@ -628,6 +628,13 @@ async function* streamChatCompletion(
         } else if (snapshot.cacheReadTokens !== undefined) {
           delete usage.cacheUsageIssue;
         }
+        // A later cumulative footer may revise input without repeating cache
+        // details. Revalidate the merged subset instead of retaining stale hits.
+        if (usage.inputTokens !== undefined && usage.cacheReadTokens !== undefined && usage.cacheReadTokens > usage.inputTokens) {
+          usage.cacheUsageIssue = "invalid";
+          delete usage.cacheReadTokens;
+          delete usage.cacheUsageSource;
+        }
         events.push({ type: "usage", usage, timestamp: Date.now() });
       }
     }

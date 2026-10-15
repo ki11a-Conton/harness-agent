@@ -67,4 +67,19 @@ describe("C1 actual HTTP/SSE cache usage", () => {
     expect(usage?.cacheReadTokens).toBeUndefined();
     expect(usage?.cacheUsageIssue).toBe("conflict");
   });
+  it("rejects a mixed-dialect miss count contradicting the observed standard cache subset", async () => {
+    const { usage } = await receive([{ prompt_tokens: 200, prompt_tokens_details: { cached_tokens: 128 }, prompt_cache_miss_tokens: 64 }]);
+    expect(usage?.cacheReadTokens).toBeUndefined(); expect(usage?.cacheUsageIssue).toBe("conflict");
+  });
+  it("revalidates a retained cache count when a later footer revises total input", async () => {
+    const { usage, events } = await receive([{ prompt_cache_hit_tokens: 128 }, { prompt_tokens: 100, completion_tokens: 20 }]);
+    expect(usage).toMatchObject({ inputTokens: 100, outputTokens: 20, cacheUsageIssue: "invalid" });
+    expect(usage?.cacheReadTokens).toBeUndefined();
+    expect(events.filter(e => e.type === "usage").at(-1)).toMatchObject({ usage: { cacheUsageIssue: "invalid" } });
+  });
+  it("a later actual zero cache observation recovers a revised-input conflict", async () => {
+    const { usage } = await receive([{ prompt_cache_hit_tokens: 128 }, { prompt_tokens: 100 }, { prompt_tokens_details: { cached_tokens: 0 }, completion_tokens: 20 }]);
+    expect(usage).toMatchObject({ inputTokens: 100, outputTokens: 20, cacheReadTokens: 0 });
+    expect(usage?.cacheUsageIssue).toBeUndefined();
+  });
 });
