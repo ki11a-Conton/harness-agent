@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "node": "v24.19.0",
+  "pnpm": "11.19.0",
+  "declaredPnpm": "pnpm@11.21.0",
+  "recordedAt": "2026-10-15T21:41:13.531190+08:00",
+  "sourceSha": "e3233deb03fa4039c0565d32302edebde994b556",
+  "sourceTreeCleanBeforeArchive": true,
+  "baseMainSha": "7e199f2af93ba9ba884da934e2fc6d3008fb9ef6",
+  "pr9Head": "e55718819fd577e3409343f15237f1e4e0ac2b14",
+  "pr10OriginalHead": "ecc73a56138ee0737053ef126045823a7f4ef3ca",
+  "pr10FixedHead": "797b17d29e571eedc86010dd1b14409b6854bc52",
+  "pr10FixPushed": true,
+  "pr9Merge": "0ed796c33b1132e5597fb729dcd7f49c31f79bfa",
+  "pr10Merge": "e3233deb03fa4039c0565d32302edebde994b556",
+  "fullSuite": {
+    "command": "pnpm test",
+    "exitCode": 0,
+    "passed": 9798,
+    "skipped": 15,
+    "failed": 0
+  },
+  "security": {
+    "command": "pnpm test:security",
+    "exitCode": 0,
+    "passed": 2146
+  },
+  "typecheck": {
+    "command": "pnpm typecheck",
+    "exitCode": 0
+  },
+  "docs": {
+    "command": "pnpm docs:verify",
+    "exitCode": 0
+  },
+  "focusedFix": {
+    "sourceSha": "797b17d29e571eedc86010dd1b14409b6854bc52",
+    "exitCode": 0,
+    "passed": 36
+  },
+  "httpAcceptance": {
+    "exitCode": 0,
+    "requests": 19,
+    "policyAssertions": 8,
+    "inheritedCodingAssertions": 50
+  },
+  "localCapabilityAudit": {
+    "command": "pnpm capability:audit",
+    "exitCode": 1,
+    "state": "MISSING_CURRENT_HEAD_GATE_EVIDENCE",
+    "documentationClaims": "PASS",
+    "profileRequirements": "PASS",
+    "evidenceFresh": "FAIL",
+    "explanation": "Standalone pnpm test does not write GateEvidenceV2. No gate receipt has been fabricated or reused from another SHA. Authoritative main CI executes release gate test before capability_audit."
+  },
+  "productionFiles": [
+    {
+      "path": "apps/web/src/deepseek/activity.test.ts",
+      "bytes": 44193,
+      "sha256": "6b27aa60d066d8a34f4238263b7aced27c1236c8314e5f79d1fe43d7343e4f35"
+    },
+    {
+      "path": "apps/web/src/deepseek/activity.ts",
+      "bytes": 42484,
+      "sha256": "fca5be93b698c41b96f354700d262e7e201548181a9a1b9b643489c8eb66943f"
+    },
+    {
+      "path": "apps/web/src/deepseek/catalog.test.ts",
+      "bytes": 28146,
+      "sha256": "7b0d21880afc0f811f1def90325c0c6b73211d1a53959e703c7d8ffa3141d579"
+    },
+    {
+      "path": "apps/web/src/deepseek/composition.integration.test.ts",
+      "bytes": 22335,
+      "sha256": "437935881faf8e4ece696c38d2fcd364cbb1f3afdebb4e18b9d4d89458119924"
+    },
+    {
+      "path": "apps/web/src/deepseek/host-tools.ts",
+      "bytes": 9937,
+      "sha256": "d4a5a11684c31f61e8a01311e94882a5f1ae0d542b774dc0177aff7194c4e627"
+    },
+    {
+      "path": "packages/harness/src/mem-stores.ts",
+      "bytes": 4486,
+      "sha256": "bc9758147cf00bba9edb3ff6b06b231b13343ec8258a1d0997361763bbc452a8"
+    },
+    {
+      "path": "packages/harness/src/memory-event-sequences.regressions.test.ts",
+      "bytes": 1132,
+      "sha256": "ac2eb351e6996bb067414720ab00d9d8d51b3b8fa8cd36a7118ab881c145af83"
+    }
+  ],
+  "paidModelCalls": 0,
+  "realModelQuality": "NOT_PROVEN",
+  "delivery": "Two native merge commits preserve the actual PR heads; this archive is prepared before the normal main push. Remote merged status and CI must be checked after push.",
+  "ciLimit": "The earlier 7e199f2a Windows UI failures remain failures. PR10 fixed-head workflow results are branch evidence, not evidence for the final main commit."
+}

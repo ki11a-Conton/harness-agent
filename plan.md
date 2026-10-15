@@ -1,6 +1,6 @@
 # Harness Agent 当前执行计划入口
 
-当前执行任务：[模型配置 PR 合并](plan(20261015-212057).md)，合同：[MODEL-CONFIG-PR-MERGE-20261015](tasks/MODEL-CONFIG-PR-MERGE-20261015.md)。按用户授权，先补 #10 的 P2 和有意义的回归，再将 #9/#10 合入 main，验证组合源码与远端状态。
+当前执行任务：[模型配置 PR 合并](plan(20261015-212057).md)，合同：[MODEL-CONFIG-PR-MERGE-20261015](tasks/MODEL-CONFIG-PR-MERGE-20261015.md)。按用户授权，#10 的 P2 与三项回归已补齐并推送原 PR 分支，#9/#10 已保留完整历史合入组合源码 `e3233deb`；全量 9798 通过/15 跳过、安全 2146 通过，类型与真实 CLI/Web 验收通过，按正常 Git 推送交付 main。远端结果及额外本地审计的证据缺口见[本次合并验收](docs/model-config-pr-merge-20261015.md)。
 
 补充复核：`d202e952` 的 Windows checkout 被过长证据路径阻断，已以 `7e199f2a` 修复并保留字节映射。真实 Windows 与普通安装通过，但 Windows UI 安装两次失败，主 CI 状态见[复核及 PR 审查](docs/archive-ci-pr-review-20261015.md)，整体不能称为全绿。PR #9 无阻塞发现；#10 存在一个已复现的 P2，三行修正与反例附件已验证。两个 PR 组合全量 9795 通过/15 跳过，不能替代新增反例。产品源码 `4ee21776` 的原成功结论保持原有绑定。
 
