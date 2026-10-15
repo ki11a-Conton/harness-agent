@@ -11,7 +11,7 @@ it("C7 actual commands, edits and verification remain separate in the browser st
   const cwd = await mkdtemp(join(tmpdir(), "coding-status-"));
   const provider = new ScriptedModelProvider([
     ScriptedModelProvider.toolCall("exec", { command: process.execPath, args: ["-e", "process.exit(2)"] }),
-    ScriptedModelProvider.toolCall("write_file", { path: "code #1.ts", content: "export const value = 2;\n" }),
+    ScriptedModelProvider.toolCall("write_file", { path: "code%20 #1.ts", content: "export const value = 2;\n" }),
     ScriptedModelProvider.text("The fixture has stopped."),
   ]);
   const harness = await createHarness({ cwd, dataDir: join(cwd, "state"), profile: "test", modelProvider: provider,
@@ -24,7 +24,8 @@ it("C7 actual commands, edits and verification remain separate in the browser st
     const status = codingStatusOf(projection);
     expect(status.status).toBe("completed"); expect(status.verification).toBe("unrun");
     expect(status.commands).toHaveLength(1); expect(status.commands[0]).toMatchObject({ exitCode: 2, failed: true });
-    expect(status.files).toHaveLength(1); expect(status.files[0]!.editorUri).toContain("code%20%231.ts:1");
+    expect(status.files).toHaveLength(1); expect(status.files[0]!.editorUri).toContain("code%2520%20%231.ts:1");
+    expect(decodeURIComponent(new URL(status.files[0]!.editorUri).pathname)).toMatch(/code%20 #1\.ts:1$/);
     expect(status.files[0]!.editorUri).toMatch(/^vscode:\/\/file\//);
     const replay = codingStatusOf({ ...projection, records: [...projection.records,
       { type: "event", event: { type: "harness/verification.completed", seq: projection.cursor + 1, time: 1000, data: { payload: { passed: true } } } },

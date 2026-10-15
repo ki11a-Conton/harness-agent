@@ -18,7 +18,7 @@ function editorUri(cwd: string, value: string): string | undefined {
   const absolute = resolve(cwd, value), rel = relative(resolve(cwd), absolute);
   if (isAbsolute(rel) || rel === ".." || rel.startsWith("../") || rel.startsWith("..\\")) return undefined;
   const url = new URL("vscode://file/");
-  url.pathname = (absolute.startsWith("/") ? "" : "/") + absolute.replace(/\\/g, "/") + ":1";
+  url.pathname = (absolute.startsWith("/") ? "" : "/") + absolute.replace(/\\/g, "/").replaceAll("%", "%25") + ":1";
   return url.href;
 }
 
