@@ -1,3 +1,4 @@
+import { RequestPrefixObserver, type RequestPrefixObservation } from "./request-prefix-observer.js";
 import { parseOpenAIUsage } from "./openai-usage.js";
 import type {
   FinishReason,
@@ -344,6 +345,7 @@ async function* streamChatCompletion(
     retryDelayMs: number;
     requestTimeoutMs: number;
     chatCompatibility: OpenAIChatCompatibility;
+    requestObserver?: RequestPrefixObserver;
   },
   request: ModelRequest,
   signal: AbortSignal,
@@ -456,9 +458,11 @@ async function* streamChatCompletion(
     );
   }
 
+  const serializedBody = JSON.stringify(body);
   let response: Response;
   for (let attempt = 0; ; attempt += 1) {
     try {
+      opts.requestObserver?.observe(body, serializedBody, request.messages[0]?.sessionId ?? "unscoped");
       response = await fetch(`${opts.baseUrl}/chat/completions`, {
         method: "POST",
         headers: {
@@ -466,7 +470,7 @@ async function* streamChatCompletion(
           Authorization: `Bearer ${opts.apiKey}`,
           Accept: "text/event-stream",
         },
-        body: JSON.stringify(body),
+        body: serializedBody,
         signal: effectiveSignal,
       });
     } catch (err) {
@@ -793,6 +797,7 @@ export class OpenAICompatibleProvider implements ModelProvider {
     baseUrl?: string;
     modelId?: string;
     chatCompatibility?: Partial<OpenAIChatCompatibility>;
+    onRequestObservation?: (value: RequestPrefixObservation) => void;
   };
   private readonly requestPolicy?: Readonly<OpenAIRequestPolicy>;
 
@@ -801,6 +806,7 @@ export class OpenAICompatibleProvider implements ModelProvider {
     baseUrl?: string;
     modelId?: string;
     chatCompatibility?: Partial<OpenAIChatCompatibility>;
+    onRequestObservation?: (value: RequestPrefixObservation) => void;
     requestPolicy?: Readonly<OpenAIRequestPolicy>;
   } = {}) {
     this.identity = identity;
@@ -857,6 +863,10 @@ export class OpenAICompatibleProvider implements ModelProvider {
     const { maxProviderRetries, retryDelayMs, requestTimeoutMs } = requestPolicy;
     const chatCompatibility = resolveOpenAIChatCompatibility(baseUrl, modelId,
       config.chatCompatibility !== undefined ? config.chatCompatibility : this.identity.chatCompatibility);
+    const auditSink = this.identity.onRequestObservation ?? (process.env.HARNESS_CACHE_DIAGNOSTICS === "1"
+      ? (value: RequestPrefixObservation) => { process.stderr.write(`[cache-diagnostics] ${JSON.stringify(value)}\n`); }
+      : undefined);
+    const requestObserver = auditSink === undefined ? undefined : new RequestPrefixObserver(auditSink);
     return {
       generate: (request, signal) =>
         streamChatCompletion(
@@ -868,6 +878,7 @@ export class OpenAICompatibleProvider implements ModelProvider {
             retryDelayMs,
             requestTimeoutMs,
             chatCompatibility,
+            requestObserver,
           },
           request,
           signal,
