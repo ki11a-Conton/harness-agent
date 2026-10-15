@@ -1,0 +1,38 @@
+{
+  "sourceSha": "242753e6db5b3de3dcf70f39ebe8746f0ff98571",
+  "baselineSha": "ef0cf955d1b31053d9f87f6d023c1ef384e40458",
+  "recordedAt": "2026-10-15T19:22:21.299390+00:00",
+  "localResults": {
+    "webAcceptance": {
+      "exitCode": 0,
+      "checks": [
+        "B14",
+        "B15"
+      ]
+    },
+    "focused": {
+      "exitCode": 0,
+      "passed": 26
+    },
+    "legacyNegative": {
+      "exitCode": 1,
+      "failed": 1,
+      "skipped": 4,
+      "expectedFailure": true
+    },
+    "typecheck": {
+      "exitCode": 0
+    },
+    "security": {
+      "exitCode": 0,
+      "passed": 2146
+    },
+    "docs": {
+      "exitCode": 0
+    }
+  },
+  "paidProviderCalls": 0,
+  "fullLocalSuite": "NOT_RUN_ON_THIS_COMMIT; exact full dual-platform CI pending",
+  "windowsAcceptance": "PENDING; no Windows claim from local Linux evidence",
+  "rootCauseLimits": "The exit-before-close cleanup window is reproduced; the original EBUSY annotation does not identify every Windows handle owner."
+}

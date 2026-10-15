@@ -13,3 +13,7 @@ source-audit-fixes 的 beforeAll 运行 web-acceptance.mjs 时，删除临时 cw
 重启/HTTP边界及21条审查验收；类型检查；提交后真实 Windows/main CI。
 
 不使用连接器/子 agent/付费模型，不发布 release，不触碰原始脏工作区。
+
+本地验收：干净 `242753e6` 的26项相关回归、真实 Web B14/B15、类型、安全2146与
+文档检查通过；原stop对照预期失败。完整远端验收尚待精确main四条工作流结束，
+见[报告](../docs/web-process-shutdown-20261015.md)。

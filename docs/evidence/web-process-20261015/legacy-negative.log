@@ -1,0 +1,33 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-windows-resource-fix-20261015
+
+ ❯ packages/harness/src/source-audit-process-owner.regressions.test.ts (5 tests | 1 failed | 4 skipped) 154ms
+   × cleanup waits for inherited pipes to close after the real parent exits 151ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/harness/src/source-audit-process-owner.regressions.test.ts > cleanup waits for inherited pipes to close after the real parent exits
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ packages/harness/src/source-audit-process-owner.regressions.test.ts:41:26
+     39|     await expect(readFile(release)).rejects.toMatchObject({ code: "ENO…
+     40|     await writeFile(release, "close the descendant"); await finishing;
+     41|     expect(owner.closed).toBe(true);
+       |                          ^
+     42|     await expect(readFile(join(cwd, "anything"))).rejects.toMatchObjec…
+     43|   } finally {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 4 skipped (5)
+   Start at  19:21:34
+   Duration  613ms (transform 87ms, setup 0ms, import 114ms, tests 154ms, environment 0ms)
+

@@ -8,3 +8,7 @@
 | 验证并交付 | 回归、真实 Web 验收21条、类型与相关安全；commit/push main，监听精确提交 CI | Windows/Ubuntu主CI与三条独立验收完整结束；原失败保留；不发布release |
 
 d6 的已成功验收保持绑定 d6；ef main 的新失败单独保留，不把前者当成后者通过。
+
+实施与本地验收已完成：固定 `242753e6` 的干净工作树 26 项回归、真实 B14/B15、
+类型、安全2146及文档通过；原 stop 屏障对照预期失败。见[修复及证据](docs/web-process-shutdown-20261015.md)。
+推送后的完整真实 Windows/main CI 仍待完成，不以本地 Linux 代替。
