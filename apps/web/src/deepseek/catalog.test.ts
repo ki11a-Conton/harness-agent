@@ -215,28 +215,36 @@ it("network discovery executes through the orchestrator, deduplicates actual HTT
   expect(await service.call("llm/discoverModels", { settingsNs: "llm-pi-ai", request: { api: "openai-completions", baseURL, apiKey: "one-shot-private-key" } }, stack.signal)).toEqual([{ id: "coding", name: "Local coding" }, { id: "other" }]);
   expect(calls).toBe(1); expect(received).toBe("Bearer one-shot-private-key");
   await expect(readFile(join(stack.directory, "deepseek", "credentials.json"))).rejects.toMatchObject({ code: "ENOENT" });
-  const execute = stack.host.executeTool!;
-  stack.host.executeTool = async (...args) => { await new Promise(done => setTimeout(done, 600)); return execute(...args); };
+  // The settings dialog runs this call for the local human, with no model session
+  // behind it, so it must reach the endpoint instead of opening an approval the
+  // dialog has no surface to show. Before this regression the dialog waited out
+  // that approval and then reported "Provider discovery was refused by the host
+  // or failed" while the endpoint was never contacted.
+  expect(await stack.call("llm/discoverModels", { settingsNs: "llm-pi-ai", request: { baseURL, apiKey: "one-shot-private-key" } })).toEqual([{ id: "coding", name: "Local coding" }, { id: "other" }]);
+  expect(calls).toBe(2); expect(received).toBe("Bearer one-shot-private-key");
+  await expect(readFile(join(stack.directory, "deepseek", "credentials.json"))).rejects.toMatchObject({ code: "ENOENT" });
   type Approval = Parameters<typeof stack.harness.approvalStore.create>[0];
   let notify!: (request: Approval) => void;
   const created = new Promise<Approval>(done => { notify = done; });
   const create = stack.harness.approvalStore.create.bind(stack.harness.approvalStore);
   stack.harness.approvalStore.create = request => { const pending = create(request); notify(request); return pending; };
-  const denied = stack.call("llm/discoverModels", { settingsNs: "llm-pi-ai", request: { baseURL, apiKey: "denied-key" } });
+  // A session-scoped caller is still gated, so the dialog's click authorises only
+  // the dialog and never a model session's network access.
+  const scoped = stack.host.executeTool!(stack.id, "web_model_discovery", { url: `${baseURL}/models`, ticket: "00000000-0000-4000-8000-000000000000" }, stack.signal);
   let deadline: ReturnType<typeof setTimeout> | undefined;
   try {
     const approval = await Promise.race([created,
-      denied.then(() => { throw new Error('Discovery bypassed its required approval'); }, error => { throw error; }),
+      scoped.then(() => { throw new Error('Discovery bypassed its required approval'); }, error => { throw error; }),
       new Promise<never>((_done, reject) => { deadline = setTimeout(() => reject(new Error('Discovery did not create its approval within 10s')), 10_000); }),
     ]);
     expect(stack.harness.approvalStore.listPending()).toContainEqual(approval);
     stack.harness.approvalStore.resolve(approval.id, "deny", "test");
-    await expect(denied).rejects.toMatchObject({ code: "llm/model-discovery-rejected" });
+    await expect(scoped).resolves.toMatchObject({ status: "denied", error: { code: "APPROVAL_DENIED" } });
   } finally {
     clearTimeout(deadline);
     stack.harness.approvalStore.create = create;
   }
-  expect(calls).toBe(1);
+  expect(calls).toBe(2);
 });
 
 it("caller cancellation settles pending provider discovery without leaking its eventual error", async () => {
