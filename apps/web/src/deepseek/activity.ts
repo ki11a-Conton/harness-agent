@@ -57,8 +57,13 @@ export function createActivityService(host: ActivityHost) {
     if (current === undefined || current.status === "failed") fail("session/not-found", "Session is unavailable");
     return current!;
   }
+  // Durable task state lives in one fixed host file, and a host launched without
+  // a data directory owns no tasks at all. Callers that only ask what is pending
+  // must therefore see "nothing" instead of failing, while real task operations
+  // keep refusing — exactly like `start()` already skips its timer loop.
+  const durableStorage = (): boolean => host.executeHostTool !== undefined && host.dataDir !== undefined;
   async function state<T>(owner: string | undefined, signal: AbortSignal, change?: (document: ScheduleDocument) => T): Promise<T | ScheduleDocument> {
-    if (host.executeHostTool === undefined || host.dataDir === undefined) fail("schedule/unavailable", "Durable controlled task storage is unavailable");
+    if (!durableStorage()) fail("schedule/unavailable", "Durable controlled task storage is unavailable");
     const name = "web_activity_metadata";
     const definition: ToolDefinition = {
       name, description: "Read or update this host's fixed task file", risk: change === undefined ? "readonly" : "side_effect",
@@ -327,12 +332,15 @@ export function createActivityService(host: ActivityHost) {
   return {
     endpoints, modelTools, schedulePath,
     async sessionActivity(sessionId: string, signal: AbortSignal) {
-      const owner = await session(sessionId); const tasks = Object.values((await read(owner.id, signal)).tasks).filter(task => task.sessionId === owner.id);
+      const owner = await session(sessionId);
+      if (host.dataDir === undefined) return { activeSchedules: 0, pendingDispatches: 0, unresolvedClaims: 0, jobs: (await jobs(owner)).map(item => item.view) };
+      const tasks = Object.values((await read(owner.id, signal)).tasks).filter(task => task.sessionId === owner.id);
       return { activeSchedules: tasks.filter(task => task.status === "active").length, pendingDispatches: [...dispatches.values()].filter(item => item.sessionId === owner.id).length,
         unresolvedClaims: tasks.filter(task => task.claim !== undefined).length, jobs: (await jobs(owner)).map(item => item.view) };
     },
     async stopSessionActivity(sessionId: string, signal: AbortSignal) {
       const owner = await session(sessionId);
+      if (host.dataDir === undefined) return { activeSchedules: 0, pendingDispatches: 0, unresolvedClaims: 0, jobs: (await jobs(owner)).map(item => item.view) };
       stoppingSessions.set(owner.id, (stoppingSessions.get(owner.id) ?? 0) + 1);
       try {
         const active = [...dispatches.values()].filter(item => item.sessionId === owner.id);

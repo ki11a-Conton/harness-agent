@@ -41,14 +41,16 @@ it("configured model window and output limit affect the actual owner and provide
     expect(requests.at(-1)).toMatchObject({ model: modelId, max_tokens: 7 });
   }
 });
-async function fixture(provider: ModelProvider = new ScriptedModelProvider([ScriptedModelProvider.text("Real composition answer")])) {
+async function fixture(provider: ModelProvider = new ScriptedModelProvider([ScriptedModelProvider.text("Real composition answer")]), options: { durableStorage?: boolean } = {}) {
   const root = await realpath(await mkdtemp(join(tmpdir(), "dsh-composition-"))); cleanup.push(() => rm(root, { recursive: true, force: true }));
   const cwd = join(root, "primary"); const secondary = join(root, "secondary"); const dataDir = join(root, "data");
   await Promise.all([mkdir(cwd), mkdir(secondary)]);
   await Promise.all([writeFile(join(cwd, "identity.txt"), "PRIMARY"), writeFile(join(secondary, "identity.txt"), "SECONDARY")]);
-  const config = { cwd, dataDir, profile: "interactive" as const, modelProvider: provider, model: { providerId: provider.id, modelId: "scripted-model" } };
+  // `dsh web` runs without a data directory until a launch lease supplies one,
+  // so the fixtures cover both the durable and the memory-only host shape.
+  const config = { cwd, ...(options.durableStorage === false ? {} : { dataDir }), profile: "interactive" as const, modelProvider: provider, model: { providerId: provider.id, modelId: "scripted-model" } };
   const base = await createHarness(config); cleanup.push(() => base.close());
-  const composition = await createDeepseekComposition(base, dataDir); cleanup.push(() => composition.close());
+  const composition = await createDeepseekComposition(base, options.durableStorage === false ? undefined : dataDir); cleanup.push(() => composition.close());
   const createSession = async (workspaceId?: string) => (await composition.sessions.call("session/create", { request: workspaceId === undefined ? {} : { workspaceId } }, signal()) as { sessionId: SessionId }).sessionId;
   return { root, cwd, secondary, dataDir, config, base, composition, createSession };
 }
@@ -173,4 +175,59 @@ it("a production-composed selected coding model edits the actual secondary works
   expect(await stack.composition.sessions.sourceSequence(id, changes.seq, signal())).toBe(captured.sequence);
   const response = await stack.composition.http(new Request(`http://localhost/api/changes.summary?sessionId=${id}&seq=${changes.seq}`));
   expect(response?.status).toBe(200); expect(await response?.json()).toMatchObject({ total: 1, files: [{ path: "generated.txt" }] });
+});
+
+it("a memory-only host still changes a draft model and still refuses durable task state", async () => {
+  const stack = await fixture(undefined, { durableStorage: false });
+  await stack.composition.catalog.call("credentials/set", { ref: "MEMORY_ONLY_KEY", value: "memory-only-private-key" }, signal());
+  await stack.composition.catalog.call("settings/update", { ns: "llm-pi-ai", patch: { providers: { "memory-only": {
+    api: "openai-completions", baseURL: "http://127.0.0.1:9/v1", apiKeyEnv: "MEMORY_ONLY_KEY", models: [{ id: "memory-only-model" }],
+  } } } }, signal());
+  const id = await stack.createSession();
+  {
+    // The memory-only host must expose the same per-session, zero-based dense
+    // journal the durable stores expose: the draft-prefix guard in owners.ts
+    // rejects a session whose journal is not a dense immutable prefix.
+    const owner = await stack.composition.owners.ownerOf(id);
+    const native = stack.composition.owners.nativeSessionId(id) as SessionId;
+    const journal = await owner.events.list(native);
+    expect(journal.map(event => event.sequence)).toEqual(journal.map((_event, index) => index));
+    expect(await owner.events.nextSequence(native)).toBe(journal.length);
+  }
+  // The official model dialog selects through this endpoint, and a host without a
+  // data directory owns no durable tasks, so the draft must not be blocked.
+  expect(await stack.composition.catalog.call("session/selectModel", { request: { sessionId: id, provider: "memory-only", model: "memory-only-model" } }, signal()))
+    .toEqual({ selected: { provider: "memory-only", model: "memory-only-model" } });
+  expect((await stack.composition.harness.store.getSession(id))!.model).toEqual({ providerId: "memory-only", modelId: "memory-only-model" });
+  expect(await stack.composition.activity.sessionActivity(id, signal())).toMatchObject({ activeSchedules: 0, pendingDispatches: 0, unresolvedClaims: 0 });
+  // Claiming a durable answer without durable storage stays a refusal.
+  await expect(stack.composition.activity.call("schedule/catalog", {}, signal())).rejects.toMatchObject({ code: "schedule/unavailable" });
+});
+
+it("repeated memory-only draft selection runs the selected HTTP model and freezes after input", async () => {
+  const requests: Array<Record<string, unknown>> = [];
+  const server = createServer(async (request, response) => {
+    let body = ""; for await (const chunk of request) body += chunk;
+    requests.push(JSON.parse(body)); response.writeHead(200, { "content-type": "text/event-stream" });
+    response.end('data: {"choices":[{"index":0,"delta":{"content":"actual memory model answer"},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n');
+  });
+  await new Promise<void>(done => server.listen(0, "127.0.0.1", done));
+  cleanup.push(() => new Promise<void>((done, reject) => server.close(error => error ? reject(error) : done())));
+  const address = server.address(); if (!address || typeof address === "string") throw new Error("Missing review listener");
+  const stack = await fixture(undefined, { durableStorage: false });
+  await stack.composition.catalog.call("credentials/set", { ref: "REVIEW_KEY", value: "review-local-key" }, signal());
+  await stack.composition.catalog.call("settings/update", { ns: "llm-pi-ai", patch: { providers: { review: {
+    api: "openai-completions", baseURL: `http://127.0.0.1:${address.port}/v1`, apiKeyEnv: "REVIEW_KEY", models: [{ id: "model-a" }, { id: "model-b" }],
+  } } } }, signal());
+  const id = await stack.createSession();
+  for (const model of ["model-a", "model-b", "model-a"]) {
+    await expect(stack.composition.catalog.call("session/selectModel", { request: { sessionId: id, provider: "review", model } }, signal())).resolves.toEqual({ selected: { provider: "review", model } });
+  }
+  await stack.composition.sessions.call("session/prompt", { request: { sessionId: id, requestId: "review-real-memory-turn", mode: "queue", content: [{ type: "text", text: "Give the configured answer" }] } }, signal());
+  const deadline = performance.now() + 10000;
+  while (performance.now() < deadline && !(await stack.composition.harness.store.listTurns(id)).some(turn => turn.status === "completed")) await new Promise(done => setTimeout(done, 10));
+  expect((await stack.composition.harness.store.listTurns(id)).map(turn => turn.status)).toEqual(["completed"]);
+  expect(requests).toHaveLength(1); expect(requests[0]).toHaveProperty("model", "model-a");
+  expect((await stack.composition.harness.store.listMessages(id)).some(message => message.content === "actual memory model answer")).toBe(true);
+  await expect(stack.composition.catalog.call("session/selectModel", { request: { sessionId: id, provider: "review", model: "model-b" } }, signal())).rejects.toMatchObject({ code: "session/model-frozen" });
 });

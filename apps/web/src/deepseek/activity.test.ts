@@ -15,6 +15,21 @@ import { createOwnerManager } from "./owners.js";
 import { createDeepseekComposition } from "./composition.js";
 
 const cleanup: Array<() => Promise<void>> = [];
+it("configured durable tasks remain unavailable when their host executor is missing", async () => {
+  const stack = await setup(); await stack.create({ every_seconds: 60 });
+  expect(await stack.activity.sessionActivity(stack.id, stack.signal)).toMatchObject({ activeSchedules: 1 });
+  const bytes = await readFile(stack.path), execute = stack.host.executeHostTool;
+  stack.host.executeHostTool = undefined;
+  const observed = await Promise.allSettled([
+    stack.activity.sessionActivity(stack.id, stack.signal),
+    stack.activity.stopSessionActivity(stack.id, stack.signal),
+    stack.activity.start(),
+  ]);
+  stack.host.executeHostTool = execute;
+  expect(await readFile(stack.path)).toEqual(bytes);
+  expect(await stack.activity.sessionActivity(stack.id, stack.signal)).toMatchObject({ activeSchedules: 1 });
+  for (const result of observed) expect(result).toMatchObject({ status: "rejected", reason: { code: "schedule/unavailable" } });
+});
 afterEach(async () => { for (const action of cleanup.splice(0).reverse()) await action(); vi.unstubAllEnvs(); });
 async function setup(options: { provider?: ModelProvider; clock?: "real"; denyModelEdits?: boolean; admitTaskPath?: boolean } = {}) {
   const directory = await realpath(await mkdtemp(join(tmpdir(), "dsh-activity-real-"))); cleanup.push(() => rm(directory, { recursive: true, force: true }));
