@@ -21,6 +21,17 @@ for item in manifest['files']:
     assert len(data) == item['bytes'] and hashlib.sha256(data).hexdigest() == item['sha256'], name
 actual = {str(path.relative_to(root)) for path in root.rglob('*') if path.is_file() and path.name != 'inventory.json'}
 assert actual == paths, (actual - paths, paths - actual)
+# Leave room for a normal Windows checkout root under MAX_PATH. Original
+# runtime paths remain in a byte-preserving mapping instead of Git filenames.
+assert all(len('docs/evidence/coding-evolution-20261015/final-4ee21776/' + name) <= 190 for name in paths)
+original = json.loads((root / 'inventory-original.json').read_text())
+original_files = {item['path']: item for item in original['files']}
+for item in json.loads((root / 'archive-paths.json').read_text())['moved']:
+    before = original_files[item['originalPath']]
+    archived = root / item['archivedPath']
+    data = archived.read_bytes()
+    assert len(data) == before['bytes'] == item['bytes']
+    assert hashlib.sha256(data).hexdigest() == before['sha256'] == item['sha256']
 
 def load(name):
     return json.loads((root / name).read_text())

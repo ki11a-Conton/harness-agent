@@ -73,3 +73,5 @@ python scripts/research/coding-evolution-20261015/historical-tasks.py validate
 包验收使用 `scripts/release/portable.mjs build --repo <干净源码目录> --source-sha <上述SHA> --version 1.10.0 --out <新目录>`；随后运行 `portable-smoke.mjs` 和 `deepseek-installed.mjs`，参数见脚本的 usage/parseArgs。安装后工具重放：在源码根目录运行 `node <本目录>/installed-tools.mjs <已解压包根目录> <新receipt.json> <上述SHA>`。面板浏览器重放使用实际 `deepseek-live-host.mjs --root <新目录> --portable-root <已解压包>`，开启实施文档中的 opt-in 变量，再运行 `browser-acceptance.mjs --url <实际监听地址> --output <新目录> --fixture-root <夹具目录> --playwright-module <模块文件>`；需要 Playwright 和 Chromium。原始截图、编译字节表和请求均已归档。
 
 `python <本目录>/verify-evidence.py` 只核对文件清单、字节 hash、源码关联和结果 receipt；它不重跑测试，也不代替真实模型配对评测。`inventory.json` 覆盖本目录除自身外的全部文件，包含验证脚本和本说明。
+
+归档可移植性更正：归档提交 `d202e952` 的 Windows CI 在 checkout 阶段因 10 个运行态证据路径过长失败，尚未执行测试。现将这些文件的字节原样移动到 `records/`，`archive-paths.json` 保留原路径/新路径/长度/hash，`inventory-original.json` 保留首次清单，验证脚本同时检查映射和 190 字符 Git 相对路径上限。该修复不改产品源码；首次失败的 CI 记录另存于 `docs/archive-ci-pr-review-20261015.md`。

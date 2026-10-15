@@ -1,5 +1,7 @@
 # Harness Agent 当前执行计划入口
 
+补充复核：`d202e952` 归档提交的 Windows checkout 被过长证据路径阻断，正在修复归档可移植性并审查用户指定 PR #9/#10；见[复核记录](docs/archive-ci-pr-review-20261015.md)。产品源码 `4ee21776` 的原成功结论不替代归档提交 CI。
+
 当前执行任务：[全面实施 coding agent 优化](plan(20261015-114843).md)，合同：[CODING-EVOLUTION-20261015](tasks/CODING-EVOLUTION-20261015.md)。按研究规格 C1–C7 实施缓存观测、评测基线、coding-v2、长任务记忆、跨语言检索、稳定前缀与工作流展示；已完成 C1–C7 工程实施：固定源码 `4ee21776` 全量 9794 通过/15 跳过，安全 2146 通过，主 CI 第 2 次完整尝试 10 任务成功，真实 Windows 与两种安装包工作流通过。做什么、怎么做、怎么验收及限制见上述规格与[最终证据](docs/evidence/coding-evolution-20261015/final-4ee21776/README.md)。付费模型质量/缓存收益仍 NOT_PROVEN，新策略维持 opt-in；本轮不发布 release。研究原件与首次失败保留。
 
 上一任务（已完成）：[PR 集成与 Web 连接修复](plan(20261014-214704).md)，合同：[PR-INTEGRATION-WEB-20261014](tasks/PR-INTEGRATION-WEB-20261014.md)。关闭开放 PR 的实证缺陷后合并 main，并修复源码启动时右下角持续“重新连接中”；做什么、怎么做和怎么验收见该规格。已完成：产品源码 `3af15705` 全量 9,707 PASS / 15 SKIP，完整 CI 10 项成功，PR #3–#7 merged=true；见[审查与验收报告](docs/pr-integration-web-20261014.md)。旧发布记录保持原源码绑定。
