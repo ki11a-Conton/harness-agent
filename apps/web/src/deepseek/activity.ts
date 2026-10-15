@@ -333,14 +333,14 @@ export function createActivityService(host: ActivityHost) {
     endpoints, modelTools, schedulePath,
     async sessionActivity(sessionId: string, signal: AbortSignal) {
       const owner = await session(sessionId);
-      if (!durableStorage()) return { activeSchedules: 0, pendingDispatches: 0, unresolvedClaims: 0, jobs: (await jobs(owner)).map(item => item.view) };
+      if (host.dataDir === undefined) return { activeSchedules: 0, pendingDispatches: 0, unresolvedClaims: 0, jobs: (await jobs(owner)).map(item => item.view) };
       const tasks = Object.values((await read(owner.id, signal)).tasks).filter(task => task.sessionId === owner.id);
       return { activeSchedules: tasks.filter(task => task.status === "active").length, pendingDispatches: [...dispatches.values()].filter(item => item.sessionId === owner.id).length,
         unresolvedClaims: tasks.filter(task => task.claim !== undefined).length, jobs: (await jobs(owner)).map(item => item.view) };
     },
     async stopSessionActivity(sessionId: string, signal: AbortSignal) {
       const owner = await session(sessionId);
-      if (!durableStorage()) return { activeSchedules: 0, pendingDispatches: 0, unresolvedClaims: 0, jobs: (await jobs(owner)).map(item => item.view) };
+      if (host.dataDir === undefined) return { activeSchedules: 0, pendingDispatches: 0, unresolvedClaims: 0, jobs: (await jobs(owner)).map(item => item.view) };
       stoppingSessions.set(owner.id, (stoppingSessions.get(owner.id) ?? 0) + 1);
       try {
         const active = [...dispatches.values()].filter(item => item.sessionId === owner.id);
@@ -357,7 +357,7 @@ export function createActivityService(host: ActivityHost) {
       }
     },
     async start(): Promise<void> {
-      if (timer !== undefined || !durableStorage() || host.submitPrompt === undefined) return;
+      if (timer !== undefined || host.dataDir === undefined || host.submitPrompt === undefined) return;
       await read(undefined, lifetime.signal);
       const tick = () => { if (driving === undefined && !lifetime.signal.aborted) { driving = drive().finally(() => { driving = undefined; }); driving.catch(error => { if (!lifetime.signal.aborted) console.error("Web task drive failed", error instanceof Error ? error.message : String(error)); }); } };
       timer = setInterval(tick, Math.max(10, host.pollDelayMs ?? 1000)); timer.unref(); tick();
