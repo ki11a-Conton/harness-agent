@@ -1,0 +1,29 @@
+{
+  "task": "hermes-write-metadata-02",
+  "catalogSha256": "db48365207d017eee3191aaafd4ac4d611b19fcf23a27ddb419029453bd32d54",
+  "source": {
+    "repository": "https://github.com/ki11a-Conton/HARNESS-SRC-FORK",
+    "snapshotSha": "1a46ea13de9a3f5e6987c5dd0319b2000fe49c92",
+    "subdirectory": "hermes-agent-main",
+    "identityCaveat": "Aggregate snapshot SHA, not Hermes official upstream SHA"
+  },
+  "revision": "seeded",
+  "preparedGitSha": "33f96fd5e6369641f01d2db588b9ac9fac6100b4",
+  "oracleFiles": [
+    {
+      "path": "tests/test_atomic_write_text_metadata.py",
+      "sha256": "3611a2570c4321e06672bd3a945934e37a1a29679e320ed3cb654ef6f1a32921"
+    }
+  ],
+  "userGuards": [
+    {
+      "path": "README.md",
+      "sha256": "9b0c60405e5d28943b370a99770327aa04b3c68f1e798d770359e280fde819be"
+    },
+    {
+      "path": "local-user-notes.txt",
+      "sha256": "515afc16490c37f0850dae873b65952cd08cba758e9c6c23d9f66439e29c7f0e"
+    }
+  ],
+  "paidModelCalls": 0
+}

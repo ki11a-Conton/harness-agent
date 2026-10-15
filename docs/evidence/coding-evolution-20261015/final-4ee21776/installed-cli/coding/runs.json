@@ -1,0 +1,116 @@
+{
+  "coding": {
+    "code": 0,
+    "signal": null,
+    "stdout": "run started: session session_bb77eb93-0cba-4a2b-b6d8-970346130ea4 turn turn_1a81bbee-b0f5-4893-ab10-e93ead49f98a\nrun: session session_bb77eb93-0cba-4a2b-b6d8-970346130ea4 turn turn_1a81bbee-b0f5-4893-ab10-e93ead49f98a\nstatus: completed\ngrade: verified_complete\ntermination: verified_complete\nsummary: Fixed addition and verified the test.\nfiles changed: src/math.cjs\ntests: passed\nverification: passed\nremaining issues: (none)\ntool calls: 4\niterations: 4\n",
+    "stderr": "[harness] context budget: model capabilities unknown for openai/coding-fixture-model — using conservative fallback 32000\napproval approval_22923d98-f5c2-4a83-abbc-92e6c2d5eb2c: \"edit\" \"src/math.cjs\"\nreason: \"edit_file: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\napproval approval_30980a16-6070-49ca-b216-7132f5e71e5d: \"exec\" \"node --test test/math.test.cjs\"\nreason: \"exec: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\napproval approval_32a45fc9-1c68-4397-9ff8-a5d177a9ce35: \"edit\" \"src/math.cjs\"\nreason: \"edit_file: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\napproval approval_338b3a2f-8950-488d-8f1f-f64821a9d717: \"exec\" \"node \\\"--test\\\" \\\"test/math.test.cjs\\\"\"\nreason: \"exec: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\napproval approval_f8040a45-6d25-42a7-a401-02cf0c5b8b4e: \"exec\" \"node --test test/math.test.cjs\"\nreason: \"exec: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\n"
+  },
+  "independentTest": {
+    "code": 0,
+    "signal": null,
+    "stdout": "✔ EXPECTED_SUM_42 (0.823599ms)\nℹ tests 1\nℹ suites 0\nℹ pass 1\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 160.664316\n",
+    "stderr": ""
+  },
+  "diff": {
+    "code": 0,
+    "signal": null,
+    "stdout": "diff --git a/src/math.cjs b/src/math.cjs\nindex a3e5af1..dabc726 100644\n--- a/src/math.cjs\n+++ b/src/math.cjs\n@@ -1 +1 @@\n-module.exports.add = (a, b) => { return a - b; };\n+module.exports.add = (a, b) => { return a + b; };\n",
+    "stderr": ""
+  },
+  "deny": {
+    "code": 0,
+    "signal": null,
+    "stdout": "run started: session session_84b09383-9e4b-44f9-be08-c5d7b2b2c8b0 turn turn_e6602f53-51ab-47ef-8ebb-1cfa385d7f26\nrun: session session_84b09383-9e4b-44f9-be08-c5d7b2b2c8b0 turn turn_e6602f53-51ab-47ef-8ebb-1cfa385d7f26\nstatus: completed\ngrade: unverified_complete\ntermination: model_stopped\nsummary: Done.\nfiles changed: (none)\ntests: no verification gate configured\nverification: no verification gate configured\nremaining issues: (none)\ntool calls: 1\niterations: 1\n",
+    "stderr": "[harness] context budget: model capabilities unknown for openai/coding-fixture-model — using conservative fallback 32000\napproval approval_26f337ee-4091-408a-b9db-e071c149d004: \"edit\" \"denied.txt\"\nreason: \"write_file: rule 'anon' (ask) matched\"\nallow/deny> denied (enter exactly allow to authorize one call)\n"
+  },
+  "failedVerification": {
+    "code": 1,
+    "signal": null,
+    "stdout": "run started: session session_a3e0bb13-518a-413b-8116-9e68dd791f9e turn turn_be25fc15-f59f-467d-abaa-2352cfe37897\nrun: session session_a3e0bb13-518a-413b-8116-9e68dd791f9e turn turn_be25fc15-f59f-467d-abaa-2352cfe37897\nstatus: failed\ngrade: verification_failed\ntermination: verification_failed\nsummary: Done.\nfiles changed: (none)\ntests: failed: command: node -e \"process.exit(17)\": exited with code 17\nverification: failed: command: node -e \"process.exit(17)\": exited with code 17\nremaining issues: failed: VERIFICATION_FAILED — command: node -e \"process.exit(17)\": exited with code 17\ntool calls: 0\niterations: 0\n",
+    "stderr": "[harness] context budget: model capabilities unknown for openai/coding-fixture-model — using conservative fallback 32000\napproval approval_b495566c-06f2-4877-8f21-46d982008298: \"exec\" \"node -e \\\"process.exit(17)\\\"\"\nreason: \"exec: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\napproval approval_a37aacfd-872e-47b9-b253-672f497bdc70: \"exec\" \"node -e \\\"process.exit(17)\\\"\"\nreason: \"exec: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\napproval approval_b3ecf699-bfda-4289-b619-30528637fb6c: \"exec\" \"node -e \\\"process.exit(17)\\\"\"\nreason: \"exec: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\n"
+  },
+  "cancel": {
+    "code": 1,
+    "signal": null,
+    "stdout": "run started: session session_c37f7424-363d-4c17-8650-05fbd6e1ca59 turn turn_75882ef5-bc67-4bcb-8fff-117c4bac630b\nrun: session session_c37f7424-363d-4c17-8650-05fbd6e1ca59 turn turn_75882ef5-bc67-4bcb-8fff-117c4bac630b\nstatus: cancelled\ngrade: unverified_complete\ntermination: cancelled\nsummary: (no assistant text)\nfiles changed: (none)\ntests: no verification gate configured\nverification: no verification gate configured\nremaining issues: cancelled\ntool calls: 1\niterations: 1\n",
+    "stderr": "[harness] context budget: model capabilities unknown for openai/coding-fixture-model — using conservative fallback 32000\napproval approval_6f22ced3-0ab7-4f0e-a534-2949fad6c71c: \"exec\" \"node \\\"-e\\\" \\\"require('fs').writeFileSync('started.txt','started');setTimeout(()=>{},60000)\\\"\"\nreason: \"exec: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\n"
+  },
+  "invalidRoot": {
+    "code": 1,
+    "signal": null,
+    "stdout": "agent run: invalid project directory \"/tmp/harness-real-coding-obyPew/absent\"\n",
+    "stderr": ""
+  },
+  "resume": {
+    "code": 0,
+    "signal": null,
+    "stdout": "session session_bb77eb93-0cba-4a2b-b6d8-970346130ea4: agent=agent_9c122bf9-2c50-45e9-b077-e0ebab96dcd2 status=active cwd=/tmp/harness-real-coding-obyPew/project with space\n",
+    "stderr": "[harness] context budget: model capabilities unknown for openai/coding-fixture-model — using conservative fallback 32000\n"
+  },
+  "trace": {
+    "code": 0,
+    "signal": null,
+    "stdout": "trace: exported episode to /tmp/coding-evolution-installed-cli-4ee21776/coding/episode (10 files)\ntrace: session session_bb77eb93-0cba-4a2b-b6d8-970346130ea4\ntrace: files: task.json, session.json, events.jsonl, context.json, tool-calls.jsonl, permissions.jsonl, artifacts.json, verification.json, metrics.json, summary.json\n",
+    "stderr": "[harness] context budget: model capabilities unknown for openai/coding-fixture-model — using conservative fallback 32000\n"
+  },
+  "webCoding": {
+    "approvals": 5,
+    "event": {
+      "id": "event_78d84fe9-8ef3-47a0-8cd4-a4c7523f8a98",
+      "sessionId": "session_9e7ff58f-893d-4017-a370-7e7471d2969f",
+      "turnId": "turn_869c4f06-3dda-405d-9e36-d73d0ebc2257",
+      "timestamp": 1792052451555,
+      "type": "turn.completed",
+      "payload": {
+        "turnId": "turn_869c4f06-3dda-405d-9e36-d73d0ebc2257",
+        "status": "completed",
+        "statusDetail": "completed",
+        "terminationReason": "verified_complete",
+        "grade": "verified_complete",
+        "completionEvidence": {
+          "passedSteps": 1,
+          "totalSteps": 1
+        }
+      },
+      "sequence": 120,
+      "schemaVersion": 1
+    }
+  },
+  "webIndependentTest": {
+    "code": 0,
+    "signal": null,
+    "stdout": "✔ EXPECTED_SUM_42 (2.055041ms)\nℹ tests 1\nℹ suites 0\nℹ pass 1\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 137.165949\n",
+    "stderr": ""
+  },
+  "webShutdown": {
+    "code": 0,
+    "signal": null
+  },
+  "webFollowup": {
+    "approvals": 1,
+    "event": {
+      "id": "event_e8c1fc88-f713-47cb-bd92-1982cbe3ed87",
+      "sessionId": "session_9e7ff58f-893d-4017-a370-7e7471d2969f",
+      "turnId": "turn_a336b9c3-5c20-4f5d-8642-2e08fa6c8c8c",
+      "timestamp": 1792052454145,
+      "type": "turn.completed",
+      "payload": {
+        "turnId": "turn_a336b9c3-5c20-4f5d-8642-2e08fa6c8c8c",
+        "status": "completed",
+        "statusDetail": "completed",
+        "terminationReason": "verified_complete",
+        "grade": "verified_complete",
+        "completionEvidence": {
+          "passedSteps": 1,
+          "totalSteps": 1
+        }
+      },
+      "sequence": 144,
+      "schemaVersion": 1
+    }
+  },
+  "webFinalShutdown": {
+    "code": 0,
+    "signal": null
+  }
+}

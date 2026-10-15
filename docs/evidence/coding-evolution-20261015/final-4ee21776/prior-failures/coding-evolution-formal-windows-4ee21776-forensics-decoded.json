@@ -1,0 +1,39 @@
+{
+  "originalRunId": "38703968309",
+  "originalRunAttempt": 1,
+  "originalSourceSha": "4ee217767c35b3a3fd5a44b1a59ce04581ef25d9",
+  "observedBy": "6cf82ae448cc3e0deda4c460c274ef00b36a99ac",
+  "purpose": "Read-only original failure extraction; no rerun or PASS substitution",
+  "paidModelCalls": 0,
+  "files": [
+    {
+      "path": "commands.json",
+      "bytes": 770,
+      "sha256": "77f3e89e64c3bed5645fc834e463f41524bd960e515bb4f2333414bc71434216",
+      "selected": "[\n  {\n    \"label\": \"pair\",\n    \"command\": \"C:\\\\hostedtoolcache\\\\windows\\\\node\\\\22.23.3\\\\x64\\\\node.exe\",\n    \"argv\": [\n      \"scripts/e4/r5-real-formal.mjs\",\n      \"--setup-pair\",\n      \"scripts/e4/r5-formal-pair.json\"\n    ],\n    \"exitCode\": 0\n  },\n  {\n    \"label\": \"arms\",\n    \"command\": \"C:\\\\hostedtoolcache\\\\windows\\\\node\\\\22.23.3\\\\x64\\\\node.exe\",\n    \"argv\": [\n      \"scripts/e4/r97-observe-arms.mjs\",\n      \"--pair\",\n      \"r5\",\n      \"--root\",\n      \"C:\\\\Users\\\\runneradmin\\\\AppData\\\\Local\\\\Temp\\\\r97-arms-r5pair\"\n    ],\n    \"exitCode\": 0\n  },\n  {\n    \"label\": \"typecheck\",\n    \"command\": \"pnpm\",\n    \"argv\": [\n      \"typecheck\"\n    ],\n    \"exitCode\": 0\n  },\n  {\n    \"label\": \"test\",\n    \"command\": \"pnpm\",\n    \"argv\": [\n      \"test\"\n    ],\n    \"exitCode\": 1\n  }\n]\n"
+    },
+    {
+      "path": "test.log",
+      "bytes": 300904,
+      "sha256": "8fc0e201e7eeaca6ee0a0a7f556100fb279ade948016f11cebe76ba862c1bec5",
+      "selected": [
+        {
+          "line": 1702,
+          "text": "[harness] context budget: model capabilities unknown for scripted/scripted-model \u2014 using conservative fallback 32000\n\u001b[90mstderr\u001b[2m | apps/web/src/deepseek/session.test.ts\u001b[2m > \u001b[22m\u001b[2man answer published before the pause checkpoint finishes waits for the original actor and resumes exactly once\n\u001b[22m\u001b[39mWeb question continuation failed session_72797af9-2cac-4cf1-822a-0efc5606b720 ask_0e2efe05-9bdb-47a5-8600-00f8c8fa8985 write failed for C:\\Users\\runneradmin\\AppData\\Local\\Temp\\dsh-session-live-lo9Ybl\\turns\\turn_d5c9e6fc-66aa-468b-9bd1-a3a888938791.json: Error: EPERM: operation not permitted, rename 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\dsh-session-live-lo9Ybl\\turns\\.turn_d5c9e6fc-66aa-468b-9bd1-a3a888938791.json.6944.b4379ca9-2019-4b02-8b90-3eebf9425781.tmp' -> 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\dsh-session-live-lo9Ybl\\turns\\turn_d5c9e6fc-66aa-468b-9bd1-a3a888938791.json'\n\n(node:3980) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[degraded] prereg observer refused case holdout/ho-esc-01: not a readable benchmarks case directory\n[degraded] prereg observer refused case ../outside/esc-01: not a readable benchmarks case directory\n(node:5548) ExperimentalWarning: SQLite is an experimental feature and might change at any time"
+        },
+        {
+          "line": 2628,
+          "text": "(Use `node --trace-warnings ...` to show where the warning was created)\n\n\u001b[31m\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u001b[39m\u001b[1m\u001b[41m Failed Tests 1 \u001b[49m\u001b[22m\u001b[31m\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u001b[39m\n\n\u001b[41m\u001b[1m FAIL \u001b[22m\u001b[49m apps/web/src/deepseek/session.test.ts\u001b[2m > \u001b[22man answer published before the pause checkpoint finishes waits for the original actor and resumes exactly once\n\u001b[31m\u001b[1mError\u001b[22m: Real Harness owner did not settle: {\"id\":\"turn_d5c9e6fc-66aa-468b-9bd1-a3a888938791\",\"sessionId\":\"session_72797af9-2cac-4cf1-822a-0efc5606b720\",\"input\":{\"sessionId\":\"session_72797af9-2cac-4cf1-822a-0efc5606b720\",\"text\":\"Please answer\"},\"status\":\"waiting_for_user\",\"startedAt\":1792052214273}\u001b[39m\n\u001b[36m \u001b[2m\u276f\u001b[22m eventually apps/web/src/deepseek/session.test.ts:\u001b[2m44:9\u001b[22m\u001b[39m\n    \u001b[90m 42|\u001b[39m   \u001b[35mconst\u001b[39m deadline \u001b[33m=\u001b[39m performance\u001b[33m.\u001b[39m\u001b[34mnow\u001b[39m() \u001b[33m+\u001b[39m \u001b[34m10_000\u001b[39m\u001b[33m;\u001b[39m\n    \u001b[90m 43|\u001b[39m   while (performance.now() < deadline) { const result = await read(); \u2026"
+        },
+        {
+          "line": 2631,
+          "text": "\n\u001b[41m\u001b[1m FAIL \u001b[22m\u001b[49m apps/web/src/deepseek/session.test.ts\u001b[2m > \u001b[22man answer published before the pause checkpoint finishes waits for the original actor and resumes exactly once\n\u001b[31m\u001b[1mError\u001b[22m: Real Harness owner did not settle: {\"id\":\"turn_d5c9e6fc-66aa-468b-9bd1-a3a888938791\",\"sessionId\":\"session_72797af9-2cac-4cf1-822a-0efc5606b720\",\"input\":{\"sessionId\":\"session_72797af9-2cac-4cf1-822a-0efc5606b720\",\"text\":\"Please answer\"},\"status\":\"waiting_for_user\",\"startedAt\":1792052214273}\u001b[39m\n\u001b[36m \u001b[2m\u276f\u001b[22m eventually apps/web/src/deepseek/session.test.ts:\u001b[2m44:9\u001b[22m\u001b[39m\n    \u001b[90m 42|\u001b[39m   \u001b[35mconst\u001b[39m deadline \u001b[33m=\u001b[39m performance\u001b[33m.\u001b[39m\u001b[34mnow\u001b[39m() \u001b[33m+\u001b[39m \u001b[34m10_000\u001b[39m\u001b[33m;\u001b[39m\n    \u001b[90m 43|\u001b[39m   while (performance.now() < deadline) { const result = await read(); \u2026\n    \u001b[90m 44|\u001b[39m   throw new Error(`Real Harness owner did not settle: ${JSON.stringify\u2026\n    \u001b[90m   |\u001b[39m         \u001b[31m^\u001b[39m\n    \u001b[90m 45|\u001b[39m }"
+        },
+        {
+          "line": 2635,
+          "text": "    \u001b[90m 42|\u001b[39m   \u001b[35mconst\u001b[39m deadline \u001b[33m=\u001b[39m performance\u001b[33m.\u001b[39m\u001b[34mnow\u001b[39m() \u001b[33m+\u001b[39m \u001b[34m10_000\u001b[39m\u001b[33m;\u001b[39m\n    \u001b[90m 43|\u001b[39m   while (performance.now() < deadline) { const result = await read(); \u2026\n    \u001b[90m 44|\u001b[39m   throw new Error(`Real Harness owner did not settle: ${JSON.stringify\u2026\n    \u001b[90m   |\u001b[39m         \u001b[31m^\u001b[39m\n    \u001b[90m 45|\u001b[39m }\n    \u001b[90m 46|\u001b[39m function send(id: string, requestId = \"unique-request\") { return { ses\u2026\n\u001b[90m \u001b[2m\u276f\u001b[22m apps/web/src/deepseek/session.test.ts:\u001b[2m268:5\u001b[22m\u001b[39m\n\n\u001b[31m\u001b[2m\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af[1/1]\u23af\u001b[22m\u001b[39m"
+        }
+      ]
+    }
+  ]
+}

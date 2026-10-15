@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "kind": "coding-prompt-engineering-acceptance",
+  "sourceSha": "4ee217767c35b3a3fd5a44b1a59ce04581ef25d9",
+  "sourceTreeClean": true,
+  "platform": "linux",
+  "node": "v24.19.0",
+  "policy": "coding-v2",
+  "prompts": {
+    "primary": {
+      "sha256": "38818bf6d9af89f2355a3a7a6ff836123000c85a48293db954f94f15115714fe",
+      "bytes": 4632,
+      "estimatedTokens": 1158
+    },
+    "readonlyWorker": {
+      "sha256": "e7bd194823a3b30302561002d8810827f4db7f53146fd1f7ea4b69b83d9e633b",
+      "bytes": 2334,
+      "estimatedTokens": 584
+    },
+    "writeWorker": {
+      "sha256": "6a70a97e644c2989f01381dc1da6832e0f22355de97fc1db77c01dcdca3fdf28",
+      "bytes": 4505,
+      "estimatedTokens": 1127
+    }
+  },
+  "assertions": [
+    "real CLI and Web requests were both captured",
+    "every actual HTTP request carries the exact selected compiled primary policy",
+    "selected policy fits fallback system reserve without raising the budget",
+    "documented native capabilities exist in the actual request schemas",
+    "new requests carry the versioned challenger rather than legacy prompt",
+    "readonly policy does not advertise mutating/exec/plan capabilities",
+    "cli rejects invalid policy before provider or listener startup",
+    "web rejects invalid policy before provider or listener startup"
+  ],
+  "inheritedCodingAssertions": 50,
+  "requests": 19,
+  "status": "PASS",
+  "paidModelCalls": 0,
+  "realModelQuality": "NOT_PROVEN",
+  "limitation": "A scripted local HTTP provider chooses the actions. Passing proves policy installation and runtime/tool invariants; it cannot prove policy obedience or a real-model quality gain."
+}

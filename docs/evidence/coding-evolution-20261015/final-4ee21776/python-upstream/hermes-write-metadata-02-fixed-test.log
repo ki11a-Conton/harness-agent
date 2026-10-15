@@ -1,0 +1,18 @@
+▶ no local venv — using Nix dev venv via HERMES_PYTHON: /tmp/coding-evolution-python/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 1 test files (~11 tests) under ['tests/test_atomic_write_text_metadata.py']; running with -j 1
+[100.0% |    11/~11 | ✓11 | ✗ 0] ✓ tests/test_atomic_write_text_metadata.py (11✓, 0.8s)
+
+=== Summary: 1 files, 11 tests passed, 0 failed (100% complete) in 0.8s (1 workers) ===
+  Durations cached to test_durations.json (1 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   1
+  Total subprocess CPU-wall: 0.8s  (runner wall: 0.8s, parallelism: 1x)
+  P50: 0.81s  P90: 0.81s  P95: 0.81s  P99: 0.81s  Max: 0.81s
+  <1s: 1 files (100%)  <2s: 1 files (100%)
+  Top 10 slowest:
+      0.81s  tests/test_atomic_write_text_metadata.py

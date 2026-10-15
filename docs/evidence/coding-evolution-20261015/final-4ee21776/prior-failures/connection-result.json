@@ -1,0 +1,83 @@
+{
+  "status": "FAIL",
+  "scenarios": 2,
+  "assertions": 5,
+  "paidModelCalls": 0,
+  "results": [
+    {
+      "language": "en",
+      "status": "FAIL",
+      "checks": [],
+      "readinessFrames": 1,
+      "errors": [],
+      "consoleLog": [
+        {
+          "type": "warning",
+          "text": "initial Session restoration failed: SessionCreateError: session create failed: gateway/internal: HARNESS_DATA_DIR_IN_USE: \"/tmp/coding-evolution-installed-ui-77c7c155/connection/en/fixture/data/deepseek/owners/f132f369291888b4b9862a02c171d53a087eb2e83582d9074c0f45156b4dda2d\": another local CLI/Web host or service already owns the directory's fixed lock port (127.0.0.1:50990). Close the owning host or choose a different HARNESS_DATA_DIR. No random port fallback is allowed. This lease requires all writers to share one local network namespace.\n    at ClientSessions.create (http://127.0.0.1:36007/deepseek/plugins/??@deepseek-ai/dsh-api-session-controller/client.js&rev=20904cdbc1e5:3948:27)\n    at async UiWorkspaceService.restoreSelection (http://127.0.0.1:36007/deepseek/plugins/??@deepseek-ai/dsh-client-ui-workspace/client.js&rev=4e7d94113a25:1598:64)"
+        }
+      ],
+      "socketLifecycle": [
+        {
+          "type": "open",
+          "url": "ws://127.0.0.1:36007/api/deepseek/socket"
+        }
+      ],
+      "failure": "locator.waitFor: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-composer-input=true][contenteditable=true]') to be visible\u001b[22m\n\n    at /workspace/harness-agent-coding-research-20261015/scripts/research/web-connection-browser.mjs:72:78"
+    },
+    {
+      "language": "zh",
+      "status": "PASS",
+      "checks": [
+        "real loopback generation ready while navigator.onLine=false",
+        "actual backend loss remains visible rather than forced connected",
+        "recovery clears stale Reconnecting within a bound despite wall-clock correction",
+        "reconnected production agent really reads a file and returns the real tool result to the HTTP model",
+        "no unhandled browser errors"
+      ],
+      "readinessFrames": 2,
+      "errors": [],
+      "consoleLog": [
+        {
+          "type": "error",
+          "text": "[session-controller] control stream failed: RemoteError: Harness socket disconnected; current operation was not replayed\n    at terminalStreamFailure (http://127.0.0.1:38321/deepseek/plugins/??@deepseek-ai/dsh-api-gateway/client.js&rev=e09e26fcd484:1117:35)\n    at RemoteStream.read (http://127.0.0.1:38321/deepseek/plugins/??@deepseek-ai/dsh-api-gateway/client.js&rev=e09e26fcd484:1056:64)\n    at async RemoteSnapshotStream.consume (http://127.0.0.1:38321/deepseek/plugins/??@deepseek-ai/dsh-api-gateway/client.js&rev=e09e26fcd484:1550:23)"
+        },
+        {
+          "type": "warning",
+          "text": "[connection] connection lost, retry #1"
+        },
+        {
+          "type": "error",
+          "text": "WebSocket connection to 'ws://127.0.0.1:38321/api/deepseek/socket' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED"
+        },
+        {
+          "type": "warning",
+          "text": "[connection] connection lost, retry #2"
+        },
+        {
+          "type": "error",
+          "text": "WebSocket connection to 'ws://127.0.0.1:38321/api/deepseek/socket' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED"
+        },
+        {
+          "type": "warning",
+          "text": "[connection] connection lost, retry #3"
+        }
+      ],
+      "socketLifecycle": [
+        {
+          "type": "open",
+          "url": "ws://127.0.0.1:38321/api/deepseek/socket"
+        },
+        {
+          "type": "close",
+          "url": "ws://127.0.0.1:38321/api/deepseek/socket"
+        },
+        {
+          "type": "open",
+          "url": "ws://127.0.0.1:38321/api/deepseek/socket"
+        }
+      ]
+    }
+  ],
+  "shutdownControl": "Test-only IPC invokes the actual production SIGTERM handler; not native OS signal delivery.",
+  "scope": "Actual loopback HTTP/WebSocket and coding after host loss/restart. Browser network hint and wall clock are controlled; backend responses are not mocked."
+}

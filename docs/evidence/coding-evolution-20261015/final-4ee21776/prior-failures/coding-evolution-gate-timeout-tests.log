@@ -1,0 +1,18 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-coding-final-20261015
+
+ ✓ apps/cli/src/release-command.test.ts (22 tests) 4144ms
+     ✓ runGate executes the canonical command and writes durable V2 evidence with the REAL exit code  747ms
+     ✓ runGate records the chaos gate's ACTUAL exit code with consistent evidence (a green gate here; the real NON-ZERO path is proven in e4-r42-gate-isolation.test.ts)  1669ms
+     ✓ E4-R19 (N20): the printed verdict derives from the EVIDENCE state — a failed/invalid evidence can never print PASS even with child exit 0  820ms
+     ✓ E4-R12 (N01): a red gate prints the saved log ref + bounded failure summary that names the real cause  556ms
+ ✓ apps/cli/src/e4-r42-gate-isolation.test.ts (7 tests) 831ms
+     ✓ green AND real-nonzero child commands record consistent evidence; the shared dist/buildinfo is untouched  642ms
+ ✓ apps/cli/src/release-artifacts.test.ts (7 tests) 48ms
+ ✓ apps/cli/src/release-verify.test.ts (46 tests) 15ms
+
+ Test Files  4 passed (4)
+      Tests  82 passed (82)
+   Start at  08:06:19
+   Duration  7.94s (transform 1.31s, setup 0ms, import 2.32s, tests 5.04s, environment 0ms)
+

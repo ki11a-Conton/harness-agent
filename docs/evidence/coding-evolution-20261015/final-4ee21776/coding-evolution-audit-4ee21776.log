@@ -1,0 +1,7 @@
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+audit: OK — 21 capabilities, 11 wired, 10 implemented-only, 0 missing
+audit verdict: documentationClaims=PASS; profileRequirements=PASS; evidenceFresh=FAIL; requiredEvidenceFresh=FAIL
+docs regression: claimed 30, on disk 30 → truthful
+docs holdout: claimed 32, on disk 32 → truthful
+docs adversarial: claimed 13, on disk 13 → truthful
+docs stress: claimed 11, on disk 11 → truthful

@@ -1,0 +1,1680 @@
+$ tsc -b && vitest run --exclude '**/*.perf.test.ts' --exclude '**/*.soak.test.ts' --exclude '**/e3-repro-current-defects.test.ts' --exclude '**/e4-r40-forensics.test.ts' --exclude '**/r97-driver-closed-loop.test.ts'
+
+ RUN  v4.1.11 /workspace/harness-agent-coding-final-20261015
+
+stdout | apps/cli/src/r0-f6-ci-readiness-classification.test.ts > S0b/F3 — a forged REAL declaration with no raw evidence must not PASS (RED counter-example) > S0b-F3-RED: forged REAL JSON with buildDigest 'x', no raw evidence and no artifact runId must not PASS
+[S0b-F3] raw forged input JSON: {"ok":true,"positiveExecution":{"providerFactoryCalls":0,"physicalProviderCalls":124,"ledgerCommitted":124,"journalChargedTokens":248,"evidenceVerified":124,"evidenceUnverified":0,"decision":"INCONCLUSIVE"},"positiveForward":{"physicalStubRequests":124,"ledgerCommitted":124,"journalChargedTokens":248,"aggregateTokensTotal":248,"aggregateTokensDelta":-60,"aggregateTokensBaseline":100,"aggregateTokensCandidate":40,"independentTokens":{"delta":-60},"costMatchesJournal":true},"ciRunSha":"4ee217767c35b3a3fd5a44b1a59ce04581ef25d9","os":"windows-latest","commandExits":{"typecheck":0,"test":0,"build":0},"dualBuild":{"baselineArm":{"sourceSha":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","buildDigest":"x"},"candidateArm":{"sourceSha":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","buildDigest":"x"},"verifier":{"ran":true,"casesVerified":1,"casesTotal":1}},"readiness":{"productionOfflineReadiness":{"executionKind":"REAL_DUAL_PINNED_BUILD"}}}
+[S0b-F3] raw readiness output JSON: {
+  "schemaVersion": "prereg-ci-readiness-v2",
+  "generatedBy": "scripts/e4/ci-readiness.mjs",
+  "ciRunSha": "4ee217767c35b3a3fd5a44b1a59ce04581ef25d9",
+  "expectedSha": "4ee217767c35b3a3fd5a44b1a59ce04581ef25d9",
+  "ciRunId": "36540000000",
+  "inputs": {
+    "e2ePath": "/tmp/r0-f6-gT9mFh/e2e.json",
+    "e2eSha256": "d9dae0f540df670b640ad534395df179c2ed52129d82d1665f33c072692bc422",
+    "otherPlatformArtifactPath": null,
+    "otherPlatformArtifactSha256": null,
+    "evidenceRoot": null,
+    "attempt": null,
+    "platform": null,
+    "strict": false,
+    "requiredLevels": null
+  },
+  "os": {
+    "label": "windows-local",
+    "platform": "linux",
+    "arch": "x64",
+    "node": "v24.19.0"
+  },
+  "platforms": {
+    "thisProcess": {
+      "platform": "ubuntu",
+      "rawPlatform": "linux",
+      "status": "MEASURED"
+    },
+    "windows": {
+      "status": "NOT_OBSERVED",
+      "detail": "no --other-platform-artifact was supplied, so this platform was not measured by this run (it is NOT assumed unproven, and it is NOT assumed measured)"
+    },
+    "ubuntu": {
+      "status": "MEASURED",
+      "detail": "this process: linux/x64"
+    },
+    "crossPlatform": {
+      "status": "NOT_OBSERVED",
+      "sameSha": false,
+      "selfMeasured": false,
+      "source": null,
+      "detail": "no other-platform artifact was supplied; the other platform stays NOT_OBSERVED rather than being hardcoded NOT_PROVEN"
+    }
+  },
+  "commandExits": {
+    "typecheck": null,
+    "test": null,
+    "build": null,
+    "n0GapGate": 0,
+    "legacyRedNextGaps": 0,
+    "docsSmoke": 0
+  },
+  "counts": {
+    "providerFactoryCalls": 0,
+    "inProcessPhysicalProviderCalls": 124,
+    "inProcessLedgerCommitted": 124,
+    "inProcessJournalChargedTokens": 248,
+    "forwardPhysicalStubRequests": 124,
+    "forwardLedgerCommitted": 124,
+    "forwardJournalChargedTokens": 248,
+    "forwardAggregateTokensTotal": 248,
+    "forwardAggregateTokensDelta": -60,
+    "forwardAggregateTokensBaseline": 100,
+    "forwardAggregateTokensCandidate": 40,
+    "forwardIndependentTokensDelta": -60,
+    "forwardCostMatchesJournal": true,
+    "evidenceVerified": 124,
+    "evidenceUnverified": 0,
+    "decision": "INCONCLUSIVE",
+    "externalProviderCalls": null,
+    "costUsdMicros": null
+  },
+  "executionKind": "REAL_DUAL_PINNED_BUILD",
+  "forwardBasis": "REAL_DUAL_PINNED_BUILD",
+  "forwardBasisSource": "readiness.productionOfflineReadiness.executionKind",
+  "levels": {
+    "fixtureProtocolReady": {
+      "status": "PASS",
+      "basis": "the offline closed loop over SYNTHETIC fixture arm builds (writeArmCheckout equals this)",
+      "counts_ref": [
+        "inProcessPhysicalProviderCalls",
+        "forwardPhysicalStubRequests",
+        "evidenceVerified"
+      ]
+    },
+    "realBuildOfflineReady": {
+      "status": "NOT_PROVEN",
+      "basis": "execution kind declares REAL_DUAL_PINNED_BUILD but its evidence did not verify against the raw evidence root, so this level is NOT_PROVEN (S6/F3: a forged enum and a self-reported digest are not a real build)",
+      "blocker": "REAL_EVIDENCE_UNVERIFIED: NO_ARTIFACT_RUN_ID: the artifact carries no runId, so the run identity of its evidence cannot be established (a caller-supplied --run-id is not a substitute); NO_ARTIFACT_ATTEMPT: the artifact carries no attempt number; NO_ARTIFACT_PLATFORM: the artifact carries no platform; BASELINE_BUILD_DIGEST_MALFORMED: dualBuild.baselineArm.buildDigest is not a 64-hex sha256 (got \"x\"); CANDIDATE_BUILD_DIGEST_MALFORMED: dualBuild.candidateArm.buildDigest is not a 64-hex sha256 (got \"x\"); NO_RAW_EVIDENCE: no --evidence-root was supplied, so no raw arm/verifier/journal file was read and the self-reported fields above are uncorroborated",
+      "evidence": {
+        "executionKind": "REAL_DUAL_PINNED_BUILD",
+        "executionKindSource": "readiness.productionOfflineReadiness.executionKind",
+        "realDeclaration": true,
+        "evidenceRoot": null,
+        "failures": [
+          "NO_ARTIFACT_RUN_ID: the artifact carries no runId, so the run identity of its evidence cannot be established (a caller-supplied --run-id is not a substitute)",
+          "NO_ARTIFACT_ATTEMPT: the artifact carries no attempt number",
+          "NO_ARTIFACT_PLATFORM: the artifact carries no platform",
+          "BASELINE_BUILD_DIGEST_MALFORMED: dualBuild.baselineArm.buildDigest is not a 64-hex sha256 (got \"x\")",
+          "CANDIDATE_BUILD_DIGEST_MALFORMED: dualBuild.candidateArm.buildDigest is not a 64-hex sha256 (got \"x\")",
+          "NO_RAW_EVIDENCE: no --evidence-root was supplied, so no raw arm/verifier/journal file was read and the self-reported fields above are uncorroborated"
+        ],
+        "bundle": null
+      }
+    },
+    "budgetEvidenceReady": {
+      "status": "NOT_PROVEN",
+      "basis": "no raw evidence bundle verified, so the budget cannot be attributed: NO_ARTIFACT_RUN_ID: the artifact carries no runId, so the run identity of its evidence cannot be established (a caller-supplied --run-id is not a substitute); NO_ARTIFACT_ATTEMPT: the artifact carries no attempt number; NO_ARTIFACT_PLATFORM: the artifact carries no platform",
+      "blocker": "no evidence bundle was verified",
+      "evidence": {
+        "journalBinding": "NOT_PROVEN",
+        "journalBindingReason": "no evidence bundle was verified",
+        "requestDispatchBinding": "NOT_PROVEN",
+        "requestDispatchBindingReason": "no evidence bundle was verified",
+        "budget": null,
+        "derivedVerifierCoverage": null
+      },
+      "counts_ref": [
+        "forwardJournalChargedTokens",
+        "forwardAggregateTokensTotal",
+        "forwardAggregateTokensDelta",
+        "forwardAggregateTokensBaseline",
+        "forwardAggregateTokensCandidate",
+        "forwardIndependentTokensDelta",
+        "forwardCostMatchesJournal"
+      ]
+    },
+    "paidExperimentRun": {
+      "status": "NOT_RUN",
+      "basis": "no paid authorization exists; this script never creates one"
+    },
+    "championPromotion": {
+      "status": "NOT_RUN",
+      "basis": "no promotion is performed or authorized by this script"
+    }
+  },
+  "notes": [
+    "counts.* === null means NOT_OBSERVED (an unmeasured value), never zero.",
+    "externalProviderCalls/costUsdMicros are NOT_OBSERVED because nothing is billed offline.",
+    "A green fixtureProtocolReady does not imply realBuildOfflineReady and never authorizes a paid run.",
+    "R7: the execution kind is read from a structured enum field; readiness.productionOfflineReady prose is not read at all, and no log is scanned for the word PASS.",
+    "R7: a platform is MEASURED only by the process that ran on it, or by an other-platform artifact whose ciRunSha equals expectedSha."
+  ]
+}
+
+
+ ✓ apps/cli/src/r0-f6-ci-readiness-classification.test.ts (42 tests) 461171ms
+     ✓ R0-F6-0: the script really runs and the fixture counts really reach the artifact  22412ms
+     ✓ R0-F6-A: LOWERCASE 'synthetic' prose must not be classified as a REAL dual pinned build  15748ms
+     ✓ R0-F6-B: an EMPTY readiness string must not be classified as a REAL dual pinned build  10666ms
+     ✓ R0-F6-C: UNRELATED text must not be classified as a REAL dual pinned build  9994ms
+     ✓ R0-F6-D2: the prose field is NOT read even when it is spelled exactly like the enum  10287ms
+     ✓ R0-F6-D: an ABSENT readiness field is fail-closed (NOT_PROVEN, never PASS)  11060ms
+     ✓ R7-F6-F: a known non-REAL kind is BLOCKED with its own blocker — not PASS, not NOT_PROVEN  21766ms
+     ✓ R0-F6-E: on a Linux/Ubuntu run this process's OWN platform is MEASURED, not hardcoded NOT_PROVEN  9770ms
+     ✓ R7-F6-H: the other platform's artifact is accepted ONLY when its SHA matches AND it measured itself  39143ms
+     ✓ R7-F6-H2: the cross-platform branch is role-symmetric — a Linux process is exercised, not assumed  19683ms
+     ✓ R7-F6-M1: a FORGED REAL enum with no artifact evidence must not upgrade  9708ms
+     ✓ R7-F6-M2: a REAL declaration for a DIFFERENT SHA must not upgrade  9563ms
+     ✓ R7-F6-M3: a replayed/stale artifact with no run identity must not upgrade  10456ms
+     ✓ R7-F6-M4: a null command exit code must not upgrade  10760ms
+     ✓ R7-F6-M5: one arm without the verifier over every case must not upgrade  30519ms
+     ✓ R7-F6-M6: a journal that disagrees with the independently recomputed delta must not upgrade  10432ms
+     ✓ R7-F6-P: the COMPLETE REAL evidence is required and IS sufficient — PASS (the path is not dead code)  10600ms
+     ✓ S6-A: the ARTIFACT must carry its own runId, attempt and platform  30912ms
+     ✓ S6-B: a wrong attempt or platform must refuse even when everything else is complete  21882ms
+     ✓ S6-C: a bundle for a DIFFERENT driver SHA must refuse  10644ms
+     ✓ S6-D: a MALFORMED or mismatched build digest must refuse  20565ms
+     ✓ S6-E: a DELETED per-arm verifier must refuse (a parsed schedule is not evidence)  9955ms
+     ✓ S6-F: a TAMPERED manifest must refuse even though its declared digest is unchanged  10396ms
+     ✓ S6-G: identical arm closures / identical source SHAs must refuse  10370ms
+     ✓ S6-H: a path that escapes the evidence root must refuse  10221ms
+     ✓ S6-J: report mode exits 0 while `--strict` exits non-zero when a required level is unmet  31139ms
+     ✓ S6-K: an UNBOUND budget dimension is NOT_PROVEN with its reason, never flattened to zero  10348ms
+     ✓ S6-L: an unknown-usage journal entry keeps its conservative upper bound and is not reported as measured  10925ms
+     ✓ S6-M: a DUPLICATE journal attempt and an unknown arm are both refused, on the BUDGET level only  11153ms
+     ✓ S0b-F3-RED: forged REAL JSON with buildDigest 'x', no raw evidence and no artifact runId must not PASS  9876ms
+usage: node scripts/e4/r97-arm-worker.mjs --checkout <arm dir> --case <caseId> --suite <suite> --arm <arm>
+                                                --provider <id> --model <id> [--endpoint <url>]
+                                                --plan-digest <hex> --state <execution state dir> --ledger <ledger dir>
+                                                [--source-sha <40-hex>] [--script-shape write-then-stop|text-only] [--json]
+
+The approved --provider/--model are REQUIRED: a worker that defaulted them would execute a
+different identity than the plan approved (plan T4 怎么做 6).
+usage: node scripts/e4/r97-arm-worker.mjs --checkout <arm dir> --case <caseId> --suite <suite> --arm <arm>
+                                                --provider <id> --model <id> [--endpoint <url>]
+                                                --plan-digest <hex> --state <execution state dir> --ledger <ledger dir>
+                                                [--source-sha <40-hex>] [--script-shape write-then-stop|text-only] [--json]
+
+The approved --provider/--model are REQUIRED: a worker that defaulted them would execute a
+different identity than the plan approved (plan T4 怎么做 6).
+usage: node scripts/e4/r97-arm-worker.mjs --checkout <arm dir> --case <caseId> --suite <suite> --arm <arm>
+                                                --provider <id> --model <id> [--endpoint <url>]
+                                                --plan-digest <hex> --state <execution state dir> --ledger <ledger dir>
+                                                [--source-sha <40-hex>] [--script-shape write-then-stop|text-only] [--json]
+
+The approved --provider/--model are REQUIRED: a worker that defaulted them would execute a
+different identity than the plan approved (plan T4 怎么做 6).
+usage: node scripts/e4/r97-arm-worker.mjs --checkout <arm dir> --case <caseId> --suite <suite> --arm <arm>
+                                                --provider <id> --model <id> [--endpoint <url>]
+                                                --plan-digest <hex> --state <execution state dir> --ledger <ledger dir>
+                                                [--source-sha <40-hex>] [--script-shape write-then-stop|text-only] [--json]
+
+The approved --provider/--model are REQUIRED: a worker that defaulted them would execute a
+different identity than the plan approved (plan T4 怎么做 6).
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts (48 tests) 29202ms
+     ✓ executes the case and records a verdict that can ONLY come from the real report  1827ms
+     ✓ TWO DIFFERENT CASES each enter their OWN context — no single placeholder request  1942ms
+     ✓ a case MISSING from the arm is refused — never borrowed from the driver repo (T4 怎么做 7)  399ms
+     ✓ leaves a real evidence file on disk after the worker returns  961ms
+     ✓ keeps the staging scratch out of the evidence, and only the scratch  952ms
+     ✓ the stored evidence row is REDACTED: no credential-shaped text reaches it  964ms
+     ✓ the record's detail AGREES with its own evidence on a REAL unit  948ms
+     ✓ grant=1, the consumer breaks mid-stream and the CLI throws: innerCalls=1, NOT abandoned, remaining=0, second reserve refused  471ms
+     ✓ a SETTLEMENT write failure on an ENTERED call is refused as `budget` and the allowance is NOT refunded  452ms
+     ✓ PROTOCOL FIXTURE: the runtime's model ref disagrees with the approval, and the synthetic PASS report must not win  538ms
+     ✓ PROTOCOL FIXTURE: a NULL runtime model ref is a refusal, never 'no drift'  423ms
+     ✓ PROTOCOL FIXTURE: a FAILED dry run ends the unit BEFORE any dispatch  387ms
+     ✓ PROTOCOL FIXTURE: an APPROVED-and-matching unit still reaches a verified PASS  441ms
+     ✓ PROTOCOL FIXTURE: a LEGITIMATE negative stays `case_failed`, not infrastructure  459ms
+     ✓ a dry run that never returns is stopped by the unit deadline, and its code does NOT outlive the unit  10721ms
+     ✓ a DISPATCH that never returns is stopped too, and the admitted call is NOT refunded  6756ms
+[harness] context budget: model capabilities unknown for stub/m — using conservative fallback 32000
+ ✓ apps/cli/src/benchmark-command.test.ts (103 tests) 58200ms
+     ✓ runs a case end-to-end with a scripted model (real tools + verification gate)  739ms
+     ✓ E4-04: runCase produces a real security_outcome (clean vs missing-evidence)  1051ms
+     ✓ supports --shuffle/--seed: randomized execution, fixed report order  1825ms
+     ✓ prevents cross-case contamination: case B cannot read case A's workspace file  2119ms
+     ✓ runs --suite holdout from benchmarks/holdout and writes holdout.json  1401ms
+     ✓ records a verification failure when the model stops without fixing the task  1277ms
+     ✓ wires sources.memory into a real store and the memory.retrieved event fires (judged via expectedEvents)  1201ms
+     ✓ P18-2: deferred schema mode still completes (tool_lookup → tool → write) with same success as full  1411ms
+     ✓ P4-5: MCP tool output rides the real injection gate (security.injection_denied fires)  791ms
+     ✓ P4-7: subagent requirement runs the REAL Delegator (subagent.started fires)  1657ms
+     ✓ P4-9: slow MCP tool completes within budget (tool.completed fires)  703ms
+     ✓ P4-8: 10+ subagent stress runs the REAL parallel delegator (subagent.started >= 10)  738ms
+     ✓ --dry-run outputs JSON plan and exits 0 with 0 provider calls  307ms
+     ✓ other candidates and plain benchmarks keep the existing RUN_PAID guard (no regression)  437ms
+     ✓ 1. 2 cases × 1 rep × 2 arms = exactly 4 logical arm runs, artifact finalized  2341ms
+     ✓ E4-04: paired candidate carries promotion-grade activationEvidenceV2 from real signals  1906ms
+     ✓ N5: tool_call_efficiency_v1 injects its guidance into the model-visible prompt (candidate only)  2088ms
+     ✓ P2: activation evidence digest binds the REAL model-visible block bytes  2162ms
+     ✓ P3: manifest prompt digest is a pure function of the real request's system prompt  1977ms
+     ✓ N6: the candidate injects ITS OWN guidance into the model-visible prompt — never the v2 bytes  2188ms
+     ✓ N6: the v2 candidate's bytes, digest and activation fact site are UNCHANGED  1733ms
+     ✓ E4-02: paired run emits canonical V3 in-process (no paired-to-v3.mjs), facts from execution  2029ms
+     ✓ 2. BA pairs execute the candidate before the baseline (real order in artifact)  1573ms
+     ✓ 3. --repeat 2 on 2 cases → exactly 8 logical arm runs (2×2×2)  2734ms
+     ✓ E4-01 #3: the same logical plan yields the same digest across runs  430ms
+     ✓ E4-01 #3/#5: isolation strength is folded into the digest; insecure is permanently ineligible  542ms
+     ✓ N03: the plan digest changes when model, policy, case CONTENT or source changes  813ms
+     ✓ N03/E4-R86 (H2): a stall-threshold change changes the plan digest (threshold is digest-bound)  436ms
+     ✓ N03/N05: a real paired run writes the V3 manifest with the FULL confirmed plan, policy and a unique sample grid  3438ms
+     ✓ N04: the journal identity binds REAL arm config hashes — never 'baseline', never the runtime hash  1528ms
+     ✓ F05: request capture — the effective budget reaches the real provider request as guidance; temperature is NOT a request parameter (manifest-only provenance)  1240ms
+     ✓ refuses a promotion run (no provider call) when captureHostState returns an UNVERIFIED state  721ms
+     ✓ F1 FIX: the offline (stub) dry-run makes 0 provider calls and is not blocked by its own gate  751ms
+     ✓ F81-1: dry-run WITHOUT any API key produces an external-billed plan with the explicit identity  367ms
+     ✓ F81-1: repeated identical dry-runs produce an IDENTICAL digest (the digest is stable)  500ms
+     ✓ F81-2 REPRO/FIX: a DIFFERENT endpoint changes the digest  421ms
+     ✓ F81-2: a DIFFERENT model changes the digest too  379ms
+     ✓ F81-2: endpoint normalization — equivalent spellings agree, real differences do not  1299ms
+     ✓ F81-1: the keyless billed plan still fails closed at EXECUTION without authorization  524ms
+     ✓ F81-2: an endpoint change invalidates a previously confirmed digest (fail closed)  420ms
+     ✓ a billed --endpoint/--model run requests the flagged URL with the flagged model (real resolution path)  905ms
+[degraded] e4-r60 taskkill spawn: spawn taskkill ENOENT
+[degraded] e4-r60 taskkill exit: taskkill exited with 1
+[degraded] e4-r60 taskkill spawn: boom
+[degraded] e4-r60 taskkill exit: taskkill exited with 1
+[degraded] e4-r60 taskkill: sync spawn failure
+[degraded] e4-r60 taskkill spawn: nope
+[degraded] e4-r60 taskkill spawn: injected taskkill failure
+[degraded] e4-r55 evidence root: ENOTDIR: not a directory, mkdir '/tmp/e4-r65-root-5ucAQ5/a-file/child'
+[degraded] e4-r55 evidence write child.stdout.txt: EIO: injected write failure for child.stdout.txt
+[degraded] e4-r55 evidence write child.stderr.txt: EACCES: injected write failure for child.stderr.txt
+[degraded] e4-r55 evidence write child-report.json: EIO: injected write failure for child-report.json
+[degraded] e4-r55 evidence write run.json: EIO: injected write failure for run.json
+[degraded] e4-r55 evidence write child.stdout.txt: EIO: injected write failure for child.stdout.txt
+
+R68_SYMLINK_CAPABILITY={"ok":true,"detail":"fs.symlink created a link that lstat reports as a symlink"}
+
+R68_LINK_DIRENT={"isSymbolicLink":true,"isFile":false}
+ ✓ apps/cli/src/e4-r55-failure-wiring.test.ts (65 tests) 41740ms
+     ✓ terminates a never-ending child's whole tree at the deadline and returns a structured timeout  4026ms
+     ✓ drives the real chain, judges its failure evidence, and requires an order mutation to break the acceptance  36887ms
+     ✓ I: a kill that never produces a terminal event resolves as UNCONFIRMED instead of hanging  457ms
+ ✓ packages/evaluation/src/r97-bounded-stop.test.ts (24 tests) 20853ms
+     ✓ returns a NAMED timeout result, and the child is really gone  3532ms
+     ✓ escalates only AFTER the grace: a child that dies on the first signal is not tree-killed  716ms
+     ✓ leaves NO descendant behind: a grandchild that ignores signals is reaped too  3541ms
+     ✓ an AbortSignal cancels a running child and is reported as `cancelled`  2427ms
+     ✓ an output flood past the cap ends the child as `output_limit`, long before the deadline  878ms
+     ✓ leaves NO descendant behind when the CAP is what stops the tree  2127ms
+     ✓ fires its AbortSignal exactly at the deadline, once  404ms
+     ✓ a unit whose deadline is ALREADY spent never dispatches, and reports timeout  712ms
+     ✓ an unspent deadline leaves the normal path completely unchanged  2639ms
+     ✓ a unit stopped by the deadline is TERMINAL, so a resume skips it rather than re-sending  350ms
+     ✓ a stubborn child is stopped well before an independent watchdog would fire  3011ms
+ ✓ packages/evaluation/src/r97-claim-anchor-rename.test.ts (3 tests) 7886ms
+     ✓ EXHAUSTED transient retries still end in the named refusal, anchor intact  7637ms
+[harness] context budget: model capabilities unknown for scripted/m — using conservative fallback 32000
+ ✓ apps/cli/src/e4-09-production-e2e.test.ts (5 tests) 15719ms
+     ✓ benchmark -> V3 -> evaluator -> promote -> createHarness -> applied, all real stages  4650ms
+     ✓ editing a real V3 artifact's outcomes while only updating the file SHA breaks the chain  3681ms
+     ✓ a forged decision field (digest recomputed) is caught by the evaluator replay  3413ms
+     ✓ a candidate ref pointing outside the bundle root is rejected  3560ms
+     ✓ provider over-call guard halts the paired run before it can finalize a promotable artifact  414ms
+[degraded] store-integrity.syncDir: Windows directory fsync is unavailable; files are flushed and replaced atomically
+ ✓ packages/store-integrity/src/windows-atomic-write.regressions.test.ts (6 tests) 6923ms
+   ✓ Windows scanner contention lasting beyond the former eight attempts still commits one complete version  1655ms
+   ✓ exhausted Windows contention remains a real failure, preserves the old target and cleans only its own temporary file  5151ms
+ ✓ apps/cli/src/n7-execution-chain.regressions.test.ts (56 tests) 9540ms
+     ✓ the real main CLI dry-run makes zero calls despite a configured fake credential  784ms
+     ✓ the real holdout CLI dry-run makes zero calls despite a configured fake credential  753ms
+     ✓ judge and archive reject an unindexed bundle without fabricating a verdict  640ms
+     ✓ recomputes judgment, archives namespaced raw bytes, and rejects a forged verdict after index regeneration  5174ms
+ ✓ apps/cli/src/n1-worker-lifecycle.test.ts (17 tests) 6912ms
+     ✓ [row 4] a provider that IGNORES abort cannot park the driver, and is marked unconfirmed  2128ms
+     ✓ [row 6] finishes in bounded time when the child writes a result and then will not exit  2065ms
+     ✓ [regression] the deadline still aborts the transport FIRST and records the timeout reason  1526ms
+ ✓ apps/cli/src/r0-f8-formal-budget-cancel-gaps.test.ts (7 tests) 6711ms
+     ✓ [F2] the provider's AbortSignal is aborted and the driver returns inside a bounded window  1529ms
+     ✓ [F2] a provider that IGNORES its AbortSignal still cannot keep the driver waiting  3256ms
+     ✓ [F2] a real HTTP stub observes its connection CLOSED after the client cancels  1555ms
+ ✓ apps/cli/src/diagnostic-first-repair.test.ts (10 tests) 6278ms
+     ✓ gets actual assertion diagnostics after exit 1, repairs, reruns the same command, then passes the original gate  545ms
+     ✓ gets actual syntax diagnostics after exit 1, repairs, reruns the same command, then passes the original gate  466ms
+     ✓ bounds repeated identical failures with existing Runtime limits  2473ms
+     ✓ executes independent S1 through the existing identity-bound AB/BA paired engine  1889ms
+ ✓ packages/evaluation/src/gen1-budget-takeover.regressions.test.ts (2 tests) 6235ms
+   ✓ Gen1: a delayed stale reclaimer cannot remove another reclaimer's new live ledger lock  6123ms
+ ✓ packages/evaluation/src/tool-call-efficiency-formal-run.test.ts (37 tests) 5665ms
+     ✓ refuses a call the ledger cannot afford, before it reaches the provider  5534ms
+ ✓ apps/cli/src/e4-r24-final-result-protocol.test.ts (6 tests) 5986ms
+     ✓ green run: observing + passing test commits exactly ONE row; independent strict audit observes the capability  605ms
+     ✓ assert-fail run: observe-then-fail leaves NO committed passed evidence; the green run's rows cannot be borrowed (same name, same HEAD)  697ms
+     ✓ hook-fail run: test body passes + afterAll fails -> NO committed passed evidence  607ms
+     ✓ a LEFTOVER failing fixture is NOT collected by the root config, IS selected by the dedicated config, and cleanup only removes its own file  1054ms
+     ✓ with BOTH residues on disk the root config collects only the real parent test, the residue is unrunnable even when named explicitly, and the dedicated config still selects the new fixture  1845ms
+     ✓ a legacy-pattern fixture in src/ is excluded from tsc; real source + real tests remain  1177ms
+ ✓ packages/evaluation/src/n7-evidence-cases.regressions.test.ts (19 tests) 5678ms
+     ✓ 6. every verifier DISCRIMINATES: it fails on the shipped fixture and passes after the reference fix  4036ms
+     ✓ 6. every verifier DISCRIMINATES: it fails on the shipped fixture and passes after the reference fix  1497ms
+ ✓ packages/evaluation/src/r97-plan.test.ts (67 tests) 4978ms
+     ✓ 4. a selection whose case list was edited while keeping the OLD digest is REFUSED  687ms
+[web] listening on http://127.0.0.1:39013
+[web] listening on http://127.0.0.1:43037
+[web] listening on http://127.0.0.1:37961
+[web] listening on http://127.0.0.1:41215
+[web] listening on http://127.0.0.1:33899
+[web] listening on http://127.0.0.1:39667
+[web] listening on http://127.0.0.1:38041
+[web] listening on http://127.0.0.1:33257
+[web] listening on http://127.0.0.1:46523
+[web] listening on http://127.0.0.1:45069
+[web] listening on http://127.0.0.1:40917
+[web] listening on http://127.0.0.1:34365
+[web] listening on http://127.0.0.1:43677
+[web] listening on http://127.0.0.1:33657
+[web] listening on http://127.0.0.1:41739
+[web] listening on http://127.0.0.1:41141
+[web] listening on http://127.0.0.1:41267
+ ✓ apps/web/src/server.test.ts (18 tests) 4471ms
+     ✓ GEN1: closing while the history cursor is loading never registers a dead SSE sink  4007ms
+ ✓ apps/cli/src/prereg-command.test.ts (43 tests) 3568ms
+     ✓ runs the frozen schedule with one root digest and reaches ACCEPT  834ms
+     ✓ resumes the SAME digest without re-spending calls  752ms
+     ✓ refuses to resume when a run record binds a DIFFERENT experiment identity  674ms
+     ✓ refuses to resume when the run records are corrupt  763ms
+ ✓ apps/cli/src/release-command.test.ts (22 tests) 3530ms
+     ✓ runGate executes the canonical command and writes durable V2 evidence with the REAL exit code  656ms
+     ✓ runGate records the chaos gate's ACTUAL exit code with consistent evidence (a green gate here; the real NON-ZERO path is proven in e4-r42-gate-isolation.test.ts)  1412ms
+     ✓ E4-R19 (N20): the printed verdict derives from the EVIDENCE state — a failed/invalid evidence can never print PASS even with child exit 0  643ms
+     ✓ E4-R12 (N01): a red gate prints the saved log ref + bounded failure summary that names the real cause  495ms
+ ✓ packages/evaluation/src/r97-execution-identity.test.ts (18 tests) 3742ms
+     ✓ runs under the APPROVED model and endpoint, not the default pair  1068ms
+     ✓ a DIFFERENT endpoint produces a DIFFERENT endpoint identity — the flag reaches the plan  2002ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+stderr | apps/web/src/deepseek/activity.test.ts > the real wall-clock timer durably admits one reminder and the actual actor executes it
+Web task drive shutdown failed tool execution cancelled before dispatch
+
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+stderr | apps/web/src/deepseek/activity.test.ts > an uncertain admission is retained as unresolved and never silently retried or shown as delivered
+Web scheduled task delivery failed schedule-9612874b-cf82-4366-905c-810369492a71 Lost admission acknowledgement
+
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for precise-child-job/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for timer/actual-timer-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ apps/web/src/deepseek/activity.test.ts (25 tests) 3934ms
+   ✓ the real wall-clock timer durably admits one reminder and the actual actor executes it  1067ms
+   ✓ a replaced Web draft schedules through its native model context and the real timer returns to the stable owner's inbox  2066ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts (60 tests) 3937ms
+     ✓ REGRESSION: the first-open grant write happens UNDER the lock, not before it  770ms
+     ✓ a REAL reader process observing a REAL writer sees only COMPLETE versions, never CORRUPT  1980ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ apps/web/src/deepseek/workspace.integration.test.ts (17 tests) 3547ms
+   ✓ directory changes start ready and observe both child modifications and deletion without treating directories as regular files  1519ms
+   ✓ a file watch observes deletion and recreation in the same generation  1518ms
+ ✓ packages/evaluation/src/n6-evidence-cases.regressions.test.ts (18 tests) 3657ms
+     ✓ 6. every verifier DISCRIMINATES: it fails on the shipped fixture and passes after the reference fix  1681ms
+     ✓ 6. every verifier DISCRIMINATES: it fails on the shipped fixture and passes after the reference fix  1851ms
+ ✓ apps/cli/src/dual-platform-acceptance.test.ts (28 tests) 3475ms
+ ✓ packages/harness/src/durable-recovery-store-xproc.test.ts (1 test) 2559ms
+     ✓ a live child's old lock is NOT stolen; after the child exits it is reclaimed  2557ms
+ ✓ packages/tools/src/gen1-regex-scanner.test.ts (6 tests) 2419ms
+     ✓ terminates real exponential backtracking at the total regex deadline  1005ms
+     ✓ shares one total deadline across multiple sequential files rather than resetting it  1143ms
+ ✓ packages/evaluation/src/r97-campaign-validator-cli.test.ts (17 tests) 4204ms
+     ✓ exits 1 when the evidence file is DELETED  535ms
+     ✓ exits 1 when the evidence file is EDITED but still valid JSON  325ms
+     ✓ exits 1 when the resultHash in the STATE is changed  300ms
+     ✓ exits 1 when the record's VERDICT TEXT is rewritten to forge a pass  375ms
+     ✓ is importable, so the report and the CLI share ONE implementation  340ms
+ ✓ packages/harness/src/source-audit-fixes.regressions.test.ts (21 tests) 2555ms
+ ✓ packages/core/src/runtime/fault-injection.test.ts (22 tests) 2121ms
+     ✓ model.error with recovery policy retries and then completes  505ms
+     ✓ exhausted retries turn.failed with MODEL_ERROR and no turn.completed  1004ms
+     ✓ mid-stream error triggers retry and fallback completes  504ms
+ ✓ apps/cli/src/source-audit-archive.regressions.test.ts (10 tests) 1987ms
+     ✓ uses a recorded commit's own rebuilt verifier and refuses altered build bytes (tiny synthetic repository)  1796ms
+ ✓ packages/evaluation/src/r97-budget-ledger-lock-eperm.test.ts (4 tests) 1735ms
+     ✓ [EPERM-1] concurrent acquire/release of ONE lock path never throws a raw EPERM  1425ms
+     ✓ [EPERM-2] a genuinely wedged lock still fails CLOSED with R97_LOCK_HELD  304ms
+ ✓ packages/tools/src/syntax-index.integration.test.ts (34 tests) 1939ms
+   ✓ C5 frozen 30-query retrieval set meets recall@5 and bounded graph budget  844ms
+ ✓ packages/evaluation/src/tool-call-efficiency-token-attribution.test.ts (12 tests) 1475ms
+ ✓ apps/cli/src/r5-formal-gate.test.ts (34 tests) 1655ms
+ ✓ packages/tools/src/production-tools.test.ts (9 tests) 1600ms
+     ✓ env_snapshot tool is wired to the host network mode + tool list  545ms
+     ✓ createProductionTools forwards harness profile + workspace root to env_snapshot  507ms
+     ✓ createEnvSnapshotTool rejects nothing and reports the live injected policy + harness facts  537ms
+ ✓ apps/cli/src/benchmark-provider-policy.test.ts (6 tests) 1424ms
+     ✓ passes the frozen identity policy into a real client after environment mutation  400ms
+ ✓ apps/cli/src/task-scoped-skills.test.ts (8 tests) 1538ms
+     ✓ admits the relevant body at 8k, preserves tools/task/verifier and binds evidence to actual requests  424ms
+     ✓ executes AB/BA through the real paired engine with independent verification and no partial pairs  670ms
+ ✓ packages/core/src/runtime/pr-harness-security-boundary.regressions.test.ts (20 tests) 1649ms
+     ✓ G1a: a model that skips the test cannot claim completion; grade, termination reason, error code and the injected correction are all preserved  310ms
+ ✓ packages/tools/src/process/executor.test.ts (30 tests | 7 skipped) 1377ms
+     ✓ kills the process tree on timeout (no orphan)  302ms
+     ✓ honors timeout, cancellation, output cap and env on the argv path  424ms
+ ✓ apps/cli/src/e4-r46-diagnostics-noclobber.test.ts (3 tests) 1299ms
+     ✓ two independent processes with the same root+runId+label write two distinct bundles; the second leaves the first intact  1131ms
+ ✓ packages/observability/src/trace-exporter.test.ts (21 tests) 1264ms
+ ✓ packages/harness/src/source-audit-recovery.regressions.test.ts (3 tests) 1141ms
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+[degraded] observation-evidence unreadable row: ObservationEvidence invalid: evidenceDigest does not recompute over the row body
+[degraded] observation-evidence unreadable row: ObservationEvidence invalid: testedSourceSha must be a 40-hex git sha (got null)
+[degraded] observation-evidence: row runId "old-run" != requested run "new-run" (rows copied from another run are diagnostic only) — dropped
+ ✓ apps/cli/src/usage-audit.test.ts (29 tests) 1023ms
+     ✓ --strict WITHOUT --run fails up front — a strict verdict must name ONE run (no global-history fallback)  367ms
+ ✓ packages/harness/src/verification-trust.regressions.test.ts (13 tests) 1070ms
+ ✓ packages/model/src/openai.test.ts (40 tests) 1147ms
+     ✓ P1-18: honors Retry-After on 429 and classifies it rate_limit with retryAfterMs  1002ms
+ ✓ apps/cli/src/path-scoped-instructions.test.ts (10 tests) 1176ms
+     ✓ changes real target context without sibling contamination and passes an independent content verifier  357ms
+     ✓ executes the actual AB/BA paired engine twice with fixed inputs and independent content verification  601ms
+ ✓ packages/evaluation/src/runner.test.ts (58 tests) 1088ms
+     ✓ aborts a turn that exceeds timeoutMs (cancelled outcome, reason recorded)  503ms
+     ✓ classifies a wall-clock timeout as an infrastructure outcome  503ms
+ ✓ packages/security/src/approval.test.ts (15 tests) 1017ms
+     ✓ expire  1002ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for gated-live/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ apps/web/src/deepseek/session.test.ts (24 tests) 915ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for openai/model-original — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for openai/model-selected — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for openai/coding — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for openai/coding — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for openai/model-original — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for openai/model-original — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for openai/model-selected — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for openai/model-original — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for openai/model-original — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for openai/model-selected — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/one — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/two — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/new — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/new — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/selected — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/selected — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/selected — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/selected — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/typed-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/file-next — using conservative fallback 32000
+ ✓ apps/web/src/deepseek/owners.test.ts (21 tests) 996ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ packages/harness/src/mcp-wiring.integration.test.ts (6 tests) 963ms
+     ✓ connects an http MCP server LAZILY when a step needs it, binds its tool and executes over the real transport  351ms
+     ✓ connects a stdio MCP server lazily (local IPC — default sandbox suffices)  330ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ apps/web/src/deepseek/catalog.test.ts (19 tests) 991ms
+   ✓ network discovery executes through the orchestrator, deduplicates actual HTTP models, and never persists one-shot credentials  651ms
+ ✓ packages/evaluation/src/e4-r77-baseline-oracle.test.ts (26 tests) 920ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:43845
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:39313
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:41209
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:34013
+[harness] context budget: model capabilities unknown for web-cancellation-probe/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:43541
+[harness] context budget: model capabilities unknown for web-queued-followup-stop-probe/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:35149
+ ✓ apps/web/src/harness.integration.test.ts (6 tests) 949ms
+     ✓ U4 stops the active queued follow-up through HTTP without cancelling another sender's session  341ms
+ ✓ packages/agents/src/parallel-delegator.test.ts (21 tests) 853ms
+ ✓ apps/cli/src/e4-r42-gate-isolation.test.ts (7 tests) 645ms
+     ✓ green AND real-nonzero child commands record consistent evidence; the shared dist/buildinfo is untouched  473ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for gateway/fresh-coding — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for local-coding/selected-coding — using conservative fallback 32000
+ ✓ apps/web/src/deepseek/composition.integration.test.ts (7 tests) 704ms
+ ✓ apps/cli/src/e4-r52-raw-bytes.test.ts (4 tests) 795ms
+     ✓ 4: cap-1 / cap / cap+1 boundaries stay correct, and a multi-byte char straddling the cut is preserved as BYTES  613ms
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/custom-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+ ✓ apps/cli/src/cli.test.ts (37 tests) 699ms
+     ✓ runs an end-to-end read through the real orchestrator and tools  331ms
+ ✓ packages/evaluation/src/r97-mutation-check-guard.test.ts (51 tests) 553ms
+     ✓ REAL second OS process: a concurrent rewrite of the file is detected after the build step  403ms
+ ✓ packages/evaluation/src/benchmark-suite.test.ts (7 tests) 664ms
+ ✓ apps/cli/src/source-audit-safety.regressions.test.ts (3 tests) 596ms
+ ✓ apps/cli/src/e4-r47-bounded-copy.test.ts (6 tests) 625ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ packages/sdk/src/gen1-session-integration.test.ts (2 tests) 489ms
+   ✓ GEN1 SDK lists, resumes and forks actual persisted Harness/AppServer sessions  479ms
+ ✓ packages/evaluation/src/r92-plan.test.ts (13 tests) 541ms
+[prereg] trusted-build mode: baseline @ 13467381e1e2 closure 473ddff35857… network sandbox=none
+[prereg] trusted-build mode: baseline @ 9fa5b2e1e6cd closure 6aab2834f8f3… network sandbox=none
+ ✓ apps/cli/src/prereg-trusted-build.test.ts (11 tests) 589ms
+ ✓ packages/tools/src/r4-file-regressions.test.ts (41 tests) 523ms
+ ✓ packages/harness/src/context-wiring.integration.test.ts (3 tests) 575ms
+     ✓ env_snapshot reports the live harness wiring (profile, workspace root, tool list)  543ms
+ ✓ packages/tools/src/gen1-text-tools.regressions.test.ts (39 tests) 521ms
+ ✓ apps/cli/src/n5-pair-setup.test.ts (8 tests | 1 skipped) 537ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ packages/harness/src/coding-verification.regressions.test.ts (4 tests) 614ms
+ ✓ packages/tools/src/symbol-scope.regressions.test.ts (23 tests) 521ms
+ ✓ apps/cli/src/e4-r21-release-reverify.test.ts (12 tests) 443ms
+ ✓ apps/cli/src/data-dir-lease.test.ts (6 tests | 1 skipped) 438ms
+ ✓ packages/harness/src/delegation-worker.integration.test.ts (13 tests) 445ms
+[skill denied] detection=injection target=/tmp/ar-skill-admission-beCgIQ/skills/blocked-injection/SKILL.md reasons=dismiss-previous-instructions,dismiss-all-instructions,override-own-instructions,extract-system-prompt
+[skill denied] detection=secret target=/tmp/ar-skill-admission-ZX8FZu/skills/blocked-secret/SKILL.md reasons=openai-key
+[skill denied] detection=required-tools target=/tmp/ar-skill-admission-6iMN0b/skills/blocked-tools/SKILL.md reasons=required tool not allowed by host policy: unavailable_tool
+ ✓ packages/harness/src/skill-admission.regressions.test.ts (11 tests) 439ms
+ ✓ packages/evaluation/src/tool-call-efficiency-tool-budget.test.ts (15 tests) 431ms
+     ✓ [R3-mid-stream] a provider that stalls PAST the deadline is aborted and the unit converges  308ms
+[degraded] prereg observer refused case holdout/ho-esc-01: not a readable benchmarks case directory
+[degraded] prereg observer refused case ../outside/esc-01: not a readable benchmarks case directory
+ ✓ apps/cli/src/prereg-formal-gaps.test.ts (15 tests) 376ms
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-mu1xIM/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-wFFQFg/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-Fd5xau/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-Mb7JoB/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-u542VJ/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-I3QzgR/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-BbSPVV/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-C1eN78/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-MkYKXA/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-6890ZL/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-cO7vEV/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-gvz910/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-zjyazf/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-JdGjM7/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-wXvaHc/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-wbeGZk/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-HPK7tV/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-v1hdv0/package.json'
+[docs:verify] package.json unreadable: ENOENT: no such file or directory, open '/tmp/docs-verify-3QaTtn/package.json'
+ ✓ apps/cli/src/docs-verify.test.ts (20 tests) 368ms
+ ✓ packages/evaluation/src/e4-r38-execution-plan-boundary.test.ts (3 tests) 378ms
+     ✓ R38-c: the parser still accepts a 130,000-case `limit=null` plan and the small-plan digest protocol is unchanged  347ms
+ ✓ packages/core/src/runtime/r87-zero-call-replay-ab.test.ts (16 tests) 332ms
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+ ✓ packages/harness/src/memory-feedback-atomic.regressions.test.ts (14 tests) 256ms
+[harness] context budget: model capabilities unknown for fake/unknown-window — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ packages/harness/src/create-harness.test.ts (17 tests) 387ms
+ ✓ packages/core/src/runtime/r88-replay-evidence-gate.test.ts (27 tests) 255ms
+ ✓ packages/agents/src/delegator.test.ts (40 tests) 371ms
+ ✓ packages/evaluation/src/r92-rehearsal.test.ts (11 tests) 360ms
+ ✓ packages/evaluation/src/e4-r33-execution-plan-scale.test.ts (7 tests) 369ms
+ ✓ packages/tools/src/vs001.test.ts (13 tests) 353ms
+ ✓ apps/cli/src/e3-13-production-path.test.ts (3 tests) 317ms
+ ✓ packages/evaluation/src/campaign-triage.test.ts (55 tests) 231ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for securefixture/coding-fixture — using conservative fallback 32000
+ ✓ apps/web/src/deepseek/composition-security.regressions.test.ts (4 tests) 334ms
+ ✓ apps/cli/src/n6-n5-judge.regressions.test.ts (7 tests) 339ms
+[harness] context budget: model capabilities unknown for openai/coding-model-selected-by-user — using conservative fallback 32000
+ ✓ apps/cli/src/coding-host.regressions.test.ts (3 tests) 388ms
+   ✓ C02: a live CLI host can approve a write in the same running session  372ms
+[skill denied] detection=required-tools target=/tmp/ar-task-skills-VsTsU7/skills/danger/SKILL.md reasons=required tool not allowed by host policy: ungranted-tool
+[skill denied] detection=injection target=/tmp/ar-task-skills-VsTsU7/skills/hostile/SKILL.md reasons=dismiss-previous-instructions,dismiss-all-instructions,override-own-instructions,extract-system-prompt
+ ✓ packages/harness/src/task-scoped-skills.integration.test.ts (10 tests) 314ms
+ ✓ apps/cli/src/n3-dispatch-journal.test.ts (19 tests) 296ms
+ ✓ apps/cli/src/r97-ci-diagnostics.test.ts (7 tests) 263ms
+ ✓ packages/core/src/runtime/r93-manifest-full-validation.test.ts (91 tests) 277ms
+[n2-arm:baseline] build copied + links created: 1 ms
+[n2-arm:baseline] closure digest computed: 5 ms
+[n2-arm:baseline] git tree committed: 29 ms
+[n2-arm:candidate] build copied + links created: 0 ms
+[n2-arm:candidate] closure digest computed: 1 ms
+[n2-arm:candidate] git tree committed: 23 ms
+[n2-arm:baseline] build copied + links created: 0 ms
+[n2-arm:baseline] closure digest computed: 1 ms
+[n2-arm:baseline] git tree committed: 25 ms
+[n2-arm:candidate] build copied + links created: 0 ms
+[n2-arm:candidate] closure digest computed: 1 ms
+[n2-arm:candidate] git tree committed: 24 ms
+ ✓ apps/cli/src/n2-pricing-guard-armed.test.ts (2 tests) 344ms
+ ✓ apps/cli/src/prereg-fixture-checkout-grant.test.ts (7 tests) 311ms
+[harness] context budget: model capabilities unknown for scripted/platform-http-fixture — using conservative fallback 32000
+[web] listening on http://127.0.0.1:38513
+[harness] context budget: model capabilities unknown for scripted/platform-http-fixture — using conservative fallback 32000
+[web] listening on http://127.0.0.1:34999
+[harness] context budget: model capabilities unknown for scripted/platform-http-fixture — using conservative fallback 32000
+[web] listening on http://127.0.0.1:37659
+[harness] context budget: model capabilities unknown for scripted/platform-http-fixture — using conservative fallback 32000
+[web] listening on http://127.0.0.1:42467
+[harness] context budget: model capabilities unknown for scripted/platform-http-fixture — using conservative fallback 32000
+[web] listening on http://127.0.0.1:38547
+ ✓ apps/web/src/deepseek/platform-http.test.ts (5 tests) 324ms
+[harness] context budget: model capabilities unknown for scripted/upgrade-boundary-test — using conservative fallback 32000
+[web] listening on http://127.0.0.1:37745
+[harness] context budget: model capabilities unknown for scripted/upgrade-boundary-test — using conservative fallback 32000
+[web] listening on http://127.0.0.1:43827
+[harness] context budget: model capabilities unknown for scripted/upgrade-boundary-test — using conservative fallback 32000
+[web] listening on http://127.0.0.1:44939
+ ✓ apps/web/src/deepseek/socket.web-server.test.ts (3 tests) 297ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ packages/harness/src/source-audit-boundaries.regressions.test.ts (12 tests) 310ms
+ ✓ apps/cli/src/final-question.regressions.test.ts (5 tests) 273ms
+ ✓ packages/tools/src/navigate.test.ts (7 tests) 225ms
+ ✓ apps/cli/src/e4-r51-read-settle.test.ts (6 tests) 315ms
+ ✓ apps/cli/src/prereg-arm-executor.test.ts (9 tests) 280ms
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+ ✓ packages/harness/src/memory-search-production.regressions.test.ts (10 tests) 295ms
+ ✓ packages/gateway/src/gateway.test.ts (36 tests) 288ms
+ ✓ packages/evaluation/src/tool-call-efficiency-token-delta-red-probe.test.ts (2 tests) 245ms
+ ✓ packages/evaluation/src/r97-campaign-lifecycle.test.ts (23 tests) 298ms
+[skill denied] detection=required-tools target=/tmp/ar-skill-revision-RKErCD/skills/lint/SKILL.md reasons=required tool not allowed by host policy: exec_command
+[skill denied] detection=injection target=/tmp/ar-skill-revision-iX8cOG/skills/lint/SKILL.md reasons=dismiss-previous-instructions,dismiss-all-instructions,override-own-instructions
+[skill denied] detection=secret target=/tmp/ar-skill-revision-pthopi/skills/lint/SKILL.md reasons=openai-key
+ ✓ packages/harness/src/skill-revision-regressions.test.ts (20 tests) 258ms
+ ✓ packages/evaluation/src/r97-execution-state-ownership.test.ts (20 tests) 308ms
+ ✓ apps/cli/src/context-safe-tool-call-efficiency.integration.test.ts (6 tests) 313ms
+ ✓ packages/security/src/parser-fuzz.test.ts (1812 tests) 256ms
+ ✓ packages/model/src/openai-cache-usage.regressions.test.ts (15 tests) 104ms
+ ✓ packages/evaluation/src/campaign-validate.test.ts (42 tests) 283ms
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+ ✓ packages/harness/src/rehydration-headroom.integration.test.ts (6 tests) 248ms
+ ✓ apps/cli/src/e4-r84-campaign-cli.test.ts (21 tests) 228ms
+ ✓ apps/cli/src/e4-r45-diagnostics-order.test.ts (4 tests) 251ms
+ ✓ packages/memory/src/query-preparation.regressions.test.ts (45 tests) 225ms
+ ✓ packages/evaluation/src/gen1-budget-lock-bounds.regressions.test.ts (3 tests) 227ms
+ ✓ apps/cli/src/e4-r85-triage-cli.test.ts (14 tests) 232ms
+ ✓ packages/evaluation/src/tool-call-efficiency-formal-gaps.test.ts (15 tests) 253ms
+ ✓ packages/evaluation/src/r97-execution-state.test.ts (27 tests) 246ms
+ ✓ packages/tools/src/process/sandbox-executor.test.ts (33 tests) 211ms
+ ✓ packages/harness/src/effective-instruction-context.regressions.test.ts (6 tests) 74ms
+ ✓ packages/core/src/runtime/runtime.test.ts (83 tests) 171ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ packages/harness/src/session-service-coding.regressions.test.ts (8 tests) 200ms
+ ✓ packages/tools/src/orchestrator.test.ts (32 tests) 195ms
+ ✓ packages/mcp/src/mcp-transport.test.ts (13 tests) 151ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ packages/harness/src/source-audit-memory.regressions.test.ts (2 tests) 195ms
+ ✓ apps/cli/src/gen1-chat.test.ts (7 tests) 229ms
+[degraded] session session_27651250-c787-43bd-a1be-4f50fdeaff4f failed to persist recovery record for turn_e468c237-c1ff-4ca3-baf7-995edba356bc: store down
+[degraded] session session_27651250-c787-43bd-a1be-4f50fdeaff4f recovery lease failed for turn_e468c237-c1ff-4ca3-baf7-995edba356bc: store down
+[degraded] session session_e0dfb3e1-5273-4994-b138-1b59c7a90099 recovery lease failed for turn_053294bc-3e34-49ff-b7c4-1aa4422e6f2a: recovery CAS conflict for turn_053294bc-3e34-49ff-b7c4-1aa4422e6f2a: expected version 1, stored 2
+[degraded] session session_01834bcc-d4cd-4f67-8c99-87d944da56cc terminal recovery ACK failed for turn_9f9b7e8b-1bc0-4010-9a64-ac9628a64a55: review terminal ACK failure — entering pending-commit (reconcile), queue frozen
+[degraded] session session_7cd08d07-43bb-4cc3-a136-56a3ae43d50b terminal recovery ACK failed for turn_3ca27f51-3f00-47ad-982e-0c0007a79203: review terminal ACK failure — entering pending-commit (reconcile), queue frozen
+[degraded] session session_97cd6418-34b2-4190-93c2-397944f43765 terminal recovery ACK failed for turn_d0eff417-0409-4e62-8e45-0dc203a8e374: review terminal ACK failure — entering pending-commit (reconcile), queue frozen
+[degraded] session session_bed0eab6-c437-4cdc-a9b1-102ee25e0b1e terminal recovery ACK failed for turn_e9068faf-87f1-454a-95b6-f38bea065a45: compound terminal/marker write outage — entering pending-commit (reconcile), queue frozen
+[degraded] session session_bed0eab6-c437-4cdc-a9b1-102ee25e0b1e failed to persist recovery record for turn_e9068faf-87f1-454a-95b6-f38bea065a45: compound terminal/marker write outage
+[degraded] session session_857442d5-afae-47f1-a893-90e25dedd5bf terminal recovery ACK failed for turn_3b26a811-b402-4e8c-be07-015c5d27e9f6: compound terminal/marker write outage — entering pending-commit (reconcile), queue frozen
+[degraded] session session_857442d5-afae-47f1-a893-90e25dedd5bf failed to persist recovery record for turn_3b26a811-b402-4e8c-be07-015c5d27e9f6: compound terminal/marker write outage
+[degraded] session session_afcc4e72-9a03-4426-880e-739a1132ae37 terminal recovery ACK failed for turn_a0d7df04-04b7-4326-967d-fc3fae02c365: compound terminal/marker write outage — entering pending-commit (reconcile), queue frozen
+[degraded] session session_afcc4e72-9a03-4426-880e-739a1132ae37 failed to persist recovery record for turn_a0d7df04-04b7-4326-967d-fc3fae02c365: compound terminal/marker write outage
+[degraded] session session_8378b43f-43fb-4a42-a128-f0e16edb060f failed to persist recovery record for turn_7598189d-f2ec-4ad1-b84d-88a12134d9ca: whole recovery store write outage
+[degraded] session session_8378b43f-43fb-4a42-a128-f0e16edb060f recovery lease failed for turn_7598189d-f2ec-4ad1-b84d-88a12134d9ca: whole recovery store write outage
+[degraded] session session_03cf2cb9-1969-4d7e-93e6-07c9c9ab1bcb recovery lease failed for turn_a515d84b-9b89-4b54-b5f9-545801cba95f: recovery store temporarily refuses the lease write
+[degraded] session session_9269baf0-9e42-47da-8f06-b7fed865bb8e recovery lease failed for turn_e71fbaec-3ee1-4957-b875-c0a4898ee1d7: recovery store temporarily refuses the lease write
+[degraded] session session_fb194067-97e3-4ebe-bfc7-7a2b92c049ee recovery attempt-intent persist failed for turn_1b4fd3cd-b0be-439d-ac5c-76d0aa9c6a8b — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_2d3efae9-8819-4442-951b-c9f42083d8c4 recovery lease failed for turn_da17489a-55b4-45a6-b7db-d30a8ce5845e: recovery CAS conflict for turn_da17489a-55b4-45a6-b7db-d30a8ce5845e: expected version 0, stored 1
+[degraded] session session_bfca92a7-88e0-460e-9cfc-56c7aa93ff69 recovery lease failed for turn_4ec73959-1797-415f-ad9e-260685b8ab43: recovery store temporarily refuses the lease write
+[degraded] session session_cfcdf861-be36-4838-87d8-7b73ab3258e2 recovery lease failed for turn_caaa5f09-0af8-4fff-9366-3213a0304cb1: recovery store temporarily refuses the lease write
+[degraded] session session_cfcdf861-be36-4838-87d8-7b73ab3258e2 recovery lease failed for turn_caaa5f09-0af8-4fff-9366-3213a0304cb1: recovery store temporarily refuses the lease write
+[degraded] session session_cfcdf861-be36-4838-87d8-7b73ab3258e2 recovery lease failed for turn_caaa5f09-0af8-4fff-9366-3213a0304cb1: recovery store temporarily refuses the lease write
+[degraded] session session_cfcdf861-be36-4838-87d8-7b73ab3258e2 recovery lease failed for turn_caaa5f09-0af8-4fff-9366-3213a0304cb1: recovery store temporarily refuses the lease write
+[degraded] session session_cfcdf861-be36-4838-87d8-7b73ab3258e2 recovery lease failed for turn_caaa5f09-0af8-4fff-9366-3213a0304cb1: recovery store temporarily refuses the lease write
+[degraded] session session_cfcdf861-be36-4838-87d8-7b73ab3258e2 recovery lease failed for turn_caaa5f09-0af8-4fff-9366-3213a0304cb1: recovery store temporarily refuses the lease write
+[degraded] session session_9fe1a2d6-69d2-4cc7-bf77-8973b011895e recovery attempt-intent persist failed for turn_d67e5b57-dd1f-4b05-9115-4101879115fc — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_9fe1a2d6-69d2-4cc7-bf77-8973b011895e release lease read failed for turn_d67e5b57-dd1f-4b05-9115-4101879115fc: recovery read outage
+[degraded] session session_472984ba-1e71-4034-a51c-df85639451ec recovery attempt-intent persist failed for turn_8b5f85d0-fb25-4e35-b3f9-47b5a6aa1906 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_472984ba-1e71-4034-a51c-df85639451ec recovery attempt-intent persist failed for turn_8b5f85d0-fb25-4e35-b3f9-47b5a6aa1906 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_472984ba-1e71-4034-a51c-df85639451ec recovery attempt-intent persist failed for turn_8b5f85d0-fb25-4e35-b3f9-47b5a6aa1906 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_472984ba-1e71-4034-a51c-df85639451ec recovery attempt-intent persist failed for turn_8b5f85d0-fb25-4e35-b3f9-47b5a6aa1906 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_472984ba-1e71-4034-a51c-df85639451ec recovery attempt-intent persist failed for turn_8b5f85d0-fb25-4e35-b3f9-47b5a6aa1906 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_472984ba-1e71-4034-a51c-df85639451ec recovery attempt-intent persist failed for turn_8b5f85d0-fb25-4e35-b3f9-47b5a6aa1906 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_472984ba-1e71-4034-a51c-df85639451ec recovery attempt-intent persist failed for turn_8b5f85d0-fb25-4e35-b3f9-47b5a6aa1906 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_a198333f-19e9-442b-b031-bdda603654c6 recovery attempt-intent persist failed for turn_fc5412dc-c079-4bf3-843c-3e2e05d2d545 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_a198333f-19e9-442b-b031-bdda603654c6 release lease read failed for turn_fc5412dc-c079-4bf3-843c-3e2e05d2d545: recovery read outage
+[degraded] session session_a198333f-19e9-442b-b031-bdda603654c6 recovery record load failed for turn_fc5412dc-c079-4bf3-843c-3e2e05d2d545: recovery read outage
+[degraded] session session_b34ba46f-2ceb-4954-a803-2f1be3a5c43f recovery attempt-intent persist failed for turn_d6ae7803-b1bc-4700-8d52-b60670c1be0a — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_b34ba46f-2ceb-4954-a803-2f1be3a5c43f release lease read failed for turn_d6ae7803-b1bc-4700-8d52-b60670c1be0a: recovery read outage
+[degraded] session session_dbe17574-c000-434c-8528-d36c3760e01f recovery discovery: durable read failed — session store temporarily unavailable
+[degraded] session session_f29f5c79-8435-4b02-b0b2-5f1ae5fb2d19 recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_f29f5c79-8435-4b02-b0b2-5f1ae5fb2d19 recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_f29f5c79-8435-4b02-b0b2-5f1ae5fb2d19 recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_f29f5c79-8435-4b02-b0b2-5f1ae5fb2d19 recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_f29f5c79-8435-4b02-b0b2-5f1ae5fb2d19 recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_f29f5c79-8435-4b02-b0b2-5f1ae5fb2d19 recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_f29f5c79-8435-4b02-b0b2-5f1ae5fb2d19 recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_523d39ec-2cbe-4512-b26c-1675c0489499 recovery discovery: durable read failed — session store unavailable for turn turn_2efa93e8-1a7c-43c1-b0d9-b7dd46feffe3
+[degraded] session session_3302d759-1270-43a1-b35c-87641ac3f1e0 recovery discovery: durable read failed — session store temporarily unavailable
+[degraded] session session_2149fc90-0e2d-4f6b-979e-555f6a31d23b terminal recovery ACK failed for turn_f9ec0068-d595-4f06-98c1-a9327cd490a2: compound terminal/marker write outage — entering pending-commit (reconcile), queue frozen
+[degraded] session session_2149fc90-0e2d-4f6b-979e-555f6a31d23b failed to persist recovery record for turn_f9ec0068-d595-4f06-98c1-a9327cd490a2: compound terminal/marker write outage
+[degraded] session session_2149fc90-0e2d-4f6b-979e-555f6a31d23b recovery discovery: durable read failed — recovery store lookup outage
+[degraded] session session_2899557a-b2f5-4924-b234-6735b158e422 recovery discovery: durable read failed — session store temporarily unavailable
+ ✓ packages/core/src/runtime/recovery-durable.test.ts (29 tests) 104ms
+[harness] context budget: model capabilities unknown for scripted/original — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/original — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/chosen — using conservative fallback 32000
+ ✓ apps/web/src/deepseek/session-model-snapshot.test.ts (1 test) 174ms
+ ✓ packages/memory/src/usefulness-atomic.regressions.test.ts (27 tests) 187ms
+[degraded] path-scoped-discovery.close: instruction handle cleanup failed
+ ✓ packages/context/src/scoped-instruction-read.regressions.test.ts (34 tests) 152ms
+[prereg] trusted-build mode: baseline @ 104a88119d9f closure 278587dce214… network sandbox=none
+ ✓ apps/cli/src/prereg-declared-posture-forward-path.test.ts (4 tests) 225ms
+ ✓ packages/agents/src/scheduler.test.ts (19 tests) 178ms
+ ✓ packages/tools/src/syntax-index.security.regressions.test.ts (3 tests) 158ms
+ ✓ apps/cli/src/n6-real-formal-ci.test.ts (3 tests) 169ms
+ ✓ packages/harness/src/verification-wiring.integration.test.ts (4 tests) 190ms
+ ✓ apps/cli/src/source-audit-verification.regressions.test.ts (1 test) 196ms
+[harness] context budget: model capabilities unknown for openai/formal-coding — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for openai/formal-coding — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for openai/formal-coding — using conservative fallback 32000
+ ✓ packages/harness/src/ask-advertisement.regressions.test.ts (3 tests) 164ms
+ ✓ packages/harness/src/path-scoped-instructions.regressions.test.ts (9 tests) 175ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts (21 tests) 197ms
+ ✓ packages/evaluation/src/r97-budget-channel.test.ts (17 tests) 150ms
+ ✓ packages/evaluation/src/gate-evidence-v2.test.ts (45 tests) 174ms
+ ✓ apps/cli/src/verified-completion-gate.integration.test.ts (4 tests) 125ms
+ ✓ packages/evaluation/src/e4-r22-execution-plan.test.ts (7 tests) 189ms
+[degraded] prereg observer refused case regression/reg-01: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/reg-02: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/reg-06: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/reg-08: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/adv-03: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/adv-07: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/st-02: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/st-05: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/reg-01: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/reg-02: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/reg-06: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/reg-08: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/adv-03: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/adv-07: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/st-02: not a readable benchmarks case directory
+[degraded] prereg observer refused case regression/st-05: not a readable benchmarks case directory
+ ✓ apps/cli/src/prereg-production-wiring.test.ts (2 tests) 162ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ apps/web/src/deepseek/session.production.test.ts (1 test) 186ms
+ ✓ packages/evaluation/src/promotion-envelope-forgery.test.ts (18 tests) 161ms
+ ✓ packages/context/src/default-discovery-budget-regressions.test.ts (49 tests) 155ms
+[degraded] openai.reader.cancel: response cleanup failed
+ ✓ packages/model/src/openai-stream-footer.regressions.test.ts (33 tests) 162ms
+ ✓ packages/sdk/src/event-stream.test.ts (13 tests) 152ms
+[degraded] sqlite-store.close-journal-mode: database is locked
+ ✓ packages/store/src/sqlite-runtime-store.test.ts (15 tests) 110ms
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+ ✓ packages/harness/src/memory-prefetch-production.regressions.test.ts (4 tests) 150ms
+[degraded] memory-store.corrupt-line: Expected property name or '}' in JSON at position 1 (line 1 column 2)
+[degraded] memory-store.corrupt-line: Expected property name or '}' in JSON at position 1 (line 1 column 2)
+ ✓ packages/memory/src/memory-store.test.ts (25 tests) 169ms
+ ✓ apps/cli/src/prereg-declared-pricing.test.ts (73 tests) 140ms
+ ✓ packages/gateway/src/rpc.test.ts (27 tests) 148ms
+ ✓ packages/model/src/openai-request-policy.test.ts (7 tests) 139ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+ ✓ packages/harness/src/memory-search-tools.integration.test.ts (1 test) 94ms
+[harness] context budget: model capabilities unknown for openai/offline — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for openai/offline — using conservative fallback 32000
+ ✓ apps/web/src/coding-evolution-cache.integration.test.ts (1 test) 97ms
+ ✓ packages/tools/src/workspace-knowledge-regressions.test.ts (29 tests) 150ms
+ ✓ packages/tools/src/verification/task-verifier.test.ts (20 tests) 129ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ apps/web/src/deepseek/coding-status.integration.test.ts (1 test) 132ms
+ ✓ packages/agents/src/nested-delegation.test.ts (12 tests) 137ms
+ ✓ apps/cli/src/context-safe-tool-call-efficiency-v2.integration.test.ts (5 tests) 127ms
+ ✓ packages/security/src/no-silent-catch.test.ts (4 tests) 147ms
+ ✓ packages/evaluation/src/source-audit-budget.regressions.test.ts (10 tests) 125ms
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+ ✓ apps/cli/src/champion-application.integration.test.ts (11 tests) 144ms
+ ✓ packages/core/src/runtime/wire-protocol-e2e.test.ts (8 tests) 148ms
+ ✓ packages/core/src/runtime/active-user-context.test.ts (24 tests) 98ms
+ ✓ packages/agents/src/completion-protocol.test.ts (5 tests) 125ms
+ ✓ packages/harness/src/reflection-turn-isolation.regressions.test.ts (18 tests) 130ms
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+ ✓ apps/cli/src/audit.benchmark-profile.test.ts (11 tests) 134ms
+ ✓ packages/evaluation/src/benchmark-isolation.test.ts (20 tests) 118ms
+ ✓ packages/memory/src/sqlite-memory-metadata.regressions.test.ts (29 tests) 84ms
+ ✓ packages/tools/src/read-file-resource.regressions.test.ts (23 tests) 94ms
+ ✓ apps/cli/src/prereg-fixture-checkout-trust.test.ts (5 tests) 130ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for unknown-provider/unknown-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for unknown-provider/unknown-model — using conservative fallback 32000
+ ✓ packages/harness/src/gen1-provider-config-identity.regressions.test.ts (11 tests) 82ms
+ ✓ packages/evaluation/src/gen1-budget-bootstrap-race.regressions.test.ts (1 test) 113ms
+ ✓ packages/core/src/runtime/provider-termination-regressions.test.ts (11 tests) 69ms
+ ✓ packages/context/src/circuit-breaker.test.ts (6 tests) 69ms
+ ✓ packages/session/src/session-store.test.ts (20 tests) 82ms
+ ✓ packages/harness/src/config-wiring.test.ts (10 tests) 69ms
+ ✓ packages/evaluation/src/e4-r27-promotion-eligibility.test.ts (18 tests) 101ms
+ ✓ apps/web/src/deepseek/transport.test.ts (12 tests) 93ms
+[degraded] memory.search: FTS unavailable or query rejected; using literal search
+ ✓ packages/memory/src/sqlite-memory-store.test.ts (31 tests) 96ms
+ ✓ packages/events/src/event-store.test.ts (28 tests) 90ms
+r101-mutation: --only definitely-not-a-mutation matches no mutation
+ ✓ packages/evaluation/src/r97-mutation-check.test.ts (35 tests) 107ms
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+ ✓ packages/harness/src/memory.integration.test.ts (2 tests) 117ms
+ ✓ packages/tools/src/process/utf8-output.regressions.test.ts (34 tests) 107ms
+[degraded] memory.search: FTS unavailable or query rejected; using literal search
+ ✓ packages/memory/src/memory-search-contract.regressions.test.ts (43 tests) 121ms
+ ✓ packages/context/src/pipeline.test.ts (38 tests) 86ms
+ ✓ apps/cli/src/prereg-egress-trust-boundary.test.ts (4 tests) 119ms
+[degraded] session session_4e9bc0dc-5d36-4d42-a92e-fca6aa73db9d durable followup consume failed for fup-1 (prompt remains bound to turn turn_52c0e140-8d89-44e1-86cd-72a37584d947): durable ack down
+[degraded] session session_9008cd0e-5766-48b0-9574-d1f7cc7f3916 durable followup bind failed for fup-1 (created turn turn_94f1778b-f7e2-46fb-8adc-199ed03a3265 will not execute): bind down
+[degraded] inbox.promotion-identity-missing: session session_20747357-c2a7-448e-9585-3495aaab7ccd prompt prompt_a8e3eda3-2c38-4a21-a495-fe3bb1272e1e is promoted but has no promotedTurnId — recovery-required, not replayed
+[degraded] session session_be7c5303-8baf-4a4d-aafc-2ac6a4830e35 failed to persist turn turn_80df1369-971e-43d0-aafd-8f66539221eb as cancelled: P38.2-9 simulated updateTurn failure
+[degraded] session session_17dea4b7-5b68-450d-9b2f-197df9327258 failed to persist turn turn_d4081f45-93d2-4649-840b-c59c1f3295b8 as cancelled: P38.2-9 simulated updateTurn failure
+[degraded] session session_17dea4b7-5b68-450d-9b2f-197df9327258 failed to emit turn.cancelled for turn_d4081f45-93d2-4649-840b-c59c1f3295b8: P38.2-9 simulated emit failure
+[degraded] session session_6001494a-b32e-4ded-a05a-c7ba0ec478b5 failed to persist turn turn_96527edd-675c-4f9e-99ea-d492414b2404 as cancelled: P38.2-9 simulated updateTurn failure
+[degraded] session session_75faeb9a-36d3-4652-9262-494477b279a5 failed to persist turn turn_ff45597e-78d2-4d3e-bbe0-0f359de9ef55 as cancelled: P38.3-8 simulated updateTurn failure
+ ✓ packages/core/src/runtime/session-actor.test.ts (69 tests) 97ms
+ ✓ packages/session/src/service.test.ts (11 tests) 52ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ apps/cli/src/coding-benchmark.test.ts (3 tests) 63ms
+ ✓ packages/tools/src/scoped-search-paths.regressions.test.ts (24 tests) 79ms
+r101-closed-loop: nothing to do — pass --all, or one or more of --setup-only --acceptance --suite --matrix --identity
+r101-closed-loop: the baseline arm has no built CLI at /workspace/harness-agent-coding-final-20261015/.ci/definitely-not-prepared/baseline/apps/cli/dist/main.js — run --setup-only first (a missing arm is a setup failure, never a skip)
+ ✓ packages/evaluation/src/r97-closed-loop.test.ts (24 tests) 64ms
+ ✓ packages/evaluation/src/tool-call-efficiency-pricing-send-guard.test.ts (9 tests) 96ms
+ ✓ packages/context/src/path-scoped-discovery.test.ts (24 tests) 111ms
+ ✓ packages/memory/src/memory-visibility.regressions.test.ts (28 tests) 68ms
+[degraded] path-scoped-discovery.close: instruction handle cleanup failed
+ ✓ packages/harness/src/scoped-instruction-read.integration.test.ts (5 tests) 95ms
+ ✓ packages/evaluation/src/promotion-envelope-r15.test.ts (5 tests) 74ms
+ ✓ packages/gateway/src/desktop-client.test.ts (17 tests) 88ms
+ ✓ packages/evaluation/src/harness-conformance-gate.test.ts (35 tests) 58ms
+ ✓ packages/evaluation/src/verified-completion-gate-preregistration.test.ts (12 tests) 59ms
+ ✓ packages/evaluation/src/e2-final-integration.test.ts (5 tests) 85ms
+ ✓ packages/tools/src/process/windows-fixture-guard.test.ts (17 tests) 33ms
+ ✓ packages/model/src/openai.wire-stub.test.ts (22 tests) 69ms
+ ✓ packages/evaluation/src/tool-call-efficiency-fixture-billing-boundary.test.ts (7 tests) 72ms
+ ✓ packages/evaluation/src/tool-call-efficiency-pricing-basis-wiring.test.ts (16 tests) 75ms
+ ✓ packages/evaluation/src/artifact-v3/artifact-v3.test.ts (40 tests) 68ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ packages/harness/src/coding-prompt-policy.test.ts (6 tests) 88ms
+ ✓ packages/evaluation/src/e2-arch-invariants.test.ts (12 tests) 54ms
+[degraded] durable-recovery-store.release-lock (ownership changed, not deleting /tmp/e4-08-rec-ywYIoj/recovery/t10.json.lock): lock token "9999 newer-owner" != mine
+ ✓ packages/harness/src/durable-recovery-store.test.ts (15 tests) 55ms
+ ✓ packages/skills/src/skill-loader.test.ts (22 tests) 69ms
+ ✓ packages/tools/src/tools/exec-workspace-policy.test.ts (12 tests) 52ms
+ ✓ apps/web/src/deepseek/socket.test.ts (7 tests) 84ms
+[degraded] openai.reader.cancel: response cleanup failed
+ ✓ packages/model/src/openai-retry-wait.regressions.test.ts (16 tests) 66ms
+ ✓ packages/evaluation/src/tool-call-efficiency-pricing-admission.test.ts (16 tests) 64ms
+ ✓ apps/cli/src/n2-script-scope.test.ts (10 tests) 90ms
+ ✓ apps/cli/src/n2-unified-selection.test.ts (9 tests) 90ms
+ ✓ apps/cli/src/champion-application-r05.test.ts (4 tests) 66ms
+ ✓ packages/core/src/runtime/pr-harness-fault-recovery.regressions.test.ts (12 tests) 65ms
+ ✓ packages/evaluation/src/context-safe-tool-call-efficiency-preregistration.test.ts (14 tests) 74ms
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/test-model — using conservative fallback 32000
+ ✓ apps/cli/src/champion-application-p1.test.ts (11 tests) 72ms
+[skill denied] detection=injection target=/tmp/gen1-skills-cli-9EJoIM/skills/repair-reference/SKILL.md reasons=dismiss-previous-instructions,dismiss-all-instructions,override-own-instructions
+ ✓ apps/cli/src/gen1-skills-wiring.regressions.test.ts (2 tests) 82ms
+ ✓ packages/core/src/runtime/run-budget.test.ts (8 tests) 52ms
+ ✓ packages/evaluation/src/baseline.test.ts (61 tests) 66ms
+ ✓ packages/evaluation/src/e4-r43-execution-plan-capacity.test.ts (3 tests) 48ms
+[harness] context budget: model capabilities unknown for offline-v2/fixture — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for offline-v2/fixture — using conservative fallback 32000
+ ✓ packages/harness/src/coding-v2.integration.test.ts (1 test) 58ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ packages/harness/src/denial-telemetry.regressions.test.ts (3 tests) 59ms
+ ✓ apps/cli/src/r0-f5-pricing-declaration-gaps.test.ts (6 tests) 59ms
+ ✓ packages/store-integrity/src/index.test.ts (11 tests) 58ms
+ ✓ packages/harness/src/skill.integration.test.ts (1 test) 46ms
+ ✓ packages/evaluation/src/context-safe-tool-call-efficiency-v2-preregistration.test.ts (13 tests) 70ms
+ ✓ packages/memory/src/retrieval.test.ts (19 tests) 55ms
+ ✓ apps/cli/src/coding-prompt.integration.test.ts (5 tests) 63ms
+ ✓ apps/cli/src/n5-offline-provider.test.ts (1 test) 53ms
+ ✓ packages/core/src/runtime/loop-integration.test.ts (26 tests) 56ms
+ ✓ packages/core/src/runtime/fault-injection-v2.test.ts (17 tests) 58ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ apps/web/src/deepseek/session-availability.test.ts (2 tests) 45ms
+ ✓ packages/context/src/discovery.test.ts (11 tests) 37ms
+ ✓ packages/harness/src/memory-runtime-bridge.test.ts (7 tests) 41ms
+ ✓ packages/core/src/runtime/message-history-regressions.test.ts (24 tests) 51ms
+ ✓ packages/model/src/openai-system-context.regressions.test.ts (13 tests) 49ms
+ ✓ packages/checkpoint/src/checkpoint-store.test.ts (12 tests) 52ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ apps/web/src/deepseek/owners.security.test.ts (2 tests) 41ms
+ ✓ packages/core/src/runtime/final-continuation.regressions.test.ts (14 tests) 49ms
+ ✓ packages/observability/src/inventory.test.ts (8 tests) 58ms
+ ✓ packages/model/src/model.test.ts (9 tests) 48ms
+[degraded] cache-diagnostics: observation callback failed
+[degraded] cache-diagnostics: observation callback failed
+[degraded] cache-diagnostics: observation callback failed
+[degraded] cache-diagnostics: observation callback failed
+[degraded] cache-diagnostics: observation callback failed
+[degraded] cache-diagnostics: observation callback failed
+[degraded] cache-diagnostics: observation callback failed
+[degraded] cache-diagnostics: observation callback failed
+[degraded] cache-diagnostics: observation callback failed
+[degraded] cache-diagnostics: observation callback failed
+[degraded] cache-diagnostics: observation callback failed
+[degraded] cache-diagnostics: observation callback failed
+[degraded] cache-diagnostics: observation callback failed
+[degraded] cache-diagnostics: observation callback failed
+[degraded] cache-diagnostics: observation callback failed
+[degraded] cache-diagnostics: observation callback failed
+[degraded] cache-diagnostics: observation callback failed
+[degraded] cache-diagnostics: observation callback failed
+[degraded] cache-diagnostics: observation callback failed
+[degraded] cache-diagnostics: observation callback failed
+[degraded] cache-diagnostics: observation callback failed
+[degraded] cache-diagnostics: observation callback failed
+ ✓ packages/model/src/request-prefix-observer.integration.test.ts (2 tests) 41ms
+ ✓ packages/model/src/gen1-reasoning-compatibility.regressions.test.ts (19 tests) 41ms
+ ✓ apps/cli/src/audit.evidence-probe.test.ts (8 tests) 41ms
+ ✓ apps/web/src/deepseek/activity-store.security.test.ts (3 tests) 47ms
+ ✓ apps/cli/src/release-artifacts.test.ts (7 tests) 34ms
+ ✓ packages/harness/src/candidate-persistence.regressions.test.ts (11 tests) 55ms
+ ✓ packages/evaluation/src/r97-offline-seam.test.ts (18 tests) 72ms
+ ✓ packages/model/src/openai-termination-regressions.test.ts (19 tests) 46ms
+ ✓ packages/core/src/runtime/gen1-model-recovery.regressions.test.ts (34 tests) 44ms
+ ✓ apps/web/src/deepseek/projections.test.ts (11 tests) 36ms
+ ✓ apps/cli/src/champion-application-r16.test.ts (6 tests) 34ms
+ ✓ packages/harness/src/command-discovery-cache.regressions.test.ts (3 tests) 37ms
+ ✓ packages/evaluation/src/r97-budget-write-fault.test.ts (4 tests) 32ms
+ ✓ packages/model/src/source-audit-request.regressions.test.ts (7 tests) 33ms
+ ✓ packages/core/src/runtime/encoded-tool-output-security.regressions.test.ts (40 tests) 39ms
+ ✓ packages/plugins/src/plugin-host-hardened.test.ts (21 tests) 43ms
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any of the parent directories): .git
+
+ ✓ apps/cli/src/learn-command.test.ts (12 tests) 42ms
+ ✓ packages/evaluation/src/tool-call-efficiency-preregistration-v2.test.ts (54 tests) 32ms
+ ✓ packages/security/src/approval-wait-settlement.test.ts (3 tests) 29ms
+ ✓ packages/contracts/src/contracts.test.ts (65 tests) 42ms
+ ✓ packages/evaluation/src/paired-execution-identity.test.ts (7 tests) 43ms
+ ✓ packages/evaluation/src/r97-campaign-evidence.test.ts (24 tests) 54ms
+ ✓ packages/evaluation/src/tool-call-efficiency-fixture-transport-grant.test.ts (4 tests) 35ms
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+ ✓ packages/harness/src/scope-resolver.test.ts (6 tests) 45ms
+ ✓ packages/mcp/src/mcp-client-hardened.test.ts (10 tests) 42ms
+ ✓ packages/tools/src/verification-plan.test.ts (9 tests) 39ms
+[degraded] inbox.corrupt-line: Expected property name or '}' in JSON at position 1 (line 1 column 2)
+ ✓ packages/session/src/inbox.test.ts (14 tests) 39ms
+ ✓ packages/evaluation/src/bench.test.ts (18 tests) 39ms
+ ✓ packages/core/src/runtime/r86-h2-offline-replay.test.ts (4 tests) 29ms
+ ✓ packages/memory/src/conflict-index.regressions.test.ts (42 tests) 38ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ packages/harness/src/coding-summary-identity.regressions.test.ts (1 test) 28ms
+ ✓ packages/evaluation/src/artifact-v3/security-consistency.regressions.test.ts (18 tests) 34ms
+ ✓ packages/model/src/capability-resolver.test.ts (6 tests) 4ms
+ ✓ packages/evaluation/src/artifact-validate.test.ts (15 tests) 35ms
+ ✓ packages/core/src/runtime/tool-output-boundary.regressions.test.ts (21 tests) 34ms
+ ✓ packages/tools/src/command-discovery.test.ts (15 tests) 42ms
+ ✓ packages/tools/src/review-regressions.test.ts (42 tests) 37ms
+ ✓ packages/core/src/runtime/crash-sideeffect.test.ts (5 tests) 32ms
+ ✓ packages/model/src/gen1-model-identity.regressions.test.ts (3 tests) 29ms
+ ✓ packages/memory/src/migration.test.ts (7 tests) 36ms
+ ✓ packages/mcp/src/mcp-chaos.test.ts (12 tests) 33ms
+ ✓ packages/core/src/runtime/crash-matrix.test.ts (8 tests) 34ms
+ ✓ packages/core/src/runtime/step-snapshot.test.ts (28 tests) 34ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ apps/web/src/source-audit-restoration.regressions.test.ts (1 test) 27ms
+ ✓ packages/evaluation/src/champion-eval-strict-read.test.ts (4 tests) 33ms
+ ✓ packages/harness/src/skill-context.test.ts (7 tests) 28ms
+ ✓ packages/core/src/runtime/session-race2.test.ts (5 tests) 29ms
+ ✓ packages/tools/src/repo-map.test.ts (12 tests) 30ms
+ ✓ packages/core/src/runtime/race-split.test.ts (5 tests) 31ms
+ ✓ packages/tools/src/transaction-final.regressions.test.ts (6 tests) 33ms
+ ✓ apps/cli/src/champion-eval.test.ts (15 tests) 28ms
+ ✓ packages/evaluation/src/r97-redaction.test.ts (12 tests) 37ms
+ ✓ packages/evaluation/src/e4-r28-execution-plan-fields.test.ts (14 tests) 42ms
+ ✓ packages/session/src/gen1-ask-store-retry.regressions.test.ts (5 tests) 22ms
+[degraded] skill-store.corrupt-line: Expected property name or '}' in JSON at position 1 (line 1 column 2)
+ ✓ packages/skills/src/skill-evolution.test.ts (22 tests) 31ms
+ ✓ packages/core/src/runtime/checkpoint.test.ts (6 tests) 32ms
+ ✓ packages/gateway/src/transport-conformance.test.ts (22 tests) 38ms
+ ✓ apps/cli/src/experiment-command.test.ts (4 tests) 19ms
+ ✓ packages/core/src/runtime/structured-output-security.regressions.test.ts (26 tests) 24ms
+ ✓ packages/harness/src/tool-budget-binding.test.ts (3 tests) 31ms
+ ✓ packages/model/src/openai-empty-finish-reason.regressions.test.ts (2 tests) 31ms
+ ✓ packages/evaluation/src/r98-fixture-cases.test.ts (8 tests) 21ms
+ ✓ packages/core/src/runtime/ask-answer-identity.regressions.test.ts (14 tests) 27ms
+ ✓ packages/evaluation/src/r95-authorization-strictness.test.ts (60 tests) 32ms
+ ✓ packages/core/src/runtime/effective-config.test.ts (10 tests) 27ms
+ ✓ packages/harness/src/workspace-manager.test.ts (6 tests) 34ms
+ ✓ packages/core/src/runtime/followup-recovery.test.ts (7 tests) 23ms
+ ✓ packages/core/src/runtime/r85-h2-progress-blind-gate.test.ts (4 tests) 27ms
+ ✓ packages/tools/src/transaction.test.ts (9 tests) 41ms
+ ✓ packages/evaluation/src/r92-authorization.test.ts (44 tests) 27ms
+ ✓ packages/evaluation/src/paired-executor.test.ts (9 tests) 30ms
+ ✓ packages/session/src/p2-integration.test.ts (3 tests) 19ms
+ ✓ packages/memory/src/retrieval-work.regressions.test.ts (29 tests) 25ms
+ ✓ packages/evaluation/src/challenger-reaudit.test.ts (5 tests) 14ms
+ ✓ packages/mcp/src/mcp-runtime-v2.test.ts (13 tests) 25ms
+[degraded] session session_44e7d2de-0e96-4a27-bb71-56bcdb21b691 durable followup consume failed for fup-1 (prompt remains bound to turn turn_bd9b4e40-af8b-48bd-9d6d-a1962efe6fb7): injected consume failure
+[degraded] session session_dee02add-da6e-4861-9613-9b07e8532699 durable followup bind failed for fup-1 (created turn turn_b5a204c1-2d11-4150-96b4-f9b7e7af8ecc will not execute): injected bind failure
+ ✓ packages/core/src/runtime/followup-crash-matrix.test.ts (9 tests) 23ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ packages/harness/src/tool-event-security.regressions.test.ts (2 tests) 24ms
+ ✓ packages/core/src/runtime/resume.test.ts (13 tests) 25ms
+ ✓ packages/security/src/sandbox.test.ts (52 tests) 28ms
+ ✓ packages/core/src/runtime/recovery-trace-and-security-events.regressions.test.ts (7 tests) 28ms
+ ✓ packages/skills/src/skill-store.test.ts (6 tests) 27ms
+[degraded] reflection.events.list: boom
+ ✓ packages/harness/src/reflection-runner.test.ts (8 tests) 26ms
+ ✓ packages/core/src/runtime/gen1-followup-wakeup.regressions.test.ts (8 tests) 29ms
+[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath '/tmp/e2-07-8POKt8/runs/baseline.json'
+[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath '/tmp/e2-07-8POKt8/runs/candidate.json'
+[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath '/tmp/e2-07-8POKt8/runs/baseline.json'
+[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath '/tmp/e2-07-8POKt8/runs/candidate.json'
+[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath '/tmp/e2-07-8POKt8/runs/candidate.json'
+[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath '/tmp/e2-07-8POKt8/runs/baseline.json'
+[degraded] promotion-envelope realpath check skipped: ENOENT: no such file or directory, realpath '/tmp/e2-07-zePGYf/decision.json'
+ ✓ packages/evaluation/src/promotion-envelope.test.ts (11 tests) 30ms
+ ✓ packages/evaluation/src/mining.test.ts (20 tests) 37ms
+ ✓ apps/cli/src/default-harness.integration.test.ts (4 tests) 24ms
+ ✓ packages/evaluation/src/champion-eval-v3.test.ts (15 tests) 24ms
+ ✓ apps/cli/src/windows-reserved-lease.regressions.test.ts (2 tests) 21ms
+ ✓ packages/evaluation/src/prereg-activation-binding.test.ts (6 tests) 32ms
+ ✓ packages/core/src/runtime/memory-prefetch.regressions.test.ts (15 tests) 25ms
+ ✓ packages/core/src/runtime/step-snapshot.invariant.test.ts (10 tests) 23ms
+ ✓ packages/security/src/boundary-guard.test.ts (49 tests) 24ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ apps/web/src/deepseek/backend.final.integration.test.ts (1 test) 22ms
+ ✓ packages/tools/src/source-matrix.test.ts (22 tests) 20ms
+ ✓ packages/core/src/lifecycle/hooks.test.ts (18 tests) 20ms
+ ✓ packages/tools/src/env-snapshot.test.ts (6 tests) 23ms
+ ✓ packages/evaluation/src/r97-acceptance-matrix.test.ts (26 tests) 24ms
+ ✓ packages/protocol/src/idempotency.test.ts (5 tests) 10ms
+ ✓ packages/tools/src/symbol-index.test.ts (6 tests) 25ms
+ ✓ packages/harness/src/trust-envelope.test.ts (8 tests) 21ms
+ ✓ packages/harness/src/child-merge.test.ts (3 tests) 16ms
+ ✓ packages/evaluation/src/champion-eval-r14.test.ts (16 tests) 24ms
+ ✓ apps/cli/src/provider-offline-profile.test.ts (33 tests) 21ms
+ ✓ packages/evaluation/src/e2-baseline-audit.test.ts (10 tests) 31ms
+ ✓ apps/cli/src/e4-r58-mutation-newlines.test.ts (5 tests) 12ms
+ ✓ apps/cli/src/explain-command.test.ts (5 tests) 16ms
+ ✓ packages/evaluation/src/mechanism-contract.test.ts (9 tests) 14ms
+ ✓ packages/evaluation/src/champion-eval-grid.test.ts (5 tests) 18ms
+ ✓ packages/evaluation/src/harness-metrics.test.ts (41 tests) 30ms
+ ✓ packages/store/src/gen1-migration-integrity.regressions.test.ts (5 tests) 24ms
+ ✓ packages/evaluation/src/experiment-harness.test.ts (5 tests) 21ms
+ ✓ packages/core/src/runtime/session-race.test.ts (5 tests) 19ms
+ ✓ packages/skills/src/task-scoped-selection.test.ts (23 tests) 19ms
+[degraded] ask-user-store.corrupt-line: Unexpected token 'o', "not-json" is not valid JSON
+ ✓ packages/session/src/ask-user-store.test.ts (7 tests) 22ms
+ ✓ apps/cli/src/e3-07-promotion-trust.test.ts (5 tests) 29ms
+ ✓ packages/context/src/taxonomy.test.ts (18 tests) 23ms
+ ✓ packages/evaluation/src/evolution-ledger.test.ts (8 tests) 19ms
+ ✓ packages/core/src/runtime/ask-user-callback.regressions.test.ts (4 tests) 25ms
+ ✓ packages/sdk/src/conformance.test.ts (3 tests) 19ms
+ ✓ apps/cli/src/mechanisms.test.ts (7 tests) 13ms
+ ✓ packages/core/src/runtime/race-part1.test.ts (1 test) 24ms
+ ✓ packages/core/src/runtime/final-parked-cancel.regressions.test.ts (4 tests) 19ms
+ ✓ packages/context/src/context-optimization-regressions.test.ts (39 tests) 20ms
+ ✓ packages/security/src/gen1-approval-store.regressions.test.ts (8 tests) 16ms
+ ✓ apps/cli/src/champion-state-file.test.ts (6 tests) 20ms
+ ✓ packages/core/src/tools/tool-selector.test.ts (4 tests) 6ms
+ ✓ packages/core/src/runtime/race-part4.test.ts (1 test) 18ms
+[degraded] discovery.close: instruction handle cleanup failed
+ ✓ packages/context/src/default-discovery-read-failures.test.ts (3 tests) 16ms
+ ✓ apps/cli/src/production-audit.test.ts (5 tests) 27ms
+ ✓ packages/evaluation/src/pr-review-20261014.regressions.test.ts (15 tests) 16ms
+ ✓ packages/evaluation/src/provenance-v2.test.ts (8 tests) 9ms
+ ✓ packages/core/src/runtime/pr-review-20261014.regressions.test.ts (4 tests) 18ms
+ ✓ packages/mcp/src/mcp-tool-adapter.test.ts (17 tests) 16ms
+ ✓ packages/evaluation/src/arm-factory.test.ts (18 tests) 17ms
+ ✓ packages/core/src/runtime/race-part0.test.ts (1 test) 11ms
+ ✓ packages/core/src/runtime/world-snapshot.conformance.test.ts (8 tests) 15ms
+ ✓ packages/session/src/replay.test.ts (14 tests) 16ms
+ ✓ packages/contracts/src/non-fatal.test.ts (6 tests) 18ms
+ ✓ packages/harness/src/security-regression-matrix.test.ts (12 tests) 14ms
+[degraded] candidate-store.corrupt-line: Unexpected token 'o', "not-json" is not valid JSON
+ ✓ packages/harness/src/candidate-store.test.ts (3 tests) 14ms
+ ✓ packages/evaluation/src/context-safe-tool-call-efficiency.regressions.test.ts (7 tests) 10ms
+ ✓ packages/tools/src/tools/exec-workspace-root-alias.test.ts (7 tests) 9ms
+ ✓ packages/tools/src/process/r96-windows-execution-boundary.test.ts (25 tests | 3 skipped) 22ms
+ ✓ packages/context/src/coding-summary.test.ts (4 tests) 14ms
+ ✓ packages/tools/src/tool-dispatch-budget.test.ts (6 tests) 14ms
+ ✓ apps/cli/src/audit.default-profile.test.ts (23 tests) 12ms
+ ✓ apps/cli/src/release-verify.test.ts (46 tests) 16ms
+ ✓ packages/evaluation/src/verified-completion-gate.regressions.test.ts (7 tests) 13ms
+ ✓ packages/evaluation/src/champion-eval-recovery-security.test.ts (8 tests) 14ms
+ ✓ packages/learning/src/experiments.test.ts (4 tests) 4ms
+ ✓ packages/context/src/rehydration-headroom.regressions.test.ts (24 tests) 17ms
+ ✓ packages/core/src/runtime/race-part3.test.ts (1 test) 13ms
+ ✓ apps/web/src/gen1-session-sidebar.test.ts (2 tests) 10ms
+ ✓ packages/evaluation/src/tool-call-efficiency-preregistration.test.ts (9 tests) 12ms
+ ✓ packages/evaluation/src/champion-application.test.ts (18 tests) 12ms
+ ✓ packages/core/src/runtime/race-bisect3.test.ts (1 test) 12ms
+ ✓ packages/mcp/src/mcp-client.test.ts (15 tests) 13ms
+ ✓ packages/evaluation/src/provenance-v3.test.ts (10 tests) 12ms
+ ✓ packages/core/src/runtime/race-bisect5.test.ts (1 test) 12ms
+ ✓ packages/memory/src/reflection.test.ts (19 tests) 12ms
+ ✓ packages/evaluation/src/load-runs.test.ts (5 tests) 10ms
+ ✓ packages/contracts/src/timer.test.ts (13 tests) 14ms
+ ✓ packages/evaluation/src/paired-plan.test.ts (12 tests) 11ms
+ ✓ packages/harness/src/adversarial-regression.test.ts (12 tests) 13ms
+ ✓ packages/security/src/canonical-path.test.ts (26 tests) 12ms
+ ✓ packages/evaluation/src/formal-invariants.test.ts (40 tests) 11ms
+ ✓ packages/core/src/runtime/race-part2.test.ts (1 test) 12ms
+ ✓ packages/observability/src/harness-evolution.test.ts (19 tests) 11ms
+ ✓ packages/evaluation/src/context-safe-tool-call-efficiency-v2.regressions.test.ts (8 tests) 12ms
+ ✓ packages/learning/src/promoter.test.ts (21 tests) 12ms
+ ✓ packages/tools/src/workspace.test.ts (8 tests) 12ms
+ ✓ packages/harness/src/config-drift.test.ts (14 tests) 11ms
+ ✓ packages/security/src/process-gate.test.ts (33 tests) 12ms
+ ✓ packages/learning/src/sandbox.test.ts (7 tests) 11ms
+ ✓ packages/contracts/src/message-protocol.wire.test.ts (26 tests) 12ms
+ ✓ packages/security/src/capability-guard.test.ts (17 tests) 10ms
+ ✓ packages/learning/src/promoter-v2.test.ts (17 tests) 12ms
+ ✓ packages/memory/src/write-gate.test.ts (15 tests) 12ms
+ ✓ packages/evaluation/src/champion-state.test.ts (11 tests) 10ms
+ ✓ packages/harness/src/config-drift-matrix.test.ts (13 tests) 11ms
+ ✓ packages/protocol/src/schema.test.ts (4 tests) 10ms
+ ✓ packages/core/src/runtime/tool-output-artifact-path.regressions.test.ts (2 tests) 10ms
+ ✓ packages/plugins/src/plugin-host.test.ts (17 tests) 15ms
+ ✓ packages/harness/src/command-discovery-service.test.ts (3 tests) 13ms
+ ✓ packages/tools/src/write-file-safety.test.ts (4 tests) 15ms
+ ✓ packages/evaluation/src/tool-selection.test.ts (17 tests) 9ms
+ ✓ packages/evaluation/src/review-experiment.test.ts (14 tests) 10ms
+ ✓ packages/store/src/gen1-event-abi.regressions.test.ts (5 tests) 11ms
+ ✓ packages/security/src/network-gate.test.ts (20 tests) 12ms
+ ✓ packages/evaluation/src/prompt-rules.test.ts (18 tests) 9ms
+ ✓ packages/evaluation/src/repeated-run.test.ts (7 tests) 10ms
+ ✓ packages/security/src/injection-gate.test.ts (13 tests) 12ms
+ ✓ apps/cli/src/source-audit-cleanup.regressions.test.ts (1 test) 16ms
+ ✓ packages/evaluation/src/manifest.test.ts (31 tests) 12ms
+ ✓ packages/agents/src/coding-prompt-v2.test.ts (3 tests) 11ms
+ ✓ packages/evaluation/src/r97-arm-report-evidence.test.ts (18 tests) 12ms
+ ✓ packages/protocol/src/bounded.test.ts (6 tests) 9ms
+ ✓ packages/evaluation/src/paired-v3-identity.test.ts (7 tests) 10ms
+ ✓ packages/evaluation/src/candidate-registry.test.ts (9 tests) 10ms
+ ✓ packages/orchestration/src/orchestration.test.ts (18 tests) 8ms
+ ✓ packages/harness/src/config-resolver.test.ts (12 tests) 9ms
+ ✓ packages/evaluation/src/tool-call-efficiency.test.ts (7 tests) 9ms
+ ✓ packages/evaluation/src/champion-manifest.test.ts (5 tests) 6ms
+ ✓ packages/learning/src/paired.test.ts (19 tests) 11ms
+ ✓ packages/evaluation/src/promotion-gate.test.ts (11 tests) 7ms
+ ✓ packages/harness/src/delegation-tools.test.ts (7 tests) 10ms
+ ✓ packages/evaluation/src/learned-workflow.test.ts (15 tests) 9ms
+ ✓ packages/core/src/verification/runtime-verifier.test.ts (13 tests) 9ms
+ ✓ packages/evaluation/src/independent-reviewer.test.ts (17 tests) 10ms
+ ✓ packages/evaluation/src/champion-profile.test.ts (10 tests) 12ms
+ ✓ packages/core/src/runtime/environment-snapshot.p31.test.ts (10 tests) 8ms
+ ✓ packages/core/src/runtime/recovery-state-machine.test.ts (8 tests) 10ms
+ ✓ packages/sdk/src/client.test.ts (9 tests) 11ms
+ ✓ packages/evaluation/src/artifact-v3/event-records.test.ts (7 tests) 8ms
+ ✓ packages/evaluation/src/security-evidence-consistency.regressions.test.ts (17 tests) 11ms
+ ✓ packages/security/src/approval-capability.test.ts (23 tests) 9ms
+ ✓ packages/learning/src/evolution.test.ts (6 tests) 8ms
+ ✓ packages/agents/src/state-handoff.test.ts (9 tests) 8ms
+ ✓ packages/memory/src/evidence.test.ts (6 tests) 5ms
+ ✓ packages/orchestration/src/orchestrator.test.ts (7 tests) 7ms
+ ✓ packages/evaluation/src/cross-model.test.ts (8 tests) 6ms
+ ✓ packages/context/src/compaction.test.ts (10 tests) 8ms
+ ✓ packages/contracts/src/message-protocol.test.ts (9 tests) 9ms
+ ✓ packages/mcp/src/mcp-tool-view.test.ts (9 tests) 11ms
+ ✓ packages/evaluation/src/cost-model.test.ts (13 tests) 16ms
+ ✓ packages/model/src/provider-diagnostics.test.ts (8 tests) 9ms
+ ✓ packages/core/src/runtime/skill-instruction-snapshot.p32.test.ts (10 tests) 9ms
+ ✓ packages/evaluation/src/specialist-routing.test.ts (18 tests) 9ms
+ ✓ packages/evaluation/src/planner-executor.test.ts (18 tests) 8ms
+ ✓ packages/context/src/prompt-versioning.test.ts (9 tests) 9ms
+ ✓ packages/context/src/message-budget-regressions.test.ts (14 tests) 9ms
+ ✓ packages/evaluation/src/activation-evidence-execution.test.ts (9 tests) 10ms
+ ✓ packages/evaluation/src/candidate-matrix.test.ts (6 tests) 7ms
+ ✓ apps/cli/src/audit.persistent-profile.test.ts (6 tests) 7ms
+ ✓ packages/harness/src/champion-profile.test.ts (5 tests) 4ms
+ ✓ apps/cli/src/app-server-layering.test.ts (3 tests) 11ms
+ ✓ packages/evaluation/src/champion-decision-v3.test.ts (13 tests) 9ms
+ ✓ apps/cli/src/audit.profiles.test.ts (11 tests) 8ms
+ ✓ packages/core/src/state/projections.test.ts (6 tests) 8ms
+ ✓ packages/tools/src/edit.test.ts (14 tests) 8ms
+ ✓ packages/plugins/src/plugin-registry.test.ts (12 tests) 7ms
+ ✓ packages/evaluation/src/activation-evidence.test.ts (13 tests) 8ms
+ ✓ packages/contracts/src/message-protocol.wire-gap.test.ts (8 tests) 6ms
+ ✓ packages/security/src/secret-gate.test.ts (16 tests) 8ms
+ ✓ packages/context/src/policy-versioning.test.ts (10 tests) 7ms
+ ✓ packages/contracts/src/path-containment.test.ts (41 tests) 8ms
+ ✓ packages/evaluation/src/tool-preference.test.ts (16 tests) 9ms
+ ✓ apps/cli/src/config-command.test.ts (4 tests) 7ms
+ ✓ packages/evaluation/src/experiment-config.test.ts (7 tests) 7ms
+ ✓ packages/core/src/runtime/ask-gate.snapshot.test.ts (2 tests) 7ms
+ ✓ packages/tools/src/schema-advert.test.ts (7 tests) 6ms
+ ✓ apps/cli/src/observer-coverage.regressions.test.ts (12 tests) 7ms
+ ✓ packages/context/src/context-safe-evidence-lifecycle.test.ts (4 tests) 7ms
+ ✓ packages/evaluation/src/champion-harness-config.test.ts (5 tests) 8ms
+ ✓ packages/contracts/src/event-payloads.test.ts (9 tests) 5ms
+ ✓ packages/harness/src/config-layers.test.ts (10 tests) 7ms
+ ✓ packages/evaluation/src/paired-v3-security-per-sample.test.ts (2 tests) 6ms
+ ✓ packages/contracts/src/taxonomy.test.ts (7 tests) 6ms
+ ✓ packages/contracts/src/serialization.test.ts (10 tests) 7ms
+ ✓ packages/tools/src/tool-lookup.test.ts (2 tests) 7ms
+ ✓ packages/evaluation/src/attribution.test.ts (11 tests) 8ms
+ ✓ packages/core/src/runtime/recovery-controller.test.ts (9 tests) 7ms
+ ✓ packages/contracts/src/tool-name.test.ts (4 tests) 5ms
+ ✓ packages/evaluation/src/paired-key.test.ts (9 tests) 6ms
+ ✓ packages/evaluation/src/false-complete-cases.test.ts (4 tests) 5ms
+ ✓ packages/core/src/runtime/command-classification.test.ts (9 tests) 5ms
+ ✓ packages/evaluation/src/security-outcome-v2.test.ts (11 tests) 7ms
+ ✓ packages/agents/src/coding-prompt.test.ts (6 tests) 8ms
+ ✓ apps/web/src/deepseek/browser-usage.regressions.test.ts (7 tests) 5ms
+ ✓ packages/evaluation/src/benchmark-candidates.test.ts (16 tests) 7ms
+ ✓ packages/evaluation/src/security-evidence-execution.test.ts (10 tests) 7ms
+ ✓ packages/core/src/state/agent-state.test.ts (9 tests) 9ms
+ ✓ packages/observability/src/metrics.test.ts (9 tests) 6ms
+ ✓ packages/evaluation/src/paired-eval.test.ts (6 tests) 6ms
+ ✓ packages/memory/src/lifecycle.test.ts (8 tests) 6ms
+ ✓ packages/core/src/runtime/race-bisect.test.ts (1 test) 4ms
+ ✓ packages/core/src/recovery/recovery.test.ts (16 tests) 8ms
+ ✓ packages/core/src/runtime/artifact-store.test.ts (3 tests) 6ms
+ ✓ packages/tools/src/write-safety.test.ts (11 tests) 7ms
+ ✓ packages/learning/src/scorecard.test.ts (12 tests) 6ms
+ ✓ packages/evaluation/src/activation-evidence-v2.test.ts (9 tests) 7ms
+ ✓ packages/security/src/permission-grant.test.ts (7 tests) 5ms
+ ✓ apps/web/src/deepseek/change-compare.regressions.test.ts (4 tests) 5ms
+ ✓ packages/evaluation/src/decision-policy-v3.test.ts (3 tests) 5ms
+ ✓ apps/cli/src/schema-advert-policy.test.ts (3 tests) 6ms
+ ✓ packages/mcp/src/mcp-provenance.test.ts (7 tests) 5ms
+ ✓ apps/cli/src/prereg-docs-smoke.test.ts (4 tests) 6ms
+ ✓ packages/protocol/src/handshake.test.ts (5 tests) 5ms
+ ✓ packages/protocol/src/mapper.test.ts (9 tests) 6ms
+ ✓ packages/security/src/path-parity.test.ts (11 tests) 5ms
+ ✓ packages/evaluation/src/path-scoped-eligibility.test.ts (3 tests) 6ms
+ ✓ packages/skills/src/selection.test.ts (5 tests) 6ms
+ ✓ packages/core/src/runtime/turn-helpers.protocol.test.ts (5 tests) 5ms
+ ✓ packages/security/src/permission.test.ts (11 tests) 6ms
+ ✓ packages/evaluation/src/self-mod-sandbox.test.ts (9 tests) 5ms
+ ✓ packages/contracts/src/testing.test.ts (9 tests) 6ms
+ ✓ packages/context/src/budget.test.ts (8 tests) 6ms
+ ✓ packages/evaluation/src/security-taxonomy.test.ts (12 tests) 6ms
+ ✓ apps/cli/src/promotion-decision.test.ts (5 tests) 7ms
+ ✓ packages/evaluation/src/model-routing.test.ts (7 tests) 5ms
+ ✓ packages/observability/src/trace-tree.test.ts (4 tests) 5ms
+ ✓ apps/cli/src/recover-command.test.ts (2 tests) 5ms
+ ✓ packages/evaluation/src/failure-cluster-backlog.test.ts (3 tests) 7ms
+ ✓ packages/tools/src/semantics.test.ts (4 tests) 5ms
+ ✓ packages/evaluation/src/counterfactual.test.ts (4 tests) 5ms
+ ✓ apps/cli/src/audit.strict.test.ts (4 tests) 6ms
+ ✓ packages/skills/src/skill-capability.test.ts (7 tests) 5ms
+ ✓ packages/skills/src/skill-security.test.ts (2 tests) 4ms
+ ✓ packages/evaluation/src/recovery-policy.test.ts (5 tests) 4ms
+ ✓ packages/orchestration/src/worker.test.ts (4 tests) 4ms
+ ✓ packages/memory/src/derivability.test.ts (4 tests) 5ms
+ ✓ packages/security/src/supply-chain.test.ts (8 tests) 5ms
+ ✓ packages/evaluation/src/offline-replay.test.ts (4 tests) 4ms
+ ✓ packages/evaluation/src/evolution-loop.test.ts (8 tests) 4ms
+ ✓ packages/contracts/src/limits.test.ts (4 tests) 4ms
+ ✓ packages/skills/src/effectiveness.test.ts (5 tests) 4ms
+ ✓ packages/memory/src/usefulness.test.ts (5 tests) 5ms
+ ✓ packages/security/src/denial.test.ts (4 tests) 4ms
+ ✓ packages/contracts/src/ids.test.ts (3 tests) 4ms
+ ✓ packages/core/src/runtime/cache-usage-merge.regressions.test.ts (1 test) 3ms
+ ✓ packages/security/src/workflow-paid-authorization.test.ts (2 tests) 4ms
+ ✓ packages/evaluation/src/scheduler-policy.test.ts (4 tests) 4ms
+ ✓ packages/evaluation/src/context-policy.test.ts (3 tests) 3ms
+ ↓ apps/cli/src/n2-release-cli-forward.test.ts (1 test | 1 skipped)
+ ↓ packages/tools/src/process/windows-cancellation.regressions.test.ts (2 tests | 2 skipped)
+
+ Test Files  579 passed | 2 skipped (581)
+      Tests  9794 passed | 15 skipped (9809)
+   Start at  08:12:01
+   Duration  985.69s (transform 15.00s, setup 0ms, import 87.34s, tests 826.01s, environment 49ms)
+

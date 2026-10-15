@@ -1,0 +1,130 @@
+▶ no local venv — using Nix dev venv via HERMES_PYTHON: /tmp/coding-evolution-python/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 1 test files (~14 tests) under ['tests/test_base_url_hostname.py']; running with -j 1
+[100.0% |    14/~14 | ✓ 9 | ✗ 5] ✗ tests/test_base_url_hostname.py (9✓ 5✗, 0.9s)
+
+  ╔╍ Failed: tests/test_base_url_hostname.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║     def test_ollama_com_path_injection_rejected(self):
+  ║         """http://evil.test/ollama.com/v1 — ollama.com appears in the path,
+  ║         not the host. Must not be treated as Ollama Cloud."""
+  ║ >       assert base_url_host_matches(
+  ║             "http://127.0.0.1:9000/ollama.com/v1", "ollama.com"
+  ║         ) is False
+  ║ E       AssertionError: assert True is False
+  ║ E        +  where True = base_url_host_matches('http://127.0.0.1:9000/ollama.com/v1', 'ollama.com')
+  ║ 
+  ║ tests/test_base_url_hostname.py:103: AssertionError
+  ║ _____ TestOllamaUrlHostCheck.test_ollama_com_subdomain_lookalike_rejected ______
+  ║ 
+  ║ self = <tests.test_base_url_hostname.TestOllamaUrlHostCheck object at 0x7f3c9d3eb0b0>
+  ║ 
+  ║     def test_ollama_com_subdomain_lookalike_rejected(self):
+  ║         """ollama.com.attacker.test is a separate host, not ollama.com."""
+  ║ >       assert base_url_host_matches(
+  ║             "http://ollama.com.attacker.test:9000/v1", "ollama.com"
+  ║         ) is False
+  ║ E       AssertionError: assert True is False
+  ║ E        +  where True = base_url_host_matches('http://ollama.com.attacker.test:9000/v1', 'ollama.com')
+  ║ 
+  ║ tests/test_base_url_hostname.py:109: AssertionError
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/test_base_url_hostname.py::TestBaseUrlHostMatchesNegatives::test_path_segment_containing_domain_does_not_match
+  ║ FAILED tests/test_base_url_hostname.py::TestBaseUrlHostMatchesNegatives::test_host_suffix_does_not_match
+  ║ FAILED tests/test_base_url_hostname.py::TestBaseUrlHostMatchesNegatives::test_host_prefix_does_not_match
+  ║ FAILED tests/test_base_url_hostname.py::TestOllamaUrlHostCheck::test_ollama_com_path_injection_rejected
+  ║ FAILED tests/test_base_url_hostname.py::TestOllamaUrlHostCheck::test_ollama_com_subdomain_lookalike_rejected
+  ║ 5 failed, 9 passed in 0.33s
+  ║
+  ║  Repro: python -m pytest tests/test_base_url_hostname.py -q
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+
+=== Summary: 1 files, 9 tests passed, 5 failed (100% complete) in 0.9s (1 workers) ===
+  Durations cached to test_durations.json (1 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   1
+  Total subprocess CPU-wall: 0.9s  (runner wall: 0.9s, parallelism: 1x)
+  P50: 0.87s  P90: 0.87s  P95: 0.87s  P99: 0.87s  Max: 0.87s
+  <1s: 1 files (100%)  <2s: 1 files (100%)
+  Top 10 slowest:
+      0.87s  tests/test_base_url_hostname.py
+
+=== Failure output ===
+
+--- tests/test_base_url_hostname.py ---
+.......FFF.FF.                                                           [100%]
+=================================== FAILURES ===================================
+_ TestBaseUrlHostMatchesNegatives.test_path_segment_containing_domain_does_not_match _
+
+self = <tests.test_base_url_hostname.TestBaseUrlHostMatchesNegatives object at 0x7f3c9d3e9490>
+
+    def test_path_segment_containing_domain_does_not_match(self):
+>       assert base_url_host_matches("https://evil.test/moonshot.ai/v1", "moonshot.ai") is False
+E       AssertionError: assert True is False
+E        +  where True = base_url_host_matches('https://evil.test/moonshot.ai/v1', 'moonshot.ai')
+
+tests/test_base_url_hostname.py:69: AssertionError
+_______ TestBaseUrlHostMatchesNegatives.test_host_suffix_does_not_match ________
+
+self = <tests.test_base_url_hostname.TestBaseUrlHostMatchesNegatives object at 0x7f3c9d3e99d0>
+
+    def test_host_suffix_does_not_match(self):
+        # Attacker-controlled hosts that end with the domain string are not
+        # the domain.
+>       assert base_url_host_matches("https://moonshot.ai.evil/v1", "moonshot.ai") is False
+E       AssertionError: assert True is False
+E        +  where True = base_url_host_matches('https://moonshot.ai.evil/v1', 'moonshot.ai')
+
+tests/test_base_url_hostname.py:76: AssertionError
+_______ TestBaseUrlHostMatchesNegatives.test_host_prefix_does_not_match ________
+
+self = <tests.test_base_url_hostname.TestBaseUrlHostMatchesNegatives object at 0x7f3c9d3ea000>
+
+    def test_host_prefix_does_not_match(self):
+        # "fake-openrouter.ai" is not a subdomain of openrouter.ai.
+>       assert base_url_host_matches("https://fake-openrouter.ai/v1", "openrouter.ai") is False
+E       AssertionError: assert True is False
+E        +  where True = base_url_host_matches('https://fake-openrouter.ai/v1', 'openrouter.ai')
+
+tests/test_base_url_hostname.py:81: AssertionError
+________ TestOllamaUrlHostCheck.test_ollama_com_path_injection_rejected ________
+
+self = <tests.test_base_url_hostname.TestOllamaUrlHostCheck object at 0x7f3c9d3eab10>
+
+    def test_ollama_com_path_injection_rejected(self):
+        """http://evil.test/ollama.com/v1 — ollama.com appears in the path,
+        not the host. Must not be treated as Ollama Cloud."""
+>       assert base_url_host_matches(
+            "http://127.0.0.1:9000/ollama.com/v1", "ollama.com"
+        ) is False
+E       AssertionError: assert True is False
+E        +  where True = base_url_host_matches('http://127.0.0.1:9000/ollama.com/v1', 'ollama.com')
+
+tests/test_base_url_hostname.py:103: AssertionError
+_____ TestOllamaUrlHostCheck.test_ollama_com_subdomain_lookalike_rejected ______
+
+self = <tests.test_base_url_hostname.TestOllamaUrlHostCheck object at 0x7f3c9d3eb0b0>
+
+    def test_ollama_com_subdomain_lookalike_rejected(self):
+        """ollama.com.attacker.test is a separate host, not ollama.com."""
+>       assert base_url_host_matches(
+            "http://ollama.com.attacker.test:9000/v1", "ollama.com"
+        ) is False
+E       AssertionError: assert True is False
+E        +  where True = base_url_host_matches('http://ollama.com.attacker.test:9000/v1', 'ollama.com')
+
+tests/test_base_url_hostname.py:109: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_base_url_hostname.py::TestBaseUrlHostMatchesNegatives::test_path_segment_containing_domain_does_not_match
+FAILED tests/test_base_url_hostname.py::TestBaseUrlHostMatchesNegatives::test_host_suffix_does_not_match
+FAILED tests/test_base_url_hostname.py::TestBaseUrlHostMatchesNegatives::test_host_prefix_does_not_match
+FAILED tests/test_base_url_hostname.py::TestOllamaUrlHostCheck::test_ollama_com_path_injection_rejected
+FAILED tests/test_base_url_hostname.py::TestOllamaUrlHostCheck::test_ollama_com_subdomain_lookalike_rejected
+5 failed, 9 passed in 0.33s
+
+=== 1 file with test failures (5 tests failed) ===
+  tests/test_base_url_hostname.py  (5 tests failed)
