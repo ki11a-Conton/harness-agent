@@ -1,6 +1,8 @@
 # Harness Agent 当前执行计划入口
 
-当前执行任务：[Web 验收子进程关闭](plan(20261015-windows-web-acceptance-shutdown).md)，合同：[WINDOWS-WEB-ACCEPTANCE-SHUTDOWN-20261015](tasks/WINDOWS-WEB-ACCEPTANCE-SHUTDOWN-20261015.md)。main ef0cf955 的 Windows 复核出现临时 cwd 清理 EBUSY；已用真实父/孙进程管道复现 exit 早于 close 的窗口，修正进程所有权与错误保留，并用真实租约预检分配新的持久化 fixture。进程回归5项、实际审查验收21项、类型及安全2146通过；精确提交的完整双平台 CI 继续复核，不发布 release。
+当前执行任务：[PR #8 审查](plan(20261016-114700).md)，合同：[PR8-REVIEW-20261016](tasks/PR8-REVIEW-20261016.md)。发现唯一开放且未审的 #8；已完成四个文件与调用链审查，确认日志前缀缺失被接受和非零坐标下队列屏障失效两项阻塞。原Web217、类型、安全2146通过，但候选反例3失败2通过，精确main对照4通过1跳过。仅在本地review分支保留候选与[审查记录](docs/pr8-review-20261016.md)，不合入main、不发布release；原main95a27dfd保持。
+
+上一任务：[Web 验收子进程关闭](plan(20261015-windows-web-acceptance-shutdown).md)，合同：[WINDOWS-WEB-ACCEPTANCE-SHUTDOWN-20261015](tasks/WINDOWS-WEB-ACCEPTANCE-SHUTDOWN-20261015.md)。main ef0cf955 的 Windows 复核出现临时 cwd 清理 EBUSY；已用真实父/孙进程管道复现 exit 早于 close 的窗口，修正进程所有权与错误保留，并用真实租约预检分配新的持久化 fixture。进程回归5项、实际审查验收21项、类型及安全2146通过；精确提交的完整双平台 CI 继续复核，不发布 release。
 
 上一任务：[Windows 关闭资源收尾](plan(20261015-windows-resource-drain).md)，合同：[WINDOWS-RESOURCE-DRAIN-20261015](tasks/WINDOWS-RESOURCE-DRAIN-20261015.md)。固定源码 `d6e00881dc804371165170c2a9a0697e34ff7b54` 已通过四个原始 CI 工作流，主 CI 十项全部成功，包含真实 Windows、双平台正式/安装/UI 验收；见[最终 CI 复核](docs/evidence/windows-resource-20261015/final-d6e00881/README.md)及[修复报告](docs/windows-resource-drain-20261015.md)。后台关闭竞态、审批/预算同步和功能 fixture 归属已按计划处理。原25s单次超时在60次 Windows 诊断未复现，根因未确立仍保留；本轮未发布 release。主分支归档提交的 CI 另据 GitHub Checks 复核。
 

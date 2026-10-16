@@ -105,8 +105,16 @@ export function createSessionService(host: SessionHost) {
       }
     }
     const agentPreset = (await host.harness.runtime.getSessionAgent(id)).name;
-    return projectSessionHistory({ session: current, messages, agentPreset,
-      events: admissionBarrier === undefined ? events : events.slice(0, admissionBarrier), title: details.title, requestIds, children });
+    const visible = admissionBarrier === undefined ? events : events.slice(0, admissionBarrier);
+    // The owner/alias layer remaps an aliased session into the global coordinate
+    // space that concatenates its retired owners' journals with the live one
+    // (owners.ts projectEvent), so the first event can legitimately start above 0.
+    // This caller is the one that knows that baseline; the projection keeps its
+    // strict 0-based contract for everyone else. Without this the control stream
+    // threw "expected 0, received N", which the browser client reported as a lost
+    // connection and retried forever ("重新连接中…").
+    return projectSessionHistory({ session: current, messages, agentPreset, sourceBaseline: visible[0]?.sequence ?? 0,
+      events: visible, title: details.title, requestIds, children });
   }
   async function projectSnapshot(id: SessionId, signal: AbortSignal) {
     return serial(id, () => projectUnlocked(id, signal));
