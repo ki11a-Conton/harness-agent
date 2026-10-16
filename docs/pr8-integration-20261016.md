@@ -25,3 +25,11 @@ checks或main95a的成功代替本候选。
 历史，也不把损坏状态的明确拒绝称为浏览器现场问题已根治。旧现场文档为历史
 诊断记录，其“修复未实施”等描述保持时间绑定，以本报告说明本次实际行为。
 没有付费调用或release；所有实际工具操作仍走现有权限/沙箱/Orchestrator。
+
+## 固定源码验收
+
+干净提交 `c7c3cf9bd2a455714e30a38b11e5fa2b289fbe55` 全仓9826通过、15跳过、
+0失败，退出0，895.54秒。真实Chromium的中英文共10项连接/断线/恢复/实际读文件
+检查通过；断线期间连接错误按预期保留，未伪造connected。原始日志与source绑定
+见[clean-source-validation](evidence/pr8-fix-20261016/clean-source-validation.json)。
+本归档只改文档与证据，产品字节保持以上固定源码；交付head的远端CI另行复核。
