@@ -1,0 +1,15 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-exec-diagnostics-20261016
+
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts (60 tests) 4149ms
+     ✓ REGRESSION: the first-open grant write happens UNDER the lock, not before it  785ms
+     ✓ a REAL reader process observing a REAL writer sees only COMPLETE versions, never CORRUPT  1999ms
+ ✓ packages/evaluation/src/gen1-budget-takeover.regressions.test.ts (3 tests) 12369ms
+   ✓ Gen1: a delayed stale reclaimer cannot remove another reclaimer's new live ledger lock (B-first=false)  6147ms
+   ✓ Gen1: a delayed stale reclaimer cannot remove another reclaimer's new live ledger lock (B-first=true)  6116ms
+
+ Test Files  2 passed (2)
+      Tests  63 passed (63)
+   Start at  09:31:23
+   Duration  17.33s (transform 342ms, setup 0ms, import 436ms, tests 16.52s, environment 0ms)
+

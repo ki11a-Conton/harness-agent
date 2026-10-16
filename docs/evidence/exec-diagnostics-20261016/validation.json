@@ -1,0 +1,130 @@
+{
+  "scope": "Working-tree checks, before final clean source commit. Not paid-model quality or final native Windows acceptance.",
+  "baselineSha": "bddf6f64efe6dbfe7ca02ad352a20735f6e7170b",
+  "upstream": {
+    "repository": "https://github.com/ki11a-Conton/HARNESS-SRC-FORK",
+    "sha": "1a46ea13de9a3f5e6987c5dd0319b2000fe49c92",
+    "license": "MIT",
+    "emittedFullLicenseVerified": true
+  },
+  "paired": [
+    {
+      "case": "typescript",
+      "measurements": [
+        {
+          "side": "baseline",
+          "diagnosticVisible": false,
+          "toolMessageBytes": 4356,
+          "providerRequests": 2,
+          "commandExit": 1
+        },
+        {
+          "side": "candidate",
+          "diagnosticVisible": true,
+          "toolMessageBytes": 4356,
+          "providerRequests": 2,
+          "commandExit": 1
+        }
+      ]
+    },
+    {
+      "case": "syntax",
+      "measurements": [
+        {
+          "side": "baseline",
+          "diagnosticVisible": false,
+          "toolMessageBytes": 4356,
+          "providerRequests": 2,
+          "commandExit": 1
+        },
+        {
+          "side": "candidate",
+          "diagnosticVisible": true,
+          "toolMessageBytes": 4356,
+          "providerRequests": 2,
+          "commandExit": 1
+        }
+      ]
+    },
+    {
+      "case": "test",
+      "measurements": [
+        {
+          "side": "baseline",
+          "diagnosticVisible": false,
+          "toolMessageBytes": 4356,
+          "providerRequests": 2,
+          "commandExit": 1
+        },
+        {
+          "side": "candidate",
+          "diagnosticVisible": true,
+          "toolMessageBytes": 4356,
+          "providerRequests": 2,
+          "commandExit": 1
+        }
+      ]
+    }
+  ],
+  "finalFramework": {
+    "baseline": {
+      "success": false,
+      "numTotalTests": 3,
+      "numPassedTests": 0,
+      "numFailedTests": 3,
+      "numPendingTests": 0
+    },
+    "candidate": {
+      "success": true,
+      "numTotalTests": 3,
+      "numPassedTests": 3,
+      "numFailedTests": 0,
+      "numPendingTests": 0
+    }
+  },
+  "related": {
+    "passed": 1062,
+    "skipped": 12
+  },
+  "security": {
+    "passed": 2146
+  },
+  "fixtureUnits": {
+    "passed": 4
+  },
+  "takeover": {
+    "candidatePassed": 3,
+    "preservedOldHookExpectedFailures": 1,
+    "faultInjectedUnsafeGuardExpectedFailures": 1,
+    "productionBudgetLedgerChanged": false,
+    "originalTimeoutsPreserved": true
+  },
+  "ui": {
+    "cases": 30,
+    "checks": 75,
+    "scope": "Working-tree fixture with startup compiled application byte manifests; no clean final installed archive claim."
+  },
+  "connection": {
+    "languages": 2,
+    "checks": 10,
+    "sameCwdAcrossRestart": true
+  },
+  "paidModelCalls": 0,
+  "fullCleanSuite": "PENDING_FIXED_COMMIT",
+  "finalMainCI": "PENDING_PUSH",
+  "sourceSha256": {
+    "apps/cli/src/installed-fixture-availability.regressions.test.ts": "be0f16e963cb26dc96630d1147ef087bfce06a8f1c994f6c0d708358182d7e6d",
+    "packages/evaluation/src/gen1-budget-takeover.regressions.test.ts": "7e5fe893c9bf87f68605178c507327dc57aa1cbc6d41b2a9d39d11e0622962c5",
+    "packages/harness/src/exec-diagnostics.integration.test.ts": "10032018214400c354b3e89277a90e4a3abab81cb7bbc38037ca3d9dca23dfe7",
+    "packages/tools/src/process/exec-diagnostics.ts": "0c52ac310353f1ce20f8cb120e828156cd0b409a266ce896eab6d0d9b774ebf9",
+    "packages/tools/src/tools/exec-diagnostics.test.ts": "97e41e1fe1d770912f9f89739b5ddcdfcdb9fb4b852dd2499f1439dfb85726e0",
+    "packages/tools/src/tools/exec.ts": "016caf4432fee75a9ee331ca15cc1932b5e2d1e062814b82dbdbaf791c4fe102",
+    "scripts/release/deepseek-installed.mjs": "b77f6cc14ba81cbc4d767b05740ef901c63a2c4783bf75477e60fc5787718264",
+    "scripts/research/deepseek-live-host.mjs": "67d6b479950609d30fa2757df98a41af3b04f14e779c88043bf1c6343acf94ec",
+    "scripts/research/exec-diagnostics-20261016/baseline.config.ts": "7b8612dd0debd3bdd08366ef28264da1d75a37eec00662e0a232dfefbeb78c80",
+    "scripts/research/exec-diagnostics-20261016/takeover-old-fixture.config.ts": "8095fab818c6b2305470fe9e56edba05e43dca2db9fa84d6110cc668d9effb02",
+    "scripts/research/exec-diagnostics-20261016/takeover-unsafe-guard.config.ts": "41268531b8ff22e601ebb5b0d8a8657154798eef9cc31949d40d42d048469818",
+    "scripts/research/fixture-availability.mjs": "31ed9895a625309468b32991180c803b49d2e70b45a911fdba99e2bbad257188",
+    "scripts/research/web-connection-browser.mjs": "b9a12180fd05fa3b887d6a94bb4fe652de969109b6b742f211ff20d82b454600"
+  }
+}

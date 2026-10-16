@@ -1,0 +1,12 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-exec-diagnostics-20261016
+
+ ✓ packages/evaluation/src/gen1-budget-takeover.regressions.test.ts (3 tests) 12482ms
+   ✓ Gen1: a delayed stale reclaimer cannot remove another reclaimer's new live ledger lock (B-first=false)  6270ms
+   ✓ Gen1: a delayed stale reclaimer cannot remove another reclaimer's new live ledger lock (B-first=true)  6101ms
+
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+   Start at  09:34:14
+   Duration  12.97s (transform 169ms, setup 0ms, import 231ms, tests 12.48s, environment 0ms)
+

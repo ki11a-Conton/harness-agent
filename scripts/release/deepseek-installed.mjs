@@ -35,11 +35,11 @@ try {
   const playwright = await import(pathToFileURL(resolve(values['playwright-module'])).href);
   const chromium = values.chromium ?? playwright.chromium.executablePath();
   const fixture = join(cleanroom, 'fixture');
-  host = spawn(process.execPath, [join(source, 'scripts/research/deepseek-live-host.mjs'), '--root', fixture, '--portable-root', root, '--ipc-control'], {
+  host = spawn(process.execPath, [join(source, 'scripts/research/deepseek-live-host.mjs'), '--root', fixture, '--portable-root', root, '--ipc-control', '--preflight-owner'], {
     cwd: cleanroom, windowsHide: true, env: { ...process.env, HARNESS_VERIFY_COMMAND: '' }, stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
   });
   // Install exit/error observers before readiness and retain failure evidence.
-  hostExit = new Promise((done, reject) => { host.once('error', reject); host.once('exit', (code, signal) => done({ code, signal })); });
+  hostExit = new Promise((done, reject) => { host.once('error', reject); host.once('close', (code, signal) => done({ code, signal })); });
   const ready = new Promise((done, reject) => {
     host.stdout.on('data', bytes => { stdout += bytes; const match = stdout.match(/http:\/\/127\.0\.0\.1:\d+/); if (match) done(match[0]); });
     host.stderr.on('data', bytes => { stderr += bytes; });

@@ -1,0 +1,32 @@
+$ vitest run packages/security packages/harness/src/security-regression-matrix.test.ts
+
+ RUN  v4.1.11 /workspace/harness-agent-exec-diagnostics-20261016
+
+ ✓ packages/security/src/sandbox.test.ts (52 tests) 25ms
+ ✓ packages/security/src/process-gate.test.ts (33 tests) 19ms
+ ✓ packages/security/src/canonical-path.test.ts (26 tests) 13ms
+ ✓ packages/security/src/parser-fuzz.test.ts (1812 tests) 260ms
+ ✓ packages/harness/src/security-regression-matrix.test.ts (12 tests) 16ms
+ ✓ packages/security/src/network-gate.test.ts (20 tests) 12ms
+ ✓ packages/security/src/approval.test.ts (15 tests) 1026ms
+     ✓ expire  1001ms
+ ✓ packages/security/src/approval-capability.test.ts (23 tests) 18ms
+ ✓ packages/security/src/capability-guard.test.ts (17 tests) 12ms
+ ✓ packages/security/src/boundary-guard.test.ts (49 tests) 28ms
+ ✓ packages/security/src/injection-gate.test.ts (13 tests) 11ms
+ ✓ packages/security/src/permission.test.ts (11 tests) 6ms
+ ✓ packages/security/src/path-parity.test.ts (11 tests) 8ms
+ ✓ packages/security/src/supply-chain.test.ts (8 tests) 7ms
+ ✓ packages/security/src/secret-gate.test.ts (16 tests) 12ms
+ ✓ packages/security/src/no-silent-catch.test.ts (4 tests) 151ms
+ ✓ packages/security/src/permission-grant.test.ts (7 tests) 5ms
+ ✓ packages/security/src/approval-wait-settlement.test.ts (3 tests) 33ms
+ ✓ packages/security/src/denial.test.ts (4 tests) 5ms
+ ✓ packages/security/src/gen1-approval-store.regressions.test.ts (8 tests) 31ms
+ ✓ packages/security/src/workflow-paid-authorization.test.ts (2 tests) 4ms
+
+ Test Files  21 passed (21)
+      Tests  2146 passed (2146)
+   Start at  09:16:30
+   Duration  7.33s (transform 986ms, setup 0ms, import 2.17s, tests 1.70s, environment 2ms)
+

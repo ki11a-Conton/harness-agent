@@ -32,7 +32,7 @@ try {
     let failure;
     async function start() {
       const args = [fixture, '--root', root, '--web-port', String(webPort), '--provider-port', String(providerPort), '--ipc-control'];
-      if (values['portable-root']) args.push('--portable-root', path.resolve(values['portable-root']));
+      if (values['portable-root']) args.push('--portable-root', path.resolve(values['portable-root']), '--preflight-owner');
       const child = spawn(process.execPath, args, { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe', 'ipc'] });
       let stdout = '', stderr = '';
       const exit = new Promise((resolve, reject) => { child.once('exit', (code, signal) => resolve({ code, signal })); child.once('error', reject); });

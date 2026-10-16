@@ -1,0 +1,108 @@
+{
+  "status": "PASS",
+  "scenarios": 2,
+  "assertions": 10,
+  "paidModelCalls": 0,
+  "results": [
+    {
+      "language": "en",
+      "status": "PASS",
+      "checks": [
+        "real loopback generation ready while navigator.onLine=false",
+        "actual backend loss remains visible rather than forced connected",
+        "recovery clears stale Reconnecting within a bound despite wall-clock correction",
+        "reconnected production agent really reads a file and returns the real tool result to the HTTP model",
+        "no unhandled browser errors"
+      ],
+      "readinessFrames": 2,
+      "errors": [],
+      "consoleLog": [
+        {
+          "type": "error",
+          "text": "[session-controller] control stream failed: RemoteError: Harness socket disconnected; current operation was not replayed\n    at terminalStreamFailure (http://127.0.0.1:35437/deepseek/plugins/??@deepseek-ai/dsh-api-gateway/client.js&rev=e09e26fcd484:1117:35)\n    at RemoteStream.read (http://127.0.0.1:35437/deepseek/plugins/??@deepseek-ai/dsh-api-gateway/client.js&rev=e09e26fcd484:1056:64)\n    at async RemoteSnapshotStream.consume (http://127.0.0.1:35437/deepseek/plugins/??@deepseek-ai/dsh-api-gateway/client.js&rev=e09e26fcd484:1550:23)"
+        },
+        {
+          "type": "warning",
+          "text": "[connection] connection lost, retry #1"
+        },
+        {
+          "type": "error",
+          "text": "WebSocket connection to 'ws://127.0.0.1:35437/api/deepseek/socket' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED"
+        },
+        {
+          "type": "warning",
+          "text": "[connection] connection lost, retry #2"
+        }
+      ],
+      "socketLifecycle": [
+        {
+          "type": "open",
+          "url": "ws://127.0.0.1:35437/api/deepseek/socket"
+        },
+        {
+          "type": "close",
+          "url": "ws://127.0.0.1:35437/api/deepseek/socket"
+        },
+        {
+          "type": "open",
+          "url": "ws://127.0.0.1:35437/api/deepseek/socket"
+        }
+      ]
+    },
+    {
+      "language": "zh",
+      "status": "PASS",
+      "checks": [
+        "real loopback generation ready while navigator.onLine=false",
+        "actual backend loss remains visible rather than forced connected",
+        "recovery clears stale Reconnecting within a bound despite wall-clock correction",
+        "reconnected production agent really reads a file and returns the real tool result to the HTTP model",
+        "no unhandled browser errors"
+      ],
+      "readinessFrames": 2,
+      "errors": [],
+      "consoleLog": [
+        {
+          "type": "error",
+          "text": "[session-controller] control stream failed: RemoteError: Harness socket disconnected; current operation was not replayed\n    at terminalStreamFailure (http://127.0.0.1:33873/deepseek/plugins/??@deepseek-ai/dsh-api-gateway/client.js&rev=e09e26fcd484:1117:35)\n    at RemoteStream.read (http://127.0.0.1:33873/deepseek/plugins/??@deepseek-ai/dsh-api-gateway/client.js&rev=e09e26fcd484:1056:64)\n    at async RemoteSnapshotStream.consume (http://127.0.0.1:33873/deepseek/plugins/??@deepseek-ai/dsh-api-gateway/client.js&rev=e09e26fcd484:1550:23)"
+        },
+        {
+          "type": "warning",
+          "text": "[connection] connection lost, retry #1"
+        },
+        {
+          "type": "error",
+          "text": "WebSocket connection to 'ws://127.0.0.1:33873/api/deepseek/socket' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED"
+        },
+        {
+          "type": "warning",
+          "text": "[connection] connection lost, retry #2"
+        },
+        {
+          "type": "error",
+          "text": "WebSocket connection to 'ws://127.0.0.1:33873/api/deepseek/socket' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED"
+        },
+        {
+          "type": "warning",
+          "text": "[connection] connection lost, retry #3"
+        }
+      ],
+      "socketLifecycle": [
+        {
+          "type": "open",
+          "url": "ws://127.0.0.1:33873/api/deepseek/socket"
+        },
+        {
+          "type": "close",
+          "url": "ws://127.0.0.1:33873/api/deepseek/socket"
+        },
+        {
+          "type": "open",
+          "url": "ws://127.0.0.1:33873/api/deepseek/socket"
+        }
+      ]
+    }
+  ],
+  "shutdownControl": "Test-only IPC invokes the actual production SIGTERM handler; not native OS signal delivery.",
+  "scope": "Actual loopback HTTP/WebSocket and coding after host loss/restart. Browser network hint and wall clock are controlled; backend responses are not mocked."
+}

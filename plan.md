@@ -1,6 +1,8 @@
 # Harness Agent 当前执行计划入口
 
-当前执行任务：[PR #8 安全集成](plan(20261016-162400).md)，合同：[PR8-SAFE-INTEGRATION-20261016](tasks/PR8-SAFE-INTEGRATION-20261016.md)。按用户追加授权修正两项阻塞后合并，再进行coding优化。生产完整日志不再自动声明首事件基线，owner严格验证retired前缀，队列屏障按源序号过滤。Web226、类型、安全2146和文档通过，旧PR3项失败对照保留；固定clean c7c3cf9b全仓9826通过/15跳过/0失败，真实浏览器中英文10项通过；远端交付CI待验收，见[修正记录](docs/pr8-integration-20261016.md)。不发布release。
+当前执行任务：[Coding 命令诊断优化](plan(20261016-164800).md)，合同：[EXEC-DIAGNOSTICS-20261016](tasks/EXEC-DIAGNOSTICS-20261016.md)。做什么、怎么做和怎么验收见规格。保留 exec 有界诊断尾部，让真实编译、语法和测试失败的最终报错进入下一次 provider 请求；同预算配对基线 0/3 可见、新实现 3/3 可见。相关回归 1062 通过/12 跳过、安全 2146 通过、类型通过；修正原 bdd CI 暴露的安装夹具租约冲突和预算锁测试屏障竞态，保留原失败和负对照。完整 clean 源码测试及新 main 双平台 CI 待固定提交后验收，见[实现和验收记录](docs/exec-diagnostics-20261016.md)。无付费模型调用，不发布 release。
+
+上一任务：[PR #8 安全集成](plan(20261016-162400).md)，合同：[PR8-SAFE-INTEGRATION-20261016](tasks/PR8-SAFE-INTEGRATION-20261016.md)。两项阻塞已修正并合入 main bddf6f64，GitHub 确认 #8 merged=true。生产完整日志不再自动声明首事件基线，owner 严格验证 retired 前缀，队列屏障按源序号过滤。固定 clean c7c3cf9b 全仓 9826 通过/15 跳过/0 失败，真实浏览器中英文 10 项通过；bdd 四个原始工作流已全部结束，主 CI 和 Windows 安装 UI 有实际失败，整体 NOT_GREEN，原因及后续修正在当前任务保留。见[修正记录](docs/pr8-integration-20261016.md)。
 
 上一任务：[PR #8 审查](plan(20261016-114700).md)，合同：[PR8-REVIEW-20261016](tasks/PR8-REVIEW-20261016.md)。发现唯一开放且未审的 #8；已完成四个文件与调用链审查，确认日志前缀缺失被接受和非零坐标下队列屏障失效两项阻塞。原Web217、类型、安全2146通过，但候选反例3失败2通过，精确main对照4通过1跳过。仅在本地review分支保留候选与[审查记录](docs/pr8-review-20261016.md)，不合入main、不发布release；原main95a27dfd保持。
 

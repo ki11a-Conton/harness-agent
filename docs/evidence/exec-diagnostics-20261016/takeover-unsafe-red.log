@@ -1,0 +1,42 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-exec-diagnostics-20261016
+
+ ❯ packages/evaluation/src/gen1-budget-takeover.regressions.test.ts (3 tests | 1 failed | 2 skipped) 6177ms
+   × Gen1: a delayed stale reclaimer cannot remove another reclaimer's new live ledger lock (B-first=false) 6175ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/evaluation/src/gen1-budget-takeover.regressions.test.ts > Gen1: a delayed stale reclaimer cannot remove another reclaimer's new live ledger lock (B-first=false)
+AssertionError: [{"code":0,"stdout":"{\"tag\":\"a\",\"ok\":true,\"overlap\":false}\n","stderr":""},{"code":0,"stdout":"{\"tag\":\"b\",\"ok\":true,\"overlap\":true}\n","stderr":""}]: expected [ { tag: 'a', ok: true, …(1) }, …(1) ] to deeply equal [ { tag: 'a', ok: true, …(1) }, …(1) ]
+
+- Expected
++ Received
+
+@@ -4,9 +4,9 @@
+      "overlap": false,
+      "tag": "a",
+    },
+    {
+      "ok": true,
+-     "overlap": false,
++     "overlap": true,
+      "tag": "b",
+    },
+  ]
+
+ ❯ packages/evaluation/src/gen1-budget-takeover.regressions.test.ts:105:46
+    103|     const records = results.map(result => JSON.parse(result.stdout) as…
+    104|     expect(records, JSON.stringify(results)).toEqual([
+    105|       {tag:"a",ok:true,overlap:false}, {tag:"b",ok:true,overlap:false},
+       |                                              ^
+    106|     ]);
+    107|   } finally {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 2 skipped (3)
+   Start at  09:34:14
+   Duration  6.70s (transform 199ms, setup 0ms, import 224ms, tests 6.18s, environment 0ms)
+
