@@ -1,6 +1,8 @@
 # Harness Agent 当前执行计划入口
 
-当前执行任务：[PR #8 审查](plan(20261016-114700).md)，合同：[PR8-REVIEW-20261016](tasks/PR8-REVIEW-20261016.md)。发现唯一开放且未审的 #8；已完成四个文件与调用链审查，确认日志前缀缺失被接受和非零坐标下队列屏障失效两项阻塞。原Web217、类型、安全2146通过，但候选反例3失败2通过，精确main对照4通过1跳过。仅在本地review分支保留候选与[审查记录](docs/pr8-review-20261016.md)，不合入main、不发布release；原main95a27dfd保持。
+当前执行任务：[PR #8 安全集成](plan(20261016-162400).md)，合同：[PR8-SAFE-INTEGRATION-20261016](tasks/PR8-SAFE-INTEGRATION-20261016.md)。按用户追加授权修正两项阻塞后合并，再进行coding优化。生产完整日志不再自动声明首事件基线，owner严格验证retired前缀，队列屏障按源序号过滤。Web226、类型、安全2146和文档通过，旧PR3项失败对照保留；固定clean源码全仓和远端CI待验收，见[修正记录](docs/pr8-integration-20261016.md)。不发布release。
+
+上一任务：[PR #8 审查](plan(20261016-114700).md)，合同：[PR8-REVIEW-20261016](tasks/PR8-REVIEW-20261016.md)。发现唯一开放且未审的 #8；已完成四个文件与调用链审查，确认日志前缀缺失被接受和非零坐标下队列屏障失效两项阻塞。原Web217、类型、安全2146通过，但候选反例3失败2通过，精确main对照4通过1跳过。仅在本地review分支保留候选与[审查记录](docs/pr8-review-20261016.md)，不合入main、不发布release；原main95a27dfd保持。
 
 上一任务：[Web 验收子进程关闭](plan(20261015-windows-web-acceptance-shutdown).md)，合同：[WINDOWS-WEB-ACCEPTANCE-SHUTDOWN-20261015](tasks/WINDOWS-WEB-ACCEPTANCE-SHUTDOWN-20261015.md)。main ef0cf955 的 Windows 复核出现临时 cwd 清理 EBUSY；已用真实父/孙进程管道复现 exit 早于 close 的窗口，修正进程所有权与错误保留，并用真实租约预检分配新的持久化 fixture。进程回归5项、实际审查验收21项、类型及安全2146通过；精确提交的完整双平台 CI 继续复核，不发布 release。
 

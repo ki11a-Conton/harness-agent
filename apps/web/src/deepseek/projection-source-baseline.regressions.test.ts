@@ -1,25 +1,5 @@
-/**
- * Regression: a session whose projected journal starts above 0 (owner/alias
- * retirement offsets the coordinate space) must not be rejected as "not
- * contiguous".
- *
- * Defect (shipped build, main 2a141309, reproduced in a real browser):
- *   - `apps/web/src/deepseek/owners.ts:548-558` `projectEvent()` remaps an
- *     aliased session's events into the GLOBAL coordinate space
- *     `sequence = offset + event.sequence`, where `offset` is the sum of the
- *     retired owners' `eventCount`.
- *   - `apps/web/src/deepseek/session.ts` `projectUnlocked()` fed that journal to
- *     `projectSessionHistory()`, whose validator required a dense 0-based
- *     journal, so validation threw
- *     "source event sequence is not contiguous: expected 0, received 2".
- *   - The failing stream is `session/control`; the browser client reports it as
- *     `[connection] connection lost, retry #1` forever, leaving the UI stuck on
- *     "重新连接中…" with no usable composer.
- *
- * The fix keeps the projection's strict 0-based contract and adds an explicit
- * `sourceBaseline` that only the owner-aware caller declares. These cases pin
- * both halves: the baseline is honoured, and every other invariant still holds.
- */
+/** Explicit bounded-range projection checks. Complete production owner journals
+ * remain dense from 0; a nonzero range is never inferred from received events. */
 import { describe, expect, it } from "vitest";
 import { newAgentId, newEventId, newSessionId } from "@ar/contracts";
 import type { AgentEvent, EventType, Session } from "@ar/contracts";
@@ -59,7 +39,7 @@ function project(sequences: number[], sourceBaseline?: number) {
   });
 }
 
-describe("projection source baseline (owner retirement offset)", () => {
+describe("explicit projection source baseline", () => {
   it("keeps the strict 0-based contract when no baseline is declared", () => {
     expect(() => project([0, 1, 2])).not.toThrow();
     // The existing contract test relies on exactly this rejection.
@@ -67,7 +47,7 @@ describe("projection source baseline (owner retirement offset)", () => {
     expect(() => project([2, 3])).toThrow(/not contiguous/);
   });
 
-  it("honours a declared non-zero baseline produced by a retired owner prefix", () => {
+  it("honours an independently declared non-zero bounded range", () => {
     expect(() => project([2, 3, 4], 2)).not.toThrow();
     expect(() => project([3, 4, 5], 3)).not.toThrow();
   });
@@ -85,6 +65,13 @@ describe("projection source baseline (owner retirement offset)", () => {
   it("rejects an invalid declared baseline", () => {
     expect(() => project([0], -1)).toThrow(/baseline/);
     expect(() => project([0], 1.5)).toThrow(/baseline/);
+  });
+
+  it("rejects a source coordinate that overflows a valid declared baseline", () => {
+    const session = makeSession();
+    const events = journal(session.id, [Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER + 1]).map(event => ({ ...event, timestamp: 1 }));
+    expect(() => projectSessionHistory({ session, messages: [], events: events.slice(0, 1), sourceBaseline: Number.MAX_SAFE_INTEGER })).not.toThrow();
+    expect(() => projectSessionHistory({ session, messages: [], events, sourceBaseline: Number.MAX_SAFE_INTEGER })).toThrow(/safe integer/);
   });
 
   it("still rejects a duplicate sequence under a declared baseline", () => {

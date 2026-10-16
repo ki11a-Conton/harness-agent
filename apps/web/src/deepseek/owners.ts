@@ -573,7 +573,12 @@ export async function createOwnerManager(base: Harness, hooks: OwnerHooks): Prom
     const physical: AgentEvent[] = [];
     for (const retired of row.retired) {
       const oldOwner = await findNativeOwner(retired.nativeId); if (oldOwner === undefined) throw new RemoteFailure("session/alias-corrupt", "Stable draft prefix owner is missing");
-      physical.push(...await oldOwner.events.list(retired.nativeId as SessionId, { limit: retired.eventCount }));
+      const prefix = await oldOwner.events.list(retired.nativeId as SessionId);
+      if (prefix.length !== retired.eventCount || new Set(prefix.map(event => event.id)).size !== prefix.length
+        || prefix.some((event, index) => event.sessionId !== retired.nativeId || event.sequence !== index || Object.is(event.sequence, -0))) {
+        throw new RemoteFailure("session/alias-corrupt", "A retired draft no longer matches its immutable journal prefix");
+      }
+      physical.push(...prefix);
     }
     physical.push(...await owner.events.list(row.nativeId as SessionId));
     const result = (await Promise.all(physical.map(projectEvent))).filter((event): event is AgentEvent => event !== undefined && event.sequence > (opts?.afterSequence ?? -1));

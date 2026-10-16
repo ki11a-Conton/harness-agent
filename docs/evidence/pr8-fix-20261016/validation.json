@@ -1,0 +1,40 @@
+{
+  "baseMainSha": "95a27dfdc17d14986537ca181fa371bad37e815e",
+  "reviewedPrHead": "4375388a2d88295de5cbbe1aed06e51d6c1171b3",
+  "reviewIntegrationSha": "fe3adf069736bdeef7c845581065283ce6ccf17c",
+  "scope": "working-tree implementation checks; full clean-source suite and CI pending",
+  "productHashes": {
+    "apps/web/src/deepseek/owners.ts": "2b9cbf3384c250426e6341b56a48f887c2f54b0d3531fcd98747970f71caeab3",
+    "apps/web/src/deepseek/session.ts": "22f319411d5116bdd536314231aa6a4ae02dc95cf6077abc1b8515f8305fdb5f",
+    "apps/web/src/deepseek/projections.ts": "1823838e4dfa9780172831903b1b8fb4b5900cb89beb8fd36dac61e3e6ef17bd"
+  },
+  "results": {
+    "beforeFix": {
+      "failed": 7,
+      "passed": 1,
+      "exitCode": 1
+    },
+    "web": {
+      "passed": 226,
+      "exitCode": 0
+    },
+    "security": {
+      "passed": 2146,
+      "exitCode": 0
+    },
+    "typecheck": {
+      "exitCode": 0
+    },
+    "docs": {
+      "exitCode": 0
+    },
+    "originalPrNegative": {
+      "failed": 3,
+      "passed": 2,
+      "exitCode": 1,
+      "expected": true
+    }
+  },
+  "paidCalls": 0,
+  "release": false
+}
