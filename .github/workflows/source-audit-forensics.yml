@@ -1,4 +1,4 @@
-name: inspect existing CI job log
+name: inspect existing installed UI artifact
 on:
   workflow_dispatch:
 permissions:
@@ -9,39 +9,39 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Read the existing Windows formal job log
+      - name: Project the original Windows artifact without rerunning acceptance
         env:
-          LOG_READ_TOKEN: ${{ github.token }}
+          READ_TOKEN: ${{ github.token }}
         run: |
-          python - <<'PY'
-          import os,urllib.request,urllib.error,urllib.parse,json,gzip,base64,hashlib,re
-          from pathlib import Path
+          python - <<'FORENSICS'
+          import os,json,urllib.request,urllib.error,urllib.parse,io,zipfile,hashlib,gzip,base64,re
           class NoRedirect(urllib.request.HTTPRedirectHandler):
             def redirect_request(self,*args,**kwargs):return None
-          q=urllib.request.Request('https://api.github.com/repos/ki11a-Conton/harness-agent/actions/jobs/116591228359/logs',headers={'Authorization':'Bearer '+os.environ['LOG_READ_TOKEN'],'Accept':'application/vnd.github+json'})
+          q=urllib.request.Request('https://api.github.com/repos/ki11a-Conton/harness-agent/actions/artifacts/12035232969/zip',headers={'Authorization':'Bearer '+os.environ['READ_TOKEN'],'Accept':'application/vnd.github+json'})
           try:
             with urllib.request.build_opener(NoRedirect).open(q,timeout=30) as r:body=r.read()
           except urllib.error.HTTPError as e:
-            if e.code!=302:print('::error::GitHub log API HTTP '+str(e.code));raise SystemExit(1)
-            location=e.headers.get('location','');host=urllib.parse.urlparse(location)
-            if host.scheme!='https' or not host.hostname.endswith('.blob.core.windows.net'):raise RuntimeError('Unexpected log destination')
-            try:
-              with urllib.request.urlopen(location,timeout=30) as r:body=r.read()
-            except urllib.error.HTTPError as e:print('::error::Log storage HTTP '+str(e.code));raise SystemExit(1)
-          if re.search(rb'gh[pousr]_[A-Za-z0-9]{20,}',body):raise RuntimeError('Credential-shaped log content refused')
-          Path('original-job.log').write_bytes(body)
-          lines=re.sub(r'\x1b\[[0-9;]*m','',body.decode('utf-8',errors='replace')).splitlines()
-          result={'jobId':116591228359,'runId':38784015304,'sourceSha':'d6e00881dc804371165170c2a9a0697e34ff7b54','rawBytes':len(body),'rawSha256':hashlib.sha256(body).hexdigest(),'lastLines':lines[-120:],'limitation':'Snapshot of existing job log only; original job not rerun.'}
-          Path('job-log-projection.json').write_text(json.dumps(result,indent=2)+'\n')
-          data=base64.b64encode(gzip.compress(json.dumps(result).encode())).decode();total=(len(data)+3499)//3500
-          if total>8:raise RuntimeError('Log projection exceeds annotation budget')
-          for index in range(total):print('::notice title=Existing Windows formal log chunk::'+json.dumps({'index':index,'total':total,'encoding':'gzip+base64','data':data[index*3500:(index+1)*3500]}))
-          PY
+            if e.code!=302:print('::error::Artifact API status '+str(e.code));raise SystemExit(1)
+            url=e.headers.get('location','');host=urllib.parse.urlparse(url)
+            if host.scheme!='https' or not host.hostname.endswith('.blob.core.windows.net'):raise RuntimeError('Unexpected artifact destination')
+            with urllib.request.urlopen(url,timeout=45) as r:body=r.read()
+          archive=zipfile.ZipFile(io.BytesIO(body));names=archive.namelist()
+          reportName=next(n for n in names if n.endswith('browser/result.json'));raw=archive.read(reportName);report=json.loads(raw)
+          hostName=next((n for n in names if n.endswith('host-stderr.log')),None);host=archive.read(hostName) if hostName else b''
+          failed=[r for r in report['results'] if r['status']!='PASS']
+          first=[{k:v for k,v in r.items() if k in ['name','viewport','status','failure','errors','calls','rpcRequests','sockets','observation','failedHttp']} for r in failed[:2]]
+          result={'runId':38875780426,'sourceSha':'bddf6f64efe6dbfe7ca02ad352a20735f6e7170b','artifactId':12035232969,'zipSha256':hashlib.sha256(body).hexdigest(),'reportSha256':hashlib.sha256(raw).hexdigest(),'hostStderrSha256':hashlib.sha256(host).hexdigest(),'hostStderrTail':host.decode(errors='replace')[-20000:],'files':[{'name':i.filename,'bytes':i.file_size} for i in archive.infolist()],'complete':report.get('complete'),'resultSummary':[{k:v for k,v in r.items() if k in ['name','viewport','status','failure']} for r in report['results']],'firstFailedCases':first,'limitation':'Original artifact only, first two failure details and last 20000 host stderr chars; no tests rerun.'}
+          serialized=json.dumps(result).encode()
+          if re.search(rb'gh[pousr]_[A-Za-z0-9]{20,}',serialized):raise RuntimeError('Credential-shaped content refused')
+          from pathlib import Path
+          Path('installed-ui-projection.json').write_bytes(serialized)
+          data=base64.b64encode(gzip.compress(serialized)).decode();total=(len(data)+3499)//3500
+          if total>8:raise RuntimeError('Projection exceeds annotation budget')
+          for index in range(total):print('::notice title=Original UI artifact projection::'+json.dumps({'index':index,'total':total,'encoding':'gzip+base64','data':data[index*3500:(index+1)*3500]}))
+          FORENSICS
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: existing-windows-formal-log-${{ github.run_id }}
-          path: |
-            original-job.log
-            job-log-projection.json
+          name: original-ui-artifact-projection-${{ github.run_id }}
+          path: installed-ui-projection.json
           if-no-files-found: warn
