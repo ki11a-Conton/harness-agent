@@ -2,7 +2,11 @@
 
 `validation.json` binds the working-tree checks to SHA-256 digests of the changed
 source files. `SHA256SUMS` covers the original receipt bytes. The clean full-suite
-result and exact final main CI are separate, subsequent acceptance stages.
+result and exact final main CI are separate acceptance stages. `full-clean.log`
+and `full-clean-result.json` record clean source `432dca23`: 9846 passes,
+15 skips, zero failures, exit 0, unchanged HEAD and clean tree at both ends.
+The archive commit changes documentation/evidence only. Final main CI is checked
+after that commit is pushed; this pre-push archive does not claim its result.
 
 `paired-baseline/` and `paired-candidate/` contain the actual compiler/check/test
 child receipts and the **tool-role** messages in the next provider request. The

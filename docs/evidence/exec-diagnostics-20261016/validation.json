@@ -110,8 +110,25 @@
     "sameCwdAcrossRestart": true
   },
   "paidModelCalls": 0,
-  "fullCleanSuite": "PENDING_FIXED_COMMIT",
-  "finalMainCI": "PENDING_PUSH",
+  "fullCleanSuite": {
+    "sourceSha": "432dca23e37fbe99d67ec18be9b4c86d4f82eca2",
+    "command": [
+      "pnpm",
+      "test"
+    ],
+    "startedAt": "2026-10-16T09:43:34.797902+00:00",
+    "durationSeconds": 899.79,
+    "exitCode": 0,
+    "cleanAtStart": true,
+    "cleanAtEnd": true,
+    "unchangedHead": true,
+    "passed": 9846,
+    "skipped": 15,
+    "failed": 0,
+    "filesPassed": 588,
+    "filesSkipped": 2
+  },
+  "finalMainCI": "PENDING_AT_PRE_PUSH_ARCHIVE; inspect exact pushed main Actions and subsequent acceptance report",
   "sourceSha256": {
     "apps/cli/src/installed-fixture-availability.regressions.test.ts": "be0f16e963cb26dc96630d1147ef087bfce06a8f1c994f6c0d708358182d7e6d",
     "packages/evaluation/src/gen1-budget-takeover.regressions.test.ts": "7e5fe893c9bf87f68605178c507327dc57aa1cbc6d41b2a9d39d11e0622962c5",
