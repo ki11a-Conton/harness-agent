@@ -1,21 +1,16 @@
-name: inspect installed UI evidence
-
+name: inspect original Windows gate evidence
 on:
   workflow_dispatch:
     inputs:
       run_id:
-        description: Installed UI workflow run whose original evidence should be inspected
         required: true
         type: string
       source_sha:
-        description: Exact source SHA of the original workflow
         required: true
         type: string
-
 permissions:
   actions: read
   contents: read
-
 jobs:
   inspect:
     runs-on: ubuntu-latest
@@ -24,7 +19,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Verify the original workflow identity
+      - name: Validate the original failed main workflow
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_ID: ${{ inputs.run_id }}
@@ -33,59 +28,45 @@ jobs:
         run: |
           node --input-type=module <<'NODE'
           import assert from 'node:assert/strict';
-          const { RUN_ID, SOURCE_SHA, REPOSITORY, GH_TOKEN } = process.env;
-          assert.match(RUN_ID, /^\d+$/); assert.match(SOURCE_SHA, /^[a-f0-9]{40}$/);
-          assert.equal(REPOSITORY, 'ki11a-Conton/harness-agent');
-          const response = await fetch(`https://api.github.com/repos/${REPOSITORY}/actions/runs/${RUN_ID}`, {
-            headers: { Authorization: `Bearer ${GH_TOKEN}`, Accept: 'application/vnd.github+json' },
-            redirect: 'error', signal: AbortSignal.timeout(30000),
-          });
-          assert.equal(response.status, 200);
-          const run = await response.json();
-          assert.equal(run.head_sha, SOURCE_SHA); assert.equal(run.head_branch, 'main');
-          assert.equal(run.path, '.github/workflows/deepseek-ui-installed.yml');
-          assert.equal(run.status, 'completed');
-          console.log(JSON.stringify({ runId: run.id, sourceSha: run.head_sha, conclusion: run.conclusion }));
+          const {RUN_ID,SOURCE_SHA,REPOSITORY,GH_TOKEN}=process.env;
+          assert.equal(REPOSITORY,'ki11a-Conton/harness-agent');
+          assert.equal(RUN_ID,'39024543525'); assert.equal(SOURCE_SHA,'0d960c2cf788435df532600124745399937d945f');
+          const r=await fetch('https://api.github.com/repos/'+REPOSITORY+'/actions/runs/'+RUN_ID,{headers:{Authorization:'Bearer '+GH_TOKEN,Accept:'application/vnd.github+json'},redirect:'error',signal:AbortSignal.timeout(30000)});
+          assert.equal(r.status,200);const run=await r.json();
+          assert.equal(run.head_sha,SOURCE_SHA);assert.equal(run.head_branch,'main');assert.equal(run.path,'.github/workflows/ci.yml');
+          assert.equal(run.status,'completed');assert.equal(run.conclusion,'failure');assert.equal(run.run_attempt,1);
+          console.log(JSON.stringify({runId:run.id,sourceSha:run.head_sha,conclusion:run.conclusion,scope:'Read original failed evidence only; no test rerun'}));
           NODE
       - uses: actions/download-artifact@v4
         with:
           github-token: ${{ github.token }}
           run-id: ${{ inputs.run_id }}
-          name: deepseek-installed-windows-latest-${{ inputs.source_sha }}-${{ inputs.run_id }}
+          name: gate-evidence-windows-latest
           path: evidence
-      - name: Expose bounded original case records without changing their verdict
+      - name: Verify original log digest and expose bounded failure context
         env:
           RUN_ID: ${{ inputs.run_id }}
           SOURCE_SHA: ${{ inputs.source_sha }}
         run: |
           node --input-type=module <<'NODE'
-          import { readFile } from 'node:fs/promises';
-          import { createHash } from 'node:crypto';
-          import { gzipSync } from 'node:zlib';
-          const bytes = await readFile('evidence/browser/result.json');
-          const report = JSON.parse(bytes);
-          const results = report.results.map(({ name, viewport, status, failure, checks, errors, externalRequests, failedHttp, calls }) =>
-            ({ name, viewport, status, failure, checks, errors, externalRequests, failedHttp,
-              rpcFailures: calls.filter(call => call.ok === false).map(({ endpoint, status, ok, error, expected }) =>
-                ({ endpoint, status, ok, error, expected })) }));
-          const hostStderr = await readFile('evidence/host-stderr.log', 'utf8');
-          const requestBytes = await readFile('evidence/fixture/requests.jsonl');
-          const modelRequests = requestBytes.toString('utf8').trim().split('\n').filter(Boolean).map(line => {
-            const { call, model, messages } = JSON.parse(line);
-            return { call, model, messages: messages.filter(message => message.role === 'user').map(({ role, content }) => ({ role, content })) };
-          });
-          const failedCaseRecords = report.results.filter(item => item.status !== 'PASS').map(
-            ({ name, viewport, status, failure, calls, rpcRequests, sockets, observation }) =>
-              ({ name, viewport, status, failure, calls, rpcRequests, sockets, observation }));
-          const record = { schemaVersion: 1, runId: process.env.RUN_ID, sourceSha: process.env.SOURCE_SHA,
-            rawReportSha256: createHash('sha256').update(bytes).digest('hex'), rawReportBytes: bytes.length,
-            requestLogSha256: createHash('sha256').update(requestBytes).digest('hex'), requestLogBytes: requestBytes.length,
-            hostStderr, modelRequests, failedCaseRecords, complete: report.complete, results };
-          const data = gzipSync(Buffer.from(JSON.stringify(record))).toString('base64');
-          const size = 3600, total = Math.ceil(data.length / size);
-          if (total > 7) throw new Error('Diagnostic projection exceeds the bounded per-step annotation budget');
-          for (let index = 0; index < total; index++) console.log(`::notice title=Installed UI evidence chunk ${index + 1}/${total}::` +
-            JSON.stringify({ encoding: 'gzip+base64', index, total, data: data.slice(index * size, (index + 1) * size) }));
-          for (const item of results.filter(item => item.status !== 'PASS')) console.log(`::notice title=Original installed UI failure::` +
-            JSON.stringify({ name: item.name, viewport: item.viewport, status: item.status, failure: item.failure }).slice(0, 4000));
+          import assert from 'node:assert/strict';
+          import {readFile} from 'node:fs/promises';
+          import {resolve,relative,dirname} from 'node:path';
+          import {createHash} from 'node:crypto';
+          import {gzipSync} from 'node:zlib';
+          const base=resolve('evidence/windows'),file=resolve(base,'test.json');
+          const raw=await readFile(file),gate=JSON.parse(raw);
+          assert.equal(gate.gitSha,process.env.SOURCE_SHA);assert.equal(gate.exitCode,1);assert.equal(gate.state,'failed');
+          const logPath=resolve(base,gate.logRef.path),rel=relative(resolve('evidence'),logPath);
+          assert(rel && !rel.startsWith('..') && !rel.startsWith('/'));
+          const bytes=await readFile(logPath),digest=createHash('sha256').update(bytes).digest('hex');
+          assert.equal(digest,gate.logRef.digest);
+          const text=bytes.toString('utf8').replace(/\x1b\[[0-9;]*m/g,''),lines=text.split('\n'),selected=new Set();
+          for(let i=0;i<lines.length;i++) if(/Real Harness owner did not settle|waterfall answer is bound|Web question continuation|Tests\s+\d+ failed|FAIL.*session\.test\.ts/.test(lines[i])) for(let j=Math.max(0,i-5);j<=Math.min(lines.length-1,i+14);j++)selected.add(j);
+          const excerpt=[...selected].sort((a,b)=>a-b).map(i=>({line:i+1,text:lines[i]}));
+          assert(excerpt.length>0);
+          const record={runId:process.env.RUN_ID,sourceSha:process.env.SOURCE_SHA,scope:'Original failed gate only; no acceptance rerun',gate,gateBytes:raw.length,gateSha256:createHash('sha256').update(raw).digest('hex'),logRef:gate.logRef.path,logBytes:bytes.length,logSha256:digest,excerpt};
+          const data=gzipSync(Buffer.from(JSON.stringify(record))).toString('base64'),size=3500,total=Math.ceil(data.length/size);
+          assert(total<=7,'Bounded annotation projection exceeded');
+          for(let index=0;index<total;index++)console.log('::notice title=Original Windows gate evidence chunk::'+JSON.stringify({index,total,encoding:'gzip+base64',data:data.slice(index*size,(index+1)*size)}));
           NODE
