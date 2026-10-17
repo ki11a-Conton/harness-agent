@@ -75,3 +75,11 @@ U13：原 0d Windows canonical test gate 的真实状态文件 rename EPERM 导�
 脚本 19、类型通过；Windows 专项显式加入该存储回归。局部语言保存等待
 12s 覆盖新真实存储预算，整套时限和语义断言不变。需固定新产品重新全仓、
 新包、同包/真实 Windows 验收及精确 main CI，不沿用原产品通过。
+
+
+最新固定验收：clean f2788ee5 完整 suite 9874/15/0；新离线归档与驱动同源码，
+Chromium 140 同包 30/75+42/117+连接 2/10 通过，0 workspace links。代码一致
+候选 9e0abb1a 首次 Windows 专项及 Windows/Ubuntu UI/CLI 工作流均成功。
+原 0d 四工作流已结束且原失败保留。最新原件见 docs/evidence/web-ui-20261017/store-final/
+和 store-candidate/。只归档文档后推送，最终 main 四工作流/十项主 CI 独立核对。
+按用户追加授权，审查剩余 PR 与现有修复的差异，无问题才合并并验收组合结果。

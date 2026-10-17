@@ -1,6 +1,6 @@
 # Harness Agent 当前执行计划入口
 
-当前执行任务：[Web 日常交互审查](plan(20261016-234000).md)，合同：[WEB-DAILY-INTERACTIONS-20261016](tasks/WEB-DAILY-INTERACTIONS-20261016.md)。已修复 13 类 UI/宿主/持久化问题，详见[报告](docs/web-daily-interactions-20261017.md)。前轮产品 4e651587 全仓 9874/15/0；12d 脚本同包 30/75+42/117+连接 2/10、4ae 首次双平台 UI/CLI CI 通过。原 0d 主 CI 又确认 Windows rename EPERM 导致问答续跑失败，原件已核对并归档；U13 采用已有 20 次有界替换预算，原反例失败、相关 80/安全 2146/脚本 19 通过。必须重新固定新产品、完整 suite、新包和精确 main 四工作流/十项主 CI；旧通过不代替新源码验收。保留失败，不调用付费模型，不发布 release。
+当前执行任务：[Web 日常交互审查](plan(20261016-234000).md)，合同：[WEB-DAILY-INTERACTIONS-20261016](tasks/WEB-DAILY-INTERACTIONS-20261016.md)。已修复 13 类 UI/宿主/持久化问题，详见[报告](docs/web-daily-interactions-20261017.md)。固定 clean f2788ee5 全仓 9874 通过/15 既有跳过/0 失败；该源码新安装包同包原 UI 30/75、新 UI 42/117、连接恢复 2/10 全部通过，安全 2146 通过。代码一致的 9e0abb1a 候选首次 Windows 专项和双平台安装 UI/CLI CI 成功，见[最新本地证据](docs/evidence/web-ui-20261017/store-final/README.md)与[候选证据](docs/evidence/web-ui-20261017/store-candidate/README.md)。原失败全部保留；归档只改文档证据，最终 main 四工作流/十项主 CI 仍按推送后的精确 SHA 独立复核。用户追加授权审查剩余 PR，逐项对照现有修复后再决定合并，不重复引入或回退已有修正。不调用付费模型，不发布 release。
 
 上一任务：[Coding 命令诊断优化](plan(20261016-164800).md)，合同：[EXEC-DIAGNOSTICS-20261016](tasks/EXEC-DIAGNOSTICS-20261016.md)。main b6a86528 的四个工作流全部成功、主 CI 10/10，均为首次运行。保留 exec 有界诊断尾部，让真实编译、语法和测试失败的最终报错进入下一次 provider 请求；同预算配对基线 0/3 可见、新实现 3/3 可见。固定 clean 432dca23 全仓 9846 通过/15 跳过/0 失败，安全 2146 通过；原 bdd CI 失败和负对照保留。见[实现和验收记录](docs/exec-diagnostics-20261016.md)。
 
