@@ -1,0 +1,20 @@
+✔ verifies the full original npm closure and independently reconstructs it offline (15300.08953ms)
+✔ rejects an altered official plugin during verification and sealing (891.383927ms)
+✔ refuses to bless modified branded executable assets even with --seal (3741.039758ms)
+✔ refuses a branding override on an unrelated plugin (3902.251225ms)
+✔ rejects altered original npm tar bytes (191.919194ms)
+✔ rejects altered source reference archive bytes (1547.88665ms)
+✔ rejects unregistered vendor files (2303.781965ms)
+✔ rejects a symlink in the vendor inventory (1745.146215ms)
+✔ rejects modified local root HTML until explicitly reviewed and sealed (2649.209629ms)
+✔ refuses to seal plain-file boot URLs that break upstream lazy client chunks (7450.174313ms)
+✔ refuses to seal a mismatched combo batch or browser boot graph (10087.514874ms)
+✔ graph regeneration still cannot bless a modified original frontend (1103.729093ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 51507.018017

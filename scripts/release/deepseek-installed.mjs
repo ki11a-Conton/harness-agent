@@ -70,6 +70,23 @@ try {
   assert.equal(exit.code, 0, stderr);
   const launch = JSON.parse(await readFile(join(fixture, 'evidence/launch.json'), 'utf8'));
   assert.equal(launch.installed, true); assert.equal(launch.sourceSha, manifest.sourceSha);
+  const dailyRunner = spawn(process.execPath, [join(source, 'scripts/research/web-daily-20261016/browser-acceptance.mjs'),
+    '--output', join(output, 'daily'), '--portable-root', root, '--playwright-module', resolve(values['playwright-module']),
+    '--chromium', chromium, '--viewports', 'desktop,mobile,narrow'], { cwd: cleanroom, windowsHide: true, env: process.env, stdio: ['ignore', 'pipe', 'pipe'] });
+  let dailyLog = '';
+  dailyRunner.stdout.on('data', bytes => { dailyLog += bytes; }); dailyRunner.stderr.on('data', bytes => { dailyLog += bytes; });
+  try {
+    const dailyExit = await timeout(new Promise((done, reject) => { dailyRunner.once('error', reject); dailyRunner.once('close', (code, signal) => done({ code, signal })); }),
+      8 * 60_000, 'Installed daily-interaction acceptance exceeded its deadline');
+    assert.equal(dailyExit.code, 0, dailyLog);
+  } finally {
+    if (dailyRunner.exitCode === null && dailyRunner.signalCode === null) dailyRunner.kill('SIGTERM');
+    await writeFile(join(output, 'daily.log'), dailyLog);
+  }
+  const daily = JSON.parse(await readFile(join(output, 'daily/result.json'), 'utf8'));
+  assert.equal(daily.status, 'PASS'); assert.equal(daily.results.length, 42); assert.equal(daily.paidModelCalls, 0);
+  assert.equal(daily.fixture.installed, true); assert.equal(daily.fixture.sourceSha, manifest.sourceSha);
+  await verifyPortable(root, { version: values.version, sourceSha: values['source-sha'] });
   const connectionArgs = [join(source, 'scripts/research/web-connection-browser.mjs'), '--output', join(output, 'connection'),
     '--portable-root', root, '--playwright-module', resolve(values['playwright-module']), '--chromium', chromium];
   const connectionRunner = spawn(process.execPath, connectionArgs, { cwd: cleanroom, env: process.env, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -90,6 +107,7 @@ try {
     workspaceLinks: 0, installedApplication: true, cases: browser.results.length,
     assertions: browser.results.reduce((sum, item) => sum + item.checks.length, 0), paidModelCalls: 0,
     connectionScenarios: connection.scenarios, connectionAssertions: connection.assertions,
+    dailyScenarios: daily.results.length, dailyAssertions: daily.results.reduce((sum, item) => sum + item.checks.length, 0),
     realModelQuality: 'NOT_PROVEN', fullDefaultUiParity: 'NOT_PROVEN',
     scope: 'Named ordinary coding UI controls on this verified archive, three viewport sizes; PTY/Cordis/goal/queue-edit capabilities are not claimed.' };
   await writeFile(join(output, 'result.json'), JSON.stringify(receipt, null, 2) + '\n');
@@ -99,15 +117,17 @@ try {
   // Only bounded fixture case metadata is exposed; the original verdict stays red.
   const escape = text => text.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
   console.error('::error title=Installed UI acceptance failed::' + escape(String(error).slice(0, 2000)));
-  try {
-    const report = JSON.parse(await readFile(join(output, 'browser/result.json'), 'utf8'));
-    for (const item of report.results.filter(item => item.status !== 'PASS').slice(0, 8)) {
-      console.error('::error title=Installed UI case failed::' + escape(JSON.stringify({
-        name: item.name, viewport: item.viewport, status: item.status, failure: item.failure,
-      }).slice(0, 2000)));
-    }
-  } catch (diagnosticError) {
-    console.error('Installed UI case diagnostics unavailable: ' + diagnosticError.message);
+  let remainingDiagnostics = 6;
+  for (const phase of ['browser', 'daily']) {
+    try {
+      const report = JSON.parse(await readFile(join(output, phase, 'result.json'), 'utf8'));
+      for (const item of report.results.filter(item => item.status !== 'PASS').slice(0, remainingDiagnostics)) {
+        remainingDiagnostics--;
+        console.error('::error title=Installed UI case failed::' + escape(JSON.stringify({
+          phase, name: item.name, viewport: item.viewport, status: item.status, failure: item.failure,
+        }).slice(0, 2000)));
+      }
+    } catch (diagnosticError) { console.error('Installed UI ' + phase + ' diagnostics unavailable: ' + diagnosticError.message); }
   }
   throw error;
 } finally {

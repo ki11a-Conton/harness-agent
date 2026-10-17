@@ -28,7 +28,7 @@ async function sendMain(text) {
 }
 async function sendPanel(text) {
   await panel.locator('#prompt').fill(text); await panel.locator('#continue').click();
-  await panel.locator('#notice').filter({ hasText: '后端接收' }).waitFor({ timeout: 15000 });
+  await panel.locator('#notice').filter({ hasText: /后端接收|accepted by the backend/ }).waitFor({ timeout: 15000 });
 }
 try {
   await page.goto(values.url); await page.locator('[data-composer-input=true]').waitFor({ timeout: 15000 });
@@ -38,11 +38,11 @@ try {
   await page.locator('pre code').filter({ hasText: 'export const value = 1;' }).last().waitFor({ timeout: 20000 });
   await page.getByRole('button', { name: 'Stop generating', exact: true }).waitFor({ state: 'hidden', timeout: 15000 });
   await panel.locator('#launch').click(); await panel.locator('#session option').first().waitFor({ state: 'attached' });
-  await refreshUntil(/任务已结束.*未运行验收/); checked('Unverified real model turn is displayed as unverified, not passed');
+  await refreshUntil(/任务已结束.*未运行验收|Task ended.*Not verified/); checked('Unverified real model turn is displayed as unverified, not passed');
   const sessionId = await panel.locator('#session').inputValue(); assert(sessionId); checked('Actual authorized session list and status remote are connected');
-  await sendPanel('[fixture:slow] Continue the current review.'); await refreshUntil(/运行中/);
-  await panel.locator('#cancel').click(); await refreshUntil(/已取消/); checked('Stop button cancels the real Runtime turn before displaying cancellation');
-  await sendPanel('[fixture:read] Resume the current coding task.'); await refreshUntil(/任务已结束.*未运行验收/);
+  await sendPanel('[fixture:slow] Continue the current review.'); await refreshUntil(/运行中|Running/);
+  await panel.locator('#cancel').click(); await refreshUntil(/已取消|Cancelled/); checked('Stop button cancels the real Runtime turn before displaying cancellation');
+  await sendPanel('[fixture:read] Resume the current coding task.'); await refreshUntil(/任务已结束.*未运行验收|Task ended.*Not verified/);
   assert.equal(actions.filter(item => item.content[0].text.includes('Resume')).length, 1); checked('Continue button submits exactly one actual prompt and completes a follow-up');
   await panel.locator('#close').click();
   await sendMain('[fixture:write] Write the actual browser-created.txt after approval.');
@@ -52,7 +52,7 @@ try {
   assert.equal(await readFile(resolve(values['fixture-root'], 'project/browser-created.txt'), 'utf8'), 'Actual approved browser coding output\n');
   checked('An actual approved edit reached disk');
   await panel.locator('#launch').click(); await panel.locator('#session').selectOption(sessionId);
-  await refreshUntil(/任务已结束/);
+  await refreshUntil(/任务已结束|Task ended/);
   await panel.locator('#files a').filter({ hasText: 'browser-created.txt' }).waitFor({ timeout: 10000 });
   assert.match(await panel.locator('#files a').filter({ hasText: 'browser-created.txt' }).getAttribute('href'), /^vscode:\/\/file\//);
   checked('Successful edit has a scoped, encoded VS Code URI without claiming a server launcher');
@@ -65,10 +65,10 @@ try {
   assert(await panel.locator('dialog').evaluate(element => element.getBoundingClientRect().width <= innerWidth));
   await page.screenshot({ path: resolve(values.output, 'coding-status-mobile.png') }); checked('Record panel fits a mobile viewport');
   await context.setOffline(true); await panel.locator('#prompt').fill('Do not silently duplicate this uncertain request.'); await panel.locator('#continue').click();
-  await panel.locator('#error').filter({ hasText: '提交状态未知' }).waitFor({ timeout: 10000 });
+  await panel.locator('#error').filter({ hasText: /提交状态未知|Submission uncertain/ }).waitFor({ timeout: 10000 });
   await context.setOffline(false); await panel.locator('#refresh').click();
   assert.equal(await panel.locator('#continue').isDisabled(), true); checked('Transport failure stays visibly uncertain and cannot auto-resubmit a new action');
-  await panel.locator('#retry').click(); await refreshUntil(/任务已结束/);
+  await panel.locator('#retry').click(); await refreshUntil(/任务已结束|Task ended/);
   const retried = actions.filter(item => item.content[0].text.includes('uncertain request'));
   assert(retried.length >= 2); assert.equal(new Set(retried.map(item => item.requestId)).size, 1);
   checked('Explicit retry reuses the identical durable request ID');

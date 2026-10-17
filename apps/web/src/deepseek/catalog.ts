@@ -363,11 +363,11 @@ export function createCatalogService(host: CatalogHost) {
   return { endpoints, resolvedModelProfiles,
     async call(name: string, input: unknown, signal: AbortSignal): Promise<unknown> {
       signal.throwIfAborted(); const args = object(input ?? {});
-      if (name === "settings/describe") { keys(args, []); const current = await document<SettingsDocument>("settings", signal); return { writable: true, hasDocument: host.dataDir !== undefined, namespaces: (Object.keys(schemas) as Namespace[]).map(ns => view(ns, current)) }; }
+      if (name === "settings/describe") { keys(args, []); const current = await document<SettingsDocument>("settings", signal); return { writable: true, hasDocument: host.dataDir !== undefined && host.openSettingsDocument !== undefined, namespaces: (Object.keys(schemas) as Namespace[]).map(ns => view(ns, current)) }; }
       if (["settings/update", "settings/replace", "settings/mutate"].includes(name)) return writeSettings(name, args, signal);
       if (name === "settings/openSettingsDocument") {
         keys(args, []);
-        if (host.dataDir === undefined || host.openSettingsDocument === undefined) throw new RemoteFailure("gateway/internal", "The host has no native settings document opener");
+        if (host.dataDir === undefined || host.openSettingsDocument === undefined) throw new RemoteFailure("gateway/unavailable", "The host has no native settings document opener");
         await document<SettingsDocument>("settings", signal, async () => {});
         await host.openSettingsDocument(settingsPath, signal); signal.throwIfAborted(); return { opened: true };
       }

@@ -1,0 +1,688 @@
+{
+  "id": 4,
+  "label": "responsive-usage-actual-computed-style",
+  "code": "return {usage:await page.getByRole('button',{name:/Usage|turns/}).evaluateAll(es=>es.map(e=>({name:e.innerText,label:e.getAttribute('aria-label'),box:{x:e.getBoundingClientRect().x,y:e.getBoundingClientRect().y,w:e.getBoundingClientRect().width,h:e.getBoundingClientRect().height},display:getComputedStyle(e).display,html:e.outerHTML.slice(0,800),parent:e.parentElement.outerHTML.slice(0,1600)}))),lang:await page.evaluate(()=>document.documentElement.lang)};\n",
+  "ok": true,
+  "result": {
+    "usage": [
+      {
+        "name": "2 turns 2 steps",
+        "label": "2 turns 2 steps",
+        "box": {
+          "x": 162.140625,
+          "y": 818,
+          "w": 114.71875,
+          "h": 22
+        },
+        "display": "flex",
+        "html": "<button type=\"button\" class=\"bOPqQW_pill\" aria-haspopup=\"dialog\" aria-expanded=\"false\" aria-label=\"2 turns 2 steps\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" aria-hidden=\"true\" stroke-width=\"1\"><path d=\"M3.4041 13.096C2.49514 12.187 1.87614 11.0288 1.62537 9.76798C1.37459 8.50716 1.50331 7.20028 1.99525 6.01261C2.48719 4.82494 3.32025 3.80981 4.3891 3.09557C5.45795 2.38134 6.71458 2.00008 8.0001 2C9.28563 2.00008 10.5423 2.38134 11.6111 3.09557C12.68 3.80981 13.513 4.82494 14.005 6.01261C14.4969 7.20028 14.6256 8.50716 14.3748 9.76798C14.1241 11.0288 13.5051 12.187 12.5961 13.096\" stroke=\"currentColor\"></path><path d=\"M8 8.49994L11.6114 4.88855\" stroke=\"currentColor\"></path><path d=\"M8 9.75C8.69036 9.75 9.25 9.19036 9.25 8.5C9.25 7.80964",
+        "parent": "<span class=\"bOPqQW_anchor\" data-composer-stat=\"activity\"><button type=\"button\" class=\"bOPqQW_pill\" aria-haspopup=\"dialog\" aria-expanded=\"false\" aria-label=\"2 turns 2 steps\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" aria-hidden=\"true\" stroke-width=\"1\"><path d=\"M3.4041 13.096C2.49514 12.187 1.87614 11.0288 1.62537 9.76798C1.37459 8.50716 1.50331 7.20028 1.99525 6.01261C2.48719 4.82494 3.32025 3.80981 4.3891 3.09557C5.45795 2.38134 6.71458 2.00008 8.0001 2C9.28563 2.00008 10.5423 2.38134 11.6111 3.09557C12.68 3.80981 13.513 4.82494 14.005 6.01261C14.4969 7.20028 14.6256 8.50716 14.3748 9.76798C14.1241 11.0288 13.5051 12.187 12.5961 13.096\" stroke=\"currentColor\"></path><path d=\"M8 8.49994L11.6114 4.88855\" stroke=\"currentColor\"></path><path d=\"M8 9.75C8.69036 9.75 9.25 9.19036 9.25 8.5C9.25 7.80964 8.69036 7.25 8 7.25C7.30964 7.25 6.75 7.80964 6.75 8.5C6.75 9.19036 7.30964 9.75 8 9.75Z\" fill=\"currentColor\"></path></svg><span class=\"bOPqQW_label\">2 turns 2 steps</span></button></span>"
+      }
+    ],
+    "lang": "en"
+  },
+  "observation": {
+    "url": "http://127.0.0.1:38065/",
+    "title": "[fixture:slow] QUEUE_ACTION_REPRO — Harness Agent",
+    "text": "[fixture:slow] QUEUE_ACTION_REPRO\nChat\nTrajectory\n[fixture:slow] QUEUE_ACTION_REPRO\n17:12\nCompleted\nCompleted in 7s\nActual Harness browser answer\n\nBold result and local documentation.\n\nFirst item\nSecond item\nFile\tStatus\ndemo.js\treviewed\njs\nexport const value = 1;\n17:12\nQUEUED_REMOVE_WILL_FAIL\n17:12\nCompleted\nCompleted in 1s\nActual Harness browser answer\n\nBold result and local documentation.\n\nFirst item\nSecond item\nFile\tStatus\ndemo.js\treviewed\njs\nexport const value = 1;\n17:12\nMessage or run a task, / commands, @ files or sessions\nweb-loopback-fixture\n2 turns 2 steps",
+    "viewport": {
+      "w": 390,
+      "h": 844,
+      "scrollW": 390
+    },
+    "active": {
+      "tag": "DIV",
+      "label": "Message or run a task, / commands, @ files or sessions"
+    },
+    "controls": [
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Open sidebar",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 10,
+          "y": 18,
+          "w": 36,
+          "h": 36
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "New session",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 10,
+          "y": 66,
+          "w": 36,
+          "h": 36
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Plugins",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 10,
+          "y": 114,
+          "w": 36,
+          "h": 36
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Automation tasks",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 10,
+          "y": 162,
+          "w": 36,
+          "h": 36
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Add workspace",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 10,
+          "y": 210,
+          "w": 36,
+          "h": 36
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Search sessions",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 10,
+          "y": 258,
+          "w": 36,
+          "h": 36
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Settings",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 10,
+          "y": 792,
+          "w": 36,
+          "h": 36
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "More actions",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 314,
+          "y": 11,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Open right sidebar",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 350,
+          "y": 11,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": "tab",
+        "label": null,
+        "title": null,
+        "text": "Chat",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 84,
+          "y": 50,
+          "w": 27,
+          "h": 25
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": "tab",
+        "label": null,
+        "title": null,
+        "text": "Trajectory",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 147,
+          "y": 50,
+          "w": 57,
+          "h": 25
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Copy",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 323,
+          "y": -400,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": null,
+        "title": null,
+        "text": "Completed in 7s",
+        "placeholder": null,
+        "disabled": true,
+        "box": {
+          "x": 88,
+          "y": -356,
+          "w": 263,
+          "h": 33
+        }
+      },
+      {
+        "tag": "A",
+        "role": null,
+        "label": null,
+        "title": null,
+        "text": "local documentation",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 189,
+          "y": -229,
+          "w": 151,
+          "h": 20
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Wrap lines",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 281,
+          "y": 36,
+          "w": 24,
+          "h": 24
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Copy",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 309,
+          "y": 36,
+          "w": 24,
+          "h": 24
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Copy",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 82,
+          "y": 84,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Good response",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 118,
+          "y": 84,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Bad response",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 154,
+          "y": 84,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Branch into a new conversation",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 190,
+          "y": 84,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": null,
+        "title": null,
+        "text": "Usage 72 tok",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 234,
+          "y": 84,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Copy",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 323,
+          "y": 188,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": null,
+        "title": null,
+        "text": "Completed in 1s",
+        "placeholder": null,
+        "disabled": true,
+        "box": {
+          "x": 88,
+          "y": 232,
+          "w": 263,
+          "h": 33
+        }
+      },
+      {
+        "tag": "A",
+        "role": null,
+        "label": null,
+        "title": null,
+        "text": "local documentation",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 189,
+          "y": 359,
+          "w": 151,
+          "h": 20
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Wrap lines",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 281,
+          "y": 579,
+          "w": 24,
+          "h": 24
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Copy",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 309,
+          "y": 579,
+          "w": 24,
+          "h": 24
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Copy",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 82,
+          "y": 672,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Good response",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 118,
+          "y": 672,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Bad response",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 154,
+          "y": 672,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Branch into a new conversation",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 190,
+          "y": 672,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": null,
+        "title": null,
+        "text": "Usage 72 tok",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 234,
+          "y": 672,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "DIV",
+        "role": "textbox",
+        "label": "Message or run a task, / commands, @ files or sessions",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 72,
+          "y": 724,
+          "w": 291,
+          "h": 36
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Add files or run commands",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 80,
+          "y": 777,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Select model, current web-loopback-fixture",
+        "title": "web-loopback-fixture",
+        "text": "web-loopback-fixture",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 183,
+          "y": 777,
+          "w": 126,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Send message",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": true,
+        "box": {
+          "x": 325,
+          "y": 772,
+          "w": 34,
+          "h": 34
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "2 turns 2 steps",
+        "title": null,
+        "text": "2 turns 2 steps",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 162,
+          "y": 818,
+          "w": 115,
+          "h": 22
+        }
+      },
+      {
+        "tag": "DIV",
+        "role": "tab",
+        "label": null,
+        "title": null,
+        "text": "Terminal",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 401,
+          "y": 10,
+          "w": 100,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Close",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 477,
+          "y": 14,
+          "w": 20,
+          "h": 20
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "New tab",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 505,
+          "y": 10,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Split",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": true,
+        "box": {
+          "x": 674,
+          "y": 10,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Exit fullscreen",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 710,
+          "y": 10,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Collapse right sidebar",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 746,
+          "y": 10,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": null,
+        "title": null,
+        "text": "Retry",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 403,
+          "y": 51,
+          "w": 51,
+          "h": 28
+        }
+      }
+    ]
+  },
+  "rpc": [],
+  "errors": [],
+  "screenshot": "/tmp/harness-web-ui-20261016/candidate8/004-responsive-usage-actual-computed-style.png"
+}

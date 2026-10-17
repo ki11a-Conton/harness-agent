@@ -1,0 +1,538 @@
+{
+  "id": 2,
+  "label": "queued-remove-unsupported-repro",
+  "code": "await page.getByRole('button',{name:'Collapse right sidebar',exact:true}).click();const input=page.locator('[data-composer-input=true][contenteditable=true]');await input.fill('[fixture:slow] QUEUE_ACTION_REPRO');await input.press('Enter');await page.getByRole('button',{name:'Stop generating',exact:true}).waitFor();await input.fill('QUEUED_REMOVE_WILL_FAIL');await page.getByRole('button',{name:'Queue message',exact:true}).click();await page.getByRole('button',{name:'Remove queued message',exact:true}).waitFor();await page.getByRole('button',{name:'Remove queued message',exact:true}).click();await page.getByText(/Removal failed/).waitFor();return {error:(await page.locator('body').innerText()).slice(-1000),queuedValueStillPresent:await page.getByText('QUEUED_REMOVE_WILL_FAIL',{exact:true}).count()};\n",
+  "ok": false,
+  "error": "TimeoutError: locator.click: Timeout 5000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Remove queued message', exact: true })\u001b[22m\n\u001b[2m    - locator resolved to <button disabled type=\"button\" title=\"Sending…\" class=\"_7yHdaG_action\" aria-label=\"Remove queued message\">…</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is not enabled\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is not enabled\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    9 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is not enabled\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 500ms\u001b[22m\n\nlocator.click: Timeout 5000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Remove queued message', exact: true })\u001b[22m\n\u001b[2m    - locator resolved to <button disabled type=\"button\" title=\"Sending…\" class=\"_7yHdaG_action\" aria-label=\"Remove queued message\">…</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is not enabled\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is not enabled\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    9 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is not enabled\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 500ms\u001b[22m\n\n    at eval (<anonymous>:3:591)\n    at async file:///tmp/harness-web-ui-20261016/browser-driver-candidate8.mjs:20:44",
+  "observation": {
+    "url": "http://127.0.0.1:38065/",
+    "title": "[fixture:slow] QUEUE_ACTION_REPRO — Harness Agent",
+    "text": "Harness Agent\nNew Session\nPlugins\nAutomation tasks\nWorkspaces\nproject\nRunning\n[fixture:slow] QUEUE_ACTION_REPRO\nnow\nSettings\n[fixture:slow] QUEUE_ACTION_REPRO\nmain\nChat\nTrajectory\n[fixture:slow] QUEUE_ACTION_REPRO\n17:12\nActual Harness browser answer\n\nBold result and local documentation.\n\nFirst item\nSecond item\nFile\tStatus\ndemo.js\treviewed\njs\nexport const value = 1;\nDeep diving\nDeep diving for 5s ···\nQUEUED_REMOVE_WILL_FAIL\nSending…\nMessage or run a task, / commands, @ files or sessions\nweb-loopback-fixture",
+    "viewport": {
+      "w": 1440,
+      "h": 900,
+      "scrollW": 1440
+    },
+    "active": {
+      "tag": "DIV",
+      "label": "Message or run a task, / commands, @ files or sessions"
+    },
+    "controls": [
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "New session",
+        "title": null,
+        "text": "Harness Agent",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 16,
+          "y": 24,
+          "w": 216,
+          "h": 24
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Collapse sidebar",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 240,
+          "y": 22,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "New session",
+        "title": null,
+        "text": "New Session",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 14,
+          "y": 70,
+          "w": 252,
+          "h": 38
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Plugins",
+        "title": null,
+        "text": "Plugins",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 14,
+          "y": 120,
+          "w": 252,
+          "h": 36
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Automation tasks",
+        "title": null,
+        "text": "Automation tasks",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 14,
+          "y": 160,
+          "w": 252,
+          "h": 36
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Search sessions",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 176,
+          "y": 210,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "INPUT",
+        "role": null,
+        "label": null,
+        "title": null,
+        "text": "",
+        "placeholder": "Search session names",
+        "disabled": false,
+        "checked": false,
+        "box": {
+          "x": 204,
+          "y": 214,
+          "w": 4,
+          "h": 20
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "View options",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 208,
+          "y": 210,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Add workspace",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 240,
+          "y": 210,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Settings",
+        "title": null,
+        "text": "Settings",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 10,
+          "y": 848,
+          "w": 260,
+          "h": 42
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "More actions",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 1364,
+          "y": 11,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Open right sidebar",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 1400,
+          "y": 11,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": "tab",
+        "label": null,
+        "title": null,
+        "text": "Chat",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 308,
+          "y": 50,
+          "w": 27,
+          "h": 25
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": "tab",
+        "label": null,
+        "title": null,
+        "text": "Trajectory",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 371,
+          "y": 50,
+          "w": 57,
+          "h": 25
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Copy",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 1200,
+          "y": 140,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "A",
+        "role": null,
+        "label": null,
+        "title": null,
+        "text": "local documentation",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 587,
+          "y": 232,
+          "w": 151,
+          "h": 20
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Wrap lines",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 1158,
+          "y": 452,
+          "w": 24,
+          "h": 24
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Copy",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 1186,
+          "y": 452,
+          "w": 24,
+          "h": 24
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Edit queued message",
+        "title": "Sending…",
+        "text": "",
+        "placeholder": null,
+        "disabled": true,
+        "box": {
+          "x": 1119,
+          "y": 763,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Remove queued message",
+        "title": "Sending…",
+        "text": "",
+        "placeholder": null,
+        "disabled": true,
+        "box": {
+          "x": 1157,
+          "y": 763,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Steer queued message",
+        "title": "Sending…",
+        "text": "",
+        "placeholder": null,
+        "disabled": true,
+        "box": {
+          "x": 1195,
+          "y": 763,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "DIV",
+        "role": "textbox",
+        "label": "Message or run a task, / commands, @ files or sessions",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 469,
+          "y": 802,
+          "w": 770,
+          "h": 36
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Add files or run commands",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 477,
+          "y": 855,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Select model, current web-loopback-fixture",
+        "title": "web-loopback-fixture",
+        "text": "web-loopback-fixture",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 1028,
+          "y": 855,
+          "w": 150,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Stop generating",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 1202,
+          "y": 850,
+          "w": 34,
+          "h": 34
+        }
+      },
+      {
+        "tag": "DIV",
+        "role": "tab",
+        "label": null,
+        "title": null,
+        "text": "Terminal",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 1451,
+          "y": 10,
+          "w": 100,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Close",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 1527,
+          "y": 14,
+          "w": 20,
+          "h": 20
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "New tab",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 1555,
+          "y": 10,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Split",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 1982,
+          "y": 10,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Fullscreen",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 2018,
+          "y": 10,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Collapse right sidebar",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 2054,
+          "y": 10,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": null,
+        "title": null,
+        "text": "Retry",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 1453,
+          "y": 51,
+          "w": 51,
+          "h": 28
+        }
+      }
+    ]
+  },
+  "rpc": [
+    {
+      "carrier": "websocket",
+      "endpoint": "agentPresets/list",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "schedule/list",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "session/prompt",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "schedule/catalog",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "session/prompt",
+      "status": 200,
+      "ok": true
+    }
+  ],
+  "errors": [],
+  "screenshot": "/tmp/harness-web-ui-20261016/candidate8/002-queued-remove-unsupported-repro.png"
+}

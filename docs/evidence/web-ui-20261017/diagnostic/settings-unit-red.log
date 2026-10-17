@@ -1,0 +1,35 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-web-interactions-20261016
+
+ ❯ apps/web/src/deepseek/settings-ui.regressions.test.ts (3 tests | 1 failed) 43ms
+   ✓ the original settings shell closes on an asynchronous blank-session onboarding step even when that step paints no modal 17ms
+   × automatic onboarding waits for a user-opened Settings panel and remains available after it closes 21ms
+   ✓ an explicit onboarding request still replaces Settings and selects exactly its requested step 5ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  apps/web/src/deepseek/settings-ui.regressions.test.ts > automatic onboarding waits for a user-opened Settings panel and remains available after it closes
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ apps/web/src/deepseek/settings-ui.regressions.test.ts:61:62
+     59| it("automatic onboarding waits for a user-opened Settings panel and re…
+     60|   const shell = await settings(true); shell.render(); shell.setOpen(tr…
+     61|   shell.setBlank(true); shell.render(); expect(shell.open()).toBe(true…
+       |                                                              ^
+     62|   expect(shell.slots.some(slot => slot.name === "settings.onboarding")…
+     63|   shell.setOpen(false); shell.render(); expect(shell.slots.find(slot =…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 2 passed (3)
+   Start at  04:18:00
+   Duration  488ms (transform 76ms, setup 0ms, import 103ms, tests 43ms, environment 2ms)
+

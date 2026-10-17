@@ -64,7 +64,9 @@ test("refuses to bless modified branded executable assets even with --seal", asy
 
 test("refuses a branding override on an unrelated plugin", async () => {
   const graph = JSON.parse(await readFile(path.join(fixturePublic, "deepseek/boot-manifest.json"), "utf8"));
-  graph.entries.find(row => row.id === "@deepseek-ai/dsh-client-ui-chat").brandOverride = true;
+  const unrelated = graph.entries.find(row => row.id === "@deepseek-ai/dsh-client-ui-theme");
+  assert(unrelated); assert.equal(unrelated.brandOverride, undefined);
+  unrelated.brandOverride = true;
   await change("deepseek/boot-manifest.json", JSON.stringify(graph), async () => {
     await assert.rejects(run(["--seal"]), error => /Invalid brand override/.test(error.stderr));
   });

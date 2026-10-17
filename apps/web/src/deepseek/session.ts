@@ -9,6 +9,8 @@ import { createEventsService, fail, keys, object, pause, string } from "./events
 import { createSessionMetadataStore, type SessionMetadata, type SessionMetadataStore } from "./metadata.js";
 import { pageSessionHistory, projectSessionHistory } from "./projections.js";
 import { codingStatusOf } from "./coding-status.js";
+import { createFeedbackService, type FeedbackAction } from "./feedback.js";
+import { createSessionReferences } from "./session-references.js";
 
 export interface SessionHost {
   harness: Harness;
@@ -69,6 +71,11 @@ export function createSessionService(host: SessionHost) {
     const details = await meta(id, signal);
     // Read source events after messages. Replay holds a commit barrier when the matching message has not appeared yet.
     const messages = await host.harness.store.listMessages(id);
+    const displayTexts: Record<string, string> = {};
+    for (const message of messages) if (message.role === "user") {
+      const text = details.displayTexts?.[createHash("sha256").update(message.content).digest("hex")];
+      if (text !== undefined) displayTexts[message.id] = text;
+    }
     const events = await host.harness.events.list(id);
     const children = await host.harness.store.listSessions({ parentId: id });
     signal.throwIfAborted();
@@ -110,7 +117,7 @@ export function createSessionService(host: SessionHost) {
     // first observed event cannot prove a baseline: accepting it would conceal
     // lost history. Only explicitly bounded projection callers may declare one.
     return projectSessionHistory({ session: current, messages, agentPreset,
-      events: visible, title: details.title, requestIds, children });
+      events: visible, title: details.title, requestIds, displayTexts, children });
   }
   async function projectSnapshot(id: SessionId, signal: AbortSignal) {
     return serial(id, () => projectUnlocked(id, signal));
@@ -198,6 +205,12 @@ export function createSessionService(host: SessionHost) {
   }
 
   const events = createEventsService({ harness: host.harness, pollDelayMs: host.pollDelayMs, answerAsk, summary: (id, signal) => summary(id, signal) });
+  const references = createSessionReferences(host.harness, async (id, signal) => {
+    const title = (await meta(id, signal)).title;
+    if (title) return title;
+    const first = (await host.harness.store.listMessages(id as SessionId)).find(message => message.role === "user");
+    return first?.content.trim().replace(/\s+/gu, " ").slice(0, 80);
+  });
 
   async function prompt(request: Record<string, unknown>, signal: AbortSignal): Promise<{ accepted: true }> {
     keys(request, ["requestId", "sessionId", "mode", "content"], ["clientTimeZone"]);
@@ -236,21 +249,22 @@ export function createSessionService(host: SessionHost) {
         await meta(id, signal, data => { data.requests[requestId]!.status = "accepted"; data.requests[requestId]!.promptId = candidates[0]!.id; });
         return { accepted: true };
       }
-      const content: string[] = [];
+      const content: Array<{ text: string; references: boolean }> = [];
       for (const part of parts) {
-        if (part.type === "text") content.push(part.text);
+        if (part.type === "text") content.push({ text: part.text, references: true });
         else {
           if (host.resolveUpload === undefined) fail("session/attachment-invalid", "Controlled file admission is unavailable");
           const upload = await host.resolveUpload!(id, part.receiptId, signal);
           if (upload.receiptId !== part.receiptId || typeof upload.text !== "string" || typeof upload.file.name !== "string") fail("session/attachment-invalid", "File receipt owner returned an invalid attachment");
-          content.push(`[Attached UTF-8 file: ${JSON.stringify(upload.file.name)}]\n${upload.text}\n[End attached file]`);
+          content.push({ text: `[Attached UTF-8 file: ${JSON.stringify(upload.file.name)}]\n${upload.text}\n[End attached file]`, references: false });
         }
       }
-      const text = content.join("\n");
+      const { text, displayText } = await references.prepare(id, content, signal);
       if (text.trim().length === 0 || text.length > 64_000) fail("session/attachment-invalid", "Prompt text and extracted file context must contain at most 64000 characters");
       const actor = await host.harness.sessions.load(id);
       const beforePromptIds = (await host.harness.inbox.listAll(id)).map(item => item.id);
       current = await meta(id, signal, data => {
+        if (displayText !== text) (data.displayTexts ??= {})[createHash("sha256").update(text).digest("hex")] = displayText;
         Object.defineProperty(data.requests, requestId, { enumerable: true, writable: true, configurable: true,
           value: { fingerprint, text, mode: request.mode as "queue" | "steer", startedAt: Date.now(), beforePromptIds, status: "admitting" } });
       });
@@ -267,8 +281,21 @@ export function createSessionService(host: SessionHost) {
     });
   }
 
+  const feedback = createFeedbackService({ harness: host.harness,
+    async transaction<T>(id: string, signal: AbortSignal, action: FeedbackAction<T>): Promise<T> {
+      return serial(id, async () => {
+        await session(id); const before = await meta(id, signal);
+        const result = action(before.feedback ?? []);
+        if (result.history !== undefined) await meta(id, signal, row => {
+          if (row.revision !== before.revision) fail("session/metadata-conflict", "Feedback metadata revision changed");
+          row.feedback = structuredClone(result.history!);
+        });
+        return result.value;
+      });
+    },
+  });
   const endpoints = ["session/list", "session/search", "session/create", "session/rename", "session/fork", "session/prompt", "session/updateQueue", "session/cancel", "session/interrupt", "session/page", "session/follow", "session/projections", "session/control", "session/codingStatus",
-    "session/canOpenWorkspacePath", "session/workspacePathApplications", "session/openWorkspacePath", ...events.endpoints];
+    "session/canOpenWorkspacePath", "session/workspacePathApplications", "session/openWorkspacePath", "sessionReferenceResolver/candidates", ...events.endpoints, ...feedback.endpoints];
   const service = {
     endpoints, metadata, summary, publish: events.publish,
     close(): Promise<void> {
@@ -292,6 +319,8 @@ export function createSessionService(host: SessionHost) {
     },
     async call(endpoint: string, args: Record<string, unknown>, signal: AbortSignal): Promise<unknown> {
       signal.throwIfAborted();
+      if (feedback.endpoints.includes(endpoint)) return feedback.call(endpoint, args, signal);
+      if (endpoint === "sessionReferenceResolver/candidates") return references.candidates(args, signal);
       if (events.endpoints.includes(endpoint)) return events.call(endpoint, args, signal);
       if (endpoint === "session/canOpenWorkspacePath") { keys(args, []); return false; }
       if (endpoint === "session/workspacePathApplications") {
@@ -395,6 +424,8 @@ export function createSessionService(host: SessionHost) {
             if (request.atSeq !== projection.cursor) fail("session/fork-unavailable", "This runtime currently forks only the latest settled history; exact earlier cuts require the prefix-fork owner");
           }
           const branch = await host.rpc.invoke("session.fork", { sessionId: owner.id }, { signal }) as Session;
+          const displayTexts = (await meta(owner.id, signal)).displayTexts;
+          if (displayTexts !== undefined) await meta(branch.id, signal, row => { row.displayTexts = structuredClone(displayTexts); });
           await host.bindSession?.(branch.id); return { sessionId: branch.id };
         });
       }

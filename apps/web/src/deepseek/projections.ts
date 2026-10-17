@@ -114,6 +114,8 @@ export interface SessionProjectionInput {
   readonly title?: string;
   /** Accepted prompt correlation, keyed by durable message id or inbox prompt id. */
   readonly requestIds?: Readonly<Record<string, string>>;
+  /** Local host presentation for user input; never changes journal anchoring or model content. */
+  readonly displayTexts?: Readonly<Record<string, string>>;
   /** Actual persisted children whose parent identity has been checked. */
   readonly children?: readonly Session[];
 }
@@ -219,7 +221,8 @@ export function projectSessionHistory(input: SessionProjectionInput): PageProjec
     // model history. Its model contract forbids exposing that internal field
     // as user-facing output; official thinking renderers remain installed but
     // receive no invented or recovered hidden reasoning blocks.
-    if (message.content !== "") content.push({ type: "text", text: message.content });
+    const text = message.role === "user" ? input.displayTexts?.[message.id] ?? message.content : message.content;
+    if (text !== "") content.push({ type: "text", text });
     for (const call of message.toolCalls ?? []) content.push({ type: "tool-call", id: call.id, name: call.name, arguments: JSON.stringify(call.args) });
     return content;
   }
@@ -237,7 +240,7 @@ export function projectSessionHistory(input: SessionProjectionInput): PageProjec
     if (message.role === "user") {
       append("user/message", message.createdAt, wireMessage, true);
       lastPromptAt = message.createdAt;
-      if (title === null) title = message.content.replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      if (title === null) title = (input.displayTexts?.[message.id] ?? message.content).replace(/\s+/g, " ").trim().slice(0, 80) || null;
     } else if (message.role === "assistant") {
       if (modelSettlement && active !== undefined) {
         // Harness journals only visible text deltas. The final reasoning block

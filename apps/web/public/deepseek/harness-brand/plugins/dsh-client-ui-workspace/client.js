@@ -1384,6 +1384,8 @@ window.__ModuleLoader__.load({
 			connecting = /* @__PURE__ */ new Map();
 			lifetime = new AbortController();
 			selection = (0, _deepseek_ai_dsh_client_store.createSnapshotStore)({}, { persist: { name: "dsh.sessions.current" } });
+            navigationPending = (0, _deepseek_ai_dsh_client_store.createSnapshotStore)(false);
+            navigationIntent = 0;
 			mainReference;
 			/**
 			* @param ctx - Client root Context.
@@ -1444,10 +1446,15 @@ window.__ModuleLoader__.load({
 				}
 			}
 			openSession(target) {
+                ++this.navigationIntent;
+                this.navigationPending.set(false);
 				const navigation = AbortSignal.any([this.ctx.layout.beginNavigation(), this.lifetime.signal]);
 				this.replaceMain(target, navigation, "reveal");
 			}
 			async openWorkspace(workspaceId, beforeOpen) {
+                const intent = ++this.navigationIntent;
+                this.navigationPending.set(true);
+                try {
 				const navigation = AbortSignal.any([this.ctx.layout.beginNavigation(), this.lifetime.signal]);
 				let sessionId;
 				try {
@@ -1461,6 +1468,9 @@ window.__ModuleLoader__.load({
 				}
 				if (navigation.aborted) return;
 				this.replaceMain(sessionId, navigation, "reveal", beforeOpen);
+                } finally {
+                    if (intent === this.navigationIntent) this.navigationPending.set(false);
+                }
 			}
 			async forkSession(sessionId, onCreated) {
 				return this.sessions.fork({
@@ -1575,6 +1585,9 @@ window.__ModuleLoader__.load({
 				};
 			}
 			async restoreSelection(workspaces, sessions) {
+                const intent = ++this.navigationIntent;
+                this.navigationPending.set(true);
+                try {
 				const saved = this.selection.getSnapshot();
 				if (saved.subagentAddress !== void 0) {
 					this.replaceMain(saved.subagentAddress, this.lifetime.signal, "preserve");
@@ -1597,6 +1610,9 @@ window.__ModuleLoader__.load({
 				}
 				if (sessionId === void 0 && target !== void 0) sessionId = await this.connectWorkspace(target);
 				if (sessionId !== void 0 && !navigation.aborted) this.replaceMain(sessionId, navigation, "preserve");
+                } finally {
+                    if (intent === this.navigationIntent) this.navigationPending.set(false);
+                }
 			}
 			async initializeDefaultWorkspace(signal) {
 				try {
@@ -1614,6 +1630,8 @@ window.__ModuleLoader__.load({
 				return true;
 			}
 			clearMain() {
+                ++this.navigationIntent;
+                this.navigationPending.set(false);
 				this.ctx.layout.beginNavigation();
 				const previous = this.mainReference;
 				this.mainReference = void 0;

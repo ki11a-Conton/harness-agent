@@ -3,6 +3,7 @@ import { atomicReplace } from "@ar/store-integrity";
 import { constants } from "node:fs";
 import { lstat, mkdir, open, unlink } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
+import { feedbackHistorySchema, type FeedbackHistory } from "./feedback-records.js";
 
 /** Host presentation/admission facts. Runtime snapshots never live in this file. */
 export interface SessionMetadata {
@@ -10,6 +11,10 @@ export interface SessionMetadata {
   title?: string;
   requests: Record<string, PromptReceipt>;
   answers: Record<string, AnswerContinuation>;
+  /** Local human feedback audit; excluded from Runtime/model conversation. */
+  feedback?: FeedbackHistory;
+  /** UI text keyed by the SHA-256 of immutable model input, including on forks. */
+  displayTexts?: Record<string, string>;
 }
 export interface PromptReceipt {
   fingerprint: string;
@@ -101,6 +106,9 @@ export class SessionMetadataStore {
           if (!record(answer) || typeof answer.turnId !== "string" || !Number.isSafeInteger(answer.afterSequence)
             || !["claimed", "started", "settled"].includes(String(answer.status))) throw new Error("Invalid answer continuation");
         }
+        if (value.feedback !== undefined && !feedbackHistorySchema.safeParse(value.feedback).success) throw new Error("Invalid feedback history");
+        if (value.displayTexts !== undefined && (!record(value.displayTexts) || Object.entries(value.displayTexts).some(([hash, text]) =>
+          !/^[a-f0-9]{64}$/.test(hash) || typeof text !== "string" || text.length > 64000))) throw new Error("Invalid session display text");
       }
       return raw as unknown as Document;
     } catch (error) {
@@ -110,6 +118,8 @@ export class SessionMetadataStore {
   }
 
   private async save(document: Document): Promise<void> {
+    const encoded = JSON.stringify(document);
+    if (Buffer.byteLength(encoded) > 32 * 1024 * 1024) throw new Error("Session metadata exceeds its bounded storage policy");
     if (this.path === undefined) { this.memory = structuredClone(document); return; }
     const directory = dirname(this.path);
     await mkdir(directory, { recursive: true, mode: 0o700 });
@@ -119,7 +129,7 @@ export class SessionMetadataStore {
     const temporary = `${this.path}.${randomUUID()}.tmp`;
     try {
       const file = await open(temporary, "wx", 0o600);
-      try { await file.writeFile(JSON.stringify(document)); await file.sync(); } finally { await file.close(); }
+      try { await file.writeFile(encoded); await file.sync(); } finally { await file.close(); }
       await atomicReplace(temporary, this.path);
       // Windows does not permit opening a directory; file contents still have a durable fence.
       if (process.platform !== "win32") {

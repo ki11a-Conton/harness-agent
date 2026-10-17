@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "defaultClientCount": 66,
-  "publishedArtifactPolicy": "Original browser JS/CSS/fonts/images remain byte-identical to pinned npm artifacts. 10 explicitly marked Harness Agent UI derivatives, including preview removal, workspace navigation/composer guards, and actual loopback connectivity with monotonic status timing, and two independent SVG assets are deterministically verified separately under harness-brand/. HTML, PWA, boot, carrier and notices are reviewed adaptations; original HTML/PWA inputs and copyrights remain preserved.",
+  "publishedArtifactPolicy": "Original browser JS/CSS/fonts/images remain byte-identical to pinned npm artifacts. 13 explicitly marked Harness Agent UI derivatives, including preview removal, workspace navigation/composer guards, and actual loopback connectivity with monotonic status timing, and two independent SVG assets are deterministically verified separately under harness-brand/. HTML, PWA, boot, carrier and notices are reviewed adaptations; original HTML/PWA inputs and copyrights remain preserved.",
   "sourceRelationship": "npm gitHead is absent; the separately frozen Git source reference does not establish release/source equivalence.",
   "rootIndexSha256": "fdcfa2f981dec07ed5768f821602b65512e3792df6fc2c666be8dda64571d16c",
   "releaseArtifacts": [
@@ -3658,13 +3658,13 @@
     },
     {
       "path": "boot-manifest.js",
-      "bytes": 35775,
-      "sha256": "cf7c67cefa2bbdba549f96751c28fb18d2b8274858a1e2c180b3f35c175186ed"
+      "bytes": 35838,
+      "sha256": "33d54145132e2b4178c51508bc2a46d5212468546c5fbe934e404fa59427eea1"
     },
     {
       "path": "boot-manifest.json",
-      "bytes": 45763,
-      "sha256": "c4afa75400fa24574ab67b5bd7f96058b732052cdb4e1eae872f621b39c7fe56"
+      "bytes": 45850,
+      "sha256": "466ae0efc23086b4afd5773274d5d68440c7450cef93de389806c6191aeae659"
     },
     {
       "path": "favicon-dark.svg",
@@ -3687,6 +3687,11 @@
       "sha256": "44212ab33e1c2325e8dac66042fa0a90d59b0bff7e6c8f7ded00b4c76a6064e8"
     },
     {
+      "path": "harness-brand/plugins/dsh-api-terminal-controller/client.js",
+      "bytes": 32668,
+      "sha256": "6f3caa0dd8ed0ba004c5481188ef6ff7c4540f8edfa3f5ca83c25f5b563fb092"
+    },
+    {
       "path": "harness-brand/plugins/dsh-client-connection/client.js",
       "bytes": 59671,
       "sha256": "9bbcae0551d74581f7d44b48f6bd548c8011361a78f20af89e3b852b3acc55a8"
@@ -3697,9 +3702,14 @@
       "sha256": "4c340fcec3cf2235a4235b89a55d55c7631e27a887f350e40d84cb1695e39f43"
     },
     {
+      "path": "harness-brand/plugins/dsh-client-ui-chat/client.js",
+      "bytes": 589783,
+      "sha256": "2352ce0665f342b0703016f86a5a5acae4ed722817c2946a677dda62a6ca79fb"
+    },
+    {
       "path": "harness-brand/plugins/dsh-client-ui-conversation/client.js",
-      "bytes": 878120,
-      "sha256": "fd0c018d73b3172ed3cd0f8ce1f5c04bd96242e22a15e850d271b7c71cfe76ee"
+      "bytes": 878309,
+      "sha256": "e0861618a394f48589dcf8792d56154183a7d5e30c347cfb4a3d3bb44635dfb9"
     },
     {
       "path": "harness-brand/plugins/dsh-client-ui-layout/client.js",
@@ -3718,8 +3728,8 @@
     },
     {
       "path": "harness-brand/plugins/dsh-client-ui-settings-general/client.js",
-      "bytes": 52375,
-      "sha256": "82fe56a180f3dc40f0c7b6e3cae284fbcd8426665bac7db169e877bede15970c"
+      "bytes": 52384,
+      "sha256": "587aad1d9c7501f01b447dc2aee9ccf0198ca8f8f4e825d7664505fda4aab9f0"
     },
     {
       "path": "harness-brand/plugins/dsh-client-ui-settings-models/client.js",
@@ -3732,9 +3742,14 @@
       "sha256": "590884595ce7467922c55b7f5d4fc06621c1e19b38013707a419059616143800"
     },
     {
+      "path": "harness-brand/plugins/dsh-client-ui-sidebar-right/client.js",
+      "bytes": 331637,
+      "sha256": "f1b8bfd60b6b45e2dc575304aa4615372f2a45d42be4d687756a363b416bbd7b"
+    },
+    {
       "path": "harness-brand/plugins/dsh-client-ui-workspace/client.js",
-      "bytes": 222175,
-      "sha256": "4e7d94113a251f0b10a2a3363e7f68acc957b74ef9792b72e6457b14eb0e1a56"
+      "bytes": 223022,
+      "sha256": "6318494664f5d81ccec05946336f0f4d9ecab46432ef1c84509e0345950bfb0c"
     },
     {
       "path": "harness-brand/welcome.svg",

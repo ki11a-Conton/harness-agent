@@ -20,8 +20,8 @@ function composer(bytes) {
     workspaceId => new Promise((resolve, reject) => { attempts.push({ workspaceId, resolve, reject }); }),
     { current: 0 }, value => { pending = value; },
   );
-  const inert = new Function('workspaceSelectionPending', 'sessionId', 'hero', 'chipTitle', `return (${guard});`);
-  return { choose, attempts, blocked: () => inert(pending, 'old-session', true, 'project'), pendingId: () => pendingId };
+  const inert = new Function('workspaceSelectionPending', 'navigationPending', 'sessionId', 'hero', 'chipTitle', `return (${guard});`);
+  return { choose, attempts, blocked: (navigationPending = false) => inert(pending, navigationPending, 'old-session', true, 'project'), pendingId: () => pendingId };
 }
 const settled = () => new Promise(resolve => setImmediate(resolve));
 
@@ -46,4 +46,10 @@ test('a rejected latest selection restores the previous editor and clears its op
   assert.equal(stack.blocked(), true);
   stack.attempts[0].reject(new Error('actual selection refused')); await settled();
   assert.equal(stack.blocked(), false); assert.equal(stack.pendingId(), undefined);
+});
+test('the actual composer remains inert during navigation even without a workspace-picker request', () => {
+  const stack = composer(deriveBrandModule(stem, original));
+  assert.equal(stack.blocked(), false);
+  assert.equal(stack.blocked(true), true);
+  assert.equal(stack.attempts.length, 0);
 });
