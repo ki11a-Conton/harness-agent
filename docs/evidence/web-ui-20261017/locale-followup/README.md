@@ -17,3 +17,16 @@
 完整 suite 固定 clean 产品 4e651587：9874 PASS /15 SKIP /0 FAIL，详见
 ../title-final/full.json。完整 suite 完成后才编辑本验收脚本；后续新归档仍需
 完整 30+42 场景、连接恢复与精确 main CI。所有调用限本地 loopback provider。
+
+## 保存之后仍需确认回执
+
+7026dbed 完整安装复验：原 UI 30/75 通过，新增 daily 39 通过/3 失败，整体
+退出 1。320px 首个失败发生在 durable zh 已写入、locale mutate 仍为 sent，
+期间旧 settings/describe 快照将乐观中文暂时还原为 en，随后两用例继承中文
+而失败。单独的三视口通过不足以代表完整安装成功；本次失败原件保留。
+
+验收需先确认真实持久化及已发送的 settings 写入/快照回执，再读取最终 DOM；
+固定原检查和 6 秒条件等待预算，不改变产品或取消原失败。临时候选在真实
+双向延迟下三视口通过；随后必须再次固定脚本、构建和完整安装验收。一个错误
+传入不存在 portable-root 的准备尝试在 fixture readiness 前退出，没有执行
+应用场景；原日志另存，不计作 UI 失败或通过。

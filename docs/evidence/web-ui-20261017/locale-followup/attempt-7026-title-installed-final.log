@@ -1,0 +1,65 @@
+::error title=Installed UI acceptance failed::AssertionError [ERR_ASSERTION]: {"name":"navigation-draft-ownership","viewport":"desktop","status":"PASS","checks":2}%0A{"name":"coding-draft-ownership","viewport":"desktop","status":"PASS","checks":3}%0A{"name":"feedback-roundtrip","viewport":"desktop","status":"PASS","checks":4}%0A{"name":"coding-modal-keyboard","viewport":"desktop","status":"PASS","checks":2}%0A{"name":"coding-diff-ownership","viewport":"desktop","status":"PASS","checks":2}%0A{"name":"session-reference-menu","viewport":"desktop","status":"PASS","checks":3}%0A{"name":"presentation-controls","viewport":"desktop","status":"PASS","checks":3}%0A{"name":"input-queue-stop","viewport":"desktop","status":"PASS","checks":3}%0A{"name":"attachment-add-remove-submit","viewport":"desktop","status":"PASS","checks":2}%0A{"name":"files-and-panel-layout","viewport":"desktop","status":"PASS","checks":3}%0A{"name":"shortcuts-persist-conflict-reset","viewport":"desktop","status":"PASS","checks":3}%0A{"name":"settings-font-and-locale","viewport":"desktop","status":"PASS","checks":3}%0A{"name":"capabilities-and-task-filters","viewport":"desktop","status":"PASS","checks":3}%0A{"name":"sidebar-pin-search-filters","viewport":"desktop","status":"PASS","checks":3}%0A{"name":"navigation-draft-ownership","viewport":"mobile","status":"PASS","checks":2}%0A{"name":"coding-draft-ownership","viewport":"mobile","status":"PASS","checks":3}%0A{"name":"feedback-roundtrip","viewport":"mobile","status":"PASS","checks":4}%0A{"name":"coding-modal-keyboard","viewport":"mobile","status":"PASS","checks":2}%0A{"name":"coding-diff-ownership","viewport":"mobile","status":"PASS","checks":2}%0A{"name":"session-reference-menu","viewport":"mobile","status":"PASS","checks":3}%0A{"name":"presentation-controls","viewport":"mobile","status":"PASS","checks":3}%0A{"name":"input-queue-stop","viewport":"mobile","status":"PASS","checks":3}%0A{"name":"attachment-add-remove-submit","viewport":"mobile","status":"PASS","checks":2}%0A{"name":"files-and-panel-layout","viewport":"mobile","status":"PASS","chec
+::error title=Installed UI case failed::{"phase":"daily","name":"settings-font-and-locale","viewport":"narrow","status":"FAIL","failure":"AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n'en' !== 'zh-CN'\n\n    at settings-font-and-locale (file:///workspace/harness-agent-web-interactions-20261016/scripts/research/web-daily-20261016/browser-acceptance.mjs:402:12)\n    at async file:///workspace/harness-agent-web-interactions-20261016/scripts/research/web-daily-20261016/browser-acceptance.mjs:473:29"}
+::error title=Installed UI case failed::{"phase":"daily","name":"capabilities-and-task-filters","viewport":"narrow","status":"FAIL","failure":"locator.waitFor: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Choose workspace', exact: true }).filter({ visible: true }) to be visible\u001b[22m\n\n    at boot (/workspace/harness-agent-web-interactions-20261016/scripts/research/web-daily-20261016/browser-acceptance.mjs:97:42)\n    at async file:///workspace/harness-agent-web-interactions-20261016/scripts/research/web-daily-20261016/browser-acceptance.mjs:473:11"}
+::error title=Installed UI case failed::{"phase":"daily","name":"sidebar-pin-search-filters","viewport":"narrow","status":"FAIL","failure":"locator.waitFor: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Choose workspace', exact: true }).filter({ visible: true }) to be visible\u001b[22m\n\n    at boot (/workspace/harness-agent-web-interactions-20261016/scripts/research/web-daily-20261016/browser-acceptance.mjs:97:42)\n    at async file:///workspace/harness-agent-web-interactions-20261016/scripts/research/web-daily-20261016/browser-acceptance.mjs:473:11"}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: {"name":"navigation-draft-ownership","viewport":"desktop","status":"PASS","checks":2}
+{"name":"coding-draft-ownership","viewport":"desktop","status":"PASS","checks":3}
+{"name":"feedback-roundtrip","viewport":"desktop","status":"PASS","checks":4}
+{"name":"coding-modal-keyboard","viewport":"desktop","status":"PASS","checks":2}
+{"name":"coding-diff-ownership","viewport":"desktop","status":"PASS","checks":2}
+{"name":"session-reference-menu","viewport":"desktop","status":"PASS","checks":3}
+{"name":"presentation-controls","viewport":"desktop","status":"PASS","checks":3}
+{"name":"input-queue-stop","viewport":"desktop","status":"PASS","checks":3}
+{"name":"attachment-add-remove-submit","viewport":"desktop","status":"PASS","checks":2}
+{"name":"files-and-panel-layout","viewport":"desktop","status":"PASS","checks":3}
+{"name":"shortcuts-persist-conflict-reset","viewport":"desktop","status":"PASS","checks":3}
+{"name":"settings-font-and-locale","viewport":"desktop","status":"PASS","checks":3}
+{"name":"capabilities-and-task-filters","viewport":"desktop","status":"PASS","checks":3}
+{"name":"sidebar-pin-search-filters","viewport":"desktop","status":"PASS","checks":3}
+{"name":"navigation-draft-ownership","viewport":"mobile","status":"PASS","checks":2}
+{"name":"coding-draft-ownership","viewport":"mobile","status":"PASS","checks":3}
+{"name":"feedback-roundtrip","viewport":"mobile","status":"PASS","checks":4}
+{"name":"coding-modal-keyboard","viewport":"mobile","status":"PASS","checks":2}
+{"name":"coding-diff-ownership","viewport":"mobile","status":"PASS","checks":2}
+{"name":"session-reference-menu","viewport":"mobile","status":"PASS","checks":3}
+{"name":"presentation-controls","viewport":"mobile","status":"PASS","checks":3}
+{"name":"input-queue-stop","viewport":"mobile","status":"PASS","checks":3}
+{"name":"attachment-add-remove-submit","viewport":"mobile","status":"PASS","checks":2}
+{"name":"files-and-panel-layout","viewport":"mobile","status":"PASS","checks":3}
+{"name":"shortcuts-persist-conflict-reset","viewport":"mobile","status":"PASS","checks":3}
+{"name":"settings-font-and-locale","viewport":"mobile","status":"PASS","checks":3}
+{"name":"capabilities-and-task-filters","viewport":"mobile","status":"PASS","checks":3}
+{"name":"sidebar-pin-search-filters","viewport":"mobile","status":"PASS","checks":3}
+{"name":"navigation-draft-ownership","viewport":"narrow","status":"PASS","checks":2}
+{"name":"coding-draft-ownership","viewport":"narrow","status":"PASS","checks":3}
+{"name":"feedback-roundtrip","viewport":"narrow","status":"PASS","checks":4}
+{"name":"coding-modal-keyboard","viewport":"narrow","status":"PASS","checks":2}
+{"name":"coding-diff-ownership","viewport":"narrow","status":"PASS","checks":2}
+{"name":"session-reference-menu","viewport":"narrow","status":"PASS","checks":3}
+{"name":"presentation-controls","viewport":"narrow","status":"PASS","checks":3}
+{"name":"input-queue-stop","viewport":"narrow","status":"PASS","checks":3}
+{"name":"attachment-add-remove-submit","viewport":"narrow","status":"PASS","checks":2}
+{"name":"files-and-panel-layout","viewport":"narrow","status":"PASS","checks":3}
+{"name":"shortcuts-persist-conflict-reset","viewport":"narrow","status":"PASS","checks":3}
+{"name":"settings-font-and-locale","viewport":"narrow","status":"FAIL","checks":1,"failure":"AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:"}
+{"name":"capabilities-and-task-filters","viewport":"narrow","status":"FAIL","checks":0,"failure":"locator.waitFor: Timeout 15000ms exceeded."}
+{"name":"sidebar-pin-search-filters","viewport":"narrow","status":"FAIL","checks":0,"failure":"locator.waitFor: Timeout 15000ms exceeded."}
+
+
+1 !== 0
+
+    at file:///workspace/harness-agent-web-interactions-20261016/scripts/release/deepseek-installed.mjs:81:12
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 1,
+  expected: 0,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.19.0

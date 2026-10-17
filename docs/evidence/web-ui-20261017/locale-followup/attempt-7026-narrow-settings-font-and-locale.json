@@ -1,0 +1,502 @@
+{
+  "name": "settings-font-and-locale",
+  "viewport": "narrow",
+  "status": "FAIL",
+  "checks": [
+    {
+      "label": "Font increase/decrease updates the actual conversation layout variable",
+      "status": "PASS"
+    }
+  ],
+  "failure": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n'en' !== 'zh-CN'\n\n    at settings-font-and-locale (file:///workspace/harness-agent-web-interactions-20261016/scripts/research/web-daily-20261016/browser-acceptance.mjs:402:12)\n    at async file:///workspace/harness-agent-web-interactions-20261016/scripts/research/web-daily-20261016/browser-acceptance.mjs:473:29",
+  "errors": [],
+  "calls": [
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "settings/describe",
+      "argsKeys": [],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "open",
+      "endpoint": "workspace/follow",
+      "argsKeys": [],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "opened"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "dynamicCordisRunner/syncInspectManifest",
+      "argsKeys": [
+        "providers"
+      ],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "dynamicCordisRunner/inventory",
+      "argsKeys": [],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "credentials/describe",
+      "argsKeys": [
+        "refs"
+      ],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "session/modelCatalog",
+      "argsKeys": [],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "open",
+      "endpoint": "$events",
+      "argsKeys": [],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "opened"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "dynamicCordisRunner/inventory",
+      "argsKeys": [],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "agentPresets/list",
+      "argsKeys": [],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "session/list",
+      "argsKeys": [
+        "_request"
+      ],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "open",
+      "endpoint": "session/control",
+      "argsKeys": [],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "opened"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "permissionPresets/catalog",
+      "argsKeys": [],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "agentPresets/list",
+      "argsKeys": [],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "agentPresets/list",
+      "argsKeys": [],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "dynamicCordisRunner/inventory",
+      "argsKeys": [],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "session/modelCatalog",
+      "argsKeys": [],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "settings/describe",
+      "argsKeys": [],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "dynamicCordisRunner/syncInspectManifest",
+      "argsKeys": [
+        "providers"
+      ],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "session/create",
+      "argsKeys": [
+        "request"
+      ],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "open",
+      "endpoint": "session/follow",
+      "argsKeys": [
+        "request"
+      ],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "opened"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "agentPresets/list",
+      "argsKeys": [],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "commands/list",
+      "argsKeys": [
+        "agentId"
+      ],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "skills/list",
+      "argsKeys": [
+        "request"
+      ],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "schedule/catalog",
+      "argsKeys": [],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "settings/mutate",
+      "argsKeys": [
+        "ns",
+        "ops",
+        "expectedRevision"
+      ],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "session/modelCatalog",
+      "argsKeys": [],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "settings/describe",
+      "argsKeys": [],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "settings/mutate",
+      "argsKeys": [
+        "ns",
+        "ops",
+        "expectedRevision"
+      ],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "session/modelCatalog",
+      "argsKeys": [],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "settings/describe",
+      "argsKeys": [],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "settled"
+    },
+    {
+      "carrier": "websocket",
+      "route": "call",
+      "endpoint": "settings/mutate",
+      "argsKeys": [
+        "ns",
+        "ops",
+        "expectedRevision"
+      ],
+      "uplink": false,
+      "uplinkDone": false,
+      "state": "sent"
+    }
+  ],
+  "results": [
+    {
+      "carrier": "websocket",
+      "endpoint": "settings/describe",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "dynamicCordisRunner/syncInspectManifest",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "dynamicCordisRunner/inventory",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "credentials/describe",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "session/modelCatalog",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "dynamicCordisRunner/inventory",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "agentPresets/list",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "permissionPresets/catalog",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "agentPresets/list",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "agentPresets/list",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "dynamicCordisRunner/inventory",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "dynamicCordisRunner/syncInspectManifest",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "session/modelCatalog",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "settings/describe",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "session/create",
+      "status": 200,
+      "ok": true,
+      "value": {
+        "sessionId": "session_fde0c737-48dd-49d4-8735-297a98ac7495"
+      }
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "agentPresets/list",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "commands/list",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "skills/list",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "schedule/catalog",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "session/list",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "settings/mutate",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "session/modelCatalog",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "settings/describe",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "settings/mutate",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "session/modelCatalog",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "settings/describe",
+      "status": 200,
+      "ok": true
+    }
+  ],
+  "sockets": [
+    {
+      "url": "ws://127.0.0.1:37963/api/deepseek/socket",
+      "sent": 31,
+      "received": 114,
+      "streamFrames": 84,
+      "closed": false,
+      "errors": []
+    }
+  ],
+  "externalRequests": [],
+  "assets": [
+    {
+      "path": "/coding-workflow.js",
+      "status": 200
+    }
+  ],
+  "screenshot": "narrow-settings-font-and-locale.png",
+  "visibleText": "Harness Agent\nNew Session\nPlugins\nAutomation tasks\nWorkspaces\nproject\nNew Session\n[Attached UTF-8 file: \"daily-upload-1792231826092.txt\"] ACTUAL_DAILY_UPLOADED_CO\nnow\n[fixture:slow] RUNNING_QUEUE_STOP_1792231823658\nnow\nPresentation controls [fixture:read] 1792231819374\nnow\n@R1792231810993 Continue the referenced coding decision.\nnow\nR1792231810993\nnow\nShow 33 more sessions\nSettings\nInto the Unknown\nproject\nmain\nDescribe what you want to build, / commands, @ files or sessions\nSettings\nGeneral\nModels\nBuilt-in plugins\nAgent presets\nClose\nLanguage\nEnglish\nAppearance\nLight\nDark\nSystem\nFont size\nOnly affects conversation content\n14\npx\nWork details\nChoose how much detail to show for tool calls\nDetailed\nShow coding view\nShows trajectory, code diffs, and all Agent presets\nKeyboard shortcuts\n\nView and edit available shortcuts and input actions\n\nEdit shortcuts\nSend behavior while busy\nWhat Enter and the Send button do while the agent is running; Cmd/Ctrl+Enter uses the other behavior\nQueue\nPerformance & usage\nChoose how much performance and usage information to show\nDetailed\nCurrent version: 0.2.1-alpha.1"
+}

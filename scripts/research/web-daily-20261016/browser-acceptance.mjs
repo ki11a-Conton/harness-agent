@@ -148,18 +148,21 @@ async function feedbackDialog(page, text, category) {
   if (text) await d.getByRole('textbox', { name: 'Feedback details', exact: true }).fill(text);
   await d.getByRole('button', { name: 'Submit', exact: true }).click(); await d.waitFor({ state: 'hidden' });
 }
-async function persistedLocale(preference) {
+async function persistedLocale(page, preference) {
   // The displayed locale is optimistic. Closing the browser context before the
   // real write arrives can cancel it and contaminate later English-only cases.
   const deadlineAt = Date.now() + 6000;
   let actual;
+  let pending;
   do {
     const settings = JSON.parse(await readFile(path.resolve(fixture.cwd, '../data/deepseek/settings.json'), 'utf8'));
     actual = settings.namespaces.locale?.user?.preference;
-    if (actual === preference) return;
+    pending = observations.get(page).calls.filter(call => ['settings/mutate', 'settings/describe'].includes(call.endpoint) && call.state === 'sent');
+    if (actual === preference && pending.length === 0) return;
     await new Promise(resolve => setTimeout(resolve, 50));
   } while (Date.now() < deadlineAt);
   assert.equal(actual, preference, 'Language change must reach the real durable settings before closing its context');
+  assert.deepEqual(pending, [], 'Actual settings writes and snapshots must be acknowledged before checking the committed language');
 }
 async function readMetadata(id) {
   const data = path.resolve(fixture.cwd, '../data'), index = JSON.parse(await readFile(path.join(data, 'deepseek/owners-index.json'), 'utf8'));
@@ -396,8 +399,8 @@ const cases = {
     check(checks, 'Font increase/decrease updates the actual conversation layout variable');
     await latency(context, page, async () => {
       await button(page, 'English').click(); await page.getByRole('menuitem', { name: '中文', exact: true }).click();
+      await persistedLocale(page, 'zh');
       await page.waitForFunction(() => document.documentElement.lang === 'zh-CN');
-      await persistedLocale('zh');
     });
     assert.equal(await page.evaluate(() => document.documentElement.lang), 'zh-CN');
     await button(page, '关闭').click(); await collapseMobile(page);
@@ -410,8 +413,8 @@ const cases = {
     await button(page, '设置').click(); await button(page, '通用设置').click(); await button(page, '中文').click();
     await latency(context, page, async () => {
       await page.getByRole('menuitem', { name: 'English', exact: true }).click();
+      await persistedLocale(page, 'en');
       await page.waitForFunction(() => document.documentElement.lang === 'en');
-      await persistedLocale('en');
     });
     assert.equal(await page.evaluate(() => document.documentElement.lang), 'en');
     await button(page, 'Close').click(); await collapseMobile(page);
