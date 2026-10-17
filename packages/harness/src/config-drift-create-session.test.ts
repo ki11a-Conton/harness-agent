@@ -98,3 +98,53 @@ describe("PKG-001: the config-drift baseline is frozen at session creation", () 
     }
   });
 });
+
+
+it("review PR13: failure to persist the initial drift baseline must not publish a runnable session", async () => {
+  const dir = await dataDir(); const harness = await createHarness(config(dir, 50));
+  try {
+    const save = harness.store.saveStateSnapshot.bind(harness.store);
+    harness.store.saveStateSnapshot = async (id, snapshot) => {
+      if (snapshot["p27.configFingerprint"] !== undefined) throw new Error("review simulated fingerprint write failure");
+      return save(id, snapshot);
+    };
+    await expect(harness.sessionService.create({ agentId: harness.agents[0]!.id,
+      model: harness.agents[0]!.model, cwd: harness.config.cwd })).rejects.toThrow("fingerprint write failure");
+    expect((await harness.store.listSessions()).filter(session => session.status !== "failed")).toEqual([]);
+  } finally { await harness.close(); }
+});
+
+it.each(["before-baseline", "after-baseline", "before-publish", "after-publish"])("restarts safely after %s in the initial configuration commit", async stage => {
+  const dir = await dataDir(); const harness = await createHarness(config(dir, 50));
+  const save = harness.store.saveStateSnapshot.bind(harness.store);
+  const update = harness.store.updateSession.bind(harness.store);
+  if (stage.endsWith("baseline")) {
+    harness.store.saveStateSnapshot = async (id, snapshot) => {
+      if (snapshot["p27.configFingerprint"] === undefined) return save(id, snapshot);
+      if (stage === "after-baseline") await save(id, snapshot);
+      throw new Error("injected baseline interruption");
+    };
+  } else {
+    harness.store.updateSession = async session => {
+      if (session.status !== "active") return update(session);
+      if (stage === "after-publish") await update(session);
+      throw new Error("injected publication interruption");
+    };
+  }
+  try {
+    await expect(harness.sessionService.create({ agentId: harness.agents[0]!.id,
+      model: harness.agents[0]!.model, cwd: harness.config.cwd })).rejects.toThrow("interruption");
+  } finally { await harness.close(); }
+  const restarted = await createHarness(config(dir, 50));
+  try {
+    const rows = await restarted.store.listSessions(); expect(rows).toHaveLength(1);
+    const row = rows[0]!;
+    expect(row.status).toBe(stage === "after-publish" ? "active" : "failed");
+    if (row.status === "active") {
+      expect((await restarted.store.loadStateSnapshot(row.id))!["p27.configFingerprint"]).toBe(restarted.resolvedConfig.fingerprint);
+    } else {
+      await expect(restarted.runtime.startTurn(row.id, "must not run")).rejects.toThrow("failed");
+      expect(await restarted.store.listTurns(row.id)).toEqual([]);
+    }
+  } finally { await restarted.close(); }
+});

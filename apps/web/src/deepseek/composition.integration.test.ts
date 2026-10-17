@@ -279,3 +279,63 @@ it("repeated memory-only selection runs each selected HTTP model, including afte
   expect((await stack.composition.harness.store.listTurns(id)).map(turn => turn.status)).toEqual(["completed", "completed"]);
   expect(requests).toHaveLength(2); expect(requests[1]).toHaveProperty("model", "model-b");
 });
+
+
+it("review PR13: an idle real Web owner must not replay the full physical journal per events poll", async () => {
+  const stack = await fixture(); const id = await stack.createSession();
+  const owner = await stack.composition.owners.ownerOf(id);
+  const list = owner.events.list.bind(owner.events); let fullPhysicalReads = 0;
+  let observed!: () => void; const fourReads = new Promise<void>(done => { observed = done; });
+  const spy = vi.spyOn(owner.events, "list").mockImplementation(async (sid, options) => {
+    if (options?.afterSequence === undefined) {
+      fullPhysicalReads += 1; if (fullPhysicalReads >= 4) observed();
+    }
+    return list(sid, options);
+  });
+  const { createEventsService } = await import("./events.js");
+  const service = createEventsService({ harness: stack.composition.harness, pollDelayMs: 1,
+    answerAsk: async () => { throw new Error("unused"); } });
+  const controller = new AbortController();
+  const running = (async () => { for await (const _frame of service.stream("$events", {}, controller.signal)) {} })();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await Promise.race([fourReads, new Promise<void>(done => { timer = setTimeout(done, 250); })]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+    controller.abort(); await running.catch(error => { if (error?.name !== "AbortError") throw error; }); spy.mockRestore();
+  }
+  expect(fullPhysicalReads).toBeLessThanOrEqual(1);
+});
+
+it("review PR13: an idle replaced stable draft owner must not replay the full physical journal per events poll", async () => {
+  const stack = await fixture(); const id = await stack.createSession();
+  await stack.composition.catalog.call("credentials/set", { ref: "REVIEW_OWNER_ROUTE", value: "synthetic-local-provider-key" }, signal());
+  await stack.composition.catalog.call("settings/update", { ns: "llm-pi-ai", patch: { providers: { review: {
+    api: "openai-completions", baseURL: "http://127.0.0.1:1/v1", apiKeyEnv: "REVIEW_OWNER_ROUTE",
+    models: [{ id: "review-model" }],
+  } } } }, signal());
+  await stack.composition.owners.selectModel(id, { providerKey: "review", modelId: "review-model" }, signal());
+  expect(stack.composition.owners.nativeSessionId(id)).not.toBe(id);
+  const owner = await stack.composition.owners.ownerOf(id);
+  const list = owner.events.list.bind(owner.events); let fullPhysicalReads = 0;
+  let observed!: () => void; const fourReads = new Promise<void>(done => { observed = done; });
+  const spy = vi.spyOn(owner.events, "list").mockImplementation(async (sid, options) => {
+    if (options?.afterSequence === undefined) {
+      fullPhysicalReads += 1; if (fullPhysicalReads >= 4) observed();
+    }
+    return list(sid, options);
+  });
+  const { createEventsService } = await import("./events.js");
+  const service = createEventsService({ harness: stack.composition.harness, pollDelayMs: 1,
+    answerAsk: async () => { throw new Error("unused"); } });
+  const controller = new AbortController();
+  const running = (async () => { for await (const _frame of service.stream("$events", {}, controller.signal)) {} })();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await Promise.race([fourReads, new Promise<void>(done => { timer = setTimeout(done, 250); })]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+    controller.abort(); await running.catch(error => { if (error?.name !== "AbortError") throw error; }); spy.mockRestore();
+  }
+  expect(fullPhysicalReads).toBeLessThanOrEqual(1);
+});

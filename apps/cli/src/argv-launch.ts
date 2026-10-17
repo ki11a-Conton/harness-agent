@@ -1,22 +1,7 @@
-/**
- * CLI-001 / CLI-003 — one shell-free launcher for every external command the
- * release pipeline runs.
- *
- * The bug these functions fix: `execFile("pnpm", …)` resolves nothing on
- * Windows (only `pnpm.cmd` exists → ENOENT), and spawning that `.cmd` directly
- * is EINVAL because Node refuses to run batch files without a shell. The two
- * "obvious" workarounds are both wrong:
- *
- *   - `shell: true` with the argv JOINED into one string (what
- *     release-command.ts used to do) re-parses every argument, so a path or an
- *     argument containing a space/quote silently changes the command;
- *   - rewriting the declared command to `pnpm.cmd` changes the gate's DECLARED
- *     identity, so the evidence no longer proves the documented command ran.
- *
- * So: resolve the executable per platform, and on win32 route `.cmd`/`.bat`
- * through `cmd.exe` with the script path and every argument as SEPARATE argv
- * entries. The declared command array never changes — only how it is launched.
- */
+/** Native executable launch stays argv-based. Windows batch files require a
+ * cmd.exe command line: validate its inputs, quote each argument, and pass the
+ * explicit /d /s /c envelope verbatim. The caller's declared argv is retained
+ * unchanged in gate evidence. */
 import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
 import { extname, isAbsolute, join, resolve } from "node:path";
@@ -35,8 +20,10 @@ const CMD_SCRIPT_EXTENSIONS = new Set([".cmd", ".bat"]);
 export interface LaunchTarget {
   /** Executable that is actually spawned. */
   file: string;
-  /** Arguments passed to `file` (separate entries, never a joined string). */
+  /** Arguments for the actual executable, including the cmd.exe envelope. */
   args: string[];
+  /** Required only for the explicitly quoted cmd.exe /s /c envelope. */
+  windowsVerbatimArguments?: true;
   /** `direct` = spawn as declared; `cmd` = routed through cmd.exe. */
   via: "direct" | "cmd";
 }
@@ -98,9 +85,8 @@ export function resolveWindowsCommand(file: string, env: NodeJS.ProcessEnv, cwd:
  * Decide HOW to launch `command` under `shell:false`. Pure and
  * platform-parameterised, so the decision table is testable off-Windows.
  *
- * Throws when a `.cmd` route would let cmd.exe re-parse a path or argument;
- * a refused launch must surface as an error, never as a silently different
- * command.
+ * Reject shell control characters before building a quoted `.cmd` envelope.
+ * A refused launch must surface as an error, never as a different command.
  */
 export function resolveLaunchTarget(command: readonly string[], opts: LaunchOptions): LaunchTarget {
   if (command.length === 0 || command[0] === undefined || command[0].length === 0) {
@@ -139,10 +125,13 @@ export function resolveLaunchTarget(command: readonly string[], opts: LaunchOpti
       }
     });
     const comspec = envValue(env, "ComSpec") ?? "cmd.exe";
-    // `/d` skips AutoRun; `/c` runs the script. The script path and every
-    // argument stay SEPARATE argv entries — nothing is joined into a shell
-    // string, so no argument can be re-interpreted as a second command.
-    return { file: comspec, args: ["/d", "/c", resolved, ...rest], via: "cmd" };
+    // libuv's ordinary executable quoting uses backslash-escaped quotes;
+    // cmd.exe has different parsing rules. /s removes the outer envelope,
+    // leaving a quoted script path plus individually quoted arguments. Escape
+    // trailing backslashes for the native Node process pnpm.cmd forwards to.
+    const quote = (arg: string) => `"${arg.replace(/(\\+)$/, "$1$1")}"`;
+    const line = `"${[resolved, ...rest].map(quote).join(" ")}"`;
+    return { file: comspec, args: ["/d", "/s", "/c", line], via: "cmd", windowsVerbatimArguments: true };
   }
   return { file: resolved, args: rest, via: "direct" };
 }
@@ -156,7 +145,7 @@ export interface SpawnResult {
 export type GateSpawn = (
   file: string,
   args: string[],
-  opts: { cwd: string; timeoutMs: number; maxBuffer?: number; env?: NodeJS.ProcessEnv },
+  opts: { cwd: string; timeoutMs: number; maxBuffer?: number; env?: NodeJS.ProcessEnv; windowsVerbatimArguments?: true },
 ) => Promise<SpawnResult>;
 
 const defaultSpawn: GateSpawn = async (file, args, opts) => {
@@ -165,6 +154,7 @@ const defaultSpawn: GateSpawn = async (file, args, opts) => {
     timeout: opts.timeoutMs,
     maxBuffer: opts.maxBuffer ?? 128 * 1024 * 1024,
     windowsHide: true,
+    ...(opts.windowsVerbatimArguments === true ? { windowsVerbatimArguments: true } : {}),
     encoding: "utf8",
     ...(opts.env !== undefined ? { env: opts.env } : {}),
   });
@@ -190,6 +180,7 @@ export async function runResolvedCommand(
   });
   const spawnFn = opts.spawnFn ?? defaultSpawn;
   return spawnFn(target.file, target.args, {
+    ...(target.windowsVerbatimArguments === true ? { windowsVerbatimArguments: true } : {}),
     cwd: opts.cwd,
     timeoutMs: opts.timeoutMs,
     ...(opts.maxBuffer !== undefined ? { maxBuffer: opts.maxBuffer } : {}),
@@ -243,6 +234,7 @@ export async function runGateCommand(
   const spawnFn = opts.spawnFn ?? defaultSpawn;
   try {
     const out = await spawnFn(target.file, target.args, {
+      ...(target.windowsVerbatimArguments === true ? { windowsVerbatimArguments: true } : {}),
       cwd: opts.cwd,
       timeoutMs: opts.timeoutMs,
       ...(opts.maxBuffer !== undefined ? { maxBuffer: opts.maxBuffer } : {}),

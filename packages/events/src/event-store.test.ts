@@ -330,3 +330,21 @@ describe("JSONLEventStore (EVENT-001)", () => {
   });
 
 });
+
+it("bounded idle tail reads inspect logarithmically many sequence values in a long real cached journal", async () => {
+  const dir = await freshDataDir();
+  const rows = Array.from({ length: 8192 }, (_, sequence) => ({ ...makeEvent(), id: newEventId(), sequence, schemaVersion: EVENT_ABI_VERSION }));
+  await writeFile(join(dir, `${SID}.jsonl`), rows.map(event => JSON.stringify({ schemaVersion: 1, event })).join("\n") + "\n");
+  const store = new JSONLEventStore({ dataDir: dir });
+  const all = await store.list(SID);
+  let inspected = 0;
+  for (const event of all) {
+    const value = event.sequence;
+    Object.defineProperty(event, "sequence", { configurable: true, get: () => { inspected++; return value; } });
+  }
+  expect(await store.list(SID, { afterSequence: 8191, limit: 1 })).toEqual([]);
+  expect(inspected).toBeLessThanOrEqual(15);
+  inspected = 0;
+  expect((await store.list(SID, { afterSequence: 8189, limit: 1 })).map(event => event.sequence)).toEqual([8190]);
+  expect(inspected).toBeLessThanOrEqual(16);
+});

@@ -586,6 +586,11 @@ export async function createOwnerManager(base: Harness, hooks: OwnerHooks): Prom
     const owner = await ownerOf(id); const row = aliases.get(externalSessionId(id));
     if (row === undefined) return (await owner.events.list(nativeSessionId(id), opts)).map(event => ({ ...event, payload: eventPayload(event.payload) }));
     const physical: AgentEvent[] = [];
+    const after = opts?.afterSequence ?? -1;
+    let offset = 0;
+    // Retired drafts are immutable safety boundaries. Always validate every
+    // prefix, even when a bounded query starts after it or already has enough
+    // results; a cache/watermark must not conceal a lost retired generation.
     for (const retired of row.retired) {
       const oldOwner = await findNativeOwner(retired.nativeId); if (oldOwner === undefined) throw new RemoteFailure("session/alias-corrupt", "Stable draft prefix owner is missing");
       const prefix = await oldOwner.events.list(retired.nativeId as SessionId);
@@ -593,12 +598,18 @@ export async function createOwnerManager(base: Harness, hooks: OwnerHooks): Prom
         || prefix.some((event, index) => event.sessionId !== retired.nativeId || event.sequence !== index || Object.is(event.sequence, -0))) {
         throw new RemoteFailure("session/alias-corrupt", "A retired draft no longer matches its immutable journal prefix");
       }
-      physical.push(...prefix);
+      for (const event of prefix) if (offset + event.sequence > after && (opts?.limit === undefined || physical.length < opts.limit)) physical.push(event);
+      offset += retired.eventCount;
     }
-    physical.push(...await owner.events.list(row.nativeId as SessionId));
-    const result = (await Promise.all(physical.map(projectEvent))).filter((event): event is AgentEvent => event !== undefined && event.sequence > (opts?.afterSequence ?? -1));
-    return opts?.limit === undefined ? result : result.slice(0, opts.limit);
+    const remaining = opts?.limit === undefined ? undefined : Math.max(0, opts.limit - physical.length);
+    if (remaining !== 0) {
+      const bounded = opts?.afterSequence !== undefined || opts?.limit !== undefined;
+      physical.push(...await owner.events.list(row.nativeId as SessionId, bounded
+        ? { afterSequence: Math.max(-1, after - offset), ...(remaining === undefined ? {} : { limit: remaining }) } : undefined));
+    }
+    return (await Promise.all(physical.map(projectEvent))).filter((event): event is AgentEvent => event !== undefined);
   }
+
   const events: EventStore = {
     async append(event) { const row = aliases.get(externalSessionId(event.sessionId)); const offset = row?.retired.reduce((sum, retired) => sum + retired.eventCount, 0) ?? 0;
       if (event.sequence < offset) throw new RemoteFailure("session/conflict", "Cannot append into a retired draft journal prefix");

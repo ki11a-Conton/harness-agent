@@ -418,7 +418,10 @@ const ENV_ASSIGNMENT_PATTERN =
 /** Redact known secret/material credential shapes so captured logs and
  *  summaries never carry provider keys (E4-R12: 日志脱敏，不能带 key). */
 export function redactSecrets(text: string): string {
-  const masked = text.replace(ENV_ASSIGNMENT_PATTERN, (_, key: string) => `${key}=****`);
+  // Retain the pre-shared gate's broad JWT guard as well: upgrading the
+  // taxonomy must never expose a previously masked provider credential.
+  const masked = text.replace(ENV_ASSIGNMENT_PATTERN, (_, key: string) => `${key}=****`)
+    .replace(/\b(eyJ[A-Za-z0-9_-]{10,}\.)[A-Za-z0-9_.-]+/g, "$1****");
   return redactSecretSpans(masked).content;
 }
 
@@ -457,7 +460,10 @@ export function buildGateErrorSummary(opts: {
   };
   const matched: string[] = [];
   const seen = new Set<string>();
-  for (const stream of [opts.stderr, opts.stdout]) {
+  // Redact complete blocks BEFORE extracting/reordering individual lines.
+  // Otherwise an Error: line inside a PEM block can lose its identifying header.
+  const safeOutput = redactSecrets(`${opts.stdout}\n${opts.stderr}`);
+  for (const stream of [safeOutput]) {
     for (const line of extractFailureLines(stream, Number.MAX_SAFE_INTEGER)) {
       if (seen.has(line)) continue;
       seen.add(line);
@@ -469,7 +475,7 @@ export function buildGateErrorSummary(opts: {
   if (matched.length > 0) {
     body = matched.slice(0, maxLines).join("\n");
   } else {
-    const tailSource = opts.stderr.trim() === "" ? opts.stdout : opts.stderr;
+    const tailSource = safeOutput;
     body = boundTail(redactSecrets(tailSource), Math.floor(maxChars * 0.6));
   }
   const joined = `${header}\n${redactSecrets(body)}`;

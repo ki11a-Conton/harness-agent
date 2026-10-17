@@ -31,12 +31,12 @@ async function writeShims(): Promise<string> {
 
 const winEnv = (shimDir: string): NodeJS.ProcessEnv => ({
   ComSpec: "C:\\WINDOWS\\system32\\cmd.exe",
-  PATHEXT: ".COM;.EXE;.BAT;.CMD",
+  PATHEXT: ".com;.exe;.bat;.cmd",
   PATH: shimDir,
 });
 
 describe("runGateCommand (CLI-001)", () => {
-  it("win32: spawns cmd.exe with the resolved .cmd shim as SEPARATE argv", async () => {
+  it("win32: spawns cmd.exe with the resolved .cmd shim as a validated, verbatim cmd envelope", async () => {
     const shimDir = await writeShims();
     const spawnFn = vi.fn(async (_file: string, _args: string[]) => ({ stdout: "CAPABILITY_AUDIT_OK\n", stderr: "" }));
     const result = await runGateCommand(["pnpm", "capability:audit"], {
@@ -50,10 +50,8 @@ describe("runGateCommand (CLI-001)", () => {
     expect(spawnFn.mock.calls[0]![0]).toBe("C:\\WINDOWS\\system32\\cmd.exe");
     // PATHEXT spells the extension, so compare case-insensitively.
     expect((spawnFn.mock.calls[0]![1] as string[]).map((a) => a.toLowerCase())).toEqual([
-      "/d",
-      "/c",
-      join(shimDir, "pnpm.cmd").toLowerCase(),
-      "capability:audit",
+      "/d", "/s", "/c",
+      `""${join(shimDir, "pnpm.cmd").toLowerCase()}" "capability:audit""`,
     ]);
     expect(result).toMatchObject({ exitCode: 0, stdout: "CAPABILITY_AUDIT_OK\n" });
     expect(result.failure).toBeUndefined();

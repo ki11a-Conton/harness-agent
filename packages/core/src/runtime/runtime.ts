@@ -523,7 +523,7 @@ export class AgentRuntime {
 
   private async withModelSelectionLock<T>(id: SessionId, action: () => Promise<T>): Promise<T> {
     const previous = this.modelSelectionLocks.get(id) ?? Promise.resolve();
-    const current = previous.catch(() => {}).then(action);
+    const current = previous.then(action, action);
     this.modelSelectionLocks.set(id, current);
     try { return await current; }
     finally { if (this.modelSelectionLocks.get(id) === current) this.modelSelectionLocks.delete(id); }
@@ -2034,26 +2034,10 @@ export class AgentRuntime {
     return stablePolicyHash(table);
   }
 
-  /** PKG-003: retry policy hashed as OBSERVABLE BEHAVIOR. `RecoveryPolicy`
-   *  keeps its config in private fields and `askOn` is a Set (JSON.stringify
-   *  renders it as `{}`), so hashing the instance hides real changes. Probing
-   *  the decision matrix sees caps, delays and ask-vs-retry exactly. */
+  /** Hash the complete normalized policy, including exhausted behavior beyond
+   * the first eight attempts and every per-kind cap/delay override. */
   private retryPolicyHashOf(): string | undefined {
-    if (this.recovery === undefined) return undefined;
-    const kinds: readonly FailureKind[] = [
-      "tool_failure",
-      "test_failure",
-      "timeout",
-      "context_overflow",
-      "model_error",
-    ];
-    const behavior = kinds.map((kind) =>
-      Array.from({ length: 8 }, (_, index) => {
-        const decision = this.recovery!.decide(kind, index + 1);
-        return [decision.action, decision.maxAttempts, decision.retryDelayMs ?? 0] as const;
-      }),
-    );
-    return stablePolicyHash(behavior);
+    return this.recovery === undefined ? undefined : stablePolicyHash(this.recovery.getConfigIdentity());
   }
 
   /** PKG-003: ONE builder for create-session and for the resume comparison, so

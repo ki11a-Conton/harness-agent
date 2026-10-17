@@ -8,8 +8,8 @@ import { resolveLaunchTarget, runResolvedCommand } from "./argv-launch.js";
  * CLI-001: `execFile("pnpm", …)` with shell:false is ENOENT on Windows (only
  * `pnpm.cmd` exists) and spawning the `.cmd` directly is EINVAL (Node refuses
  * to spawn batch files without a shell). The launch target must therefore be
- * resolved per platform and, on win32, routed through cmd.exe with SEPARATE
- * argv — never by joining the command into a shell string.
+ * resolved per platform. Batch execution uses an explicit cmd.exe envelope,
+ * validated quoting and verbatim arguments; native executables stay argv-based.
  */
 
 let dir = "";
@@ -31,11 +31,11 @@ async function writeShims(): Promise<string> {
 }
 
 function winEnv(shimDir: string): NodeJS.ProcessEnv {
-  return { ComSpec: "C:\\WINDOWS\\system32\\cmd.exe", PATHEXT: ".COM;.EXE;.BAT;.CMD", PATH: shimDir };
+  return { ComSpec: "C:\\WINDOWS\\system32\\cmd.exe", PATHEXT: ".com;.exe;.bat;.cmd", PATH: shimDir };
 }
 
 describe("resolveLaunchTarget (CLI-001 / CLI-003)", () => {
-  it("win32: a bare `pnpm` resolves to its .cmd shim and is routed through cmd.exe with SEPARATE argv", async () => {
+  it("win32: a bare `pnpm` resolves to its .cmd shim and is routed through cmd.exe with a validated, verbatim cmd envelope", async () => {
     const shimDir = await writeShims();
     const target = resolveLaunchTarget(["pnpm", "capability:audit"], {
       cwd: dir,
@@ -45,13 +45,10 @@ describe("resolveLaunchTarget (CLI-001 / CLI-003)", () => {
     expect(target.file).toBe("C:\\WINDOWS\\system32\\cmd.exe");
     // The extension is spelled by PATHEXT, so compare case-insensitively.
     expect(target.args.map((a) => a.toLowerCase())).toEqual([
-      "/d",
-      "/c",
-      join(shimDir, "pnpm.cmd").toLowerCase(),
-      "capability:audit",
+      "/d", "/s", "/c",
+      `""${join(shimDir, "pnpm.cmd").toLowerCase()}" "capability:audit""`,
     ]);
-    // The command is never joined into one shell string.
-    expect(target.args.join("\u0000")).not.toContain("capability:audit pnpm");
+    expect(target.windowsVerbatimArguments).toBe(true);
     expect(target.via).toBe("cmd");
   });
 
@@ -106,4 +103,15 @@ describe("runResolvedCommand (CLI-001 real launch)", () => {
       runResolvedCommand(["definitely-not-installed-4102"], { cwd: dir, timeoutMs: 30_000, env: { ...process.env, PATH: dir } }),
     ).rejects.toThrow();
   });
+});
+
+it.skipIf(process.platform !== "win32")("native Windows: a batch shim in a path with spaces preserves empty, spaced, Unicode and trailing-backslash arguments", async () => {
+  const shimDir = join(dir, "bin with spaces"); await mkdir(shimDir);
+  const script = join(shimDir, "capture args.cjs");
+  await writeFile(script, "process.stdout.write(JSON.stringify(process.argv.slice(2)))", "utf8");
+  await writeFile(join(shimDir, "capture.cmd"), `@echo off\r\n"${process.execPath}" "${script}" %*\r\n`, "utf8");
+  const args = ["two words", "", "中文", "trailing\\"];
+  const result = await runResolvedCommand(["capture", ...args], { cwd: dir, timeoutMs: 30000,
+    env: { ...process.env, PATH: `${shimDir};${process.env.PATH ?? ""}` } });
+  expect(JSON.parse(result.stdout)).toEqual(args);
 });

@@ -215,9 +215,15 @@ export class JSONLEventStore implements EventStore {
   ): Promise<AgentEvent[]> {
     const events = await this.load(sessionId);
     const afterSequence = opts.afterSequence ?? -1;
-    const filtered = events.filter((e) => e.sequence > afterSequence);
-    if (opts.limit === undefined) return filtered;
-    return filtered.slice(0, opts.limit);
+    // The cache is a sorted immutable prefix. Locate the tail without scanning
+    // the whole journal on every bounded Web poll.
+    let low = 0, high = events.length;
+    while (low < high) {
+      const middle = low + Math.floor((high - low) / 2);
+      if (events[middle]!.sequence <= afterSequence) low = middle + 1;
+      else high = middle;
+    }
+    return events.slice(low, opts.limit === undefined ? undefined : low + opts.limit);
   }
 
   async *stream(

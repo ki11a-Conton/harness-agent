@@ -490,3 +490,30 @@ it("a short file preview waits for the committed replacement activation without 
   const lock = stack.manager.withSessionLock(draft.id, async () => "A watch must release its sampling lock before yielding"); expect(await lock).toBe("A watch must release its sampling lock before yielding");
   controller.abort(); await feed.return?.();
 });
+
+it("bounded stable-owner tails keep global coordinates, limit physical delivery, and still reject a corrupted retired prefix", async () => {
+  const selected = new ScriptedModelProvider([ScriptedModelProvider.text("unused")]);
+  const stack = await fixture(undefined, { newSessionsUseChildren: true,
+    resolveSelection: async choice => ({ modelProvider: selected, model: { providerId: selected.id, modelId: choice.modelId } }) });
+  const draft = await stack.manager.createSession("secondary", signal());
+  const retiredOwner = await stack.manager.ownerOf(draft.id);
+  await stack.manager.selectModel(draft.id, { providerKey: "bounded", modelId: "bounded" }, signal());
+  const owner = await stack.manager.ownerOf(draft.id), native = stack.manager.nativeSessionId(draft.id);
+  for (let n = 0; n < 128; n++) await owner.events.appendNew({ id: newEventId(), sessionId: native,
+    timestamp: Date.now(), type: "human.message", payload: { n } });
+  const facade = stack.manager.harnessFacade;
+  const all = await facade.events.list(draft.id);
+  let delivered = 0;
+  const list = owner.events.list.bind(owner.events);
+  owner.events.list = async (id, options) => { const result = await list(id, options); delivered += result.length; return result; };
+  const tail = await facade.events.list(draft.id, { afterSequence: all.at(-3)!.sequence, limit: 1 });
+  expect(tail).toEqual(all.slice(-2, -1)); expect(delivered).toBe(1);
+  delivered = 0;
+  expect(await facade.events.list(draft.id, { afterSequence: all.at(-1)!.sequence, limit: 1 })).toEqual([]);
+  expect(delivered).toBe(0);
+  // A bounded cache check must still execute the existing prefix integrity gate.
+  const first = (await retiredOwner.events.list(draft.id))[0]!;
+  await retiredOwner.events.appendNew({ ...first, id: newEventId() });
+  await expect(facade.events.list(draft.id, { afterSequence: all.at(-1)!.sequence, limit: 1 }))
+    .rejects.toMatchObject({ code: "session/alias-corrupt" });
+});

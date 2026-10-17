@@ -227,3 +227,35 @@ describe("PKG-003: the safe-resume gate observes every frozen runtime policy dim
     expect(await driftEvents(events, sessionId)).toHaveLength(0);
   });
 });
+
+
+it("review PR13: observes askOn drift when the configured retry cap exceeds eight", async () => {
+  const before = new RecoveryPolicy({ maxAttempts: 16 });
+  const after = new RecoveryPolicy({ maxAttempts: 16, askOn: new Set(["tool_failure"] as const) });
+  expect(before.decide("tool_failure", 16).action).toBe("fail_safe");
+  expect(after.decide("tool_failure", 16).action).toBe("ask");
+  const { sessionId, events } = await resumeWithDriftedPolicy({ recovery: before }, { recovery: after });
+  const drift = await driftEvents(events, sessionId);
+  expect(drift).toHaveLength(1);
+  expect(drift[0]!.payload.retryPolicyChanged).toBe(true);
+});
+
+it.each([
+  { maxAttemptsByKind: { model_error: 64 }, askOn: new Set(["model_error"] as const) },
+  { maxAttemptsByKind: { timeout: 1000000 } },
+  { retryDelayByKind: { tool_failure: 700 } },
+])("observes the complete per-kind retry policy: %j", async options => {
+  const { sessionId, events } = await resumeWithDriftedPolicy(
+    { recovery: new RecoveryPolicy({ maxAttempts: 16 }) },
+    { recovery: new RecoveryPolicy({ maxAttempts: 16, ...options }) },
+  );
+  expect((await driftEvents(events, sessionId))[0]!.payload.retryPolicyChanged).toBe(true);
+});
+
+it("normalizes askOn insertion order without a false resume drift", async () => {
+  const { sessionId, events } = await resumeWithDriftedPolicy(
+    { recovery: new RecoveryPolicy({ askOn: new Set(["tool_failure", "model_error"]) }) },
+    { recovery: new RecoveryPolicy({ askOn: new Set(["model_error", "tool_failure"]) }) },
+  );
+  expect(await driftEvents(events, sessionId)).toHaveLength(0);
+});
