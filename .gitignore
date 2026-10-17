@@ -80,3 +80,11 @@ apps/cli/src/e4-r55-mutated-chain.generated.ts
 # `git status --porcelain` dirty, which would break concurrent promotion
 # benchmarks (see the fixtures above for the same reasoning).
 apps/cli/test-infra/e4-r55-runs/
+
+# Python bytecode emitted by scripts/research helpers (never commit).
+*.pyc
+__pycache__/
+
+# Output of the external HTML-share tool (LEA-01): a stale snapshot of
+# apps/web/public, not part of the repo.
+.trae-html-share-packages/
