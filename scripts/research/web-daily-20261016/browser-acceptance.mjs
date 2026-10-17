@@ -4,12 +4,12 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { createServer, connect } from 'node:net';
-import { Transform } from 'node:stream';
 import { mkdir, readFile, writeFile, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 import { observeProductionRpc } from '../deepseek-browser-observe.mjs';
+import { createLatencyStream } from './tcp-latency.mjs';
 
 const { values } = parseArgs({ options: {
   output: { type: 'string' }, 'fixture-script': { type: 'string' }, 'portable-root': { type: 'string' },
@@ -28,9 +28,7 @@ const connections = new Set();
 const relay = createServer(socket => {
   const peer = connect(Number(upstream.port || 80), upstream.hostname);
   connections.add(socket); connections.add(peer);
-  const delay = () => new Transform({ transform(bytes, _encoding, done) {
-    if (transportLatency) setTimeout(() => done(null, bytes), transportLatency); else done(null, bytes);
-  } });
+  const delay = () => createLatencyStream(() => transportLatency);
   socket.pipe(delay()).pipe(peer); peer.pipe(delay()).pipe(socket);
   for (const [from, to] of [[socket, peer], [peer, socket]]) {
     from.on('error', () => to.destroy()); from.on('close', () => { connections.delete(from); to.destroy(); });
@@ -493,7 +491,7 @@ try {
   assert.equal(exit.code, 0, 'Actual production fixture shutdown must complete');
 }
 const report = { status: results.length && results.every(r => r.status === 'PASS') ? 'PASS' : 'FAIL', paidModelCalls: 0,
-  origin, upstreamOrigin: upstream.origin, latency: '350 ms per actual TCP chunk in each direction, only during named race scenarios', fixture: {
+  origin, upstreamOrigin: upstream.origin, latency: '350 ms one-way byte arrival delay in each direction during named race scenarios; preserves order without per-chunk bandwidth throttling', fixture: {
     launchId: fixture.launchId, compiledDigest: fixture.compiledDigest, installed: fixture.installed, sourceSha: fixture.sourceSha },
   driverSha256: createHash('sha256').update(await readFile(new URL(import.meta.url))).digest('hex'),
   engine: { node: process.version, chromium: browser.version(), viewportScope: 'Desktop Chromium responsive sizes; no physical mobile or Windows claim' },

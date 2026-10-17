@@ -181,3 +181,15 @@ D9 失败使汇总失败、attestation 跳过；普通安装包与原生 Windows
 新本地回执与归档摘要见 [最终本地证据](evidence/web-ui-20261017/title-final/README.md)。
 接下来的归档提交只改文档/证据，最终 main 的四个工作流和十项主 CI 须按该
 提交独立复核，实际结果以其 GitHub Checks 及独立复核记录为准。不发布 release。
+
+## 远端验收中继的追加修正
+
+0d960c2c 的 Windows/Ubuntu UI 均在语言场景遇到 6 秒后仍为 sent 的设置
+回执，后续英文 boot 继承中文失败。整体不能称通过，原运行保持，不重跑。
+检查发现验收 TCP Transform 每个分块串行增加 350ms，形成与系统分块相关
+的带宽限制；确定性反例到 350ms 只送 1/40 字节。改为按到达时刻排期，
+保序且有界背压；实际 TCP 12 块/40ms 原约 486ms、修正约 98ms，字节一致。
+
+5 项网络回归及相邻 UI 共 19 项通过，已纳入 UI archive 门禁。没有改变产品
+或原等待预算，原本地通过仍绑定 e4a 的当时脚本，不能替代新固定脚本的完整
+同包及最终 CI。见 [中继追修证据](evidence/web-ui-20261017/tcp-followup/README.md)。
