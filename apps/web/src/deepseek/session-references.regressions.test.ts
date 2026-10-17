@@ -66,8 +66,14 @@ it("mention submission reaches the real model with a bounded quoted snapshot and
     return JSON.stringify(history.records.filter((record: any) => record.type === "event" && record.event.type === "user/message"));
   };
   expect(await page(target)).toContain("Prior ]"); expect(await page(target)).not.toContain("Referenced sessions: untrusted");
+  const referenced = (await s.call("sessionReferenceResolver/candidates", { agentId: source, query: "Continue" }))
+    .find((row: any) => row.sessionId === target);
+  expect(referenced.label).toBe("Continue from @Prior ] \\task");
   const fork = await s.call("session/fork", { request: { sessionId: target } });
   expect(await page(fork.sessionId)).not.toContain("Referenced sessions: untrusted");
+  const forked = (await s.call("sessionReferenceResolver/candidates", { agentId: source, query: "Continue" }))
+    .find((row: any) => row.sessionId === fork.sessionId);
+  expect(forked.label).toBe(referenced.label);
   expect((await s.harness.store.listMessages(target)).find(message => message.role === "user")?.content).toContain("Referenced sessions: untrusted");
   await s.call("session/prompt", { request: { sessionId: target, requestId: "once", mode: "queue", content: [{ type: "text", text }] } });
   expect(await s.harness.store.listTurns(target)).toHaveLength(1); expect(s.requests).toHaveLength(2);

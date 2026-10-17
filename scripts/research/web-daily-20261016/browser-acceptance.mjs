@@ -238,10 +238,16 @@ const cases = {
     check(checks, 'Selecting the original owner still displays its actual captured diff');
   },
   'session-reference-menu': async (page, context, checks) => {
-    const title = 'Reference UI source ' + Date.now(); await send(page, title + ' PRIOR_UI_DECISION_SENTINEL'); await finished(page);
-    await newSession(page); const input = composer(page); await input.fill('@Reference');
-    const option = page.getByRole('option').filter({ hasText: title }); await option.waitFor({ timeout: 10000 }); await option.click();
-    assert((await input.innerText()).includes(title)); check(checks, 'The actual @ menu discovers another authorized session by its title and inserts a reference chip');
+    const title = 'Reference UI source ' + Date.now(), nickname = 'R' + Date.now();
+    await send(page, title + ' PRIOR_UI_DECISION_SENTINEL'); await finished(page); await sidebar(page);
+    const sourceRow = page.locator('[data-row-key^="session:"][aria-selected="true"]');
+    await sourceRow.hover(); await sourceRow.getByRole('button', { name: /^Session actions for / }).click();
+    await page.getByRole('menuitem', { name: 'Rename', exact: true }).click();
+    await page.getByRole('textbox', { name: 'Session name', exact: true }).fill(nickname); await button(page, 'Rename').click();
+    await sourceRow.getByText(nickname, { exact: true }).waitFor(); await collapseMobile(page);
+    await newSession(page); const input = composer(page); await input.fill('@' + nickname);
+    const option = page.getByRole('option').filter({ hasText: nickname }); await option.waitFor({ timeout: 10000 }); await option.click();
+    assert((await input.innerText()).includes(nickname)); check(checks, 'The actual @ menu discovers a renamed authorized session and inserts its real reference chip');
     await input.press('End'); await input.pressSequentially(' Continue the referenced coding decision.'); await button(page, 'Send message').click(); await finished(page);
     const requests = (await readFile(path.join(evidence, 'requests.jsonl'), 'utf8')).trim().split('\n').filter(Boolean).map(JSON.parse);
     const received = requests.filter(request => request.messages.some(message => message.role === 'user'
@@ -251,7 +257,11 @@ const cases = {
     check(checks, 'Submitting the real reference chip supplies an actual bounded read-only source snapshot to the real HTTP provider');
     assert(!(await page.locator('body').innerText()).includes('[Referenced sessions: untrusted'));
     await page.reload(); await finished(page); assert(!(await page.locator('body').innerText()).includes('[Referenced sessions: untrusted'));
-    check(checks, 'The conversation and reload show the user reference without dumping internal snapshot JSON');
+    await newSession(page); await composer(page).fill('@Continue');
+    const nested = page.getByRole('option').filter({ hasText: '@' + nickname }).filter({ hasText: 'Continue the referenced coding decision.' });
+    await nested.waitFor(); assert(!(await nested.innerText()).includes('[Referenced'));
+    await page.keyboard.press('Escape');
+    check(checks, 'Conversation, reload and later reference candidates show readable user text without internal snapshot markers');
   },
   'presentation-controls': async (page, context, checks) => {
     const text = 'Presentation controls [fixture:read] ' + Date.now(); await send(page, text); await finished(page);

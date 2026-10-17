@@ -206,10 +206,14 @@ export function createSessionService(host: SessionHost) {
 
   const events = createEventsService({ harness: host.harness, pollDelayMs: host.pollDelayMs, answerAsk, summary: (id, signal) => summary(id, signal) });
   const references = createSessionReferences(host.harness, async (id, signal) => {
-    const title = (await meta(id, signal)).title;
-    if (title) return title;
     const first = (await host.harness.store.listMessages(id as SessionId)).find(message => message.role === "user");
-    return first?.content.trim().replace(/\s+/gu, " ").slice(0, 80);
+    // Read presentation metadata after messages: admission persists its display
+    // mapping before the immutable expanded message can become visible.
+    const details = await meta(id, signal);
+    if (details.title) return details.title;
+    if (!first) return undefined;
+    const text = details.displayTexts?.[createHash("sha256").update(first.content).digest("hex")] ?? first.content;
+    return text.trim().replace(/\s+/gu, " ").slice(0, 80);
   });
 
   async function prompt(request: Record<string, unknown>, signal: AbortSignal): Promise<{ accepted: true }> {
