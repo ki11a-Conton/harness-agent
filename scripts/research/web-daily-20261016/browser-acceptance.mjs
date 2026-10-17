@@ -149,7 +149,9 @@ async function feedbackDialog(page, text, category) {
 async function persistedLocale(page, preference) {
   // The displayed locale is optimistic. Closing the browser context before the
   // real write arrives can cancel it and contaminate later English-only cases.
-  const deadlineAt = Date.now() + 6000;
+  // The real Windows atomic replacement can spend 7.13s retrying a transient
+  // lock. Include that operation plus actual transport; keep the suite deadline.
+  const deadlineAt = Date.now() + 12000;
   let actual;
   let pending;
   do {

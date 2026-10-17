@@ -1,6 +1,6 @@
 # Harness Agent 当前执行计划入口
 
-当前执行任务：[Web 日常交互审查](plan(20261016-234000).md)，合同：[WEB-DAILY-INTERACTIONS-20261016](tasks/WEB-DAILY-INTERACTIONS-20261016.md)。已修复 12 类 UI/宿主问题，做什么、怎么做、怎么验收及具名覆盖见[修复报告](docs/web-daily-interactions-20261017.md)。产品 4e651587 clean 全仓 9874 通过/15 既有跳过/0 失败；固定 e4a95db6 的新安装包在 Chromium 140 上原 30/75、新 42/117、连接 2/10 全通过，0 workspace links。原 e4/61 CI 失败和语言验收候选失败保留；当前归档只改文档/证据，推送后独立复核精确 main 的四工作流和十项主 CI。状态以该提交的 GitHub Checks 及最终独立 CI 记录为准，不调用付费模型，不发布 release。
+当前执行任务：[Web 日常交互审查](plan(20261016-234000).md)，合同：[WEB-DAILY-INTERACTIONS-20261016](tasks/WEB-DAILY-INTERACTIONS-20261016.md)。已修复 13 类 UI/宿主/持久化问题，详见[报告](docs/web-daily-interactions-20261017.md)。前轮产品 4e651587 全仓 9874/15/0；12d 脚本同包 30/75+42/117+连接 2/10、4ae 首次双平台 UI/CLI CI 通过。原 0d 主 CI 又确认 Windows rename EPERM 导致问答续跑失败，原件已核对并归档；U13 采用已有 20 次有界替换预算，原反例失败、相关 80/安全 2146/脚本 19 通过。必须重新固定新产品、完整 suite、新包和精确 main 四工作流/十项主 CI；旧通过不代替新源码验收。保留失败，不调用付费模型，不发布 release。
 
 上一任务：[Coding 命令诊断优化](plan(20261016-164800).md)，合同：[EXEC-DIAGNOSTICS-20261016](tasks/EXEC-DIAGNOSTICS-20261016.md)。main b6a86528 的四个工作流全部成功、主 CI 10/10，均为首次运行。保留 exec 有界诊断尾部，让真实编译、语法和测试失败的最终报错进入下一次 provider 请求；同预算配对基线 0/3 可见、新实现 3/3 可见。固定 clean 432dca23 全仓 9846 通过/15 跳过/0 失败，安全 2146 通过；原 bdd CI 失败和负对照保留。见[实现和验收记录](docs/exec-diagnostics-20261016.md)。
 
@@ -35,7 +35,3 @@
 本轮固定运行时代码 b38566d 已完成完整 9,473 PASS/15 skipped、安全/协议、独立包、真实 Windows、同包官方 UI/CLI、formal 与 coverage 验收。原主 CI 文档门缺当前入口 marker 而失败；入口和真正的当前日期规格已修正，实际 docs:verify PASS。归档提交仅改文档；新 main 自动 CI 的最终状态另行记录，不把旧 CI 称整体通过。
 
 队列原子编辑、Cordis、goal/Plan continuation、可续写子智能体和强沙箱 PTY 等缺口尚在，W3–W6 与逐控件完整 parity 仍部分完成，不能发布为“全部默认 UI 功能已完成”。旧第一代工程计划与发布记录保留在[第一代规格](plan(20261008-024527).md)，原用户未提交文件、v1.9及固定 c5 证据不改写。
-
-本任务 CI 追修：0d960c2c 的两平台 UI 仍失败，不作为最终通过；验收中继
-逐块累计延迟已确定性复现并修正，产品代码不变。须完整同包复验，再等待
-原四工作流完整结束后推送，按新 main 启动并核对四工作流。

@@ -35,16 +35,16 @@ it("a real atomic write retries transient Windows rename contention and keeps th
   await replacing; expect(await readFile(target, "utf8")).toBe("committed-new");
   expect(fault.calls).toBe(4); expect(await readdir(directory!)).toEqual(["state.json"]);
 });
-it("Windows scanner contention lasting beyond the former eight attempts still commits one complete version", async () => {
-  const target = await fixture("win32"); fault.codes = Array(8).fill("EPERM");
+it("Windows contention lasting beyond the former sixteen attempts still commits one complete version", async () => {
+  const target = await fixture("win32"); fault.codes = Array(16).fill("EPERM");
   await atomicWriteFile(target, "committed-after-scanner");
-  expect(fault.calls).toBe(9); expect(await readFile(target, "utf8")).toBe("committed-after-scanner");
+  expect(fault.calls).toBe(17); expect(await readFile(target, "utf8")).toBe("committed-after-scanner");
   expect(await readdir(directory!)).toEqual(["state.json"]);
 });
 it("exhausted Windows contention remains a real failure, preserves the old target and cleans only its own temporary file", async () => {
   const target = await fixture("win32"); fault.codes = Array(32).fill("EPERM");
   await expect(atomicWriteFile(target, "must-not-commit")).rejects.toMatchObject({ code: "EPERM" });
-  expect(fault.calls).toBe(16); expect(await readFile(target, "utf8")).toBe("committed-old");
+  expect(fault.calls).toBe(20); expect(await readFile(target, "utf8")).toBe("committed-old");
   expect(await readdir(directory!)).toEqual(["state.json"]);
 });
 it("permanent and POSIX permission failures do not become a delete-and-recreate fallback", async () => {
