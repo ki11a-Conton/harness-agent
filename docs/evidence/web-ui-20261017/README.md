@@ -21,3 +21,7 @@ SHA 与后续测试脚本 SHA 分别记录；修正后的精确 main CI 需另�
 `title-final/full.*` 是包含 U12 的 clean 4e651587 完整 suite；
 `locale-followup/` 保存原 61ef8e20 Ubuntu UI 失败的只读投影、本地探测反例、
 持久化确认后的三视口通过与其脚本身份，不覆盖旧记录。
+
+`title-final/README.md` 记录包含 U12 的完整新构建与同包 30/75+42/117+
+连接 2/10 通过；`original-61/` 保留主 CI 十项成功但 Ubuntu UI 旧语言
+探测失败的完整 NOT_GREEN 复核。最终 main CI 在归档推送后按精确 SHA 核对。

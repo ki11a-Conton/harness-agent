@@ -1,6 +1,6 @@
 # Harness Agent 当前执行计划入口
 
-当前执行任务：[Web 日常交互审查](plan(20261016-234000).md)，合同：[WEB-DAILY-INTERACTIONS-20261016](tasks/WEB-DAILY-INTERACTIONS-20261016.md)。已修复 12 类 UI/宿主问题：原 11 项及收尾发现的引用候选标题泄露内部快照标记。前轮固定 1a85b345 全仓 9874/15/0、同包 30/75+42/117+连接 2/10；D9/等待时机修正闭环 567/567、矩阵 9/9。U12 原安装包反例失败、修正版三视口及 Web 226 项通过，新产品 4e651587 clean 全仓 9874/15/0 完成；61ef8e20 的语言验收时序失败已定位并修正，新完整安装与最终 main CI 待完成。见[修复报告](docs/web-daily-interactions-20261017.md)。保留原失败，不调用付费模型，不发布 release。
+当前执行任务：[Web 日常交互审查](plan(20261016-234000).md)，合同：[WEB-DAILY-INTERACTIONS-20261016](tasks/WEB-DAILY-INTERACTIONS-20261016.md)。已修复 12 类 UI/宿主问题，做什么、怎么做、怎么验收及具名覆盖见[修复报告](docs/web-daily-interactions-20261017.md)。产品 4e651587 clean 全仓 9874 通过/15 既有跳过/0 失败；固定 e4a95db6 的新安装包在 Chromium 140 上原 30/75、新 42/117、连接 2/10 全通过，0 workspace links。原 e4/61 CI 失败和语言验收候选失败保留；当前归档只改文档/证据，推送后独立复核精确 main 的四工作流和十项主 CI。状态以该提交的 GitHub Checks 及最终独立 CI 记录为准，不调用付费模型，不发布 release。
 
 上一任务：[Coding 命令诊断优化](plan(20261016-164800).md)，合同：[EXEC-DIAGNOSTICS-20261016](tasks/EXEC-DIAGNOSTICS-20261016.md)。main b6a86528 的四个工作流全部成功、主 CI 10/10，均为首次运行。保留 exec 有界诊断尾部，让真实编译、语法和测试失败的最终报错进入下一次 provider 请求；同预算配对基线 0/3 可见、新实现 3/3 可见。固定 clean 432dca23 全仓 9846 通过/15 跳过/0 失败，安全 2146 通过；原 bdd CI 失败和负对照保留。见[实现和验收记录](docs/exec-diagnostics-20261016.md)。
 

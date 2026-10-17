@@ -166,3 +166,18 @@ D9 失败使汇总失败、attestation 跳过；普通安装包与原生 Windows
 已落盘而 mutate 仍为 sent 时，旧 describe 快照暂时把页面还原为 en；该原件
 保留。确认真实持久化与全部已发送 settings 写入/快照回执后，再等最终 DOM；
 新候选单项三视口通过，完整新安装验收仍待完成。产品代码不变，不增总时限。
+
+## 包含全部修复的新安装包验收
+
+最终固定 clean `e4a95db6a2cb8551141a4e0d727300394ff9eec2` 已离线重建并
+完成完整同包验收：原 UI 30 场景/75 项具名检查、新 UI 42/117、连接恢复
+2/10 全部通过，Chromium 140；构建/安装验收前后 HEAD 不变、工作树干净。
+3125 个文件、0 workspace links，实际在仓库外运行，载荷逐文件多次复验。
+该提交的 apps/packages 与全仓通过的 4e651587 相同；脚本包含真实保存回执
+确认和刷新条件，前一轮 7026 的 39/3 失败保留，没有重跑或覆盖它。
+
+原 61ef8e20 的四个远端工作流均已结束，主 CI 十项、原生 Windows、普通安装
+通过，Ubuntu UI 原失败导致整体 NOT_GREEN，见 [精确复核](evidence/web-ui-20261017/original-61/README.md)。
+新本地回执与归档摘要见 [最终本地证据](evidence/web-ui-20261017/title-final/README.md)。
+接下来的归档提交只改文档/证据，最终 main 的四个工作流和十项主 CI 须按该
+提交独立复核，实际结果以其 GitHub Checks 及独立复核记录为准。不发布 release。

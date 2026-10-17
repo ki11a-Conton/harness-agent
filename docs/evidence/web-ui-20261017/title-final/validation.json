@@ -1,0 +1,40 @@
+{
+  "productFullSuiteSha": "4e651587911523b1d67b8e3383be1d76faee755d",
+  "installedApplicationAndDriverSha": "e4a95db6a2cb8551141a4e0d727300394ff9eec2",
+  "productBytesUnchangedAfterFullSuite": true,
+  "fullTests": {
+    "passed": 9874,
+    "existingSkipped": 15,
+    "failed": 0,
+    "beforeAfterClean": true
+  },
+  "installed": {
+    "schemaVersion": 1,
+    "status": "PASS",
+    "kind": "harness-official-ui-installed",
+    "version": "1.10.0",
+    "sourceSha": "e4a95db6a2cb8551141a4e0d727300394ff9eec2",
+    "sourceTree": "acf601b84ba0da62fb15b6259d99070d6f6c5315",
+    "archiveSha256": "161d1645ad1c6437fd1bcf07559ba52d603fb6dc4b61805caf8c991cb63fdd66",
+    "platform": "linux",
+    "architecture": "x64",
+    "node": "v24.19.0",
+    "files": 3125,
+    "workspaceLinks": 0,
+    "installedApplication": true,
+    "cases": 30,
+    "assertions": 75,
+    "paidModelCalls": 0,
+    "connectionScenarios": 2,
+    "connectionAssertions": 10,
+    "dailyScenarios": 42,
+    "dailyAssertions": 117,
+    "realModelQuality": "NOT_PROVEN",
+    "fullDefaultUiParity": "NOT_PROVEN",
+    "scope": "Named ordinary coding UI controls on this verified archive, three viewport sizes; PTY/Cordis/goal/queue-edit capabilities are not claimed."
+  },
+  "scope": "Named actual UI interactions on one immutable offline archive; no paid-model quality or exhaustive UI parity claim",
+  "priorMain": "61ef8e2030c40e81a1b768a741d5b63626edbab3",
+  "priorMainCi": "NOT_GREEN; original Ubuntu locale probe failure retained",
+  "finalMainCi": "must be independently accepted on its exact SHA"
+}
