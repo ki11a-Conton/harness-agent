@@ -14,6 +14,7 @@ import type {
   InboxStore,
   Message,
   ModelProvider,
+  ModelRef,
   SandboxPolicy,
   Session,
   SessionId,
@@ -1944,6 +1945,46 @@ export class AgentRuntime {
     const session = await this.store.getSession(sessionId);
     if (session === undefined) throw new AgentError(errorInfo("INTERNAL_ERROR", `unknown session ${sessionId}`));
     return this.resolveAgent(session);
+  }
+
+  /**
+   * DSH parity (session/selectModel): switch the model a live session uses for
+   * its next and later turns instead of refusing the change.
+   *
+   * The frozen effective-agent snapshot is the only place runTurn resolves the
+   * model from (prepareTurn -> resolveAgent), so re-freezing that snapshot and
+   * the session row hosts read is the whole switch. An already-captured turn
+   * keeps its own agent definition; the following request uses the new model.
+   * Fail closed: a session without a valid snapshot is never handed the base
+   * registry definition, and a snapshot that belongs to another agent is
+   * rejected exactly like resolveAgent rejects it.
+   */
+  async setSessionModel(sessionId: SessionId, model: ModelRef): Promise<Session> {
+    if (model === undefined || typeof model.providerId !== "string" || model.providerId.length === 0
+      || typeof model.modelId !== "string" || model.modelId.length === 0) {
+      throw new AgentError(errorInfo("INTERNAL_ERROR", "setSessionModel requires a concrete providerId/modelId reference"));
+    }
+    const session = await this.store.getSession(sessionId);
+    if (session === undefined) throw new AgentError(errorInfo("INTERNAL_ERROR", `unknown session ${sessionId}`));
+    const snapshot = await this.store.loadStateSnapshot(sessionId);
+    const cfg = snapshot?.[EFFECTIVE_AGENT_SNAPSHOT_KEY] as EffectiveAgentConfig | undefined;
+    if (!isEffectiveAgentConfig(cfg)) {
+      throw new AgentError(
+        errorInfo("INTERNAL_ERROR", `session ${sessionId} has a corrupt effective-agent snapshot: refusing to switch its model`),
+      );
+    }
+    if (cfg.agentId !== session.agentId) {
+      throw new AgentError(
+        errorInfo("INTERNAL_ERROR", `session ${sessionId} effective-agent snapshot agentId ${cfg.agentId} does not match session agentId ${session.agentId}`),
+      );
+    }
+    await this.store.saveStateSnapshot(sessionId, {
+      ...(snapshot ?? {}),
+      [EFFECTIVE_AGENT_SNAPSHOT_KEY]: { ...cfg, model },
+    });
+    const updated: Session = { ...session, model, updatedAt: this.now() };
+    await this.store.updateSession(updated);
+    return updated;
   }
 
   /**

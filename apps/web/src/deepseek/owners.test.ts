@@ -263,13 +263,21 @@ it("a stable Web draft changes its real HTTP model without editing native frozen
   const branch = await stack.manager.harnessFacade.sessionService.threadFork(session.id);
   expect(branch.parentId).toBe(session.id); expect((await actual.store.getSession(branch.id))?.parentId).toBe(physical);
   expect((await stack.manager.harnessFacade.sessionService.resume(session.id)).id).toBe(session.id);
-  await expect(stack.manager.selectModel(session.id, { providerKey: "original-reference", modelId: "model-original" }, signal())).rejects.toMatchObject({ code: "session/model-frozen" });
+  // DSH parity: a session that already admitted input, ran a turn or produced a
+  // child keeps its identity and transcript; the selection applies to its next
+  // request instead of being refused.
+  const settled = await stack.manager.harnessFacade.events.list(session.id);
+  await stack.manager.selectModel(session.id, { providerKey: "original-reference", modelId: "model-original" }, signal());
+  expect(stack.manager.nativeSessionId(session.id)).toBe(physical);
+  expect(await stack.manager.harnessFacade.store.getSession(session.id)).toMatchObject({ id: session.id, status: "active", model: { modelId: "model-original" } });
+  const switched = await stack.manager.harnessFacade.events.list(session.id);
+  expect(switched).toHaveLength(settled.length + 1); expect(switched.slice(0, settled.length)).toEqual(settled);
   await stack.manager.close(); await stack.base.close();
   const base = await createHarness(stack.config); cleanup.push(() => base.close());
   const tools = createHostTools(base, stack.primary, stack.dataDir);
   const restarted = await createOwnerManager(base, { ...stack.hooks, executeHostTool: tools.executeHostTool }); cleanup.push(() => restarted.close());
   expect(restarted.nativeSessionId(session.id)).toBe(physical);
-  expect(await restarted.harnessFacade.events.list(session.id)).toEqual(history);
+  expect(await restarted.harnessFacade.events.list(session.id)).toEqual(switched);
   expect(await restarted.harnessFacade.store.listMessages(session.id)).toEqual(messages);
   expect((await restarted.harnessFacade.sessionService.resume(branch.id)).parentId).toBe(session.id);
   expect((await restarted.harnessFacade.checkSessionConfigDrift(session.id)).severity).toBe("none");
@@ -307,8 +315,12 @@ it("model selection and durable prompt admission serialize on the same stable se
     await stack.manager.harnessFacade.inbox.admit({ id: newPromptId(), sessionId: first.id, kind: "followup", status: "pending", text: "Already admitted", admittedAt: Date.now() });
   });
   await enter; const selecting = stack.manager.selectModel(first.id, { providerKey: "selected", modelId: "new" }, signal()); release();
-  await admission; await expect(selecting).rejects.toMatchObject({ code: "session/model-frozen" });
-  expect(stack.manager.nativeSessionId(first.id)).toBe(first.id); expect(await stack.manager.harnessFacade.inbox.listAll(first.id)).toHaveLength(1);
+  await admission; await selecting;
+  // The admitted prompt keeps the session's identity: its selection changes in
+  // place instead of re-homing the session onto a replacement owner.
+  expect(stack.manager.nativeSessionId(first.id)).toBe(first.id);
+  expect((await stack.manager.harnessFacade.store.getSession(first.id))?.model).toMatchObject({ modelId: "new" });
+  expect(await stack.manager.harnessFacade.inbox.listAll(first.id)).toHaveLength(1);
   const second = await stack.manager.createSession("secondary", signal());
   const selectingSecond = stack.manager.selectModel(second.id, { providerKey: "selected", modelId: "new" }, signal());
   const admitSecond = stack.manager.withSessionLock(second.id, async () => {
@@ -326,18 +338,23 @@ it("host attachments and active facilities block draft replacement, and a denied
     draftBlockers: async () => blockers,
     resolveSelection: async choice => ({ modelProvider: selected, model: { providerId: selected.id, modelId: choice.modelId } }) });
   const session = await stack.manager.createSession("secondary", signal());
-  await expect(stack.manager.selectModel(session.id, { providerKey: "selected", modelId: "new" }, signal())).rejects.toMatchObject({ code: "session/model-frozen" });
-  expect(stack.manager.nativeSessionId(session.id)).toBe(session.id); blockers = [];
+  // A blocker that forbids replacing the draft no longer refuses the selection:
+  // the session keeps its identity and the choice applies to its next request.
+  expect(await stack.manager.selectModel(session.id, { providerKey: "selected", modelId: "new" }, signal())).toBeUndefined();
+  expect(stack.manager.nativeSessionId(session.id)).toBe(session.id);
+  expect((await stack.manager.harnessFacade.store.getSession(session.id))?.model).toMatchObject({ modelId: "new" });
+  blockers = [];
+  const pristine = await stack.manager.createSession("secondary", signal());
   await stack.manager.close();
   let writes = 0;
   const manager = await createOwnerManager(stack.base, { ...stack.hooks, executeHostTool: async (id, definition, args, abort) => {
     if (definition.name === "web_owner_index_write" && ++writes === 2) return { status: "denied" };
     return stack.tools.executeHostTool(id, definition, args, abort);
   } }); cleanup.push(() => manager.close());
-  const owner = await manager.ownerOf(session.id); const before = await owner.store.loadStateSnapshot(session.id);
-  await expect(manager.selectModel(session.id, { providerKey: "selected", modelId: "new" }, signal())).rejects.toMatchObject({ code: "gateway/internal" });
-  expect(manager.nativeSessionId(session.id)).toBe(session.id); expect((await manager.harnessFacade.store.getSession(session.id))?.status).toBe("active");
-  expect(await owner.store.loadStateSnapshot(session.id)).toEqual(before);
+  const owner = await manager.ownerOf(pristine.id); const before = await owner.store.loadStateSnapshot(pristine.id);
+  await expect(manager.selectModel(pristine.id, { providerKey: "selected", modelId: "new" }, signal())).rejects.toMatchObject({ code: "gateway/internal" });
+  expect(manager.nativeSessionId(pristine.id)).toBe(pristine.id); expect((await manager.harnessFacade.store.getSession(pristine.id))?.status).toBe("active");
+  expect(await owner.store.loadStateSnapshot(pristine.id)).toEqual(before);
   expect((JSON.parse(await readFile(join(stack.dataDir, "deepseek", "owners-index.json"), "utf8")) as { aliases: unknown[] }).aliases).toEqual([]);
 });
 
@@ -427,7 +444,7 @@ it("stable draft typed stores retain actual native ownership and checkpoint inte
   await expect(facade.inbox.bindPromotion(prompt.id, (await (await facade.sessions.load(other.id)).createTurn({ sessionId: other.id, text: "Foreign promotion" })).id)).rejects.toMatchObject({ code: "session/conflict" });
 });
 
-it("a real staged attachment commit and model replacement share the stable draft lock until acknowledgement", async () => {
+it("a real staged attachment commit and model selection share the stable draft lock until acknowledgement", async () => {
   const selected = new ScriptedModelProvider([ScriptedModelProvider.text("Selected route")]); let manager!: OwnerManager;
   const stack = await fixture(undefined, { newSessionsUseChildren: true,
     resolveSelection: async choice => ({ modelProvider: selected, model: { providerId: selected.id, modelId: choice.modelId } }),
@@ -443,7 +460,11 @@ it("a real staged attachment commit and model replacement share the stable draft
   await committed; let selectingDone = false;
   const selecting = manager.selectModel(draft.id, { providerKey: "selected", modelId: "new" }, signal()).then(() => ({ accepted: true }), error => ({ accepted: false, code: (error as { code?: string }).code })).finally(() => { selectingDone = true; });
   await new Promise(done => setTimeout(done, 20)); expect(selectingDone).toBe(false); expect(manager.nativeSessionId(draft.id)).toBe(native);
-  release(); const receipt = await uploading as { receiptId: string }; expect(await selecting).toEqual({ accepted: false, code: "session/model-frozen" });
+  release(); const receipt = await uploading as { receiptId: string };
+  // Serialized, not refused: after the durable upload acknowledgement the same
+  // session keeps its identity and its selection moves in place.
+  expect(await selecting).toEqual({ accepted: true });
+  expect((await manager.harnessFacade.store.getSession(draft.id))?.model).toMatchObject({ modelId: "new" });
   expect(manager.nativeSessionId(draft.id)).toBe(native); expect(await deliverables.resolveUpload(draft.id, receipt.receiptId, signal())).toMatchObject({ text: "Stable owned upload\n" });
 });
 

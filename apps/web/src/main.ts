@@ -16,6 +16,7 @@ import { WebChannelAdapter } from "./adapter.js";
 import { SessionBindings, TrackingRegistry } from "./bindings.js";
 import { WebServer } from "./server.js";
 import { createDeepseekComposition } from "./deepseek/composition.js";
+import { routeAwareProvider } from "./deepseek/routes.js";
 
 /**
  * Web console entry: compose the production harness (@ar/harness, interactive
@@ -48,6 +49,10 @@ async function startMain(lease: DataDirLease | undefined): Promise<number> {
   // E3-01: resolveModelProvider now returns a BillingProvider — unwrap the
   // provider for harness wiring.
   const provider = (await resolveModelProvider({ modelId: process.env.OPENAI_MODEL || DEFAULT_MODEL_ID })).provider;
+  // DSH parity: a session the host itself owns may switch models too, so the
+  // adapter default resolves the selected route on demand instead of pinning
+  // the one route this process started with.
+  const routedProvider = routeAwareProvider(provider);
   const verificationCommand = process.env.HARNESS_VERIFY_COMMAND?.trim();
   // E4-07: Web uses the same production champion application path as CLI.
   // The shared path resolves the pending champion profile, passes it through
@@ -62,7 +67,7 @@ async function startMain(lease: DataDirLease | undefined): Promise<number> {
       ...(agentPromptPolicy !== undefined ? { agentPromptPolicy } : {}),
       ...(contextSummary !== undefined ? { contextSummary } : {}),
       ...(memoryEnabled ? { memory: { enabled: true, onDemand: process.env.HARNESS_MEMORY_SEARCH === "1" } } : {}),
-      modelProvider: provider,
+      modelProvider: routedProvider.provider,
       model: resolveInteractiveModelRef(provider),
       ...(verificationCommand ? { task: { id: "web-coding", goal: "Complete the user task and pass the configured project check",
         verification: [{ kind: "command" as const, command: verificationCommand }] } } : {}),
@@ -111,7 +116,7 @@ async function startMain(lease: DataDirLease | undefined): Promise<number> {
     } } : {},
     initialCredentials: process.env.OPENAI_API_KEY ? { OPENAI_API_KEY: process.env.OPENAI_API_KEY } : {},
     environment: { ...process.env },
-  }); }
+  }, { installRouteResolver: routedProvider.install }); }
   catch (error) { await harness.close(); throw error; }
   const server = new WebServer({
     adapter,

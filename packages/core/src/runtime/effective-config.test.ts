@@ -1,4 +1,4 @@
-﻿import { defaultTestToolCatalog } from "../test/fakes.js";
+import { defaultTestToolCatalog } from "../test/fakes.js";
 import { describe, expect, it } from "vitest";
 import type { AgentDefinition, SessionId } from "@ar/contracts";
 import { newAgentId } from "@ar/contracts";
@@ -248,4 +248,56 @@ it("legacy and mismatched cosmetic records do not replace a frozen agent policy"
     expect(actual.name).toBe(READ_ONLY.id); expect(actual.tools).toEqual(READ_ONLY.tools);
     expect(actual.permissions).toEqual(READ_ONLY.permissions);
   }
+});
+
+describe("P27-4 session model switch", () => {
+  it("re-freezes the effective-agent model and the session row for later turns", async () => {
+    const store = new MemorySessionStore(); const { runtime } = makeRuntime(store, [BASE]);
+    const session = await runtime.createSession({ agent: READ_ONLY, cwd: "/work" });
+    const before = (await store.loadStateSnapshot(session.id))!;
+    const target = { providerId: "scripted", modelId: "next-model" };
+
+    const updated = await runtime.setSessionModel(session.id, target);
+    expect(updated.model).toEqual(target);
+
+    const after = (await store.loadStateSnapshot(session.id))!;
+    expect(Object.keys(after).sort()).toEqual(Object.keys(before).sort());
+    expect(after.effectiveAgent).toMatchObject({
+      agentId: READ_ONLY.id,
+      systemPrompt: READ_ONLY.systemPrompt,
+      tools: READ_ONLY.tools,
+      permissions: READ_ONLY.permissions,
+      model: target,
+    });
+    expect((await store.getSession(session.id))!.model).toEqual(target);
+    // The next turn resolves the switched model from the frozen snapshot alone.
+    expect((await runtime.getSessionAgent(session.id)).model).toEqual(target);
+  });
+
+  it("fails closed for a missing, corrupt, or foreign effective-agent snapshot", async () => {
+    for (const mutate of [
+      (snapshot: Record<string, unknown>) => { delete snapshot.effectiveAgent; },
+      (snapshot: Record<string, unknown>) => { snapshot.effectiveAgent = { agentId: newAgentId() }; },
+      (snapshot: Record<string, unknown>) => { (snapshot.effectiveAgent as { agentId: string }).agentId = newAgentId(); },
+    ]) {
+      const store = new MemorySessionStore(); const { runtime } = makeRuntime(store, [BASE]);
+      const session = await runtime.createSession({ agent: READ_ONLY, cwd: "/work" });
+      const snapshot = (await store.loadStateSnapshot(session.id))!;
+      mutate(snapshot as unknown as Record<string, unknown>);
+      await store.saveStateSnapshot(session.id, snapshot);
+      await expect(runtime.setSessionModel(session.id, { providerId: "scripted", modelId: "next" }))
+        .rejects.toMatchObject({ info: { code: "INTERNAL_ERROR" } });
+    }
+  });
+
+  it("rejects an empty or unknown model reference instead of clearing the frozen model", async () => {
+    const store = new MemorySessionStore(); const { runtime } = makeRuntime(store, [BASE]);
+    const session = await runtime.createSession({ agent: READ_ONLY, cwd: "/work" });
+    for (const model of [{ providerId: "", modelId: "next" }, { providerId: "scripted", modelId: "" }]) {
+      await expect(runtime.setSessionModel(session.id, model)).rejects.toMatchObject({ info: { code: "INTERNAL_ERROR" } });
+    }
+    await expect(runtime.setSessionModel("session_missing" as SessionId, { providerId: "scripted", modelId: "next" }))
+      .rejects.toMatchObject({ info: { code: "INTERNAL_ERROR" } });
+    expect((await store.getSession(session.id))!.model).toEqual(READ_ONLY.model);
+  });
 });

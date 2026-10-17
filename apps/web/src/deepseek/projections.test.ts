@@ -137,6 +137,26 @@ describe("official DeepSeek Harness history projection", () => {
     expect(settled.records.filter(record => record.event.type === "tool/result")).toHaveLength(1);
   });
 
+  it("keeps published history immutable when a live session switches its model", () => {
+    const f = fixture();
+    const prompt = f.message("user", "只回复两个字：好的");
+    f.event("turn.started", { text: prompt.content });
+    f.event("model.started", { callId: "call", stepId: "step" });
+    f.message("assistant", "好的", { model: { providerId: "loopback", modelId: "coding" } });
+    f.event("model.completed", { text: "好的", toolCalls: 0, finishReason: "stop" });
+    f.event("turn.completed");
+    const before = f.project();
+    const settled = before.records.find(record => record.event.type === "assistant/message")!.event;
+    expect((recordData(settled).message as Record<string, unknown>).source).toEqual({ kind: "model", provider: "loopback", model: "coding" });
+    // session/selectModel mutates the session row. The durable prefix a client
+    // already holds must stay byte-identical, or the follow stream is right to
+    // refuse it as a changed prefix.
+    const switched: Session = { ...f.session, model: { providerId: "loopback", modelId: "coding-2" } };
+    const after = projectSessionHistory({ session: switched, events: f.events, messages: f.messages });
+    expect(after.records.map(record => JSON.stringify(record))).toEqual(before.records.map(record => JSON.stringify(record)));
+    expect(after.projections.values.modelSelection).toEqual({ lastUsed: { provider: "loopback", model: "coding" }, next: { provider: "loopback", model: "coding-2" } });
+  });
+
   it("joins dense assistant revisions and reconnect prefix through the official settlement fold", () => {
     const f = fixture();
     const prompt = f.message("user", "hello");

@@ -461,8 +461,23 @@ export async function createOwnerManager(base: Harness, hooks: OwnerHooks): Prom
         else if (session.status === "failed") throw new RemoteFailure("session/not-found", "Failed initialization is not a selectable Web session");
         return;
       }
-      const prefix = await assertDraft(owner, session, sessionId, signal);
+      let prefix: Awaited<ReturnType<typeof assertDraft>> | undefined;
+      try {
+        prefix = await assertDraft(owner, session, sessionId, signal);
+      } catch (error) {
+        // DSH parity: a session that already admitted input, tool activity or a
+        // child keeps its identity and transcript. The selection applies to its
+        // next request instead of being refused.
+        if (!(error instanceof RemoteFailure) || error.code !== "session/model-frozen") throw error;
+      }
       const originalView = [...children.values()].find(view => view.harness === owner);
+      if (prefix === undefined) {
+        if (originalView === undefined) throw new RemoteFailure("session/model-frozen", "Legacy sessions keep their frozen model");
+        await owner.runtime.setSessionModel(nativeId, target.model);
+        await owner.events.appendNew({ id: newEventId(), sessionId: nativeId, timestamp: Date.now(), type: "human.message",
+          payload: { hostOnly: true, kind: "web_model_selection", selection: { provider: target.model.providerId, model: target.model.modelId } } });
+        return;
+      }
       if (originalView === undefined) throw new RemoteFailure("session/model-frozen", "Legacy sessions keep their frozen model");
       const row: OwnerRow = { id: identity(session.cwd, choice), path: session.cwd,
         ...(originalView.workspaceId === undefined ? {} : { workspaceId: originalView.workspaceId }), selection: choice };

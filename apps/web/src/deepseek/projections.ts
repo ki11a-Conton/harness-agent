@@ -158,6 +158,7 @@ export function projectSessionHistory(input: SessionProjectionInput): PageProjec
   let lastStepBoundary: JsonValue = null;
   let lastPromptAt: number | null = null;
   let modelStarted = false;
+  let usedModel: { providerId: string; modelId: string } | undefined;
   let title: string | null = input.title ?? null;
   let frameBatch: SessionFollowFrame[] = [];
   let sourceSequence = -1;
@@ -199,7 +200,7 @@ export function projectSessionHistory(input: SessionProjectionInput): PageProjec
   }
   function messageSource(message: Message): JsonValue {
     if (message.role === "assistant") return plan.modelMessages.has(message.id)
-      ? { kind: "model", provider: session.model.providerId, model: session.model.modelId }
+      ? { kind: "model", provider: message.model?.providerId ?? session.model.providerId, model: message.model?.modelId ?? session.model.modelId }
       : { kind: "harness-verification" };
     if (message.role === "tool") return { kind: "tool", callId: message.toolCallId! };
     if (message.role === "system") return { kind: "system-prompt" };
@@ -232,6 +233,9 @@ export function projectSessionHistory(input: SessionProjectionInput): PageProjec
       lastPromptAt = message.createdAt;
       if (title === null) title = message.content.replace(/\s+/g, " ").trim().slice(0, 80) || null;
     } else if (message.role === "assistant") {
+      // The provenance recorded when the response was produced, never the
+      // session row: a live model switch must not relabel published history.
+      if (message.model !== undefined) usedModel = { providerId: message.model.providerId, modelId: message.model.modelId };
       if (modelSettlement && active !== undefined) {
         // Harness journals only visible text deltas. The final reasoning block
         // remains reasoning; it is never emitted as a text-delta.
@@ -405,6 +409,9 @@ export function projectSessionHistory(input: SessionProjectionInput): PageProjec
     sourceCursor = event.sequence;
   }
   const cursor = records.length - 1;
+  // Legacy journals carry no per-message provenance; they keep reporting the
+  // session's own model, which is what the pre-switch UI showed.
+  const lastUsedModel = usedModel ?? (modelStarted ? { providerId: session.model.providerId, modelId: session.model.modelId } : undefined);
   return {
     header: { version: 4, id: session.id, createdAt: session.createdAt, cwd: session.cwd,
       isSeeded: session.parentId !== undefined, ...(session.parentId === undefined ? {} : { parentSession: session.parentId }) },
@@ -416,7 +423,7 @@ export function projectSessionHistory(input: SessionProjectionInput): PageProjec
     projections: { asOfSeq: cursor, values: {
       title,
       sessionListMetadata: { blank: turnNumbers.size === 0 && lastPromptAt === null, lastPromptAt },
-      modelSelection: { lastUsed: modelStarted ? { provider: session.model.providerId, model: session.model.modelId } : null,
+      modelSelection: { lastUsed: lastUsedModel === undefined ? null : { provider: lastUsedModel.providerId, model: lastUsedModel.modelId },
         next: { provider: session.model.providerId, model: session.model.modelId } },
       turnBoundary: { openTurnStartSeq, lastStepStartSeq, lastStepBoundary, lastTurn: currentTurn },
       ...activity.values(),
