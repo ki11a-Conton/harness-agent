@@ -1,0 +1,579 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-web-interactions-20261016
+
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W1: the worker's own identity and vocabulary > exposes one worker version and the three exit codes 3ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W1: the worker's own identity and vocabulary > names every failure category, and `null` is never a member (null means PASSED) 2ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W1: the worker's own identity and vocabulary > resolves the ARM'S OWN entry point and report path 1ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W2: dispatch argv — the measured P0 regression > passes --plan-digest to the dispatch, which the CLI REQUIRES for an external-billed run 1ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W2: dispatch argv — the measured P0 regression > NEGATIVE CONTROL: omits --plan-digest when no digest was supplied, so the flag is not fabricated 1ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W2: dispatch argv — the measured P0 regression > NEGATIVE CONTROL: an EMPTY digest string is not passed as a flag value 1ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W2: dispatch argv — the measured P0 regression > uses the ARM'S OWN cliEntry as argv[0] and never a shell string 1ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W2: dispatch argv — the measured P0 regression > dryRunArgs is exactly dispatchArgs plus --dry-run, so both describe ONE plan 1ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W3: build identity is observed, never fabricated > reads the REAL git HEAD of the checkout and a 64-hex build digest 117ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W3: build identity is observed, never fabricated > returns null — not a substituted value — for a tree with no build 4ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W3: build identity is observed, never fabricated > changing the build changes the digest: a different tree is a different identity 108ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W4: the unit input digest binds what can change a result > is a 64-hex digest and is STABLE for identical inputs 1ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W4: the unit input digest binds what can change a result > CHANGES when the build, the plan, the case, or the arm changes 1ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W5: report classification is three-way and never invents a pass > a PASS requires the report's own success flag — never a hardcoded true 1ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W5: report classification is three-way and never invents a pass > a case that RAN and failed its task is a VALID negative (`case_failed`), not an infrastructure error 0ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W5: report classification is three-way and never invents a pass > distinguishes a MODEL error (`provider`) from an infrastructure defect 1ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W5: report classification is three-way and never invents a pass > an EMPTY report is an infrastructure failure, never a silent pass 0ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W5: report classification is three-way and never invents a pass > success=true WITHOUT the report's own verification evidence is infrastructure, not a pass 1ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W6: plan-digest parsing accepts the shapes the CLI has used > reads a top-level planDigest, a bare digest, and a nested plan.planDigest 1ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W6: plan-digest parsing accepts the shapes the CLI has used > returns null — never a guess — for malformed or non-hex input 0ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W7: the CLI entry refuses misuse instead of guessing > no flags is a USAGE error (exit 2), not a defaulted run 1ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W7: the CLI entry refuses misuse instead of guessing > a partial flag set is still a usage error 1ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W7: the CLI entry refuses misuse instead of guessing > the approved identity is REQUIRED — the CLI cannot dodge it by omitting flags (T4) 1ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W8: THE REAL EXECUTION — the arm's own build actually runs the case > executes the case and records a verdict that can ONLY come from the real report 1832ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W8: THE REAL EXECUTION — the arm's own build actually runs the case > TWO DIFFERENT CASES each enter their OWN context — no single placeholder request 1828ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W8: THE REAL EXECUTION — the arm's own build actually runs the case > REFUSES a unit whose checkout is not the approved build, and dispatches NOTHING 151ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W8: THE REAL EXECUTION — the arm's own build actually runs the case > a case MISSING from the arm is refused — never borrowed from the driver repo (T4 怎么做 7) 384ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W9: failure text is redacted before it can reach a caller > removes bearer tokens, provider keys, query credentials and URL userinfo 0ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W9: failure text is redacted before it can reach a caller > walks a NESTED cause rather than stringifying the whole error 0ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W9: failure text is redacted before it can reach a caller > caps the message, so a huge provider payload cannot flood a report 24ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W9: failure text is redacted before it can reach a caller > exposes `redactFailureText` as the SAME function, not a second implementation 0ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W10: the worker's report SURVIVES it, linked and hashed > leaves a real evidence file on disk after the worker returns 955ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W10: the worker's report SURVIVES it, linked and hashed > keeps the staging scratch out of the evidence, and only the scratch 917ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W10: the worker's report SURVIVES it, linked and hashed > the stored evidence row is REDACTED: no credential-shaped text reaches it 987ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W10: the worker's report SURVIVES it, linked and hashed > the TERMINAL RECORD is redacted too, and agrees with the evidence it links to 1ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W10: the worker's report SURVIVES it, linked and hashed > the record's detail AGREES with its own evidence on a REAL unit 980ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W10: the worker's report SURVIVES it, linked and hashed > a REFUSED unit still records evidence, because its refusal is the result 157ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W11 (A1/F1): a DISPATCHED call is never refunded when the arm CLI dies afterwards > grant=1, the consumer breaks mid-stream and the CLI throws: innerCalls=1, NOT abandoned, remaining=0, second reserve refused 461ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W11 (A1/F1): a DISPATCHED call is never refunded when the arm CLI dies afterwards > a SETTLEMENT write failure on an ENTERED call is refused as `budget` and the allowance is NOT refunded 450ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R105 (A5/F5): an identity refusal outranks a report that claims a PASS > PROTOCOL FIXTURE: the runtime's model ref disagrees with the approval, and the synthetic PASS report must not win 470ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R105 (A5/F5): an identity refusal outranks a report that claims a PASS > PROTOCOL FIXTURE: a NULL runtime model ref is a refusal, never 'no drift' 430ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R105 (A5/F5): an identity refusal outranks a report that claims a PASS > PROTOCOL FIXTURE: a FAILED dry run ends the unit BEFORE any dispatch 387ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R105 (A5/F5): an identity refusal outranks a report that claims a PASS > PROTOCOL FIXTURE: an APPROVED-and-matching unit still reaches a verified PASS 406ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R105 (A5/F5): an identity refusal outranks a report that claims a PASS > PROTOCOL FIXTURE: a LEGITIMATE negative stays `case_failed`, not infrastructure 401ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R105 P: the verdict priority table is a real, ordered contract > ranks every failure category, and a PASS is the LOWEST priority 1ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > R105 P: the verdict priority table is a real, ordered contract > never lets a later assignment overwrite a more blocking fact, in EITHER order 1ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > E4-R106 (A6/F6): a HANGING arm is really TERMINATED, within the declared bound > a dry run that never returns is stopped by the unit deadline, and its code does NOT outlive the unit 10704ms
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts > E4-R106 (A6/F6): a HANGING arm is really TERMINATED, within the declared bound > a DISPATCH that never returns is stopped too, and the admitted call is NOT refunded 6717ms
+ ✓ packages/evaluation/src/r97-bounded-stop.test.ts > R99-B S1: a child that IGNORES SIGTERM is still stopped, within deadline + grace > returns a NAMED timeout result, and the child is really gone 3516ms
+ ✓ packages/evaluation/src/r97-bounded-stop.test.ts > R99-B S1: a child that IGNORES SIGTERM is still stopped, within deadline + grace > escalates only AFTER the grace: a child that dies on the first signal is not tree-killed 707ms
+ ✓ packages/evaluation/src/r97-bounded-stop.test.ts > R99-B S1: a child that IGNORES SIGTERM is still stopped, within deadline + grace > leaves NO descendant behind: a grandchild that ignores signals is reaped too 3513ms
+ ✓ packages/evaluation/src/r97-bounded-stop.test.ts > R99-B S2: the output cap is BYTES, not a count of chunks > one HUGE chunk and many SMALL chunks are bounded identically 10ms
+ ✓ packages/evaluation/src/r97-bounded-stop.test.ts > R99-B S2: the output cap is BYTES, not a count of chunks > counts UTF-8 bytes, not characters 2ms
+ ✓ packages/evaluation/src/r97-bounded-stop.test.ts > R99-B S2: the output cap is BYTES, not a count of chunks > an under-limit stream is NOT marked truncated 1ms
+ ✓ packages/evaluation/src/r97-bounded-stop.test.ts > R99-B S2: the output cap is BYTES, not a count of chunks > the module's own default cap is a real byte limit, not a chunk count 12ms
+ ✓ packages/evaluation/src/r97-bounded-stop.test.ts > R99-B S3: cancellation and spawn failure are distinct, named outcomes > an AbortSignal cancels a running child and is reported as `cancelled` 2418ms
+ ✓ packages/evaluation/src/r97-bounded-stop.test.ts > R99-B S3: cancellation and spawn failure are distinct, named outcomes > an ALREADY-aborted signal cancels without ever starting the child 1ms
+ ✓ packages/evaluation/src/r97-bounded-stop.test.ts > R99-B S3: cancellation and spawn failure are distinct, named outcomes > a file that cannot be spawned is `spawn_failed`, not a timeout 3ms
+ ✓ packages/evaluation/src/r97-bounded-stop.test.ts > R99-B S3: cancellation and spawn failure are distinct, named outcomes > a child that exits normally is `exited`, with its own code 30ms
+ ✓ packages/evaluation/src/r97-bounded-stop.test.ts > R99-B S3: cancellation and spawn failure are distinct, named outcomes > an output flood past the cap ends the child as `output_limit`, long before the deadline 836ms
+ ✓ packages/evaluation/src/r97-bounded-stop.test.ts > R99-B S3: cancellation and spawn failure are distinct, named outcomes > leaves NO descendant behind when the CAP is what stops the tree 2037ms
+ ✓ packages/evaluation/src/r97-bounded-stop.test.ts > R99-B S5: the deadline is SHARED across phases, not re-granted per phase > a phase cannot obtain a fresh full deadline after the first one spent it 1ms
+ ✓ packages/evaluation/src/r97-bounded-stop.test.ts > R99-B S5: the deadline is SHARED across phases, not re-granted per phase > fires its AbortSignal exactly at the deadline, once 402ms
+ ✓ packages/evaluation/src/r97-bounded-stop.test.ts > R99-B S5: the deadline is SHARED across phases, not re-granted per phase > dispose() releases the timer so a finished unit leaves nothing armed 202ms
+ ✓ packages/evaluation/src/r97-bounded-stop.test.ts > R99-B S5: the deadline is SHARED across phases, not re-granted per phase > a budget that is already spent is expired from the first check 1ms
+ ✓ packages/evaluation/src/r97-bounded-stop.test.ts > R99-B S6: the deadline reaches the REAL execution path > mergeSignals aborts when EITHER the arm's signal or the campaign's does 3ms
+ ✓ packages/evaluation/src/r97-bounded-stop.test.ts > R99-B S6: the deadline reaches the REAL execution path > a unit whose deadline is ALREADY spent never dispatches, and reports timeout 301ms
+ ✓ packages/evaluation/src/r97-bounded-stop.test.ts > R99-B S6: the deadline reaches the REAL execution path > an unspent deadline leaves the normal path completely unchanged 952ms
+ ✓ packages/evaluation/src/r97-bounded-stop.test.ts > R99-B S7: an interrupted unit settles its budget and its state honestly > a unit stopped by the deadline is TERMINAL, so a resume skips it rather than re-sending 120ms
+ ✓ packages/evaluation/src/r97-bounded-stop.test.ts > R99-B S7: an interrupted unit settles its budget and its state honestly > the interrupt's reservation is NOT refunded, because a dispatched call may have been billed 115ms
+ ✓ packages/evaluation/src/r97-bounded-stop.test.ts > R99-B S4: every path is bounded, and the stop is the IMPLEMENTATION's doing > a stubborn child is stopped well before an independent watchdog would fire 3006ms
+ ✓ packages/evaluation/src/r97-bounded-stop.test.ts > R99-B S4: every path is bounded, and the stop is the IMPLEMENTATION's doing > the named reasons are a closed set the rest of the contract can rely on 1ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R97 P1: DRAFT vs FINALIZED_AUTHORIZATION_PLAN is structural > with NO arm observed the plan is a DRAFT that carries no envelope and no digest 110ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R97 P1: DRAFT vs FINALIZED_AUTHORIZATION_PLAN is structural > with only ONE arm observed the plan is NOT_READY (something WAS observed and is incomplete) 123ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R97 P1: DRAFT vs FINALIZED_AUTHORIZATION_PLAN is structural > with BOTH arms really observed the plan FINALIZES and carries a digest 80ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R97 P1: DRAFT vs FINALIZED_AUTHORIZATION_PLAN is structural > a DRAFT is never authorizable and never claims a digest, whatever the caps 79ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R97 P1: DRAFT vs FINALIZED_AUTHORIZATION_PLAN is structural > the draft schema and the finalized schema are DIFFERENT values 1ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R97 P1: DRAFT vs FINALIZED_AUTHORIZATION_PLAN is structural > carries a plan schema label that is NOT the superseded pre-A4 contract 0ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R97 P2: the observed facts are OBSERVED, never copied from the envelope > gateFacts carries the arms' OBSERVED shas and real dry-run digests 99ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R97 P2: the observed facts are OBSERVED, never copied from the envelope > an UNOBSERVED arm yields null in gateFacts — the R92 anti-copy defect 100ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R97 P2: the observed facts are OBSERVED, never copied from the envelope > gateFacts.observedCaseFingerprints come from the ARM, not from the selection file 86ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R97 P2: the observed facts are OBSERVED, never copied from the envelope > gateFacts.now is the supplied executor clock, never a plan value 71ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R97 P2: the observed facts are OBSERVED, never copied from the envelope > the previous plan-time substitute digest function is gone from the module 2ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R97 P3: readiness refuses a plan that is not executable as written > refuses an arm observed on a DIRTY checkout 194ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R97 P3: readiness refuses a plan that is not executable as written > refuses two arms that observed the SAME build (one arm standing in for two) 104ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R97 P3: readiness refuses a plan that is not executable as written > refuses a case SET that drifted from the frozen selection 107ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R97 P3: readiness refuses a plan that is not executable as written > accepts a different ORDER than the selection file, because loadBenchmarkCases sorts 118ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R97 P3: readiness refuses a plan that is not executable as written > refuses two arms that planned the frozen cases in DIFFERENT orders 109ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R97 P3: readiness refuses a plan that is not executable as written > refuses an arm that planned a SHORTER case list 97ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R97 P3: readiness refuses a plan that is not executable as written > refuses an arm whose provider/model/endpoint disagree with the plan 172ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R97 P3: readiness refuses a plan that is not executable as written > refuses a malformed arm digest or sha 99ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R97 P3: readiness refuses a plan that is not executable as written > the cap contract is enforced with the SAME rule the R95 gate applies 0ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R97 P4: the approval package names what a human must decide > a FINALIZED package names the digest, both arms, expiry, caps and unknowns 81ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R97 P4: the approval package names what a human must decide > the package states that the arm digests are REAL dry-run digests 70ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R97 P4: the approval package names what a human must decide > the package separates logical calls from physical retries 82ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R97 P4: the approval package names what a human must decide > never claims a real score or a pass-rate improvement 69ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R97 P4: the approval package names what a human must decide > states the fix scope without implying later fixes are included 75ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R97 P5: parseR97ArmObservation fails closed on hostile dry-run output > accepts a well-formed dry-run document 1ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R97 P5: parseR97ArmObservation fails closed on hostile dry-run output > refuses a dry-run document with no suite 0ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R97 P5: parseR97ArmObservation fails closed on hostile dry-run output > refuses a document that is NOT a dry-run 0ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R97 P5: parseR97ArmObservation fails closed on hostile dry-run output > refuses a dry-run that reports provider calls 0ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R97 P5: parseR97ArmObservation fails closed on hostile dry-run output > never throws on hostile input and names the field 1ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R97 P6: readiness is computed from observations, independently of any authorization > reports readiness issues even when no authorization exists at all 0ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R97 P6: readiness is computed from observations, independently of any authorization > a clean selection with both arms observed reports zero readiness issues 73ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R98/R100 P7: execution-time facts are re-observed, never inherited from the plan snapshot > 1. a freshly observed set of facts that MATCHES the envelope passes with ok:true and NO codes 80ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R98/R100 P7: execution-time facts are re-observed, never inherited from the plan snapshot > 1b. the plan snapshot is HISTORY for review, and `observation` is the SAME object as `planObservation` 68ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R98/R100 P7: execution-time facts are re-observed, never inherited from the plan snapshot > 2a. EXEC_OBS_ARM_SHA_DRIFT fires alone when one arm's HEAD moved 69ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R98/R100 P7: execution-time facts are re-observed, never inherited from the plan snapshot > 2b. EXEC_OBS_ARM_PLAN_DIGEST_DRIFT fires alone when an arm's real dry-run digest changed 72ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R98/R100 P7: execution-time facts are re-observed, never inherited from the plan snapshot > 2c. EXEC_OBS_CASE_DRIFT fires for ONE case and NAMES that case id 64ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R98/R100 P7: execution-time facts are re-observed, never inherited from the plan snapshot > 2c2. a case approved but NOT observed is EXEC_OBS_CASE_MISSING, not a silent skip 76ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R98/R100 P7: execution-time facts are re-observed, never inherited from the plan snapshot > 2d. EXEC_OBS_IDENTITY_DRIFT fires alone for a changed provider id 71ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R98/R100 P7: execution-time facts are re-observed, never inherited from the plan snapshot > 2e. EXEC_OBS_IDENTITY_DRIFT fires alone for a changed model id 71ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R98/R100 P7: execution-time facts are re-observed, never inherited from the plan snapshot > 2f. EXEC_OBS_IDENTITY_DRIFT fires alone for a changed endpoint identity 72ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R98/R100 P7: execution-time facts are re-observed, never inherited from the plan snapshot > 2g. EXEC_OBS_DRIVER_BUILD_DRIFT fires alone when the driver's BYTES changed under an unchanged version label 73ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R98/R100 P7: execution-time facts are re-observed, never inherited from the plan snapshot > 2h. EXEC_OBS_PLAN_DIGEST_MISMATCH fires alone for a changed expanded plan digest 73ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R98/R100 P7: execution-time facts are re-observed, never inherited from the plan snapshot > 2h2. a top-level-digest-only edit cannot pass: the label and the BODY must agree 72ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R98/R100 P7: execution-time facts are re-observed, never inherited from the plan snapshot > 3a. EXEC_OBS_EXPIRED refuses a plan whose validity window has passed 67ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R98/R100 P7: execution-time facts are re-observed, never inherited from the plan snapshot > 3b. EXEC_OBS_NOT_YET_VALID refuses a plan whose window has not started 75ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R98/R100 P7: execution-time facts are re-observed, never inherited from the plan snapshot > 3c. an unreadable execution clock is refused, never treated as inside the window 70ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R98/R100 P7: execution-time facts are re-observed, never inherited from the plan snapshot > 4. a selection whose case list was edited while keeping the OLD digest is REFUSED 661ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R98/R100 P7: execution-time facts are re-observed, never inherited from the plan snapshot > 4b. the committed frozen selection still VERIFIES against its own digest 16ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R98/R100 P7: execution-time facts are re-observed, never inherited from the plan snapshot > 5a. the case inventory labels the two stress/* cases `stress`, NOT `regression` 73ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R98/R100 P7: execution-time facts are re-observed, never inherited from the plan snapshot > 5b. the inventory is INSIDE the envelope, so relabelling a case moves planDigest 74ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R98/R100 P7: execution-time facts are re-observed, never inherited from the plan snapshot > 5c. execution-time refuses an inventory that disagrees with the case ids 74ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R98/R100 P7: execution-time facts are re-observed, never inherited from the plan snapshot > 6. changing ANY single bound envelope field moves planDigest 75ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R98/R100 P7: execution-time facts are re-observed, never inherited from the plan snapshot > 6b. a DRAFT/NOT_READY plan with no envelope is refused by the check, never run 65ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R98/R100 P7: execution-time facts are re-observed, never inherited from the plan snapshot > 6c. the driver build digest is derived from the real dependency closure, not a version label 57ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R98/R100 P7: execution-time facts are re-observed, never inherited from the plan snapshot > 6d. the ARM WORKER is inside the driver's derived closure (E4-R99) 36ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R98/R100 P7: execution-time facts are re-observed, never inherited from the plan snapshot > 6e. the digest covers the EXECUTING dist closure — and a src-only edit does NOT move it (E4-R104 / A4) 41ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R98/R100 P7: execution-time facts are re-observed, never inherited from the plan snapshot > 6f. a driver-loaded module that NO hand-written list names is inside the digest 35ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R98/R100 P7: execution-time facts are re-observed, never inherited from the plan snapshot > 6g. a driver dependency that cannot be resolved makes the digest NOT ESTABLISHED 2ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R98/R100 P7: execution-time facts are re-observed, never inherited from the plan snapshot > 6h. the child runner the ARM WORKER SPAWNS is inside the driver identity (N2 / F2) 38ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R104 (A4): the formal plan binds the arm's EXECUTED bytes > 1. REFUSES to finalize an arm that binds no EXECUTION build digest 112ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R104 (A4): the formal plan binds the arm's EXECUTED bytes > 1b. the refusal NAMES the arm, so an operator knows which checkout to rebuild 71ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R104 (A4): the formal plan binds the arm's EXECUTED bytes > 2. a fully-observed pair binds the digest PER ARM and FINALIZES 70ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R104 (A4): the formal plan binds the arm's EXECUTED bytes > 3. REFUSES at execution time when the arm's BYTES moved, with sha and plan digest UNCHANGED 71ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R104 (A4): the formal plan binds the arm's EXECUTED bytes > 4. REFUSES an arm whose build digest could NOT be established at execution time 69ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R104 (A4): the formal plan binds the arm's EXECUTED bytes > 5. REFUSES an approval that binds NO build digest, naming regeneration 86ms
+ ✓ packages/evaluation/src/r97-plan.test.ts > E4-R104 (A4): the formal plan binds the arm's EXECUTED bytes > 6. the shared ARM build contract derives the SAME digest the worker records 1ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G1: the ledger accounts for every call exactly once > the §R97 acceptance fixture: grant 3, arm A uses 2, arm B gets at most 1 24ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G1: the ledger accounts for every call exactly once > a reservation larger than the grant is refused atomically, leaving nothing consumed 6ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G1: the ledger accounts for every call exactly once > reserving the exact remainder succeeds; one more fails 6ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G1: the ledger accounts for every call exactly once > counts LOGICAL calls and PHYSICAL retries separately 6ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G1: the ledger accounts for every call exactly once > committing fewer calls than reserved returns the difference 5ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G1: the ledger accounts for every call exactly once > refuses a commit that consumed MORE than it reserved 7ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G1: the ledger accounts for every call exactly once > refuses to commit or abandon a reservation twice 8ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G1: the ledger accounts for every call exactly once > refuses a non-positive or non-integer reservation 4ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G2: the allowance survives a restart and is never re-granted > a SECOND ledger handle on the same directory sees the consumed calls 11ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G2: the allowance survives a restart and is never re-granted > the remaining budget is visible WITHOUT opening a ledger (a fresh reader) 6ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G2: the allowance survives a restart and is never re-granted > an OUTSTANDING reservation from a dead process counts against the budget 1ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G2: the allowance survives a restart and is never re-granted > a process must not re-grant itself a DIFFERENT allowance for the same plan 5ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G2: the allowance survives a restart and is never re-granted > a ledger bound to another plan is refused, never silently adopted 5ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G3: recovery preserves consumption and never silently refunds > reclassifies a DEAD owner's outstanding reservation as unknown, WITHOUT returning it 4ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G3: recovery preserves consumption and never silently refunds > leaves a LIVE owner's reservation outstanding 5ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G3: recovery preserves consumption and never silently refunds > only a provably-undispatched attempt may return its allowance 4ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G3: recovery preserves consumption and never silently refunds > an abandoned reservation is terminal and cannot be committed afterwards 5ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G4: a damaged ledger fails closed > refuses to treat unparseable JSON as an empty (full) budget 2ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G4: a damaged ledger fails closed > rejects a structurally invalid ledger rather than defaulting the grant 2ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G4: a damaged ledger fails closed > parseR97Ledger names the defect and never throws on hostile input 1ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G4: a damaged ledger fails closed > the ledger file carries NO key, endpoint or absolute host path 5ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G5: the budget holds ACROSS PROCESSES, not just in memory > a second PROCESS sees the first process's consumption (the real two-arm case) 155ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G5: the budget holds ACROSS PROCESSES, not just in memory > two processes racing for the last call do not both win 58ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G5: the budget holds ACROSS PROCESSES, not just in memory > REGRESSION: the first-open grant write happens UNDER the lock, not before it 766ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G5: the budget holds ACROSS PROCESSES, not just in memory > a process waiting on a held lock eventually fails loudly rather than hanging forever 155ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G6: hostile budget data can never INCREASE the allowance (R98 / F3) > REFUSES a negative consumed instead of inflating the remaining budget 2ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G6: hostile budget data can never INCREASE the allowance (R98 / F3) > parseR97Ledger names the defect for every illegal counter 1ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G6: hostile budget data can never INCREASE the allowance (R98 / F3) > viewOfR97Ledger never reports remaining outside [0, granted] and never clamps 1ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G6: hostile budget data can never INCREASE the allowance (R98 / F3) > a commit cannot record a negative or fractional consumed count 5ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G6: hostile budget data can never INCREASE the allowance (R98 / F3) > refuses a transportRetries count that is not a non-negative safe integer 4ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G7: an ESTABLISHED campaign with missing/foreign state fails closed (R98 / F4) > REFUSES to refresh the allowance when the ledger disappears after open 7ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G7: an ESTABLISHED campaign with missing/foreign state fails closed (R98 / F4) > REFUSES to reuse a ledger that was replaced by another plan's state 4ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G7: an ESTABLISHED campaign with missing/foreign state fails closed (R98 / F4) > REFUSES to treat a corrupted ledger as an empty (full) budget on a resume 4ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G7: an ESTABLISHED campaign with missing/foreign state fails closed (R98 / F4) > still bootstraps normally when NO ledger exists yet (true first creation) 4ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G8: lock ownership is by live owner token, not by age (R98 / F4) > REFUSES to steal a lock whose owner is still alive, however old it is 206ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G8: lock ownership is by live owner token, not by age (R98 / F4) > takes over a lock whose owner is truly dead, even when it is young 54ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G8: lock ownership is by live owner token, not by age (R98 / F4) > a taker's release never deletes a lock another owner has since acquired 161ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G9: one authorization cannot be spent twice through a different directory > campaignIdOf is deterministic and binds BOTH the plan digest and the grant 1ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G9: one authorization cannot be spent twice through a different directory > REFUSES a first-run in directory B when the same authorization already owns directory A 10ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G9: one authorization cannot be spent twice through a different directory > RECORDS the competing directory durably, so the double-spend is DETECTABLE 14ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G9: one authorization cannot be spent twice through a different directory > a first-run into its OWN already-claimed directory is NOT a conflict 11ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G9: one authorization cannot be spent twice through a different directory > REGRESSION: a first-run cannot hide behind a ledger an earlier auto open already created 9ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G9: one authorization cannot be spent twice through a different directory > REFUSES a resume against a directory with NO ledger, and creates nothing 2ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G9: one authorization cannot be spent twice through a different directory > resume ADOPTS an existing ledger that carries the matching campaign identity 5ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G9: one authorization cannot be spent twice through a different directory > REFUSES a TAMPERED campaignId on both the resume open AND a later reserve() 5ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G9: one authorization cannot be spent twice through a different directory > handles a LEGACY ledger with NO campaignId strictly: refused as BUDGET_STATE_MISMATCH 2ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G9: one authorization cannot be spent twice through a different directory > reserve() inside the LOCKED MUTATE path refuses a plan-digest swap (not just read()) 4ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G9: one authorization cannot be spent twice through a different directory > reserve() inside the LOCKED MUTATE path refuses a SCHEMA swap 2ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G9: one authorization cannot be spent twice through a different directory > a first-run may ADOPT an existing ledger only when the identity matches 5ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G9: one authorization cannot be spent twice through a different directory > a first-run ADOPTS the existing ledger but REFUSES a different grant for the same plan 4ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G10: a DELETED ledger is never a fresh allowance (deletion injection) > REGRESSION (probe c): after establishment, a deleted ledger is BUDGET_STATE_MISSING on EVERY entry point 8ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G10: a DELETED ledger is never a fresh allowance (deletion injection) > REGRESSION (probe c): the failed settles leave NO ledger file and NO stale lock behind 7ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G10: a DELETED ledger is never a fresh allowance (deletion injection) > REGRESSION (probe c2): re-opening the emptied directory cannot mint a fresh allowance either 6ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G10: a DELETED ledger is never a fresh allowance (deletion injection) > REGRESSION (probe d1): a DIRECTORY at the ledger path is CORRUPT, never an empty budget 7ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G10: a DELETED ledger is never a fresh allowance (deletion injection) > REGRESSION (probe d2): an invalid-JSON ledger is CORRUPT and is never read as empty 5ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > E4-R97 G10: a DELETED ledger is never a fresh allowance (deletion injection) > NEGATIVE CONTROL: a GENUINE first run does NOT reproduce the missing-state refusal 3ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > R98-N1: the claim anchor is replaced atomically — a real reader never sees a torn anchor > a REAL reader process observing a REAL writer sees only COMPLETE versions, never CORRUPT 2393ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > R98-N1: the claim anchor is replaced atomically — a real reader never sees a torn anchor > a GENUINELY damaged anchor is STILL refused by name — the fix is not leniency toward corruption 3ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > R98-N1: the claim anchor is replaced atomically — a real reader never sees a torn anchor > an unwritable claim location is a NAMED refusal that mints no budget 3ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts > R98-N1: the claim anchor is replaced atomically — a real reader never sees a torn anchor > re-opening the SAME root resumes under the original contract and leaves no temp file that could be read as an approval 4ms
+ ✓ packages/evaluation/src/r97-execution-identity.test.ts > R100 I1: the approved identity is REQUIRED, never defaulted > accepts an explicitly approved provider/model/endpoint 2ms
+ ✓ packages/evaluation/src/r97-execution-identity.test.ts > R100 I1: the approved identity is REQUIRED, never defaulted > REFUSES a missing or empty modelId rather than falling back to gpt-4o-mini 1ms
+ ✓ packages/evaluation/src/r97-execution-identity.test.ts > R100 I1: the approved identity is REQUIRED, never defaulted > REFUSES a missing providerId rather than falling back to openai 0ms
+ ✓ packages/evaluation/src/r97-execution-identity.test.ts > R100 I1: the approved identity is REQUIRED, never defaulted > REFUSES a malformed endpoint, and treats `null` as the provider default 1ms
+ ✓ packages/evaluation/src/r97-execution-identity.test.ts > R100 I2: the request the arm ACTUALLY made carries the approved identity > runs under the APPROVED model and endpoint, not the default pair 1834ms
+ ✓ packages/evaluation/src/r97-execution-identity.test.ts > R100 I2: the request the arm ACTUALLY made carries the approved identity > a DIFFERENT endpoint produces a DIFFERENT endpoint identity — the flag reaches the plan 3328ms
+ ✓ packages/evaluation/src/r97-execution-identity.test.ts > R100 I2: the request the arm ACTUALLY made carries the approved identity > REFUSES to dispatch at all when the identity is incomplete 321ms
+ ✓ packages/evaluation/src/r97-execution-identity.test.ts > R100 I3: the build identity is a BYTE hash over the modules that actually execute > names the modules the executor really imports, not just main.js 2ms
+ ✓ packages/evaluation/src/r97-execution-identity.test.ts > R100 I3: the build identity is a BYTE hash over the modules that actually execute > CHANGES when content changes while size and mtime are PRESERVED 17ms
+ ✓ packages/evaluation/src/r97-execution-identity.test.ts > R100 I3: the build identity is a BYTE hash over the modules that actually execute > is null when a covered module is missing, so an unestablished build never passes 4ms
+ ✓ packages/evaluation/src/r97-execution-identity.test.ts > R100 I3: the build identity is a BYTE hash over the modules that actually execute > the executed-bytes manifest covers the provider and runtime trees, not only the CLI 12ms
+ ✓ packages/evaluation/src/r97-execution-identity.test.ts > E4-R103 (A3): the worker stages the bytes it was approved for > REFUSES a unit dispatched with NO approved fingerprint, before the ledger exists 111ms
+ ✓ packages/evaluation/src/r97-execution-identity.test.ts > E4-R103 (A3): the worker stages the bytes it was approved for > REFUSES when the staged bytes do not match the approved fingerprint 131ms
+ ✓ packages/evaluation/src/r97-execution-identity.test.ts > E4-R103 (A3): the worker stages the bytes it was approved for > REFUSES when the SOURCE changes inside the copy window (probe → copy) 47ms
+ ✓ packages/evaluation/src/r97-execution-identity.test.ts > E4-R103 (A3): the worker stages the bytes it was approved for > ACCEPTS matching bytes and records the fingerprint it actually staged 257ms
+ ✓ packages/evaluation/src/r97-execution-identity.test.ts > E4-R104 (A4): the arm build identity is derived from the real import graph > 1. CHANGES when a TRANSITIVELY imported module changes, at identical size and mtime 26ms
+ ✓ packages/evaluation/src/r97-execution-identity.test.ts > E4-R104 (A4): the arm build identity is derived from the real import graph > 2. is NOT ESTABLISHED (null) when an execution dependency cannot be resolved 25ms
+ ✓ packages/evaluation/src/r97-execution-identity.test.ts > E4-R104 (A4): the arm build identity is derived from the real import graph > 3. REFUSES a unit whose approved build digest no longer matches, before the ledger opens 41ms
+ ✓ packages/evaluation/src/r97-campaign-validator-cli.test.ts > R99 V1: the validator command exists and states its contract > is present, and --help exits 0 with usage rather than a stack trace 75ms
+ ✓ packages/evaluation/src/r97-campaign-validator-cli.test.ts > R99 V1: the validator command exists and states its contract > exits 2 with usage when no campaign is named 79ms
+ ✓ packages/evaluation/src/r97-campaign-validator-cli.test.ts > R99 V1: the validator command exists and states its contract > exits 1 (not 0) for a directory that is not an established campaign 194ms
+ ✓ packages/evaluation/src/r97-campaign-validator-cli.test.ts > R99 V2: an intact campaign verifies, and every break makes it exit non-zero > exits 0 and reports the records it re-derived 242ms
+ ✓ packages/evaluation/src/r97-campaign-validator-cli.test.ts > R99 V2: an intact campaign verifies, and every break makes it exit non-zero > exits 1 when the evidence file is DELETED 514ms
+ ✓ packages/evaluation/src/r97-campaign-validator-cli.test.ts > R99 V2: an intact campaign verifies, and every break makes it exit non-zero > exits 1 when the evidence file is EDITED but still valid JSON 209ms
+ ✓ packages/evaluation/src/r97-campaign-validator-cli.test.ts > R99 V2: an intact campaign verifies, and every break makes it exit non-zero > exits 1 when the resultHash in the STATE is changed 354ms
+ ✓ packages/evaluation/src/r97-campaign-validator-cli.test.ts > R99 V2: an intact campaign verifies, and every break makes it exit non-zero > exits 1 when the record's VERDICT TEXT is rewritten to forge a pass 322ms
+ ✓ packages/evaluation/src/r97-campaign-validator-cli.test.ts > R99 V2: an intact campaign verifies, and every break makes it exit non-zero > exits 1 when the record's verdict text is DELETED, rather than silently ignored 313ms
+ ✓ packages/evaluation/src/r97-campaign-validator-cli.test.ts > R99 V2: an intact campaign verifies, and every break makes it exit non-zero > the UNTAMPERED fixture still exits 0, so the two refusals above are not vacuous 242ms
+ ✓ packages/evaluation/src/r97-campaign-validator-cli.test.ts > R99 V2: an intact campaign verifies, and every break makes it exit non-zero > exits 1 when the stored report ROW is tampered with and the envelope re-hashed 209ms
+ ✓ packages/evaluation/src/r97-campaign-validator-cli.test.ts > R99 V2: an intact campaign verifies, and every break makes it exit non-zero > exits 1 when the ledger is deleted, even though the state is intact 212ms
+ ✓ packages/evaluation/src/r97-campaign-validator-cli.test.ts > R99 V2: an intact campaign verifies, and every break makes it exit non-zero > exits 1 when the execution state is deleted 237ms
+ ✓ packages/evaluation/src/r97-campaign-validator-cli.test.ts > R99 V2: an intact campaign verifies, and every break makes it exit non-zero > writes the report to --out when asked, with the same verdict 235ms
+ ✓ packages/evaluation/src/r97-campaign-validator-cli.test.ts > R99 V3: the validator reads THIS campaign's artifacts and never re-runs a case > names the campaign header it validated and does not create anything new 201ms
+ ✓ packages/evaluation/src/r97-campaign-validator-cli.test.ts > R99 V3: the validator reads THIS campaign's artifacts and never re-runs a case > refuses a campaign whose only unit CRASHED, so nothing is settled 196ms
+ ✓ packages/evaluation/src/r97-campaign-validator-cli.test.ts > R99 V3: the validator reads THIS campaign's artifacts and never re-runs a case > is importable, so the report and the CLI share ONE implementation 318ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D1: every refusal path makes ZERO provider requests > UNAUTHORIZED: no auth env -> refused, 0 requests, provider never constructed 155ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D1: every refusal path makes ZERO provider requests > WRONG DIGEST: 0 requests, provider never constructed 160ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D1: every refusal path makes ZERO provider requests > EXPIRED: 0 requests, provider never constructed 122ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D1: every refusal path makes ZERO provider requests > INVALID DATE: 0 requests, provider never constructed 91ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D1: every refusal path makes ZERO provider requests > NOT YET VALID (future createdAt): 0 requests, provider never constructed 85ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D1: every refusal path makes ZERO provider requests > CASE DRIFT: 0 requests, provider never constructed 101ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D1: every refusal path makes ZERO provider requests > BUILD DRIFT (arm sha changed): 0 requests, provider never constructed 117ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D1: every refusal path makes ZERO provider requests > ARM BUILD DIGEST DRIFT: 0 requests, provider never constructed 112ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D1: every refusal path makes ZERO provider requests > IDENTITY DRIFT (model changed): 0 requests, provider never constructed 177ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D1: every refusal path makes ZERO provider requests > an authorized run with NO ledger is refused BEFORE any provider exists 165ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D1: every refusal path makes ZERO provider requests > R100: the execution-boundary check RUNS on the authorized path and reports its own result 366ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D1: every refusal path makes ZERO provider requests > R100: a DRIVER BUILD change is refused before any provider exists 140ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D1: every refusal path makes ZERO provider requests > R100: a TAMPERED envelope whose top-level digest was relabelled is refused 100ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D1: every refusal path makes ZERO provider requests > R100: the report carries the TRUE per-case suite inventory, not one --suite label 261ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D1: every refusal path makes ZERO provider requests > BUDGET EXHAUSTED by a pre-existing ledger: 0 requests, provider never constructed 194ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D2: the normal path runs the pair within the campaign budget > an authorized run completes with one reservation per logical call 264ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D2: the normal path runs the pair within the campaign budget > the ledger on disk records the consumption, so a RESTART cannot re-spend 230ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D2: the normal path runs the pair within the campaign budget > F2: a SECOND run of the same plan executes ZERO new units (case resume) 197ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D2: the normal path runs the pair within the campaign budget > F2: a partial run resumes ONLY the missing units 170ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D2: the normal path runs the pair within the campaign budget > F2/F4: a resumed campaign whose durable state was REPLACED is refused, never COMPLETE 316ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D2: the normal path runs the pair within the campaign budget > F2/F4: a resumed campaign whose execution state was CORRUPTED is refused, never COMPLETE 277ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D2: the normal path runs the pair within the campaign budget > F2: an interruption quarantines the in-flight unit and never silently re-dispatches it 148ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D2: the normal path runs the pair within the campaign budget > a campaign budget smaller than the pair stops EARLY and reports PARTIAL 105ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D2: the normal path runs the pair within the campaign budget > the fake provider is what runs: it never opens a socket 289ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D10: a provider ERROR event is a FAILED call, never a silent COMPLETE > every call failing with an error event is reported ONCE, as failed, not COMPLETE 245ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D10: a provider ERROR event is a FAILED call, never a silent COMPLETE > a PARTIAL run is never promotion-eligible or reported as a success line 227ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R99-A D8: a resume aggregates the FULL history, not just this run > a resumed run does NOT report COMPLETE when history holds failures 274ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R99-A D8: a resume aggregates the FULL history, not just this run > keeps NEW work and CUMULATIVE history as separate, honest numbers 213ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R99-A D8: a resume aggregates the FULL history, not just this run > a resume of a CLEAN run stays COMPLETE with the same aggregates 313ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R99-A D8: a resume aggregates the FULL history, not just this run > the pass aggregate is a UNION over units, never a SUM over lists > counts a unit present in BOTH history and this run exactly once 1ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R99-A D8: a resume aggregates the FULL history, not just this run > the pass aggregate is a UNION over units, never a SUM over lists > does not lose a pass that only THIS run recorded 0ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R99-A D8: a resume aggregates the FULL history, not just this run > the pass aggregate is a UNION over units, never a SUM over lists > does not lose a pass that only HISTORY recorded 0ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R99-A D8: a resume aggregates the FULL history, not just this run > the pass aggregate is a UNION over units, never a SUM over lists > never counts a `case_failed` unit as a pass, on either side 0ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R99-A D8: a resume aggregates the FULL history, not just this run > the pass aggregate is a UNION over units, never a SUM over lists > a resume reports the SAME numerator as the run it resumed 1ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R99-A D8: a resume aggregates the FULL history, not just this run > the pass aggregate is a UNION over units, never a SUM over lists > splits this run's passes into STRONG and WEAK, never one undifferentiated number 0ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R99-A D8: a resume aggregates the FULL history, not just this run > the pass aggregate is a UNION over units, never a SUM over lists > does not claim this run's strong/weak split from HISTORY it did not observe 0ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D3: the driver cannot exceed the ceiling it was given > a provider call ceiling below the plan size is reported, never exceeded 126ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D9: the finalized plan is executable WITHOUT modification > the plan artifact the approval package describes runs as-is, with no edit 543ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D9: the finalized plan is executable WITHOUT modification > an unauthorized run of the same unmodified artifact is NOT_RUN with 0 requests 342ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D4: the CLI entry refuses to build a real provider by default > without --fake-provider the driver only prints a plan and makes no provider 361ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D4: the CLI entry refuses to build a real provider by default > --plan is required 45ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R100-A (T4): the OFFICIAL, help-discoverable arm-worker entry > allows the arm-worker campaign more time than the work really takes 3ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R100-A (T4): the OFFICIAL, help-discoverable arm-worker entry > --help exits 0 and documents the arm-worker mode and every flag 144ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R100-A (T4): the OFFICIAL, help-discoverable arm-worker entry > --arm-worker is REFUSED without both arm directories, before any provider 266ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R100-A (T4): the OFFICIAL, help-discoverable arm-worker entry > an UNKNOWN flag is a usage error, never silently ignored 195ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R100-A (T4): the OFFICIAL, help-discoverable arm-worker entry > the arm-worker path really ENTERS the worker: each unit runs its own arm build 19973ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D5: the driver writes its result artifact and leaks nothing > the persisted driver result carries no key, endpoint or host path 184ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D5: the driver writes its result artifact and leaks nothing > carries NO host path in ANY field, on every platform's separator 130ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D7: the zero-call rehearsal produces R93-VALID paired evidence > the normal path produces complete paired records that the R93 validator accepts 387ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D7: the zero-call rehearsal produces R93-VALID paired evidence > the rehearsal opens no socket and constructs no real provider 36ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D7: the zero-call rehearsal produces R93-VALID paired evidence > the interruption path resumes through the R94 state contract and still VALIDATES 40ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D7: the zero-call rehearsal produces R93-VALID paired evidence > a rehearsal whose manifest does not match its records is NOT reported VALID 32ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D7: the zero-call rehearsal produces R93-VALID paired evidence > the rehearsal writes its manifest to disk for independent re-validation 29ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D8: the plan is bound to the driver that would execute it > driverVersion is part of the envelope and therefore covered by planDigest 54ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D8: the plan is bound to the driver that would execute it > the digest equals the R92 canonical digest of the envelope that carries driverVersion 49ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D8: the plan is bound to the driver that would execute it > a plan bound to a DIFFERENT driver version is refused before any provider exists 49ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D8: the plan is bound to the driver that would execute it > a plan with NO bound driver version is refused, never assumed compatible 49ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D6: the REAL two-arm observation produces a FINALIZED plan > the two real arm builds MUST exist — a missing arm is a FAILURE, never a skip 0ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D6: the REAL two-arm observation produces a FINALIZED plan > both arms are observed by the real CLI dry-run and the plan FINALIZES 805ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D6: the REAL two-arm observation produces a FINALIZED plan > R100 NEGATIVE CONTROL: a case missing from an arm is NOT_READY — never borrowed from another tree 17ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R97 D6: the REAL two-arm observation produces a FINALIZED plan > R101: the arm-setup command EXISTS and agrees with the SHAs this file asserts 10ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R99-B (T5): the campaign's own stop, checked before every unit > a cancelled campaign refuses the NEXT unit and dispatches nothing further 79ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R99-B (T5): the campaign's own stop, checked before every unit > a campaign whose own deadline has already passed refuses without dispatching 77ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R99-B (T5): the campaign's own stop, checked before every unit > cancellation is reported as CANCELLATION, not as an expired deadline, when both hold 78ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R99-B (T5): the campaign's own stop, checked before every unit > NO stop condition leaves the campaign completely unchanged 124ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R99-B (T5): the campaign's own stop, checked before every unit > a stop that has NOT fired does not prevent the campaign from completing 134ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R99-B (T5): the campaign's own stop, checked before every unit > A6: the driver forwards the cancellation signal and the campaign's REMAINING time to every unit 102ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R99-B (T5): the campaign's own stop, checked before every unit > A6: an ALREADY-CANCELLED campaign never dispatches a unit at all 81ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R99-B (T5): the campaign's own stop, checked before every unit > the driver CLI accepts --campaign-deadline-ms and rejects an unknown flag 80ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R103 (A3): the formal CLI uses the execution clock and current inputs > REAL GATE + DEV TOOL: an approval expired against the execution clock is REFUSED with 0 calls, even though plan.observation.now is still inside the window 178ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R103 (A3): the formal CLI uses the execution clock and current inputs > REAL GATE + FORMAL MAIN: a polluted environment endpoint is refused and the sentinel token never reaches stdout 188ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R103 (A3): the formal CLI uses the execution clock and current inputs > REAL GATE + FORMAL MAIN: a model flag that disagrees with the approval is refused, never accepted-and-ignored 195ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R103 (A3): the formal CLI uses the execution clock and current inputs > REAL GATE + FORMAL MAIN: an unparseable or negative numeric flag is a configuration error, not a silent NaN 176ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R103 (A3): the formal CLI uses the execution clock and current inputs > REAL GATE + FORMAL MAIN: the gate judges the CURRENT checkouts, not the plan's review snapshot 1743ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R103 (A3): the formal CLI uses the execution clock and current inputs > REAL GATE + FORMAL MAIN: a checkout that has MOVED since approval is refused before any unit 1040ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R103 (A3): the formal CLI uses the execution clock and current inputs > REAL GATE + FORMAL DRIVER: a resume verifies the OLD evidence before it spends any new budget 172ms
+ ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > E4-R104 (A4): the driver forwards the approved build identity > A4: the driver forwards the APPROVED build digest to every unit, so a rebuilt arm is refused 118ms
+ ✓ packages/evaluation/src/r97-campaign-lifecycle.test.ts > R98-A L1: the campaign header is a durable, campaign-local fact > a first run writes the header and the ledger together 19ms
+ ✓ packages/evaluation/src/r97-campaign-lifecycle.test.ts > R98-A L1: the campaign header is a durable, campaign-local fact > a resume adopts the SAME budget and reports mode `resume` 16ms
+ ✓ packages/evaluation/src/r97-campaign-lifecycle.test.ts > R98-A L2: a lost ledger is NEVER a fresh allowance > REFUSES to start when the header exists but the ledger was deleted 7ms
+ ✓ packages/evaluation/src/r97-campaign-lifecycle.test.ts > R98-A L2: a lost ledger is NEVER a fresh allowance > REFUSES a resume when the header itself is missing 7ms
+ ✓ packages/evaluation/src/r97-campaign-lifecycle.test.ts > R98-A L2: a lost ledger is NEVER a fresh allowance > REFUSES an `auto` open when a ledger exists with no header 12ms
+ ✓ packages/evaluation/src/r97-campaign-lifecycle.test.ts > R98-A L3: the same authorization cannot be re-rooted into a new directory > REFUSES a first-run in a DIFFERENT directory for the same authorization 7ms
+ ✓ packages/evaluation/src/r97-campaign-lifecycle.test.ts > R98-A L3: the same authorization cannot be re-rooted into a new directory > the campaign reports the competing directories it refused over 6ms
+ ✓ packages/evaluation/src/r97-campaign-lifecycle.test.ts > R98-A L3: the same authorization cannot be re-rooted into a new directory > a ledger whose header records a DIFFERENT root is refused 21ms
+ ✓ packages/evaluation/src/r97-campaign-lifecycle.test.ts > R98-A L3b: only a claim that never ESTABLISHED a budget is stale > REFUSES a new root once the claiming directory is GONE — the claim is a LOSS, not garbage 21ms
+ ✓ packages/evaluation/src/r97-campaign-lifecycle.test.ts > R98-A L3b: only a claim that never ESTABLISHED a budget is stale > still REFUSES while the claiming directory is LIVE 6ms
+ ✓ packages/evaluation/src/r97-campaign-lifecycle.test.ts > R98-A L4: the lifecycle refuses identity drift > REFUSES a different grant for the same plan digest 5ms
+ ✓ packages/evaluation/src/r97-campaign-lifecycle.test.ts > R98-A L4: the lifecycle refuses identity drift > REFUSES a different plan digest in the same directory 5ms
+ ✓ packages/evaluation/src/r97-campaign-lifecycle.test.ts > R98-A L4: the lifecycle refuses identity drift > REFUSES a corrupt header rather than treating it as absent 5ms
+ ✓ packages/evaluation/src/r97-campaign-lifecycle.test.ts > R98-A L5: an established campaign has ALL THREE artifacts at once > creates the case state in the same step as the header and the ledger 6ms
+ ✓ packages/evaluation/src/r97-campaign-lifecycle.test.ts > R98-A L5: an established campaign has ALL THREE artifacts at once > a resume adopts the SAME state, and a DELETED state file is a named loss 34ms
+ ✓ packages/evaluation/src/r97-campaign-lifecycle.test.ts > R98-A L3c: a SPENT authorization is not refreshed by deleting its root > REFUSES a new root after the root that SPENT the authorization was deleted 10ms
+ ✓ packages/evaluation/src/r97-campaign-lifecycle.test.ts > R98-A L3c: a SPENT authorization is not refreshed by deleting its root > REFUSES the SAME path after it was deleted and recreated 18ms
+ ✓ packages/evaluation/src/r97-campaign-lifecycle.test.ts > R98-A L3c: a SPENT authorization is not refreshed by deleting its root > a NEW, independently authorized campaign is unaffected by a lost one 22ms
+ ✓ packages/evaluation/src/r97-campaign-lifecycle.test.ts > R98-A L3c: a SPENT authorization is not refreshed by deleting its root > a claim that never ESTABLISHED a budget does not wedge a legitimate first run 7ms
+ ✓ packages/evaluation/src/r97-campaign-lifecycle.test.ts > R98-A L3e: a damaged claim anchor is refused, not read as 'unclaimed' > REFUSES a CORRUPT claim anchor and creates no replacement state 1ms
+ ✓ packages/evaluation/src/r97-campaign-lifecycle.test.ts > R98-A L3e: a damaged claim anchor is refused, not read as 'unclaimed' > REFUSES an UNREADABLE claim anchor and creates no replacement state 2ms
+ ✓ packages/evaluation/src/r97-campaign-lifecycle.test.ts > R98-A L3f: two REAL processes racing one approval cannot both win > at most ONE of two concurrently opened roots receives the approval's budget 102ms
+ ✓ packages/evaluation/src/r97-campaign-lifecycle.test.ts > R98-A L3f: two REAL processes racing one approval cannot both win > a LEFTOVER claim lock from a crashed process cannot hand TWO roots the same approval 67ms
+ ✓ packages/evaluation/src/r97-execution-state-ownership.test.ts > R98-B S1: an ESTABLISHED campaign's missing state is a LOSS, not a blank slate > REFUSES to treat a deleted state file as 'nothing has run' 27ms
+ ✓ packages/evaluation/src/r97-execution-state-ownership.test.ts > R98-B S1: an ESTABLISHED campaign's missing state is a LOSS, not a blank slate > still CREATES state on a genuine first run (no ledger yet) 3ms
+ ✓ packages/evaluation/src/r97-execution-state-ownership.test.ts > R98-B S2: one unit has exactly ONE owner at a time > REFUSES a second begin while the unit is running 6ms
+ ✓ packages/evaluation/src/r97-execution-state-ownership.test.ts > R98-B S2: one unit has exactly ONE owner at a time > records owner evidence (pid + host) on the attempt 3ms
+ ✓ packages/evaluation/src/r97-execution-state-ownership.test.ts > R98-B S2: one unit has exactly ONE owner at a time > REFUSES a terminal write from a SUPERSEDED attempt 12ms
+ ✓ packages/evaluation/src/r97-execution-state-ownership.test.ts > R98-B S3: recovery respects a LIVE owner > does NOT reclassify a running unit whose owner is alive 3ms
+ ✓ packages/evaluation/src/r97-execution-state-ownership.test.ts > R98-B S3: recovery respects a LIVE owner > quarantines a running unit whose owner is provably DEAD, keeping its allowance 4ms
+ ✓ packages/evaluation/src/r97-execution-state-ownership.test.ts > R98-B S3: recovery respects a LIVE owner > conservatively does NOT touch a running unit owned by ANOTHER HOST 4ms
+ ✓ packages/evaluation/src/r97-execution-state-ownership.test.ts > R98-B S4: reconciliation actually re-opens the unit > isDone is FALSE after a retry reconciliation, so the dispatcher re-runs it 10ms
+ ✓ packages/evaluation/src/r97-execution-state-ownership.test.ts > R98-B S4: reconciliation actually re-opens the unit > a retry with a CHANGED input digest is drift, not a retry 9ms
+ ✓ packages/evaluation/src/r97-execution-state-ownership.test.ts > R98-B S4: reconciliation actually re-opens the unit > accept-as-failed stays terminal and is NOT re-runnable 9ms
+ ✓ packages/evaluation/src/r97-execution-state-ownership.test.ts > R98-B S4: reconciliation actually re-opens the unit > REFUSES to reconcile a unit that is not outcome_unknown 5ms
+ ✓ packages/evaluation/src/r97-execution-state-ownership.test.ts > R98-B S4: reconciliation actually re-opens the unit > preserves the OLD attempt's audit trail rather than overwriting it 11ms
+ ✓ packages/evaluation/src/r97-execution-state-ownership.test.ts > R98-B S5: a skip is only legitimate when the RECORD is trustworthy > a COMPLETED record whose input digest changed is drift, not a cache hit 6ms
+ ✓ packages/evaluation/src/r97-execution-state-ownership.test.ts > R98-B S5: a skip is only legitimate when the RECORD is trustworthy > a TERMINAL record with an EMPTY resultHash is refused by the parser 4ms
+ ✓ packages/evaluation/src/r97-execution-state-ownership.test.ts > R98-B S5: a skip is only legitimate when the RECORD is trustworthy > REFUSES a record whose experimentId disagrees with the header 4ms
+ ✓ packages/evaluation/src/r97-execution-state-ownership.test.ts > R98-B S5: a skip is only legitimate when the RECORD is trustworthy > REFUSES a missing startedAt rather than silently reading it as 0 4ms
+ ✓ packages/evaluation/src/r97-execution-state-ownership.test.ts > R98-B S5: a skip is only legitimate when the RECORD is trustworthy > REFUSES a duplicate attemptId across records 6ms
+ ✓ packages/evaluation/src/r97-execution-state-ownership.test.ts > R98-B S6: two REAL processes racing the same store > two processes beginning the SAME unit: exactly ONE wins, the other gets EXEC_BUSY 71ms
+ ✓ packages/evaluation/src/r97-execution-state-ownership.test.ts > R98-B S6: two REAL processes racing the same store > two processes beginning DIFFERENT units: BOTH records survive 70ms
+ ✓ packages/evaluation/src/r97-execution-state.test.ts > E4-R98 S1: the unit state machine is durable and resume-safe > a unit is NOT done before it starts, and IS done after it completes 21ms
+ ✓ packages/evaluation/src/r97-execution-state.test.ts > E4-R98 S1: the unit state machine is durable and resume-safe > a FAILED unit is terminal and is not retried automatically either 7ms
+ ✓ packages/evaluation/src/r97-execution-state.test.ts > E4-R98 S1: the unit state machine is durable and resume-safe > a crash leaves `running`, which recovery turns into outcome_unknown — never auto-retried 6ms
+ ✓ packages/evaluation/src/r97-execution-state.test.ts > E4-R98 S1: the unit state machine is durable and resume-safe > a completed unit survives a restart with its result hash 6ms
+ ✓ packages/evaluation/src/r97-execution-state.test.ts > E4-R98 S1: the unit state machine is durable and resume-safe > records the reservation id, so a unit is tied to its budget reservation 6ms
+ ✓ packages/evaluation/src/r97-execution-state.test.ts > E4-R98 S1: the unit state machine is durable and resume-safe > keys distinguish case, arm and repetition 6ms
+ ✓ packages/evaluation/src/r97-execution-state.test.ts > E4-R98 S2: the execution state fails closed on identity drift > refuses a store bound to a different plan digest 6ms
+ ✓ packages/evaluation/src/r97-execution-state.test.ts > E4-R98 S2: the execution state fails closed on identity drift > refuses a store bound to a different experiment id 3ms
+ ✓ packages/evaluation/src/r97-execution-state.test.ts > E4-R98 S2: the execution state fails closed on identity drift > stops when a COMPLETED unit's input digest no longer matches 5ms
+ ✓ packages/evaluation/src/r97-execution-state.test.ts > E4-R98 S2: the execution state fails closed on identity drift > refuses a corrupted store rather than treating it as empty 4ms
+ ✓ packages/evaluation/src/r97-execution-state.test.ts > E4-R98 S2: the execution state fails closed on identity drift > writes a schema-tagged, non-secret store 5ms
+ ✓ packages/evaluation/src/r97-execution-state.test.ts > E4-R98 S3: the full 8×2 matrix resumes with zero new work > a second pass over the same matrix finds every unit done 55ms
+ ✓ packages/evaluation/src/r97-execution-state.test.ts > E4-R98 S3: the full 8×2 matrix resumes with zero new work > a partially completed matrix resumes only the MISSING units 11ms
+ ✓ packages/evaluation/src/r97-execution-state.test.ts > E4-R98 S4: reconciliation of outcome_unknown is explicit and never silent > a recovered unit can be reconciled with `retry`, and then begins AGAIN 20ms
+ ✓ packages/evaluation/src/r97-execution-state.test.ts > E4-R98 S4: reconciliation of outcome_unknown is explicit and never silent > `retry` keeps the evidence: the record names the reconciliation and carries a hash 9ms
+ ✓ packages/evaluation/src/r97-execution-state.test.ts > E4-R98 S4: reconciliation of outcome_unknown is explicit and never silent > `retry` persists an operator-supplied hash instead of inventing a marker 11ms
+ ✓ packages/evaluation/src/r97-execution-state.test.ts > E4-R98 S4: reconciliation of outcome_unknown is explicit and never silent > `accept-as-failed` closes the unit as terminal and failed 16ms
+ ✓ packages/evaluation/src/r97-execution-state.test.ts > E4-R98 S4: reconciliation of outcome_unknown is explicit and never silent > `accept-as-failed` WITHOUT a result hash throws 11ms
+ ✓ packages/evaluation/src/r97-execution-state.test.ts > E4-R98 S4: reconciliation of outcome_unknown is explicit and never silent > reconciling a unit that is NOT outcome_unknown throws (running, completed, missing) 10ms
+ ✓ packages/evaluation/src/r97-execution-state.test.ts > E4-R98 S4: reconciliation of outcome_unknown is explicit and never silent > a reconciliation is DURABLE across store handles 8ms
+ ✓ packages/evaluation/src/r97-execution-state.test.ts > E4-R98 S4: reconciliation of outcome_unknown is explicit and never silent > reconciliation MUTATES one record and never appends a duplicate 7ms
+ ✓ packages/evaluation/src/r97-execution-state.test.ts > E4-R98 S4: reconciliation of outcome_unknown is explicit and never silent > only an OPERATOR retry reopens a terminal unit — a plain failure does not 13ms
+ ✓ packages/evaluation/src/r97-execution-state.test.ts > R99-A E5: the evidence link travels with the terminal record and its attempt > round-trips a completed record's evidence link through the file 6ms
+ ✓ packages/evaluation/src/r97-execution-state.test.ts > R99-A E5: the evidence link travels with the terminal record and its attempt > keeps a FAILED record's evidence too — a negative is a result 5ms
+ ✓ packages/evaluation/src/r97-execution-state.test.ts > R99-A E5: the evidence link travels with the terminal record and its attempt > an OLD attempt keeps its own evidence after a retry, so it stays attributable 7ms
+ ✓ packages/evaluation/src/r97-execution-state.test.ts > R99-A E5: the evidence link travels with the terminal record and its attempt > REFUSES a malformed link rather than silently dropping it 8ms
+ ✓ packages/evaluation/src/r97-execution-state.test.ts > R99-A E5: the evidence link travels with the terminal record and its attempt > accepts a record with NO link, because the provider mode has no report to link 4ms
+ ✓ packages/evaluation/src/r97-budget-channel.test.ts > R98-A C1: every logical generate() reserves BEFORE the call leaves > with a grant of 1, a second generate() is refused BEFORE the provider is entered 20ms
+ ✓ packages/evaluation/src/r97-budget-channel.test.ts > R98-A C1: every logical generate() reserves BEFORE the call leaves > a grant of 3 admits exactly three calls across the SAME channel 13ms
+ ✓ packages/evaluation/src/r97-budget-channel.test.ts > R98-A C1: every logical generate() reserves BEFORE the call leaves > the budget is shared with a SECOND channel on the same ledger (the two-arm case) 12ms
+ ✓ packages/evaluation/src/r97-budget-channel.test.ts > R98-A C2: logical calls, transport retries and unknown outcomes are separate > counts transport retry events WITHOUT billing them as new logical calls 6ms
+ ✓ packages/evaluation/src/r97-budget-channel.test.ts > R98-A C2: logical calls, transport retries and unknown outcomes are separate > a call that was SENT and then failed keeps its allowance and is recorded as unknown 6ms
+ ✓ packages/evaluation/src/r97-budget-channel.test.ts > R98-A C2: logical calls, transport retries and unknown outcomes are separate > a generate() that THROWS mid-stream also keeps its allowance as unknown 6ms
+ ✓ packages/evaluation/src/r97-budget-channel.test.ts > R98-A C2: logical calls, transport retries and unknown outcomes are separate > exposes the unknown-outcome code so a caller can name the state 0ms
+ ✓ packages/evaluation/src/r97-budget-channel.test.ts > R98-A C3: a PRE-TAKEN reservation is adopted, not double-charged > spends the caller's reservation on the first call and reserves fresh afterwards 10ms
+ ✓ packages/evaluation/src/r97-budget-channel.test.ts > R98-A C3: a PRE-TAKEN reservation is adopted, not double-charged > REGRESSION: the pre-taken reservation is spent by ONE client only 8ms
+ ✓ packages/evaluation/src/r97-budget-channel.test.ts > R98-A C4: an early close or an exception after dispatch still settles exactly once > a consumer that BREAKS after a non-terminal event keeps the allowance (unknown) and never refunds it 10ms
+ ✓ packages/evaluation/src/r97-budget-channel.test.ts > R98-A C4: an early close or an exception after dispatch still settles exactly once > an explicit iterator.return() after a non-terminal event settles as unknown, exactly once 5ms
+ ✓ packages/evaluation/src/r97-budget-channel.test.ts > R98-A C4: an early close or an exception after dispatch still settles exactly once > stopping right after the COMPLETED event commits exactly once and leaves nothing dangling 6ms
+ ✓ packages/evaluation/src/r97-budget-channel.test.ts > R98-A C4: an early close or an exception after dispatch still settles exactly once > a CONSUMER that throws while reading settles the reservation as unknown, exactly once 9ms
+ ✓ packages/evaluation/src/r97-budget-channel.test.ts > R98-A C4: an early close or an exception after dispatch still settles exactly once > a CANCEL that aborts the signal mid-stream settles as unknown and is not refunded 8ms
+ ✓ packages/evaluation/src/r97-budget-channel.test.ts > R98-A C4: an early close or an exception after dispatch still settles exactly once > a stream that ends with NO terminal event is unknown, never committed 5ms
+ ✓ packages/evaluation/src/r97-budget-channel.test.ts > R98-A C4: an early close or an exception after dispatch still settles exactly once > a call whose inner provider was PROVABLY never entered RETURNS its reservation 6ms
+ ✓ packages/evaluation/src/r97-budget-channel.test.ts > R98-A C4: an early close or an exception after dispatch still settles exactly once > a SETTLEMENT write failure is reported, not swallowed, and leaves a recoverable state 8ms
+ ✓ packages/evaluation/src/r97-mutation-check.test.ts > E4-R101-A (T6) X1: the mutation gate covers the plan's five mutations > carries a version so a report can be tied to the gate that produced it 4ms
+ ✓ packages/evaluation/src/r97-mutation-check.test.ts > E4-R101-A (T6) X1: the mutation gate covers the plan's five mutations > declares exactly the five T6 mutations plan 怎么做 7 names, alongside A7's five 1ms
+ ✓ packages/evaluation/src/r97-mutation-check.test.ts > E4-R101-A (T6) X1: the mutation gate covers the plan's five mutations > declares one A7 counterexample mutation per closed counterexample, plus A4's formal path 1ms
+ ✓ packages/evaluation/src/r97-mutation-check.test.ts > E4-R101-A (T6) X1: the mutation gate covers the plan's five mutations > tags every mutation with the round whose defect list it came from 2ms
+ ✓ packages/evaluation/src/r97-mutation-check.test.ts > E4-R101-A (T6) X1: the mutation gate covers the plan's five mutations > declares the S7 mutations for THIS round's own defects 0ms
+ ✓ packages/evaluation/src/r97-mutation-check.test.ts > E4-R101-A (T6) X1: the mutation gate covers the plan's five mutations > declares the S0 mutations for the release-CLI wiring + evidence invariants 0ms
+ ✓ packages/evaluation/src/r97-mutation-check.test.ts > E4-R101-A (T6) X1: the mutation gate covers the plan's five mutations > declares the N5 mutations for the pre-registration closed loop's invariants 0ms
+ ✓ packages/evaluation/src/r97-mutation-check.test.ts > E4-R101-A (T6) X1: the mutation gate covers the plan's five mutations > declares the N2 counterexample mutation for the spawned child runner 0ms
+ ✓ packages/evaluation/src/r97-mutation-check.test.ts > E4-R101-A (T6) X1: the mutation gate covers the plan's five mutations > declares the N3 mutations for the strict tool-dispatch journal contract (F30-4) 1ms
+ ✓ packages/evaluation/src/r97-mutation-check.test.ts > E4-R101-A (T6) X1: the mutation gate covers the plan's five mutations > declares the N6 mutation for the dual-platform join's evidence-root rule (F30-7) 0ms
+ ✓ packages/evaluation/src/r97-mutation-check.test.ts > E4-R101-A (T6) X1: the mutation gate covers the plan's five mutations > gives every mutation a unique id and a stated expectation 1ms
+ ✓ packages/evaluation/src/r97-mutation-check.test.ts > E4-R101-A (T6) X2: every mutation really LANDS on its target > changes the text — a find identical to its replace is a no-op 1ms
+ ✓ packages/evaluation/src/r97-mutation-check.test.ts > E4-R101-A (T6) X2: every mutation really LANDS on its target > names a production file that exists 1ms
+ ✓ packages/evaluation/src/r97-mutation-check.test.ts > E4-R101-A (T6) X2: every mutation really LANDS on its target > matches its anchor EXACTLY ONCE — zero is a silent no-op, two is ambiguous 17ms
+ ✓ packages/evaluation/src/r97-mutation-check.test.ts > E4-R101-A (T6) X2: every mutation really LANDS on its target > does NOT mutate a test file — a mutation must change PRODUCTION behaviour 1ms
+ ✓ packages/evaluation/src/r97-mutation-check.test.ts > E4-R101-A (T6) X5: an anchor is matched independently of the checkout's EOL policy > still finds its anchor when the checkout rewrote the file to CRLF 30ms
+ ✓ packages/evaluation/src/r97-mutation-check.test.ts > E4-R101-A (T6) X5: an anchor is matched independently of the checkout's EOL policy > finds an anchor that itself arrived with CRLF line endings 13ms
+ ✓ packages/evaluation/src/r97-mutation-check.test.ts > E4-R101-A (T6) X3: each mutation names a test that can actually catch it > names a suite that exists and declares the filtered test 21ms
+ ✓ packages/evaluation/src/r97-mutation-check.test.ts > E4-R101-A (T6) X3: each mutation names a test that can actually catch it > binds each mutation to a DIFFERENT test, so one break cannot cover five 0ms
+ ✓ packages/evaluation/src/r97-mutation-check.test.ts > E4-R101-A (T6) X4: the gate refuses to run on a bad request > refuses `--only` with an id that matches no mutation 2ms
+ ✓ packages/evaluation/src/r97-mutation-check.test.ts > E4-R101-A (T6) X4: the gate refuses to run on a bad request > refuses a flag with no value 1ms
+ ✓ packages/evaluation/src/r97-mutation-check.test.ts > E4-R101-A (T6) X4: the gate refuses to run on a bad request > selects the whole set when no --only is given 0ms
+ ✓ packages/evaluation/src/r97-mutation-check.test.ts > E4-R101-A (A7) X6: only a real FAILED TEST counts as catching the mutation > counts a genuine failing assertion as CAUGHT 1ms
+ ✓ packages/evaluation/src/r97-mutation-check.test.ts > E4-R101-A (A7) X6: only a real FAILED TEST counts as catching the mutation > REFUSES a passing run, even though the gate would like it to be red 0ms
+ ✓ packages/evaluation/src/r97-mutation-check.test.ts > E4-R101-A (A7) X6: only a real FAILED TEST counts as catching the mutation > REFUSES a BUILD failure — it tests the compiler, not the behaviour 0ms
+ ✓ packages/evaluation/src/r97-mutation-check.test.ts > E4-R101-A (A7) X6: only a real FAILED TEST counts as catching the mutation > REFUSES a COLLECTION error — a suite that never loaded proved nothing 0ms
+ ✓ packages/evaluation/src/r97-mutation-check.test.ts > E4-R101-A (A7) X6: only a real FAILED TEST counts as catching the mutation > REFUSES a failure of a DIFFERENT test, which the filter happened to also select 0ms
+ ✓ packages/evaluation/src/r97-mutation-check.test.ts > E4-R101-A (A7) X6: only a real FAILED TEST counts as catching the mutation > REFUSES a timeout with no per-test marker 0ms
+ ✓ packages/evaluation/src/r97-mutation-check.test.ts > E4-R101-A (A7) X6: only a real FAILED TEST counts as catching the mutation > counts a genuine RED when the reporter COLORED its output (CI run 35972462139) 0ms
+ ✓ packages/evaluation/src/r97-mutation-check.test.ts > E4-R101-A (A7) X6: only a real FAILED TEST counts as catching the mutation > strips ANSI escapes without touching the surrounding text 0ms
+ ✓ packages/evaluation/src/r97-mutation-check.test.ts > E4-R101-A (A7) X6: only a real FAILED TEST counts as catching the mutation > still REFUSES an infrastructure abort even when the output is colored 0ms
+ ✓ packages/evaluation/src/r97-mutation-check.test.ts > E4-R101-A (A8) X7: a target left in its mutated state is refused, not silently 'restored' > detects the mutated state: the fixed text is ABSENT and the mutated text is PRESENT 0ms
+ ✓ packages/evaluation/src/r97-mutation-check.test.ts > E4-R101-A (A8) X7: a target left in its mutated state is refused, not silently 'restored' > does NOT fire on a healthy tree, where the fixed text is present 0ms
+ ✓ packages/evaluation/src/r97-mutation-check.test.ts > E4-R101-A (A8) X7: a target left in its mutated state is refused, not silently 'restored' > is REQUIRED for real: a2's replace text really is a substring of its find 16ms
+ ✓ packages/evaluation/src/r97-mutation-check.test.ts > E4-R101-A (A8) X7: a target left in its mutated state is refused, not silently 'restored' > names the live defect in its refusal, so an operator knows the tree is not trustworthy 0ms
+ ✓ packages/evaluation/src/r97-closed-loop.test.ts > E4-R101-A (T6) L1: one command, cross-platform, no shell > carries a version so a run can be tied to the recipe that produced it 2ms
+ ✓ packages/evaluation/src/r97-closed-loop.test.ts > E4-R101-A (T6) L1: one command, cross-platform, no shell > NEVER shells out — no `shell: true`, and no bash-only mechanism 8ms
+ ✓ packages/evaluation/src/r97-closed-loop.test.ts > E4-R101-A (T6) L1: one command, cross-platform, no shell > defaults the arm root to a NODE temp directory, not a hard-coded drive path 1ms
+ ✓ packages/evaluation/src/r97-closed-loop.test.ts > E4-R101-A (T6) L1: one command, cross-platform, no shell > passes the arm directories to the test child through its ENVIRONMENT 1ms
+ ✓ packages/evaluation/src/r97-closed-loop.test.ts > E4-R101-A (T6) L1: one command, cross-platform, no shell > spawns vitest's real .mjs entry, never a .cmd/.bat shim 1ms
+ ✓ packages/evaluation/src/r97-closed-loop.test.ts > E4-R101-A (T6) L2: the suite list covers every file the matrix names > names only files that EXIST 1ms
+ ✓ packages/evaluation/src/r97-closed-loop.test.ts > E4-R101-A (T6) L2: the suite list covers every file the matrix names > names each file at most once 0ms
+ ✓ packages/evaluation/src/r97-closed-loop.test.ts > E4-R101-A (T6) L2: the suite list covers every file the matrix names > every suite file that opens a campaign ISOLATES the machine-global claim anchor 4ms
+ ✓ packages/evaluation/src/r97-closed-loop.test.ts > E4-R101-A (T6) L2: the suite list covers every file the matrix names > covers every file that declares a test the acceptance matrix requires 28ms
+ ✓ packages/evaluation/src/r97-closed-loop.test.ts > E4-R101-A (T6) L2: the suite list covers every file the matrix names > requires a test total no larger than what the suite really reports 0ms
+ ✓ packages/evaluation/src/r97-closed-loop.test.ts > E4-R101-A (T6) L2: the suite list covers every file the matrix names > still RUNS the files `pnpm test` excludes, so the dedicated job is what covers them 2ms
+ ✓ packages/evaluation/src/r97-closed-loop.test.ts > E4-R101-A (T6) L3: phase selection is explicit, and setup-only is a real mode > `--all` selects every phase 0ms
+ ✓ packages/evaluation/src/r97-closed-loop.test.ts > E4-R101-A (T6) L3: phase selection is explicit, and setup-only is a real mode > `--setup-only` prepares the arms and stops — the mode plan 怎么做 2 asks for 0ms
+ ✓ packages/evaluation/src/r97-closed-loop.test.ts > E4-R101-A (T6) L3: phase selection is explicit, and setup-only is a real mode > a flag with no value is refused rather than read as the next flag 1ms
+ ✓ packages/evaluation/src/r97-closed-loop.test.ts > E4-R101-A (T6) L3: phase selection is explicit, and setup-only is a real mode > refuses to run when NO phase was requested 1ms
+ ✓ packages/evaluation/src/r97-closed-loop.test.ts > E4-R101-A (T6) L4: a missing arm is a SETUP FAILURE, never a skip > refuses with a CONFIG error when the arms were never prepared 3ms
+ ✓ packages/evaluation/src/r97-closed-loop.test.ts > E4-R101-A (T6) L4: a missing arm is a SETUP FAILURE, never a skip > says which arm is missing and that setup is the remedy 0ms
+ ✓ packages/evaluation/src/r97-closed-loop.test.ts > E4-R101-A (T6) L5: the identity record states the OFFLINE scope in fields > records that no paid execution happened and that nothing is promotable 2ms
+ ✓ packages/evaluation/src/r97-closed-loop.test.ts > E4-R101-A (T6) L5: the identity record states the OFFLINE scope in fields > does NOT report the plan's matrix as covered when a phase never ran 1ms
+ ✓ packages/evaluation/src/r97-closed-loop.test.ts > E4-R101-A (T6) L6: the workflow runs THIS script, on BOTH platforms > invokes the committed runner rather than an inline shell recipe 1ms
+ ✓ packages/evaluation/src/r97-closed-loop.test.ts > E4-R101-A (T6) L6: the workflow runs THIS script, on BOTH platforms > runs the closed loop on Windows AND Ubuntu 1ms
+ ✓ packages/evaluation/src/r97-closed-loop.test.ts > E4-R101-A (T6) L6: the workflow runs THIS script, on BOTH platforms > keeps the paid-authorization literal out of the workflow 1ms
+ ✓ packages/evaluation/src/r97-closed-loop.test.ts > E4-R101-A (T6) L6: the workflow runs THIS script, on BOTH platforms > uses NO bash step in the closed-loop job — the Windows leg has no bash 1ms
+ ✓ packages/evaluation/src/r97-closed-loop.test.ts > E4-R101-A (T6) L6: the workflow runs THIS script, on BOTH platforms > runs the anti-cheat mutation gate, so the suite's strength is itself checked 1ms
+ ✓ packages/evaluation/src/r97-offline-seam.test.ts > E4-R101-A (T6) C6: an explicit arm pair is USED, never re-prepared > does not run --prepare when the caller supplied BOTH arm directories 24ms
+ ✓ packages/evaluation/src/r97-offline-seam.test.ts > E4-R101-A (T6) C6: an explicit arm pair is USED, never re-prepared > records the arm directories it MEASURED, and null for a root it did not create 2ms
+ ✓ packages/evaluation/src/r97-offline-seam.test.ts > E4-R101-A (T6) C7: a REUSED --out is refused up front, not deep inside the run > pre-flights the ledger and refuses a foreign campaign header with its own code 1ms
+ ✓ packages/evaluation/src/r97-offline-seam.test.ts > E4-R101-A (T6) C7: a REUSED --out is refused up front, not deep inside the run > does NOT refuse a fresh directory, so the pre-flight is not a blanket block 3ms
+ ✓ packages/evaluation/src/r97-offline-seam.test.ts > E4-R101-A (T6) C1: the seam reads the case's OWN contract > recovers the literal from a case whose command verifier embeds it 1ms
+ ✓ packages/evaluation/src/r97-offline-seam.test.ts > E4-R101-A (T6) C1: the seam reads the case's OWN contract > returns NO write target for a case that declares only a command verifier 1ms
+ ✓ packages/evaluation/src/r97-offline-seam.test.ts > E4-R101-A (T6) C2: scripting NEVER throws a case into infrastructure > scripts a command-only case as the claim-only negative control 2ms
+ ✓ packages/evaluation/src/r97-offline-seam.test.ts > E4-R101-A (T6) C2: scripting NEVER throws a case into infrastructure > gives DIFFERENT cases DIFFERENT claim text — never one fixed placeholder 2ms
+ ✓ packages/evaluation/src/r97-offline-seam.test.ts > E4-R101-A (T6) C2: scripting NEVER throws a case into infrastructure > scripts EVERY frozen command-only case without throwing 5ms
+ ✓ packages/evaluation/src/r97-offline-seam.test.ts > E4-R101-A (T6) C3: an artifact-only case gets a REAL non-null write > derives a labelled banner for a case with an artifact but no literal 1ms
+ ✓ packages/evaluation/src/r97-offline-seam.test.ts > E4-R101-A (T6) C3: an artifact-only case gets a REAL non-null write > puts the write FIRST, so the tool call really happens 1ms
+ ✓ packages/evaluation/src/r97-offline-seam.test.ts > E4-R101-A (T6) C3: an artifact-only case gets a REAL non-null write > still scripts the `text-only` shape as a write-free negative control 1ms
+ ✓ packages/evaluation/src/r97-offline-seam.test.ts > E4-R101-A (T6) C5: a pass is labelled STRONG or WEAK, never just 'passed' > labels a literal-derived pass as strong 0ms
+ ✓ packages/evaluation/src/r97-offline-seam.test.ts > E4-R101-A (T6) C5: a pass is labelled STRONG or WEAK, never just 'passed' > REFUSES an EMPTY literal — an emptiness test is not the case's expected bytes 1ms
+ ✓ packages/evaluation/src/r97-offline-seam.test.ts > E4-R101-A (T6) C5: a pass is labelled STRONG or WEAK, never just 'passed' > labels a banner-derived pass as weak 2ms
+ ✓ packages/evaluation/src/r97-offline-seam.test.ts > E4-R101-A (T6) C5: a pass is labelled STRONG or WEAK, never just 'passed' > labels a case the seam could not write for at all as no pass at all 1ms
+ ✓ packages/evaluation/src/r97-offline-seam.test.ts > E4-R101-A (T6) C5: a pass is labelled STRONG or WEAK, never just 'passed' > carries the strength through to the executed result, not just the target 1ms
+ ✓ packages/evaluation/src/r97-offline-seam.test.ts > E4-R101-A (T6) C4: a detail carries the executor tag exactly once > adds the tag when it is absent and collapses it when repeated 0ms
+ ✓ packages/evaluation/src/r97-campaign-evidence.test.ts > R99 E1: the evidence envelope is self-describing and stable > names one schema, one directory, and one attempt-scoped path 2ms
+ ✓ packages/evaluation/src/r97-campaign-evidence.test.ts > R99 E1: the evidence envelope is self-describing and stable > gives two DIFFERENT attempts two different paths 1ms
+ ✓ packages/evaluation/src/r97-campaign-evidence.test.ts > R99 E1: the evidence envelope is self-describing and stable > binds the result hash to the verdict AND to the report row 1ms
+ ✓ packages/evaluation/src/r97-campaign-evidence.test.ts > R99 E1: the evidence envelope is self-describing and stable > is deterministic: the same inputs produce the same result hash 0ms
+ ✓ packages/evaluation/src/r97-campaign-evidence.test.ts > R99 E2: writing the evidence is atomic and hashed over REAL bytes > writes the file, reports its POSIX-relative path, and hashes the bytes it wrote 5ms
+ ✓ packages/evaluation/src/r97-campaign-evidence.test.ts > R99 E2: writing the evidence is atomic and hashed over REAL bytes > leaves no temporary file behind 3ms
+ ✓ packages/evaluation/src/r97-campaign-evidence.test.ts > R99 E2: writing the evidence is atomic and hashed over REAL bytes > reads back the same bytes and hash it wrote 2ms
+ ✓ packages/evaluation/src/r97-campaign-evidence.test.ts > R99 E2: writing the evidence is atomic and hashed over REAL bytes > returns null (not a throw) for an absent file, so 'missing' is a value 1ms
+ ✓ packages/evaluation/src/r97-campaign-evidence.test.ts > R99 E3: the verification chain accepts a genuine record and nothing else > accepts an untouched record 2ms
+ ✓ packages/evaluation/src/r97-campaign-evidence.test.ts > R99 E3: the verification chain accepts a genuine record and nothing else > REFUSES a record that was never linked to evidence 2ms
+ ✓ packages/evaluation/src/r97-campaign-evidence.test.ts > R99 E3: the verification chain accepts a genuine record and nothing else > REFUSES a DELETED evidence file 2ms
+ ✓ packages/evaluation/src/r97-campaign-evidence.test.ts > R99 E3: the verification chain accepts a genuine record and nothing else > REFUSES a MODIFIED evidence file, naming the byte hash 3ms
+ ✓ packages/evaluation/src/r97-campaign-evidence.test.ts > R99 E3: the verification chain accepts a genuine record and nothing else > REFUSES a re-hashed file whose RESULT no longer matches the record 2ms
+ ✓ packages/evaluation/src/r97-campaign-evidence.test.ts > R99 E3: the verification chain accepts a genuine record and nothing else > REFUSES a tampered report ROW even when the envelope's own result hash is recomputed 2ms
+ ✓ packages/evaluation/src/r97-campaign-evidence.test.ts > R99 E3: the verification chain accepts a genuine record and nothing else > REFUSES evidence for the WRONG case, however well hashed 2ms
+ ✓ packages/evaluation/src/r97-campaign-evidence.test.ts > R99 E3: the verification chain accepts a genuine record and nothing else > REFUSES a structurally invalid envelope rather than trusting its fields 2ms
+ ✓ packages/evaluation/src/r97-campaign-evidence.test.ts > R99 E3: the verification chain accepts a genuine record and nothing else > REFUSES an evidence path that escapes the campaign root 2ms
+ ✓ packages/evaluation/src/r97-campaign-evidence.test.ts > R99 E4: the whole campaign is verified in one pass > reports every terminal record and fails on the FIRST broken link 3ms
+ ✓ packages/evaluation/src/r97-campaign-evidence.test.ts > R99 E4: the whole campaign is verified in one pass > an EMPTY record list is not a pass: a campaign with no evidence proves nothing 0ms
+ ✓ packages/evaluation/src/r97-campaign-evidence.test.ts > R99 E5: the record's own VERDICT TEXT is bound to the hashed evidence > REFUSES a record whose detail claims a PASS the evidence does not support 3ms
+ ✓ packages/evaluation/src/r97-campaign-evidence.test.ts > R99 E5: the record's own VERDICT TEXT is bound to the hashed evidence > ACCEPTS the genuine detail the worker writes, so the binding is not vacuous 2ms
+ ✓ packages/evaluation/src/r97-campaign-evidence.test.ts > R99 E5: the record's own VERDICT TEXT is bound to the hashed evidence > REFUSES a detail whose category prefix DISAGREES with the evidence's category 3ms
+ ✓ packages/evaluation/src/r97-campaign-evidence.test.ts > R99 E5: the record's own VERDICT TEXT is bound to the hashed evidence > binds detail AGREEMENT when present — presence itself is the validator's check 2ms
+ ✓ packages/evaluation/src/r97-campaign-evidence.test.ts > R99 E5: the record's own VERDICT TEXT is bound to the hashed evidence > the WHOLE-CAMPAIGN verdict fails when even one record's detail is forged 3ms
+ ✓ packages/evaluation/src/r97-budget-write-fault.test.ts > R97 T1-5: a failed ledger WRITE refuses the call instead of sending it unbilled > REFUSES with the named code, never enters the provider, and leaves the ledger untouched 22ms
+ ✓ packages/evaluation/src/r97-budget-write-fault.test.ts > R97 T1-5: a failed ledger WRITE refuses the call instead of sending it unbilled > the LEDGER's own write path propagates the failure — there is no catch to hide it 7ms
+ ✓ packages/evaluation/src/r97-budget-write-fault.test.ts > R97 T1-5: a failed ledger WRITE refuses the call instead of sending it unbilled > CONTRAST: a GENUINELY missing ledger reports BUDGET_STATE_MISSING, a distinct condition 7ms
+ ✓ packages/evaluation/src/r97-budget-write-fault.test.ts > R97 T1-5: a failed ledger WRITE refuses the call instead of sending it unbilled > CONTROL: with a healthy ledger the SAME call is admitted and reaches the provider 8ms
+ ✓ packages/evaluation/src/r97-redaction.test.ts > R98 redaction — F6: a provider failure text must never carry a credential > redacts a Bearer token echoed back inside an HTTP 401 message (the F6 canary shape) 2ms
+ ✓ packages/evaluation/src/r97-redaction.test.ts > R98 redaction — F6: a provider failure text must never carry a credential > redacts a raw sk- API key that appears with no Bearer prefix 0ms
+ ✓ packages/evaluation/src/r97-redaction.test.ts > R98 redaction — F6: a provider failure text must never carry a credential > redacts query-string secrets from a URL 0ms
+ ✓ packages/evaluation/src/r97-redaction.test.ts > R98 redaction — F6: a provider failure text must never carry a credential > redacts URL userinfo (user:password@host) 0ms
+ ✓ packages/evaluation/src/r97-redaction.test.ts > R98 redaction — F6: a provider failure text must never carry a credential > redacts both a thrown Error instance and a thrown plain string 0ms
+ ✓ packages/evaluation/src/r97-redaction.test.ts > R98 redaction — F6: a provider failure text must never carry a credential > redacts a fake OPENAI_API_KEY=… assignment embedded in a message 0ms
+ ✓ packages/evaluation/src/r97-redaction.test.ts > R98 redaction — the function is not a blunt 'delete everything' filter > leaves the allowlisted benign failure text VERBATIM 1ms
+ ✓ packages/evaluation/src/r97-redaction.test.ts > R98 redaction — the function is not a blunt 'delete everything' filter > leaves a normal short error code intact (code-only branch) 0ms
+ ✓ packages/evaluation/src/r97-redaction.test.ts > R98 redaction — total input domain and the ordering of cap vs redaction > never throws and always returns a short non-empty string for weird inputs 27ms
+ ✓ packages/evaluation/src/r97-redaction.test.ts > R98 redaction — total input domain and the ordering of cap vs redaction > applies the 300-char cap AFTER redaction, so a secret near the boundary is still removed 1ms
+ ✓ packages/evaluation/src/r97-redaction.test.ts > R98 redaction — total input domain and the ordering of cap vs redaction > collapses newlines and tabs into a single line 0ms
+ ✓ packages/evaluation/src/r97-redaction.test.ts > R98 redaction — total input domain and the ordering of cap vs redaction > is idempotent: re-redacting its own output changes nothing 0ms
+ ✓ packages/evaluation/src/r97-acceptance-matrix.test.ts > E4-R101-A (T6) M1: the matrix is well-formed and covers the plan's nine rows > declares the nine rows of plan §T6's acceptance matrix 3ms
+ ✓ packages/evaluation/src/r97-acceptance-matrix.test.ts > E4-R101-A (T6) M1: the matrix is well-formed and covers the plan's nine rows > has NO vacuous row — a row with no test would be satisfied by nothing 1ms
+ ✓ packages/evaluation/src/r97-acceptance-matrix.test.ts > E4-R101-A (T6) M1: the matrix is well-formed and covers the plan's nine rows > names each test at most once across the whole matrix 0ms
+ ✓ packages/evaluation/src/r97-acceptance-matrix.test.ts > E4-R101-A (T6) M1: the matrix is well-formed and covers the plan's nine rows > carries a version, so a report can be tied to the matrix that judged it 0ms
+ ✓ packages/evaluation/src/r97-acceptance-matrix.test.ts > E4-R101-A (T6) M2: a SKIPPED test fails its row — the '没有 skip' property > refuses a row whose test was skipped, even though it was PRESENT 2ms
+ ✓ packages/evaluation/src/r97-acceptance-matrix.test.ts > E4-R101-A (T6) M2: a SKIPPED test fails its row — the '没有 skip' property > refuses a `todo` test the same way 0ms
+ ✓ packages/evaluation/src/r97-acceptance-matrix.test.ts > E4-R101-A (T6) M3: a MISSING test fails its row, and is named > reports the absent test by name rather than only a count 0ms
+ ✓ packages/evaluation/src/r97-acceptance-matrix.test.ts > E4-R101-A (T6) M3: a MISSING test fails its row, and is named > fails EVERY row when the report holds nothing at all 0ms
+ ✓ packages/evaluation/src/r97-acceptance-matrix.test.ts > E4-R101-A (T6) M3: a MISSING test fails its row, and is named > is not satisfied by a passing SUITE whose individual tests are absent 0ms
+ ✓ packages/evaluation/src/r97-acceptance-matrix.test.ts > E4-R101-A (T6) M4: a duplicate test name is refused as unattributable > records the duplicate and fails the whole matrix 0ms
+ ✓ packages/evaluation/src/r97-acceptance-matrix.test.ts > E4-R101-A (T6) M6: the PINNED regression names survive, read from the JSON report > exports a non-empty list of pinned regression names 0ms
+ ✓ packages/evaluation/src/r97-acceptance-matrix.test.ts > E4-R101-A (T6) M6: the PINNED regression names survive, read from the JSON report > pins the four defects the previous gate asserted by symbol 0ms
+ ✓ packages/evaluation/src/r97-acceptance-matrix.test.ts > E4-R101-A (T6) M6: the PINNED regression names survive, read from the JSON report > FAILS the whole gate when a pinned name is absent from the report 0ms
+ ✓ packages/evaluation/src/r97-acceptance-matrix.test.ts > E4-R101-A (T6) M6: the PINNED regression names survive, read from the JSON report > FAILS when a pinned name is present but SKIPPED 0ms
+ ✓ packages/evaluation/src/r97-acceptance-matrix.test.ts > E4-R101-A (T6) M6: the PINNED regression names survive, read from the JSON report > reports no pinned failure when every pin ran and passed 0ms
+ ✓ packages/evaluation/src/r97-acceptance-matrix.test.ts > E4-R101-A (T6) M6: the PINNED regression names survive, read from the JSON report > names only pins that some suite really declares 7ms
+ ✓ packages/evaluation/src/r97-acceptance-matrix.test.ts > E4-R101-A (T6) M5: the matrix names tests that REALLY EXIST in the suites > finds each named test's own title in one of the R97 suites 5ms
+ ✓ packages/evaluation/src/r97-acceptance-matrix.test.ts > E4-R101-A (T6) M5: the matrix names tests that REALLY EXIST in the suites > names a suite that is actually part of the CI closed-loop run 4ms
+ ✓ packages/evaluation/src/r97-acceptance-matrix.test.ts > E4-R101-A (T6) M7: a row is satisfied only by tests about ITS OWN scenario > every row's tests share vocabulary with the scenario the row names 1ms
+ ✓ packages/evaluation/src/r97-acceptance-matrix.test.ts > E4-R101-A (T6) M7: a row is satisfied only by tests about ITS OWN scenario > the authorization row names a test that says the provider was never constructed 0ms
+ ✓ packages/evaluation/src/r97-acceptance-matrix.test.ts > E4-R101-A (A7) M8: the closing plan's M1–M9 table is covered by rows that pass > declares the nine rows of plan §A7's behavior matrix, with their minimum evidence 0ms
+ ✓ packages/evaluation/src/r97-acceptance-matrix.test.ts > E4-R101-A (A7) M8: the closing plan's M1–M9 table is covered by rows that pass > leaves NO M row unclaimed — every scenario has an acceptance row behind it 0ms
+ ✓ packages/evaluation/src/r97-acceptance-matrix.test.ts > E4-R101-A (A7) M8: the closing plan's M1–M9 table is covered by rows that pass > rejects a plan row claimed by NO acceptance row, even when every test passed 0ms
+ ✓ packages/evaluation/src/r97-acceptance-matrix.test.ts > E4-R101-A (A7) M8: the closing plan's M1–M9 table is covered by rows that pass > rejects a plan row whose claiming acceptance row did NOT pass 1ms
+ ✓ packages/evaluation/src/r97-acceptance-matrix.test.ts > E4-R101-A (A7) M8: the closing plan's M1–M9 table is covered by rows that pass > refuses an acceptance row that claims a plan row the plan never declared 1ms
+ ✓ packages/evaluation/src/r97-acceptance-matrix.test.ts > E4-R101-A (A7) M8: the closing plan's M1–M9 table is covered by rows that pass > binds each round counterexample to the M row it was written for 0ms
+ ✓ packages/evaluation/src/r98-fixture-cases.test.ts > R98 fixture cases load through the REAL loader > loads both r98-tool-write cases with the regression suite and non-empty docs 6ms
+ ✓ packages/evaluation/src/r98-fixture-cases.test.ts > R98 fixture cases load through the REAL loader > keeps the two request texts DIFFERENT and free of any r97 placeholder text 2ms
+ ✓ packages/evaluation/src/r98-fixture-cases.test.ts > R98 fixture cases load through the REAL loader > keeps the two verification blocks DIFFERENT (different paths AND different expectations) 3ms
+ ✓ packages/evaluation/src/r98-fixture-cases.test.ts > R98 fixture cases load through the REAL loader > does NOT pre-seed the file either request is supposed to create 3ms
+ ✓ packages/evaluation/src/r98-fixture-cases.test.ts > R98 fixture cases load through the REAL loader > NEGATIVE CONTROL: the expected content strings are absent from the initial fixture state 2ms
+ ✓ packages/evaluation/src/r98-fixture-cases.test.ts > R98 fixture cases load through the REAL loader > the command half of each gate asserts the content, not just existence 2ms
+ ✓ packages/evaluation/src/r98-fixture-cases.test.ts > R98 fixtures do NOT disturb the frozen suite counts > keeps the frozen regression suite at its counted 30 cases 1ms
+ ✓ packages/evaluation/src/r98-fixture-cases.test.ts > R98 fixtures do NOT disturb the frozen suite counts > the relocated fixtures still declare the honest regression suite label 2ms
+ ✓ packages/evaluation/src/r97-arm-report-evidence.test.ts > R99-A C1: only the REQUESTED case may be accepted > REFUSES a report whose only row belongs to a DIFFERENT case 2ms
+ ✓ packages/evaluation/src/r97-arm-report-evidence.test.ts > R99-A C1: only the REQUESTED case may be accepted > REFUSES a report with several rows when NONE is the requested case 0ms
+ ✓ packages/evaluation/src/r97-arm-report-evidence.test.ts > R99-A C1: only the REQUESTED case may be accepted > ACCEPTS the requested case among unrelated rows 0ms
+ ✓ packages/evaluation/src/r97-arm-report-evidence.test.ts > R99-A C1: only the REQUESTED case may be accepted > REFUSES an empty report — a missing measurement is never a pass 0ms
+ ✓ packages/evaluation/src/r97-arm-report-evidence.test.ts > R99-A C1: only the REQUESTED case may be accepted > REFUSES a report with no `results` array at all 1ms
+ ✓ packages/evaluation/src/r97-arm-report-evidence.test.ts > R99-A C1: only the REQUESTED case may be accepted > REFUSES DUPLICATE rows for the requested case — ambiguous evidence is not evidence 0ms
+ ✓ packages/evaluation/src/r97-arm-report-evidence.test.ts > R99-A C1: only the REQUESTED case may be accepted > maps an explicit bare-ID request to the same row as the full ID 0ms
+ ✓ packages/evaluation/src/r97-arm-report-evidence.test.ts > R99-A C2: `success` alone is NEVER a verified pass > REFUSES `success: true` with NO verification evidence 0ms
+ ✓ packages/evaluation/src/r97-arm-report-evidence.test.ts > R99-A C2: `success` alone is NEVER a verified pass > REFUSES `success: true` whose own verification_passed is FALSE 0ms
+ ✓ packages/evaluation/src/r97-arm-report-evidence.test.ts > R99-A C2: `success` alone is NEVER a verified pass > ACCEPTS a pass whose verification evidence is present 0ms
+ ✓ packages/evaluation/src/r97-arm-report-evidence.test.ts > R99-A C2: `success` alone is NEVER a verified pass > does NOT require verification_passed for a suite whose contract is EXPECTED REJECTION 0ms
+ ✓ packages/evaluation/src/r97-arm-report-evidence.test.ts > R99-A C3: infrastructure failures never masquerade as results > classifies an infrastructure failure as `infrastructure`, not a case failure 1ms
+ ✓ packages/evaluation/src/r97-arm-report-evidence.test.ts > R99-A C3: infrastructure failures never masquerade as results > classifies a model error as `provider` — an invalid score, not a negative result 0ms
+ ✓ packages/evaluation/src/r97-arm-report-evidence.test.ts > R99-A C3: infrastructure failures never masquerade as results > keeps a genuine task failure as `case_failed` — that is DATA, not a defect 0ms
+ ✓ packages/evaluation/src/r97-arm-report-evidence.test.ts > R99-A C3: infrastructure failures never masquerade as results > classifies a harness/judge failure as `harness`, not as the case failing 0ms
+ ✓ packages/evaluation/src/r97-arm-report-evidence.test.ts > R99-A C4: the persisted row is bound to THIS case and re-verifiable > stores the requested case's row, and returns null for a different case 1ms
+ ✓ packages/evaluation/src/r97-arm-report-evidence.test.ts > R99-A C4: the persisted row is bound to THIS case and re-verifiable > carries a reportHash that CHANGES when any stored field changes 2ms
+ ✓ packages/evaluation/src/r97-arm-report-evidence.test.ts > R99-A C4: the persisted row is bound to THIS case and re-verifiable > stores no credential and no absolute host path 0ms
+
+ Test Files  20 passed (20)
+      Tests  567 passed (567)
+   Start at  04:59:24
+   Duration  109.60s (transform 3.62s, setup 0ms, import 4.68s, tests 102.22s, environment 2ms)
+
+JSON report written to /tmp/harness-web-ui-20261016/d9-loop-fixed/r97-r98.json
+
+

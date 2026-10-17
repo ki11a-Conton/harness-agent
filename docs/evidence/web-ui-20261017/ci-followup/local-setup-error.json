@@ -1,0 +1,18 @@
+{
+  "schema": "e4-r101-closed-loop-run-v1",
+  "closedLoopVersion": "e4-r101-closed-loop-v1",
+  "platform": "linux",
+  "nodeVersion": "v24.19.0",
+  "ok": false,
+  "armsRoot": "/workspace/harness-agent-d9-arms-20261017",
+  "outDir": "/tmp/harness-web-ui-20261016/d9-loop",
+  "phases": [
+    {
+      "phase": "setup",
+      "ok": false,
+      "code": 1,
+      "output": "r97-observe-arms: root /workspace/harness-agent-d9-arms-20261017\nr97-observe-arms: preparing baseline @ 4f8d98ec65d475844d3ed4b959a3199f84ed5d03\nr97-observe-arms: SETUP FAILED — arm baseline: pnpm install FAILED in /workspace/harness-agent-d9-arms-20261017/baseline — Command failed: pnpm install --prefer-offline"
+    }
+  ],
+  "identityPath": null
+}

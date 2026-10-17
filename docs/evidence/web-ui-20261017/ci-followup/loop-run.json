@@ -1,0 +1,38 @@
+{
+  "schema": "e4-r101-closed-loop-run-v1",
+  "closedLoopVersion": "e4-r101-closed-loop-v1",
+  "platform": "linux",
+  "nodeVersion": "v24.19.0",
+  "ok": true,
+  "armsRoot": "/workspace/harness-agent-d9-arms-fixed-20261017",
+  "outDir": "/tmp/harness-web-ui-20261016/d9-loop-fixed",
+  "phases": [
+    {
+      "phase": "setup",
+      "ok": true,
+      "code": 0,
+      "output": "04:59:02 AM - Building project 'packages/plugins/tsconfig.json'...\n04:59:02 AM - Project 'packages/protocol/tsconfig.json' is being forcibly rebuilt\n04:59:02 AM - Building project 'packages/protocol/tsconfig.json'...\n04:59:03 AM - Project 'packages/evaluation/tsconfig.json' is being forcibly rebuilt\n04:59:03 AM - Building project 'packages/evaluation/tsconfig.json'...\n04:59:05 AM - Project 'packages/skills/tsconfig.json' is being forcibly rebuilt\n04:59:05 AM - Building project 'packages/skills/tsconfig.json'...\n04:59:03 AM - Project 'packages/memory/tsconfig.json' is being forcibly rebuilt\n04:59:03 AM - Building project 'packages/memory/tsconfig.json'...\n04:59:03 AM - Project 'packages/agents/tsconfig.json' is being forcibly rebuilt\n04:59:03 AM - Building project 'packages/agents/tsconfig.json'...\n04:59:05 AM - Project 'packages/learning/tsconfig.json' is being forcibly rebuilt\n04:59:05 AM - Building project 'packages/learning/tsconfig.json'...\n04:59:05 AM - Project 'packages/store/tsconfig.json' is being forcibly rebuilt\n04:59:05 AM - Building project 'packages/store/tsconfig.json'...\n04:59:05 AM - Project 'packages/harness/tsconfig.json' is being forcibly rebuilt\n04:59:05 AM - Building project 'packages/harness/tsconfig.json'...\n04:59:05 AM - Project 'packages/gateway/tsconfig.json' is being forcibly rebuilt\n04:59:05 AM - Building project 'packages/gateway/tsconfig.json'...\n04:59:05 AM - Project 'packages/sdk/tsconfig.json' is being forcibly rebuilt\n04:59:05 AM - Building project 'packages/sdk/tsconfig.json'...\n04:59:05 AM - Project 'apps/cli/tsconfig.json' is being forcibly rebuilt\n04:59:05 AM - Building project 'apps/cli/tsconfig.json'...\n04:59:06 AM - Project 'apps/web/tsconfig.json' is being forcibly rebuilt\n04:59:06 AM - Building project 'apps/web/tsconfig.json'...\nr97-observe-arms: candidate ready — /workspace/harness-agent-d9-arms-fixed-20261017/candidate/apps/cli/dist/main.js\n# Export these, then run the D6 acceptance path:\nR97_ARM_BASELINE_DIR=/workspace/harness-agent-d9-arms-fixed-20261017/baseline\nR97_ARM_CANDIDATE_DIR=/workspace/harness-agent-d9-arms-fixed-20261017/candidate\n# npx vitest run packages/evaluation/src/r97-driver-closed-loop.test.ts -t D6"
+    },
+    {
+      "phase": "acceptance",
+      "ok": true,
+      "code": 0
+    },
+    {
+      "phase": "suite",
+      "ok": true,
+      "code": 0
+    },
+    {
+      "phase": "matrix",
+      "ok": true,
+      "code": 0
+    },
+    {
+      "phase": "identity",
+      "ok": true,
+      "code": 0
+    }
+  ],
+  "identityPath": "/tmp/harness-web-ui-20261016/d9-loop-fixed/closed-loop-identity.json"
+}

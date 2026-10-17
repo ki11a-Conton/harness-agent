@@ -256,8 +256,18 @@ const cases = {
   'presentation-controls': async (page, context, checks) => {
     const text = 'Presentation controls [fixture:read] ' + Date.now(); await send(page, text); await finished(page);
     const copies = page.getByRole('button', { name: /^(Copy|Copied)$/ }), copied = [];
-    // Both names stay in the locator while buttons temporarily display Copied.
-    for (let i = 0; i < await copies.count(); i++) { await copies.nth(i).click(); copied.push(await page.evaluate(() => navigator.clipboard.readText())); }
+    // Turn completion and its footer can arrive in separate WS frames. Wait
+    // for the third real control instead of sampling a transient button count.
+    await copies.nth(2).waitFor();
+    assert.equal(await copies.count(), 3);
+    for (let i = 0; i < 3; i++) {
+      await copies.nth(i).click();
+      await page.waitForFunction(async ({ index, text }) => {
+        const value = await navigator.clipboard.readText();
+        return index === 0 ? value === text : index === 1 ? value.trim() === 'export const value = 1;' : value.startsWith('# Actual Harness browser answer');
+      }, { index: i, text });
+      copied.push(await page.evaluate(() => navigator.clipboard.readText()));
+    }
     assert.equal(copied[0], text); assert.equal(copied[1].trim(), 'export const value = 1;'); assert(copied[2].startsWith('# Actual Harness browser answer'));
     check(checks, 'User, code block and assistant copy buttons put their distinct actual contents on the clipboard');
     await button(page, 'Wrap lines').click(); await button(page, 'Wrap lines').click();
@@ -393,7 +403,12 @@ const cases = {
     const text = 'PIN_SEARCH_DAILY_' + Date.now(); await send(page, text); await finished(page); await sidebar(page);
     const selected = page.locator('[data-row-key^="session:"][aria-selected="true"]'); const key = await selected.getAttribute('data-row-key'); assert(key);
     async function actions() { const row = page.locator('[data-row-key="' + key + '"]'); await row.hover(); await row.getByRole('button', { name: /^Session actions for / }).click(); }
-    await actions(); await page.getByRole('menuitem', { name: 'Pin session', exact: true }).click(); await page.reload();
+    await actions(); await page.getByRole('menuitem', { name: 'Pin session', exact: true }).click();
+    // The menu closes before the asynchronous mutation. A confirmed pin is
+    // visible through the inverse row action only after the real host reply.
+    await page.locator('[data-row-key="' + key + '"]').hover();
+    await page.locator('[data-row-key="' + key + '"]').getByRole('button', { name: 'Unpin session', exact: true }).waitFor();
+    await page.reload();
     await composer(page).waitFor({ timeout: 15000 }); await sidebar(page); await actions();
     await page.getByRole('menuitem', { name: 'Unpin session', exact: true }).waitFor(); await page.keyboard.press('Escape');
     check(checks, 'Pinning a real selected session survives reload and exposes its inverse action');
@@ -404,6 +419,8 @@ const cases = {
     await page.locator('[data-row-key="' + key + '"]').waitFor({ state: 'hidden' });
     await button(page, 'View options').click(); await page.getByRole('menuitem', { name: 'Hide archived', exact: true }).click();
     await page.locator('[data-row-key="' + key + '"]').waitFor(); await actions(); await page.getByRole('menuitem', { name: 'Unpin session', exact: true }).click();
+    await page.locator('[data-row-key="' + key + '"]').hover();
+    await page.locator('[data-row-key="' + key + '"]').getByRole('button', { name: 'Pin session', exact: true }).waitFor();
     check(checks, 'Archive filtering hides/restores active sessions and Unpin reaches its real owner');
   },
 };
