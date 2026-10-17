@@ -341,3 +341,18 @@ it("serializes simultaneous selections without changing the immutable old-messag
   expect((await store.getSession(session.id))!.modelSelection!.initialModel).toEqual(READ_ONLY.model);
   expect((await events.list(session.id)).filter(event => event.payload.kind === "web_model_selection")).toHaveLength(2);
 });
+
+
+it("branches a durable parent after registry IDs change without permitting a widened unknown agent", async () => {
+  const store = new MemorySessionStore(); const original = makeRuntime(store, [BASE]);
+  const parent = await original.runtime.createSession({ agent: READ_ONLY, cwd: "/work" });
+  const restarted = makeRuntime(store, [{ ...BASE, id: newAgentId() }]);
+  const effective = await restarted.runtime.getSessionAgent(parent.id);
+  const before = (await store.listSessions()).length;
+  await expect(restarted.runtime.createSession({ agent: { ...effective, tools: BASE.tools }, cwd: "/work", parentId: parent.id }))
+    .rejects.toThrow("mismatched inherited agent");
+  expect(await store.listSessions()).toHaveLength(before);
+  const branch = await restarted.runtime.createSession({ agent: effective, cwd: "/work", parentId: parent.id });
+  expect((await restarted.runtime.getSessionAgent(branch.id)).tools).toEqual(READ_ONLY.tools);
+  await expect(restarted.runtime.createSession({ agent: effective, cwd: "/work" })).rejects.toThrow("unknown");
+});

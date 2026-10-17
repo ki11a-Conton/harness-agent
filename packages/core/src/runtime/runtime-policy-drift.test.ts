@@ -259,3 +259,45 @@ it("normalizes askOn insertion order without a false resume drift", async () => 
   );
   expect(await driftEvents(events, sessionId)).toHaveLength(0);
 });
+
+
+it("policy drift without optional policies stays lossless JSON for live Web projection and durable replay", async () => {
+  const { sessionId, events } = await resumeWithDriftedPolicy(
+    { sandboxPolicy: SANDBOX_DENY }, { sandboxPolicy: SANDBOX_OPEN },
+  );
+  const [event] = await driftEvents(events, sessionId);
+  expect(event!.payload.sandboxPolicyChanged).toBe(true);
+  expect(JSON.parse(JSON.stringify(event!.payload))).toStrictEqual(event!.payload);
+});
+
+
+it("repeated and concurrent metadata reads report the same unchanged drift once instead of writing on every Web poll", async () => {
+  const store = new MemorySessionStore(), events = new MemoryEventStore();
+  const first = makeRuntime(store, events, { sandboxPolicy: SANDBOX_DENY });
+  const session = await first.createSession({ agent: AGENT, cwd: "/work" });
+  const resumed = makeRuntime(store, events, { sandboxPolicy: SANDBOX_OPEN });
+  await Promise.all(Array.from({ length: 3 }, () => resumed.getSessionAgent(session.id)));
+  await resumed.getSessionAgent(session.id);
+  expect(await driftEvents(events, session.id)).toHaveLength(1);
+});
+
+
+it("a failed drift write remains observable on retry, and returning to baseline does not suppress a later drift", async () => {
+  const store = new MemorySessionStore(), events = new MemoryEventStore();
+  const first = makeRuntime(store, events, { sandboxPolicy: SANDBOX_DENY });
+  const session = await first.createSession({ agent: AGENT, cwd: "/work" });
+  const live: SandboxPolicy = { ...SANDBOX_OPEN, network: { mode: "full" } };
+  const resumed = makeRuntime(store, events, { sandboxPolicy: live });
+  const append = events.appendNew.bind(events);
+  events.appendNew = async () => { throw new Error("drift journal unavailable"); };
+  await expect(resumed.getSessionAgent(session.id)).rejects.toThrow("journal unavailable");
+  events.appendNew = append;
+  await resumed.getSessionAgent(session.id);
+  expect(await driftEvents(events, session.id)).toHaveLength(1);
+  live.network = { mode: "deny" };
+  await resumed.getSessionAgent(session.id);
+  expect(await driftEvents(events, session.id)).toHaveLength(1);
+  live.network = { mode: "full" };
+  await resumed.getSessionAgent(session.id);
+  expect(await driftEvents(events, session.id)).toHaveLength(2);
+});

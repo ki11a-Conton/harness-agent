@@ -24,3 +24,14 @@
 安全门首次发现锁队列的空 catch，保留原失败；改为 previous.then(action, action)，前一任务的失败仍返回其调用者，新任务在两种结局后均执行，不静默吞掉业务失败。修复提交重新执行安全与完整回归。
 
 额外复核修正 JWT 的误报边界：候选串仍须保持旧 eyJ 结构防护或能解码为合法 JWT header/claims JSON。正常限定代码符号 namespace.packagecomponent.functionmodule 不会被标记或遮盖；空白 JSON 的有效合成 JWT 仍会被遮盖，二者加入同一回归。
+
+
+## 真实旧会话验收补充发现
+
+初版修复 b4e6efe4 的定向/安全通过后，用真实 JSONL、HTTP provider、Web service/follow 和两次完整关闭并重建 harness（同一 Node 进程）继续验收，发现并修复：
+
+1. R13-6：可选策略缺失时 policy.changed_on_resume 携带 undefined，JSONL 落盘后会丢字段，内存事件投影却会拒绝，导致旧会话切模型后的 Web 历史报错。所有缺失 hash 明确写 null，新增严格 JSON roundtrip 反例（toStrictEqual，避免普通 toEqual 忽略缺失字段）。
+2. R13-7：相同策略漂移在每次 UI 元数据轮询重复落盘；并发/重复四次读取会生成四条相同事件。按完整观察指纹合并同一宿主内的相同报告；失败可重试，回到基线后再漂移仍重新报告。原冻结基线不变，不把报告去重当作接受新策略。
+3. R11-3：已保存的 agent ID 在重启后的新注册表中不存在，分支创建被 Runtime 拒绝。只有提供持久化父会话且请求策略与父会话验证后的完整有效策略一致时，才允许继承该 ID；扩大 tools 等策略的请求在创建记录前拒绝。普通未知 agent 仍拒绝。
+
+独立验收固化为 scripts/research/pr-blockers-20261017/legacy-model-switch.mjs 和常规 Web 回归，并纳入真实 Windows 专项。先执行真实 model-a HTTP turn，关闭宿主后把持久化消息转换为升级前不含 model 的格式；重新打开 follow 并选 model-b，再重启，执行真实 model-b 请求和创建分支。断言原已发布前缀逐条不变、旧 tab 观察到选择、新请求模型正确、分支旧/新答案分别保留 a/b 来源。重启可追加真实策略观察事件，不允许改写任何原前缀。原 b4 的 JSON 投影失败、随后 fork 的 unknown-agent 失败与两项 core 反例日志均保留。

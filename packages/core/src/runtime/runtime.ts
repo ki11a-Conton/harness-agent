@@ -518,6 +518,7 @@ export interface RunTurnOptions {
 }
 
 export class AgentRuntime {
+  private readonly policyDriftReports = new Map<SessionId, { hash: string; promise: Promise<void> }>();
   private readonly modelSelectionLocks = new Map<SessionId, Promise<unknown>>();
   private readonly publishedModelSelections = new Map<SessionId, string>();
 
@@ -937,7 +938,14 @@ export class AgentRuntime {
     initialStatus?: "active" | "failed";
   }): Promise<Session> {
     if (!this.agents.has(opts.agent.id)) {
-      throw new AgentError(errorInfo("INTERNAL_ERROR", `unknown agent ${opts.agent.id}`));
+      if (opts.parentId === undefined) throw new AgentError(errorInfo("INTERNAL_ERROR", `unknown agent ${opts.agent.id}`));
+      // A durable parent can outlive the host's freshly allocated registry ID.
+      // Branch only its validated effective policy; the parent is not a permit
+      // to create an arbitrary unknown/wider agent after restart.
+      const parentAgent = await this.getSessionAgent(opts.parentId);
+      if (parentAgent === undefined || stablePolicyHash(snapshotEffectiveConfig(parentAgent)) !== stablePolicyHash(snapshotEffectiveConfig(opts.agent))) {
+        throw new AgentError(errorInfo("INTERNAL_ERROR", `unknown or mismatched inherited agent ${opts.agent.id}`));
+      }
     }
     const session: Session = {
       id: newSessionId(),
@@ -2054,6 +2062,24 @@ export class AgentRuntime {
     };
   }
 
+  /** Keep the frozen baseline unchanged, but report an unchanged observed
+   * drift only once per host. Concurrent metadata reads join the same write;
+   * failed writes remain retryable rather than suppressing the observation. */
+  private async emitPolicyDrift(sessionId: SessionId, payload: Record<string, unknown>): Promise<void> {
+    const hash = stablePolicyHash(payload);
+    const previous = this.policyDriftReports.get(sessionId);
+    if (previous?.hash === hash) return previous.promise;
+    const emit = async () => { await this.emit(sessionId, "policy.changed_on_resume", payload); };
+    const promise = (previous?.promise ?? Promise.resolve()).then(emit, emit);
+    const entry = { hash, promise };
+    this.policyDriftReports.set(sessionId, entry);
+    try { await promise; }
+    catch (error) {
+      if (this.policyDriftReports.get(sessionId) === entry) this.policyDriftReports.delete(sessionId);
+      throw error;
+    }
+  }
+
   /** PKG-003: emit ONE `policy.changed_on_resume` event naming every policy
    *  dimension that moved since createSession. Observation-only by design (the
    *  P0-1 agent snapshot already prevents silent widening); the old gate
@@ -2080,15 +2106,15 @@ export class AgentRuntime {
         this.recovery !== undefined &&
         stored.retryPolicyHash !== undefined &&
         stored.retryPolicyHash !== stableHashOf(this.recovery);
-      if (!contextPolicyChanged && !retryPolicyChanged) return;
-      await this.emit(sessionId, "policy.changed_on_resume", {
+      if (!contextPolicyChanged && !retryPolicyChanged) { this.policyDriftReports.delete(sessionId); return; }
+      await this.emitPolicyDrift(sessionId, {
         ...(contextPolicyChanged
           ? { contextPolicyChanged: true, contextPolicyHash: currentContextHash, stored: stored.contextPolicyHash }
           : {}),
         ...(retryPolicyChanged
           ? { retryPolicyChanged: true, retryPolicyHash: stableHashOf(this.recovery) }
           : {}),
-      }, undefined);
+      });
       return;
     }
     const current = this.runtimePolicySnapshot();
@@ -2096,17 +2122,17 @@ export class AgentRuntime {
     const retryPolicyChanged = stored.retryPolicyHash !== current.retryPolicyHash;
     const toolSemanticsChanged = stored.toolSemanticsHash !== current.toolSemanticsHash;
     const sandboxPolicyChanged = stored.sandboxPolicyHash !== current.sandboxPolicyHash;
-    if (!contextPolicyChanged && !retryPolicyChanged && !toolSemanticsChanged && !sandboxPolicyChanged) return;
-    await this.emit(sessionId, "policy.changed_on_resume", {
+    if (!contextPolicyChanged && !retryPolicyChanged && !toolSemanticsChanged && !sandboxPolicyChanged) { this.policyDriftReports.delete(sessionId); return; }
+    await this.emitPolicyDrift(sessionId, {
       contextPolicyChanged,
       retryPolicyChanged,
       toolSemanticsChanged,
       sandboxPolicyChanged,
-      contextPolicyHash: current.contextPolicyHash,
-      retryPolicyHash: current.retryPolicyHash,
-      toolSemanticsHash: current.toolSemanticsHash,
-      sandboxPolicyHash: current.sandboxPolicyHash,
-    }, undefined);
+      contextPolicyHash: current.contextPolicyHash ?? null,
+      retryPolicyHash: current.retryPolicyHash ?? null,
+      toolSemanticsHash: current.toolSemanticsHash ?? null,
+      sandboxPolicyHash: current.sandboxPolicyHash ?? null,
+    });
   }
 
   getAgent(agentId: AgentId): AgentDefinition | undefined {
