@@ -6,11 +6,12 @@
  * real exit code (INV-P38.2-004), and writes evidence JSON to the P38.2-10
  * namespaced layout. `release verify` reads the same evidence layout.
  */
-import { execFile, execFileSync } from "node:child_process";
+import { execFile } from "node:child_process";
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import type { CommandResult } from "./commands.js";
 import { reverifyGateEvidenceRefs, type GateEvidenceV2 } from "@ar/evaluation";
+import { runGateCommand } from "./argv-launch.js";
 import {
   GATE_COMMANDS,
   releaseGateTimeoutMs,
@@ -281,22 +282,43 @@ export function gatePlatform(): "linux" | "windows" | "darwin" {
  *  (never collapsing them into a bare exit 1), keeps the exception message even
  *  when stderr is empty, and persists the gate's FULL output log with a
  *  relative reference + digest so the root cause survives the run. */
+/** Launches one gate's declared argv. Injected by tests; production uses the
+ *  platform-resolved, shell-free launcher (CLI-003). */
+export type GateRunner = (command: string[], cwd: string) => Promise<{
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+  failure?: { kind: "spawn" | "timeout" | "maxBuffer" | "signal" | "runner_error"; detail: string };
+}>;
+
 export async function runGate(
   gate: RequiredGateId,
-  opts: { root?: string; headSha?: string; evidenceDir?: string } = {},
+  opts: {
+    root?: string;
+    headSha?: string;
+    evidenceDir?: string;
+    /** Test seam: replaces the real child-process launch. */
+    runner?: GateRunner;
+    /** Test seam: replaces the gate's declared argv (must stay an ARRAY). */
+    commandOverride?: readonly string[];
+  } = {},
 ): Promise<GateRunResult> {
   const root = resolve(opts.root ?? process.cwd());
   const headSha = opts.headSha ?? (await detectHead(root));
   const commandStr = GATE_COMMANDS[gate];
+  // CLI-003: the argv is kept as an ARRAY end to end. It used to be joined
+  // into one string and re-parsed by a shell, which silently changed the
+  // command whenever an argument contained a space or a quote.
+  const argv = opts.commandOverride !== undefined ? [...opts.commandOverride] : commandStr.split(/\s+/).filter(Boolean);
   // P38.2-10: evidence is namespaced per platform under gates/<os>/.
   const evidenceDir = resolve(opts.evidenceDir ?? join(root, ".ci", "evidence", "gates", gatePlatform()));
   const evidencePath = join(evidenceDir, `${gate}.json`);
   await mkdir(evidenceDir, { recursive: true });
 
-  const { runGateV2, writeGateEvidenceV2, classifyChildFailure } = await import("@ar/evaluation");
+  const { runGateV2, writeGateEvidenceV2 } = await import("@ar/evaluation");
   const evidence = await runGateV2({
     gate,
-    command: commandStr.split(/\s+/).filter(Boolean),
+    command: argv,
     cwd: root,
     toolVersion: "release-command-v2",
     environmentClass: "offline",
@@ -309,48 +331,26 @@ export async function runGate(
     // cwd — the ref then survives upload/download and re-verifies on another
     // platform (no workspace-absolute, non-portable references).
     logRefBase: evidenceDir,
-    // Preserve the V1 runner contract: shell execution, paid key stripped,
-    // real exit code captured (a red gate never exits the process early).
+    // Preserve the V1 runner contract: the paid key is stripped and the REAL
+    // exit code is captured (a red gate never exits the process early). The
+    // launch itself is platform-resolved and shell-free (CLI-001/CLI-003):
+    // on win32 a `pnpm` gate resolves its .cmd shim instead of failing with
+    // ENOENT, and every argument keeps its boundary — nothing is joined into
+    // a shell string.
     run: async (cmd, cwd) => {
-      let exitCode = 0;
-      let stderr = "";
-      let stdout = "";
-      let failure: ReturnType<typeof classifyChildFailure>;
-      try {
-        const out = execFileSync(cmd.join(" "), {
-          cwd,
-          shell: true,
-          stdio: "pipe",
-          encoding: "utf8",
-          env: { ...process.env, OPENAI_API_KEY: "" },
-          windowsHide: true,
-          timeout: releaseGateTimeoutMs(gate),
-          maxBuffer: 128 * 1024 * 1024,
-        });
-        stdout = String(out ?? "");
-      } catch (err) {
-        const e = err as { status?: number; signal?: unknown; killed?: boolean; stderr?: unknown; stdout?: unknown; message?: unknown };
-        // E4-R12 (N01): a real child exit carries a numeric status; everything
-        // else (spawn failure, timeout, maxBuffer, signal) is classified so the
-        // evidence records WHY there is no real exit code.
-        if (typeof e.status === "number") {
-          exitCode = e.status;
-        } else {
-          exitCode = 1;
-          failure = classifyChildFailure(err);
-        }
-        stdout = String(e.stdout ?? "");
-        stderr = String(e.stderr ?? "");
-        // E4-R12 (N01): never drop the exception message when stderr is empty.
-        if (stderr === "") stderr = typeof e.message === "string" ? e.message : String(err);
-      }
-      return { exitCode, stdout, stderr, failure };
+      if (opts.runner !== undefined) return opts.runner(cmd, cwd);
+      return runGateCommand(cmd, {
+        cwd,
+        timeoutMs: releaseGateTimeoutMs(gate),
+        maxBuffer: 128 * 1024 * 1024,
+        env: { ...process.env, OPENAI_API_KEY: "" },
+      });
     },
   });
   await writeGateEvidenceV2(evidence, evidencePath);
   return {
     gate,
-    command: commandStr,
+    command: opts.commandOverride !== undefined ? opts.commandOverride.join(" ") : commandStr,
     exitCode: evidence.exitCode ?? 0,
     evidencePath,
     gitSha: evidence.gitSha,

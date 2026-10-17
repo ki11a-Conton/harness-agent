@@ -199,6 +199,23 @@ function claimPathFor(campaignId: string): string {
  *  reading it that way is precisely how a damaged anchor becomes a licence to
  *  mint a second allowance. Only ENOENT degrades to `null`. */
 export async function readR97CampaignClaim(campaignId: string): Promise<R97CampaignClaim | null> {
+  const visible = await readClaimUnderLock(campaignId);
+  if (visible !== null) return visible;
+  // Native Windows observed transient ENOENT during a replacement while the
+  // real writer held the claim lock. Absence is a budget authorization decision,
+  // so recheck it under that SAME lock, not through a fixed sleep/retry guess.
+  // Do not create a claims directory for a genuinely untouched namespace.
+  try { await stat(campaignClaimsDir()); }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw new Error(`E4-R97: ${R97_CAMPAIGN_CLAIM_UNREADABLE}: claim namespace could not be inspected: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  return withClaimAnchorLock(campaignId, Date.now, defaultIsAlive, () => readClaimUnderLock(campaignId));
+}
+
+/** The caller either holds the anchor lock, or accepts a COMPLETE direct read.
+ * A direct ENOENT must be checked under the writer lock by the public reader. */
+async function readClaimUnderLock(campaignId: string): Promise<R97CampaignClaim | null> {
   let text: string;
   try {
     text = await readFile(claimPathFor(campaignId), "utf8");
@@ -372,7 +389,7 @@ async function mutateClaimUnderLock<T>(
   campaignId: string,
   mutate: (previous: R97CampaignClaim | null) => Promise<{ next: R97CampaignClaim | null; result: T }> | { next: R97CampaignClaim | null; result: T },
 ): Promise<T> {
-  const previous = await readR97CampaignClaim(campaignId);
+  const previous = await readClaimUnderLock(campaignId);
   const { next, result } = await mutate(previous);
   if (next !== null) await writeClaimAtomic(campaignId, next);
   return result;
@@ -1595,7 +1612,7 @@ export async function openR97BudgetLedger(dir: string, opts: R97LedgerOpenOption
         // cannot mint anything, so it is never refused by this rule.
         const wouldCreate = present === null && mode !== "resume";
         if (wouldCreate) {
-          const anchor = await readR97CampaignClaim(campaignId);
+          const anchor = await readClaimUnderLock(campaignId);
           const establishedDirs = anchor === null ? [] : anchor.establishedDirs;
           const lostHere = establishedDirs.includes(dir) ? [dir] : [];
           const lostElsewhere = establishedDirs.filter((d) => d !== dir && !duplicateCampaignDirs.includes(d));

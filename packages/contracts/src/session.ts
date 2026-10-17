@@ -1,4 +1,4 @@
-import type { AgentId, SessionId, TurnId } from "./ids.js";
+import type { AgentId, EventId, SessionId, TurnId } from "./ids.js";
 import type { ModelRef } from "./model.js";
 import type { Message, UserMessage } from "./message.js";
 
@@ -9,6 +9,16 @@ export interface Session {
   parentId?: SessionId;
   agentId: AgentId;
   model: ModelRef;
+  /** Atomic model-selection commit and durable outbox. The policy snapshot is
+   * immutable; only an explicitly recorded selection overrides its model.
+   * initialModel anchors pre-provenance history across upgrades and switches. */
+  modelSelection?: {
+    version: 1;
+    initialModel: ModelRef;
+    model: ModelRef;
+    eventId: EventId;
+    timestamp: number;
+  };
   cwd: string;
   status: SessionStatus;
   createdAt: number;

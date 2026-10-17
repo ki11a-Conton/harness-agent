@@ -1,4 +1,5 @@
 import type { AskId, MessageId, PromptId, SessionId, ToolCallId, TurnId } from "./ids.js";
+import type { ModelRef } from "./model.js";
 import type { ToolCall } from "./tool.js";
 
 export type MessageRole = "system" | "user" | "assistant" | "tool";
@@ -13,6 +14,13 @@ export interface Message {
   toolCallId?: ToolCallId;
   /** Set when role === "assistant": tool calls requested by the model. */
   toolCalls?: ToolCall[];
+  /** Set when role === "assistant": the exact model reference that produced this
+   *  message. Durable per-message provenance, so a read-side projection of
+   *  history stays immutable when a live session switches its model
+   *  (session/selectModel) instead of re-deriving it from the mutable session
+   *  row. Absent on messages recorded before this field existed; readers fall
+   *  back to the immutable initial model in the session selection record. */
+  model?: ModelRef;
   /** Set when role === "assistant": reasoning/thinking content produced by a
    *  thinking-mode model (e.g. deepseek reasoning_content). Some providers
    *  REQUIRE this to be passed back on the next assistant message of the

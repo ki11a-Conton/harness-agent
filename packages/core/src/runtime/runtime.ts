@@ -14,6 +14,7 @@ import type {
   InboxStore,
   Message,
   ModelProvider,
+  ModelRef,
   SandboxPolicy,
   Session,
   SessionId,
@@ -93,7 +94,7 @@ import { ASK_GATE_SPEC } from "./ask-gate.js";
 import type { StepToolCatalog } from "./tool-catalog.js";
 import { AgentState } from "../state/agent-state.js";
 import { HookRegistry } from "../lifecycle/hooks.js";
-import { RecoveryPolicy } from "../recovery/recovery.js";
+import { RecoveryPolicy, type FailureKind } from "../recovery/recovery.js";
 import {
   activeUserMessages,
   buildResumePrompt,
@@ -128,6 +129,44 @@ import { ReadOnlyPrefetch } from "./read-only-prefetch.js";
 function stableHashOf(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex").slice(0, 16);
 }
+
+/** PKG-003: deterministic hash of a policy VALUE for drift detection. Object
+ *  keys are sorted first, so an equivalent policy built with a different key
+ *  insertion order hashes identically — plain [[stableHashOf]] is key-order
+ *  sensitive and would report phantom drift. Functions/undefined are dropped,
+ *  matching JSON.stringify. */
+function stablePolicyHash(value: unknown): string {
+  return stableHashOf(sortKeysDeep(value));
+}
+
+function sortKeysDeep(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(sortKeysDeep);
+  if (value !== null && typeof value === "object") {
+    const sorted: Record<string, unknown> = {};
+    for (const key of Object.keys(value as Record<string, unknown>).sort()) {
+      const entry = (value as Record<string, unknown>)[key];
+      if (entry === undefined || typeof entry === "function") continue;
+      sorted[key] = sortKeysDeep(entry);
+    }
+    return sorted;
+  }
+  return value;
+}
+
+/** PKG-003: local extension of the frozen runtime-policy snapshot.
+ *
+ *  Version 1 froze `toolSemanticsHash` as `String(this.toolSemanticsOf.length)`
+ *  — the arity constant "1", identical for every host — and had no sandbox
+ *  hash at all, while the resume gate compared only `contextPolicyHash`. So a
+ *  session resumed under a widened retry/sandbox/tool-semantics policy drifted
+ *  silently. Version 2 adds a real tool-semantics table hash plus the sandbox
+ *  hash, and the gate compares all four dimensions. Version-1 snapshots keep
+ *  the legacy context-only comparison: re-deriving the other dimensions would
+ *  report phantom drift for every pre-upgrade session. */
+type RuntimePolicySnapshotV2 = Omit<EffectiveRuntimePolicySnapshot, "version"> & {
+  version: 2;
+  sandboxPolicyHash?: string;
+};
 import type { ExecutedToolCall } from "./tool-call-controller.js";
 import { ContextController } from "./context-controller.js";
 import type { ContextUpdate } from "./context-controller.js";
@@ -479,6 +518,48 @@ export interface RunTurnOptions {
 }
 
 export class AgentRuntime {
+  private readonly policyDriftReports = new Map<SessionId, { hash: string; promise: Promise<void> }>();
+  private readonly modelSelectionLocks = new Map<SessionId, Promise<unknown>>();
+  private readonly publishedModelSelections = new Map<SessionId, string>();
+
+  private async withModelSelectionLock<T>(id: SessionId, action: () => Promise<T>): Promise<T> {
+    const previous = this.modelSelectionLocks.get(id) ?? Promise.resolve();
+    const current = previous.then(action, action);
+    this.modelSelectionLocks.set(id, current);
+    try { return await current; }
+    finally { if (this.modelSelectionLocks.get(id) === current) this.modelSelectionLocks.delete(id); }
+  }
+
+  /** The row is the commit point. A crash before the event append is replayed
+   * from this outbox before another selection or model request is admitted.
+   * The stable ID also handles an append that committed before throwing. */
+  private async publishModelSelection(session: Session): Promise<void> {
+    const selection = session.modelSelection;
+    if (selection === undefined) return;
+    const validModel = (value: ModelRef) => value !== null && typeof value === "object"
+      && typeof value.providerId === "string" && value.providerId.length > 0
+      && typeof value.modelId === "string" && value.modelId.length > 0;
+    if (selection.version !== 1 || !validModel(selection.initialModel) || !validModel(selection.model)
+      || selection.model.providerId !== session.model.providerId || selection.model.modelId !== session.model.modelId
+      || typeof selection.eventId !== "string" || !selection.eventId || !Number.isFinite(selection.timestamp) || selection.timestamp < 0) {
+      throw new AgentError(errorInfo("INTERNAL_ERROR", "corrupt durable session model selection"));
+    }
+    if (this.publishedModelSelections.get(session.id) === selection.eventId) return;
+    const existing = (await this.events.list(session.id)).find(event => event.id === selection.eventId);
+    const payload = { hostOnly: true, kind: "web_model_selection",
+      selection: { provider: selection.model.providerId, model: selection.model.modelId } };
+    if (existing !== undefined) {
+      if (existing.type !== "human.message" || existing.timestamp !== selection.timestamp
+        || stableHashOf(existing.payload) !== stableHashOf(payload)) {
+        throw new AgentError(errorInfo("INTERNAL_ERROR", "conflicting durable session model selection event"));
+      }
+    } else {
+      await this.events.appendNew({ id: selection.eventId, sessionId: session.id,
+        timestamp: selection.timestamp, type: "human.message", payload });
+    }
+    this.publishedModelSelections.set(session.id, selection.eventId);
+  }
+
   private readonly store: SessionStore;
   private readonly events: EventStore;
   private readonly modelProvider: ModelProvider;
@@ -857,7 +938,14 @@ export class AgentRuntime {
     initialStatus?: "active" | "failed";
   }): Promise<Session> {
     if (!this.agents.has(opts.agent.id)) {
-      throw new AgentError(errorInfo("INTERNAL_ERROR", `unknown agent ${opts.agent.id}`));
+      if (opts.parentId === undefined) throw new AgentError(errorInfo("INTERNAL_ERROR", `unknown agent ${opts.agent.id}`));
+      // A durable parent can outlive the host's freshly allocated registry ID.
+      // Branch only its validated effective policy; the parent is not a permit
+      // to create an arbitrary unknown/wider agent after restart.
+      const parentAgent = await this.getSessionAgent(opts.parentId);
+      if (parentAgent === undefined || stablePolicyHash(snapshotEffectiveConfig(parentAgent)) !== stablePolicyHash(snapshotEffectiveConfig(opts.agent))) {
+        throw new AgentError(errorInfo("INTERNAL_ERROR", `unknown or mismatched inherited agent ${opts.agent.id}`));
+      }
     }
     const session: Session = {
       id: newSessionId(),
@@ -885,15 +973,9 @@ export class AgentRuntime {
       agentMetadata: { version: 1, agentId: opts.agent.id, name: opts.agent.name,
         description: opts.agent.description, mode: opts.agent.mode },
       // P1-6: freeze the runtime policy hashes too, so a resume can detect
-      // host-policy drift (safe-resume gate).
-      [RUNTIME_POLICY_SNAPSHOT_KEY]: {
-        version: 1,
-        contextPolicyHash: this.context !== undefined ? stableHashOf(this.context) : undefined,
-        retryPolicyHash: this.recovery !== undefined ? stableHashOf(this.recovery) : undefined,
-        schedulerPolicyHash: undefined,
-        toolSemanticsHash: this.toolSemanticsOf !== undefined ? String(this.toolSemanticsOf.length) : undefined,
-        createdAt: this.now(),
-      } satisfies EffectiveRuntimePolicySnapshot,
+      // host-policy drift (safe-resume gate). PKG-003: one builder for both
+      // sides of the comparison — see [[runtimePolicySnapshot]].
+      [RUNTIME_POLICY_SNAPSHOT_KEY]: this.runtimePolicySnapshot(),
     });
     const initialized: Session = { ...session, status: opts.initialStatus ?? "active" };
     await this.store.updateSession(initialized);
@@ -974,12 +1056,21 @@ export class AgentRuntime {
           );
         }
       }
-      // P26-3: fence the journal BEFORE acking completion — an acked turn must
-      // survive a crash at the store's declared durability level. A fence
-      // failure fails the turn (fail-closed): the caller must not treat an
-      // un-flushed completion as durable.
+      // P26-3 / PKG-002: fence the journal BEFORE acking completion — an acked
+      // turn must survive a crash at the store's declared durability level. A
+      // fence failure fails the turn (fail-closed): the caller must not treat
+      // an un-flushed completion as durable.
+      //
+      // The fence is handed the turn's REAL last committed sequence: the old
+      // `Number.MAX_SAFE_INTEGER` sentinel was unverifiable by every store
+      // (`WHERE sequence = MAX_SAFE_INTEGER` never matches), so the guard
+      // degraded to a bare WAL checkpoint and could never fail. A session with
+      // no committed events has nothing to fence.
       if (this.durabilityFence !== undefined) {
-        await this.durabilityFence.flushThrough(sessionId, Number.MAX_SAFE_INTEGER);
+        const lastCommitted = (await this.events.nextSequence(sessionId)) - 1;
+        if (lastCommitted >= 0) {
+          await this.durabilityFence.flushThrough(sessionId, lastCommitted);
+        }
       }
       return outcome;
     } finally {
@@ -1343,8 +1434,10 @@ export class AgentRuntime {
       await this.emit(sessionId, "run.limit_reached", { limit: "maxIterationsPerTurn", used: this.maxIterationsPerTurn }, turnId);
       return this.recoveryController.finishTurn(ctx, "failed", state, working, info, "agent_limit", toolLedger);
     } finally {
-      const current = await this.store.getSession(sessionId);
-      if (current) await this.store.updateSession({ ...current, updatedAt: this.now() });
+      await this.withModelSelectionLock(sessionId, async () => {
+        const current = await this.store.getSession(sessionId);
+        if (current) await this.store.updateSession({ ...current, updatedAt: this.now() });
+      });
     }
   }
 
@@ -1934,6 +2027,114 @@ export class AgentRuntime {
     return this.toolSemanticsOf?.(name) ?? DEFAULT_RUNTIME_TOOL_SEMANTICS[name] ?? DEFAULT_TOOL_SEMANTICS;
   }
 
+  /** PKG-003: the tool-semantics policy is a LOOKUP, not a scalar — hash the
+   *  whole table (registry tools + built-ins, name-sorted) so a host that
+   *  reclassifies a tool's read-only/retry/side-effect surface is observed on
+   *  resume. The old hash was `String(this.toolSemanticsOf.length)`, i.e. the
+   *  constant "1" for every host: a gate that could never differ. */
+  private toolSemanticsTableHash(): string | undefined {
+    if (this.toolSemanticsOf === undefined) return undefined;
+    const names = new Set<string>([
+      ...Object.keys(DEFAULT_RUNTIME_TOOL_SEMANTICS),
+      ...(this.toolRegistry?.list() ?? []).map((tool) => tool.name),
+    ]);
+    const table = [...names].sort().map((name) => [name, this.semanticsOf(name)] as const);
+    return stablePolicyHash(table);
+  }
+
+  /** Hash the complete normalized policy, including exhausted behavior beyond
+   * the first eight attempts and every per-kind cap/delay override. */
+  private retryPolicyHashOf(): string | undefined {
+    return this.recovery === undefined ? undefined : stablePolicyHash(this.recovery.getConfigIdentity());
+  }
+
+  /** PKG-003: ONE builder for create-session and for the resume comparison, so
+   *  the two sides of the drift check can never diverge from each other. */
+  private runtimePolicySnapshot(): RuntimePolicySnapshotV2 {
+    return {
+      version: 2,
+      contextPolicyHash: this.context !== undefined ? stableHashOf(this.context) : undefined,
+      retryPolicyHash: this.retryPolicyHashOf(),
+      schedulerPolicyHash: undefined,
+      toolSemanticsHash: this.toolSemanticsTableHash(),
+      sandboxPolicyHash: this.sandboxPolicy !== undefined ? stablePolicyHash(this.sandboxPolicy) : undefined,
+      createdAt: this.now(),
+    };
+  }
+
+  /** Keep the frozen baseline unchanged, but report an unchanged observed
+   * drift only once per host. Concurrent metadata reads join the same write;
+   * failed writes remain retryable rather than suppressing the observation. */
+  private async emitPolicyDrift(sessionId: SessionId, payload: Record<string, unknown>): Promise<void> {
+    const hash = stablePolicyHash(payload);
+    const previous = this.policyDriftReports.get(sessionId);
+    if (previous?.hash === hash) return previous.promise;
+    const emit = async () => { await this.emit(sessionId, "policy.changed_on_resume", payload); };
+    const promise = (previous?.promise ?? Promise.resolve()).then(emit, emit);
+    const entry = { hash, promise };
+    this.policyDriftReports.set(sessionId, entry);
+    try { await promise; }
+    catch (error) {
+      if (this.policyDriftReports.get(sessionId) === entry) this.policyDriftReports.delete(sessionId);
+      throw error;
+    }
+  }
+
+  /** PKG-003: emit ONE `policy.changed_on_resume` event naming every policy
+   *  dimension that moved since createSession. Observation-only by design (the
+   *  P0-1 agent snapshot already prevents silent widening); the old gate
+   *  compared only the context pipeline, so a resumed session ran against a
+   *  changed retry/sandbox/tool-semantics policy with NO event at all. */
+  private async reportPolicyDrift(
+    sessionId: SessionId,
+    stored: EffectiveRuntimePolicySnapshot | RuntimePolicySnapshotV2,
+  ): Promise<void> {
+    if (stored.version === 1) {
+      const currentContextHash = this.context !== undefined ? stableHashOf(this.context) : undefined;
+      const contextPolicyChanged =
+        this.context !== undefined &&
+        stored.contextPolicyHash !== undefined &&
+        stored.contextPolicyHash !== currentContextHash;
+      // v1 froze retryPolicyHash as `stableHashOf(this.recovery)` on the live
+      // instance, so that exact encoding is still recomputable here: a session
+      // created before this upgrade can be checked for retry drift too. v1's
+      // toolSemanticsHash was an arity constant and it recorded no sandbox
+      // hash, so those two are genuinely unknowable for a legacy session and
+      // must not be reported as drift (that would be a phantom alarm on every
+      // pre-upgrade resume).
+      const retryPolicyChanged =
+        this.recovery !== undefined &&
+        stored.retryPolicyHash !== undefined &&
+        stored.retryPolicyHash !== stableHashOf(this.recovery);
+      if (!contextPolicyChanged && !retryPolicyChanged) { this.policyDriftReports.delete(sessionId); return; }
+      await this.emitPolicyDrift(sessionId, {
+        ...(contextPolicyChanged
+          ? { contextPolicyChanged: true, contextPolicyHash: currentContextHash, stored: stored.contextPolicyHash }
+          : {}),
+        ...(retryPolicyChanged
+          ? { retryPolicyChanged: true, retryPolicyHash: stableHashOf(this.recovery) }
+          : {}),
+      });
+      return;
+    }
+    const current = this.runtimePolicySnapshot();
+    const contextPolicyChanged = stored.contextPolicyHash !== current.contextPolicyHash;
+    const retryPolicyChanged = stored.retryPolicyHash !== current.retryPolicyHash;
+    const toolSemanticsChanged = stored.toolSemanticsHash !== current.toolSemanticsHash;
+    const sandboxPolicyChanged = stored.sandboxPolicyHash !== current.sandboxPolicyHash;
+    if (!contextPolicyChanged && !retryPolicyChanged && !toolSemanticsChanged && !sandboxPolicyChanged) { this.policyDriftReports.delete(sessionId); return; }
+    await this.emitPolicyDrift(sessionId, {
+      contextPolicyChanged,
+      retryPolicyChanged,
+      toolSemanticsChanged,
+      sandboxPolicyChanged,
+      contextPolicyHash: current.contextPolicyHash ?? null,
+      retryPolicyHash: current.retryPolicyHash ?? null,
+      toolSemanticsHash: current.toolSemanticsHash ?? null,
+      sandboxPolicyHash: current.sandboxPolicyHash ?? null,
+    });
+  }
+
   getAgent(agentId: AgentId): AgentDefinition | undefined {
     return this.agents.get(agentId);
   }
@@ -1944,6 +2145,38 @@ export class AgentRuntime {
     const session = await this.store.getSession(sessionId);
     if (session === undefined) throw new AgentError(errorInfo("INTERNAL_ERROR", `unknown session ${sessionId}`));
     return this.resolveAgent(session);
+  }
+
+  /** Switch only the authorized model reference. Model, immutable legacy
+   * provenance and the event outbox share one atomic session-row commit; tools,
+   * permissions, skills and all other frozen policy fields remain unchanged. */
+  async setSessionModel(sessionId: SessionId, model: ModelRef): Promise<Session> {
+    if (model === undefined || typeof model.providerId !== "string" || model.providerId.length === 0
+      || typeof model.modelId !== "string" || model.modelId.length === 0) {
+      throw new AgentError(errorInfo("INTERNAL_ERROR", "setSessionModel requires a concrete providerId/modelId reference"));
+    }
+    return this.withModelSelectionLock(sessionId, async () => {
+      const session = await this.store.getSession(sessionId);
+      if (session === undefined) throw new AgentError(errorInfo("INTERNAL_ERROR", `unknown session ${sessionId}`));
+      const snapshot = await this.store.loadStateSnapshot(sessionId);
+      const cfg = snapshot?.[EFFECTIVE_AGENT_SNAPSHOT_KEY] as EffectiveAgentConfig | undefined;
+      if (!isEffectiveAgentConfig(cfg) || cfg.agentId !== session.agentId) {
+        throw new AgentError(errorInfo("INTERNAL_ERROR", `session ${sessionId} has a corrupt or foreign effective-agent snapshot: refusing to switch its model`));
+      }
+      if (session.status !== "active") throw new AgentError(errorInfo("INTERNAL_ERROR", "only active sessions can select a model"));
+      await this.publishModelSelection(session);
+      if (session.model.providerId === model.providerId && session.model.modelId === model.modelId) return session;
+      const selected = { ...model };
+      const updated: Session = { ...session, model: selected, updatedAt: this.now(),
+        modelSelection: { version: 1, initialModel: { ...(session.modelSelection?.initialModel ?? session.model) },
+          model: selected, eventId: newEventId(), timestamp: this.now() } };
+      await this.store.updateSession(updated);
+      // A failure here leaves a committed, recoverable selection, never a
+      // different model in the row and the effective policy. Retry/restart
+      // publishes this exact event before proceeding; no best-effort rollback.
+      await this.publishModelSelection(updated);
+      return updated;
+    });
   }
 
   /**
@@ -1958,6 +2191,14 @@ export class AgentRuntime {
    *   path; a present-but-corrupt/mismatched snapshot fails closed instead.
    */
   private async resolveAgent(session: Session): Promise<AgentDefinition> {
+    if (session.modelSelection !== undefined) {
+      session = await this.withModelSelectionLock(session.id, async () => {
+        const current = await this.store.getSession(session.id);
+        if (current === undefined) throw new AgentError(errorInfo("INTERNAL_ERROR", `unknown session ${session.id}`));
+        await this.publishModelSelection(current);
+        return current;
+      });
+    }
     const snapshot = await this.store.loadStateSnapshot(session.id);
     if (snapshot === undefined) {
       const base = this.agents.get(session.agentId);
@@ -1978,17 +2219,12 @@ export class AgentRuntime {
     // P1-6: safe-resume gate — detect host policy drift since the session was
     // created. Never silently change security semantics: the change is
     // observable on the event stream so a strict host can refuse to resume.
-    const runtimePolicy = snapshot[RUNTIME_POLICY_SNAPSHOT_KEY] as EffectiveRuntimePolicySnapshot | undefined;
-    if (runtimePolicy?.version === 1 && this.context !== undefined) {
-      const currentContextHash = stableHashOf(this.context);
-      if (runtimePolicy.contextPolicyHash !== undefined && runtimePolicy.contextPolicyHash !== currentContextHash) {
-        await this.emit(session.id, "policy.changed_on_resume", {
-          contextPolicyChanged: true,
-          contextPolicyHash: currentContextHash,
-          stored: runtimePolicy.contextPolicyHash,
-        }, undefined);
-      }
-    }
+    // PKG-003: every frozen dimension is compared, not just the context pipeline.
+    const runtimePolicy = snapshot[RUNTIME_POLICY_SNAPSHOT_KEY] as
+      | EffectiveRuntimePolicySnapshot
+      | RuntimePolicySnapshotV2
+      | undefined;
+    if (runtimePolicy !== undefined) await this.reportPolicyDrift(session.id, runtimePolicy);
     // Display metadata never supplies model/tools/permissions/skills/limits.
     // Existing registry metadata keeps precedence; a restarted registry may
     // lack this durable ID, in which case use only a validated cosmetic record.
@@ -2003,7 +2239,7 @@ export class AgentRuntime {
       name: meta?.name ?? cfg.agentId,
       description: meta?.description ?? "",
       mode: meta?.mode ?? "primary",
-      model: cfg.model,
+      model: session.modelSelection?.model ?? cfg.model,
       systemPrompt: cfg.systemPrompt,
       tools: cfg.tools,
       permissions: cfg.permissions,

@@ -103,3 +103,14 @@ describe("redactSecrets (P0-7)", () => {
     expect(redactSecrets("")).toEqual({ content: "", redacted: 0 });
   });
 });
+
+it("whitespace JWT JSON remains secret while long qualified code symbols remain ordinary code", () => {
+  const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" }, null, 2)).toString("base64url");
+  const claims = Buffer.from(JSON.stringify({ sub: "local-only" }, null, 2)).toString("base64url");
+  const token = `${header}.${claims}.synthetic_signature_not_a_credential`;
+  expect(detectSecrets(token).secrets).toContain("jwt-token");
+  expect(redactSecrets(token).content).toBe("[redacted]");
+  const code = "namespace.packagecomponent.functionmodule";
+  expect(detectSecrets(code).hasSecret).toBe(false);
+  expect(redactSecrets(code).content).toBe(code);
+});

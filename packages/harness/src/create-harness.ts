@@ -31,6 +31,7 @@ import {
   type MemoryId,
   type MemoryStore,
   type MemoryType,
+  type Session,
   type SessionId,
   type SessionStore,
   type Skill,
@@ -738,8 +739,21 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
       if (stableFingerprint([input.model]) !== stableFingerprint([agent.model])) {
         throw new AgentError(errorInfo("INTERNAL_ERROR", "session model must match the effective agent model"));
       }
-      return runtime.createSession({ agent, cwd: input.cwd, ...(input.parentId !== undefined ? { parentId: input.parentId } : {}),
-        ...(input.initialStatus !== undefined ? { initialStatus: input.initialStatus } : {}) });
+      const session = await runtime.createSession({ agent, cwd: input.cwd, ...(input.parentId !== undefined ? { parentId: input.parentId } : {}),
+        initialStatus: "failed" });
+      // PKG-001: freeze the drift baseline AT CREATION, not on the first load.
+      // The gate below only compares when a baseline exists; with the baseline
+      // written by `sessions.load`, "create -> change config -> first load"
+      // compared against nothing, returned "none", and then froze the CHANGED
+      // config as the new baseline — so CONFIG_DRIFT_REJECTED could never fire
+      // on a session's first resume, which is the most common path of all.
+      // fail-closed: if the baseline cannot be persisted, creation fails rather
+      // than producing a session with no frozen config.
+      await freezeConfigFingerprint(session.id);
+      if (input.initialStatus === "failed") return session;
+      const active: Session = { ...session, status: "active" };
+      await store.updateSession(active);
+      return active;
     },
   });
   // E4-08: production recovery persistence. When a dataDir is configured the
