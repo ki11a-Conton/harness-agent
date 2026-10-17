@@ -14,6 +14,7 @@ import type {
   InboxStore,
   Message,
   ModelProvider,
+  ModelRef,
   SandboxPolicy,
   Session,
   SessionId,
@@ -479,6 +480,47 @@ export interface RunTurnOptions {
 }
 
 export class AgentRuntime {
+  private readonly modelSelectionLocks = new Map<SessionId, Promise<unknown>>();
+  private readonly publishedModelSelections = new Map<SessionId, string>();
+
+  private async withModelSelectionLock<T>(id: SessionId, action: () => Promise<T>): Promise<T> {
+    const previous = this.modelSelectionLocks.get(id) ?? Promise.resolve();
+    const current = previous.then(action, action);
+    this.modelSelectionLocks.set(id, current);
+    try { return await current; }
+    finally { if (this.modelSelectionLocks.get(id) === current) this.modelSelectionLocks.delete(id); }
+  }
+
+  /** The row is the commit point. A crash before the event append is replayed
+   * from this outbox before another selection or model request is admitted.
+   * The stable ID also handles an append that committed before throwing. */
+  private async publishModelSelection(session: Session): Promise<void> {
+    const selection = session.modelSelection;
+    if (selection === undefined) return;
+    const validModel = (value: ModelRef) => value !== null && typeof value === "object"
+      && typeof value.providerId === "string" && value.providerId.length > 0
+      && typeof value.modelId === "string" && value.modelId.length > 0;
+    if (selection.version !== 1 || !validModel(selection.initialModel) || !validModel(selection.model)
+      || selection.model.providerId !== session.model.providerId || selection.model.modelId !== session.model.modelId
+      || typeof selection.eventId !== "string" || !selection.eventId || !Number.isFinite(selection.timestamp) || selection.timestamp < 0) {
+      throw new AgentError(errorInfo("INTERNAL_ERROR", "corrupt durable session model selection"));
+    }
+    if (this.publishedModelSelections.get(session.id) === selection.eventId) return;
+    const existing = (await this.events.list(session.id)).find(event => event.id === selection.eventId);
+    const payload = { hostOnly: true, kind: "web_model_selection",
+      selection: { provider: selection.model.providerId, model: selection.model.modelId } };
+    if (existing !== undefined) {
+      if (existing.type !== "human.message" || existing.timestamp !== selection.timestamp
+        || stableHashOf(existing.payload) !== stableHashOf(payload)) {
+        throw new AgentError(errorInfo("INTERNAL_ERROR", "conflicting durable session model selection event"));
+      }
+    } else {
+      await this.events.appendNew({ id: selection.eventId, sessionId: session.id,
+        timestamp: selection.timestamp, type: "human.message", payload });
+    }
+    this.publishedModelSelections.set(session.id, selection.eventId);
+  }
+
   private readonly store: SessionStore;
   private readonly events: EventStore;
   private readonly modelProvider: ModelProvider;
@@ -1343,8 +1385,10 @@ export class AgentRuntime {
       await this.emit(sessionId, "run.limit_reached", { limit: "maxIterationsPerTurn", used: this.maxIterationsPerTurn }, turnId);
       return this.recoveryController.finishTurn(ctx, "failed", state, working, info, "agent_limit", toolLedger);
     } finally {
-      const current = await this.store.getSession(sessionId);
-      if (current) await this.store.updateSession({ ...current, updatedAt: this.now() });
+      await this.withModelSelectionLock(sessionId, async () => {
+        const current = await this.store.getSession(sessionId);
+        if (current) await this.store.updateSession({ ...current, updatedAt: this.now() });
+      });
     }
   }
 
@@ -1946,6 +1990,38 @@ export class AgentRuntime {
     return this.resolveAgent(session);
   }
 
+  /** Switch only the authorized model reference. Model, immutable legacy
+   * provenance and the event outbox share one atomic session-row commit; tools,
+   * permissions, skills and all other frozen policy fields remain unchanged. */
+  async setSessionModel(sessionId: SessionId, model: ModelRef): Promise<Session> {
+    if (model === undefined || typeof model.providerId !== "string" || model.providerId.length === 0
+      || typeof model.modelId !== "string" || model.modelId.length === 0) {
+      throw new AgentError(errorInfo("INTERNAL_ERROR", "setSessionModel requires a concrete providerId/modelId reference"));
+    }
+    return this.withModelSelectionLock(sessionId, async () => {
+      const session = await this.store.getSession(sessionId);
+      if (session === undefined) throw new AgentError(errorInfo("INTERNAL_ERROR", `unknown session ${sessionId}`));
+      const snapshot = await this.store.loadStateSnapshot(sessionId);
+      const cfg = snapshot?.[EFFECTIVE_AGENT_SNAPSHOT_KEY] as EffectiveAgentConfig | undefined;
+      if (!isEffectiveAgentConfig(cfg) || cfg.agentId !== session.agentId) {
+        throw new AgentError(errorInfo("INTERNAL_ERROR", `session ${sessionId} has a corrupt or foreign effective-agent snapshot: refusing to switch its model`));
+      }
+      if (session.status !== "active") throw new AgentError(errorInfo("INTERNAL_ERROR", "only active sessions can select a model"));
+      await this.publishModelSelection(session);
+      if (session.model.providerId === model.providerId && session.model.modelId === model.modelId) return session;
+      const selected = { ...model };
+      const updated: Session = { ...session, model: selected, updatedAt: this.now(),
+        modelSelection: { version: 1, initialModel: { ...(session.modelSelection?.initialModel ?? session.model) },
+          model: selected, eventId: newEventId(), timestamp: this.now() } };
+      await this.store.updateSession(updated);
+      // A failure here leaves a committed, recoverable selection, never a
+      // different model in the row and the effective policy. Retry/restart
+      // publishes this exact event before proceeding; no best-effort rollback.
+      await this.publishModelSelection(updated);
+      return updated;
+    });
+  }
+
   /**
    * P0-1: resolve the effective agent for a session.
    *
@@ -1958,6 +2034,14 @@ export class AgentRuntime {
    *   path; a present-but-corrupt/mismatched snapshot fails closed instead.
    */
   private async resolveAgent(session: Session): Promise<AgentDefinition> {
+    if (session.modelSelection !== undefined) {
+      session = await this.withModelSelectionLock(session.id, async () => {
+        const current = await this.store.getSession(session.id);
+        if (current === undefined) throw new AgentError(errorInfo("INTERNAL_ERROR", `unknown session ${session.id}`));
+        await this.publishModelSelection(current);
+        return current;
+      });
+    }
     const snapshot = await this.store.loadStateSnapshot(session.id);
     if (snapshot === undefined) {
       const base = this.agents.get(session.agentId);
@@ -2003,7 +2087,7 @@ export class AgentRuntime {
       name: meta?.name ?? cfg.agentId,
       description: meta?.description ?? "",
       mode: meta?.mode ?? "primary",
-      model: cfg.model,
+      model: session.modelSelection?.model ?? cfg.model,
       systemPrompt: cfg.systemPrompt,
       tools: cfg.tools,
       permissions: cfg.permissions,

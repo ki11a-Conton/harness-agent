@@ -265,6 +265,10 @@ export class ModelCallController {
       sessionId,
       turnId,
       role: "assistant",
+      // The model that actually answered this call. `session.model` is mutable
+      // (session/selectModel), so history projections must read provenance from
+      // the message instead of the live session row.
+      model: agent.model,
       content: final.text ?? assistantText,
       ...(toolCalls.length > 0 ? { toolCalls } : {}),
       ...(reasoningText.length > 0 ? { reasoningContent: reasoningText } : {}),
