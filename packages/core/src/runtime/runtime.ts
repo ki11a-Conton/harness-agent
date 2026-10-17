@@ -485,7 +485,7 @@ export class AgentRuntime {
 
   private async withModelSelectionLock<T>(id: SessionId, action: () => Promise<T>): Promise<T> {
     const previous = this.modelSelectionLocks.get(id) ?? Promise.resolve();
-    const current = previous.catch(() => {}).then(action);
+    const current = previous.then(action, action);
     this.modelSelectionLocks.set(id, current);
     try { return await current; }
     finally { if (this.modelSelectionLocks.get(id) === current) this.modelSelectionLocks.delete(id); }
