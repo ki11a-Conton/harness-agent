@@ -1109,9 +1109,21 @@ describe("E4-R97 D9: the finalized plan is executable WITHOUT modification", () 
   const { promisify } = nodeUtil;
   const run = promisify(execFile);
 
+  async function currentPlan() {
+    // This CLI deliberately judges the real execution clock. A positive plan
+    // created at the shared fixed September date expired on 2026-10-17. Issue
+    // fresh TEST material before serialization; never extend an existing plan
+    // or change the production expiry gate to make this assertion pass.
+    const now = new Date().toISOString();
+    const plan = await finalizedPlan({ createdAt: now, now });
+    expect(Date.parse(plan.authorization!.createdAt)).toBeLessThanOrEqual(Date.now());
+    expect(Date.parse(plan.authorization!.expiresAt)).toBeGreaterThan(Date.now());
+    return plan;
+  }
+
   it("the plan artifact the approval package describes runs as-is, with no edit", async () => {
     const dir = await tempDir();
-    const plan = await finalizedPlan();
+    const plan = await currentPlan();
     const planPath = join(dir, "plan.json");
     // Written EXACTLY as the plan builder produced it — no injected observation.
     await writeFile(planPath, JSON.stringify(plan, null, 2), "utf8");
@@ -1149,7 +1161,7 @@ describe("E4-R97 D9: the finalized plan is executable WITHOUT modification", () 
 
   it("an unauthorized run of the same unmodified artifact is NOT_RUN with 0 requests", async () => {
     const dir = await tempDir();
-    const plan = await finalizedPlan();
+    const plan = await currentPlan();
     const planPath = join(dir, "plan.json");
     await writeFile(planPath, JSON.stringify(plan, null, 2), "utf8");
     // No auth env at all. The artifact must still be READABLE and refused
@@ -1175,6 +1187,7 @@ describe("E4-R97 D9: the finalized plan is executable WITHOUT modification", () 
     expect(stdout.length).toBeGreaterThan(0);
     const parsed = JSON.parse(stdout);
     expect(parsed.status).toBe("NOT_RUN");
+    expect(parsed.authorization).toMatchObject({ authorizedToExecute: false, code: "PAID_AUTHORIZATION_REQUIRED" });
     expect(parsed.providerRequests).toBe(0);
     expect(parsed.logicalCalls).toBe(0);
   }, 180_000);
