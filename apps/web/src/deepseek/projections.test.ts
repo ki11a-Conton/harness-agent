@@ -344,3 +344,22 @@ describe("official DeepSeek Harness history projection", () => {
     expect(() => projectSessionHistory({ ...f, events: [f.events[0]!, invalid] })).toThrow("durable Web model selection");
   });
 });
+
+
+it("review PR11: switching an upgraded session keeps its legacy durable prefix unchanged", () => {
+  const f = fixture();
+  f.event("session.created", {}, false);
+  const user = f.message("user", "Existing task before upgrade");
+  f.event("turn.started", { text: user.content });
+  f.event("model.started", { callId: "old-model-call", contextMessageIds: [user.id] });
+  const answer = f.message("assistant", "Persisted answer from before this PR");
+  expect("model" in answer).toBe(false); // Exactly the persisted pre-PR Message contract.
+  f.event("model.completed", { text: answer.content, toolCalls: 0, finishReason: "stop" });
+  f.event("turn.completed", { terminationReason: "model_stopped" });
+  const before = f.project();
+  // The Runtime atomically records migration provenance with the new row.
+  f.session.modelSelection = { version: 1, initialModel: { ...f.session.model }, model: { providerId: "new-route", modelId: "new-model" }, eventId: newEventId(), timestamp: 99 };
+  f.session.model = { ...f.session.modelSelection.model };
+  const after = f.project();
+  expect(after.records.slice(0, before.records.length)).toEqual(before.records);
+});

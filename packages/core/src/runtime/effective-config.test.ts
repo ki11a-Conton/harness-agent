@@ -31,8 +31,7 @@ const READ_ONLY: AgentDefinition = {
   systemPrompt: "read-only prompt",
 };
 
-function makeRuntime(store: MemorySessionStore, agents: AgentDefinition[]) {
-  const events = new MemoryEventStore();
+function makeRuntime(store: MemorySessionStore, agents: AgentDefinition[], events = new MemoryEventStore()) {
   const orchestrator = new FakeOrchestrator({ status: "success", output: "fake-ok" });
   const runtime = new AgentRuntime({
       toolRegistry: defaultTestToolCatalog(),
@@ -251,7 +250,7 @@ it("legacy and mismatched cosmetic records do not replace a frozen agent policy"
 });
 
 describe("P27-4 session model switch", () => {
-  it("re-freezes the effective-agent model and the session row for later turns", async () => {
+  it("atomically selects the next model without rewriting frozen policy", async () => {
     const store = new MemorySessionStore(); const { runtime } = makeRuntime(store, [BASE]);
     const session = await runtime.createSession({ agent: READ_ONLY, cwd: "/work" });
     const before = (await store.loadStateSnapshot(session.id))!;
@@ -267,10 +266,10 @@ describe("P27-4 session model switch", () => {
       systemPrompt: READ_ONLY.systemPrompt,
       tools: READ_ONLY.tools,
       permissions: READ_ONLY.permissions,
-      model: target,
+      model: READ_ONLY.model,
     });
     expect((await store.getSession(session.id))!.model).toEqual(target);
-    // The next turn resolves the switched model from the frozen snapshot alone.
+    // Only the explicit durable selection overrides the immutable snapshot model.
     expect((await runtime.getSessionAgent(session.id)).model).toEqual(target);
   });
 
@@ -300,4 +299,45 @@ describe("P27-4 session model switch", () => {
       .rejects.toMatchObject({ info: { code: "INTERNAL_ERROR" } });
     expect((await store.getSession(session.id))!.model).toEqual(READ_ONLY.model);
   });
+});
+
+
+it("review PR11: a rejected model selection preserves the previous effective model", async () => {
+  const store = new MemorySessionStore(); const { runtime } = makeRuntime(store, [BASE]);
+  const session = await runtime.createSession({ agent: READ_ONLY, cwd: "/work" });
+  const before = await runtime.getSessionAgent(session.id);
+  store.updateSession = async () => { throw new Error("review simulated durable row write failure"); };
+  await expect(runtime.setSessionModel(session.id, { providerId: "next-route", modelId: "next-model" }))
+    .rejects.toThrow("durable row write failure");
+  expect((await store.getSession(session.id))!.model).toEqual(before.model);
+  expect((await runtime.getSessionAgent(session.id)).model).toEqual(before.model);
+});
+
+
+it.each(["before", "after"])("recovers a model-selection event failure %s durable append exactly once", async stage => {
+  const store = new MemorySessionStore(); const { runtime, events } = makeRuntime(store, [BASE]);
+  const session = await runtime.createSession({ agent: READ_ONLY, cwd: "/work" });
+  const append = events.appendNew.bind(events);
+  events.appendNew = async event => {
+    if (stage === "after") await append(event);
+    throw new Error("interrupted event append");
+  };
+  const model = { providerId: "next-route", modelId: "next-model" };
+  await expect(runtime.setSessionModel(session.id, model)).rejects.toThrow("interrupted event append");
+  expect((await store.getSession(session.id))!.model).toEqual(model);
+  events.appendNew = append;
+  const fresh = makeRuntime(store, [BASE], events).runtime;
+  expect((await fresh.getSessionAgent(session.id)).model).toEqual(model);
+  await fresh.setSessionModel(session.id, model);
+  expect((await events.list(session.id)).filter(event => event.payload.kind === "web_model_selection")).toHaveLength(1);
+  expect((await store.loadStateSnapshot(session.id))!.effectiveAgent).toMatchObject({ model: READ_ONLY.model, tools: READ_ONLY.tools });
+});
+
+it("serializes simultaneous selections without changing the immutable old-message model", async () => {
+  const store = new MemorySessionStore(); const { runtime, events } = makeRuntime(store, [BASE]);
+  const session = await runtime.createSession({ agent: READ_ONLY, cwd: "/work" });
+  await Promise.all(["one", "two"].map(modelId => runtime.setSessionModel(session.id, { providerId: "scripted", modelId })));
+  expect((await runtime.getSessionAgent(session.id)).model.modelId).toBe("two");
+  expect((await store.getSession(session.id))!.modelSelection!.initialModel).toEqual(READ_ONLY.model);
+  expect((await events.list(session.id)).filter(event => event.payload.kind === "web_model_selection")).toHaveLength(2);
 });

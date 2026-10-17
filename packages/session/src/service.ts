@@ -130,6 +130,8 @@ export class SessionService {
       const { turnId: _turnId, promptId: _promptId, askId: _askId, ...history } = message;
       const copy: Message = {
         ...history,
+        ...(message.role === "assistant" && message.model === undefined && parent.modelSelection !== undefined
+          ? { model: { ...parent.modelSelection.initialModel } } : {}),
         id: newMessageId(),
         sessionId: session.id,
       };
@@ -164,6 +166,10 @@ export class SessionService {
       if (Object.hasOwn(source, key)) inherited[key] = structuredClone(source[key]);
     }
     if (Object.keys(inherited).length === 0) return;
+    const parent = await this.store.getSession(parentId);
+    if (parent?.modelSelection !== undefined && inherited[EFFECTIVE_AGENT_SNAPSHOT_KEY] !== undefined) {
+      inherited[EFFECTIVE_AGENT_SNAPSHOT_KEY] = { ...(inherited[EFFECTIVE_AGENT_SNAPSHOT_KEY] as Record<string, unknown>), model: { ...parent.model } };
+    }
     const childState = await this.store.loadStateSnapshot(childId);
     await this.store.saveStateSnapshot(childId, { ...childState, ...inherited });
   }

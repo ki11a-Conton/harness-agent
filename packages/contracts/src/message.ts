@@ -19,7 +19,7 @@ export interface Message {
    *  history stays immutable when a live session switches its model
    *  (session/selectModel) instead of re-deriving it from the mutable session
    *  row. Absent on messages recorded before this field existed; readers fall
-   *  back to the session model. */
+   *  back to the immutable initial model in the session selection record. */
   model?: ModelRef;
   /** Set when role === "assistant": reasoning/thinking content produced by a
    *  thinking-mode model (e.g. deepseek reasoning_content). Some providers
