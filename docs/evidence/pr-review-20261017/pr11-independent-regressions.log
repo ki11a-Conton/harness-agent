@@ -1,0 +1,96 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-pr11-review-20261017
+
+ ❯ apps/web/src/deepseek/projections.test.ts (13 tests | 1 failed) 52ms
+     ✓ preserves actual message ids, tool arguments, full results, and official surface envelopes 17ms
+     ✓ holds the tool outcome append gap and preserves every published prefix when the result arrives 1ms
+     ✓ keeps published history immutable when a live session switches its model 1ms
+     ✓ joins dense assistant revisions and reconnect prefix through the official settlement fold 4ms
+     ✓ passes real official follow/page decoding and detects a deliberately skipped revision 5ms
+     ✓ keeps failed and cancelled streamed attempts without fabricating assistant messages 2ms
+     ✓ reconciles accepted prompt ids from message or inbox identity and only logs real metadata commits 1ms
+     ✓ uses official message-aligned page cuts and a fixed inclusive history watermark 1ms
+     ✓ rejects gaps, duplicated identities, wrong-session messages, incompatible ABI, and non-JSON payloads 1ms
+     ✓ keeps private host operations out of chat and assigns settled workspace snapshots stable source-owned seqs 3ms
+     ✓ holds the reply-message append gap so a later answer cannot renumber the followed durable prefix 1ms
+     ✓ publishes actual durable draft selection with an advancing official wire coordinate and no fabricated model use 3ms
+   × review PR11: switching an upgraded session keeps its legacy durable prefix unchanged 11ms
+ ❯ packages/core/src/runtime/effective-config.test.ts (14 tests | 1 failed) 40ms
+     ✓ createSession persists the effective config; runTurn enforces it (write denied) 12ms
+     ✓ resume on a fresh runtime still enforces the snapshot (persisted restriction) 3ms
+     ✓ a later registry widening cannot change a running session's policy 1ms
+     ✓ legacy sessions without a snapshot fall back to the registry agent (backward compat) 2ms
+     ✓ a corrupt effective-agent snapshot fails closed (no base-agent fallback) 1ms
+     ✓ a snapshot whose agentId mismatches the session fails closed 1ms
+     ✓ session.created fires after the snapshot is persisted 0ms
+     ✓ mutating the caller's agent after createSession cannot change the frozen policy 0ms
+   ✓ a restarted owner with new registry identities retains the original cosmetic role and frozen policy 2ms
+   ✓ legacy and mismatched cosmetic records do not replace a frozen agent policy 2ms
+     ✓ re-freezes the effective-agent model and the session row for later turns 1ms
+     ✓ fails closed for a missing, corrupt, or foreign effective-agent snapshot 2ms
+     ✓ rejects an empty or unknown model reference instead of clearing the frozen model 0ms
+   × review PR11: a rejected model selection preserves the previous effective model 9ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  apps/web/src/deepseek/projections.test.ts > review PR11: switching an upgraded session keeps its legacy durable prefix unchanged
+AssertionError: expected [ …(8) ] to deeply equal [ …(8) ]
+
+- Expected
++ Received
+
+@@ -70,12 +70,12 @@
+            ],
+            "id": "message_9c1f1923-db1f-48a5-bf5a-ed1b60d4aa74",
+            "role": "assistant",
+            "source": {
+              "kind": "model",
+-             "model": "coding",
+-             "provider": "loopback",
++             "model": "new-model",
++             "provider": "new-route",
+            },
+          },
+          "step": 1,
+          "stream": [
+            {
+
+ ❯ apps/web/src/deepseek/projections.test.ts:362:57
+    360|   f.session.model = { providerId: "new-route", modelId: "new-model" };
+    361|   const after = f.project();
+    362|   expect(after.records.slice(0, before.records.length)).toEqual(before…
+       |                                                         ^
+    363| });
+    364|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  packages/core/src/runtime/effective-config.test.ts > review PR11: a rejected model selection preserves the previous effective model
+AssertionError: expected { providerId: 'next-route', …(1) } to deeply equal { providerId: 'scripted', …(1) }
+
+- Expected
++ Received
+
+  {
+-   "modelId": "scripted-model",
+-   "providerId": "scripted",
++   "modelId": "next-model",
++   "providerId": "next-route",
+  }
+
+ ❯ packages/core/src/runtime/effective-config.test.ts:314:61
+    312|     .rejects.toThrow("durable row write failure");
+    313|   expect((await store.getSession(session.id))!.model).toEqual(before.m…
+    314|   expect((await runtime.getSessionAgent(session.id)).model).toEqual(be…
+       |                                                             ^
+    315| });
+    316|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  2 failed | 25 passed (27)
+   Start at  11:44:02
+   Duration  1.58s (transform 923ms, setup 0ms, import 1.21s, tests 92ms, environment 0ms)
+

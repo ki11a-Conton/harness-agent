@@ -183,3 +183,6 @@ apps/web/public/deepseek/harness-brand/plugins/dsh-client-ui-sidebar-right/clien
 # reproducing -- the same failure mode R12 and R94 fixed for their own fixtures.
 benchmarks/coding-repositories-v1/** text eol=lf
 benchmarks/r98-fixtures/** text eol=lf
+
+# Preserve original PR review counterexamples and CI receipts byte-for-byte.
+docs/evidence/pr-review-20261017/** -text -whitespace

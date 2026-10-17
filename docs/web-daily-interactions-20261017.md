@@ -247,3 +247,14 @@ Windows 39027508288 均完整成功，包含真实 Windows/Ubuntu 同包 UI/CLI�
 main 的四工作流和十项主 CI 必须按其精确 SHA 独立完成，候选不替代最终 main。
 后续用户追加的剩余 PR 审查另行留证，先核对是否已被现有修复覆盖再决定合并。
 真实付费模型质量、完整默认 UI parity 和本地强沙箱内 PTY 执行仍未证明。
+
+
+## UI 修复 main 的最终 CI 复核
+
+main `3b3f4e9f81c19fa9f93f440d4b8ab7184d60a414` 的首次四工作流均完整成功，
+主 CI 十项全部成功，包括真实 Windows、双平台安装 UI/CLI 与发布证明。
+各 workflow/job 的源码与 attempt 已逐项复核，原件见
+[精确 CI 记录](evidence/pr-review-20261017/ui-main-3b3f4e9f/README.md)。
+随后用户追加的 PR 审查见 [审查与合入报告](pr-remaining-review-20261017.md)；
+可用项只改文档、属性及删除生成物，运行时代码保持本轮修复；最终组合提交
+仍按其新 SHA 独立复核，不用本次结果替代。未发布 release。

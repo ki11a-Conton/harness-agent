@@ -1,0 +1,111 @@
+diff --git a/apps/web/src/deepseek/composition.integration.test.ts b/apps/web/src/deepseek/composition.integration.test.ts
+index 343b4665..c90b5203 100644
+--- a/apps/web/src/deepseek/composition.integration.test.ts
++++ b/apps/web/src/deepseek/composition.integration.test.ts
+@@ -251,3 +251,63 @@ it("repeated memory-only draft selection runs the selected HTTP model and freeze
+   expect((await stack.composition.harness.store.listMessages(id)).some(message => message.content === "actual memory model answer")).toBe(true);
+   await expect(stack.composition.catalog.call("session/selectModel", { request: { sessionId: id, provider: "review", model: "model-b" } }, signal())).rejects.toMatchObject({ code: "session/model-frozen" });
+ });
++
++
++it("review PR13: an idle real Web owner must not replay the full physical journal per events poll", async () => {
++  const stack = await fixture(); const id = await stack.createSession();
++  const owner = await stack.composition.owners.ownerOf(id);
++  const list = owner.events.list.bind(owner.events); let fullPhysicalReads = 0;
++  let observed!: () => void; const fourReads = new Promise<void>(done => { observed = done; });
++  const spy = vi.spyOn(owner.events, "list").mockImplementation(async (sid, options) => {
++    if (options?.afterSequence === undefined) {
++      fullPhysicalReads += 1; if (fullPhysicalReads >= 4) observed();
++    }
++    return list(sid, options);
++  });
++  const { createEventsService } = await import("./events.js");
++  const service = createEventsService({ harness: stack.composition.harness, pollDelayMs: 1,
++    answerAsk: async () => { throw new Error("unused"); } });
++  const controller = new AbortController();
++  const running = (async () => { for await (const _frame of service.stream("$events", {}, controller.signal)) {} })();
++  let timer: ReturnType<typeof setTimeout> | undefined;
++  try {
++    await Promise.race([fourReads, new Promise<void>(done => { timer = setTimeout(done, 250); })]);
++  } finally {
++    if (timer !== undefined) clearTimeout(timer);
++    controller.abort(); await running.catch(error => { if (error?.name !== "AbortError") throw error; }); spy.mockRestore();
++  }
++  expect(fullPhysicalReads).toBeLessThanOrEqual(1);
++});
++
++it("review PR13: an idle replaced stable draft owner must not replay the full physical journal per events poll", async () => {
++  const stack = await fixture(); const id = await stack.createSession();
++  await stack.composition.catalog.call("credentials/set", { ref: "REVIEW_OWNER_ROUTE", value: "synthetic-local-provider-key" }, signal());
++  await stack.composition.catalog.call("settings/update", { ns: "llm-pi-ai", patch: { providers: { review: {
++    api: "openai-completions", baseURL: "http://127.0.0.1:1/v1", apiKeyEnv: "REVIEW_OWNER_ROUTE",
++    models: [{ id: "review-model" }],
++  } } } }, signal());
++  await stack.composition.owners.selectModel(id, { providerKey: "review", modelId: "review-model" }, signal());
++  expect(stack.composition.owners.nativeSessionId(id)).not.toBe(id);
++  const owner = await stack.composition.owners.ownerOf(id);
++  const list = owner.events.list.bind(owner.events); let fullPhysicalReads = 0;
++  let observed!: () => void; const fourReads = new Promise<void>(done => { observed = done; });
++  const spy = vi.spyOn(owner.events, "list").mockImplementation(async (sid, options) => {
++    if (options?.afterSequence === undefined) {
++      fullPhysicalReads += 1; if (fullPhysicalReads >= 4) observed();
++    }
++    return list(sid, options);
++  });
++  const { createEventsService } = await import("./events.js");
++  const service = createEventsService({ harness: stack.composition.harness, pollDelayMs: 1,
++    answerAsk: async () => { throw new Error("unused"); } });
++  const controller = new AbortController();
++  const running = (async () => { for await (const _frame of service.stream("$events", {}, controller.signal)) {} })();
++  let timer: ReturnType<typeof setTimeout> | undefined;
++  try {
++    await Promise.race([fourReads, new Promise<void>(done => { timer = setTimeout(done, 250); })]);
++  } finally {
++    if (timer !== undefined) clearTimeout(timer);
++    controller.abort(); await running.catch(error => { if (error?.name !== "AbortError") throw error; }); spy.mockRestore();
++  }
++  expect(fullPhysicalReads).toBeLessThanOrEqual(1);
++});
+diff --git a/packages/core/src/runtime/runtime-policy-drift.test.ts b/packages/core/src/runtime/runtime-policy-drift.test.ts
+index 637ce5e0..49826a73 100644
+--- a/packages/core/src/runtime/runtime-policy-drift.test.ts
++++ b/packages/core/src/runtime/runtime-policy-drift.test.ts
+@@ -227,3 +227,15 @@ describe("PKG-003: the safe-resume gate observes every frozen runtime policy dim
+     expect(await driftEvents(events, sessionId)).toHaveLength(0);
+   });
+ });
++
++
++it("review PR13: observes askOn drift when the configured retry cap exceeds eight", async () => {
++  const before = new RecoveryPolicy({ maxAttempts: 16 });
++  const after = new RecoveryPolicy({ maxAttempts: 16, askOn: new Set(["tool_failure"] as const) });
++  expect(before.decide("tool_failure", 16).action).toBe("fail_safe");
++  expect(after.decide("tool_failure", 16).action).toBe("ask");
++  const { sessionId, events } = await resumeWithDriftedPolicy({ recovery: before }, { recovery: after });
++  const drift = await driftEvents(events, sessionId);
++  expect(drift).toHaveLength(1);
++  expect(drift[0]!.payload.retryPolicyChanged).toBe(true);
++});
+diff --git a/packages/harness/src/config-drift-create-session.test.ts b/packages/harness/src/config-drift-create-session.test.ts
+index b00d81cc..e19206dc 100644
+--- a/packages/harness/src/config-drift-create-session.test.ts
++++ b/packages/harness/src/config-drift-create-session.test.ts
+@@ -98,3 +98,18 @@ describe("PKG-001: the config-drift baseline is frozen at session creation", ()
+     }
+   });
+ });
++
++
++it("review PR13: failure to persist the initial drift baseline must not publish a runnable session", async () => {
++  const dir = await dataDir(); const harness = await createHarness(config(dir, 50));
++  try {
++    const save = harness.store.saveStateSnapshot.bind(harness.store);
++    harness.store.saveStateSnapshot = async (id, snapshot) => {
++      if (snapshot["p27.configFingerprint"] !== undefined) throw new Error("review simulated fingerprint write failure");
++      return save(id, snapshot);
++    };
++    await expect(harness.sessionService.create({ agentId: harness.agents[0]!.id,
++      model: harness.agents[0]!.model, cwd: harness.config.cwd })).rejects.toThrow("fingerprint write failure");
++    expect((await harness.store.listSessions()).filter(session => session.status !== "failed")).toEqual([]);
++  } finally { await harness.close(); }
++});
