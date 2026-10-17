@@ -1,11 +1,15 @@
 /** Reviewed deterministic UI derivatives; upstream bytes remain frozen. */
 import { createHash } from 'node:crypto';
+import { guardConversationNavigation, guardWorkspaceNavigation } from './web-navigation-ui.mjs';
 
 export const brandedModules = Object.freeze([
   'dsh-client-ui-brand-official', 'dsh-client-ui-layout', 'dsh-client-ui-plugin-manager',
   'dsh-client-ui-settings-models', 'dsh-client-ui-settings-account', 'dsh-client-ui-sidebar-documentpreview',
   'dsh-client-ui-conversation',
+  'dsh-client-ui-chat',
   'dsh-client-ui-workspace',
+  'dsh-client-ui-sidebar-right',
+  'dsh-api-terminal-controller',
   'dsh-client-connection',
   'dsh-client-ui-settings-general',
 ]);
@@ -44,13 +48,38 @@ export function deriveBrandModule(stem, original) {
   if (!brandedModules.includes(stem)) throw new Error('Unreviewed branding module: ' + stem);
   if (stem === 'dsh-client-ui-brand-official') return Buffer.from(brandModule);
   let source = original.toString('utf8');
-  if (!['dsh-client-ui-conversation', 'dsh-client-ui-workspace', 'dsh-client-connection', 'dsh-client-ui-settings-general'].includes(stem) && !source.includes('DeepSeek Harness')) throw new Error('Branding source changed: ' + stem);
+  if (!['dsh-client-ui-conversation', 'dsh-client-ui-chat', 'dsh-client-ui-workspace', 'dsh-client-ui-sidebar-right', 'dsh-api-terminal-controller', 'dsh-client-connection', 'dsh-client-ui-settings-general'].includes(stem) && !source.includes('DeepSeek Harness')) throw new Error('Branding source changed: ' + stem);
   source = source.replaceAll('DeepSeek Harness', 'Harness Agent');
+  if (stem === 'dsh-client-ui-chat') {
+    const marker = 'className: TurnUsagePanel_module_css_default.trigger,';
+    if (source.split(marker).length !== 2) throw new Error('Expected exactly one turn usage trigger');
+    // The responsive stylesheet hides the visible label below 480px. Keep the
+    // same localized name available to assistive technology and as a tooltip.
+    source = source.replace(marker, marker + '\n\t\t\t\t\t"aria-label": t("message.turnUsage.consumed", { total }),\n\t\t\t\t\ttitle: t("message.turnUsage.consumed", { total }),');
+  }
+  if (stem === 'dsh-api-terminal-controller') {
+    const marker = ' : failure?.code === "terminal/unavailable" ? "missingTerminal" : void 0;';
+    if (source.split(marker).length !== 2) throw new Error('Expected exactly one terminal failure classification boundary');
+    // Native view/list recovery already emits the explicit missingTerminal
+    // issue. Confinement, shell and allocation failures need their real reason.
+    source = source.replace(marker, ' : void 0;');
+  }
+  if (stem === 'dsh-client-ui-sidebar-right') {
+    const marker = 'console.error("Sidebar Session opening failed:", error);';
+    if (source.split(marker).length !== 2) throw new Error('Expected exactly one sidebar readiness error boundary');
+    source = source.replace(marker, 'if (!this.disposed) ' + marker);
+  }
   if (stem === 'dsh-client-ui-settings-general') {
     for (const pattern of ['connectingShownAt.current = Date.now();', 'const remaining = CONNECTING_MIN_VISIBLE_MS - (Date.now() - shownAt);']) {
       if (source.split(pattern).length !== 2) throw new Error('Expected exactly one connection indicator clock boundary');
       source = source.replace(pattern, pattern.replace('Date.now()', 'performance.now()'));
     }
+    const onboarding = ': onboardingActive ? onboardingSteps.find((step) => !completedOnboarding.has(step.id)) : void 0;';
+    if (source.split(onboarding).length !== 2) throw new Error('Expected exactly one automatic onboarding selection');
+    // A late blank-session projection can activate a registered step that
+    // renders null (already configured). Do not dismiss a user-owned settings
+    // edit. Automatic setup resumes after closing; explicit requests still win.
+    source = source.replace(onboarding, ': onboardingActive && !open ? onboardingSteps.find((step) => !completedOnboarding.has(step.id)) : void 0;');
   }
   if (stem === 'dsh-client-connection') {
     const declaration = 'function watchBrowserNetwork(controller) {';
@@ -65,6 +94,7 @@ export function deriveBrandModule(stem, original) {
     for (const pattern of [open, clear]) if (source.split(pattern).length !== 2) throw new Error('Expected exactly one workspace navigation boundary');
     source = source.replace(open, 'openSession(target) {\n\t\t\t\tconst navigation = AbortSignal.any([this.ctx.layout.beginNavigation(), this.lifetime.signal]);\n\t\t\t\tthis.replaceMain(target, navigation, "reveal");');
     source = source.replace(clear, 'clearMain() {\n\t\t\t\tthis.ctx.layout.beginNavigation();\n\t\t\t\tconst previous = this.mainReference;');
+    source = guardWorkspaceNavigation(source);
   }
   if (stem === 'dsh-client-ui-conversation') {
     const badge = /, \(0, react_jsx_runtime\.jsx\)\("span", \{\s*className: HeroShell_module_css_default\.previewBadge,\s*children: t\("hero\.preview"\)\s*\}\)/g;
@@ -77,6 +107,7 @@ export function deriveBrandModule(stem, original) {
     source = source.replace(state, state + '\n\t\t\tconst workspaceSelection = (0, react.useRef)(0);\n\t\t\tconst [workspaceSelectionPending, setWorkspaceSelectionPending] = (0, react.useState)(false);');
     source = source.replace(pending, 'const selection = ++workspaceSelection.current;\n\t\t\t\t\t\t\tsetWorkspaceSelectionPending(true);\n\t\t\t\t\t\t\tselectWorkspace(workspaceId).catch(() => {\n\t\t\t\t\t\t\t\tsetPendingWorkspaceId((current) => current === workspaceId ? void 0 : current);\n\t\t\t\t\t\t\t}).finally(() => {\n\t\t\t\t\t\t\t\tif (selection === workspaceSelection.current) setWorkspaceSelectionPending(false);\n\t\t\t\t\t\t\t});');
     source = source.replace(inert, 'const inert = workspaceSelectionPending || sessionId === void 0 || hero && chipTitle === void 0;');
+    source = guardConversationNavigation(source);
   }
   if (stem === 'dsh-client-ui-settings-models') {
     let replaced = 0;
@@ -97,7 +128,7 @@ export function deriveBrandModule(stem, original) {
   }
   // Derived files have their own provenance, rather than claiming an original source map.
   source = source.replace(/\n\/\/# sourceMappingURL=[^\n]+/g, '');
-  const kind = ['dsh-client-ui-conversation', 'dsh-client-ui-workspace', 'dsh-client-connection', 'dsh-client-ui-settings-general'].includes(stem) ? 'UI' : 'presentation';
+  const kind = ['dsh-client-ui-conversation', 'dsh-client-ui-chat', 'dsh-client-ui-workspace', 'dsh-client-ui-sidebar-right', 'dsh-api-terminal-controller', 'dsh-client-connection', 'dsh-client-ui-settings-general'].includes(stem) ? 'UI' : 'presentation';
   return Buffer.from(`// Harness Agent ${kind} derivative; original retained under plugins/.\n` + source);
 }
 

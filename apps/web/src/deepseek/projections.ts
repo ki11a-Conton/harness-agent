@@ -104,9 +104,18 @@ export interface SessionProjectionInput {
   /** Read messages before events, so every visible message has its complete event prefix. */
   readonly messages: readonly Message[];
   readonly events: readonly AgentEvent[];
+  /** Declared baseline of the source-event coordinate space, defaulting to 0.
+   *
+   * Complete journals, including concatenated retired-owner prefixes, start at
+   * 0. Only a caller with an independently established bounded range may declare
+   * another baseline; never infer one from the first event received. Interior
+   * gaps remain invalid, and browser session services always use the default. */
+  readonly sourceBaseline?: number;
   readonly title?: string;
   /** Accepted prompt correlation, keyed by durable message id or inbox prompt id. */
   readonly requestIds?: Readonly<Record<string, string>>;
+  /** Local host presentation for user input; never changes journal anchoring or model content. */
+  readonly displayTexts?: Readonly<Record<string, string>>;
   /** Actual persisted children whose parent identity has been checked. */
   readonly children?: readonly Session[];
 }
@@ -213,7 +222,8 @@ export function projectSessionHistory(input: SessionProjectionInput): PageProjec
     // model history. Its model contract forbids exposing that internal field
     // as user-facing output; official thinking renderers remain installed but
     // receive no invented or recovered hidden reasoning blocks.
-    if (message.content !== "") content.push({ type: "text", text: message.content });
+    const text = message.role === "user" ? input.displayTexts?.[message.id] ?? message.content : message.content;
+    if (text !== "") content.push({ type: "text", text });
     for (const call of message.toolCalls ?? []) content.push({ type: "tool-call", id: call.id, name: call.name, arguments: JSON.stringify(call.args) });
     return content;
   }
@@ -231,7 +241,7 @@ export function projectSessionHistory(input: SessionProjectionInput): PageProjec
     if (message.role === "user") {
       append("user/message", message.createdAt, wireMessage, true);
       lastPromptAt = message.createdAt;
-      if (title === null) title = message.content.replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      if (title === null) title = (input.displayTexts?.[message.id] ?? message.content).replace(/\s+/g, " ").trim().slice(0, 80) || null;
     } else if (message.role === "assistant") {
       // The provenance recorded when the response was produced, never the
       // session row: a live model switch must not relabel published history.
@@ -528,10 +538,20 @@ function planMessageAnchors(input: SessionProjectionInput): AnchorPlan {
 
 function validateSources(input: SessionProjectionInput): void {
   const eventIds = new Set<string>();
+  // A declared range is distinct from a full journal. Production session reads
+  // do not derive this value from unvalidated input.
+  const baseline = input.sourceBaseline ?? 0;
+  if (!Number.isSafeInteger(baseline) || baseline < 0 || Object.is(baseline, -0)) {
+    throw new Error(`source event baseline must be a non-negative safe integer, received ${baseline}`);
+  }
+  if (input.events.length > 0 && input.events[0]!.sequence !== baseline) {
+    throw new Error(`source event sequence is not contiguous: expected ${baseline}, received ${input.events[0]!.sequence}`);
+  }
   for (let index = 0; index < input.events.length; index++) {
     const event = input.events[index]!;
+    if (!Number.isSafeInteger(event.sequence)) throw new Error(`source event sequence must be a safe integer, received ${event.sequence}`);
     if (event.sessionId !== input.session.id) throw new Error(`event ${event.id} belongs to another session`);
-    if (event.sequence !== index || Object.is(event.sequence, -0)) throw new Error(`source event sequence is not contiguous: expected ${index}, received ${event.sequence}`);
+    if (event.sequence !== baseline + index || Object.is(event.sequence, -0)) throw new Error(`source event sequence is not contiguous: expected ${baseline + index}, received ${event.sequence}`);
     if (eventIds.has(event.id)) throw new Error(`duplicate source event id ${event.id}`);
     eventIds.add(event.id);
     if (!Number.isSafeInteger(event.timestamp)) throw new Error(`event ${event.id} has an invalid timestamp`);

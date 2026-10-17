@@ -1,0 +1,153 @@
+{
+  "status": "PASS",
+  "scope": "unmodified official UI, real production Web main, local HTTP fixture; not paid model quality",
+  "origin": "http://127.0.0.1:33909",
+  "providerOrigin": "http://127.0.0.1:41525/v1",
+  "runnerSha256": "e21c66eaaad6e8bbf7c23fa93aae0be197fc228bead64b8b32c859e17baf7e9d",
+  "node": "v24.19.0",
+  "playwrightVersion": "1.55.1",
+  "paidModelCalls": 0,
+  "loopbackRequests": 1,
+  "launches": [
+    {
+      "at": "2026-10-17T04:21:21.057Z",
+      "artifacts": {
+        "apps/web/dist/main.js": "68df6341e17af56910567bb67fcf4ebe08a7b1d3d990db2613b0e95c274f6e02",
+        "apps/web/dist/deepseek/catalog.js": "5872cd278edaee033b053630a32752f626679c90f840890f1454e3618c321bb2",
+        "apps/web/dist/deepseek/composition.js": "b8c2f0d076cc80903a6487a7cd8ac322a4958e920d8d80a723e1ebddd1405ff7",
+        "apps/web/dist/deepseek/owners.js": "c190319285f0c4baf469018918cd65ccbb9098178410dc71da2b3698dbb1dc14",
+        "apps/web/dist/deepseek/session.js": "efc7b455c7b9f1d1a5999d514d5a3cf91e69c996b2d3c5af4bb2ef52edc4de76",
+        "packages/core/dist/runtime/runtime.js": "38662949fa3a10c820f541eff923ccb9130b2b557dba656a78b92589d8c4290b",
+        "packages/core/dist/runtime/session-actor.js": "5bb8d46eddd9d738b3f09c63fb8ad3c7f974d273a41d72562f097e085a7cf81b"
+      }
+    },
+    {
+      "at": "2026-10-17T04:22:03.893Z",
+      "artifacts": {
+        "apps/web/dist/main.js": "68df6341e17af56910567bb67fcf4ebe08a7b1d3d990db2613b0e95c274f6e02",
+        "apps/web/dist/deepseek/catalog.js": "5872cd278edaee033b053630a32752f626679c90f840890f1454e3618c321bb2",
+        "apps/web/dist/deepseek/composition.js": "b8c2f0d076cc80903a6487a7cd8ac322a4958e920d8d80a723e1ebddd1405ff7",
+        "apps/web/dist/deepseek/owners.js": "c190319285f0c4baf469018918cd65ccbb9098178410dc71da2b3698dbb1dc14",
+        "apps/web/dist/deepseek/session.js": "efc7b455c7b9f1d1a5999d514d5a3cf91e69c996b2d3c5af4bb2ef52edc4de76",
+        "packages/core/dist/runtime/runtime.js": "38662949fa3a10c820f541eff923ccb9130b2b557dba656a78b92589d8c4290b",
+        "packages/core/dist/runtime/session-actor.js": "5bb8d46eddd9d738b3f09c63fb8ad3c7f974d273a41d72562f097e085a7cf81b"
+      }
+    }
+  ],
+  "fingerprints": {
+    "apps/web/src/deepseek/catalog.ts": "78e0954adc26743e2c18a4d0a3d70d359ee6e372eb73f885ad703a4638911c23",
+    "apps/web/src/deepseek/composition.ts": "4ddda1a87cb79b32fbac8ec23a2c96fd95a0afb03b296502c6e9fdcb70a596dc",
+    "apps/web/src/deepseek/owners.ts": "2b9cbf3384c250426e6341b56a48f887c2f54b0d3531fcd98747970f71caeab3",
+    "apps/web/src/deepseek/session.ts": "0d31e66503ed98e10872ca40bce274a0ad69f478315fc93ce354c12c63d5496c",
+    "apps/web/src/deepseek/projections.ts": "86ae245e28d3a37d4e9cc90fd8fadc939a0bc15e6b95cd4310d299bec8bad7f9",
+    "apps/web/src/main.ts": "f97cc5ff476e5aad75c16218c9338c88b744041ed877e421adad16dbc4f66fac",
+    "packages/core/src/runtime/runtime.ts": "fb806edf61de36800b08ab2669b4ae91c9946a7feb03a389eedd7a88239cf30f",
+    "packages/core/src/runtime/session-actor.ts": "fc3698dc863dc72002b15eff1382701f531541784d6c66055477741616799ed7"
+  },
+  "screenshots": [
+    {
+      "name": "selected-model-two-tabs",
+      "status": "PASS"
+    },
+    {
+      "name": "started-selection-refused",
+      "status": "BLOCKED",
+      "message": "TimeoutError: page.screenshot: Timeout 8000ms exceeded.\nCall log:\n\u001b[2m  - taking page screenshot\u001b[22m\n\u001b[2m    - disabled all CSS animations\u001b[22m\n\u001b[2m  - waiting for fonts to load...\u001b[22m\n\u001b[2m  - fonts loaded\u001b[22m\n"
+    },
+    {
+      "name": "restart-selection",
+      "status": "PASS"
+    }
+  ],
+  "assertions": [
+    {
+      "name": "startup opens the composer without Preview Notice",
+      "status": "PASS"
+    },
+    {
+      "name": "official browser booted with production carrier",
+      "status": "PASS"
+    },
+    {
+      "name": "official Models form persisted a real adapter profile",
+      "status": "PASS"
+    },
+    {
+      "name": "official key form stored only a credential reference in profile",
+      "status": "PASS"
+    },
+    {
+      "name": "official theme and font controls persisted to host settings",
+      "status": "PASS"
+    },
+    {
+      "name": "official Work details and Performance controls persisted to ui-chat",
+      "status": "PASS"
+    },
+    {
+      "name": "startup opens the composer without Preview Notice",
+      "status": "PASS"
+    },
+    {
+      "name": "official composer and second tab show committed selected model",
+      "status": "PASS"
+    },
+    {
+      "name": "authoritative projection.next matches selected route/model",
+      "status": "PASS"
+    },
+    {
+      "name": "existing follow stream received the durable newer model/selection event",
+      "status": "PASS"
+    },
+    {
+      "name": "model switch retained every previously committed history record",
+      "status": "PASS"
+    },
+    {
+      "name": "real production HTTP turn used selected alternate model",
+      "status": "PASS"
+    },
+    {
+      "name": "started-session selection visibly rejects and preserves native owner",
+      "status": "PASS"
+    },
+    {
+      "name": "startup opens the composer without Preview Notice",
+      "status": "PASS"
+    },
+    {
+      "name": "real process restart rehydrates stable session and model selection",
+      "status": "PASS"
+    },
+    {
+      "name": "real process restart retains the actual native role label",
+      "status": "PASS"
+    },
+    {
+      "name": "real process restart retains actual official chat preference writes",
+      "status": "PASS"
+    },
+    {
+      "name": "restart retained previously committed history prefix",
+      "status": "PASS"
+    },
+    {
+      "name": "both process launches used identical captured production artifact fingerprints",
+      "status": "PASS"
+    },
+    {
+      "name": "browser has no uncaught errors",
+      "status": "PASS",
+      "details": []
+    },
+    {
+      "name": "paid model calls remained zero",
+      "status": "PASS",
+      "details": {
+        "paidModelCalls": 0,
+        "loopbackRequests": 1
+      }
+    }
+  ]
+}

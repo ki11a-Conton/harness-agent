@@ -1,0 +1,23 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-exec-diagnostics-20261016
+
+stdout | packages/harness/src/exec-diagnostics.integration.test.ts > 'typescript': real failed command diagnostics reach the next actual provider request
+EXEC_DIAGNOSTIC_REPLAY {"case":"typescript","exitCode":1,"providerRequests":2,"diagnosticVisible":true,"toolMessageBytes":4356,"paidCalls":0}
+
+stdout | packages/harness/src/exec-diagnostics.integration.test.ts > 'syntax': real failed command diagnostics reach the next actual provider request
+EXEC_DIAGNOSTIC_REPLAY {"case":"syntax","exitCode":1,"providerRequests":2,"diagnosticVisible":true,"toolMessageBytes":4356,"paidCalls":0}
+
+stdout | packages/harness/src/exec-diagnostics.integration.test.ts > 'test': real failed command diagnostics reach the next actual provider request
+EXEC_DIAGNOSTIC_REPLAY {"case":"test","exitCode":1,"providerRequests":2,"diagnosticVisible":true,"toolMessageBytes":4356,"paidCalls":0}
+
+ ✓ packages/harness/src/exec-diagnostics.integration.test.ts (3 tests) 3846ms
+   ✓ 'typescript': real failed command diagnostics reach the next actual provider request  1374ms
+   ✓ 'syntax': real failed command diagnostics reach the next actual provider request  1194ms
+   ✓ 'test': real failed command diagnostics reach the next actual provider request  1276ms
+
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+   Start at  09:37:10
+   Duration  8.21s (transform 3.30s, setup 0ms, import 4.06s, tests 3.85s, environment 0ms)
+
+JSON report written to /tmp/harness-exec-diagnostics-20261016/candidate-framework.json

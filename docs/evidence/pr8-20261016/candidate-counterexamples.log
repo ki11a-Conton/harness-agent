@@ -1,0 +1,138 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-pr8-review-20261016
+
+[harness] context budget: model capabilities unknown for scripted/old-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/old-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/old-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/one — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/two — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/old-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/old-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/new-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/old-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/old-model — using conservative fallback 32000
+stdout | apps/web/test-infra/pr8-review-20261016/acceptance.test.ts > offset=7 holds an unbound queue promotion until its durable binding
+PR8_QUEUE_WITNESS {"offset":7,"earlyCursor":2,"snapshotCursor":0,"early":{"type":"user/message","seq":2,"time":1792122439793,"data":{"id":"message_a6f74fbe-c104-4ab9-bf17-76d535ce0a1d","role":"user","content":[{"type":"text","text":"Bound prompt only"}],"source":{"kind":"user"}},"surfaceOp":"append"},"late":{"type":"user/message","seq":2,"time":1792122439793,"data":{"id":"message_a6f74fbe-c104-4ab9-bf17-76d535ce0a1d","role":"user","content":[{"type":"text","text":"Bound prompt only"}],"source":{"kind":"user","rpcId":"review-pr8"}},"surfaceOp":"append"}}
+
+ ❯ apps/web/test-infra/pr8-review-20261016/acceptance.test.ts (5 tests | 3 failed) 123ms
+   × rejects a missing first event in an ordinary native session through the actual session service 35ms
+   × rejects a missing retired-owner prefix through the actual owner facade and session service 23ms
+   × offset=7 holds an unbound queue promotion until its durable binding 8ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  apps/web/test-infra/pr8-review-20261016/acceptance.test.ts > rejects a missing first event in an ordinary native session through the actual session service
+AssertionError: promise resolved "{ asOfSeq: +0, values: { …(7) } }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "asOfSeq": 0,
++   "values": {
++     "agentPreset": "main",
++     "modelSelection": {
++       "lastUsed": null,
++       "next": {
++         "model": "old-model",
++         "provider": "scripted",
++       },
++     },
++     "sessionListMetadata": {
++       "blank": true,
++       "lastPromptAt": null,
++     },
++     "subagentCatalog": [],
++     "title": null,
++     "todos": null,
++     "turnBoundary": {
++       "lastStepBoundary": null,
++       "lastStepStartSeq": null,
++       "lastTurn": 0,
++       "openTurnStartSeq": null,
++     },
++   },
+  }
+
+ ❯ apps/web/test-infra/pr8-review-20261016/acceptance.test.ts:46:75
+     44|     const events = await list(id, options); return id === stack.id && …
+     45|   });
+     46|   await expect(stack.call('session/projections', { sessionId: stack.id…
+       |                                                                           ^
+     47| });
+     48|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  apps/web/test-infra/pr8-review-20261016/acceptance.test.ts > rejects a missing retired-owner prefix through the actual owner facade and session service
+AssertionError: promise resolved "{ asOfSeq: 1, values: { …(7) } }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "asOfSeq": 1,
++   "values": {
++     "agentPreset": "main",
++     "modelSelection": {
++       "lastUsed": null,
++       "next": {
++         "model": "new-model",
++         "provider": "scripted",
++       },
++     },
++     "sessionListMetadata": {
++       "blank": true,
++       "lastPromptAt": null,
++     },
++     "subagentCatalog": [],
++     "title": null,
++     "todos": null,
++     "turnBoundary": {
++       "lastStepBoundary": null,
++       "lastStepStartSeq": null,
++       "lastTurn": 0,
++       "openTurnStartSeq": null,
++     },
++   },
+  }
+
+ ❯ apps/web/test-infra/pr8-review-20261016/acceptance.test.ts:69:75
+     67|   vi.spyOn(oldOwner.events, 'list').mockImplementation(async (id, opti…
+     68|   const visible = await stack.harness.events.list(stack.id); expect(vi…
+     69|   await expect(stack.call('session/projections', { sessionId: stack.id…
+       |                                                                           ^
+     70| });
+     71|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  apps/web/test-infra/pr8-review-20261016/acceptance.test.ts > offset=7 holds an unbound queue promotion until its durable binding
+AssertionError: Unbound turn must stay behind the prior snapshot cursor: expected 2 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 2
+
+ ❯ apps/web/test-infra/pr8-review-20261016/acceptance.test.ts:96:87
+     94|     expect(late?.event.data.source?.rpcId).toBe('review-pr8');
+     95|     console.log('PR8_QUEUE_WITNESS', JSON.stringify({ offset, earlyCur…
+     96|     expect(before.asOfSeq, 'Unbound turn must stay behind the prior sn…
+       |                                                                                       ^
+     97|   } finally { release(); controller.abort(); await stream.return?.(); }
+     98| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 2 passed (5)
+   Start at  03:47:16
+   Duration  3.75s (transform 2.76s, setup 0ms, import 3.49s, tests 123ms, environment 0ms)
+

@@ -1,0 +1,621 @@
+{
+  "id": 1,
+  "label": "settings-document-opener-repro",
+  "code": "await page.getByRole('button',{name:'Choose workspace',exact:true}).click();await page.getByRole('menuitem',{name:'project',exact:true}).click();await page.getByRole('button',{name:'Settings',exact:true}).click();await page.getByRole('button',{name:'Open configuration file',exact:true}).click();await page.getByText('Could not open configuration file',{exact:true}).waitFor();return {visibleNativeOpenerButUnavailable:true,header:await page.getByRole('dialog',{name:'Settings',exact:true}).innerText()};\n",
+  "ok": true,
+  "result": {
+    "visibleNativeOpenerButUnavailable": true,
+    "header": "Settings\nGeneral\nModels\nBuilt-in plugins\nAgent presets\nCould not open configuration file\nOpen configuration file\nClose\nLanguage\nEnglish\nAppearance\nLight\nDark\nSystem\nFont size\nOnly affects conversation content\n14\npx\nWork details\nChoose how much detail to show for tool calls\nDetailed\nShow coding view\nShows trajectory, code diffs, and all Agent presets\nKeyboard shortcuts\n\nView and edit available shortcuts and input actions\n\nEdit shortcuts\nSend behavior while busy\nWhat Enter and the Send button do while the agent is running; Cmd/Ctrl+Enter uses the other behavior\nQueue\nPerformance & usage\nChoose how much performance and usage information to show\nDetailed\nCurrent version: 0.2.1-alpha.1"
+  },
+  "observation": {
+    "url": "http://127.0.0.1:39075/",
+    "title": "Harness Agent",
+    "text": "Harness Agent\nNew Session\nPlugins\nAutomation tasks\nWorkspaces\nproject\nNew Session\nSettings\nInto the Unknown\nproject\nmain\nDescribe what you want to build, / commands, @ files or sessions\nweb-loopback-fixture\nSettings\nGeneral\nModels\nBuilt-in plugins\nAgent presets\nCould not open configuration file\nOpen configuration file\nClose\nLanguage\nEnglish\nAppearance\nLight\nDark\nSystem\nFont size\nOnly affects conversation content\n14\npx\nWork details\nChoose how much detail to show for tool calls\nDetailed\nShow coding view\nShows trajectory, code diffs, and all Agent presets\nKeyboard shortcuts\n\nView and edit available shortcuts and input actions\n\nEdit shortcuts\nSend behavior while busy\nWhat Enter and the Send button do while the agent is running; Cmd/Ctrl+Enter uses the other behavior\nQueue\nPerformance & usage\nChoose how much performance and usage information to show\nDetailed\nCurrent version: 0.2.1-alpha.1",
+    "viewport": {
+      "w": 1440,
+      "h": 900,
+      "scrollW": 1440
+    },
+    "active": {
+      "tag": "BODY",
+      "label": null
+    },
+    "controls": [
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "New session",
+        "title": null,
+        "text": "Harness Agent",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 16,
+          "y": 24,
+          "w": 216,
+          "h": 24
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Collapse sidebar",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 240,
+          "y": 22,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "New session",
+        "title": null,
+        "text": "New Session",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 14,
+          "y": 70,
+          "w": 252,
+          "h": 38
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Plugins",
+        "title": null,
+        "text": "Plugins",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 14,
+          "y": 120,
+          "w": 252,
+          "h": 36
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Automation tasks",
+        "title": null,
+        "text": "Automation tasks",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 14,
+          "y": 160,
+          "w": 252,
+          "h": 36
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Search sessions",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 176,
+          "y": 210,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "INPUT",
+        "role": null,
+        "label": null,
+        "title": null,
+        "text": "",
+        "placeholder": "Search session names",
+        "disabled": false,
+        "checked": false,
+        "box": {
+          "x": 204,
+          "y": 214,
+          "w": 4,
+          "h": 20
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "View options",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 208,
+          "y": 210,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Add workspace",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 240,
+          "y": 210,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Settings",
+        "title": null,
+        "text": "Settings",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 10,
+          "y": 848,
+          "w": 260,
+          "h": 42
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Open right sidebar",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 1400,
+          "y": 11,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Choose workspace",
+        "title": null,
+        "text": "project",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 473,
+          "y": 408,
+          "w": 91,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": null,
+        "title": "Choose the agent preset for your new task",
+        "text": "main",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 568,
+          "y": 408,
+          "w": 82,
+          "h": 28
+        }
+      },
+      {
+        "tag": "DIV",
+        "role": "textbox",
+        "label": "Describe what you want to build, / commands, @ files or sessions",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 469,
+          "y": 452,
+          "w": 770,
+          "h": 52
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Add files or run commands",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 477,
+          "y": 521,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Select model, current web-loopback-fixture",
+        "title": "web-loopback-fixture",
+        "text": "web-loopback-fixture",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 1028,
+          "y": 521,
+          "w": 150,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Send message",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": true,
+        "box": {
+          "x": 1202,
+          "y": 516,
+          "w": 34,
+          "h": 34
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "New tab",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 1454,
+          "y": 10,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Split",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 1982,
+          "y": 10,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Fullscreen",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 2018,
+          "y": 10,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Collapse right sidebar",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 2054,
+          "y": 10,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": null,
+        "title": null,
+        "text": "General",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 332,
+          "y": 114,
+          "w": 164,
+          "h": 40
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": null,
+        "title": null,
+        "text": "Models",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 332,
+          "y": 158,
+          "w": 164,
+          "h": 40
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": null,
+        "title": null,
+        "text": "Built-in plugins",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 332,
+          "y": 202,
+          "w": 164,
+          "h": 40
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": null,
+        "title": null,
+        "text": "Agent presets",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 332,
+          "y": 246,
+          "w": 164,
+          "h": 40
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": null,
+        "title": null,
+        "text": "Open configuration file",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 928,
+          "y": 70,
+          "w": 142,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": null,
+        "title": null,
+        "text": "Close",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 1078,
+          "y": 70,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": null,
+        "title": null,
+        "text": "English",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 996,
+          "y": 120,
+          "w": 100,
+          "h": 36
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": null,
+        "title": null,
+        "text": "Light",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 532,
+          "y": 219,
+          "w": 183,
+          "h": 84
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": null,
+        "title": null,
+        "text": "Dark",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 723,
+          "y": 219,
+          "w": 183,
+          "h": 84
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": null,
+        "title": null,
+        "text": "System",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 913,
+          "y": 219,
+          "w": 183,
+          "h": 84
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Increase font size",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 1048,
+          "y": 345,
+          "w": 17,
+          "h": 12
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Decrease font size",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 1048,
+          "y": 359,
+          "w": 17,
+          "h": 12
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": null,
+        "title": null,
+        "text": "Detailed",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 991,
+          "y": 417,
+          "w": 105,
+          "h": 36
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": "switch",
+        "label": "Show coding view",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 1060,
+          "y": 501,
+          "w": 36,
+          "h": 20
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Edit shortcuts",
+        "title": null,
+        "text": "Edit shortcuts",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 983,
+          "y": 569,
+          "w": 113,
+          "h": 36
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": null,
+        "title": null,
+        "text": "Queue",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 1000,
+          "y": 655,
+          "w": 96,
+          "h": 36
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": null,
+        "title": null,
+        "text": "Detailed",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 991,
+          "y": 741,
+          "w": 105,
+          "h": 36
+        }
+      }
+    ]
+  },
+  "rpc": [
+    {
+      "carrier": "websocket",
+      "endpoint": "session/create",
+      "status": 200,
+      "ok": true,
+      "value": {
+        "sessionId": "session_944153c9-fa83-4a60-b3c8-91c7660142e8"
+      }
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "settings/openSettingsDocument",
+      "status": 400,
+      "ok": false,
+      "error": {
+        "code": "gateway/internal",
+        "message": "The host has no native settings document opener",
+        "details": {}
+      }
+    }
+  ],
+  "errors": [],
+  "screenshot": "/tmp/harness-web-ui-20261016/candidate7/001-settings-document-opener-repro.png"
+}

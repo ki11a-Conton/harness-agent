@@ -37,7 +37,7 @@ async function setup(overrides: Partial<CatalogHost> = {}) {
 it("official settings envelopes rehydrate with the exact Schemastery implementation and expose supported protocols", async () => {
   const stack = await setup();
   const described = await stack.call("settings/describe") as { writable: boolean; hasDocument: boolean; namespaces: Array<{ ns: string; schema: Schema; value: unknown; secrets: unknown[] }> };
-  expect(described).toMatchObject({ writable: true, hasDocument: true });
+  expect(described).toMatchObject({ writable: true, hasDocument: false });
   const models = described.namespaces.find(item => item.ns === "llm-pi-ai")!;
   const root = new Schema(models.schema);
   const profile = root.dict!.providers!.inner!;
@@ -46,6 +46,19 @@ it("official settings envelopes rehydrate with the exact Schemastery implementat
   expect(profile({ api: "openai-completions", models: [{ id: "coding" }] })).toHaveProperty("models.0.id", "coding");
   expect(models.secrets).toEqual([]);
   for (const item of described.namespaces) expect(() => new Schema(item.schema)(item.value)).not.toThrow();
+});
+
+it("advertises a settings document action only with its actual host opener and honors controlled access denial", async () => {
+  const unavailable = await setup();
+  await expect(unavailable.call("settings/openSettingsDocument")).rejects.toMatchObject({ code: "gateway/unavailable" });
+  const opened: string[] = [], available = await setup({ openSettingsDocument: async path => { opened.push(path); } });
+  expect(await available.call("settings/describe")).toMatchObject({ writable: true, hasDocument: true });
+  expect(await available.call("settings/openSettingsDocument")).toEqual({ opened: true });
+  expect(opened).toEqual([join(available.directory, "deepseek/settings.json")]);
+  const denied = await setup({ openSettingsDocument: async path => { opened.push(path); },
+    executeHostTool: async () => ({ status: "denied", error: { code: "PERMISSION_DENIED", message: "Private document denied", retryable: false, safeToRetry: false } }) });
+  await expect(denied.call("settings/openSettingsDocument")).rejects.toMatchObject({ code: "settings/rejected" });
+  expect(opened).toHaveLength(1);
 });
 
 it("the official Preview Continue path owns its exact welcome namespace and persists acknowledgement with a revision fence", async () => {

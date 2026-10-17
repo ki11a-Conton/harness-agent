@@ -1,0 +1,58 @@
+{
+  "mainSha": "95a27dfdc17d14986537ca181fa371bad37e815e",
+  "prNumber": 8,
+  "prHeadSha": "4375388a2d88295de5cbbe1aed06e51d6c1171b3",
+  "mergeBase": "2a141309f01acae3707060faf1fab8aa247ed31d",
+  "recordedAt": "2026-10-16T03:49:19.084609+00:00",
+  "verdict": "CHANGES_REQUIRED",
+  "findings": [
+    "R1: observed first sequence cannot prove a complete authoritative prefix",
+    "R2: admissionBarrier sequence is not an array index under nonzero baseline"
+  ],
+  "localResults": {
+    "candidateExistingWeb": {
+      "exitCode": 0,
+      "passed": 217
+    },
+    "typecheck": {
+      "exitCode": 0
+    },
+    "typecheckProofsInsideSrc": {
+      "exitCode": 0
+    },
+    "security": {
+      "exitCode": 0,
+      "passed": 2146
+    },
+    "candidateCounterexamples": {
+      "exitCode": 1,
+      "failed": 3,
+      "passed": 2,
+      "failureExpected": true
+    },
+    "exactMainControls": {
+      "exitCode": 0,
+      "passed": 4,
+      "skipped": 1,
+      "skipReason": "Main does not accept nonzero-baseline journals; the offset=7 feature test is only run on candidate"
+    },
+    "finalTypecheck": {
+      "exitCode": 0
+    },
+    "docs": {
+      "exitCode": 0
+    }
+  },
+  "testedProductSha256": {
+    "apps/web/src/deepseek/session.ts": "7edf814d60e3a08f5d4588fe89fde3341c6487f54e5236873830fedf2d4d30a5",
+    "apps/web/src/deepseek/projections.ts": "2dd3513220e3ee21e3aa17611555f8130af64f529d481a11bfb93dd87edd9a21"
+  },
+  "paidModelCalls": 0,
+  "limits": [
+    "No new Windows or browser acceptance performed",
+    "No full-repository suite run in this review",
+    "Read-boundary fault injection does not reproduce the user original historic data bytes",
+    "Historical check failures are not attributed to these findings",
+    "Local review candidate only: main/remote PR unchanged"
+  ]
+}

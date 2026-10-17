@@ -1,0 +1,47 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-exec-diagnostics-20261016
+
+stdout | packages/harness/src/exec-diagnostics.integration.test.ts > 'typescript': real failed command diagnostics reach the next actual provider request
+EXEC_DIAGNOSTIC_REPLAY {"case":"typescript","exitCode":1,"providerRequests":2,"diagnosticVisible":false,"toolMessageBytes":4356,"paidCalls":0}
+
+stdout | packages/harness/src/exec-diagnostics.integration.test.ts > 'syntax': real failed command diagnostics reach the next actual provider request
+EXEC_DIAGNOSTIC_REPLAY {"case":"syntax","exitCode":1,"providerRequests":2,"diagnosticVisible":false,"toolMessageBytes":4356,"paidCalls":0}
+
+stdout | packages/harness/src/exec-diagnostics.integration.test.ts > 'test': real failed command diagnostics reach the next actual provider request
+EXEC_DIAGNOSTIC_REPLAY {"case":"test","exitCode":1,"providerRequests":2,"diagnosticVisible":false,"toolMessageBytes":4356,"paidCalls":0}
+
+ ❯ packages/harness/src/exec-diagnostics.integration.test.ts (3 tests | 3 failed) 3464ms
+   × 'typescript': real failed command diagnostics reach the next actual provider request 1364ms
+   × 'syntax': real failed command diagnostics reach the next actual provider request 1110ms
+   × 'test': real failed command diagnostics reach the next actual provider request 989ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/harness/src/exec-diagnostics.integration.test.ts > 'typescript': real failed command diagnostics reach the next actual provider request
+ FAIL  packages/harness/src/exec-diagnostics.integration.test.ts > 'syntax': real failed command diagnostics reach the next actual provider request
+ FAIL  packages/harness/src/exec-diagnostics.integration.test.ts > 'test': real failed command diagnostics reach the next actual provider request
+AssertionError: The real process error was discarded before the provider could inspect it: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ packages/harness/src/exec-diagnostics.integration.test.ts:64:98
+     62|     }
+     63|     expect(toolMessage).toContain('[failed]');
+     64|     expect(visible, 'The real process error was discarded before the p…
+       |                                                                                                  ^
+     65|   } finally { await h.close(); await rm(cwd, { recursive: true, force:…
+     66| }, 30000);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed (3)
+   Start at  09:37:10
+   Duration  7.73s (transform 3.14s, setup 0ms, import 3.89s, tests 3.46s, environment 0ms)
+
+JSON report written to /tmp/harness-exec-diagnostics-20261016/baseline-framework.json

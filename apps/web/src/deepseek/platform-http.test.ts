@@ -62,9 +62,12 @@ describe("Official Web platform HTTP routes", () => {
     const boot = JSON.parse(await readFile(new URL("../../public/deepseek/boot-manifest.json", import.meta.url), "utf8")) as {
       entries: Array<{ id: string; rev: string; url: string; brandOverride?: boolean }>;
     };
-    const derivatives = boot.entries.filter(row => row.brandOverride); expect(derivatives).toHaveLength(10);
+    const derivatives = boot.entries.filter(row => row.brandOverride); expect(derivatives).toHaveLength(13);
     expect(derivatives.map(row => row.id)).toContain("@deepseek-ai/dsh-client-ui-conversation");
+    expect(derivatives.map(row => row.id)).toContain("@deepseek-ai/dsh-client-ui-chat");
     expect(derivatives.map(row => row.id)).toContain("@deepseek-ai/dsh-client-ui-workspace");
+    expect(derivatives.map(row => row.id)).toContain("@deepseek-ai/dsh-client-ui-sidebar-right");
+    expect(derivatives.map(row => row.id)).toContain("@deepseek-ai/dsh-api-terminal-controller");
     expect(derivatives.map(row => row.id)).toContain("@deepseek-ai/dsh-client-connection");
     expect(derivatives.map(row => row.id)).toContain("@deepseek-ai/dsh-client-ui-settings-general");
     for (const row of derivatives) {

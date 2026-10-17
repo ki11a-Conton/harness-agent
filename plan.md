@@ -1,6 +1,16 @@
 # Harness Agent 当前执行计划入口
 
-当前执行任务：[Web 验收子进程关闭](plan(20261015-windows-web-acceptance-shutdown).md)，合同：[WINDOWS-WEB-ACCEPTANCE-SHUTDOWN-20261015](tasks/WINDOWS-WEB-ACCEPTANCE-SHUTDOWN-20261015.md)。main ef0cf955 的 Windows 复核出现临时 cwd 清理 EBUSY；已用真实父/孙进程管道复现 exit 早于 close 的窗口，修正进程所有权与错误保留，并用真实租约预检分配新的持久化 fixture。进程回归5项、实际审查验收21项、类型及安全2146通过；精确提交的完整双平台 CI 继续复核，不发布 release。
+当前执行任务：[剩余 PR 代码审查与安全合入](plan(20261017-115200).md)，合同：[PR-REMAINING-REVIEW-20261017](tasks/PR-REMAINING-REVIEW-20261017.md)。已审查 #11–#14：#12/#14 可合入，#11/#13 的兼容性、持久化、脱敏及真实 owner 性能反例失败，保留开放。安全组合 clean 499bc4e9 全仓 9874/15/0，安全 2146、类型、文档门禁通过；之前 UI main 3b3f4e9f 精确四工作流/十项主 CI 已通过，见[审查报告](docs/pr-remaining-review-20261017.md)。保留原 PR 历史，正常推送后验收最终 main 的全部 CI，不发布 release。
+
+上一任务：[Web 日常交互审查](plan(20261016-234000).md)，合同：[WEB-DAILY-INTERACTIONS-20261016](tasks/WEB-DAILY-INTERACTIONS-20261016.md)。已修复 13 类 UI/宿主/持久化问题，详见[报告](docs/web-daily-interactions-20261017.md)。固定 clean f2788ee5 全仓 9874 通过/15 既有跳过/0 失败；该源码新安装包同包原 UI 30/75、新 UI 42/117、连接恢复 2/10 全部通过，安全 2146 通过。代码一致的 9e0abb1a 候选首次 Windows 专项和双平台安装 UI/CLI CI 成功，见[最新本地证据](docs/evidence/web-ui-20261017/store-final/README.md)与[候选证据](docs/evidence/web-ui-20261017/store-candidate/README.md)。原失败全部保留；归档只改文档证据，最终 main 四工作流/十项主 CI 仍按推送后的精确 SHA 独立复核。用户追加授权审查剩余 PR，逐项对照现有修复后再决定合并，不重复引入或回退已有修正。不调用付费模型，不发布 release。
+
+上一任务：[Coding 命令诊断优化](plan(20261016-164800).md)，合同：[EXEC-DIAGNOSTICS-20261016](tasks/EXEC-DIAGNOSTICS-20261016.md)。main b6a86528 的四个工作流全部成功、主 CI 10/10，均为首次运行。保留 exec 有界诊断尾部，让真实编译、语法和测试失败的最终报错进入下一次 provider 请求；同预算配对基线 0/3 可见、新实现 3/3 可见。固定 clean 432dca23 全仓 9846 通过/15 跳过/0 失败，安全 2146 通过；原 bdd CI 失败和负对照保留。见[实现和验收记录](docs/exec-diagnostics-20261016.md)。
+
+上一任务：[PR #8 安全集成](plan(20261016-162400).md)，合同：[PR8-SAFE-INTEGRATION-20261016](tasks/PR8-SAFE-INTEGRATION-20261016.md)。两项阻塞已修正并合入 main bddf6f64，GitHub 确认 #8 merged=true。生产完整日志不再自动声明首事件基线，owner 严格验证 retired 前缀，队列屏障按源序号过滤。固定 clean c7c3cf9b 全仓 9826 通过/15 跳过/0 失败，真实浏览器中英文 10 项通过；bdd 四个原始工作流已全部结束，主 CI 和 Windows 安装 UI 有实际失败，整体 NOT_GREEN，原因及后续修正在当前任务保留。见[修正记录](docs/pr8-integration-20261016.md)。
+
+上一任务：[PR #8 审查](plan(20261016-114700).md)，合同：[PR8-REVIEW-20261016](tasks/PR8-REVIEW-20261016.md)。发现唯一开放且未审的 #8；已完成四个文件与调用链审查，确认日志前缀缺失被接受和非零坐标下队列屏障失效两项阻塞。原Web217、类型、安全2146通过，但候选反例3失败2通过，精确main对照4通过1跳过。仅在本地review分支保留候选与[审查记录](docs/pr8-review-20261016.md)，不合入main、不发布release；原main95a27dfd保持。
+
+上一任务：[Web 验收子进程关闭](plan(20261015-windows-web-acceptance-shutdown).md)，合同：[WINDOWS-WEB-ACCEPTANCE-SHUTDOWN-20261015](tasks/WINDOWS-WEB-ACCEPTANCE-SHUTDOWN-20261015.md)。main ef0cf955 的 Windows 复核出现临时 cwd 清理 EBUSY；已用真实父/孙进程管道复现 exit 早于 close 的窗口，修正进程所有权与错误保留，并用真实租约预检分配新的持久化 fixture。进程回归5项、实际审查验收21项、类型及安全2146通过；精确提交的完整双平台 CI 继续复核，不发布 release。
 
 上一任务：[Windows 关闭资源收尾](plan(20261015-windows-resource-drain).md)，合同：[WINDOWS-RESOURCE-DRAIN-20261015](tasks/WINDOWS-RESOURCE-DRAIN-20261015.md)。固定源码 `d6e00881dc804371165170c2a9a0697e34ff7b54` 已通过四个原始 CI 工作流，主 CI 十项全部成功，包含真实 Windows、双平台正式/安装/UI 验收；见[最终 CI 复核](docs/evidence/windows-resource-20261015/final-d6e00881/README.md)及[修复报告](docs/windows-resource-drain-20261015.md)。后台关闭竞态、审批/预算同步和功能 fixture 归属已按计划处理。原25s单次超时在60次 Windows 诊断未复现，根因未确立仍保留；本轮未发布 release。主分支归档提交的 CI 另据 GitHub Checks 复核。
 

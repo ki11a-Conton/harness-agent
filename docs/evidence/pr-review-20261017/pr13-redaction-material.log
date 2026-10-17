@@ -1,0 +1,52 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-pr13-review-20261017
+
+ ❯ packages/evaluation/src/pr13-review-redaction.test.ts (2 tests | 2 failed) 14ms
+   × review PR13: retain redaction of valid JWTs whose JSON has whitespace 8ms
+   × review PR13: redact the private key material, not only its PEM header 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/evaluation/src/pr13-review-redaction.test.ts > review PR13: retain redaction of valid JWTs whose JSON has whitespace
+AssertionError: expected 'authorization-token eyJhbGciOiJIUzI1N…' not to contain 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.…'
+
+Expected: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.ewogICJzdWIiOiAic3ludGhldGljLXJldmlldy11c2VyIiwKICAicm9sZSI6ICJ0ZXN0Igp9.rMIb6tTSekea2PPjODf4fN9uRwO5DJpu5YJOIr5z_sE"
+Received: "authorization-token eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.ewogICJzdWIiOiAic3ludGhldGljLXJldmlldy11c2VyIiwKICAicm9sZSI6ICJ0ZXN0Igp9.rMIb6tTSekea2PPjODf4fN9uRwO5DJpu5YJOIr5z_sE"
+
+ ❯ packages/evaluation/src/pr13-review-redaction.test.ts:12:61
+     10|   const token = `${input}.${signature}`;
+     11|   expect(JSON.parse(Buffer.from(payload, "base64url").toString()).sub)…
+     12|   expect(redactSecrets(`authorization-token ${token}`)).not.toContain(…
+       |                                                             ^
+     13| });
+     14|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  packages/evaluation/src/pr13-review-redaction.test.ts > review PR13: redact the private key material, not only its PEM header
+AssertionError: expected '[redacted]\nMC4CAQAwBQYDK2VwBCIEIKHn4…' not to contain 'MC4CAQAwBQYDK2VwBCIEIKHn4sdU+gjc+hABP…'
+
+- Expected
++ Received
+
++ [redacted]
+  MC4CAQAwBQYDK2VwBCIEIKHn4sdU+gjc+hABPx7cP7pEkcPWLl2AOD34KEF5qJx3
++ -----END PRIVATE KEY-----
++
+
+ ❯ packages/evaluation/src/pr13-review-redaction.test.ts:21:34
+     19|   const body = pem.split("\n").filter(line => line && !line.startsWith…
+     20|   expect(body.length).toBeGreaterThan(20);
+     21|   expect(redactSecrets(pem)).not.toContain(body);
+       |                                  ^
+     22| });
+     23|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed (2)
+   Start at  12:12:40
+   Duration  562ms (transform 319ms, setup 0ms, import 413ms, tests 14ms, environment 0ms)
+

@@ -1,0 +1,761 @@
+{
+  "id": 1,
+  "label": "file-split-composer-reachability",
+  "code": "const b=n=>page.getByRole('button',{name:n,exact:true}).filter({visible:true});await b('Choose workspace').click();await page.getByRole('menuitem',{name:'project',exact:true}).click();await page.locator('[data-composer-input=true][contenteditable=true]').waitFor();await b('Open right sidebar').click();await page.getByRole('button',{name:/^Workspace files/}).click();await page.getByText('demo.js',{exact:true}).dblclick();await page.getByRole('tab',{name:/demo\\.js/}).waitFor();if(await b('Split').isEnabled()){await b('Split').click();await page.getByRole('button',{name:/^Workspace files/}).last().click();await page.getByText('README.md',{exact:true}).last().dblclick();await page.getByRole('tab',{name:/README\\.md/}).waitFor();}\nconst input=page.locator('[data-composer-input=true][contenteditable=true]').filter({visible:true});await input.fill('[fixture:read] CODE_WHILE_PREVIEWS_OPEN');const send=b('Send message');const before=await send.evaluate(e=>{const r=e.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return {rect:{x:r.x,y:r.y,w:r.width,h:r.height},covered:hit!==e&&!e.contains(hit),hit:hit?.outerHTML?.slice(0,220)}});await send.click({timeout:6000});await page.getByRole('heading',{name:'Actual Harness browser answer',exact:true}).waitFor({timeout:15000});return{before,successfulRealRead:true,previewTabs:await page.getByRole('tab',{name:/demo\\.js|README\\.md/}).count()};\n",
+  "ok": true,
+  "result": {
+    "before": {
+      "rect": {
+        "x": 727,
+        "y": 516,
+        "w": 34,
+        "h": 34
+      },
+      "covered": false,
+      "hit": "<path d=\"M8.3125 0.980183C8.66767 1.0531 8.97902 1.20418 9.2627 1.43233C9.48724 1.61297 9.73029 1.85793 9.97949 2.10714L14.707 6.83468L13.293 8.24874L9 3.95577V15.0417H7V3.95577L2.70703 8.24874L1.29297 6.83468L6.02051 2."
+    },
+    "successfulRealRead": true,
+    "previewTabs": 2
+  },
+  "observation": {
+    "url": "http://127.0.0.1:44593/",
+    "title": "[fixture:read] CODE_WHILE_PREVIEWS_OPEN — Harness Agent",
+    "text": "Harness Agent\nNew Session\nPlugins\nAutomation tasks\nWorkspaces\nproject\nRunning\n[fixture:read] CODE_WHILE_PREVIEWS_OPEN\nnow\nSettings\n[fixture:read] CODE_WHILE_PREVIEWS_OPEN\nChat\nTrajectory\n[fixture:read] CODE_WHILE_PREVIEWS_OPEN\n04:28\nTool call\nread_file · demo.js\nActual Harness browser answer\n\nBold result and local documentation.\n\nFirst item\nSecond item\nFile\tStatus\ndemo.js\treviewed\njs\nexport const value = 1;\n\nThe actual tool result was received.\n\nDeep diving\nDeep diving for 1s ···\nMessage or run a task, / commands, @ files or sessions\nweb-loopback-fixture\n1 turns 1 steps\nFiles\ndemo.js\n/tmp/harness-web-ui-20261016/candidate9/fixture/project/demo.js\nCode\njavascript\nexport const value = 1;\nFiles\nREADME.md\n/tmp/harness-web-ui-20261016/candidate9/fixture/project/README.md\nMarkdown\nBrowser fixture",
+    "viewport": {
+      "w": 1440,
+      "h": 900,
+      "scrollW": 1440
+    },
+    "active": {
+      "tag": "DIV",
+      "label": "Message or run a task, / commands, @ files or sessions"
+    },
+    "controls": [
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "New session",
+        "title": null,
+        "text": "Harness Agent",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 16,
+          "y": 24,
+          "w": 216,
+          "h": 24
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Collapse sidebar",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 240,
+          "y": 22,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "New session",
+        "title": null,
+        "text": "New Session",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 14,
+          "y": 70,
+          "w": 252,
+          "h": 38
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Plugins",
+        "title": null,
+        "text": "Plugins",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 14,
+          "y": 120,
+          "w": 252,
+          "h": 36
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Automation tasks",
+        "title": null,
+        "text": "Automation tasks",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 14,
+          "y": 160,
+          "w": 252,
+          "h": 36
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Search sessions",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 176,
+          "y": 210,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "INPUT",
+        "role": null,
+        "label": null,
+        "title": null,
+        "text": "",
+        "placeholder": "Search session names",
+        "disabled": false,
+        "checked": false,
+        "box": {
+          "x": 204,
+          "y": 214,
+          "w": 4,
+          "h": 20
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "View options",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 208,
+          "y": 210,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Add workspace",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 240,
+          "y": 210,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Settings",
+        "title": null,
+        "text": "Settings",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 10,
+          "y": 848,
+          "w": 260,
+          "h": 42
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "More actions",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 744,
+          "y": 11,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": "tab",
+        "label": null,
+        "title": null,
+        "text": "Chat",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 308,
+          "y": 50,
+          "w": 27,
+          "h": 25
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": "tab",
+        "label": null,
+        "title": null,
+        "text": "Trajectory",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 371,
+          "y": 50,
+          "w": 57,
+          "h": 25
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Copy",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 725,
+          "y": 140,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "DIV",
+        "role": "button",
+        "label": null,
+        "title": null,
+        "text": "Tool callread_file · demo.js",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 312,
+          "y": 184,
+          "w": 441,
+          "h": 24
+        }
+      },
+      {
+        "tag": "A",
+        "role": null,
+        "label": null,
+        "title": null,
+        "text": "local documentation",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 413,
+          "y": 268,
+          "w": 151,
+          "h": 20
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Wrap lines",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 683,
+          "y": 488,
+          "w": 24,
+          "h": 24
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Copy",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 711,
+          "y": 488,
+          "w": 24,
+          "h": 24
+        }
+      },
+      {
+        "tag": "DIV",
+        "role": "textbox",
+        "label": "Message or run a task, / commands, @ files or sessions",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 296,
+          "y": 780,
+          "w": 469,
+          "h": 36
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Add files or run commands",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 304,
+          "y": 833,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Select model, current web-loopback-fixture",
+        "title": "web-loopback-fixture",
+        "text": "web-loopback-fixture",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 561,
+          "y": 833,
+          "w": 150,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Stop generating",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 727,
+          "y": 828,
+          "w": 34,
+          "h": 34
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "1 turns 1 steps",
+        "title": null,
+        "text": "1 turns 1 steps",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 475,
+          "y": 874,
+          "w": 115,
+          "h": 22
+        }
+      },
+      {
+        "tag": "DIV",
+        "role": "tab",
+        "label": null,
+        "title": null,
+        "text": "Files",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 803,
+          "y": 10,
+          "w": 100,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Close",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 879,
+          "y": 14,
+          "w": 20,
+          "h": 20
+        }
+      },
+      {
+        "tag": "DIV",
+        "role": "tab",
+        "label": null,
+        "title": null,
+        "text": "demo.js",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 913,
+          "y": 10,
+          "w": 100,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Close",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 989,
+          "y": 14,
+          "w": 20,
+          "h": 20
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "New tab",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 1017,
+          "y": 10,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Split",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": true,
+        "box": {
+          "x": 1082,
+          "y": 10,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Open with",
+        "title": "Code",
+        "text": "Code",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 1005,
+          "y": 43,
+          "w": 41,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Line wrap",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 1050,
+          "y": 43,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Read the file again",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 1082,
+          "y": 43,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Copy",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 1074,
+          "y": 86,
+          "w": 24,
+          "h": 24
+        }
+      },
+      {
+        "tag": "DIV",
+        "role": "tab",
+        "label": null,
+        "title": null,
+        "text": "Files",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 1084,
+          "y": 10,
+          "w": 100,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Close",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 1160,
+          "y": 14,
+          "w": 20,
+          "h": 20
+        }
+      },
+      {
+        "tag": "DIV",
+        "role": "tab",
+        "label": null,
+        "title": null,
+        "text": "README.md",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 1194,
+          "y": 10,
+          "w": 100,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Close",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 1270,
+          "y": 14,
+          "w": 20,
+          "h": 20
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "New tab",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 1298,
+          "y": 10,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Split",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": true,
+        "box": {
+          "x": 1334,
+          "y": 10,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Fullscreen",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 1370,
+          "y": 10,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Collapse right sidebar",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 1406,
+          "y": 10,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Open with",
+        "title": "Markdown",
+        "text": "Markdown",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 1335,
+          "y": 43,
+          "w": 67,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Read the file again",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 1406,
+          "y": 43,
+          "w": 28,
+          "h": 28
+        }
+      }
+    ]
+  },
+  "rpc": [
+    {
+      "carrier": "websocket",
+      "endpoint": "session/create",
+      "status": 200,
+      "ok": true,
+      "value": {
+        "sessionId": "session_a5bb2e20-0980-4901-9d4b-d33631cae5bc"
+      }
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "workspaceFiles/list",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "workspaceFiles/read",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "workspaceFiles/stat",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "session/canOpenWorkspacePath",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "workspaceFiles/list",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "workspaceFiles/read",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "workspaceFiles/stat",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "agentPresets/list",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "schedule/list",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "session/prompt",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "schedule/catalog",
+      "status": 200,
+      "ok": true
+    }
+  ],
+  "errors": [],
+  "screenshot": "/tmp/harness-web-ui-20261016/candidate9/001-file-split-composer-reachability.png"
+}

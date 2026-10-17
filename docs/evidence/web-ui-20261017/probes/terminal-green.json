@@ -1,0 +1,467 @@
+{
+  "id": 1,
+  "label": "terminal-failure-reason-fixed",
+  "code": "await page.getByRole('button',{name:'Choose workspace',exact:true}).click();await page.getByRole('menuitem',{name:'project',exact:true}).click();await page.getByRole('button',{name:'Settings',exact:true}).click();await page.getByRole('button',{name:'Increase font size',exact:true}).waitFor();if(await page.getByRole('button',{name:'Open configuration file',exact:true}).count())throw Error('Unavailable native opener was advertised');await page.getByRole('button',{name:'Close',exact:true}).click();await page.getByRole('button',{name:'Open right sidebar',exact:true}).click();await page.getByRole('button',{name:'New terminal Run commands in the Session workspace',exact:true}).click();await page.getByRole('button',{name:'Reject',exact:true}).waitFor({timeout:10000});await page.getByRole('button',{name:'Reject',exact:true}).click();await page.getByRole('button',{name:'Retry',exact:true}).waitFor({timeout:10000});const rejected=(await page.locator('body').innerText()).slice(-900);await page.getByRole('button',{name:'Retry',exact:true}).click();let approvals=0;for(let i=0;i<4;i++){const allow=page.getByRole('button',{name:'Allow once',exact:true});try{await allow.waitFor({timeout:3000})}catch{break}await allow.click();approvals++;}await page.getByRole('button',{name:'Retry',exact:true}).waitFor({timeout:10000});const text=await page.locator('body').innerText();if(!text.includes('sandbox backend linux-bwrap self-test failed')||text.includes('This terminal no longer exists'))throw Error('Failure reason lost');return {nativeOpenerHidden:true,rejected,approvals,visibleTerminalError:text.slice(-1500),realTerminalExecuted:false};\n",
+  "ok": true,
+  "result": {
+    "nativeOpenerHidden": true,
+    "rejected": "Harness Agent\nNew Session\nPlugins\nAutomation tasks\nWorkspaces\nproject\nNew Session\nSettings\nInto the Unknown\nproject\nmain\nDescribe what you want to build, / commands, @ files or sessions\nweb-loopback-fixture\nTerminal\nRetry\n\nTerminal error: approval denied by web",
+    "approvals": 3,
+    "visibleTerminalError": "Harness Agent\nNew Session\nPlugins\nAutomation tasks\nWorkspaces\nproject\nNew Session\nSettings\nInto the Unknown\nproject\nmain\nDescribe what you want to build, / commands, @ files or sessions\nweb-loopback-fixture\nTerminal\nRetry\n\nTerminal error: sandbox backend linux-bwrap self-test failed (external-absolute-write, dotdot-escape, symlink-escape, shell-redirection, interpreter-invocation, repo-tracked-write, secret-env-exposure, network-access) — benchmark exec refused (fail-closed)",
+    "realTerminalExecuted": false
+  },
+  "observation": {
+    "url": "http://127.0.0.1:38065/",
+    "title": "Harness Agent",
+    "text": "Harness Agent\nNew Session\nPlugins\nAutomation tasks\nWorkspaces\nproject\nNew Session\nSettings\nInto the Unknown\nproject\nmain\nDescribe what you want to build, / commands, @ files or sessions\nweb-loopback-fixture\nTerminal\nRetry\n\nTerminal error: sandbox backend linux-bwrap self-test failed (external-absolute-write, dotdot-escape, symlink-escape, shell-redirection, interpreter-invocation, repo-tracked-write, secret-env-exposure, network-access) — benchmark exec refused (fail-closed)",
+    "viewport": {
+      "w": 1440,
+      "h": 900,
+      "scrollW": 1440
+    },
+    "active": {
+      "tag": "BODY",
+      "label": null
+    },
+    "controls": [
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "New session",
+        "title": null,
+        "text": "Harness Agent",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 16,
+          "y": 24,
+          "w": 216,
+          "h": 24
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Collapse sidebar",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 240,
+          "y": 22,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "New session",
+        "title": null,
+        "text": "New Session",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 14,
+          "y": 70,
+          "w": 252,
+          "h": 38
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Plugins",
+        "title": null,
+        "text": "Plugins",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 14,
+          "y": 120,
+          "w": 252,
+          "h": 36
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Automation tasks",
+        "title": null,
+        "text": "Automation tasks",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 14,
+          "y": 160,
+          "w": 252,
+          "h": 36
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Search sessions",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 176,
+          "y": 210,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "INPUT",
+        "role": null,
+        "label": null,
+        "title": null,
+        "text": "",
+        "placeholder": "Search session names",
+        "disabled": false,
+        "checked": false,
+        "box": {
+          "x": 204,
+          "y": 214,
+          "w": 4,
+          "h": 20
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "View options",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 208,
+          "y": 210,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Add workspace",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 240,
+          "y": 210,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Settings",
+        "title": null,
+        "text": "Settings",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 10,
+          "y": 848,
+          "w": 260,
+          "h": 42
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Choose workspace",
+        "title": null,
+        "text": "project",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 300,
+          "y": 408,
+          "w": 91,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": null,
+        "title": "Choose the agent preset for your new task",
+        "text": "main",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 395,
+          "y": 408,
+          "w": 82,
+          "h": 28
+        }
+      },
+      {
+        "tag": "DIV",
+        "role": "textbox",
+        "label": "Describe what you want to build, / commands, @ files or sessions",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 296,
+          "y": 452,
+          "w": 469,
+          "h": 52
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Add files or run commands",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 304,
+          "y": 521,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Select model, current web-loopback-fixture",
+        "title": "web-loopback-fixture",
+        "text": "web-loopback-fixture",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 561,
+          "y": 521,
+          "w": 150,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Send message",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": true,
+        "box": {
+          "x": 727,
+          "y": 516,
+          "w": 34,
+          "h": 34
+        }
+      },
+      {
+        "tag": "DIV",
+        "role": "tab",
+        "label": null,
+        "title": null,
+        "text": "Terminal",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 803,
+          "y": 10,
+          "w": 100,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Close",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 879,
+          "y": 14,
+          "w": 20,
+          "h": 20
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "New tab",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 907,
+          "y": 10,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Split",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 1334,
+          "y": 10,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Fullscreen",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 1370,
+          "y": 10,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": "Collapse right sidebar",
+        "title": null,
+        "text": "",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 1406,
+          "y": 10,
+          "w": 28,
+          "h": 28
+        }
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "label": null,
+        "title": null,
+        "text": "Retry",
+        "placeholder": null,
+        "disabled": false,
+        "box": {
+          "x": 805,
+          "y": 51,
+          "w": 51,
+          "h": 28
+        }
+      }
+    ]
+  },
+  "rpc": [
+    {
+      "carrier": "websocket",
+      "endpoint": "session/create",
+      "status": 200,
+      "ok": true,
+      "value": {
+        "sessionId": "session_0e5d1017-5707-41e9-8a5e-415380cb78a9"
+      }
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "terminal/environment",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "terminal/list",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "$events/result",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "terminal/shells",
+      "status": 400,
+      "ok": false,
+      "error": {
+        "code": "gateway/forbidden",
+        "message": "approval denied by web",
+        "details": {}
+      }
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "terminal/environment",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "terminal/list",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "$events/result",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "terminal/shells",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "$events/result",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "$events/result",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "carrier": "websocket",
+      "endpoint": "terminal/create",
+      "status": 400,
+      "ok": false,
+      "error": {
+        "code": "terminal/unavailable",
+        "message": "sandbox backend linux-bwrap self-test failed (external-absolute-write, dotdot-escape, symlink-escape, shell-redirection, interpreter-invocation, repo-tracked-write, secret-env-exposure, network-access) — benchmark exec refused (fail-closed)",
+        "details": {
+          "code": "SANDBOX_BACKEND_DENIED",
+          "platform": "linux"
+        }
+      }
+    }
+  ],
+  "errors": [],
+  "screenshot": "/tmp/harness-web-ui-20261016/candidate8/001-terminal-failure-reason-fixed.png"
+}

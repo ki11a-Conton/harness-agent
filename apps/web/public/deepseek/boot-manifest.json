@@ -1,5 +1,5 @@
 {
-  "rev": "75a5db06183d",
+  "rev": "e895036d9dff",
   "entries": [
     {
       "id": "@deepseek-ai/dsh-api-gateway",
@@ -46,14 +46,15 @@
     },
     {
       "id": "@deepseek-ai/dsh-api-terminal-controller",
-      "url": "/deepseek/plugins/??@deepseek-ai/dsh-api-terminal-controller/client.js&rev=f6455f76bb1e",
-      "rev": "f6455f76bb1e",
+      "url": "/deepseek/plugins/??@deepseek-ai/dsh-api-terminal-controller/client.js&rev=6f3caa0dd8ed",
+      "rev": "6f3caa0dd8ed",
       "inject": [
         "@deepseek-ai/dsh-api-gateway"
       ],
       "external": [
         "@deepseek-ai/dsh-api-gateway/client"
-      ]
+      ],
+      "brandOverride": true
     },
     {
       "id": "@deepseek-ai/dsh-api-workspace-controller",
@@ -189,8 +190,8 @@
     },
     {
       "id": "@deepseek-ai/dsh-client-ui-chat",
-      "url": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-chat/client.js&rev=3c8e71ad348d",
-      "rev": "3c8e71ad348d",
+      "url": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-chat/client.js&rev=2352ce0665f3",
+      "rev": "2352ce0665f3",
       "inject": [
         "@deepseek-ai/dsh-api-session-controller",
         "@deepseek-ai/dsh-api-workspace-controller",
@@ -203,7 +204,8 @@
         "@deepseek-ai/dsh-client-ui-settings",
         "@deepseek-ai/dsh-client-ui-sidebar-right",
         "@deepseek-ai/dsh-client-ui-workspace"
-      ]
+      ],
+      "brandOverride": true
     },
     {
       "id": "@deepseek-ai/dsh-client-ui-commands",
@@ -218,8 +220,8 @@
     },
     {
       "id": "@deepseek-ai/dsh-client-ui-conversation",
-      "url": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-conversation/client.js&rev=fd0c018d73b3",
-      "rev": "fd0c018d73b3",
+      "url": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-conversation/client.js&rev=e0861618a394",
+      "rev": "e0861618a394",
       "inject": [
         "@deepseek-ai/dsh-api-session-controller",
         "@deepseek-ai/dsh-client-file-upload",
@@ -474,8 +476,8 @@
     },
     {
       "id": "@deepseek-ai/dsh-client-ui-settings-general",
-      "url": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-settings-general/client.js&rev=82fe56a180f3",
-      "rev": "82fe56a180f3",
+      "url": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-settings-general/client.js&rev=587aad1d9c75",
+      "rev": "587aad1d9c75",
       "inject": [
         "@deepseek-ai/dsh-client-ui-settings",
         "@deepseek-ai/dsh-client-locale",
@@ -615,8 +617,8 @@
     },
     {
       "id": "@deepseek-ai/dsh-client-ui-sidebar-right",
-      "url": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-sidebar-right/client.js&rev=7d1a6168cdb1",
-      "rev": "7d1a6168cdb1",
+      "url": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-sidebar-right/client.js&rev=f1b8bfd60b6b",
+      "rev": "f1b8bfd60b6b",
       "inject": [
         "@deepseek-ai/dsh-api-session-controller",
         "@deepseek-ai/dsh-client-resources",
@@ -624,7 +626,8 @@
         "@deepseek-ai/dsh-client-ui-layout",
         "@deepseek-ai/dsh-client-ui-session",
         "@deepseek-ai/dsh-client-shortcuts"
-      ]
+      ],
+      "brandOverride": true
     },
     {
       "id": "@deepseek-ai/dsh-client-ui-sidebar-terminal",
@@ -733,8 +736,8 @@
     },
     {
       "id": "@deepseek-ai/dsh-client-ui-workspace",
-      "url": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-workspace/client.js&rev=4e7d94113a25",
-      "rev": "4e7d94113a25",
+      "url": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-workspace/client.js&rev=6318494664f5",
+      "rev": "6318494664f5",
       "inject": [
         "@deepseek-ai/dsh-api-remotes",
         "@deepseek-ai/dsh-api-session-controller",
@@ -827,8 +830,8 @@
     },
     {
       "phase": "application",
-      "url": "/deepseek/plugins/??@deepseek-ai/dsh-api-terminal-controller/client.js&rev=f6455f76bb1e",
-      "rev": "f6455f76bb1e",
+      "url": "/deepseek/plugins/??@deepseek-ai/dsh-api-terminal-controller/client.js&rev=6f3caa0dd8ed",
+      "rev": "6f3caa0dd8ed",
       "entries": [
         "@deepseek-ai/dsh-api-terminal-controller"
       ]
@@ -939,8 +942,8 @@
     },
     {
       "phase": "application",
-      "url": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-chat/client.js&rev=3c8e71ad348d",
-      "rev": "3c8e71ad348d",
+      "url": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-chat/client.js&rev=2352ce0665f3",
+      "rev": "2352ce0665f3",
       "entries": [
         "@deepseek-ai/dsh-client-ui-chat"
       ]
@@ -955,8 +958,8 @@
     },
     {
       "phase": "application",
-      "url": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-conversation/client.js&rev=fd0c018d73b3",
-      "rev": "fd0c018d73b3",
+      "url": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-conversation/client.js&rev=e0861618a394",
+      "rev": "e0861618a394",
       "entries": [
         "@deepseek-ai/dsh-client-ui-conversation"
       ]
@@ -1115,8 +1118,8 @@
     },
     {
       "phase": "application",
-      "url": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-settings-general/client.js&rev=82fe56a180f3",
-      "rev": "82fe56a180f3",
+      "url": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-settings-general/client.js&rev=587aad1d9c75",
+      "rev": "587aad1d9c75",
       "entries": [
         "@deepseek-ai/dsh-client-ui-settings-general"
       ]
@@ -1211,8 +1214,8 @@
     },
     {
       "phase": "application",
-      "url": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-sidebar-right/client.js&rev=7d1a6168cdb1",
-      "rev": "7d1a6168cdb1",
+      "url": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-sidebar-right/client.js&rev=f1b8bfd60b6b",
+      "rev": "f1b8bfd60b6b",
       "entries": [
         "@deepseek-ai/dsh-client-ui-sidebar-right"
       ]
@@ -1283,8 +1286,8 @@
     },
     {
       "phase": "application",
-      "url": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-workspace/client.js&rev=4e7d94113a25",
-      "rev": "4e7d94113a25",
+      "url": "/deepseek/plugins/??@deepseek-ai/dsh-client-ui-workspace/client.js&rev=6318494664f5",
+      "rev": "6318494664f5",
       "entries": [
         "@deepseek-ai/dsh-client-ui-workspace"
       ]

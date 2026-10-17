@@ -1,0 +1,31 @@
+{
+  "sourceSha": "7026dbed4a160f8680267904caf40015a5309b13",
+  "productFullSuiteSha": "4e651587911523b1d67b8e3383be1d76faee755d",
+  "before": {
+    "head": "7026dbed4a160f8680267904caf40015a5309b13",
+    "porcelain": ""
+  },
+  "command": [
+    "node",
+    "scripts/release/portable.mjs",
+    "build",
+    "--out",
+    "/tmp/harness-web-ui-20261016/title-portable",
+    "--version",
+    "1.10.0",
+    "--source-sha",
+    "7026dbed4a160f8680267904caf40015a5309b13",
+    "--offline",
+    "--store-dir",
+    "/workspace/.pnpm-store",
+    "--node-headers-dir",
+    "/workspace/.cache/node-gyp/24.19.0"
+  ],
+  "startedAt": "2026-10-17T10:05:33.030318+00:00",
+  "endedAt": "2026-10-17T10:05:59.610190+00:00",
+  "exitCode": 0,
+  "headAfter": "7026dbed4a160f8680267904caf40015a5309b13",
+  "statusAfter": "",
+  "logSha256": "fd4f3fab7f7ce595e65a9f07ef85566ffc1a9db65bf3b0ac5c82b5fc908c535e",
+  "logBytes": 198
+}

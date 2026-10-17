@@ -1,0 +1,41 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-pr13-review-20261017
+
+ ❯ packages/core/src/runtime/runtime-policy-drift.test.ts (9 tests | 1 failed) 20ms
+     ✓ detects tool-semantics drift on resume (a real hash, not the arity constant) 5ms
+     ✓ detects retry-policy drift on resume 1ms
+     ✓ detects an ask-only retry-policy change (a Set, invisible to JSON.stringify) 1ms
+     ✓ detects sandbox-policy drift on resume 1ms
+     ✓ still detects context-pipeline drift on resume 1ms
+     ✓ stays silent when the host policy is unchanged 1ms
+     ✓ still detects retry drift for a pre-upgrade (v1) snapshot 1ms
+     ✓ reports no phantom drift for a pre-upgrade (v1) snapshot under the same policy 1ms
+   × review PR13: observes askOn drift when the configured retry cap exceeds eight 8ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/core/src/runtime/runtime-policy-drift.test.ts > review PR13: observes askOn drift when the configured retry cap exceeds eight
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ packages/core/src/runtime/runtime-policy-drift.test.ts:239:17
+    237|   const { sessionId, events } = await resumeWithDriftedPolicy({ recove…
+    238|   const drift = await driftEvents(events, sessionId);
+    239|   expect(drift).toHaveLength(1);
+       |                 ^
+    240|   expect(drift[0]!.payload.retryPolicyChanged).toBe(true);
+    241| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 8 passed (9)
+   Start at  12:11:11
+   Duration  782ms (transform 499ms, setup 0ms, import 624ms, tests 20ms, environment 0ms)
+

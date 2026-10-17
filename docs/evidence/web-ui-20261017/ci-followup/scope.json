@@ -1,0 +1,12 @@
+{
+  "kind": "test-fixture and browser-acceptance timing corrections",
+  "productUiUnchangedFrom": "1a85b345d7d3b6a5016f671268a32da5c8bdcde6",
+  "closedLoopSource": "74db3b9732d35bf440ec23ae00c819b296372dac",
+  "closedLoopTests": 567,
+  "closedLoopMatrixRows": 9,
+  "paidModelCalls": 0,
+  "pinFailure": "Reload preceded the asynchronous pin acknowledgement; original RPC remained sent with no reply and the reloaded menu still offered Pin session",
+  "pinCheck": "Wait for the real host-confirmed inverse row action; preserve the strict after-reload inverse menu assertion and confirm unpin too",
+  "copyCheck": "Wait for the third actual copy control and real clipboard completion; retain the original distinct-content assertions",
+  "firstLocalSetup": "PNPM 11 ignores npm_config_store_dir; its supported PNPM_CONFIG_STORE_DIR resolves the permitted task cache. Original setup failure is retained."
+}

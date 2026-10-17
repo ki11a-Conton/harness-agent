@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { ErrorCode, ToolDefinition, ToolExecutionContext, ToolResult } from "@ar/contracts";
 import { errorInfo } from "@ar/contracts";
 import { ProcessExecutor } from "../process/executor.js";
+import { ExecDiagnosticTail } from "../process/exec-diagnostics.js";
 import { prepareSandboxedExec } from "../process/sandbox-executor.js";
 import type { SandboxExecutionProvenance } from "../process/sandbox-executor.js";
 import { isAbsolute, resolve, relative, sep } from "node:path";
@@ -25,6 +26,9 @@ export interface ExecOutput {
   /** E3-09: sandbox backend identity, policy and self-test digest when the
    *  exec ran under a confinement policy (benchmark mode). */
   provenance?: SandboxExecutionProvenance;
+  /** Partial UTF-8 suffixes, never a complete log or a replacement for the
+   * captured prefixes. Present only for streams that exceeded capture policy. */
+  diagnostics?: { incomplete: true; stdoutTail?: string; stderrTail?: string };
 }
 
 /**
@@ -117,7 +121,7 @@ export async function resolveExecCwd(
  */
 export const execTool: ToolDefinition<ExecInput, ExecOutput> = {
   name: "exec",
-  description: "Run a command in the workspace shell and capture its output.",
+  description: "Run a command in the workspace shell and capture its output. Truncated stdout/stderr remain prefixes; diagnostics contains bounded UTF-8 tails with final compiler/test errors. Tails are incomplete evidence: inspect a bounded rerun or an available artifact when omitted output matters.",
   inputSchema: z.object({
     command: z.string().min(1),
     args: z.array(z.string()).optional(),
@@ -128,7 +132,7 @@ export const execTool: ToolDefinition<ExecInput, ExecOutput> = {
   risk: "elevated",
   metadata: {
     name: "exec",
-    version: "1.0.0",
+    version: "1.1.0",
     sideEffect: true,
     network: false,
     filesystem: false,
@@ -179,6 +183,7 @@ export const execTool: ToolDefinition<ExecInput, ExecOutput> = {
       }
     }
 
+    const tails = { stdout: new ExecDiagnosticTail(proc.maxOutputBytes), stderr: new ExecDiagnosticTail(proc.maxOutputBytes) };
     const execution = {
       command: input.command,
       cwd,
@@ -186,7 +191,10 @@ export const execTool: ToolDefinition<ExecInput, ExecOutput> = {
       timeoutMs: input.timeoutMs ?? proc.timeoutMs,
       maxOutputBytes: proc.maxOutputBytes,
       signal: context.signal,
-      onOutput: context.onOutput,
+      onOutput: (event: { stream: "stdout" | "stderr"; text: string }) => {
+        tails[event.stream].append(event.text);
+        context.onOutput?.(event);
+      },
       ...(sandboxPrepared?.ok === true
         ? { sandboxExecution: sandboxPrepared.sandboxExecution }
         : {}),
@@ -196,6 +204,10 @@ export const execTool: ToolDefinition<ExecInput, ExecOutput> = {
       ? await executor.runArgv({ ...execution, file: input.command, args: input.args })
       : await executor.run(execution);
 
+    const diagnostics = {
+      ...(tails.stdout.observedBytes > Buffer.byteLength(outcome.stdout) && tails.stdout.text ? { stdoutTail: tails.stdout.text } : {}),
+      ...(tails.stderr.observedBytes > Buffer.byteLength(outcome.stderr) && tails.stderr.text ? { stderrTail: tails.stderr.text } : {}),
+    };
     const base = {
       exitCode: outcome.exitCode,
       stdout: outcome.stdout,
@@ -203,6 +215,9 @@ export const execTool: ToolDefinition<ExecInput, ExecOutput> = {
       truncated: outcome.truncated,
       durationMs: outcome.durationMs,
       ...(outcome.provenance !== undefined ? { provenance: outcome.provenance } : {}),
+      // Keep the bounded diagnostics last so the existing context tail preview
+      // can retain both streams without changes to Core or its trust boundary.
+      ...(Object.keys(diagnostics).length ? { diagnostics: { incomplete: true as const, ...diagnostics } } : {}),
     };
 
     switch (outcome.status) {

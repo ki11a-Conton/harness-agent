@@ -1,0 +1,94 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-exec-diagnostics-20261016
+
+ ✓ packages/context/src/pipeline.test.ts (38 tests) 72ms
+ ✓ packages/tools/src/orchestrator.test.ts (32 tests) 230ms
+ ✓ packages/tools/src/process/executor.test.ts (30 tests | 7 skipped) 1507ms
+     ✓ kills the process tree on timeout (no orphan)  303ms
+     ✓ honors timeout, cancellation, output cap and env on the argv path  486ms
+ ✓ packages/tools/src/process/sandbox-executor.test.ts (33 tests) 301ms
+ ✓ packages/tools/src/r4-file-regressions.test.ts (41 tests) 569ms
+ ✓ packages/tools/src/process/r96-windows-execution-boundary.test.ts (25 tests | 3 skipped) 14ms
+ ✓ packages/tools/src/workspace-knowledge-regressions.test.ts (29 tests) 159ms
+ ✓ packages/core/src/runtime/encoded-tool-output-security.regressions.test.ts (40 tests) 62ms
+ ✓ packages/core/src/runtime/tool-output-boundary.regressions.test.ts (21 tests) 51ms
+ ✓ packages/tools/src/source-matrix.test.ts (22 tests) 17ms
+ ✓ packages/tools/src/process/windows-fixture-guard.test.ts (17 tests) 24ms
+ ✓ packages/tools/src/review-regressions.test.ts (42 tests) 43ms
+ ✓ packages/tools/src/gen1-text-tools.regressions.test.ts (39 tests) 529ms
+ ✓ packages/context/src/context-optimization-regressions.test.ts (39 tests) 20ms
+ ✓ packages/context/src/taxonomy.test.ts (18 tests) 23ms
+ ✓ packages/tools/src/verification/task-verifier.test.ts (20 tests) 205ms
+[degraded] path-scoped-discovery.close: instruction handle cleanup failed
+ ✓ packages/context/src/scoped-instruction-read.regressions.test.ts (34 tests) 146ms
+ ✓ packages/tools/src/symbol-scope.regressions.test.ts (23 tests) 505ms
+ ✓ packages/tools/src/navigation-work.regressions.test.ts (21 tests) 182ms
+ ✓ packages/context/src/compaction.test.ts (10 tests) 10ms
+ ✓ packages/tools/src/process/utf8-output.regressions.test.ts (34 tests) 96ms
+ ✓ packages/tools/src/vs001.test.ts (13 tests) 364ms
+ ✓ packages/context/src/path-scoped-discovery.test.ts (24 tests) 108ms
+ ✓ packages/tools/src/scoped-search-paths.regressions.test.ts (24 tests) 89ms
+ ✓ packages/context/src/default-discovery-budget-regressions.test.ts (49 tests) 145ms
+ ✓ packages/tools/src/read-file-resource.regressions.test.ts (23 tests) 91ms
+ ✓ packages/tools/src/tool-dispatch-budget.test.ts (6 tests) 14ms
+ ✓ packages/context/src/rehydration-headroom.regressions.test.ts (24 tests) 15ms
+ ✓ packages/tools/src/command-discovery.test.ts (15 tests) 41ms
+ ✓ packages/context/src/context-safe-evidence-lifecycle.test.ts (4 tests) 8ms
+ ✓ packages/tools/src/semantics.test.ts (4 tests) 9ms
+ ✓ packages/tools/src/repo-map.test.ts (12 tests) 47ms
+ ✓ packages/context/src/discovery.test.ts (11 tests) 45ms
+ ✓ packages/core/src/runtime/structured-output-security.regressions.test.ts (26 tests) 35ms
+ ✓ packages/context/src/circuit-breaker.test.ts (6 tests) 76ms
+ ✓ packages/tools/src/transaction.test.ts (9 tests) 36ms
+ ✓ packages/context/src/policy-versioning.test.ts (10 tests) 9ms
+ ✓ packages/tools/src/symbol-index.test.ts (6 tests) 27ms
+[degraded] executor.onOutput: fixture observer disconnected
+ ✓ packages/tools/src/tools/exec-diagnostics.test.ts (12 tests) 197ms
+ ✓ packages/context/src/message-budget-regressions.test.ts (14 tests) 10ms
+ ✓ packages/tools/src/production-tools.test.ts (9 tests) 1555ms
+     ✓ env_snapshot tool is wired to the host network mode + tool list  519ms
+     ✓ createProductionTools forwards harness profile + workspace root to env_snapshot  479ms
+     ✓ createEnvSnapshotTool rejects nothing and reports the live injected policy + harness facts  547ms
+ ✓ packages/tools/src/tools/exec-workspace-root-alias.test.ts (7 tests) 10ms
+ ✓ packages/context/src/prompt-versioning.test.ts (9 tests) 10ms
+ ✓ packages/tools/src/syntax-index.integration.test.ts (34 tests) 1763ms
+   ✓ C5 frozen 30-query retrieval set meets recall@5 and bounded graph budget  843ms
+ ✓ packages/tools/src/tools/exec-workspace-policy.test.ts (12 tests) 45ms
+ ✓ packages/context/src/budget.test.ts (8 tests) 6ms
+stdout | packages/harness/src/exec-diagnostics.integration.test.ts > 'typescript': real failed command diagnostics reach the next actual provider request
+EXEC_DIAGNOSTIC_REPLAY {"case":"typescript","exitCode":1,"providerRequests":2,"diagnosticVisible":true,"toolMessageBytes":4356,"paidCalls":0}
+
+stdout | packages/harness/src/exec-diagnostics.integration.test.ts > 'syntax': real failed command diagnostics reach the next actual provider request
+EXEC_DIAGNOSTIC_REPLAY {"case":"syntax","exitCode":1,"providerRequests":2,"diagnosticVisible":true,"toolMessageBytes":4356,"paidCalls":0}
+
+stdout | packages/harness/src/exec-diagnostics.integration.test.ts > 'test': real failed command diagnostics reach the next actual provider request
+EXEC_DIAGNOSTIC_REPLAY {"case":"test","exitCode":1,"providerRequests":2,"diagnosticVisible":true,"toolMessageBytes":4356,"paidCalls":0}
+
+ ✓ packages/harness/src/exec-diagnostics.integration.test.ts (3 tests) 3456ms
+   ✓ 'typescript': real failed command diagnostics reach the next actual provider request  1130ms
+   ✓ 'syntax': real failed command diagnostics reach the next actual provider request  936ms
+   ✓ 'test': real failed command diagnostics reach the next actual provider request  1389ms
+ ✓ packages/tools/src/transaction-final.regressions.test.ts (6 tests) 29ms
+ ✓ packages/tools/src/write-safety.test.ts (11 tests) 7ms
+ ✓ packages/tools/src/verification-plan.test.ts (9 tests) 37ms
+ ✓ packages/tools/src/schema-advert.test.ts (7 tests) 7ms
+ ✓ packages/tools/src/env-snapshot.test.ts (6 tests) 26ms
+ ✓ packages/tools/src/workspace.test.ts (8 tests) 10ms
+[degraded] discovery.close: instruction handle cleanup failed
+ ✓ packages/context/src/default-discovery-read-failures.test.ts (3 tests) 18ms
+ ✓ packages/tools/src/navigate.test.ts (7 tests) 238ms
+ ✓ packages/tools/src/gen1-regex-scanner.test.ts (6 tests) 2247ms
+     ✓ terminates real exponential backtracking at the total regex deadline  1004ms
+     ✓ shares one total deadline across multiple sequential files rather than resetting it  1078ms
+ ✓ packages/tools/src/edit.test.ts (14 tests) 8ms
+ ✓ packages/tools/src/syntax-index.security.regressions.test.ts (3 tests) 143ms
+ ↓ packages/tools/src/process/windows-cancellation.regressions.test.ts (2 tests | 2 skipped)
+ ✓ packages/context/src/coding-summary.test.ts (4 tests) 14ms
+ ✓ packages/tools/src/write-file-safety.test.ts (4 tests) 12ms
+ ✓ packages/tools/src/tool-lookup.test.ts (2 tests) 6ms
+
+ Test Files  61 passed | 1 skipped (62)
+      Tests  1062 passed | 12 skipped (1074)
+   Start at  09:16:30
+   Duration  31.51s (transform 3.21s, setup 0ms, import 7.90s, tests 15.78s, environment 5ms)
+

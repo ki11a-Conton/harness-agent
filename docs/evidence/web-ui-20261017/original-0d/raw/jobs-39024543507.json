@@ -1,0 +1,380 @@
+{
+  "total_count": 4,
+  "jobs": [
+    {
+      "id": 117372828619,
+      "run_id": 39024543507,
+      "workflow_name": "first-generation installed acceptance",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/runs/39024543507",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOT8gONs8AAAAbU_c7yw",
+      "head_sha": "0d960c2cf788435df532600124745399937d945f",
+      "url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/jobs/117372828619",
+      "html_url": "https://github.com/ki11a-Conton/harness-agent/actions/runs/39024543507/job/117372828619",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-17T10:20:48Z",
+      "started_at": "2026-10-17T10:20:49Z",
+      "completed_at": "2026-10-17T10:23:54Z",
+      "name": "installed (windows-latest)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-17T10:20:50Z",
+          "completed_at": "2026-10-17T10:20:51Z"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-17T10:20:51Z",
+          "completed_at": "2026-10-17T10:21:04Z"
+        },
+        {
+          "name": "Run pnpm/action-setup@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-17T10:21:04Z",
+          "completed_at": "2026-10-17T10:21:09Z"
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-17T10:21:09Z",
+          "completed_at": "2026-10-17T10:21:17Z"
+        },
+        {
+          "name": "Frozen install",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-17T10:21:17Z",
+          "completed_at": "2026-10-17T10:21:21Z"
+        },
+        {
+          "name": "Build application entries",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-10-17T10:21:21Z",
+          "completed_at": "2026-10-17T10:21:30Z"
+        },
+        {
+          "name": "Real interaction and independent installed coding",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-10-17T10:21:30Z",
+          "completed_at": "2026-10-17T10:23:48Z"
+        },
+        {
+          "name": "Preserve exact-source acceptance and portable artifacts",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-10-17T10:23:48Z",
+          "completed_at": "2026-10-17T10:23:51Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 14,
+          "started_at": "2026-10-17T10:23:51Z",
+          "completed_at": "2026-10-17T10:23:51Z"
+        },
+        {
+          "name": "Post Run pnpm/action-setup@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15,
+          "started_at": "2026-10-17T10:23:51Z",
+          "completed_at": "2026-10-17T10:23:51Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 16,
+          "started_at": "2026-10-17T10:23:51Z",
+          "completed_at": "2026-10-17T10:23:53Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 17,
+          "started_at": "2026-10-17T10:23:53Z",
+          "completed_at": "2026-10-17T10:23:53Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/check-runs/117372828619",
+      "labels": [
+        "windows-latest"
+      ],
+      "runner_id": 1000003749,
+      "runner_name": "GitHub Actions 1000003749",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 117372828746,
+      "run_id": 39024543507,
+      "workflow_name": "first-generation installed acceptance",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/runs/39024543507",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOT8gONs8AAAAbU_c8Sg",
+      "head_sha": "0d960c2cf788435df532600124745399937d945f",
+      "url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/jobs/117372828746",
+      "html_url": "https://github.com/ki11a-Conton/harness-agent/actions/runs/39024543507/job/117372828746",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-17T10:20:48Z",
+      "started_at": "2026-10-17T10:20:50Z",
+      "completed_at": "2026-10-17T10:22:38Z",
+      "name": "installed (ubuntu-latest)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-17T10:20:51Z",
+          "completed_at": "2026-10-17T10:20:52Z"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-17T10:20:52Z",
+          "completed_at": "2026-10-17T10:20:59Z"
+        },
+        {
+          "name": "Run pnpm/action-setup@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-17T10:20:59Z",
+          "completed_at": "2026-10-17T10:21:00Z"
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-17T10:21:00Z",
+          "completed_at": "2026-10-17T10:21:04Z"
+        },
+        {
+          "name": "Frozen install",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-17T10:21:04Z",
+          "completed_at": "2026-10-17T10:21:07Z"
+        },
+        {
+          "name": "Build application entries",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-10-17T10:21:07Z",
+          "completed_at": "2026-10-17T10:21:14Z"
+        },
+        {
+          "name": "Real interaction and independent installed coding",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-10-17T10:21:14Z",
+          "completed_at": "2026-10-17T10:22:32Z"
+        },
+        {
+          "name": "Preserve exact-source acceptance and portable artifacts",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-10-17T10:22:32Z",
+          "completed_at": "2026-10-17T10:22:35Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 14,
+          "started_at": "2026-10-17T10:22:35Z",
+          "completed_at": "2026-10-17T10:22:35Z"
+        },
+        {
+          "name": "Post Run pnpm/action-setup@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15,
+          "started_at": "2026-10-17T10:22:35Z",
+          "completed_at": "2026-10-17T10:22:35Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 16,
+          "started_at": "2026-10-17T10:22:35Z",
+          "completed_at": "2026-10-17T10:22:36Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 17,
+          "started_at": "2026-10-17T10:22:36Z",
+          "completed_at": "2026-10-17T10:22:36Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/check-runs/117372828746",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000003753,
+      "runner_name": "GitHub Actions 1000003753",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 117373388107,
+      "run_id": 39024543507,
+      "workflow_name": "first-generation installed acceptance",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/runs/39024543507",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOT8gONs8AAAAbU__FSw",
+      "head_sha": "0d960c2cf788435df532600124745399937d945f",
+      "url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/jobs/117373388107",
+      "html_url": "https://github.com/ki11a-Conton/harness-agent/actions/runs/39024543507/job/117373388107",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-17T10:23:55Z",
+      "started_at": "2026-10-17T10:23:57Z",
+      "completed_at": "2026-10-17T10:25:22Z",
+      "name": "Linux-built portable bytes on native Windows",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-17T10:23:58Z",
+          "completed_at": "2026-10-17T10:23:59Z"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-17T10:23:59Z",
+          "completed_at": "2026-10-17T10:24:13Z"
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-17T10:24:13Z",
+          "completed_at": "2026-10-17T10:24:17Z"
+        },
+        {
+          "name": "Download the actual Ubuntu-built portable archive",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-17T10:24:17Z",
+          "completed_at": "2026-10-17T10:24:19Z"
+        },
+        {
+          "name": "Run the identical distributed bytes without pnpm or a build",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-17T10:24:19Z",
+          "completed_at": "2026-10-17T10:25:17Z"
+        },
+        {
+          "name": "Preserve archive hash and native consumer evidence",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-10-17T10:25:17Z",
+          "completed_at": "2026-10-17T10:25:18Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-10-17T10:25:18Z",
+          "completed_at": "2026-10-17T10:25:18Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-10-17T10:25:18Z",
+          "completed_at": "2026-10-17T10:25:20Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-10-17T10:25:20Z",
+          "completed_at": "2026-10-17T10:25:21Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/check-runs/117373388107",
+      "labels": [
+        "windows-latest"
+      ],
+      "runner_id": 1000003762,
+      "runner_name": "GitHub Actions 1000003762",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 117373657682,
+      "run_id": 39024543507,
+      "workflow_name": "first-generation installed acceptance",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/runs/39024543507",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOT8gONs8AAAAbVAPiUg",
+      "head_sha": "0d960c2cf788435df532600124745399937d945f",
+      "url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/jobs/117373657682",
+      "html_url": "https://github.com/ki11a-Conton/harness-agent/actions/runs/39024543507/job/117373657682",
+      "status": "completed",
+      "conclusion": "skipped",
+      "created_at": "2026-10-17T10:25:23Z",
+      "started_at": "2026-10-17T10:25:23Z",
+      "completed_at": "2026-10-17T10:25:22Z",
+      "name": "export-existing-draft",
+      "steps": [],
+      "check_run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/check-runs/117373657682",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": null,
+      "runner_name": null,
+      "runner_group_id": null,
+      "runner_group_name": null
+    }
+  ]
+}

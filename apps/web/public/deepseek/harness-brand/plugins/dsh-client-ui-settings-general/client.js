@@ -365,7 +365,7 @@ window.__ModuleLoader__.load({
 				const main = Object.values(state.byId).find((session) => (session.retainedBy.mainView ?? 0) > 0);
 				return state.phase === "ready" && (main === void 0 || main.blank);
 			});
-			const onboardingStep = requestedOnboarding !== void 0 ? onboardingSteps.find((step) => step.id === requestedOnboarding) : onboardingActive ? onboardingSteps.find((step) => !completedOnboarding.has(step.id)) : void 0;
+			const onboardingStep = requestedOnboarding !== void 0 ? onboardingSteps.find((step) => step.id === requestedOnboarding) : onboardingActive && !open ? onboardingSteps.find((step) => !completedOnboarding.has(step.id)) : void 0;
 			(0, react.useEffect)(() => {
 				if (onboardingActive) return;
 				setCompletedOnboarding(/* @__PURE__ */ new Set());

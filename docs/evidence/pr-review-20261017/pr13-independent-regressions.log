@@ -1,0 +1,73 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-pr13-review-20261017
+
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ❯ packages/harness/src/config-drift-create-session.test.ts (4 tests | 1 failed) 61ms
+     ✓ writes the fingerprint into the durable snapshot before any load 21ms
+     ✓ rejects the FIRST load after a frozen-config change (create -> change -> load) 13ms
+     ✓ still loads a first resume under an unchanged config 12ms
+   × review PR13: failure to persist the initial drift baseline must not publish a runnable session 14ms
+ ❯ packages/evaluation/src/pr13-review-redaction.test.ts (1 test | 1 failed) 7ms
+   × review PR13: retain redaction of valid JWTs whose JSON has whitespace 6ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/evaluation/src/pr13-review-redaction.test.ts > review PR13: retain redaction of valid JWTs whose JSON has whitespace
+AssertionError: expected 'authorization-token eyJhbGciOiJIUzI1N…' not to contain 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.…'
+
+Expected: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.ewogICJzdWIiOiAic3ludGhldGljLXJldmlldy11c2VyIiwKICAicm9sZSI6ICJ0ZXN0Igp9.rMIb6tTSekea2PPjODf4fN9uRwO5DJpu5YJOIr5z_sE"
+Received: "authorization-token eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.ewogICJzdWIiOiAic3ludGhldGljLXJldmlldy11c2VyIiwKICAicm9sZSI6ICJ0ZXN0Igp9.rMIb6tTSekea2PPjODf4fN9uRwO5DJpu5YJOIr5z_sE"
+
+ ❯ packages/evaluation/src/pr13-review-redaction.test.ts:12:61
+     10|   const token = `${input}.${signature}`;
+     11|   expect(JSON.parse(Buffer.from(payload, "base64url").toString()).sub)…
+     12|   expect(redactSecrets(`authorization-token ${token}`)).not.toContain(…
+       |                                                             ^
+     13| });
+     14|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  packages/harness/src/config-drift-create-session.test.ts > review PR13: failure to persist the initial drift baseline must not publish a runnable session
+AssertionError: expected [ { …(7) } ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   {
++     "agentId": "agent_adfe7c4f-4e7d-4603-9e41-ad1346bd9896",
++     "createdAt": 1792237447317,
++     "cwd": "/workspace/harness-agent-pr13-review-20261017",
++     "id": "session_3e562f6b-9e5f-4d12-8e60-21f71d3a87fa",
++     "model": {
++       "modelId": "scripted-model",
++       "providerId": "scripted",
++     },
++     "status": "active",
++     "updatedAt": 1792237447317,
++   },
++ ]
+
+ ❯ packages/harness/src/config-drift-create-session.test.ts:113:97
+    111|     await expect(harness.sessionService.create({ agentId: harness.agen…
+    112|       model: harness.agents[0]!.model, cwd: harness.config.cwd })).rej…
+    113|     expect((await harness.store.listSessions()).filter(session => sess…
+       |                                                                                                 ^
+    114|   } finally { await harness.close(); }
+    115| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  2 failed | 3 passed (5)
+   Start at  11:44:04
+   Duration  2.84s (transform 1.96s, setup 0ms, import 2.52s, tests 69ms, environment 0ms)
+

@@ -2,18 +2,20 @@
 /** Production host plus a loopback HTTP model fixture. No browser RPC mocks. */
 import { createServer } from "node:http";
 import { spawn } from "node:child_process";
-import { appendFile, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { appendFile, mkdir, mkdtemp, readFile, readdir, writeFile } from "node:fs/promises";
 import { resolve, dirname, relative } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { createHash, randomUUID } from "node:crypto";
 import { verifyPortable } from "../release/portable-lib.mjs";
+import { prepareFreshFixture, readFixtureDirectory, rememberFixtureDirectory } from "./fixture-availability.mjs";
 
 const { values } = parseArgs({ options: {
   root: { type: "string" }, "provider-port": { type: "string", default: "0" },
   "web-port": { type: "string", default: "0" },
   "portable-root": { type: "string" },
   "ipc-control": { type: "boolean", default: false },
+  "preflight-owner": { type: "boolean", default: false },
 } });
 if (!values.root) throw new Error("Use --root <fresh fixture directory>");
 const root = resolve(values.root), evidence = resolve(root, "evidence"), cwd = resolve(root, "project");
@@ -118,27 +120,90 @@ const entry = resolve(web, "dist/main.js");
 // Windows kill(SIGTERM) forcibly terminates Node instead of delivering the
 // registered handler. Test-only IPC invokes the actual handler and disconnects
 // its channel; it does not assert native operating-system signal delivery.
-const childArgs = values["ipc-control"] ? ["--input-type=module", "--eval",
+const controlled = values["ipc-control"] || values["preflight-owner"];
+const childArgs = controlled ? ["--input-type=module", "--eval",
   `import { main } from ${JSON.stringify(pathToFileURL(entry).href)}; process.once("message", message => { if (message?.type === "fixture-stop") { process.disconnect(); process.emit("SIGTERM"); } }); process.exitCode = await main();`] : [entry];
-const child = spawn(process.execPath, childArgs, { cwd,
-  env: { ...process.env, OPENAI_API_KEY: "local-fixture-credential", OPENAI_BASE_URL: providerOrigin,
-    OPENAI_MODEL: "web-loopback-fixture", HARNESS_DATA_DIR: resolve(root, "data"), HARNESS_WEB_PORT: values["web-port"] },
-  stdio: values["ipc-control"] ? ["ignore", "pipe", "pipe", "ipc"] : ["ignore", "pipe", "pipe"] });
-const launch = { launchId, compiledDigest, providerOrigin, cwd, source: artifactRoot,
+const deadline = (promise, ms, label) => new Promise((done, reject) => {
+  const timer = setTimeout(() => reject(new Error(label)), ms);
+  promise.then(value => { clearTimeout(timer); done(value); }, error => { clearTimeout(timer); reject(error); });
+});
+let activeCandidate, restoredRoot, shutdownRequested = false;
+if (values['ipc-control']) process.once('message', message => {
+  if (message?.type !== 'fixture-stop') return;
+  shutdownRequested = true;
+  if (activeCandidate?.child.connected) activeCandidate.child.send(message);
+  else activeCandidate?.child.kill('SIGTERM');
+});
+for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, () => { shutdownRequested = true; activeCandidate?.child.kill(signal); });
+async function createCandidate(index) {
+  if (shutdownRequested) throw new Error('Fixture shutdown requested during preparation');
+  const candidateRoot = index === 0 ? restoredRoot ?? root : await mkdtemp(resolve(root, 'availability-'));
+  const candidateCwd = resolve(candidateRoot, 'project');
+  await mkdir(candidateCwd, { recursive: true });
+  if (index !== 0) for (const name of ['README.md', 'demo.js']) await writeFile(resolve(candidateCwd, name), await readFile(resolve(cwd, name)));
+  const child = spawn(process.execPath, childArgs, { cwd: candidateCwd,
+    env: { ...process.env, OPENAI_API_KEY: 'local-fixture-credential', OPENAI_BASE_URL: providerOrigin,
+      OPENAI_MODEL: 'web-loopback-fixture', HARNESS_DATA_DIR: resolve(candidateRoot, 'data'), HARNESS_WEB_PORT: values['web-port'] },
+    stdio: controlled ? ['ignore', 'pipe', 'pipe', 'ipc'] : ['ignore', 'pipe', 'pipe'] });
+  const candidate = { child, root: candidateRoot, cwd: candidateCwd, stdout: '', stderr: '', exposed: false, closed: false };
+  activeCandidate = candidate;
+  candidate.done = new Promise(done => child.once('close', (code, signal) => { candidate.closed = true; done({ code, signal }); }));
+  candidate.ready = deadline(new Promise((done, reject) => {
+    child.once('error', reject);
+    child.stdout.on('data', bytes => { candidate.stdout += bytes; if (candidate.exposed) process.stdout.write(bytes);
+      const match = candidate.stdout.match(/listening on (http:\/\/127\.0\.0\.1:\d+)/); if (match) done(match[1]); });
+    child.stderr.on('data', bytes => { candidate.stderr += bytes; process.stderr.write(bytes); });
+    candidate.done.then(exit => reject(new Error(`Fixture host exited before readiness: ${JSON.stringify(exit)} ${candidate.stderr}`)));
+  }), 15000, 'Fixture host readiness exceeded its deadline');
+  void candidate.ready.catch(() => {});
+  return candidate;
+}
+async function disposeCandidate(candidate) {
+  const { child } = candidate;
+  if (!candidate.closed && child.exitCode === null && child.signalCode === null) {
+    if (child.connected) child.send({ type: 'fixture-stop' }); else child.kill('SIGTERM');
+  }
+  try { await deadline(candidate.done, 15000, 'Fixture candidate shutdown timed out'); }
+  catch (error) {
+    if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL');
+    await deadline(candidate.done, 5000, 'Forced fixture candidate did not close'); throw error;
+  }
+}
+let selected;
+try {
+  restoredRoot = values['preflight-owner'] ? await readFixtureDirectory(root) : undefined;
+  selected = await prepareFreshFixture({ create: createCandidate, dispose: disposeCandidate,
+    attempts: values['preflight-owner'] && restoredRoot === undefined ? 16 : 1,
+    prepare: async (candidate, origin) => {
+      if (!values['preflight-owner']) return;
+      const response = await fetch(new URL('/api/deepseek/call', origin), { method: 'POST',
+        headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requestId: randomUUID(), endpoint: 'session/create', args: { request: {} } }), signal: AbortSignal.timeout(15000) });
+      const body = await response.json();
+      if (!response.ok || body.ok !== true) throw new Error(body.error?.message ?? `Fixture owner preparation HTTP ${response.status}`);
+      if (!/^session_[\w-]+$/.test(body.value?.sessionId ?? '')) throw new Error('Fixture owner preparation returned no real session identity');
+      candidate.preparedSessionId = body.value.sessionId;
+    } });
+  if (values['preflight-owner']) await rememberFixtureDirectory(root, selected.candidate.root);
+} catch (error) {
+  let failure = error;
+  if (selected) try { await disposeCandidate(selected.candidate); }
+  catch (cleanup) { failure = new AggregateError([error, cleanup], 'Fixture publication and disposal both failed'); }
+  server.close(); for (const socket of sockets) socket.destroy(); throw failure;
+}
+const { candidate } = selected, child = candidate.child;
+const launch = { launchId, compiledDigest, providerOrigin, cwd: candidate.cwd, source: artifactRoot,
   ...(manifest ? { installed: true, sourceSha: manifest.sourceSha, version: manifest.version } : {}),
   ...(values["ipc-control"] ? { shutdownControl: "test-only IPC invokes the actual production SIGTERM handler; not native OS signal delivery" } : {}),
-  model: "web-loopback-fixture", paidModelCalls: 0, pid: child.pid, parentPid: process.pid };
+  model: "web-loopback-fixture", paidModelCalls: 0, pid: child.pid, parentPid: process.pid,
+  ...(values['preflight-owner'] ? { fixtureOwnerPreflight: { preparedSessionId: candidate.preparedSessionId, rejected: selected.rejected,
+    scope: 'Fresh fixture owner allocated before browser checks; no task input or model request; product lease policy unchanged' } } : {}) };
 await writeFile(resolve(evidence, "launch.json"), JSON.stringify(launch, null, 2) + "\n");
 await appendFile(resolve(evidence, "launch-history.jsonl"), JSON.stringify(launch) + "\n");
-child.stdout.on("data", chunk => process.stdout.write(chunk)); child.stderr.on("data", chunk => process.stderr.write(chunk));
-child.on("exit", async code => {
+child.on("close", async code => {
   const receipt = { launchId, code, paidModelCalls: 0, loopbackModelRequests: calls };
   await writeFile(resolve(evidence, "host-exit.json"), JSON.stringify(receipt) + "\n");
   await appendFile(resolve(evidence, "host-exit-history.jsonl"), JSON.stringify(receipt) + "\n");
   server.close(); for (const socket of sockets) socket.destroy();
   if (process.connected) process.disconnect(); process.exitCode = code ?? 1;
 });
-if (values["ipc-control"]) process.once("message", message => {
-  if (message?.type === "fixture-stop" && child.connected) child.send(message);
-});
-for (const signal of ["SIGTERM", "SIGINT"]) process.once(signal, () => child.kill(signal));
+candidate.exposed = true; process.stdout.write(candidate.stdout);

@@ -1,0 +1,29 @@
+✖ fragmentation does not multiply the configured propagation latency (3.628634ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 57.61775
+
+✖ failing tests:
+
+test at ../../tmp/harness-web-ui-20261016/tcp-serial-original.test.mjs:9:1
+✖ fragmentation does not multiply the configured propagation latency (3.628634ms)
+  AssertionError [ERR_ASSERTION]: All forty arrivals have the same due time
+  
+  1 !== 40
+  
+      at TestContext.<anonymous> (file:///tmp/harness-web-ui-20261016/tcp-serial-original.test.mjs:18:10)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 40,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

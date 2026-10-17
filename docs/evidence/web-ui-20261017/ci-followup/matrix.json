@@ -1,0 +1,626 @@
+{
+  "matrixVersion": "e4-r101-acceptance-matrix-v1",
+  "totalTests": 567,
+  "passedTests": 567,
+  "suiteSuccess": true,
+  "duplicateNames": [],
+  "pinnedRegressions": [
+    "passes --plan-digest to the dispatch",
+    "executes the case and records a verdict that can ONLY come from the real report",
+    "TWO DIFFERENT CASES each enter their OWN context",
+    "G5: the budget holds ACROSS PROCESSES"
+  ],
+  "missingPinned": [],
+  "notPassedPinned": [],
+  "rows": [
+    {
+      "id": "两个不同 arm + 两种不同 request",
+      "planExpectation": "每臂模块/build identity、捕获输入、真实工具事件",
+      "planRows": [
+        "M8"
+      ],
+      "tests": [
+        {
+          "name": "R100 I3: the build identity is a BYTE hash over the modules that actually execute the executed-bytes manifest covers the provider and runtime trees, not only the CLI",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "R99 W8: THE REAL EXECUTION — the arm's own build actually runs the case TWO DIFFERENT CASES each enter their OWN context — no single placeholder request",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "R99 W8: THE REAL EXECUTION — the arm's own build actually runs the case executes the case and records a verdict that can ONLY come from the real report",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "E4-R101-A (T6) C1: the seam reads the case's OWN contract recovers the literal from a case whose command verifier embeds it",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "missing": [],
+      "notPassed": []
+    },
+    {
+      "id": "写文件成功 / 只说完成但未写文件",
+      "planExpectation": "TaskVerifier 的正反结果和持久报告",
+      "planRows": [
+        "M8"
+      ],
+      "tests": [
+        {
+          "name": "E4-R101-A (T6) C3: an artifact-only case gets a REAL non-null write puts the write FIRST, so the tool call really happens",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "E4-R101-A (T6) C2: scripting NEVER throws a case into infrastructure scripts a command-only case as the claim-only negative control",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "R99 W5: report classification is three-way and never invents a pass a case that RAN and failed its task is a VALID negative (`case_failed`), not an infrastructure error",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "R99 W10: the worker's report SURVIVES it, linked and hashed leaves a real evidence file on disk after the worker returns",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "missing": [],
+      "notPassed": []
+    },
+    {
+      "id": "多轮与子代理共享预算 3 次",
+      "planExpectation": "第四次未进入 provider；实际计数与 ledger 一致",
+      "planRows": [
+        "M1"
+      ],
+      "tests": [
+        {
+          "name": "R98-A C1: every logical generate() reserves BEFORE the call leaves a grant of 3 admits exactly three calls across the SAME channel",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "R98-A C1: every logical generate() reserves BEFORE the call leaves with a grant of 1, a second generate() is refused BEFORE the provider is entered",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "R98-A C1: every logical generate() reserves BEFORE the call leaves the budget is shared with a SECOND channel on the same ledger (the two-arm case)",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "R98-A C3: a PRE-TAKEN reservation is adopted, not double-charged spends the caller's reservation on the first call and reserves fresh afterwards",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "R99 W11 (A1/F1): a DISPATCHED call is never refunded when the arm CLI dies afterwards grant=1, the consumer breaks mid-stream and the CLI throws: innerCalls=1, NOT abandoned, remaining=0, second reserve refused",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "R98-A C4: an early close or an exception after dispatch still settles exactly once a consumer that BREAKS after a non-terminal event keeps the allowance (unknown) and never refunds it",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "missing": [],
+      "notPassed": []
+    },
+    {
+      "id": "成功、有效负例、provider 失败后的恢复",
+      "planExpectation": "新调用 0；累计结果和失败不消失",
+      "planRows": [
+        "M9"
+      ],
+      "tests": [
+        {
+          "name": "E4-R99-A D8: a resume aggregates the FULL history, not just this run a resumed run does NOT report COMPLETE when history holds failures",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "E4-R99-A D8: a resume aggregates the FULL history, not just this run the pass aggregate is a UNION over units, never a SUM over lists counts a unit present in BOTH history and this run exactly once",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "E4-R99-A D8: a resume aggregates the FULL history, not just this run the pass aggregate is a UNION over units, never a SUM over lists a resume reports the SAME numerator as the run it resumed",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "E4-R103 (A3): the formal CLI uses the execution clock and current inputs REAL GATE + FORMAL DRIVER: a resume verifies the OLD evidence before it spends any new budget",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "missing": [],
+      "notPassed": []
+    },
+    {
+      "id": "缺 state/ledger、换目录、hash 改动",
+      "planExpectation": "命名拒绝；0 新调用",
+      "planRows": [
+        "M2",
+        "M4"
+      ],
+      "tests": [
+        {
+          "name": "R98-B S1: an ESTABLISHED campaign's missing state is a LOSS, not a blank slate REFUSES to treat a deleted state file as 'nothing has run'",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "R98-B S1: an ESTABLISHED campaign's missing state is a LOSS, not a blank slate still CREATES state on a genuine first run (no ledger yet)",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "E4-R98 S2: the execution state fails closed on identity drift refuses a store bound to a different plan digest",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "E4-R98 S2: the execution state fails closed on identity drift refuses a corrupted store rather than treating it as empty",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "R98-A L3c: a SPENT authorization is not refreshed by deleting its root REFUSES a new root after the root that SPENT the authorization was deleted",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "R98-A L3b: only a claim that never ESTABLISHED a budget is stale REFUSES a new root once the claiming directory is GONE — the claim is a LOSS, not garbage",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "R98-A L3f: two REAL processes racing one approval cannot both win a LEFTOVER claim lock from a crashed process cannot hand TWO roots the same approval",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "E4-R103 (A3): the worker stages the bytes it was approved for REFUSES a unit dispatched with NO approved fingerprint, before the ledger exists",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "E4-R103 (A3): the worker stages the bytes it was approved for REFUSES when the staged bytes do not match the approved fingerprint",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "E4-R103 (A3): the worker stages the bytes it was approved for REFUSES when the SOURCE changes inside the copy window (probe → copy)",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "E4-R103 (A3): the worker stages the bytes it was approved for ACCEPTS matching bytes and records the fingerprint it actually staged",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "missing": [],
+      "notPassed": []
+    },
+    {
+      "id": "同单位竞争、活 owner、死 owner、reconcile retry",
+      "planExpectation": "所有权和预算证据，未重复执行",
+      "planRows": [],
+      "tests": [
+        {
+          "name": "R98-B S2: one unit has exactly ONE owner at a time REFUSES a second begin while the unit is running",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "R98-B S2: one unit has exactly ONE owner at a time records owner evidence (pid + host) on the attempt",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "R98-B S3: recovery respects a LIVE owner does NOT reclassify a running unit whose owner is alive",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "R98-B S3: recovery respects a LIVE owner quarantines a running unit whose owner is provably DEAD, keeping its allowance",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "R98-B S3: recovery respects a LIVE owner conservatively does NOT touch a running unit owned by ANOTHER HOST",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "R98-B S4: reconciliation actually re-opens the unit isDone is FALSE after a retry reconciliation, so the dispatcher re-runs it",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "R98-B S4: reconciliation actually re-opens the unit preserves the OLD attempt's audit trail rather than overwriting it",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "missing": [],
+      "notPassed": []
+    },
+    {
+      "id": "输入/构建/model/endpoint 漂移",
+      "planExpectation": "实际执行边界拒绝，不仅纯函数比较",
+      "planRows": [
+        "M5",
+        "M6"
+      ],
+      "tests": [
+        {
+          "name": "R100 I2: the request the arm ACTUALLY made carries the approved identity runs under the APPROVED model and endpoint, not the default pair",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "R100 I2: the request the arm ACTUALLY made carries the approved identity REFUSES to dispatch at all when the identity is incomplete",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "R100 I1: the approved identity is REQUIRED, never defaulted REFUSES a missing or empty modelId rather than falling back to gpt-4o-mini",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "R99 W8: THE REAL EXECUTION — the arm's own build actually runs the case REFUSES a unit whose checkout is not the approved build, and dispatches NOTHING",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "R100 I3: the build identity is a BYTE hash over the modules that actually execute is null when a covered module is missing, so an unestablished build never passes",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "E4-R104 (A4): the arm build identity is derived from the real import graph 1. CHANGES when a TRANSITIVELY imported module changes, at identical size and mtime",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "E4-R104 (A4): the arm build identity is derived from the real import graph 2. is NOT ESTABLISHED (null) when an execution dependency cannot be resolved",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "E4-R104 (A4): the arm build identity is derived from the real import graph 3. REFUSES a unit whose approved build digest no longer matches, before the ledger opens",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "E4-R104 (A4): the formal plan binds the arm's EXECUTED bytes 1. REFUSES to finalize an arm that binds no EXECUTION build digest",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "E4-R104 (A4): the formal plan binds the arm's EXECUTED bytes 3. REFUSES at execution time when the arm's BYTES moved, with sha and plan digest UNCHANGED",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "E4-R104 (A4): the formal plan binds the arm's EXECUTED bytes 5. REFUSES an approval that binds NO build digest, naming regeneration",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "E4-R104 (A4): the driver forwards the approved build identity A4: the driver forwards the APPROVED build digest to every unit, so a rebuilt arm is refused",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "R105 (A5/F5): an identity refusal outranks a report that claims a PASS PROTOCOL FIXTURE: the runtime's model ref disagrees with the approval, and the synthetic PASS report must not win",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "R105 (A5/F5): an identity refusal outranks a report that claims a PASS PROTOCOL FIXTURE: a NULL runtime model ref is a refusal, never 'no drift'",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "R105 (A5/F5): an identity refusal outranks a report that claims a PASS PROTOCOL FIXTURE: a FAILED dry run ends the unit BEFORE any dispatch",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "R105 (A5/F5): an identity refusal outranks a report that claims a PASS PROTOCOL FIXTURE: a LEGITIMATE negative stays `case_failed`, not infrastructure",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "R105 P: the verdict priority table is a real, ordered contract never lets a later assignment overwrite a more blocking fact, in EITHER order",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "missing": [],
+      "notPassed": []
+    },
+    {
+      "id": "超时/取消/输出过量",
+      "planExpectation": "有界返回，无遗留进程，状态正确",
+      "planRows": [
+        "M7"
+      ],
+      "tests": [
+        {
+          "name": "R99-B S1: a child that IGNORES SIGTERM is still stopped, within deadline + grace returns a NAMED timeout result, and the child is really gone",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "R99-B S2: the output cap is BYTES, not a count of chunks one HUGE chunk and many SMALL chunks are bounded identically",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "R99-B S2: the output cap is BYTES, not a count of chunks the module's own default cap is a real byte limit, not a chunk count",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "R99-B S3: cancellation and spawn failure are distinct, named outcomes an AbortSignal cancels a running child and is reported as `cancelled`",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "R99-B S6: the deadline reaches the REAL execution path a unit whose deadline is ALREADY spent never dispatches, and reports timeout",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "R99-B S7: an interrupted unit settles its budget and its state honestly a unit stopped by the deadline is TERMINAL, so a resume skips it rather than re-sending",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "E4-R106 (A6/F6): a HANGING arm is really TERMINATED, within the declared bound a dry run that never returns is stopped by the unit deadline, and its code does NOT outlive the unit",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "E4-R106 (A6/F6): a HANGING arm is really TERMINATED, within the declared bound a DISPATCH that never returns is stopped too, and the admitted call is NOT refunded",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "E4-R99-B (T5): the campaign's own stop, checked before every unit A6: the driver forwards the cancellation signal and the campaign's REMAINING time to every unit",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "E4-R99-B (T5): the campaign's own stop, checked before every unit A6: an ALREADY-CANCELLED campaign never dispatches a unit at all",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "missing": [],
+      "notPassed": []
+    },
+    {
+      "id": "外部 provider 未获授权",
+      "planExpectation": "真实 gate 拒绝、provider 未构造、外部请求 0",
+      "planRows": [
+        "M3"
+      ],
+      "tests": [
+        {
+          "name": "E4-R97 D4: the CLI entry refuses to build a real provider by default without --fake-provider the driver only prints a plan and makes no provider",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "E4-R97 D9: the finalized plan is executable WITHOUT modification an unauthorized run of the same unmodified artifact is NOT_RUN with 0 requests",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "E4-R97 D1: every refusal path makes ZERO provider requests UNAUTHORIZED: no auth env -> refused, 0 requests, provider never constructed",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "E4-R103 (A3): the formal CLI uses the execution clock and current inputs REAL GATE + DEV TOOL: an approval expired against the execution clock is REFUSED with 0 calls, even though plan.observation.now is still inside the window",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "E4-R103 (A3): the formal CLI uses the execution clock and current inputs REAL GATE + FORMAL MAIN: the gate judges the CURRENT checkouts, not the plan's review snapshot",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        },
+        {
+          "name": "E4-R103 (A3): the formal CLI uses the execution clock and current inputs REAL GATE + FORMAL MAIN: a checkout that has MOVED since approval is refused before any unit",
+          "present": true,
+          "status": "passed",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "missing": [],
+      "notPassed": []
+    }
+  ],
+  "planRows": [
+    {
+      "id": "M1",
+      "requirement": "流提前 break/return 后 CLI 异常",
+      "minimumEvidence": "innerCalls=1；预算不退；第二次 reserve 拒绝",
+      "coveredBy": [
+        "多轮与子代理共享预算 3 次"
+      ],
+      "ok": true
+    },
+    {
+      "id": "M2",
+      "requirement": "已消费 campaign 整目录删除后重新打开",
+      "minimumEvidence": "同批准拒绝；没有新调用",
+      "coveredBy": [
+        "缺 state/ledger、换目录、hash 改动"
+      ],
+      "ok": true
+    },
+    {
+      "id": "M3",
+      "requirement": "旧 observation.now + 当前时间已过期",
+      "minimumEvidence": "真实 main/gate 拒绝；没有进入 worker",
+      "coveredBy": [
+        "外部 provider 未获授权"
+      ],
+      "ok": true
+    },
+    {
+      "id": "M4",
+      "requirement": "计划后修改实际 case/staged 字节",
+      "minimumEvidence": "首次/恢复均拒绝，调用 0",
+      "coveredBy": [
+        "缺 state/ledger、换目录、hash 改动"
+      ],
+      "ok": true
+    },
+    {
+      "id": "M5",
+      "requirement": "只改被导入 dist 子模块",
+      "minimumEvidence": "实际批准 digest 不匹配，调用前拒绝",
+      "coveredBy": [
+        "输入/构建/model/endpoint 漂移"
+      ],
+      "ok": true
+    },
+    {
+      "id": "M6",
+      "requirement": "身份漂移 + 成功报告",
+      "minimumEvidence": "非 PASS；落盘与汇总一致",
+      "coveredBy": [
+        "输入/构建/model/endpoint 漂移"
+      ],
+      "ok": true
+    },
+    {
+      "id": "M7",
+      "requirement": "当前 unit 中取消/总 deadline/output_limit",
+      "minimumEvidence": "当前执行及进程树停止；原因准确；预算保守结算",
+      "coveredBy": [
+        "超时/取消/输出过量"
+      ],
+      "ok": true
+    },
+    {
+      "id": "M8",
+      "requirement": "正常双 arm 工具/verifier 路径",
+      "minimumEvidence": "正常通过与真实负例仍成立；不是协议 fixture 伪造通过",
+      "coveredBy": [
+        "两个不同 arm + 两种不同 request",
+        "写文件成功 / 只说完成但未写文件"
+      ],
+      "ok": true
+    },
+    {
+      "id": "M9",
+      "requirement": "正常/失败/unknown 的 resume",
+      "minimumEvidence": "新增调用与累计结果符合合同；损坏证据先拒绝",
+      "coveredBy": [
+        "成功、有效负例、provider 失败后的恢复"
+      ],
+      "ok": true
+    }
+  ],
+  "uncoveredPlanRows": [],
+  "unsatisfiedPlanRows": [],
+  "ok": true
+}

@@ -1,0 +1,463 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-pr8-review-20261016
+
+[harness] context budget: model capabilities unknown for scripted/old-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/old-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/new-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/old-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/old-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/new-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/old-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/old-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/new-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/old-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/old-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/new-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/old-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/old-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/new-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/old-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/old-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/new-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/old-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/old-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/old-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/new-model — using conservative fallback 32000
+ ❯ apps/web/src/deepseek/pr8-sequence-safety.regressions.test.ts (8 tests | 7 failed) 147ms
+   × owner reads reject a missing retired prefix before exposing any live suffix 58ms
+   × owner reads reject a short retired prefix before exposing any live suffix 21ms
+   × owner reads reject a gap retired prefix before exposing any live suffix 12ms
+   × owner reads reject a wrong-session retired prefix before exposing any live suffix 16ms
+   × owner reads reject a duplicate-id retired prefix before exposing any live suffix 13ms
+   × owner reads reject a extra retired prefix before exposing any live suffix 9ms
+   × ordinary sessions cannot self-declare a missing first event as their baseline 7ms
+   ✓ healthy alias reads preserve full and paginated global coordinates and the native fork inverse 11ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  apps/web/src/deepseek/pr8-sequence-safety.regressions.test.ts > owner reads reject a missing retired prefix before exposing any live suffix
+AssertionError: promise resolved "[ { …(6) }, { …(6) } ]" instead of rejecting
+
+- Expected:
+Error {
+  "message": "rejected promise",
+}
+
++ Received:
+[
+  {
+    "id": "event_51348bdf-28eb-47fb-8ace-af78a2c4e208",
+    "payload": {
+      "agentId": "agent_e9470a6b-07df-40b5-be12-b256810a8da5",
+      "sessionId": "session_e0878974-f492-4aa4-80f6-341964d01c25",
+    },
+    "sequence": 2,
+    "sessionId": "session_e0878974-f492-4aa4-80f6-341964d01c25",
+    "timestamp": 1792139016260,
+    "type": "session.created",
+  },
+  {
+    "id": "event_60bfb982-7fb2-4a0a-8d63-4f884fbba5c5",
+    "payload": {
+      "hostOnly": true,
+      "kind": "web_model_selection",
+      "selection": {
+        "model": "new-model",
+        "provider": "scripted",
+      },
+    },
+    "sequence": 3,
+    "sessionId": "session_e0878974-f492-4aa4-80f6-341964d01c25",
+    "timestamp": 1792139016260,
+    "type": "human.message",
+  },
+]
+
+ ❯ apps/web/src/deepseek/pr8-sequence-safety.regressions.test.ts:23:52
+     21|   if (fault === 'extra') damaged.push({ ...damaged.at(-1)!, id: newEve…
+     22|   vi.spyOn(stack.oldOwner.events, 'list').mockImplementation(async (id…
+     23|   await expect(stack.harness.events.list(stack.id)).rejects.toMatchObj…
+       |                                                    ^
+     24|   await expect(stack.call('session/projections', { sessionId: stack.id…
+     25| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/7]⎯
+
+ FAIL  apps/web/src/deepseek/pr8-sequence-safety.regressions.test.ts > owner reads reject a short retired prefix before exposing any live suffix
+AssertionError: promise resolved "[ { …(6) }, { …(6) }, { …(6) } ]" instead of rejecting
+
+- Expected:
+Error {
+  "message": "rejected promise",
+}
+
++ Received:
+[
+  {
+    "id": "event_0c4f0200-42ce-403e-86d3-d4b6c0830e59",
+    "payload": {
+      "agentId": "agent_48dbe97f-e27d-498b-b5ea-ed274976e360",
+      "sessionId": "session_71a868b7-6c38-4305-ac91-d1a670e3d408",
+    },
+    "sequence": 0,
+    "sessionId": "session_71a868b7-6c38-4305-ac91-d1a670e3d408",
+    "timestamp": 1792139016302,
+    "type": "session.created",
+  },
+  {
+    "id": "event_0c414d9a-290d-4dc5-b768-f8c8b2fec144",
+    "payload": {
+      "agentId": "agent_7d1537cc-86a4-4cb7-b9e3-e5e8e498d40d",
+      "sessionId": "session_71a868b7-6c38-4305-ac91-d1a670e3d408",
+    },
+    "sequence": 2,
+    "sessionId": "session_71a868b7-6c38-4305-ac91-d1a670e3d408",
+    "timestamp": 1792139016308,
+    "type": "session.created",
+  },
+  {
+    "id": "event_b64ce82b-cd6d-4be0-863b-e6f34c3eea81",
+    "payload": {
+      "hostOnly": true,
+      "kind": "web_model_selection",
+      "selection": {
+        "model": "new-model",
+        "provider": "scripted",
+      },
+    },
+    "sequence": 3,
+    "sessionId": "session_71a868b7-6c38-4305-ac91-d1a670e3d408",
+    "timestamp": 1792139016308,
+    "type": "human.message",
+  },
+]
+
+ ❯ apps/web/src/deepseek/pr8-sequence-safety.regressions.test.ts:23:52
+     21|   if (fault === 'extra') damaged.push({ ...damaged.at(-1)!, id: newEve…
+     22|   vi.spyOn(stack.oldOwner.events, 'list').mockImplementation(async (id…
+     23|   await expect(stack.harness.events.list(stack.id)).rejects.toMatchObj…
+       |                                                    ^
+     24|   await expect(stack.call('session/projections', { sessionId: stack.id…
+     25| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/7]⎯
+
+ FAIL  apps/web/src/deepseek/pr8-sequence-safety.regressions.test.ts > owner reads reject a gap retired prefix before exposing any live suffix
+AssertionError: promise resolved "[ { …(6) }, { …(6) }, { …(6) }, …(1) ]" instead of rejecting
+
+- Expected:
+Error {
+  "message": "rejected promise",
+}
+
++ Received:
+[
+  {
+    "id": "event_605716fb-ff15-49aa-aba5-2b7c354c4c0d",
+    "payload": {
+      "agentId": "agent_6337a990-58a8-4901-ab7b-fcd055ae9338",
+      "sessionId": "session_68ddee89-2477-4802-9467-759d0ecc7ada",
+    },
+    "sequence": 1,
+    "sessionId": "session_68ddee89-2477-4802-9467-759d0ecc7ada",
+    "timestamp": 1792139016316,
+    "type": "session.created",
+  },
+  {
+    "id": "event_de1ecc52-275d-4577-8708-39e595cb915b",
+    "payload": {},
+    "sequence": 1,
+    "sessionId": "session_68ddee89-2477-4802-9467-759d0ecc7ada",
+    "timestamp": 1792139016316,
+    "type": "session.resumed",
+  },
+  {
+    "id": "event_8c2b13de-ef4e-4b26-80c0-819e72a3c966",
+    "payload": {
+      "agentId": "agent_13ed2995-7131-48a8-a457-fa3b93463fde",
+      "sessionId": "session_68ddee89-2477-4802-9467-759d0ecc7ada",
+    },
+    "sequence": 2,
+    "sessionId": "session_68ddee89-2477-4802-9467-759d0ecc7ada",
+    "timestamp": 1792139016320,
+    "type": "session.created",
+  },
+  {
+    "id": "event_c9eee84f-30fa-457d-acd5-1a5a85a3f0c1",
+    "payload": {
+      "hostOnly": true,
+      "kind": "web_model_selection",
+      "selection": {
+        "model": "new-model",
+        "provider": "scripted",
+      },
+    },
+    "sequence": 3,
+    "sessionId": "session_68ddee89-2477-4802-9467-759d0ecc7ada",
+    "timestamp": 1792139016320,
+    "type": "human.message",
+  },
+]
+
+ ❯ apps/web/src/deepseek/pr8-sequence-safety.regressions.test.ts:23:52
+     21|   if (fault === 'extra') damaged.push({ ...damaged.at(-1)!, id: newEve…
+     22|   vi.spyOn(stack.oldOwner.events, 'list').mockImplementation(async (id…
+     23|   await expect(stack.harness.events.list(stack.id)).rejects.toMatchObj…
+       |                                                    ^
+     24|   await expect(stack.call('session/projections', { sessionId: stack.id…
+     25| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/7]⎯
+
+ FAIL  apps/web/src/deepseek/pr8-sequence-safety.regressions.test.ts > owner reads reject a wrong-session retired prefix before exposing any live suffix
+AssertionError: promise resolved "[ { …(6) }, { …(6) }, { …(6) }, …(1) ]" instead of rejecting
+
+- Expected:
+Error {
+  "message": "rejected promise",
+}
+
++ Received:
+[
+  {
+    "id": "event_0f74182c-dacb-4541-be52-426ae6d3b2e7",
+    "payload": {
+      "agentId": "agent_806a3366-da40-491b-b7f9-ea9f502e9d0c",
+      "sessionId": "session_c9dfdb38-9500-4dff-b5a3-2ff53ca3061b",
+    },
+    "sequence": 0,
+    "sessionId": "session_9562d638-742d-4fd9-8795-7582be39a354",
+    "timestamp": 1792139016328,
+    "type": "session.created",
+  },
+  {
+    "id": "event_97b8dc62-af71-4af9-8415-af58aa160cd3",
+    "payload": {},
+    "sequence": 1,
+    "sessionId": "session_c9dfdb38-9500-4dff-b5a3-2ff53ca3061b",
+    "timestamp": 1792139016328,
+    "type": "session.resumed",
+  },
+  {
+    "id": "event_6e13e146-90fd-4b68-be4a-0f137cd1f144",
+    "payload": {
+      "agentId": "agent_879fd5c1-6af3-4c7e-9272-a508e1c01e67",
+      "sessionId": "session_c9dfdb38-9500-4dff-b5a3-2ff53ca3061b",
+    },
+    "sequence": 2,
+    "sessionId": "session_c9dfdb38-9500-4dff-b5a3-2ff53ca3061b",
+    "timestamp": 1792139016331,
+    "type": "session.created",
+  },
+  {
+    "id": "event_8149fd22-ec01-451a-9f9d-78d9a1f2f549",
+    "payload": {
+      "hostOnly": true,
+      "kind": "web_model_selection",
+      "selection": {
+        "model": "new-model",
+        "provider": "scripted",
+      },
+    },
+    "sequence": 3,
+    "sessionId": "session_c9dfdb38-9500-4dff-b5a3-2ff53ca3061b",
+    "timestamp": 1792139016331,
+    "type": "human.message",
+  },
+]
+
+ ❯ apps/web/src/deepseek/pr8-sequence-safety.regressions.test.ts:23:52
+     21|   if (fault === 'extra') damaged.push({ ...damaged.at(-1)!, id: newEve…
+     22|   vi.spyOn(stack.oldOwner.events, 'list').mockImplementation(async (id…
+     23|   await expect(stack.harness.events.list(stack.id)).rejects.toMatchObj…
+       |                                                    ^
+     24|   await expect(stack.call('session/projections', { sessionId: stack.id…
+     25| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/7]⎯
+
+ FAIL  apps/web/src/deepseek/pr8-sequence-safety.regressions.test.ts > owner reads reject a duplicate-id retired prefix before exposing any live suffix
+AssertionError: promise resolved "[ { …(6) }, { …(6) }, { …(6) }, …(1) ]" instead of rejecting
+
+- Expected:
+Error {
+  "message": "rejected promise",
+}
+
++ Received:
+[
+  {
+    "id": "event_a1bb494c-a981-4600-8ada-135644b9aae8",
+    "payload": {
+      "agentId": "agent_dbb1df5a-e269-4ef5-8529-849b5d1264cc",
+      "sessionId": "session_1deb8ed9-7973-440d-9316-8f1c26a20ebb",
+    },
+    "sequence": 0,
+    "sessionId": "session_1deb8ed9-7973-440d-9316-8f1c26a20ebb",
+    "timestamp": 1792139016345,
+    "type": "session.created",
+  },
+  {
+    "id": "event_a1bb494c-a981-4600-8ada-135644b9aae8",
+    "payload": {},
+    "sequence": 1,
+    "sessionId": "session_1deb8ed9-7973-440d-9316-8f1c26a20ebb",
+    "timestamp": 1792139016345,
+    "type": "session.resumed",
+  },
+  {
+    "id": "event_04b9b59d-81e4-469a-b805-6e93bc9fb221",
+    "payload": {
+      "agentId": "agent_85fd5749-7a33-473b-b159-09cbf57970dc",
+      "sessionId": "session_1deb8ed9-7973-440d-9316-8f1c26a20ebb",
+    },
+    "sequence": 2,
+    "sessionId": "session_1deb8ed9-7973-440d-9316-8f1c26a20ebb",
+    "timestamp": 1792139016348,
+    "type": "session.created",
+  },
+  {
+    "id": "event_85597936-44d6-439f-8c4d-22eb12acc281",
+    "payload": {
+      "hostOnly": true,
+      "kind": "web_model_selection",
+      "selection": {
+        "model": "new-model",
+        "provider": "scripted",
+      },
+    },
+    "sequence": 3,
+    "sessionId": "session_1deb8ed9-7973-440d-9316-8f1c26a20ebb",
+    "timestamp": 1792139016349,
+    "type": "human.message",
+  },
+]
+
+ ❯ apps/web/src/deepseek/pr8-sequence-safety.regressions.test.ts:23:52
+     21|   if (fault === 'extra') damaged.push({ ...damaged.at(-1)!, id: newEve…
+     22|   vi.spyOn(stack.oldOwner.events, 'list').mockImplementation(async (id…
+     23|   await expect(stack.harness.events.list(stack.id)).rejects.toMatchObj…
+       |                                                    ^
+     24|   await expect(stack.call('session/projections', { sessionId: stack.id…
+     25| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/7]⎯
+
+ FAIL  apps/web/src/deepseek/pr8-sequence-safety.regressions.test.ts > owner reads reject a extra retired prefix before exposing any live suffix
+AssertionError: promise resolved "[ { …(6) }, { …(6) }, { …(6) }, …(1) ]" instead of rejecting
+
+- Expected:
+Error {
+  "message": "rejected promise",
+}
+
++ Received:
+[
+  {
+    "id": "event_09bba7ca-dd4f-4ca8-86ab-7c0cd60456d6",
+    "payload": {
+      "agentId": "agent_6d31ac23-206a-4a57-bd10-111a5bb11942",
+      "sessionId": "session_7ac81da8-d592-4a94-b522-b23f4af00217",
+    },
+    "sequence": 0,
+    "sessionId": "session_7ac81da8-d592-4a94-b522-b23f4af00217",
+    "timestamp": 1792139016356,
+    "type": "session.created",
+  },
+  {
+    "id": "event_5286102a-88f7-40e2-9094-4ce2c21b2ea0",
+    "payload": {},
+    "sequence": 1,
+    "sessionId": "session_7ac81da8-d592-4a94-b522-b23f4af00217",
+    "timestamp": 1792139016356,
+    "type": "session.resumed",
+  },
+  {
+    "id": "event_8e94b455-34f4-48b8-9dc9-85ae44f6c426",
+    "payload": {
+      "agentId": "agent_19889b9e-26de-4adf-94d7-c450e942a9d1",
+      "sessionId": "session_7ac81da8-d592-4a94-b522-b23f4af00217",
+    },
+    "sequence": 2,
+    "sessionId": "session_7ac81da8-d592-4a94-b522-b23f4af00217",
+    "timestamp": 1792139016358,
+    "type": "session.created",
+  },
+  {
+    "id": "event_b13b8a05-0bd8-49c1-a80b-72e937faf852",
+    "payload": {
+      "hostOnly": true,
+      "kind": "web_model_selection",
+      "selection": {
+        "model": "new-model",
+        "provider": "scripted",
+      },
+    },
+    "sequence": 3,
+    "sessionId": "session_7ac81da8-d592-4a94-b522-b23f4af00217",
+    "timestamp": 1792139016359,
+    "type": "human.message",
+  },
+]
+
+ ❯ apps/web/src/deepseek/pr8-sequence-safety.regressions.test.ts:23:52
+     21|   if (fault === 'extra') damaged.push({ ...damaged.at(-1)!, id: newEve…
+     22|   vi.spyOn(stack.oldOwner.events, 'list').mockImplementation(async (id…
+     23|   await expect(stack.harness.events.list(stack.id)).rejects.toMatchObj…
+       |                                                    ^
+     24|   await expect(stack.call('session/projections', { sessionId: stack.id…
+     25| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/7]⎯
+
+ FAIL  apps/web/src/deepseek/pr8-sequence-safety.regressions.test.ts > ordinary sessions cannot self-declare a missing first event as their baseline
+AssertionError: promise resolved "{ asOfSeq: +0, values: { …(7) } }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "asOfSeq": 0,
++   "values": {
++     "agentPreset": "main",
++     "modelSelection": {
++       "lastUsed": null,
++       "next": {
++         "model": "old-model",
++         "provider": "scripted",
++       },
++     },
++     "sessionListMetadata": {
++       "blank": true,
++       "lastPromptAt": null,
++     },
++     "subagentCatalog": [],
++     "title": null,
++     "todos": null,
++     "turnBoundary": {
++       "lastStepBoundary": null,
++       "lastStepStartSeq": null,
++       "lastTurn": 0,
++       "openTurnStartSeq": null,
++     },
++   },
+  }
+
+ ❯ apps/web/src/deepseek/pr8-sequence-safety.regressions.test.ts:31:75
+     29|   const original = stack.harness.events.list.bind(stack.harness.events…
+     30|   vi.spyOn(stack.harness.events, 'list').mockImplementation(async (id,…
+     31|   await expect(stack.call('session/projections', { sessionId: stack.id…
+       |                                                                           ^
+     32| });
+     33|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/7]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  7 failed | 1 passed (8)
+   Start at  08:23:33
+   Duration  3.26s (transform 2.36s, setup 0ms, import 2.96s, tests 147ms, environment 0ms)
+

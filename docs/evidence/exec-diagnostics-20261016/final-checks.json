@@ -1,0 +1,24 @@
+{
+  "typecheck": {
+    "command": [
+      "pnpm",
+      "typecheck"
+    ],
+    "exitCode": 0
+  },
+  "docs": {
+    "command": [
+      "pnpm",
+      "docs:verify"
+    ],
+    "exitCode": 0
+  },
+  "diff-check": {
+    "command": [
+      "git",
+      "diff",
+      "--check"
+    ],
+    "exitCode": 0
+  }
+}

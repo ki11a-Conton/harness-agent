@@ -21035,7 +21035,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		* @returns the Conversation view, Composer, and optional width controls.
 		*/
 		function ConversationContent(props) {
-			const { sessionId, phase, hero, useSession, useSessions, useSessionStatus, useWorkspaces, useInput, useComposerBlock, renderSlot, renderSlotChain, selectWorkspace, t, useFactorySlot } = props;
+			const { sessionId, phase, hero, useSession, useSessions, useSessionStatus, useWorkspaces, useInput, useComposerBlock, useWorkspaceNavigation, renderSlot, renderSlotChain, selectWorkspace, t, useFactorySlot } = props;
 			const session = useSession((snapshot) => snapshot);
 			const Views = useFactorySlot("views", ConversationSessionView);
 			const WidthControls = useFactorySlot("widthControls", NoConversationWidthControls);
@@ -21045,6 +21045,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			const cwd = useSessions((s) => sessionId === void 0 ? void 0 : s.byId[sessionId]?.cwd);
 			const workspaces = useWorkspaces((s) => s);
 			const composerBlock = useComposerBlock((block) => block);
+            const navigationPending = useWorkspaceNavigation((pending) => pending);
 			const [pickerOpen, setPickerOpen] = (0, react.useState)(false);
 			const [pendingWorkspaceId, setPendingWorkspaceId] = (0, react.useState)();
 			const workspaceSelection = (0, react.useRef)(0);
@@ -21114,7 +21115,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					renderSlot("conversation.hero.agentPreset", {})
 				]
 			});
-			const inert = workspaceSelectionPending || sessionId === void 0 || hero && chipTitle === void 0;
+			const inert = navigationPending || workspaceSelectionPending || sessionId === void 0 || hero && chipTitle === void 0;
 			const inputBar = renderSlot("conversation.composer.bar", {
 				variant: hero ? "hero" : "composer",
 				...inert ? {
@@ -23016,7 +23017,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					widthControls: { scope: "root" }
 				},
 				inject: (sessionId) => ({
-					hooks: { composerBlock: sessionId === void 0 ? ABSENT_BLOCK : composerBlocks.storeFor(sessionId) },
+					hooks: { composerBlock: sessionId === void 0 ? ABSENT_BLOCK : composerBlocks.storeFor(sessionId), workspaceNavigation: workspaceNavigation.navigationPending },
 					selectWorkspace: (workspaceId) => workspaceNavigation.openWorkspace(workspaceId, (nextId) => {
 						if (sessionId !== void 0 && nextId !== sessionId) {
 							const from = inputHub.shell(sessionId);

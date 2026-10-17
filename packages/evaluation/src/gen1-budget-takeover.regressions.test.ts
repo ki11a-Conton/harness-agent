@@ -6,7 +6,7 @@ import { pathToFileURL } from "node:url";
 import { expect, it } from "vitest";
 import { withR97CampaignLock } from "./r97-budget-ledger.js";
 
-it("Gen1: a delayed stale reclaimer cannot remove another reclaimer's new live ledger lock", async () => {
+it.each([false, true])("Gen1: a delayed stale reclaimer cannot remove another reclaimer's new live ledger lock (B-first=%s)", async forceBFirst => {
   const root = await mkdtemp(join(tmpdir(), "gen1-ledger-takeover-"));
   const lock = join(root, "budget-ledger.lock");
   await writeFile(lock, JSON.stringify({ token: "dead-owner", pid: 2147483647, host: hostname(), acquiredAt: 0 }));
@@ -18,7 +18,7 @@ it("Gen1: a delayed stale reclaimer cannot remove another reclaimer's new live l
     const deadline = Date.now() + 10_000;
     for (;;) {
       for (const name of names) if (await exists(name)) return name;
-      if (Date.now() >= deadline) throw new Error(`barrier not reached: ${names.join(", ")}`);
+      if (Date.now() >= deadline) throw new Error(`barrier not reached: ${names.join(", ")}; B first removal owner: ${await readFile(join(root, 'rm-token-b'), 'utf8').catch(() => '<none>')}`);
       await new Promise(resolve => setTimeout(resolve, 5));
     }
   };
@@ -30,18 +30,34 @@ it("Gen1: a delayed stale reclaimer cannot remove another reclaimer's new live l
       let first = true;
       fs.rm = async function(path, ...args) {
         if (String(path) === ${JSON.stringify(lock)} && first) {
+          const holder = JSON.parse(await fs.readFile(path, 'utf8'));
+          await fs.writeFile(${JSON.stringify(root)} + '/rm-token-' + ${JSON.stringify(tag)}, holder.token);
+          // B can legitimately acquire and release before A's next iteration.
+          // Park only stale removal, never that ordinary live-owner release.
+          if (holder.token === "dead-owner") {
           first = false; await fs.writeFile(${JSON.stringify(root)} + "/rm-ready-" + ${JSON.stringify(tag)}, "1");
           for (;;) { try { await fs.access(${JSON.stringify(root)} + "/remove-" + ${JSON.stringify(tag)}); break; }
             catch { await new Promise(resolve => setTimeout(resolve, 5)); } }
+          }
         }
         return originalRm(path, ...args);
       };
       fs.open = async function(path, ...args) {
+        if (${JSON.stringify(forceBFirst)} && ${JSON.stringify(tag)} === 'a' && !first && String(path).endsWith('.reclaim')) {
+          for (;;) { try { await fs.access(${JSON.stringify(root)} + '/b-finished'); break; }
+            catch { await new Promise(resolve => setTimeout(resolve, 5)); } }
+        }
         try { return await originalOpen(path, ...args); }
         catch(error) {
           if (${JSON.stringify(tag)} === "b" && error.code === "EEXIST") {
-            const name = String(path).endsWith(".reclaim") ? "/guard-blocked-b" : "/main-blocked-b";
-            await fs.writeFile(${JSON.stringify(root)} + name, "1");
+            const guard = String(path).endsWith(".reclaim");
+            let liveOwner = false;
+            if (!guard) try { const owner = JSON.parse(await fs.readFile(path, 'utf8'));
+              liveOwner = owner.token !== 'dead-owner' && owner.pid !== process.pid;
+            } catch {}
+            // An old EEXIST against the seeded dead owner is not evidence that
+            // B has waited on A's new live lock. Never release A on that signal.
+            if (guard || liveOwner) await fs.writeFile(${JSON.stringify(root)} + (guard ? "/guard-blocked-b" : "/main-blocked-b"), "1");
           }
           throw error;
         }
@@ -63,6 +79,7 @@ it("Gen1: a delayed stale reclaimer cannot remove another reclaimer's new live l
             } catch {}
           }
         }, {lockTimeoutMs: 30_000});
+        if (${JSON.stringify(tag)} === 'b') await fs.writeFile(${JSON.stringify(root)} + '/b-finished', '1');
         console.log(JSON.stringify({tag:${JSON.stringify(tag)},ok:true,overlap}));
       } catch(error) { console.log(JSON.stringify({tag:${JSON.stringify(tag)},ok:false,error:String(error)})); }
     `;
