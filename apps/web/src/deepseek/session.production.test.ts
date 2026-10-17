@@ -1,7 +1,7 @@
 import { mkdtemp, mkdir, rm, realpath } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { createHarness } from "@ar/harness";
 import { ScriptedModelProvider } from "@ar/model";
 import type { ModelEvent, SessionId } from "@ar/contracts";
@@ -10,12 +10,13 @@ import { createDeepseekComposition } from "./composition.js";
 const cleanup: Array<() => Promise<void>> = [];
 afterEach(async () => { for (const action of cleanup.splice(0).reverse()) await action(); });
 
-it("production composition admits a prompt while official event and follow streams remain open", async () => {
+it.each([0, 2000])("production composition admits a prompt with %i ms metadata IO while official event and follow streams remain open", async metadataDelayMs => {
   const root = await realpath(await mkdtemp(join(tmpdir(), "dsh-production-prompt-")));
   cleanup.push(() => rm(root, { recursive: true, force: true }));
   const cwd = join(root, "project"), dataDir = join(root, "data"); await mkdir(cwd);
   let releaseModel!: () => void;
-  const modelGate = new Promise<void>(resolve => { releaseModel = resolve; });
+  let modelReleased = false;
+  const modelGate = new Promise<void>(resolve => { releaseModel = () => { modelReleased = true; resolve(); }; });
   cleanup.push(async () => { releaseModel(); });
   const provider = new ScriptedModelProvider([(async function* (): AsyncIterable<ModelEvent> {
     // Admission and subscriber shutdown must not depend on the model ending.
@@ -42,13 +43,25 @@ it("production composition admits a prompt while official event and follow strea
     try { while (!(await iterator.next()).done) { /* Real stream subscribers drain frames continuously. */ } }
     catch (error) { if (!signal.aborted) throw error; }
   });
+  const update = stack.sessions.metadata.update.bind(stack.sessions.metadata);
+  let delay = metadataDelayMs;
+  const slowWrite = vi.spyOn(stack.sessions.metadata, "update").mockImplementation(async (...args) => {
+    if (delay > 0) { const wait = delay; delay = 0; await new Promise(done => setTimeout(done, wait)); }
+    return update(...args);
+  });
+  cleanup.push(async () => slowWrite.mockRestore());
   const admission = stack.sessions.call("session/prompt", { request: { sessionId: id, requestId: "production-request", mode: "queue", content: [{ type: "text", text: "Please answer" }] } }, signal);
-  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    const result = await Promise.race([admission, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error("Production admission timed out")), 1500); })]);
+    // This is a liveness/ownership test, not a 1.5s storage benchmark. Keep
+    // the model gate closed and all three real subscriptions active until the
+    // prompt is DURABLY admitted. The existing outer 20s watchdog catches a
+    // lock held across a yield or an admission that waits for model completion.
+    const result = await admission;
     expect(result).toEqual({ accepted: true });
+    expect(modelReleased).toBe(false);
+    expect(await stack.harness.inbox.listAll(id)).toHaveLength(1);
   } finally {
-    if (timer) clearTimeout(timer); controller.abort();
+    controller.abort();
     try { await Promise.all(pumps); } finally { releaseModel(); }
   }
   expect(await stack.harness.inbox.listAll(id)).toHaveLength(1);
