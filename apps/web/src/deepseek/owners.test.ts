@@ -517,3 +517,36 @@ it("bounded stable-owner tails keep global coordinates, limit physical delivery,
   await expect(facade.events.list(draft.id, { afterSequence: all.at(-1)!.sequence, limit: 1 }))
     .rejects.toMatchObject({ code: "session/alias-corrupt" });
 });
+
+it.each(["factory", "runtime-facade"] as const)("%s never publishes a runnable session if its creating owner's config baseline fails", async entry => {
+  const stack = await fixture();
+  const seed = await stack.manager.createSession("secondary", signal());
+  const owner = await stack.manager.ownerOf(seed.id);
+  const before = new Set((await owner.store.listSessions()).map(session => session.id));
+  const save = owner.store.saveStateSnapshot.bind(owner.store);
+  owner.store.saveStateSnapshot = async (id, snapshot) => {
+    if (snapshot["p27.configFingerprint"] !== undefined) throw new Error("owner baseline unavailable");
+    await save(id, snapshot);
+  };
+  const creating = entry === "factory" ? stack.manager.createSession("secondary", signal())
+    : stack.manager.harnessFacade.runtime.createSession({ agent: owner.agents[0]!, cwd: owner.config.cwd });
+  await expect(creating).rejects.toThrow("owner baseline unavailable");
+  const added = (await owner.store.listSessions()).filter(session => !before.has(session.id));
+  expect(added).toHaveLength(1);
+  expect(added[0]!.status).toBe("failed");
+  await expect(owner.runtime.startTurn(added[0]!.id, "must not run")).rejects.toThrow("failed");
+});
+
+it("runtime-facade creation freezes its host baseline while retaining the caller's narrower agent policy", async () => {
+  const stack = await fixture(); const seed = await stack.manager.createSession("secondary", signal());
+  const owner = await stack.manager.ownerOf(seed.id);
+  const restricted = { ...owner.agents[0]!, tools: { allow: ["read_file"] },
+    permissions: { rules: [], defaultEffect: "deny" as const }, limits: { maxToolCalls: 1 } };
+  const session = await stack.manager.harnessFacade.runtime.createSession({ agent: restricted, cwd: owner.config.cwd });
+  expect(session.status).toBe("active");
+  expect((await owner.store.loadStateSnapshot(session.id))!["p27.configFingerprint"]).toBe(owner.resolvedConfig.fingerprint);
+  const effective = await stack.manager.harnessFacade.runtime.getSessionAgent(session.id);
+  expect(effective.tools).toEqual(restricted.tools);
+  expect(effective.permissions).toEqual(restricted.permissions);
+  expect(effective.limits).toEqual(restricted.limits);
+});

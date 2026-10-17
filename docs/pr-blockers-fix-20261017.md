@@ -45,3 +45,6 @@
 - W-2：正式 gate 的并发 Web 准入用例触发了其额外 1500ms 看门狗；原测试并无产品 1.5s SLO。存储层本来允许 Windows 有界共享锁恢复，不能用这个常数当成功能契约。注入合法 2000ms 元数据 I/O 即可在本地确定性复现同一个测试失败。改为在真实模型闸门仍关闭、三个订阅持续打开时等待并断言“accepted + inbox 已持久化”，保持原外层 20s 死锁守护；正常/慢存储都测试。该修正不声称识别了原 CI 实例的具体延迟持有者，也不改变产品权限/准入语义或扩大验收为性能证明。
 
 原 Windows 失败、对应本地反例与新增严格验收全部保留；只有后续最终源码首次通过原生 Windows/完整 CI 才满足合入条件，不取消/重跑原失败。
+
+
+R13-2 调用链补齐：继续用同一基线写入故障检查 Web factory 与 Runtime facade，前者仍在冻结前发布 active，后者根本未冻结配置。两个新独立反例在 76caf6a3 上均失败。普通 Web factory 统一经过修正后的 sessionService；Runtime facade 保留调用者完整受限 agent，以 failed 初始化、冻结宿主基线、最后发布，隐藏 failed 会话仍不发布。另断言 facade 创建后的 read_file-only/deny/maxToolCalls=1 没有被注册表宽策略替换。所有 Web 新会话入口与 draft replacement 的初始化契约保持一致。

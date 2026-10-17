@@ -390,10 +390,12 @@ export async function createOwnerManager(base: Harness, hooks: OwnerHooks): Prom
     }
     signal.throwIfAborted(); guard();
     const agent = owner.agents[0]; if (agent === undefined) throw new RemoteFailure("agent/not-found", "Workspace owner has no runnable agent");
-    const session = await owner.runtime.createSession({ agent, cwd: owner.config.cwd });
+    // The creating owner's service freezes every required baseline while the
+    // row is still failed, then publishes active. A failed Web initialization
+    // must not leave a runnable session discoverable through list/restart.
+    const session = await owner.sessionService.create({ agentId: agent.id, model: agent.model, cwd: owner.config.cwd });
     sessionOwners.set(session.id, owner);
-    // Freeze exactly the creating owner's effective policy before exposing the new native identity.
-    await owner.freezeConfigFingerprint(session.id); return session;
+    return session;
   }
 
   async function assertDraft(owner: Harness, session: Session, externalId: string, signal: AbortSignal): Promise<AgentEvent[]> {
@@ -668,7 +670,15 @@ export async function createOwnerManager(base: Harness, hooks: OwnerHooks): Prom
     createSession: async (options: Parameters<Harness["runtime"]["createSession"]>[0]) => {
       const owner = ownerFromAgent(options.agent.id); if (!samePath(options.cwd, owner.config.cwd)) throw new RemoteFailure("session/conflict", "Use the registered workspace factory to change cwd");
       if (options.parentId !== undefined && await ownerOf(options.parentId) !== owner) throw new RemoteFailure("session/conflict", "Parent session belongs to another workspace owner");
-      const session = await owner.runtime.createSession({ ...options, ...(options.parentId === undefined ? {} : { parentId: nativeSessionId(options.parentId) }) }); sessionOwners.set(session.id, owner); return outwardSession(session);
+      // Preserve the caller's exact restricted agent rather than substituting
+      // a registry definition, while retaining the host baseline commit gate.
+      const session = await owner.runtime.createSession({ ...options, initialStatus: "failed", ...(options.parentId === undefined ? {} : { parentId: nativeSessionId(options.parentId) }) });
+      sessionOwners.set(session.id, owner);
+      await owner.freezeConfigFingerprint(session.id);
+      if (options.initialStatus === "failed") return outwardSession(session);
+      const active: Session = { ...session, status: "active" };
+      await owner.store.updateSession(active);
+      return outwardSession(active);
     },
     startTurn: async (id: SessionId, text: string) => outwardTurn(await (await ownerOf(id)).runtime.startTurn(nativeSessionId(id), text))!,
     runTurn: async (...args: Parameters<Harness["runtime"]["runTurn"]>) => outwardOutcome(await (await ownerOf(args[0])).runtime.runTurn(nativeSessionId(args[0]), args[1], args[2], args[3])),
