@@ -1,6 +1,10 @@
 # Harness Agent 当前执行计划入口
 
-当前执行任务：[Web 日常交互审查](plan(20261016-234000).md)，合同：[WEB-DAILY-INTERACTIONS-20261016](tasks/WEB-DAILY-INTERACTIONS-20261016.md)。11 类 UI/宿主问题已修复；固定 clean 1a85b345 全仓 9874 通过/15 既有跳过/0 失败。原 e4 CI 暴露 D9 测试授权过期及浏览器验收提前刷新/读取的问题，现已修正：专用闭环 567/567、矩阵 9/9，同包在 CI 同版 Chromium 140 上 30/75、42/117、连接 2/10 全部通过。见[修复及失败分类](docs/web-daily-interactions-20261017.md)和[原始证据](docs/evidence/web-ui-20261017/README.md)。原 CI 失败保留，最终 main 四工作流另行复核；不调用付费模型，不发布 release。
+当前追加任务：[修复并合并 PR #11/#13](plan(20261017-pr-blockers).md)，合同：[PR-BLOCKERS-FIX-20261017](tasks/PR-BLOCKERS-FIX-20261017.md)。用户授权直接修复全部七组阻塞，独立反例与组合回归通过后更新原 PR 分支并合并 main，按最终精确 SHA 验收四工作流。原审查与失败证据保持历史绑定。
+
+当前执行任务：[剩余 PR 代码审查与安全合入](plan(20261017-115200).md)，合同：[PR-REMAINING-REVIEW-20261017](tasks/PR-REMAINING-REVIEW-20261017.md)。已审查 #11–#14：#12/#14 可合入，#11/#13 的兼容性、持久化、脱敏及真实 owner 性能反例失败，保留开放。安全组合 clean 499bc4e9 全仓 9874/15/0，安全 2146、类型、文档门禁通过；之前 UI main 3b3f4e9f 精确四工作流/十项主 CI 已通过，见[审查报告](docs/pr-remaining-review-20261017.md)。保留原 PR 历史，正常推送后验收最终 main 的全部 CI，不发布 release。
+
+上一任务：[Web 日常交互审查](plan(20261016-234000).md)，合同：[WEB-DAILY-INTERACTIONS-20261016](tasks/WEB-DAILY-INTERACTIONS-20261016.md)。已修复 13 类 UI/宿主/持久化问题，详见[报告](docs/web-daily-interactions-20261017.md)。固定 clean f2788ee5 全仓 9874 通过/15 既有跳过/0 失败；该源码新安装包同包原 UI 30/75、新 UI 42/117、连接恢复 2/10 全部通过，安全 2146 通过。代码一致的 9e0abb1a 候选首次 Windows 专项和双平台安装 UI/CLI CI 成功，见[最新本地证据](docs/evidence/web-ui-20261017/store-final/README.md)与[候选证据](docs/evidence/web-ui-20261017/store-candidate/README.md)。原失败全部保留；归档只改文档证据，最终 main 四工作流/十项主 CI 仍按推送后的精确 SHA 独立复核。用户追加授权审查剩余 PR，逐项对照现有修复后再决定合并，不重复引入或回退已有修正。不调用付费模型，不发布 release。
 
 上一任务：[Coding 命令诊断优化](plan(20261016-164800).md)，合同：[EXEC-DIAGNOSTICS-20261016](tasks/EXEC-DIAGNOSTICS-20261016.md)。main b6a86528 的四个工作流全部成功、主 CI 10/10，均为首次运行。保留 exec 有界诊断尾部，让真实编译、语法和测试失败的最终报错进入下一次 provider 请求；同预算配对基线 0/3 可见、新实现 3/3 可见。固定 clean 432dca23 全仓 9846 通过/15 跳过/0 失败，安全 2146 通过；原 bdd CI 失败和负对照保留。见[实现和验收记录](docs/exec-diagnostics-20261016.md)。
 

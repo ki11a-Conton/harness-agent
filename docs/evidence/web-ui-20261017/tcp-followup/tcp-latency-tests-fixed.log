@@ -1,0 +1,34 @@
+✖ fragmentation does not multiply the configured propagation latency (7.842107ms)
+✔ turning latency off cannot let newer bytes overtake queued bytes or EOF (1.861471ms)
+✔ queued byte limit applies writable backpressure and releases it after delivery (0.929298ms)
+✔ destroy cancels delayed delivery and closes with buffered input (0.85111ms)
+✔ actual TCP forwarding preserves binary bytes and graceful EOF (20.863586ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 4
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 92.837737
+
+✖ failing tests:
+
+test at scripts/research/web-daily-20261016/tcp-latency.test.mjs:8:1
+✖ fragmentation does not multiply the configured propagation latency (7.842107ms)
+  AssertionError [ERR_ASSERTION]: All forty arrivals have the same due time
+  
+  0 !== 40
+  
+      at TestContext.<anonymous> (file:///workspace/harness-agent-web-interactions-20261016/scripts/research/web-daily-20261016/tcp-latency.test.mjs:16:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 40,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

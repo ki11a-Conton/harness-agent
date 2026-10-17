@@ -1,0 +1,19 @@
+{
+  "kind": "deterministic actual atomic write; original sixteen-attempt implementation",
+  "sourceSha": "12d053eb1fe10680a75a40576750dff5f569dacb",
+  "productFileSha256": "323cb8efca9bfa500afee1d7d03d22e5099730b956d2f264be31e453ed401269",
+  "testFileSha256": "d8b3c0350ecef4d38d87f6c021f8b14ec30b8e463292bba3680f199b5de8fcdb",
+  "command": [
+    "pnpm",
+    "exec",
+    "vitest",
+    "run",
+    "packages/store-integrity/src/windows-atomic-write.regressions.test.ts",
+    "-t",
+    "former sixteen attempts"
+  ],
+  "startedAt": "2026-10-17T10:59:46.250289+00:00",
+  "exitCode": 1,
+  "expected": "original implementation rejects EPERM before staged replacement can succeed",
+  "paidModelCalls": 0
+}

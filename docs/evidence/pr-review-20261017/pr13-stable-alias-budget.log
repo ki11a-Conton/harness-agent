@@ -1,0 +1,39 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-pr13-review-20261017
+
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for review/review-model — using conservative fallback 32000
+ ❯ apps/web/src/deepseek/composition.integration.test.ts (11 tests | 1 failed | 10 skipped) 74ms
+   ↓ configured model window and output limit affect the actual owner and provider requests
+   ↓ actual composed event generations survive private host identities and emit only visible sessions
+   ↓ official secondary workspace creation and file read use the actual owner and enforce its boundary
+   ↓ restored child owners register their frozen schedule model tools before loading a session
+   ↓ an external host observer preserves actual deliverable capture on a completed approved coding turn
+   ↓ new valid model profiles are admitted by production composition and their profile identity reaches real HTTP
+   ↓ a production-composed selected coding model edits the actual secondary workspace through its own approval and stable capture coordinates
+   ↓ a memory-only host still changes a draft model and still refuses durable task state
+   ↓ repeated memory-only draft selection runs the selected HTTP model and freezes after input
+   ↓ review PR13: an idle real Web owner must not replay the full physical journal per events poll
+   × review PR13: an idle replaced stable draft owner must not replay the full physical journal per events poll 73ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  apps/web/src/deepseek/composition.integration.test.ts > review PR13: an idle replaced stable draft owner must not replay the full physical journal per events poll
+AssertionError: expected 4 to be less than or equal to 1
+ ❯ apps/web/src/deepseek/composition.integration.test.ts:312:29
+    310|     controller.abort(); await running.catch(error => { if (error?.name…
+    311|   }
+    312|   expect(fullPhysicalReads).toBeLessThanOrEqual(1);
+       |                             ^
+    313| });
+    314|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 10 skipped (11)
+   Start at  11:46:31
+   Duration  4.42s (transform 3.32s, setup 0ms, import 4.20s, tests 74ms, environment 0ms)
+

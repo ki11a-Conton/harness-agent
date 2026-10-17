@@ -4,12 +4,12 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { createServer, connect } from 'node:net';
-import { Transform } from 'node:stream';
 import { mkdir, readFile, writeFile, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 import { observeProductionRpc } from '../deepseek-browser-observe.mjs';
+import { createLatencyStream } from './tcp-latency.mjs';
 
 const { values } = parseArgs({ options: {
   output: { type: 'string' }, 'fixture-script': { type: 'string' }, 'portable-root': { type: 'string' },
@@ -28,9 +28,7 @@ const connections = new Set();
 const relay = createServer(socket => {
   const peer = connect(Number(upstream.port || 80), upstream.hostname);
   connections.add(socket); connections.add(peer);
-  const delay = () => new Transform({ transform(bytes, _encoding, done) {
-    if (transportLatency) setTimeout(() => done(null, bytes), transportLatency); else done(null, bytes);
-  } });
+  const delay = () => createLatencyStream(() => transportLatency);
   socket.pipe(delay()).pipe(peer); peer.pipe(delay()).pipe(socket);
   for (const [from, to] of [[socket, peer], [peer, socket]]) {
     from.on('error', () => to.destroy()); from.on('close', () => { connections.delete(from); to.destroy(); });
@@ -148,6 +146,24 @@ async function feedbackDialog(page, text, category) {
   if (text) await d.getByRole('textbox', { name: 'Feedback details', exact: true }).fill(text);
   await d.getByRole('button', { name: 'Submit', exact: true }).click(); await d.waitFor({ state: 'hidden' });
 }
+async function persistedLocale(page, preference) {
+  // The displayed locale is optimistic. Closing the browser context before the
+  // real write arrives can cancel it and contaminate later English-only cases.
+  // The real Windows atomic replacement can spend 7.13s retrying a transient
+  // lock. Include that operation plus actual transport; keep the suite deadline.
+  const deadlineAt = Date.now() + 12000;
+  let actual;
+  let pending;
+  do {
+    const settings = JSON.parse(await readFile(path.resolve(fixture.cwd, '../data/deepseek/settings.json'), 'utf8'));
+    actual = settings.namespaces.locale?.user?.preference;
+    pending = observations.get(page).calls.filter(call => ['settings/mutate', 'settings/describe'].includes(call.endpoint) && call.state === 'sent');
+    if (actual === preference && pending.length === 0) return;
+    await new Promise(resolve => setTimeout(resolve, 50));
+  } while (Date.now() < deadlineAt);
+  assert.equal(actual, preference, 'Language change must reach the real durable settings before closing its context');
+  assert.deepEqual(pending, [], 'Actual settings writes and snapshots must be acknowledged before checking the committed language');
+}
 async function readMetadata(id) {
   const data = path.resolve(fixture.cwd, '../data'), index = JSON.parse(await readFile(path.join(data, 'deepseek/owners-index.json'), 'utf8'));
   for (const base of [data, ...index.owners.map(owner => { assert(/^[a-f0-9]{64}$/.test(owner.id)); return path.join(data, 'deepseek/owners', owner.id); })]) {
@@ -238,10 +254,16 @@ const cases = {
     check(checks, 'Selecting the original owner still displays its actual captured diff');
   },
   'session-reference-menu': async (page, context, checks) => {
-    const title = 'Reference UI source ' + Date.now(); await send(page, title + ' PRIOR_UI_DECISION_SENTINEL'); await finished(page);
-    await newSession(page); const input = composer(page); await input.fill('@Reference');
-    const option = page.getByRole('option').filter({ hasText: title }); await option.waitFor({ timeout: 10000 }); await option.click();
-    assert((await input.innerText()).includes(title)); check(checks, 'The actual @ menu discovers another authorized session by its title and inserts a reference chip');
+    const title = 'Reference UI source ' + Date.now(), nickname = 'R' + Date.now();
+    await send(page, title + ' PRIOR_UI_DECISION_SENTINEL'); await finished(page); await sidebar(page);
+    const sourceRow = page.locator('[data-row-key^="session:"][aria-selected="true"]');
+    await sourceRow.hover(); await sourceRow.getByRole('button', { name: /^Session actions for / }).click();
+    await page.getByRole('menuitem', { name: 'Rename', exact: true }).click();
+    await page.getByRole('textbox', { name: 'Session name', exact: true }).fill(nickname); await button(page, 'Rename').click();
+    await sourceRow.getByText(nickname, { exact: true }).waitFor(); await collapseMobile(page);
+    await newSession(page); const input = composer(page); await input.fill('@' + nickname);
+    const option = page.getByRole('option').filter({ hasText: nickname }); await option.waitFor({ timeout: 10000 }); await option.click();
+    assert((await input.innerText()).includes(nickname)); check(checks, 'The actual @ menu discovers a renamed authorized session and inserts its real reference chip');
     await input.press('End'); await input.pressSequentially(' Continue the referenced coding decision.'); await button(page, 'Send message').click(); await finished(page);
     const requests = (await readFile(path.join(evidence, 'requests.jsonl'), 'utf8')).trim().split('\n').filter(Boolean).map(JSON.parse);
     const received = requests.filter(request => request.messages.some(message => message.role === 'user'
@@ -251,7 +273,11 @@ const cases = {
     check(checks, 'Submitting the real reference chip supplies an actual bounded read-only source snapshot to the real HTTP provider');
     assert(!(await page.locator('body').innerText()).includes('[Referenced sessions: untrusted'));
     await page.reload(); await finished(page); assert(!(await page.locator('body').innerText()).includes('[Referenced sessions: untrusted'));
-    check(checks, 'The conversation and reload show the user reference without dumping internal snapshot JSON');
+    await newSession(page); await composer(page).fill('@Continue');
+    const nested = page.getByRole('option').filter({ hasText: '@' + nickname }).filter({ hasText: 'Continue the referenced coding decision.' });
+    await nested.waitFor(); assert(!(await nested.innerText()).includes('[Referenced'));
+    await page.keyboard.press('Escape');
+    check(checks, 'Conversation, reload and later reference candidates show readable user text without internal snapshot markers');
   },
   'presentation-controls': async (page, context, checks) => {
     const text = 'Presentation controls [fixture:read] ' + Date.now(); await send(page, text); await finished(page);
@@ -371,7 +397,11 @@ const cases = {
     await button(page, 'Decrease font size').click();
     await page.waitForFunction(() => document.body.style.getPropertyValue('--dsh-content-font-size') === '14px');
     check(checks, 'Font increase/decrease updates the actual conversation layout variable');
-    await button(page, 'English').click(); await page.getByRole('menuitem', { name: '中文', exact: true }).click();
+    await latency(context, page, async () => {
+      await button(page, 'English').click(); await page.getByRole('menuitem', { name: '中文', exact: true }).click();
+      await persistedLocale(page, 'zh');
+      await page.waitForFunction(() => document.documentElement.lang === 'zh-CN');
+    });
     assert.equal(await page.evaluate(() => document.documentElement.lang), 'zh-CN');
     await button(page, '关闭').click(); await collapseMobile(page);
     await panel(page).locator('#launch').click(); const p = panel(page);
@@ -381,10 +411,18 @@ const cases = {
     await page.keyboard.press('Escape'); check(checks, 'The actual language setting localizes the coding dialog and its narrow-screen modal fits');
     const open = button(page, '打开侧边栏'); if (await open.isVisible()) await open.click();
     await button(page, '设置').click(); await button(page, '通用设置').click(); await button(page, '中文').click();
-    await page.getByRole('menuitem', { name: 'English', exact: true }).click(); assert.equal(await page.evaluate(() => document.documentElement.lang), 'en');
+    await latency(context, page, async () => {
+      await page.getByRole('menuitem', { name: 'English', exact: true }).click();
+      await persistedLocale(page, 'en');
+      await page.waitForFunction(() => document.documentElement.lang === 'en');
+    });
+    assert.equal(await page.evaluate(() => document.documentElement.lang), 'en');
     await button(page, 'Close').click(); await collapseMobile(page);
     assert.equal(await panel(page).locator('#launch').getAttribute('aria-label'), 'Open coding status');
-    check(checks, 'Returning to English updates native and shadow components together');
+    await page.reload(); await composer(page).waitFor({ timeout: 15000 });
+    assert.equal(await page.evaluate(() => document.documentElement.lang), 'en');
+    assert.equal(await panel(page).locator('#launch').getAttribute('aria-label'), 'Open coding status');
+    check(checks, 'Returning to English updates native/shadow components and survives an actual reload');
   },
   'capabilities-and-task-filters': async (page, context, checks) => {
     await sidebar(page); await button(page, 'Settings').click(); await button(page, 'General').click();
@@ -455,7 +493,7 @@ try {
   assert.equal(exit.code, 0, 'Actual production fixture shutdown must complete');
 }
 const report = { status: results.length && results.every(r => r.status === 'PASS') ? 'PASS' : 'FAIL', paidModelCalls: 0,
-  origin, upstreamOrigin: upstream.origin, latency: '350 ms per actual TCP chunk in each direction, only during named race scenarios', fixture: {
+  origin, upstreamOrigin: upstream.origin, latency: '350 ms one-way byte arrival delay in each direction during named race scenarios; preserves order without per-chunk bandwidth throttling', fixture: {
     launchId: fixture.launchId, compiledDigest: fixture.compiledDigest, installed: fixture.installed, sourceSha: fixture.sourceSha },
   driverSha256: createHash('sha256').update(await readFile(new URL(import.meta.url))).digest('hex'),
   engine: { node: process.version, chromium: browser.version(), viewportScope: 'Desktop Chromium responsive sizes; no physical mobile or Windows claim' },

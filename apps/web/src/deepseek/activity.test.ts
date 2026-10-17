@@ -443,7 +443,7 @@ it("a replaced Web draft schedules through its native model context and the real
   expect(await base.store.listTurns(external)).toEqual([]);
 });
 
-it("a human task commit holds the real owner's draft lock until its durable acknowledgement and fences model replacement", async () => {
+it("a human task commit holds the real owner's draft lock until its durable acknowledgement and serializes with in-place model selection", async () => {
   const stack = await setup();
   const selected = new ScriptedModelProvider([ScriptedModelProvider.text("Selected route")]);
   const owners = await createOwnerManager(stack.harness, { dataDir: stack.dataDir, executeHostTool: stack.tools.executeHostTool,
@@ -470,7 +470,9 @@ it("a human task commit holds the real owner's draft lock until its durable ackn
     .then(() => ({ accepted: true }), error => ({ accepted: false, code: (error as { code?: string }).code })).finally(() => { finished = true; });
   await new Promise<void>(done => setTimeout(done, 20)); expect(finished).toBe(false); expect(owners.nativeSessionId(draft.id)).toBe(native);
   release(); expect(await creating).toMatchObject({ result: { kind: "success" } });
-  expect(await selecting).toMatchObject({ accepted: false, code: "session/model-frozen" });
+  // The lock still serializes both writers; the selection then applies in place.
+  expect(await selecting).toEqual({ accepted: true });
   expect(owners.nativeSessionId(draft.id)).toBe(native);
+  expect((await (await owners.ownerOf(draft.id)).store.getSession(native))?.model).toMatchObject({ modelId: "another-model" });
   expect(await activity.call("schedule/list", { request: { sessionId: draft.id } }, stack.signal)).toHaveLength(1);
 });

@@ -288,6 +288,7 @@ export async function createOwnerManager(base: Harness, hooks: OwnerHooks): Prom
   }
   async function refreshOwner(owner: Harness): Promise<void> {
     for (const session of await owner.store.listSessions()) {
+      if (session.modelSelection !== undefined) await owner.runtime.getSessionAgent(session.id);
       const prior = sessionOwners.get(session.id);
       if (prior !== undefined && prior !== owner) throw new RemoteFailure("gateway/conflict", "Native session identity appears in two workspace stores");
       sessionOwners.set(session.id, owner);
@@ -456,13 +457,27 @@ export async function createOwnerManager(base: Harness, hooks: OwnerHooks): Prom
       const requested = resolveHarnessConfig({ profile: owner.profile, overrides: { ...owner.config, ...target } });
       if (session.model.providerId === target.model.providerId && session.model.modelId === target.model.modelId
         && requested.fingerprint === owner.resolvedConfig.fingerprint) {
+        if (session.modelSelection !== undefined) await owner.runtime.getSessionAgent(nativeId);
         const committed = aliases.get(sessionId);
         if (committed !== undefined) await activateReplacement(committed);
         else if (session.status === "failed") throw new RemoteFailure("session/not-found", "Failed initialization is not a selectable Web session");
         return;
       }
-      const prefix = await assertDraft(owner, session, sessionId, signal);
+      let prefix: Awaited<ReturnType<typeof assertDraft>> | undefined;
+      try {
+        prefix = await assertDraft(owner, session, sessionId, signal);
+      } catch (error) {
+        // DSH parity: a session that already admitted input, tool activity or a
+        // child keeps its identity and transcript. The selection applies to its
+        // next request instead of being refused.
+        if (!(error instanceof RemoteFailure) || error.code !== "session/model-frozen") throw error;
+      }
       const originalView = [...children.values()].find(view => view.harness === owner);
+      if (prefix === undefined) {
+        if (originalView === undefined) throw new RemoteFailure("session/model-frozen", "Legacy sessions keep their frozen model");
+        await owner.runtime.setSessionModel(nativeId, target.model);
+        return;
+      }
       if (originalView === undefined) throw new RemoteFailure("session/model-frozen", "Legacy sessions keep their frozen model");
       const row: OwnerRow = { id: identity(session.cwd, choice), path: session.cwd,
         ...(originalView.workspaceId === undefined ? {} : { workspaceId: originalView.workspaceId }), selection: choice };
@@ -518,7 +533,7 @@ export async function createOwnerManager(base: Harness, hooks: OwnerHooks): Prom
     async getSession(id) { const session = await (await findOwner(id))?.store.getSession(nativeSessionId(id)); return session === undefined ? undefined : outwardSession(session); },
     async updateSession(session) {
       const owner = await ownerOf(session.id); const native = inwardSession(session); const original = await owner.store.getSession(native.id);
-      if (original === undefined || original.agentId !== native.agentId || original.cwd !== native.cwd || original.model.providerId !== native.model.providerId || original.model.modelId !== native.model.modelId) throw new RemoteFailure("session/conflict", "Host update cannot mutate a session's frozen model, agent, or cwd");
+      if (original === undefined || original.agentId !== native.agentId || original.cwd !== native.cwd || original.model.providerId !== native.model.providerId || original.model.modelId !== native.model.modelId || JSON.stringify(original.modelSelection) !== JSON.stringify(native.modelSelection)) throw new RemoteFailure("session/conflict", "Host update cannot mutate a session's frozen model, agent, or cwd");
       await owner.store.updateSession(native);
     },
     async listSessions(opts) {

@@ -1,0 +1,31 @@
+{
+  "sourceSha": "e4a95db6a2cb8551141a4e0d727300394ff9eec2",
+  "productFullSuiteSha": "4e651587911523b1d67b8e3383be1d76faee755d",
+  "before": {
+    "head": "e4a95db6a2cb8551141a4e0d727300394ff9eec2",
+    "porcelain": ""
+  },
+  "command": [
+    "node",
+    "scripts/release/portable.mjs",
+    "build",
+    "--out",
+    "/tmp/harness-web-ui-20261016/ack-portable",
+    "--version",
+    "1.10.0",
+    "--source-sha",
+    "e4a95db6a2cb8551141a4e0d727300394ff9eec2",
+    "--offline",
+    "--store-dir",
+    "/workspace/.pnpm-store",
+    "--node-headers-dir",
+    "/workspace/.cache/node-gyp/24.19.0"
+  ],
+  "startedAt": "2026-10-17T10:14:00.564456+00:00",
+  "endedAt": "2026-10-17T10:14:25.980916+00:00",
+  "exitCode": 0,
+  "headAfter": "e4a95db6a2cb8551141a4e0d727300394ff9eec2",
+  "statusAfter": "",
+  "logSha256": "39e69acd6ccc8357119a4dd843fdf24a0d5f9953cb70e0cff80b70c727607f81",
+  "logBytes": 196
+}

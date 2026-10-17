@@ -1,0 +1,13 @@
+✔ fragmentation does not multiply the configured propagation latency (5.750433ms)
+✔ turning latency off cannot let newer bytes overtake queued bytes or EOF (0.683277ms)
+✔ queued byte limit applies writable backpressure and releases it after delivery (0.854264ms)
+✔ destroy cancels delayed delivery and closes with buffered input (0.697689ms)
+✔ actual TCP forwarding preserves binary bytes and graceful EOF (20.247913ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 85.679117

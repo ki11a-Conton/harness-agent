@@ -1,0 +1,9 @@
+file:///tmp/harness-web-ui-20261016/locale-acknowledged-driver.mjs:59
+    hostExit.then(exit => reject(Error('Fixture exited before readiness: ' + JSON.stringify(exit))), reject);
+                                 ^
+
+Error: Fixture exited before readiness: {"code":1,"signal":null}
+    at file:///tmp/harness-web-ui-20261016/locale-acknowledged-driver.mjs:59:34
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+
+Node.js v24.19.0

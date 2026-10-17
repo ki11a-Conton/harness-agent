@@ -17,3 +17,16 @@ U11 实际关闭栈和确定性组件失败；`probes/` 保存真实缺陷及探
 `d9/` 保留过期测试材料的真实失败与定向修正，`ci-followup/` 保留专用闭环
 567/567、9/9 矩阵、Chromium 140 反例及同包完整复验。原 1a 的应用/完整套件
 SHA 与后续测试脚本 SHA 分别记录；修正后的精确 main CI 需另行核对。
+
+`title-final/full.*` 是包含 U12 的 clean 4e651587 完整 suite；
+`locale-followup/` 保存原 61ef8e20 Ubuntu UI 失败的只读投影、本地探测反例、
+持久化确认后的三视口通过与其脚本身份，不覆盖旧记录。
+
+`title-final/README.md` 记录包含 U12 的完整新构建与同包 30/75+42/117+
+连接 2/10 通过；`original-61/` 保留主 CI 十项成功但 Ubuntu UI 旧语言
+探测失败的完整 NOT_GREEN 复核。最终 main CI 在归档推送后按精确 SHA 核对。
+
+`tcp-final/`、`tcp-candidate/` 绑定 U13 前的固定脚本/应用与首次双平台 UI
+通过；`original-0d/` 保留四工作流完整 NOT_GREEN，`windows-store-followup/`
+保存真实 Windows 状态文件 EPERM 原日志摘要、确定性反例和修正回归。U13
+改变共享存储，新的完整产品 suite/包/双平台和最终 main CI 必须另行绑定。

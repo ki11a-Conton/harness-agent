@@ -1,0 +1,26 @@
+{
+  "kind": "owned-real-TCP-ordered-binary-replay",
+  "results": [
+    {
+      "name": "original-serial",
+      "configuredDelayMs": 40,
+      "inputChunks": 12,
+      "bytes": 12,
+      "lastInputAtMs": 64.625258,
+      "elapsedMs": 486.454,
+      "tailDelayMs": 421.82874200000003,
+      "exactBytes": true
+    },
+    {
+      "name": "fixed-arrival",
+      "configuredDelayMs": 40,
+      "inputChunks": 12,
+      "bytes": 12,
+      "lastInputAtMs": 62.600633000000016,
+      "elapsedMs": 97.57237399999997,
+      "tailDelayMs": 34.97174099999995,
+      "exactBytes": true
+    }
+  ],
+  "paidModelCalls": 0
+}

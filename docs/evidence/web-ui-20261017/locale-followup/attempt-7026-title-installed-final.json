@@ -1,0 +1,31 @@
+{
+  "sourceSha": "7026dbed4a160f8680267904caf40015a5309b13",
+  "productFullSuiteSha": "4e651587911523b1d67b8e3383be1d76faee755d",
+  "before": {
+    "head": "7026dbed4a160f8680267904caf40015a5309b13",
+    "porcelain": ""
+  },
+  "command": [
+    "node",
+    "scripts/release/deepseek-installed.mjs",
+    "--archive",
+    "/tmp/harness-web-ui-20261016/title-portable/harness-agent-1.10.0-portable.tar.gz",
+    "--out",
+    "/tmp/harness-web-ui-20261016/title-installed-final",
+    "--version",
+    "1.10.0",
+    "--source-sha",
+    "7026dbed4a160f8680267904caf40015a5309b13",
+    "--playwright-module",
+    "/tmp/harness-ui-running-rootcause-20261015/browser-tools/node_modules/playwright/index.mjs",
+    "--chromium",
+    "/workspace/.cache/harness-pw-1.55.1/chromium-1193/chrome-linux/chrome"
+  ],
+  "startedAt": "2026-10-17T10:05:59.705309+00:00",
+  "endedAt": "2026-10-17T10:11:09.915736+00:00",
+  "exitCode": 1,
+  "headAfter": "7026dbed4a160f8680267904caf40015a5309b13",
+  "statusAfter": "",
+  "logSha256": "071a8bcddbc8a34fa4c4aee487c6157b952b3aa05fc4884046deb724711fb6d9",
+  "logBytes": 7959
+}

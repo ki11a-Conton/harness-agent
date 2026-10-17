@@ -1,0 +1,27 @@
+✔ original browser offline hint pauses a reachable loopback carrier (2.237946ms)
+✔ derived loopback carrier uses actual readiness and loss, not interface hints (2.095292ms)
+✔ remote authority retains real browser offline/online suspension (1.131893ms)
+✔ original healthy recovery holds Reconnecting for over a minute after wall clock correction (0.635867ms)
+✔ derived healthy recovery has a bounded monotonic visibility interval (0.569186ms)
+✔ fragmentation does not multiply the configured propagation latency (5.384241ms)
+✔ turning latency off cannot let newer bytes overtake queued bytes or EOF (0.60492ms)
+✔ queued byte limit applies writable backpressure and releases it after delivery (0.786053ms)
+✔ destroy cancels delayed delivery and closes with buffered input (0.594925ms)
+✔ actual TCP forwarding preserves binary bytes and graceful EOF (19.810214ms)
+✔ original late initialization overwrites a newer open action (3.155958ms)
+✔ reviewed actual UI navigation preserves a newer open action (6.385657ms)
+✔ original late initialization overwrites a newer clear action (1.00372ms)
+✔ reviewed actual UI navigation preserves a newer clear action (3.94169ms)
+✔ original optimistic workspace label permits sending to the old session before selection settles (6.359567ms)
+✔ reviewed actual composer blocks the same-workspace replacement until its real promise settles (16.095926ms)
+✔ an older selection completing cannot unlock a newer pending workspace choice (21.29648ms)
+✔ a rejected latest selection restores the previous editor and clears its optimistic label (14.938043ms)
+✔ the actual composer remains inert during navigation even without a workspace-picker request (23.718393ms)
+ℹ tests 19
+ℹ suites 0
+ℹ pass 19
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 401.706811

@@ -91,10 +91,6 @@ docs/evidence/agent-context-memory-20261004/raw/** -text
 docs/evidence/agent-context-memory-20261004/raw/**/*.log -whitespace
 docs/evidence/agent-context-memory-20261004/raw/**/*.diff -whitespace
 
-# UI preregistration snapshots are immutable byte copies, including final blank line.
-plan(20261004-ui-preregister).md whitespace=-blank-at-eof
-plan(20261004-022759).md whitespace=-blank-at-eof
-
 # Preserve original Web recheck receipts, including failed probes and logs.
 docs/evidence/web-recheck-20261004/raw/** -text
 docs/evidence/web-recheck-20261004/raw/**/*.log -whitespace
@@ -180,3 +176,13 @@ docs/evidence/web-ui-20261017/** -text -whitespace
 # The generated sidebar copy preserves four space-only upstream lines. Keep
 # its deterministic published-byte transformation; authored source stays checked.
 apps/web/public/deepseek/harness-brand/plugins/dsh-client-ui-sidebar-right/client.js whitespace=-blank-at-eol
+
+# Benchmark catalogs are hashed over raw bytes by scripts/benchmark/upstream-tasks.py
+# (read_bytes + sha256, recorded in eight committed evidence files). Without an eol
+# pin a Windows checkout rewrites them to CRLF and every recorded catalogSha256 stops
+# reproducing -- the same failure mode R12 and R94 fixed for their own fixtures.
+benchmarks/coding-repositories-v1/** text eol=lf
+benchmarks/r98-fixtures/** text eol=lf
+
+# Preserve original PR review counterexamples and CI receipts byte-for-byte.
+docs/evidence/pr-review-20261017/** -text -whitespace

@@ -1,0 +1,98 @@
+[
+  {
+    "path": ".github",
+    "blob_href": "https://github.com/ki11a-Conton/harness-agent/blob/0d960c2cf788435df532600124745399937d945f/.github",
+    "start_line": 2,
+    "start_column": null,
+    "end_line": 2,
+    "end_column": null,
+    "annotation_level": "warning",
+    "title": "",
+    "message": "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/download-artifact@v4, actions/setup-node@v4, actions/upload-artifact@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/",
+    "raw_details": ""
+  },
+  {
+    "path": ".github",
+    "blob_href": "https://github.com/ki11a-Conton/harness-agent/blob/0d960c2cf788435df532600124745399937d945f/.github",
+    "start_line": 17,
+    "start_column": null,
+    "end_line": 17,
+    "end_column": null,
+    "annotation_level": "failure",
+    "title": "",
+    "message": "No files were found with the provided path: .ci/deepseek/cli-installed/. No artifacts will be uploaded.",
+    "raw_details": ""
+  },
+  {
+    "path": ".github",
+    "blob_href": "https://github.com/ki11a-Conton/harness-agent/blob/0d960c2cf788435df532600124745399937d945f/.github",
+    "start_line": 98,
+    "start_column": null,
+    "end_line": 98,
+    "end_column": null,
+    "annotation_level": "failure",
+    "title": "",
+    "message": "Process completed with exit code 1.",
+    "raw_details": ""
+  },
+  {
+    "path": ".github",
+    "blob_href": "https://github.com/ki11a-Conton/harness-agent/blob/0d960c2cf788435df532600124745399937d945f/.github",
+    "start_line": 36,
+    "start_column": null,
+    "end_line": 36,
+    "end_column": null,
+    "annotation_level": "failure",
+    "title": "Installed UI case failed",
+    "message": "{\"phase\":\"daily\",\"name\":\"sidebar-pin-search-filters\",\"viewport\":\"narrow\",\"status\":\"FAIL\",\"failure\":\"locator.waitFor: Timeout 15000ms exceeded.\\nCall log:\\n  - waiting for getByRole('button', { name: 'Choose workspace', exact: true }).filter({ visible: true }) to be visible\\n\\n    at boot (/home/runner/work/harness-agent/harness-agent/scripts/research/web-daily-20261016/browser-acceptance.mjs:97:42)\\n    at async file:///home/runner/work/harness-agent/harness-agent/scripts/research/web-daily-20261016/browser-acceptance.mjs:476:11\"}",
+    "raw_details": ""
+  },
+  {
+    "path": ".github",
+    "blob_href": "https://github.com/ki11a-Conton/harness-agent/blob/0d960c2cf788435df532600124745399937d945f/.github",
+    "start_line": 35,
+    "start_column": null,
+    "end_line": 35,
+    "end_column": null,
+    "annotation_level": "failure",
+    "title": "Installed UI case failed",
+    "message": "{\"phase\":\"daily\",\"name\":\"capabilities-and-task-filters\",\"viewport\":\"narrow\",\"status\":\"FAIL\",\"failure\":\"locator.waitFor: Timeout 15000ms exceeded.\\nCall log:\\n  - waiting for getByRole('button', { name: 'Choose workspace', exact: true }).filter({ visible: true }) to be visible\\n\\n    at boot (/home/runner/work/harness-agent/harness-agent/scripts/research/web-daily-20261016/browser-acceptance.mjs:97:42)\\n    at async file:///home/runner/work/harness-agent/harness-agent/scripts/research/web-daily-20261016/browser-acceptance.mjs:476:11\"}",
+    "raw_details": ""
+  },
+  {
+    "path": ".github",
+    "blob_href": "https://github.com/ki11a-Conton/harness-agent/blob/0d960c2cf788435df532600124745399937d945f/.github",
+    "start_line": 34,
+    "start_column": null,
+    "end_line": 34,
+    "end_column": null,
+    "annotation_level": "failure",
+    "title": "Installed UI case failed",
+    "message": "{\"phase\":\"daily\",\"name\":\"settings-font-and-locale\",\"viewport\":\"narrow\",\"status\":\"FAIL\",\"failure\":\"AssertionError [ERR_ASSERTION]: Actual settings writes and snapshots must be acknowledged before checking the committed language\\n+ actual - expected\\n\\n+ [\\n+   {\\n+     argsKeys: [\\n+       'ns',\\n+       'ops',\\n+       'expectedRevision'\\n+     ],\\n+     carrier: 'websocket',\\n+     endpoint: 'settings/mutate',\\n+     route: 'call',\\n+     state: 'sent',\\n+     uplink: false,\\n+     uplinkDone: false\\n+   },\\n+   {\\n+     argsKeys: [],\\n+     carrier: 'websocket',\\n+     endpoint: 'settings/describe',\\n+     route: 'call',\\n+     state: 'sent',\\n+     uplink: false,\\n+     uplinkDone: false\\n+   }\\n+ ]\\n- []\\n\\n    at persistedLocale (file:///home/runner/work/harness-agent/harness-agent/scripts/research/web-daily-20261016/browser-acceptance.mjs:165:10)\\n    at async file:///home/runner/work/harness-agent/harness-agent/scripts/research/web-daily-20261016/browser-acceptance.mjs:402:7\\n    at async latency (file:///home/runner/work/harness-agent/harness-agent/scripts/research/web-daily-20261016/browser-acceptance.mjs:127:16)\\n    at async settings-font-and-locale (file:///home/runner/work/harness-agent/harness-agent/scripts/research/web-daily-20261016/browser-acceptance.mjs:400:5)\\n    at async file:///home/runner/work/harness-agent/harness-agent/scripts/research/web-daily-20261016/browser-acceptance.mjs:476:29\"}",
+    "raw_details": ""
+  },
+  {
+    "path": ".github",
+    "blob_href": "https://github.com/ki11a-Conton/harness-agent/blob/0d960c2cf788435df532600124745399937d945f/.github",
+    "start_line": 10,
+    "start_column": null,
+    "end_line": 10,
+    "end_column": null,
+    "annotation_level": "failure",
+    "title": "Installed UI acceptance failed",
+    "message": "AssertionError [ERR_ASSERTION]: {\"name\":\"navigation-draft-ownership\",\"viewport\":\"desktop\",\"status\":\"PASS\",\"checks\":2}\n{\"name\":\"coding-draft-ownership\",\"viewport\":\"desktop\",\"status\":\"PASS\",\"checks\":3}\n{\"name\":\"feedback-roundtrip\",\"viewport\":\"desktop\",\"status\":\"PASS\",\"checks\":4}\n{\"name\":\"coding-modal-keyboard\",\"viewport\":\"desktop\",\"status\":\"PASS\",\"checks\":2}\n{\"name\":\"coding-diff-ownership\",\"viewport\":\"desktop\",\"status\":\"PASS\",\"checks\":2}\n{\"name\":\"session-reference-menu\",\"viewport\":\"desktop\",\"status\":\"PASS\",\"checks\":3}\n{\"name\":\"presentation-controls\",\"viewport\":\"desktop\",\"status\":\"PASS\",\"checks\":3}\n{\"name\":\"input-queue-stop\",\"viewport\":\"desktop\",\"status\":\"PASS\",\"checks\":3}\n{\"name\":\"attachment-add-remove-submit\",\"viewport\":\"desktop\",\"status\":\"PASS\",\"checks\":2}\n{\"name\":\"files-and-panel-layout\",\"viewport\":\"desktop\",\"status\":\"PASS\",\"checks\":3}\n{\"name\":\"shortcuts-persist-conflict-reset\",\"viewport\":\"desktop\",\"status\":\"PASS\",\"checks\":3}\n{\"name\":\"settings-font-and-locale\",\"viewport\":\"desktop\",\"status\":\"PASS\",\"checks\":3}\n{\"name\":\"capabilities-and-task-filters\",\"viewport\":\"desktop\",\"status\":\"PASS\",\"checks\":3}\n{\"name\":\"sidebar-pin-search-filters\",\"viewport\":\"desktop\",\"status\":\"PASS\",\"checks\":3}\n{\"name\":\"navigation-draft-ownership\",\"viewport\":\"mobile\",\"status\":\"PASS\",\"checks\":2}\n{\"name\":\"coding-draft-ownership\",\"viewport\":\"mobile\",\"status\":\"PASS\",\"checks\":3}\n{\"name\":\"feedback-roundtrip\",\"viewport\":\"mobile\",\"status\":\"PASS\",\"checks\":4}\n{\"name\":\"coding-modal-keyboard\",\"viewport\":\"mobile\",\"status\":\"PASS\",\"checks\":2}\n{\"name\":\"coding-diff-ownership\",\"viewport\":\"mobile\",\"status\":\"PASS\",\"checks\":2}\n{\"name\":\"session-reference-menu\",\"viewport\":\"mobile\",\"status\":\"PASS\",\"checks\":3}\n{\"name\":\"presentation-controls\",\"viewport\":\"mobile\",\"status\":\"PASS\",\"checks\":3}\n{\"name\":\"input-queue-stop\",\"viewport\":\"mobile\",\"status\":\"PASS\",\"checks\":3}\n{\"name\":\"attachment-add-remove-submit\",\"viewport\":\"mobile\",\"status\":\"PASS\",\"checks\":2}\n{\"name\":\"files-and-panel-layout\",\"viewport\":\"mobile\",\"status\":\"PASS\",\"chec",
+    "raw_details": ""
+  },
+  {
+    "path": ".github",
+    "blob_href": "https://github.com/ki11a-Conton/harness-agent/blob/0d960c2cf788435df532600124745399937d945f/.github",
+    "start_line": 1,
+    "start_column": null,
+    "end_line": 1,
+    "end_column": null,
+    "annotation_level": "notice",
+    "title": "",
+    "message": "\"The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748\"",
+    "raw_details": ""
+  }
+]

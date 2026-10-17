@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { stableStringify, type AgentEvent, type SessionId } from "@ar/contracts";
+import { stableStringify, type AgentEvent, type ModelClient, type ModelProvider, type ModelRef, type ProviderConfig, type SessionId } from "@ar/contracts";
 import type { Harness } from "@ar/harness";
 import { resolveHarnessConfig } from "@ar/harness";
 import { resolveModelProvider } from "@ar/cli";
@@ -15,6 +15,7 @@ import { createCatalogService, type CatalogHost, type ModelProfile } from "./cat
 import { createActivityService } from "./activity.js";
 import { createDeliverablesService } from "./deliverables.js";
 import { RemoteFailure, type DeepseekService } from "./transport.js";
+import type { RouteResolver } from "./routes.js";
 
 /** The production Web host composes services over the same Harness contracts as CLI. */
 export interface DeepseekLaunchFacts {
@@ -22,7 +23,17 @@ export interface DeepseekLaunchFacts {
   initialCredentials?: Readonly<Record<string, string>>;
   environment?: Readonly<Record<string, string | undefined>>;
 }
-export async function createDeepseekComposition(base: Harness, dataDir?: string, facts: DeepseekLaunchFacts = {}) {
+/**
+ * Wiring hooks. `installRouteResolver` hands the caller's own provider (the
+ * adapter default the base harness was built with) the same catalogue route
+ * lookup the workspace owners use, so a started base session can switch models
+ * too. It is called once, before any request can arrive.
+ */
+export interface DeepseekCompositionHooks {
+  installRouteResolver?: (resolver: RouteResolver) => void;
+}
+export async function createDeepseekComposition(base: Harness, dataDir?: string, facts: DeepseekLaunchFacts = {},
+  hooks: DeepseekCompositionHooks = {}) {
   const cwd = base.config.cwd;
   const bootstrapTools = createHostTools(base, cwd, dataDir);
   const initialProviderProfiles = structuredClone(facts.initialProviderProfiles ?? {});
@@ -48,6 +59,49 @@ export async function createDeepseekComposition(base: Harness, dataDir?: string,
     },
   };
   const catalog = createCatalogService(catalogHost);
+  const neverAborted = new AbortController().signal;
+  /**
+   * The catalogue lookup behind both owner creation and live model switches:
+   * the same route/credential resolution and adapter fingerprint the workspace
+   * owner index has always been built from, so a switch reuses exactly the
+   * frozen identity that index keys on.
+   */
+  const resolveRoute = async (selection: { providerKey: string; modelId: string }, signal: AbortSignal) => {
+    const profile = (await catalog.resolvedModelProfiles(signal))[selection.providerKey];
+    if (profile === undefined || profile.api !== "openai-completions" || !profile.apiKey || !profile.baseURL
+      || !profile.models?.some(model => model.id === selection.modelId)) throw new RemoteFailure("session/model-unavailable", "The requested model does not have a configured adapter and credential");
+    const billing = await resolveModelProvider({ apiKey: profile.apiKey, baseUrl: profile.baseURL, modelId: selection.modelId });
+    if (billing.provider.id === "stub") throw new RemoteFailure("session/model-unavailable", "The model provider could not be constructed");
+    const { apiKey, ...publicProfile } = profile;
+    usedProfiles.set(selection.providerKey, stableStringify(publicProfile));
+    if (profile.apiKeyEnv !== undefined) usedCredentials.set(profile.apiKeyEnv, apiKey);
+    const nativeModel = { providerId: billing.provider.id, modelId: selection.modelId };
+    // Preserve the actual adapter's complete frozen configuration identity,
+    // while routing the public model selection by its configured route key.
+    const adapterFingerprint = resolveHarnessConfig({ profile: base.profile, overrides: { ...base.config, modelProvider: billing.provider, model: nativeModel } }).fingerprint;
+    const configuredModels = profile.models.map(model => {
+      const contextWindow = model.contextWindow ?? profile.defaultContextWindow;
+      const maxTokens = model.maxTokens ?? profile.defaultMaxTokens;
+      return { id: model.id, ...(model.name === undefined ? {} : { name: model.name }),
+        ...(contextWindow === undefined ? {} : { contextSize: contextWindow }),
+        capabilities: { ...(contextWindow === undefined ? {} : { contextWindowTokens: contextWindow }),
+          ...(maxTokens === undefined ? {} : { maxOutputTokens: maxTokens }) } };
+    });
+    return { ...selection, billing, nativeModel, adapterFingerprint,
+      configuredModels, configuredLimits: configuredModels.map(({ id, capabilities }) => ({ id, ...capabilities })) };
+  };
+  type Route = Awaited<ReturnType<typeof resolveRoute>>;
+  const routeClient = (route: Route, model: ModelRef, config: ProviderConfig): ModelClient => {
+    const client = route.billing.provider.createClient({ ...model, providerId: route.billing.provider.id }, config);
+    const maximum = route.configuredModels.find(item => item.id === model.modelId)?.capabilities.maxOutputTokens;
+    return { generate: (request, signal) => client.generate(maximum === undefined
+      ? request : { ...request, maxTokens: Math.min(request.maxTokens ?? maximum, maximum) }, signal) };
+  };
+  hooks.installRouteResolver?.(async (providerKey, modelId, signal) => {
+    if (providerKey === base.config.modelProvider.id && modelId === base.config.model.modelId) return undefined;
+    const route = await resolveRoute({ providerKey, modelId }, signal ?? neverAborted);
+    return { provider: route.billing.provider, maximumOutputTokens: route.configuredModels.find(item => item.id === modelId)?.capabilities.maxOutputTokens };
+  });
   let workspace!: ReturnType<typeof createWorkspaceService>;
   const observed = new WeakSet<Harness>();
   let activity: ReturnType<typeof createActivityService> | undefined;
@@ -96,37 +150,20 @@ export async function createDeepseekComposition(base: Harness, dataDir?: string,
     workspace: async id => { const selected = await workspace.workspace(id); return { path: selected.path, workspaceId: selected.id }; },
     resolveSelection: async (selection, signal) => {
       if (selection.providerKey === base.config.modelProvider.id && selection.modelId === base.config.model.modelId) return { modelProvider: base.config.modelProvider, model: base.config.model };
-      const profile = (await catalog.resolvedModelProfiles(signal))[selection.providerKey];
-      if (profile === undefined || profile.api !== "openai-completions" || !profile.apiKey || !profile.baseURL
-        || !profile.models?.some(model => model.id === selection.modelId)) throw new RemoteFailure("session/model-unavailable", "The requested model does not have a configured adapter and credential");
-      const billing = await resolveModelProvider({ apiKey: profile.apiKey, baseUrl: profile.baseURL, modelId: selection.modelId });
-      if (billing.provider.id === "stub") throw new RemoteFailure("session/model-unavailable", "The model provider could not be constructed");
-      const { apiKey, ...publicProfile } = profile;
-      usedProfiles.set(selection.providerKey, stableStringify(publicProfile));
-      if (profile.apiKeyEnv !== undefined) usedCredentials.set(profile.apiKeyEnv, apiKey);
-      const nativeModel = { providerId: billing.provider.id, modelId: selection.modelId };
-      // Preserve the actual adapter's complete frozen configuration identity,
-      // while routing the public model selection by its configured route key.
-      const adapterFingerprint = resolveHarnessConfig({ profile: base.profile, overrides: { ...base.config, modelProvider: billing.provider, model: nativeModel } }).fingerprint;
-      const configuredModels = profile.models.map(model => {
-        const contextWindow = model.contextWindow ?? profile.defaultContextWindow;
-        const maxTokens = model.maxTokens ?? profile.defaultMaxTokens;
-        return { id: model.id, ...(model.name === undefined ? {} : { name: model.name }),
-          ...(contextWindow === undefined ? {} : { contextSize: contextWindow }),
-          capabilities: { ...(contextWindow === undefined ? {} : { contextWindowTokens: contextWindow }),
-            ...(maxTokens === undefined ? {} : { maxOutputTokens: maxTokens }) } };
-      });
-      const configuredLimits = configuredModels.map(({ id, capabilities }) => ({ id, ...capabilities }));
-      const modelProvider = {
+      const route = await resolveRoute(selection, signal);
+      const modelProvider: ModelProvider = {
         id: selection.providerKey,
-        getConfigIdentity: () => ({ implementation: "harness-web-openai-route-v2", route: selection.providerKey, adapterFingerprint, configuredLimits }),
-        listModels: async () => structuredClone(configuredModels),
-        createClient: (model: import("@ar/contracts").ModelRef, config: import("@ar/contracts").ProviderConfig) => {
-          const client = billing.provider.createClient({ ...model, providerId: billing.provider.id }, config);
-          const maximum = configuredModels.find(item => item.id === model.modelId)?.capabilities.maxOutputTokens;
-          return { generate: (request: import("@ar/contracts").ModelRequest, signal: AbortSignal) => client.generate(maximum === undefined
-            ? request : { ...request, maxTokens: Math.min(request.maxTokens ?? maximum, maximum) }, signal) };
-        },
+        getConfigIdentity: () => ({ implementation: "harness-web-openai-route-v2", route: selection.providerKey, adapterFingerprint: route.adapterFingerprint, configuredLimits: route.configuredLimits }),
+        listModels: async () => structuredClone(route.configuredModels),
+        createClient: (model, config) => model.providerId === selection.providerKey && model.modelId === selection.modelId
+          ? routeClient(route, model, config)
+          // The owner identity stays frozen while a live session may have
+          // switched to another model, so that route is resolved on demand
+          // instead of being sent to this route's upstream.
+          : { generate: async function* (request, requestSignal) {
+            yield* routeClient(await resolveRoute({ providerKey: model.providerId, modelId: model.modelId }, requestSignal), model, config)
+              .generate(request, requestSignal);
+          } },
       };
       return { modelProvider, model: { providerId: selection.providerKey, modelId: selection.modelId } };
     },

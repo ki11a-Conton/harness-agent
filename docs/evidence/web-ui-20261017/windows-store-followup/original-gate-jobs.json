@@ -1,0 +1,89 @@
+{
+  "total_count": 1,
+  "jobs": [
+    {
+      "id": 117379129751,
+      "run_id": 39026749313,
+      "workflow_name": "inspect original Windows gate evidence",
+      "head_branch": "diagnostics/windows-waterfall-20261017",
+      "run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/runs/39026749313",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOT8gONs8AAAAbVFdhlw",
+      "head_sha": "0880ce71aff54d38d1d35f6af359b632eb6a17c3",
+      "url": "https://api.github.com/repos/ki11a-Conton/harness-agent/actions/jobs/117379129751",
+      "html_url": "https://github.com/ki11a-Conton/harness-agent/actions/runs/39026749313/job/117379129751",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-17T10:55:42Z",
+      "started_at": "2026-10-17T10:55:44Z",
+      "completed_at": "2026-10-17T10:55:50Z",
+      "name": "inspect",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-17T10:55:44Z",
+          "completed_at": "2026-10-17T10:55:46Z"
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-17T10:55:46Z",
+          "completed_at": "2026-10-17T10:55:47Z"
+        },
+        {
+          "name": "Validate the original failed main workflow",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-17T10:55:47Z",
+          "completed_at": "2026-10-17T10:55:47Z"
+        },
+        {
+          "name": "Run actions/download-artifact@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-17T10:55:47Z",
+          "completed_at": "2026-10-17T10:55:47Z"
+        },
+        {
+          "name": "Verify original log digest and expose bounded failure context",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-17T10:55:47Z",
+          "completed_at": "2026-10-17T10:55:48Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-10-17T10:55:48Z",
+          "completed_at": "2026-10-17T10:55:48Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-10-17T10:55:48Z",
+          "completed_at": "2026-10-17T10:55:48Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/ki11a-Conton/harness-agent/check-runs/117379129751",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000003767,
+      "runner_name": "GitHub Actions 1000003767",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    }
+  ]
+}

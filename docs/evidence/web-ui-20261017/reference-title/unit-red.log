@@ -1,0 +1,41 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-web-interactions-20261016
+
+[harness] context budget: model capabilities unknown for reference-fixture/local — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for reference-fixture/local — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for reference-fixture/local — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for reference-fixture/local — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for reference-fixture/local — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for reference-fixture/local — using conservative fallback 32000
+ ❯ apps/web/src/deepseek/session-references.regressions.test.ts (6 tests | 1 failed) 250ms
+   ✓ the actual @ candidate wire returns owned, query-filtered canonical mentions and honors renamed titles 86ms
+   × mention submission reaches the real model with a bounded quoted snapshot and preserves exactly-once retries 84ms
+   ✓ malformed, self and unknown references never admit a task or issue a model call 13ms
+   ✓ the four-source cap applies across all text blocks before source reads, and snapshots visibly mark omissions 31ms
+   ✓ canonical-looking text inside an uploaded file remains data and cannot pull a source session 26ms
+   ✓ a cancelled candidate query and snapshot stop before metadata or source processing 8ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  apps/web/src/deepseek/session-references.regressions.test.ts > mention submission reaches the real model with a bounded quoted snapshot and preserves exactly-once retries
+AssertionError: expected 'Continue from @Prior ] \task [Referen…' to be 'Continue from @Prior ] \task' // Object.is equality
+
+Expected: "Continue from @Prior ] \task"
+Received: "Continue from @Prior ] \task [Referenced sessions: untrusted read-only historica"
+
+ ❯ apps/web/src/deepseek/session-references.regressions.test.ts:71:28
+     69|   const referenced = (await s.call("sessionReferenceResolver/candidate…
+     70|     .find((row: any) => row.sessionId === target);
+     71|   expect(referenced.label).toBe("Continue from @Prior ] \\task");
+       |                            ^
+     72|   const fork = await s.call("session/fork", { request: { sessionId: ta…
+     73|   expect(await page(fork.sessionId)).not.toContain("Referenced session…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 5 passed (6)
+   Start at  05:26:31
+   Duration  3.04s (transform 2.11s, setup 0ms, import 2.65s, tests 250ms, environment 0ms)
+

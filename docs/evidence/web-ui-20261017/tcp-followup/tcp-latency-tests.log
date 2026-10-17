@@ -1,0 +1,19 @@
+✔ fragmentation does not multiply the configured propagation latency (5.462748ms)
+✔ turning latency off cannot let newer bytes overtake queued bytes or EOF (0.73072ms)
+✔ queued byte limit applies writable backpressure and releases it after delivery (0.748176ms)
+✔ destroy cancels delayed delivery and closes with buffered input (0.583428ms)
+✖ scripts/research/web-daily-20261016/tcp-latency.test.mjs (6790.867934ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 4
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6797.91146
+
+✖ failing tests:
+
+test at scripts/research/web-daily-20261016/tcp-latency.test.mjs:1:1
+✖ scripts/research/web-daily-20261016/tcp-latency.test.mjs (6790.867934ms)
+  'test failed'
