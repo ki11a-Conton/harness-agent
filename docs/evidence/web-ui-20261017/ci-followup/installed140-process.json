@@ -1,0 +1,27 @@
+{
+  "driverSourceSha": "fb1f3f62b17101ff03f472d469b9916b445bed33",
+  "applicationSourceSha": "1a85b345d7d3b6a5016f671268a32da5c8bdcde6",
+  "command": [
+    "node",
+    "scripts/release/deepseek-installed.mjs",
+    "--archive",
+    "/tmp/harness-web-ui-20261016/portable/harness-agent-1.10.0-portable.tar.gz",
+    "--out",
+    "/tmp/harness-web-ui-20261016/installed140-final",
+    "--version",
+    "1.10.0",
+    "--source-sha",
+    "1a85b345d7d3b6a5016f671268a32da5c8bdcde6",
+    "--playwright-module",
+    "/tmp/harness-ui-running-rootcause-20261015/browser-tools/node_modules/playwright/index.mjs",
+    "--chromium",
+    "/workspace/.cache/harness-pw-1.55.1/chromium-1193/chrome-linux/chrome"
+  ],
+  "startedAt": "2026-10-17T05:03:03.144120+00:00",
+  "endedAt": "2026-10-17T05:07:55.616342+00:00",
+  "exitCode": 0,
+  "headAfter": "fb1f3f62b17101ff03f472d469b9916b445bed33",
+  "statusAfter": "",
+  "logSha256": "784980e7daef58a0a2205c0ab9e44e1c6bf720ef94d4184bdecb38bf84f66580",
+  "logBytes": 760
+}

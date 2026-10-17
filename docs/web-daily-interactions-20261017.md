@@ -101,4 +101,32 @@ node scripts/research/web-daily-20261016/browser-acceptance.mjs \
 
 新增修正属于被主 suite 单独排除、由专用 CI 执行的测试 fixture；UI/Runtime
 产品代码仍与完整验收的 1a85b345 相同。定向正向/无授权/真实过期 3 项通过；
-完整专用闭环及后续精确 main CI 需另行完成，原 e4 仍为 NOT_GREEN。
+固定 clean 74db3b97 的完整专用闭环已完成真实双 arm 构建、执行、567/567 测试、
+9/9 矩阵和身份归档，0 付费请求；后续精确 main CI 另行复核。原 e4 仍为
+NOT_GREEN。
+
+## CI 浏览器版本与动作确认
+
+原 e4 安装 UI 在三个尺寸的固定会话场景失败；Windows 另报一次复制用例
+`copied[2]` 不存在。本地原先使用 Chromium 151，CI 使用 Playwright 1.55.1
+对应的 Chromium 140。换用同版 140 后，原验收也能复现固定失败：刷新时
+workspace/pinSession 还处于 sent、没有回执，刷新后菜单仍提供 Pin session。
+菜单关闭不等于后端已固定成功，原用例提前刷新中断了尚未确认的操作。
+
+只修正验收等待：先等后端确认后实际出现的 Unpin 行按钮，再刷新，原有重载后
+Unpin 菜单断言保持；最终取消固定也等反向按钮。复制用例原来动态读取瞬时按钮
+数量，未等 turn footer 到达就可能只循环两次；现在先等三个实际控件，并等待
+剪贴板完成后读取，保留用户、代码、回复三种内容的原断言。没有改产品、增加
+超时、跳过控件或吞掉失败。原 TypeError、原 140 失败与修正后的 6/6 配对记录
+保留，不能把这些探测前提问题另算产品缺陷。
+
+固定 clean fb1f3f62 的验收脚本在 Chromium 140 上，对原先已验证且校验和不变
+的 1a85b345 安装包完整复验：30 场景/75 断言、42 场景/117 断言、连接恢复
+2 场景/10 断言全部通过。应用来源 SHA 与验收脚本来源 SHA 分别记录；后续
+真实 Windows/Ubuntu 仍以新 main CI 为准，不用本地 Chromium 结果代替。
+
+原 e4 四个工作流现已全部结束：[精确原始复核](evidence/web-ui-20261017/original-e4/README.md)
+为 NOT_GREEN。主 CI 两平台 verify、coverage、正式离线和冷启动通过，双平台
+D9 失败使汇总失败、attestation 跳过；普通安装包与原生 Windows 工作流成功，
+安装 UI 的原样失败保留。等待原流程结束后才推送修正，未取消或重跑原失败。
+修正后 main 的四个新工作流需按其确切 SHA 独立复核，不能沿用 e4 的局部通过。
