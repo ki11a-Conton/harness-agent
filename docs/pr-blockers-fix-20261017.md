@@ -22,3 +22,5 @@
 
 本地 Web 31 文件/233 项通过；核心阻塞与新增边界定向复核通过，类型与安全、完整 suite 另按固定 clean 提交执行。首次新增长日志 fixture 漏写持久化 record envelope 的失败已修正，原失败日志保留；未删减预算或前缀完整性断言。真实 Windows 和最终 main 验收仍待 CI，不能提前视作全绿。
 安全门首次发现锁队列的空 catch，保留原失败；改为 previous.then(action, action)，前一任务的失败仍返回其调用者，新任务在两种结局后均执行，不静默吞掉业务失败。修复提交重新执行安全与完整回归。
+
+额外复核修正 JWT 的误报边界：候选串仍须保持旧 eyJ 结构防护或能解码为合法 JWT header/claims JSON。正常限定代码符号 namespace.packagecomponent.functionmodule 不会被标记或遮盖；空白 JSON 的有效合成 JWT 仍会被遮盖，二者加入同一回归。
