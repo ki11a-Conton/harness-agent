@@ -148,6 +148,19 @@ async function feedbackDialog(page, text, category) {
   if (text) await d.getByRole('textbox', { name: 'Feedback details', exact: true }).fill(text);
   await d.getByRole('button', { name: 'Submit', exact: true }).click(); await d.waitFor({ state: 'hidden' });
 }
+async function persistedLocale(preference) {
+  // The displayed locale is optimistic. Closing the browser context before the
+  // real write arrives can cancel it and contaminate later English-only cases.
+  const deadlineAt = Date.now() + 6000;
+  let actual;
+  do {
+    const settings = JSON.parse(await readFile(path.resolve(fixture.cwd, '../data/deepseek/settings.json'), 'utf8'));
+    actual = settings.namespaces.locale?.user?.preference;
+    if (actual === preference) return;
+    await new Promise(resolve => setTimeout(resolve, 50));
+  } while (Date.now() < deadlineAt);
+  assert.equal(actual, preference, 'Language change must reach the real durable settings before closing its context');
+}
 async function readMetadata(id) {
   const data = path.resolve(fixture.cwd, '../data'), index = JSON.parse(await readFile(path.join(data, 'deepseek/owners-index.json'), 'utf8'));
   for (const base of [data, ...index.owners.map(owner => { assert(/^[a-f0-9]{64}$/.test(owner.id)); return path.join(data, 'deepseek/owners', owner.id); })]) {
@@ -381,7 +394,11 @@ const cases = {
     await button(page, 'Decrease font size').click();
     await page.waitForFunction(() => document.body.style.getPropertyValue('--dsh-content-font-size') === '14px');
     check(checks, 'Font increase/decrease updates the actual conversation layout variable');
-    await button(page, 'English').click(); await page.getByRole('menuitem', { name: '中文', exact: true }).click();
+    await latency(context, page, async () => {
+      await button(page, 'English').click(); await page.getByRole('menuitem', { name: '中文', exact: true }).click();
+      await page.waitForFunction(() => document.documentElement.lang === 'zh-CN');
+      await persistedLocale('zh');
+    });
     assert.equal(await page.evaluate(() => document.documentElement.lang), 'zh-CN');
     await button(page, '关闭').click(); await collapseMobile(page);
     await panel(page).locator('#launch').click(); const p = panel(page);
@@ -391,10 +408,18 @@ const cases = {
     await page.keyboard.press('Escape'); check(checks, 'The actual language setting localizes the coding dialog and its narrow-screen modal fits');
     const open = button(page, '打开侧边栏'); if (await open.isVisible()) await open.click();
     await button(page, '设置').click(); await button(page, '通用设置').click(); await button(page, '中文').click();
-    await page.getByRole('menuitem', { name: 'English', exact: true }).click(); assert.equal(await page.evaluate(() => document.documentElement.lang), 'en');
+    await latency(context, page, async () => {
+      await page.getByRole('menuitem', { name: 'English', exact: true }).click();
+      await page.waitForFunction(() => document.documentElement.lang === 'en');
+      await persistedLocale('en');
+    });
+    assert.equal(await page.evaluate(() => document.documentElement.lang), 'en');
     await button(page, 'Close').click(); await collapseMobile(page);
     assert.equal(await panel(page).locator('#launch').getAttribute('aria-label'), 'Open coding status');
-    check(checks, 'Returning to English updates native and shadow components together');
+    await page.reload(); await composer(page).waitFor({ timeout: 15000 });
+    assert.equal(await page.evaluate(() => document.documentElement.lang), 'en');
+    assert.equal(await panel(page).locator('#launch').getAttribute('aria-label'), 'Open coding status');
+    check(checks, 'Returning to English updates native/shadow components and survives an actual reload');
   },
   'capabilities-and-task-filters': async (page, context, checks) => {
     await sidebar(page); await button(page, 'Settings').click(); await button(page, 'General').click();
