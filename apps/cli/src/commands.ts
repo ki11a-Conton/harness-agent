@@ -130,6 +130,80 @@ commands:
   learn candidates|evaluate <id>|promote <id>|reevaluate
                                     learning-candidate lifecycle — reflection queues, explicit promotion only (P2-7)`;
 
+const CHAMPION_EVAL_USAGE =
+  "usage: agent champion eval <baseline-runs.json> <candidate-runs.json> [--mode stub|real-model] [--strict] [--historical] [--candidate <id>]";
+
+/**
+ * CLI-002: parse `champion eval` argv. The previous implementation derived the
+ * run files with `filter(a => !a.startsWith("--"))`, which keeps FLAG VALUES as
+ * positionals — `--mode real-model a.json b.json` read `baselinePath =
+ * "real-model"` and `candidatePath = "a.json"`, a silently wrong pair.
+ *
+ * Flags are consumed together with their value, an unknown flag or an unknown
+ * `--mode` value is an ERROR (never silently downgraded to the stub mode), and
+ * exactly two positional run files are required.
+ */
+export function parseChampionEvalArgs(
+  rest: readonly string[],
+):
+  | { ok: true; files: [string, string]; mode: EvalMode; strict: boolean; historical: boolean; candidateId?: string }
+  | { ok: false; error: string } {
+  const files: string[] = [];
+  let mode: EvalMode = "stub";
+  let strict = false;
+  let historical = false;
+  let candidateId: string | undefined;
+
+  for (let i = 0; i < rest.length; i++) {
+    const arg = rest[i] ?? "";
+    if (arg === "--strict") {
+      strict = true;
+      continue;
+    }
+    if (arg === "--historical") {
+      historical = true;
+      continue;
+    }
+    if (arg === "--mode" || arg === "--candidate") {
+      const value = rest[i + 1];
+      // A following flag is NOT a value: `--candidate --strict` is a mistake,
+      // not a candidate literally named "--strict".
+      if (value === undefined || value.startsWith("--")) {
+        return { ok: false, error: `${arg} requires a value\n\n${CHAMPION_EVAL_USAGE}` };
+      }
+      i += 1;
+      if (arg === "--mode") {
+        if (value !== "stub" && value !== "real-model") {
+          return { ok: false, error: `--mode must be "stub" or "real-model" (got ${JSON.stringify(value)})\n\n${CHAMPION_EVAL_USAGE}` };
+        }
+        mode = value;
+      } else {
+        candidateId = value;
+      }
+      continue;
+    }
+    if (arg.startsWith("--")) {
+      return { ok: false, error: `unknown flag: ${arg}\n\n${CHAMPION_EVAL_USAGE}` };
+    }
+    files.push(arg);
+  }
+
+  if (files.length !== 2) {
+    return {
+      ok: false,
+      error: `expected exactly 2 run files (baseline and candidate), got ${String(files.length)}\n\n${CHAMPION_EVAL_USAGE}`,
+    };
+  }
+  return {
+    ok: true,
+    files: [files[0] as string, files[1] as string],
+    mode,
+    strict,
+    historical,
+    ...(candidateId !== undefined ? { candidateId } : {}),
+  };
+}
+
 /** Dispatch `agent <command> [args]`. argv excludes the program and "agent". */
 export async function runCommand(argv: string[], deps: CommandDeps): Promise<CommandResult> {
   const [command, ...rest] = argv;
@@ -399,18 +473,13 @@ export async function runCommand(argv: string[], deps: CommandDeps): Promise<Com
       if (rest[0] !== "eval") {
         return { exitCode: 1, lines: ["usage: agent champion (eval <baseline-runs.json> <candidate-runs.json> [--mode stub|real-model] [--strict] [--historical] [--candidate <id>]) | (state [--json]) | (promote --envelope <promotion-envelope.json> [--candidate <id>]) | (rollback --to <C0|C1|...> --reason <text>) | (audit [--baseline <p>] [--candidate <p>] [--review-sha <sha>]) | (quarantine [--reason-codes a,b,c] [--note <text>])"] };
       }
-      const files = rest.slice(1).filter((a) => !a.startsWith("--"));
-      const modeIdx = rest.indexOf("--mode");
-      const mode: EvalMode = modeIdx >= 0 && rest[modeIdx + 1] === "real-model" ? "real-model" : "stub";
-      const strict = rest.includes("--strict");
-      const historical = rest.includes("--historical");
-      const candIdx = rest.indexOf("--candidate");
-      const candidateId = candIdx >= 0 ? rest[candIdx + 1] : undefined;
-      if (files.length < 2) {
-        return { exitCode: 1, lines: ["usage: agent champion eval <baseline-runs.json> <candidate-runs.json> [--mode stub|real-model] [--strict] [--historical] [--candidate <id>]"] };
+      const parsed = parseChampionEvalArgs(rest.slice(1));
+      if (!parsed.ok) {
+        return { exitCode: 1, lines: [parsed.error] };
       }
+      const { files, mode, strict, historical, candidateId } = parsed;
       try {
-        const { lines, decision } = await runChampionEval({ baselinePath: files[0]!, candidatePath: files[1]!, mode, strict, historical, candidateId });
+        const { lines, decision } = await runChampionEval({ baselinePath: files[0], candidatePath: files[1], mode, strict, historical, candidateId });
         // E1-08: exit code reflects the decision:
         //   0 = ACCEPT (promotable)
         //   1 = INCONCLUSIVE (insufficient evidence)
