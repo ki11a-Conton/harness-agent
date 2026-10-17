@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { homedir } from "node:os";
-import { isAskReason, type AgentEvent, type ApprovalId, type AskId, type AskUserRequest, type SessionId } from "@ar/contracts";
+import { isAskReason, type AgentEvent, type ApprovalId, type AskId, type AskUserRequest, type SessionId, type TurnId } from "@ar/contracts";
 import type { Harness } from "@ar/harness";
 
 export interface RemoteEventHost {
@@ -11,7 +11,7 @@ export interface RemoteEventHost {
   answerAsk(request: AskUserRequest, text: string): Promise<void>;
   summary?(sessionId: SessionId, signal?: AbortSignal): Promise<unknown>;
 }
-type Pending = { kind: "approval" | "ask"; id: string; sessionId: SessionId; turnId?: string; question?: AskUserRequest };
+type Pending = { kind: "approval" | "ask"; id: string; sessionId: SessionId; turnId?: TurnId; question?: AskUserRequest };
 type Delivery = { pending: Pending; completed?: string; inflight?: Promise<void> };
 type Notification = { type: "emit"; event: string; args: readonly unknown[] };
 type Generation = { deliveries: Map<string, Delivery>; notices: Notification[]; active: boolean; failure?: Error };
@@ -50,16 +50,48 @@ export function createEventsService(host: RemoteEventHost) {
     return request;
   }
 
+  // P41 audit WEB-020: the `$events` waterfall polls every ~25 ms, so a full
+  // journal replay plus one ownership read per ask id must not run for sessions
+  // that produced no new event. The cache is validated by one bounded tail read
+  // (`afterSequence` + `limit: 1`) and by the cheap mutable sources the projection
+  // actually depends on: the approval store, the ask store, and the session status.
+  type AskCache = { lastSequence: number; approvals: string; asks: string; status: string; items: Pending[] };
+  const askCache = new Map<SessionId, AskCache>();
+
   async function pending(): Promise<Pending[]> {
     const sessions = (await host.harness.store.listSessions()).filter(session => session.status !== "failed");
     const visible = new Set(sessions.map(session => session.id));
-    const result: Pending[] = host.harness.approvalStore.listPending()
-      .filter(request => visible.has(request.sessionId) && request.expiresAt > Date.now())
-      .map(request => ({ kind: "approval", id: request.id, sessionId: request.sessionId, turnId: request.turnId }));
+    const now = Date.now();
+    const approvals = new Map<SessionId, Pending[]>();
+    const approvalSignature = new Map<SessionId, string>();
+    for (const request of host.harness.approvalStore.listPending()) {
+      if (!visible.has(request.sessionId)) continue;
+      const live = request.expiresAt > now;
+      approvalSignature.set(request.sessionId, `${approvalSignature.get(request.sessionId) ?? ""}${request.id}/${live ? 1 : 0};`);
+      if (!live) continue;
+      const list = approvals.get(request.sessionId) ?? [];
+      list.push({ kind: "approval", id: request.id, sessionId: request.sessionId, turnId: request.turnId });
+      approvals.set(request.sessionId, list);
+    }
+    const result: Pending[] = [];
     for (const session of sessions) {
+      const sessionApprovals = approvals.get(session.id) ?? [];
+      const sessionApprovalSignature = approvalSignature.get(session.id) ?? "";
+      const questions = host.harness.askUserStore === undefined ? [] : await host.harness.askUserStore.listPending(session.id);
+      const askSignature = questions.map(question => `${question.id}/${question.status}`).join(";");
+      const cached = askCache.get(session.id);
+      if (cached !== undefined) {
+        const tail = await host.harness.events.list(session.id, { afterSequence: cached.lastSequence, limit: 1 });
+        if (tail.length === 0 && cached.approvals === sessionApprovalSignature && cached.asks === askSignature
+          && cached.status === session.status && await stillWaiting(cached.items)) {
+          result.push(...cached.items);
+          continue;
+        }
+      }
       const journal = await host.harness.events.list(session.id);
+      const items: Pending[] = [...sessionApprovals];
       const ids = new Set(journal.flatMap(event => event.type === "ask.user_asked" && typeof event.payload.askId === "string" ? [event.payload.askId] : []));
-      if (host.harness.askUserStore !== undefined) for (const question of await host.harness.askUserStore.listPending(session.id)) ids.add(question.id);
+      for (const question of questions) ids.add(question.id);
       for (const id of ids) {
         const question = await ownedQuestion(session.id, id, journal);
         if (question?.turnId === undefined) continue;
@@ -70,10 +102,23 @@ export function createEventsService(host: RemoteEventHost) {
         // An answer can commit before the continuation owner starts (including
         // an IO-failure window). Keep that original ask retryable until a real
         // continuation model.started, rather than leaving an invisible pause.
-        result.push({ kind: "ask", id, sessionId: session.id, turnId: question.turnId, question });
+        items.push({ kind: "ask", id, sessionId: session.id, turnId: question.turnId, question });
       }
+      askCache.set(session.id, { lastSequence: journal.at(-1)?.sequence ?? cached?.lastSequence ?? 0,
+        approvals: sessionApprovalSignature, asks: askSignature, status: session.status, items });
+      result.push(...items);
     }
+    for (const id of [...askCache.keys()]) if (!visible.has(id)) askCache.delete(id);
     return result;
+  }
+
+  /** A cached ask is valid only while its turn is still parked on the same owner. */
+  async function stillWaiting(items: readonly Pending[]): Promise<boolean> {
+    for (const item of items) {
+      if (item.kind !== "ask" || item.turnId === undefined) continue;
+      if ((await host.harness.store.getTurn(item.turnId))?.status !== "waiting_for_user") return false;
+    }
+    return true;
   }
 
   async function apply(delivery: Delivery, outcome: Record<string, unknown>): Promise<void> {
