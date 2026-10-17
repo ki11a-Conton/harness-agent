@@ -2615,7 +2615,14 @@ describe("P15-2: immutable StepContext per model call", () => {
     expect(outcome.status).toBe("completed");
     expect(calls).toHaveLength(1);
     expect(calls[0]!.sessionId).toBe(session.id);
-    expect(calls[0]!.sequence).toBe(Number.MAX_SAFE_INTEGER);
+    // PKG-002: the fence must be handed the turn's REAL last committed
+    // sequence. The old `Number.MAX_SAFE_INTEGER` sentinel was unverifiable by
+    // any store (`WHERE sequence = MAX_SAFE_INTEGER` never matches), so the
+    // durability guard degraded to a bare WAL checkpoint and never failed.
+    const committed = await events.list(session.id);
+    expect(committed.length).toBeGreaterThan(0);
+    expect(calls[0]!.sequence).toBe(committed[committed.length - 1]!.sequence);
+    expect(calls[0]!.sequence).not.toBe(Number.MAX_SAFE_INTEGER);
   });
 });
 

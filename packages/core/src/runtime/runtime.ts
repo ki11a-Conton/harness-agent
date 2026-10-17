@@ -93,7 +93,7 @@ import { ASK_GATE_SPEC } from "./ask-gate.js";
 import type { StepToolCatalog } from "./tool-catalog.js";
 import { AgentState } from "../state/agent-state.js";
 import { HookRegistry } from "../lifecycle/hooks.js";
-import { RecoveryPolicy } from "../recovery/recovery.js";
+import { RecoveryPolicy, type FailureKind } from "../recovery/recovery.js";
 import {
   activeUserMessages,
   buildResumePrompt,
@@ -128,6 +128,44 @@ import { ReadOnlyPrefetch } from "./read-only-prefetch.js";
 function stableHashOf(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex").slice(0, 16);
 }
+
+/** PKG-003: deterministic hash of a policy VALUE for drift detection. Object
+ *  keys are sorted first, so an equivalent policy built with a different key
+ *  insertion order hashes identically — plain [[stableHashOf]] is key-order
+ *  sensitive and would report phantom drift. Functions/undefined are dropped,
+ *  matching JSON.stringify. */
+function stablePolicyHash(value: unknown): string {
+  return stableHashOf(sortKeysDeep(value));
+}
+
+function sortKeysDeep(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(sortKeysDeep);
+  if (value !== null && typeof value === "object") {
+    const sorted: Record<string, unknown> = {};
+    for (const key of Object.keys(value as Record<string, unknown>).sort()) {
+      const entry = (value as Record<string, unknown>)[key];
+      if (entry === undefined || typeof entry === "function") continue;
+      sorted[key] = sortKeysDeep(entry);
+    }
+    return sorted;
+  }
+  return value;
+}
+
+/** PKG-003: local extension of the frozen runtime-policy snapshot.
+ *
+ *  Version 1 froze `toolSemanticsHash` as `String(this.toolSemanticsOf.length)`
+ *  — the arity constant "1", identical for every host — and had no sandbox
+ *  hash at all, while the resume gate compared only `contextPolicyHash`. So a
+ *  session resumed under a widened retry/sandbox/tool-semantics policy drifted
+ *  silently. Version 2 adds a real tool-semantics table hash plus the sandbox
+ *  hash, and the gate compares all four dimensions. Version-1 snapshots keep
+ *  the legacy context-only comparison: re-deriving the other dimensions would
+ *  report phantom drift for every pre-upgrade session. */
+type RuntimePolicySnapshotV2 = Omit<EffectiveRuntimePolicySnapshot, "version"> & {
+  version: 2;
+  sandboxPolicyHash?: string;
+};
 import type { ExecutedToolCall } from "./tool-call-controller.js";
 import { ContextController } from "./context-controller.js";
 import type { ContextUpdate } from "./context-controller.js";
@@ -885,15 +923,9 @@ export class AgentRuntime {
       agentMetadata: { version: 1, agentId: opts.agent.id, name: opts.agent.name,
         description: opts.agent.description, mode: opts.agent.mode },
       // P1-6: freeze the runtime policy hashes too, so a resume can detect
-      // host-policy drift (safe-resume gate).
-      [RUNTIME_POLICY_SNAPSHOT_KEY]: {
-        version: 1,
-        contextPolicyHash: this.context !== undefined ? stableHashOf(this.context) : undefined,
-        retryPolicyHash: this.recovery !== undefined ? stableHashOf(this.recovery) : undefined,
-        schedulerPolicyHash: undefined,
-        toolSemanticsHash: this.toolSemanticsOf !== undefined ? String(this.toolSemanticsOf.length) : undefined,
-        createdAt: this.now(),
-      } satisfies EffectiveRuntimePolicySnapshot,
+      // host-policy drift (safe-resume gate). PKG-003: one builder for both
+      // sides of the comparison — see [[runtimePolicySnapshot]].
+      [RUNTIME_POLICY_SNAPSHOT_KEY]: this.runtimePolicySnapshot(),
     });
     const initialized: Session = { ...session, status: opts.initialStatus ?? "active" };
     await this.store.updateSession(initialized);
@@ -974,12 +1006,21 @@ export class AgentRuntime {
           );
         }
       }
-      // P26-3: fence the journal BEFORE acking completion — an acked turn must
-      // survive a crash at the store's declared durability level. A fence
-      // failure fails the turn (fail-closed): the caller must not treat an
-      // un-flushed completion as durable.
+      // P26-3 / PKG-002: fence the journal BEFORE acking completion — an acked
+      // turn must survive a crash at the store's declared durability level. A
+      // fence failure fails the turn (fail-closed): the caller must not treat
+      // an un-flushed completion as durable.
+      //
+      // The fence is handed the turn's REAL last committed sequence: the old
+      // `Number.MAX_SAFE_INTEGER` sentinel was unverifiable by every store
+      // (`WHERE sequence = MAX_SAFE_INTEGER` never matches), so the guard
+      // degraded to a bare WAL checkpoint and could never fail. A session with
+      // no committed events has nothing to fence.
       if (this.durabilityFence !== undefined) {
-        await this.durabilityFence.flushThrough(sessionId, Number.MAX_SAFE_INTEGER);
+        const lastCommitted = (await this.events.nextSequence(sessionId)) - 1;
+        if (lastCommitted >= 0) {
+          await this.durabilityFence.flushThrough(sessionId, lastCommitted);
+        }
       }
       return outcome;
     } finally {
@@ -1934,6 +1975,112 @@ export class AgentRuntime {
     return this.toolSemanticsOf?.(name) ?? DEFAULT_RUNTIME_TOOL_SEMANTICS[name] ?? DEFAULT_TOOL_SEMANTICS;
   }
 
+  /** PKG-003: the tool-semantics policy is a LOOKUP, not a scalar — hash the
+   *  whole table (registry tools + built-ins, name-sorted) so a host that
+   *  reclassifies a tool's read-only/retry/side-effect surface is observed on
+   *  resume. The old hash was `String(this.toolSemanticsOf.length)`, i.e. the
+   *  constant "1" for every host: a gate that could never differ. */
+  private toolSemanticsTableHash(): string | undefined {
+    if (this.toolSemanticsOf === undefined) return undefined;
+    const names = new Set<string>([
+      ...Object.keys(DEFAULT_RUNTIME_TOOL_SEMANTICS),
+      ...(this.toolRegistry?.list() ?? []).map((tool) => tool.name),
+    ]);
+    const table = [...names].sort().map((name) => [name, this.semanticsOf(name)] as const);
+    return stablePolicyHash(table);
+  }
+
+  /** PKG-003: retry policy hashed as OBSERVABLE BEHAVIOR. `RecoveryPolicy`
+   *  keeps its config in private fields and `askOn` is a Set (JSON.stringify
+   *  renders it as `{}`), so hashing the instance hides real changes. Probing
+   *  the decision matrix sees caps, delays and ask-vs-retry exactly. */
+  private retryPolicyHashOf(): string | undefined {
+    if (this.recovery === undefined) return undefined;
+    const kinds: readonly FailureKind[] = [
+      "tool_failure",
+      "test_failure",
+      "timeout",
+      "context_overflow",
+      "model_error",
+    ];
+    const behavior = kinds.map((kind) =>
+      Array.from({ length: 8 }, (_, index) => {
+        const decision = this.recovery!.decide(kind, index + 1);
+        return [decision.action, decision.maxAttempts, decision.retryDelayMs ?? 0] as const;
+      }),
+    );
+    return stablePolicyHash(behavior);
+  }
+
+  /** PKG-003: ONE builder for create-session and for the resume comparison, so
+   *  the two sides of the drift check can never diverge from each other. */
+  private runtimePolicySnapshot(): RuntimePolicySnapshotV2 {
+    return {
+      version: 2,
+      contextPolicyHash: this.context !== undefined ? stableHashOf(this.context) : undefined,
+      retryPolicyHash: this.retryPolicyHashOf(),
+      schedulerPolicyHash: undefined,
+      toolSemanticsHash: this.toolSemanticsTableHash(),
+      sandboxPolicyHash: this.sandboxPolicy !== undefined ? stablePolicyHash(this.sandboxPolicy) : undefined,
+      createdAt: this.now(),
+    };
+  }
+
+  /** PKG-003: emit ONE `policy.changed_on_resume` event naming every policy
+   *  dimension that moved since createSession. Observation-only by design (the
+   *  P0-1 agent snapshot already prevents silent widening); the old gate
+   *  compared only the context pipeline, so a resumed session ran against a
+   *  changed retry/sandbox/tool-semantics policy with NO event at all. */
+  private async reportPolicyDrift(
+    sessionId: SessionId,
+    stored: EffectiveRuntimePolicySnapshot | RuntimePolicySnapshotV2,
+  ): Promise<void> {
+    if (stored.version === 1) {
+      const currentContextHash = this.context !== undefined ? stableHashOf(this.context) : undefined;
+      const contextPolicyChanged =
+        this.context !== undefined &&
+        stored.contextPolicyHash !== undefined &&
+        stored.contextPolicyHash !== currentContextHash;
+      // v1 froze retryPolicyHash as `stableHashOf(this.recovery)` on the live
+      // instance, so that exact encoding is still recomputable here: a session
+      // created before this upgrade can be checked for retry drift too. v1's
+      // toolSemanticsHash was an arity constant and it recorded no sandbox
+      // hash, so those two are genuinely unknowable for a legacy session and
+      // must not be reported as drift (that would be a phantom alarm on every
+      // pre-upgrade resume).
+      const retryPolicyChanged =
+        this.recovery !== undefined &&
+        stored.retryPolicyHash !== undefined &&
+        stored.retryPolicyHash !== stableHashOf(this.recovery);
+      if (!contextPolicyChanged && !retryPolicyChanged) return;
+      await this.emit(sessionId, "policy.changed_on_resume", {
+        ...(contextPolicyChanged
+          ? { contextPolicyChanged: true, contextPolicyHash: currentContextHash, stored: stored.contextPolicyHash }
+          : {}),
+        ...(retryPolicyChanged
+          ? { retryPolicyChanged: true, retryPolicyHash: stableHashOf(this.recovery) }
+          : {}),
+      }, undefined);
+      return;
+    }
+    const current = this.runtimePolicySnapshot();
+    const contextPolicyChanged = stored.contextPolicyHash !== current.contextPolicyHash;
+    const retryPolicyChanged = stored.retryPolicyHash !== current.retryPolicyHash;
+    const toolSemanticsChanged = stored.toolSemanticsHash !== current.toolSemanticsHash;
+    const sandboxPolicyChanged = stored.sandboxPolicyHash !== current.sandboxPolicyHash;
+    if (!contextPolicyChanged && !retryPolicyChanged && !toolSemanticsChanged && !sandboxPolicyChanged) return;
+    await this.emit(sessionId, "policy.changed_on_resume", {
+      contextPolicyChanged,
+      retryPolicyChanged,
+      toolSemanticsChanged,
+      sandboxPolicyChanged,
+      contextPolicyHash: current.contextPolicyHash,
+      retryPolicyHash: current.retryPolicyHash,
+      toolSemanticsHash: current.toolSemanticsHash,
+      sandboxPolicyHash: current.sandboxPolicyHash,
+    }, undefined);
+  }
+
   getAgent(agentId: AgentId): AgentDefinition | undefined {
     return this.agents.get(agentId);
   }
@@ -1978,17 +2125,12 @@ export class AgentRuntime {
     // P1-6: safe-resume gate — detect host policy drift since the session was
     // created. Never silently change security semantics: the change is
     // observable on the event stream so a strict host can refuse to resume.
-    const runtimePolicy = snapshot[RUNTIME_POLICY_SNAPSHOT_KEY] as EffectiveRuntimePolicySnapshot | undefined;
-    if (runtimePolicy?.version === 1 && this.context !== undefined) {
-      const currentContextHash = stableHashOf(this.context);
-      if (runtimePolicy.contextPolicyHash !== undefined && runtimePolicy.contextPolicyHash !== currentContextHash) {
-        await this.emit(session.id, "policy.changed_on_resume", {
-          contextPolicyChanged: true,
-          contextPolicyHash: currentContextHash,
-          stored: runtimePolicy.contextPolicyHash,
-        }, undefined);
-      }
-    }
+    // PKG-003: every frozen dimension is compared, not just the context pipeline.
+    const runtimePolicy = snapshot[RUNTIME_POLICY_SNAPSHOT_KEY] as
+      | EffectiveRuntimePolicySnapshot
+      | RuntimePolicySnapshotV2
+      | undefined;
+    if (runtimePolicy !== undefined) await this.reportPolicyDrift(session.id, runtimePolicy);
     // Display metadata never supplies model/tools/permissions/skills/limits.
     // Existing registry metadata keeps precedence; a restarted registry may
     // lack this durable ID, in which case use only a validated cosmetic record.

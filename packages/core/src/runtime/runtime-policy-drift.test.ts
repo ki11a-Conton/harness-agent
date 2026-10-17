@@ -1,0 +1,229 @@
+import { createHash } from "node:crypto";
+import { describe, expect, it } from "vitest";
+import type { AgentDefinition, SandboxPolicy, SessionId, ToolSemantics } from "@ar/contracts";
+import { DEFAULT_TOOL_SEMANTICS, RUNTIME_POLICY_SNAPSHOT_KEY, newAgentId } from "@ar/contracts";
+import { ContextPipeline } from "@ar/context";
+import { ScriptedModelProvider } from "@ar/model";
+import { AgentRuntime, type AgentRuntimeDeps } from "./runtime.js";
+import { RecoveryPolicy } from "../recovery/recovery.js";
+import { MemoryEventStore, MemorySessionStore, defaultTestToolCatalog } from "../test/fakes.js";
+import { FakeOrchestrator } from "../test/fake-orchestrator.js";
+
+const AGENT: AgentDefinition = {
+  id: newAgentId(),
+  name: "drift-agent",
+  description: "test",
+  mode: "primary",
+  model: { providerId: "scripted", modelId: "scripted-model" },
+  systemPrompt: "you are a test",
+  tools: {},
+  permissions: { rules: [] },
+  skills: {},
+  limits: {},
+};
+
+/** Filesystem-writing semantics vs process-spawning semantics: the same tool
+ *  name must hash differently once the host's lookup changes. */
+const FS_SEMANTICS: ToolSemantics = {
+  ...DEFAULT_TOOL_SEMANTICS,
+  readOnly: false,
+  retrySafety: "none",
+  sideEffectScope: "filesystem",
+  networkBehavior: "none",
+  outputSensitivity: "high",
+};
+const PROCESS_SEMANTICS: ToolSemantics = {
+  ...FS_SEMANTICS,
+  sideEffectScope: "process",
+  networkBehavior: "outbound",
+};
+
+const SANDBOX_DENY: SandboxPolicy = {
+  filesystem: { mode: "read-only" },
+  network: { mode: "deny" },
+  process: {},
+};
+const SANDBOX_OPEN: SandboxPolicy = {
+  filesystem: { mode: "read-only" },
+  network: { mode: "full" },
+  process: {},
+};
+
+function makeRuntime(
+  store: MemorySessionStore,
+  events: MemoryEventStore,
+  overrides: Partial<AgentRuntimeDeps> = {},
+): AgentRuntime {
+  return new AgentRuntime({
+    toolRegistry: defaultTestToolCatalog(),
+    permissiveToolResolution: true,
+    store,
+    events,
+    modelProvider: new ScriptedModelProvider([]),
+    orchestrator: new FakeOrchestrator(),
+    agents: [AGENT],
+    ...overrides,
+  });
+}
+
+/** Simulates a host restart: the same durable state, a different live policy. */
+async function resumeWithDriftedPolicy(
+  before: Partial<AgentRuntimeDeps>,
+  after: Partial<AgentRuntimeDeps>,
+): Promise<{ sessionId: SessionId; events: MemoryEventStore }> {
+  const store = new MemorySessionStore();
+  const events = new MemoryEventStore();
+  const first = makeRuntime(store, events, before);
+  const session = await first.createSession({ agent: AGENT, cwd: "/work" });
+  const restarted = makeRuntime(store, events, after);
+  await restarted.getSessionAgent(session.id);
+  return { sessionId: session.id, events };
+}
+
+async function driftEvents(events: MemoryEventStore, sessionId: SessionId) {
+  return (await events.list(sessionId)).filter((e) => e.type === "policy.changed_on_resume");
+}
+
+/** The v1 snapshot encoding of retryPolicyHash: a plain hash of the live
+ *  `RecoveryPolicy` instance (JSON.stringify over its own properties). */
+function legacyRetryHash(policy: RecoveryPolicy): string {
+  return createHash("sha256").update(JSON.stringify(policy)).digest("hex").slice(0, 16);
+}
+
+/** Simulates resuming a session created BEFORE the PKG-003 upgrade: the live
+ *  runtime starts from `before`, then its snapshot is rewritten into the v1
+ *  shape (arity-constant tool-semantics hash, no sandbox hash). */
+async function resumeWithLegacySnapshot(
+  before: RecoveryPolicy,
+  after: RecoveryPolicy,
+): Promise<{ sessionId: SessionId; events: MemoryEventStore }> {
+  const store = new MemorySessionStore();
+  const events = new MemoryEventStore();
+  const first = makeRuntime(store, events, { recovery: before });
+  const session = await first.createSession({ agent: AGENT, cwd: "/work" });
+  const snapshot = (await store.loadStateSnapshot(session.id))!;
+  await store.saveStateSnapshot(session.id, {
+    ...snapshot,
+    [RUNTIME_POLICY_SNAPSHOT_KEY]: {
+      version: 1,
+      contextPolicyHash: undefined,
+      retryPolicyHash: legacyRetryHash(before),
+      schedulerPolicyHash: undefined,
+      toolSemanticsHash: "1",
+      createdAt: 0,
+    },
+  });
+  const restarted = makeRuntime(store, events, { recovery: after });
+  await restarted.getSessionAgent(session.id);
+  return { sessionId: session.id, events };
+}
+
+describe("PKG-003: the safe-resume gate observes every frozen runtime policy dimension", () => {
+  it("detects tool-semantics drift on resume (a real hash, not the arity constant)", async () => {
+    const { sessionId, events } = await resumeWithDriftedPolicy(
+      { toolSemanticsOf: () => FS_SEMANTICS },
+      { toolSemanticsOf: () => PROCESS_SEMANTICS },
+    );
+    const drift = await driftEvents(events, sessionId);
+    expect(drift).toHaveLength(1);
+    expect(drift[0]!.payload.toolSemanticsChanged).toBe(true);
+    expect(drift[0]!.payload.contextPolicyChanged).toBe(false);
+    expect(drift[0]!.payload.retryPolicyChanged).toBe(false);
+    expect(drift[0]!.payload.sandboxPolicyChanged).toBe(false);
+  });
+
+  it("detects retry-policy drift on resume", async () => {
+    const { sessionId, events } = await resumeWithDriftedPolicy(
+      { recovery: new RecoveryPolicy({ maxAttempts: 3 }) },
+      { recovery: new RecoveryPolicy({ maxAttempts: 5 }) },
+    );
+    const drift = await driftEvents(events, sessionId);
+    expect(drift).toHaveLength(1);
+    expect(drift[0]!.payload.retryPolicyChanged).toBe(true);
+    expect(drift[0]!.payload.toolSemanticsChanged).toBe(false);
+  });
+
+  it("detects an ask-only retry-policy change (a Set, invisible to JSON.stringify)", async () => {
+    const { sessionId, events } = await resumeWithDriftedPolicy(
+      { recovery: new RecoveryPolicy({ maxAttempts: 2 }) },
+      {
+        recovery: new RecoveryPolicy({
+          maxAttempts: 2,
+          askOn: new Set(["tool_failure"] as const),
+        }),
+      },
+    );
+    const drift = await driftEvents(events, sessionId);
+    expect(drift).toHaveLength(1);
+    expect(drift[0]!.payload.retryPolicyChanged).toBe(true);
+  });
+
+  it("detects sandbox-policy drift on resume", async () => {
+    const { sessionId, events } = await resumeWithDriftedPolicy(
+      { sandboxPolicy: SANDBOX_DENY },
+      { sandboxPolicy: SANDBOX_OPEN },
+    );
+    const drift = await driftEvents(events, sessionId);
+    expect(drift).toHaveLength(1);
+    expect(drift[0]!.payload.sandboxPolicyChanged).toBe(true);
+    expect(drift[0]!.payload.retryPolicyChanged).toBe(false);
+  });
+
+  it("still detects context-pipeline drift on resume", async () => {
+    const { sessionId, events } = await resumeWithDriftedPolicy(
+      {
+        context: {
+          pipeline: new ContextPipeline(),
+          budget: { maxTokens: 1_000 } as never,
+        },
+      },
+      {
+        context: {
+          pipeline: new ContextPipeline(),
+          budget: { maxTokens: 2_000 } as never,
+        },
+      },
+    );
+    const drift = await driftEvents(events, sessionId);
+    expect(drift).toHaveLength(1);
+    expect(drift[0]!.payload.contextPolicyChanged).toBe(true);
+    expect(drift[0]!.payload.toolSemanticsChanged).toBe(false);
+    expect(drift[0]!.payload.sandboxPolicyChanged).toBe(false);
+  });
+
+  it("stays silent when the host policy is unchanged", async () => {
+    const { sessionId, events } = await resumeWithDriftedPolicy(
+      {
+        toolSemanticsOf: () => FS_SEMANTICS,
+        recovery: new RecoveryPolicy({ maxAttempts: 3 }),
+        sandboxPolicy: SANDBOX_DENY,
+      },
+      {
+        toolSemanticsOf: () => FS_SEMANTICS,
+        recovery: new RecoveryPolicy({ maxAttempts: 3 }),
+        sandboxPolicy: SANDBOX_DENY,
+      },
+    );
+    expect(await driftEvents(events, sessionId)).toHaveLength(0);
+  });
+
+  it("still detects retry drift for a pre-upgrade (v1) snapshot", async () => {
+    const { sessionId, events } = await resumeWithLegacySnapshot(
+      new RecoveryPolicy({ maxAttempts: 3 }),
+      new RecoveryPolicy({ maxAttempts: 5 }),
+    );
+    const drift = await driftEvents(events, sessionId);
+    expect(drift).toHaveLength(1);
+    expect(drift[0]!.payload.retryPolicyChanged).toBe(true);
+  });
+
+  it("reports no phantom drift for a pre-upgrade (v1) snapshot under the same policy", async () => {
+    const { sessionId, events } = await resumeWithLegacySnapshot(
+      new RecoveryPolicy({ maxAttempts: 3 }),
+      new RecoveryPolicy({ maxAttempts: 3 }),
+    );
+    // v1 recorded an arity constant as its tool-semantics hash and no sandbox
+    // hash at all; neither may be reported as drift for an old session.
+    expect(await driftEvents(events, sessionId)).toHaveLength(0);
+  });
+});

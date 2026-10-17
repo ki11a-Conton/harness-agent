@@ -456,14 +456,31 @@ export class SqliteRuntimeStore
 
   /** P26-3: fold the WAL into the main db so a subsequent process (or OS
    *  crash recovery) sees every committed event up to `sequence`. Idempotent;
-   *  PASSIVE never blocks a concurrent writer. */
+   *  PASSIVE never blocks a concurrent writer.
+   *
+   *  PKG-002: `Number.MAX_SAFE_INTEGER` is the documented "flush the whole
+   *  session" sentinel. It is resolved to the session's committed tail before
+   *  validating — the old code skipped the check for the sentinel, so the
+   *  fence silently succeeded on ANY input (including a session with no
+   *  events at all) and degraded to a bare WAL checkpoint. */
   async flushThrough(sessionId: SessionId, sequence: number): Promise<void> {
     this.db.exec("PRAGMA wal_checkpoint(PASSIVE);");
+    const target =
+      sequence === Number.MAX_SAFE_INTEGER
+        ? (this.db
+            .prepare("SELECT MAX(sequence) AS seq FROM events WHERE session_id = ?")
+            .get(sessionId) as { seq: number | null }).seq
+        : sequence;
+    if (target === null || target === undefined) {
+      throw new Error(
+        `flushThrough: session ${sessionId} has no committed events to flush through (requested ${sequence})`,
+      );
+    }
     const row = this.db
       .prepare("SELECT 1 AS x FROM events WHERE session_id = ? AND sequence = ?")
-      .get(sessionId, sequence);
-    if (row === undefined && sequence !== Number.MAX_SAFE_INTEGER) {
-      throw new Error(`flushThrough: event ${sequence} for ${sessionId} is not committed`);
+      .get(sessionId, target);
+    if (row === undefined) {
+      throw new Error(`flushThrough: event ${target} for ${sessionId} is not committed`);
     }
   }
 
