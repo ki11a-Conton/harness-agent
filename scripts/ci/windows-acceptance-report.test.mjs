@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { receiptFromReport, annotationPackets } from './windows-acceptance-report.mjs';
+import { receiptFromReport, annotationPackets, caseRecordPublication } from './windows-acceptance-report.mjs';
 import { gunzipSync } from 'node:zlib';
+import { createHash } from 'node:crypto';
 
 const host = { platform: 'win32', osType: 'Windows_NT', sourceSha: 'a'.repeat(40), workflowSha: 'a'.repeat(40), treeClean: true };
 const report = { success: true, numFailedTests: 0, numFailedTestSuites: 0, numPassedTests: 1, numTotalTests: 1,
@@ -32,4 +33,32 @@ test('annotation packets reconstruct Unicode final states without per-step or me
   assert(packets.length <= 9); assert(packets.every(packet => JSON.stringify(packet).length < 3000));
   const decoded = gunzipSync(Buffer.from(packets.map(packet => packet.data).join(''), 'base64')).toString();
   assert.deepEqual(JSON.parse(decoded), files);
+});
+
+const largeFiles = () => [{ file: 'packages/large.test.ts', assertions: Array.from({ length: 1000 }, (_, index) => ({
+  name: createHash('sha256').update(`native-case-${index}`).digest('hex'), status: 'passed', durationMs: index,
+})) }];
+test('large suites retain all lossless case records beyond one step annotation budget', () => {
+  const files = largeFiles();
+  const packets = annotationPackets(files);
+  assert(packets.length > 9);
+  assert.deepEqual(JSON.parse(gunzipSync(Buffer.from(packets.map(packet => packet.data).join(''), 'base64'))), files);
+});
+
+test('large-suite publication is bounded and indexes the complete artifact without weakening the verdict', () => {
+  const files = largeFiles();
+  const publication = caseRecordPublication(files);
+  assert.equal(publication.mode, 'artifact');
+  assert.equal(publication.packets.length, 0);
+  assert.equal(publication.index.assertions, 1000);
+  assert.equal(publication.index.artifactPath, '.ci/windows-acceptance/receipt.json');
+  assert.equal(publication.index.caseRecordsSha256, createHash('sha256').update(JSON.stringify(files)).digest('hex'));
+  assert(publication.index.losslessPackets > 9);
+  assert.equal(receiptFromReport({ ...report, success: false }, host, []).receipt.outcome, 'FAIL');
+});
+test('small-suite publication still includes every reconstructible record in public annotations', () => {
+  const { files } = receiptFromReport(report, host, ['required native case']);
+  const publication = caseRecordPublication(files);
+  assert.equal(publication.mode, 'annotations');
+  assert.deepEqual(JSON.parse(gunzipSync(Buffer.from(publication.packets.map(packet => packet.data).join(''), 'base64'))), files);
 });

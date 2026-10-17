@@ -48,3 +48,6 @@
 
 
 R13-2 调用链补齐：继续用同一基线写入故障检查 Web factory 与 Runtime facade，前者仍在冻结前发布 active，后者根本未冻结配置。两个新独立反例在 76caf6a3 上均失败。普通 Web factory 统一经过修正后的 sessionService；Runtime facade 保留调用者完整受限 agent，以 failed 初始化、冻结宿主基线、最后发布，隐藏 failed 会话仍不发布。另断言 facade 创建后的 read_file-only/deny/maxToolCalls=1 没有被注册表宽策略替换。所有 Web 新会话入口与 draft replacement 的初始化契约保持一致。
+
+
+W-3：run 39055712482/job 117463135869 的步骤 9 原生回归成功，公开 Windows 回执为 PASS：42 文件、498 passed、0 failed、2 skipped，全部 12 个必跑原生进程用例执行成功。失败在步骤 10：新增用例的压缩记录超出脚本硬编码的单步骤 9 个注释分片上限，脚本在写出有效回执后抛错。原失败仍是失败，不记作 CI 全绿。新增 1000 条高熵名称记录的独立反例确定性复现该异常。修正为小报告发布全部无损分片，大报告保留完整 receipt.json artifact 并发布明确索引，绑定与回执相同的全部记录 SHA-256；不静默截断，也不修改实际 verdict。两种路径及无损重建均回归，后续源码必须重新通过原生 Windows gate。
