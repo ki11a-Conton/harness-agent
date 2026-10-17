@@ -1,6 +1,6 @@
 # Harness Agent 当前执行计划入口
 
-当前追加任务：[修复并合并 PR #11/#13](plan(20261017-pr-blockers).md)，合同：[PR-BLOCKERS-FIX-20261017](tasks/PR-BLOCKERS-FIX-20261017.md)。用户授权直接修复全部七组阻塞，独立反例与组合回归通过后更新原 PR 分支并合并 main，按最终精确 SHA 验收四工作流。原审查与失败证据保持历史绑定。
+当前追加任务：[修复并合并 PR #11/#13](plan(20261018-005000).md)，合同：[PR-BLOCKERS-FIX-20261017](tasks/PR-BLOCKERS-FIX-20261017.md)。用户授权直接修复全部七组阻塞，独立反例与组合回归通过后更新原 PR 分支并合并 main，按最终精确 SHA 验收四工作流。原审查与失败证据保持历史绑定。
 
 当前执行任务：[剩余 PR 代码审查与安全合入](plan(20261017-115200).md)，合同：[PR-REMAINING-REVIEW-20261017](tasks/PR-REMAINING-REVIEW-20261017.md)。已审查 #11–#14：#12/#14 可合入，#11/#13 的兼容性、持久化、脱敏及真实 owner 性能反例失败，保留开放。安全组合 clean 499bc4e9 全仓 9874/15/0，安全 2146、类型、文档门禁通过；之前 UI main 3b3f4e9f 精确四工作流/十项主 CI 已通过，见[审查报告](docs/pr-remaining-review-20261017.md)。保留原 PR 历史，正常推送后验收最终 main 的全部 CI，不发布 release。
 
