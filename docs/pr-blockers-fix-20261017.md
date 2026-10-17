@@ -21,3 +21,4 @@
 - R13-5：Linux 上模拟 Windows 的 fixture 使用实际存在的小写扩展，不改变生产文件系统查找语义。Batch 文件必须经过 cmd.exe 的显式 /d /s /c 引号封套和 verbatim 参数；原“独立 argv 足以解决 cmd 解析”的说明不成立，已修正实现与断言。加入真实 Windows 路径含空格、空参数、中文、尾部反斜杠的实际 batch->Node 回归，纳入 Windows 专项。Linux 上此原生用例明确跳过，只有实际 Windows CI 通过后才算完成该项。
 
 本地 Web 31 文件/233 项通过；核心阻塞与新增边界定向复核通过，类型与安全、完整 suite 另按固定 clean 提交执行。首次新增长日志 fixture 漏写持久化 record envelope 的失败已修正，原失败日志保留；未删减预算或前缀完整性断言。真实 Windows 和最终 main 验收仍待 CI，不能提前视作全绿。
+安全门首次发现锁队列的空 catch，保留原失败；改为 previous.then(action, action)，前一任务的失败仍返回其调用者，新任务在两种结局后均执行，不静默吞掉业务失败。修复提交重新执行安全与完整回归。
