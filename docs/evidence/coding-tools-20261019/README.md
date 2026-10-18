@@ -12,7 +12,9 @@
 - [最终聚焦回归](final-focused.json)：43 项新增回归通过，包含真实 Runtime 失败恢复；[类型检查](logs/typecheck-final.log)、[安全测试](logs/security.log)、[旧接口/策略兼容](logs/compatibility.log)、[既有30查询回归所在测试组](logs/tool-regressions.log)、[Windows 回执解析器](logs/windows-parser.log)。
 - [文件清单及 SHA-256](inventory.json)：覆盖证据文件；本清单不包含自身。
 
-本地完整命令为 `pnpm test --maxWorkers=2 --reporter=default --reporter=json --outputFile=<工作区缓存>/full.json`，未额外删减 package.json 定义的测试范围；限制并发用于当前 8 GiB 环境。干净提交后的最终执行起止状态与退出码在验收完成后写入 `full-execution.json`，完整结果以 `local-checks.json` 中的 `full` 及对应原件为准。
+最终本地全量在干净提交 `86cde6ff5c26c956b49dd3835eae0a5120c2fa24` 上通过：10018通过、0失败、16平台条件跳过。起止HEAD相同，起止工作树均干净。归档提交只补充文档和证据，14份产品/测试/脚本文件的哈希与该已测提交一致。
+
+本地完整命令为 `pnpm test --maxWorkers=2 --reporter=default --reporter=json --outputFile=<工作区缓存>/full.json`，未额外删减 package.json 定义的测试范围；限制并发用于当前 8 GiB 环境。干净提交后的最终执行起止状态与退出码见 [full-execution.json](full-execution.json)，完整结果以 `local-checks.json` 中的 `full` 及对应原件为准。
 
 ## 保留的开发失败
 
