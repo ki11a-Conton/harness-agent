@@ -1,0 +1,28 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-coding-next-20261019
+
+ ✓ packages/tools/src/repo-map.test.ts (12 tests) 172ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ packages/tools/src/production-tools.test.ts (9 tests) 4208ms
+     ✓ env_snapshot tool is wired to the host network mode + tool list  1509ms
+     ✓ createProductionTools forwards harness profile + workspace root to env_snapshot  1200ms
+     ✓ createEnvSnapshotTool rejects nothing and reports the live injected policy + harness facts  1462ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+ ✓ packages/harness/src/coding-prompt-policy.test.ts (6 tests) 235ms
+ ✓ packages/agents/src/coding-prompt.test.ts (6 tests) 8ms
+ ✓ packages/tools/src/transaction-final.regressions.test.ts (6 tests) 37ms
+ ✓ packages/agents/src/coding-prompt-v2.test.ts (3 tests) 15ms
+
+ Test Files  6 passed (6)
+      Tests  42 passed (42)
+   Start at  16:51:59
+   Duration  7.62s (transform 6.33s, setup 0ms, import 8.64s, tests 4.67s, environment 1ms)
+
+JSON report written to /workspace/.cache/harness-coding-next-20261019/compatibility.json

@@ -1,0 +1,33 @@
+$ vitest run packages/security packages/harness/src/security-regression-matrix.test.ts --maxWorkers=2 --reporter=default --reporter=json --outputFile=/workspace/.cache/harness-coding-next-20261019/security.json
+
+ RUN  v4.1.11 /workspace/harness-agent-coding-next-20261019
+
+ ✓ packages/security/src/process-gate.test.ts (33 tests) 61ms
+ ✓ packages/security/src/canonical-path.test.ts (26 tests) 80ms
+ ✓ packages/security/src/sandbox.test.ts (52 tests) 94ms
+ ✓ packages/harness/src/security-regression-matrix.test.ts (12 tests) 38ms
+ ✓ packages/security/src/network-gate.test.ts (20 tests) 16ms
+ ✓ packages/security/src/parser-fuzz.test.ts (1812 tests) 579ms
+ ✓ packages/security/src/approval-capability.test.ts (23 tests) 15ms
+ ✓ packages/security/src/capability-guard.test.ts (17 tests) 16ms
+ ✓ packages/security/src/boundary-guard.test.ts (49 tests) 29ms
+ ✓ packages/security/src/approval.test.ts (15 tests) 1052ms
+     ✓ expire  1002ms
+ ✓ packages/security/src/secret-gate.test.ts (17 tests) 54ms
+ ✓ packages/security/src/permission.test.ts (11 tests) 14ms
+ ✓ packages/security/src/injection-gate.test.ts (13 tests) 28ms
+ ✓ packages/security/src/path-parity.test.ts (11 tests) 43ms
+ ✓ packages/security/src/supply-chain.test.ts (8 tests) 46ms
+ ✓ packages/security/src/permission-grant.test.ts (7 tests) 7ms
+ ✓ packages/security/src/no-silent-catch.test.ts (4 tests) 402ms
+ ✓ packages/security/src/approval-wait-settlement.test.ts (3 tests) 71ms
+ ✓ packages/security/src/denial.test.ts (4 tests) 17ms
+ ✓ packages/security/src/workflow-paid-authorization.test.ts (2 tests) 5ms
+ ✓ packages/security/src/gen1-approval-store.regressions.test.ts (8 tests) 79ms
+
+ Test Files  21 passed (21)
+      Tests  2147 passed (2147)
+   Start at  16:51:58
+   Duration  7.50s (transform 2.06s, setup 0ms, import 4.92s, tests 2.75s, environment 3ms)
+
+JSON report written to /workspace/.cache/harness-coding-next-20261019/security.json

@@ -1,0 +1,18 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-coding-next-20261019
+
+ ✓ packages/tools/src/scoped-repo-map.regressions.test.ts (13 tests) 4863ms
+   ✓ scoped repository map reaches 'typescript' targets beyond the global 500-file budget  1255ms
+   ✓ scoped repository map reaches 'python' targets beyond the global 500-file budget  1185ms
+   ✓ scoped repository map reaches 'rust' targets beyond the global 500-file budget  1373ms
+   ✓ scoped repository map reaches 'go' targets beyond the global 500-file budget  1009ms
+ ✓ packages/harness/src/batch-edit.integration.test.ts (1 test) 619ms
+   ✓ a real runtime recovers from batch preflight failure without partial writes and verifies the repaired file  617ms
+ ✓ packages/tools/src/batch-edit.regressions.test.ts (29 tests) 148ms
+
+ Test Files  3 passed (3)
+      Tests  43 passed (43)
+   Start at  16:55:33
+   Duration  6.41s (transform 4.86s, setup 0ms, import 6.46s, tests 5.63s, environment 0ms)
+
+JSON report written to /workspace/.cache/harness-coding-next-20261019/final-focused.json

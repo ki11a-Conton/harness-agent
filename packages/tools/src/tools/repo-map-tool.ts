@@ -16,6 +16,8 @@ export interface RepoMapToolInput {
   refresh?: boolean;
   maxFiles?: number;
   query?: string;
+  /** Restrict ONLY the query-related code map to a workspace-relative path. */
+  queryPath?: string;
   maxCodeTokens?: number;
 }
 
@@ -23,6 +25,7 @@ const repoMapSchema = z.object({
   refresh: z.boolean().optional(),
   maxFiles: z.number().int().positive().max(500_000).optional(),
   query: z.string().trim().min(1).max(512).optional(),
+  queryPath: z.string().min(1).max(2048).optional(),
   maxCodeTokens: z.number().int().min(128).max(4000).optional(),
 });
 
@@ -72,12 +75,12 @@ export function createRepoMapTool(
   return {
     name: "repo_map",
     description:
-      "Return the cached repository overview. query additionally produces a task-related Tree-sitter symbol/reference graph for TS/JS, Python, Rust and Go; maxCodeTokens bounds that additional section (default 1600). References are candidates, not semantic resolution. refresh:true rebuilds the overview.",
+      "Return the cached repository overview. query additionally produces a task-related Tree-sitter symbol/reference graph for TS/JS, Python, Rust and Go; maxCodeTokens bounds that additional section (default 1600). queryPath restricts ONLY this extra code map to a known workspace file/subdirectory, useful when a broad scan exhausts its file budget; the repository overview remains global, bounded separately by maxFiles. Use queryPath together with query. References are candidates, not semantic resolution. refresh:true rebuilds the overview.",
     inputSchema: repoMapSchema,
     risk: "readonly",
     metadata: {
       name: "repo_map",
-      version: "1.0.0",
+      version: "1.1.0",
       sideEffect: false,
       network: false,
       filesystem: true,
@@ -88,9 +91,12 @@ export function createRepoMapTool(
     },
     async execute(input: RepoMapToolInput, context: ToolExecutionContext): Promise<ToolResult<RepositoryMap>> {
       try {
+        if (input.queryPath !== undefined && input.query === undefined) {
+          return { status: "failed", error: errorInfo("TOOL_SCHEMA_ERROR", "queryPath requires query; it scopes only the additional code map") };
+        }
         const map = await resolver.resolve(input, context.cwd);
         const relevantCode = input.query === undefined ? undefined : await buildRelevantCodeMap({
-          root: context.cwd, query: input.query, maxTokens: input.maxCodeTokens, signal: context.signal,
+          root: context.cwd, query: input.query, path: input.queryPath, maxTokens: input.maxCodeTokens, signal: context.signal,
         });
         return {
           status: "success",

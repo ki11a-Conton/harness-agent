@@ -126,6 +126,53 @@ export function applyReplace(
   return { ok: true, content: parts.join(""), count: selected.length, matched: matches.length };
 }
 
+/** A group of unique, disjoint anchors in ONE original file snapshot. */
+export interface TextEdit { oldText: string; newText: string }
+export const MAX_BATCH_EDITS = 64;
+
+/** Snapshot matching and overlap rejection adapted from pi's
+ * applyEditsToNormalizedContent (Copyright 2025 Mario Zechner, MIT).
+ * Unlike pi, retain Harness's original byte offsets/local EOL and do not
+ * perform fuzzy/Unicode matching. License: third_party/coding-tools/pi-LICENSE.
+ * This pure preflight never returns a partially changed string on failure. */
+export function applyBatchReplace(content: string, edits: readonly TextEdit[]): ApplyResult {
+  const fail = (error: string): ApplyResult => ({ ok: false, content, count: 0, matched: 0, error });
+  if (!Array.isArray(edits) || edits.length === 0 || edits.length > MAX_BATCH_EDITS) {
+    return fail(`edits must contain 1..${MAX_BATCH_EDITS} replacements`);
+  }
+  const bom = content.startsWith("\ufeff") ? "\ufeff" : "";
+  const body = content.slice(bom.length);
+  const view = lfView(body);
+  const planned: { start: number; end: number; text: string; editIndex: number }[] = [];
+  for (const [editIndex, edit] of edits.entries()) {
+    if (!edit || typeof edit.oldText !== "string" || typeof edit.newText !== "string" || !edit.oldText.length) {
+      return fail(`edits[${editIndex}] requires nonempty oldText and string newText`);
+    }
+    const includesBom = bom.length > 0 && edit.oldText.startsWith(bom);
+    const anchor = edit.oldText.slice(includesBom ? bom.length : 0).replace(/\r\n/g, "\n");
+    if (!anchor) return fail(`edits[${editIndex}] has an empty anchor after BOM removal`);
+    const first = view.text.indexOf(anchor);
+    if (first < 0 || (includesBom && first !== 0)) return fail(`edits[${editIndex}] anchor not found in the original snapshot`);
+    // Count overlapping candidates too: "aa" in "aaa" is ambiguous.
+    if (!includesBom && view.text.indexOf(anchor, first + 1) >= 0) return fail(`edits[${editIndex}] anchor is ambiguous; use a unique anchor`);
+    const start = view.offsets[first]!, end = view.offsets[first + anchor.length]!;
+    const text = includesBom && edit.newText.startsWith(bom) ? edit.newText.slice(bom.length) : edit.newText;
+    planned.push({ start, end, text: replacementEol(text, localEol(body, start)), editIndex });
+  }
+  planned.sort((a, b) => a.start - b.start);
+  for (let i = 1; i < planned.length; i++) {
+    const previous = planned[i - 1]!, current = planned[i]!;
+    if (previous.end > current.start) return fail(`edits[${previous.editIndex}] and edits[${current.editIndex}] overlap; merge them into one edit`);
+  }
+  const parts = [bom];
+  let cursor = 0;
+  for (const edit of planned) { parts.push(body.slice(cursor, edit.start), edit.text); cursor = edit.end; }
+  parts.push(body.slice(cursor));
+  const next = parts.join("");
+  if (next === content) return fail("batch replacements produced no change");
+  return { ok: true, content: next, count: planned.length, matched: planned.length };
+}
+
 /** Structured line-range edit: replace lines [lineStart..lineEnd] (1-based,
  *  inclusive) with `replacement` (which may span multiple lines). */
 export function applyLineRange(

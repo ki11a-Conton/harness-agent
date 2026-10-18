@@ -1,0 +1,20 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-coding-next-20261019
+
+ ✓ packages/tools/src/batch-edit.regressions.test.ts (29 tests) 54ms
+ ✓ packages/tools/src/scoped-repo-map.regressions.test.ts (12 tests) 1562ms
+   ✓ scoped repository map reaches 'typescript' targets beyond the global 500-file budget  525ms
+   ✓ scoped repository map reaches 'python' targets beyond the global 500-file budget  349ms
+   ✓ scoped repository map reaches 'rust' targets beyond the global 500-file budget  309ms
+   ✓ scoped repository map reaches 'go' targets beyond the global 500-file budget  344ms
+ ✓ packages/tools/src/syntax-index.integration.test.ts (34 tests) 2173ms
+   ✓ C5 frozen 30-query retrieval set meets recall@5 and bounded graph budget  1006ms
+ ✓ packages/tools/src/edit.test.ts (14 tests) 9ms
+ ✓ packages/tools/src/syntax-index.security.regressions.test.ts (3 tests) 154ms
+
+ Test Files  5 passed (5)
+      Tests  92 passed (92)
+   Start at  16:47:27
+   Duration  5.39s (transform 443ms, setup 0ms, import 792ms, tests 3.95s, environment 1ms)
+
+JSON report written to /workspace/.cache/harness-coding-next-20261019/tool-regressions.json

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { ToolDefinition, ToolExecutionContext, ToolResult } from "@ar/contracts";
 import { errorInfo } from "@ar/contracts";
-import { applyLineRange, applyReplace, lineDiff } from "../edit.js";
+import { applyBatchReplace, applyLineRange, applyReplace, lineDiff, MAX_BATCH_EDITS, type TextEdit } from "../edit.js";
 import {
   assertFileVersion, checkFileVersion, decodeEditableUtf8, fileSha256,
   FileOperationCancelled, FileVersionConflict, throwIfFileCancelled, withFileLock,
@@ -9,6 +9,8 @@ import {
 
 export interface EditFileInput {
   path: string;
+  /** Batch mode: unique disjoint anchors in one original snapshot; requires expectedSha256. */
+  edits?: readonly TextEdit[];
   /** Text-anchor mode: the substring to replace. Omit in line-range mode. */
   oldText?: string;
   newText?: string;
@@ -41,6 +43,7 @@ export interface EditFileOutput {
 
 const fileSchema = z.object({
   path: z.string().min(1),
+  edits: z.array(z.object({ oldText: z.string().min(1), newText: z.string() })).min(1).max(MAX_BATCH_EDITS).optional(),
   oldText: z.string().optional(),
   newText: z.string().optional(),
   replaceAll: z.boolean().optional(),
@@ -53,24 +56,26 @@ const fileSchema = z.object({
 });
 
 /**
- * edit_file (VS-001 + P2-28). Two modes:
+ * edit_file (VS-001 + P2-28). Three modes:
  *  - text mode: replace `oldText` → `newText` (first occurrence by default,
  *    `occurrence` targets an exact one, `replaceAll` replaces all). Fails when
  *    an explicit occurrence is out of range — never guesses.
  *  - line-range mode: replace lines [lineStart..lineEnd] with `replacement`,
  *    so a local change never requires reproducing the whole file.
+ *  - batch mode: versioned edits[] matched against one original snapshot;
+ *    all anchors preflight before one write.
  * Every successful edit records a before/after diff in the output.
  * All policy enforcement stays in the orchestrator.
  */
 export const editFileTool: ToolDefinition<EditFileInput, EditFileOutput> = {
   name: "edit_file",
   description:
-    "Edit a UTF-8 file: replace anchor text (first/occurrence/all) or a line range. Supply expectedSha256 from versioned read_file to reject stale content; on conflict, reread and recalculate. profile=strict requires a version for ranges/repeated anchors. Default compatibility permits unversioned edits. Returns a diff.",
+    "Edit a UTF-8 file by anchor, line range, or edits:[{oldText,newText},...]. Batch mode requires expectedSha256 from versioned read_file; matches every unique, nonoverlapping anchor against the SAME original snapshot, validates all before a single write, and cannot mix legacy selection/range fields. Keep oldText small but unique; merge overlapping edits. On stale/missing/ambiguous anchors reread and recalculate. Existing first/occurrence/all and strict range APIs remain available. Returns a diff.",
   inputSchema: fileSchema,
   risk: "side_effect",
   metadata: {
     name: "edit_file",
-    version: "2.0.0",
+    version: "2.1.0",
     sideEffect: true,
     network: false,
     filesystem: true,
@@ -85,11 +90,26 @@ export const editFileTool: ToolDefinition<EditFileInput, EditFileOutput> = {
       const { resolve } = await import("node:path");
       const target = resolve(context.cwd, input.path);
 
-      const isRange = input.lineStart !== undefined;
+      const isBatch = input.edits !== undefined;
+      const isRange = !isBatch && input.lineStart !== undefined;
+      if (isBatch) {
+        if (!Array.isArray(input.edits) || !input.edits.length || input.edits.length > MAX_BATCH_EDITS
+          || input.edits.some(edit => !edit || typeof edit.oldText !== "string" || !edit.oldText.length || typeof edit.newText !== "string")) {
+          return { status: "failed", error: errorInfo("TOOL_SCHEMA_ERROR", `batch edits require 1..${MAX_BATCH_EDITS} nonempty oldText/string newText pairs; no writes made`) };
+        }
+        if (input.expectedSha256 === undefined) {
+          return { status: "failed", error: errorInfo("TOOL_SCHEMA_ERROR", "batch edits require expectedSha256; read_file with versioned=true and recalculate; no writes made") };
+        }
+        if ([input.oldText, input.newText, input.replaceAll, input.occurrence, input.lineStart, input.lineEnd, input.replacement].some(value => value !== undefined)) {
+          return { status: "failed", error: errorInfo("TOOL_SCHEMA_ERROR", "batch edits cannot be combined with text/occurrence/range parameters; no writes made") };
+        }
+      }
       if (input.profile === "strict" && isRange && input.expectedSha256 === undefined) {
         return { status: "failed", error: errorInfo("TOOL_SCHEMA_ERROR", "strict range edits require expectedSha256; no writes made, read_file with versioned=true and recalculate") };
       }
-      if (isRange) {
+      if (isBatch) {
+        // All batch shape/version checks above happen before any file read.
+      } else if (isRange) {
         if (input.lineEnd === undefined || input.replacement === undefined) {
           return {
             status: "failed",
@@ -119,7 +139,9 @@ export const editFileTool: ToolDefinition<EditFileInput, EditFileOutput> = {
         throwIfFileCancelled(context.signal);
         assertFileVersion(bytes, input.expectedSha256, target);
         const before = decodeEditableUtf8(bytes);
-        const res = isRange
+        const res = isBatch
+          ? applyBatchReplace(before, input.edits!)
+          : isRange
           ? applyLineRange(before, input.lineStart!, input.lineEnd!, input.replacement!)
           : applyReplace(before, input.oldText!, input.newText!, {
               replaceAll: input.replaceAll,

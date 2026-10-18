@@ -1,0 +1,42 @@
+
+ RUN  v4.1.11 /workspace/harness-agent-coding-next-20261019
+
+ ❯ packages/tools/src/scoped-repo-map.regressions.test.ts (13 tests | 1 failed | 12 skipped) 19ms
+   ↓ scoped repository map reaches 'typescript' targets beyond the global 500-file budget
+   ↓ scoped repository map reaches 'python' targets beyond the global 500-file budget
+   ↓ scoped repository map reaches 'rust' targets beyond the global 500-file budget
+   ↓ scoped repository map reaches 'go' targets beyond the global 500-file budget
+   ↓ scoped map fingerprints describe their subset and ignore unrelated content changes
+   ↓ scope can name a single file without widening to its siblings
+   × queryPath preserves significant spaces instead of silently selecting another directory 18ms
+   ↓ scoped repository map preserves root and nested ignores and refuses symlink escape
+   ↓ queryPath without query is rejected before repository enumeration
+   ↓ a narrow token budget remains bounded without dropping the requested scope identity
+   ↓ unrepresentable scope metadata fails instead of returning an oversized result
+   ↓ aborted scoped indexing returns no source content
+   ↓ omitting queryPath preserves the existing broad-map result shape
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/tools/src/scoped-repo-map.regressions.test.ts > queryPath preserves significant spaces instead of silently selecting another directory
+AssertionError: expected 'target' to be ' target' // Object.is equality
+
+Expected: " target"
+Received: "target"
+
+ ❯ packages/tools/src/scoped-repo-map.regressions.test.ts:62:27
+     60|   const tool = createRepoMapTool();
+     61|   const input = tool.inputSchema.parse({ query: "wanted", queryPath: "…
+     62|   expect(input.queryPath).toBe(" target");
+       |                           ^
+     63|   const map = (await tool.execute(input, context(root))).output!.relev…
+     64|   expect(map.scope).toBe(" target"); expect(map.files.map(f => f.path)…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 12 skipped (13)
+   Start at  16:55:20
+   Duration  934ms (transform 600ms, setup 0ms, import 751ms, tests 19ms, environment 0ms)
+

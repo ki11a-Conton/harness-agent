@@ -119,6 +119,8 @@ jobs:
 
       - name: Coding-v2 actual CLI and Web request acceptance
         run: node scripts/research/coding-prompts-20261008/acceptance.mjs .ci/coding-v2 coding-v2
+      - name: Coding tool schemas and real CLI and Web execution
+        run: node scripts/research/coding-tools-20261019/acceptance.mjs .ci/coding-v2/tools
 
       - name: Upload coding-v2 evidence
         if: always()

@@ -1,0 +1,15 @@
+✔ parser accepts a consistent final result and binds its complete case records (1.402989ms)
+✔ parser refuses a skipped native case despite a self-reported successful suite (0.319169ms)
+✔ parser refuses Linux, dirty trees, source drift, duplicate required cases and fabricated counts (0.283306ms)
+✔ annotation packets reconstruct Unicode final states without per-step or message truncation (3.232561ms)
+✔ large suites retain all lossless case records beyond one step annotation budget (6.600294ms)
+✔ large-suite publication is bounded and indexes the complete artifact without weakening the verdict (4.446717ms)
+✔ small-suite publication still includes every reconstructible record in public annotations (0.391589ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 79.5762

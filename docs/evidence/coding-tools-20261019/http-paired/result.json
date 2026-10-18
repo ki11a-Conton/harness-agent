@@ -1,0 +1,476 @@
+{
+  "schemaVersion": 1,
+  "status": "PASS",
+  "kind": "paired-local-HTTP-tool-engineering",
+  "paidModelCalls": 0,
+  "realModelQuality": "NOT_PROVEN",
+  "platform": "linux",
+  "node": "v24.19.0",
+  "beforeSha256": "4e8a49fd734b96efaf6cdaae91388f93b50d7a2cee71057179a2837da839ae59",
+  "expectedSha256": "a95bc4f26775eb0fb603e8e51dd11bc4a040f90c4ca5a5ef6074943b5d6ba6dd",
+  "runs": [
+    {
+      "arm": "baseline",
+      "surface": "cli",
+      "sourceSha": "7a596f058d4f7df28cbc39bc1740b725916e00d5",
+      "sourceTreeClean": true,
+      "requests": 9,
+      "edited": 3,
+      "toolCalls": [
+        {
+          "name": "repo_map",
+          "args": {
+            "query": "formatInvoice",
+            "maxFiles": 1,
+            "maxCodeTokens": 1600
+          }
+        },
+        {
+          "name": "read_file",
+          "args": {
+            "path": "values.cjs",
+            "versioned": true
+          }
+        },
+        {
+          "name": "edit_file",
+          "args": {
+            "path": "values.cjs",
+            "expectedSha256": "4e8a49fd734b96efaf6cdaae91388f93b50d7a2cee71057179a2837da839ae59",
+            "oldText": "= 1;",
+            "newText": "= 10;"
+          }
+        },
+        {
+          "name": "read_file",
+          "args": {
+            "path": "values.cjs",
+            "versioned": true
+          }
+        },
+        {
+          "name": "edit_file",
+          "args": {
+            "path": "values.cjs",
+            "expectedSha256": "8957eae9d4290d1bb26312ecfb605c2a57d1c5a00bc1784fc11ac9f35968222d",
+            "oldText": "= 2;",
+            "newText": "= 20;"
+          }
+        },
+        {
+          "name": "read_file",
+          "args": {
+            "path": "values.cjs",
+            "versioned": true
+          }
+        },
+        {
+          "name": "edit_file",
+          "args": {
+            "path": "values.cjs",
+            "expectedSha256": "5ee1b898abec8dd911491c43860968b9535d2b1829a2b59bf05ad50f1cb1a3d5",
+            "oldText": "= 3;",
+            "newText": "= 30;"
+          }
+        },
+        {
+          "name": "exec",
+          "args": {
+            "command": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+            "args": [
+              "--test",
+              "check.test.cjs"
+            ]
+          }
+        }
+      ],
+      "schema": {
+        "canBatch": false,
+        "canScope": false
+      },
+      "phase": "done",
+      "retrieval": {
+        "scope": null,
+        "filesIndexed": 500,
+        "complete": false,
+        "targetFound": false,
+        "paths": [
+          "aaa-noise/0000.ts",
+          "aaa-noise/0001.ts",
+          "aaa-noise/0002.ts",
+          "aaa-noise/0003.ts",
+          "aaa-noise/0004.ts",
+          "aaa-noise/0005.ts",
+          "aaa-noise/0006.ts",
+          "aaa-noise/0007.ts",
+          "aaa-noise/0008.ts",
+          "aaa-noise/0009.ts",
+          "aaa-noise/0010.ts",
+          "aaa-noise/0011.ts"
+        ]
+      },
+      "process": {
+        "code": 0,
+        "signal": null,
+        "stdout": "run started: session session_a600f48b-ceca-4880-af1e-b2d399128e4a turn turn_84d10a65-0a22-42ca-8551-dacc255dd947\nrun: session session_a600f48b-ceca-4880-af1e-b2d399128e4a turn turn_84d10a65-0a22-42ca-8551-dacc255dd947\nstatus: completed\ngrade: verified_complete\ntermination: verified_complete\nsummary: All three values fixed and the actual project tests passed.\nfiles changed: values.cjs\ntests: passed\nverification: passed\nremaining issues: (none)\ntool calls: 8\niterations: 8\n",
+        "stderr": "[harness] context budget: model capabilities unknown for openai/coding-tools-fixture — using conservative fallback 32000\napproval approval_d0bf06e2-c211-41f9-ae97-7cb80c9ab0bc: \"edit\" \"values.cjs\"\nreason: \"edit_file: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\napproval approval_069efe84-825c-49c7-8f24-bc5af3fec40f: \"edit\" \"values.cjs\"\nreason: \"edit_file: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\napproval approval_7f1f9bb4-f8e1-4a88-8559-aa74cc74498c: \"edit\" \"values.cjs\"\nreason: \"edit_file: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\napproval approval_f2079714-ba59-48a2-81ca-84e2ea3232fd: \"exec\" \"/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node \\\"--test\\\" \\\"check.test.cjs\\\"\"\nreason: \"exec: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\napproval approval_f5e4a694-f176-44d2-a43c-75ea50dd2a34: \"exec\" \"node --test check.test.cjs\"\nreason: \"exec: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\n"
+      },
+      "approvals": 5,
+      "finalSha256": "a95bc4f26775eb0fb603e8e51dd11bc4a040f90c4ca5a5ef6074943b5d6ba6dd",
+      "independentTest": {
+        "code": 0,
+        "signal": null,
+        "stdout": "✔ CODING_THREE_VALUES (2.216144ms)\nℹ tests 1\nℹ suites 0\nℹ pass 1\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 64.341322\n",
+        "stderr": ""
+      },
+      "diff": "diff --git a/values.cjs b/values.cjs\nindex 103a44c..2f3babc 100644\n--- a/values.cjs\n+++ b/values.cjs\n@@ -1,3 +1,3 @@\n-exports.first = 1;\n-exports.second = 2;\n-exports.third = 3;\n+exports.first = 10;\n+exports.second = 20;\n+exports.third = 30;\n",
+      "calls": {
+        "total": 8,
+        "read": 3,
+        "edit": 3,
+        "exec": 1,
+        "map": 1
+      }
+    },
+    {
+      "arm": "baseline",
+      "surface": "web",
+      "sourceSha": "7a596f058d4f7df28cbc39bc1740b725916e00d5",
+      "sourceTreeClean": true,
+      "requests": 9,
+      "edited": 3,
+      "toolCalls": [
+        {
+          "name": "repo_map",
+          "args": {
+            "query": "formatInvoice",
+            "maxFiles": 1,
+            "maxCodeTokens": 1600
+          }
+        },
+        {
+          "name": "read_file",
+          "args": {
+            "path": "values.cjs",
+            "versioned": true
+          }
+        },
+        {
+          "name": "edit_file",
+          "args": {
+            "path": "values.cjs",
+            "expectedSha256": "4e8a49fd734b96efaf6cdaae91388f93b50d7a2cee71057179a2837da839ae59",
+            "oldText": "= 1;",
+            "newText": "= 10;"
+          }
+        },
+        {
+          "name": "read_file",
+          "args": {
+            "path": "values.cjs",
+            "versioned": true
+          }
+        },
+        {
+          "name": "edit_file",
+          "args": {
+            "path": "values.cjs",
+            "expectedSha256": "8957eae9d4290d1bb26312ecfb605c2a57d1c5a00bc1784fc11ac9f35968222d",
+            "oldText": "= 2;",
+            "newText": "= 20;"
+          }
+        },
+        {
+          "name": "read_file",
+          "args": {
+            "path": "values.cjs",
+            "versioned": true
+          }
+        },
+        {
+          "name": "edit_file",
+          "args": {
+            "path": "values.cjs",
+            "expectedSha256": "5ee1b898abec8dd911491c43860968b9535d2b1829a2b59bf05ad50f1cb1a3d5",
+            "oldText": "= 3;",
+            "newText": "= 30;"
+          }
+        },
+        {
+          "name": "exec",
+          "args": {
+            "command": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+            "args": [
+              "--test",
+              "check.test.cjs"
+            ]
+          }
+        }
+      ],
+      "schema": {
+        "canBatch": false,
+        "canScope": false
+      },
+      "phase": "done",
+      "retrieval": {
+        "scope": null,
+        "filesIndexed": 500,
+        "complete": false,
+        "targetFound": false,
+        "paths": [
+          "aaa-noise/0000.ts",
+          "aaa-noise/0001.ts",
+          "aaa-noise/0002.ts",
+          "aaa-noise/0003.ts",
+          "aaa-noise/0004.ts",
+          "aaa-noise/0005.ts",
+          "aaa-noise/0006.ts",
+          "aaa-noise/0007.ts",
+          "aaa-noise/0008.ts",
+          "aaa-noise/0009.ts",
+          "aaa-noise/0010.ts",
+          "aaa-noise/0011.ts"
+        ]
+      },
+      "completedEvent": {
+        "id": "event_9b02e6a1-5f8f-4be1-9ea5-62842353b811",
+        "sessionId": "session_405e36f5-9141-4bb6-a6e8-f0f6d656f8fd",
+        "turnId": "turn_caa94e6e-06ef-45e8-9035-d794760d8ec8",
+        "timestamp": 1792342618010,
+        "type": "turn.completed",
+        "payload": {
+          "turnId": "turn_caa94e6e-06ef-45e8-9035-d794760d8ec8",
+          "status": "completed",
+          "statusDetail": "completed",
+          "terminationReason": "verified_complete",
+          "grade": "verified_complete",
+          "completionEvidence": {
+            "passedSteps": 1,
+            "totalSteps": 1
+          }
+        },
+        "sequence": 174,
+        "schemaVersion": 1
+      },
+      "approvals": 5,
+      "finalSha256": "a95bc4f26775eb0fb603e8e51dd11bc4a040f90c4ca5a5ef6074943b5d6ba6dd",
+      "independentTest": {
+        "code": 0,
+        "signal": null,
+        "stdout": "✔ CODING_THREE_VALUES (1.988551ms)\nℹ tests 1\nℹ suites 0\nℹ pass 1\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 78.821153\n",
+        "stderr": ""
+      },
+      "diff": "diff --git a/values.cjs b/values.cjs\nindex 103a44c..2f3babc 100644\n--- a/values.cjs\n+++ b/values.cjs\n@@ -1,3 +1,3 @@\n-exports.first = 1;\n-exports.second = 2;\n-exports.third = 3;\n+exports.first = 10;\n+exports.second = 20;\n+exports.third = 30;\n",
+      "calls": {
+        "total": 8,
+        "read": 3,
+        "edit": 3,
+        "exec": 1,
+        "map": 1
+      }
+    },
+    {
+      "arm": "candidate",
+      "surface": "cli",
+      "sourceSha": "7a596f058d4f7df28cbc39bc1740b725916e00d5",
+      "sourceTreeClean": false,
+      "requests": 5,
+      "edited": 3,
+      "toolCalls": [
+        {
+          "name": "repo_map",
+          "args": {
+            "query": "formatInvoice",
+            "maxFiles": 1,
+            "maxCodeTokens": 1600,
+            "queryPath": "zzz-target"
+          }
+        },
+        {
+          "name": "read_file",
+          "args": {
+            "path": "values.cjs",
+            "versioned": true
+          }
+        },
+        {
+          "name": "edit_file",
+          "args": {
+            "path": "values.cjs",
+            "expectedSha256": "4e8a49fd734b96efaf6cdaae91388f93b50d7a2cee71057179a2837da839ae59",
+            "edits": [
+              {
+                "oldText": "= 1;",
+                "newText": "= 10;"
+              },
+              {
+                "oldText": "= 2;",
+                "newText": "= 20;"
+              },
+              {
+                "oldText": "= 3;",
+                "newText": "= 30;"
+              }
+            ]
+          }
+        },
+        {
+          "name": "exec",
+          "args": {
+            "command": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+            "args": [
+              "--test",
+              "check.test.cjs"
+            ]
+          }
+        }
+      ],
+      "schema": {
+        "canBatch": true,
+        "canScope": true
+      },
+      "phase": "done",
+      "retrieval": {
+        "scope": "zzz-target",
+        "filesIndexed": 2,
+        "complete": true,
+        "targetFound": true,
+        "paths": [
+          "zzz-target/target.ts",
+          "zzz-target/caller.ts"
+        ]
+      },
+      "process": {
+        "code": 0,
+        "signal": null,
+        "stdout": "run started: session session_6adb5433-8e02-429c-a39b-b1f3d3c599f5 turn turn_2873061a-d9d3-43a7-92ea-d730f867e2b1\nrun: session session_6adb5433-8e02-429c-a39b-b1f3d3c599f5 turn turn_2873061a-d9d3-43a7-92ea-d730f867e2b1\nstatus: completed\ngrade: verified_complete\ntermination: verified_complete\nsummary: All three values fixed and the actual project tests passed.\nfiles changed: values.cjs\ntests: passed\nverification: passed\nremaining issues: (none)\ntool calls: 4\niterations: 4\n",
+        "stderr": "[harness] context budget: model capabilities unknown for openai/coding-tools-fixture — using conservative fallback 32000\napproval approval_7c1a9417-2952-48cf-be04-45470490d439: \"edit\" \"values.cjs\"\nreason: \"edit_file: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\napproval approval_094b5d9e-4600-4949-96f2-1df4ceb80c97: \"exec\" \"/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node \\\"--test\\\" \\\"check.test.cjs\\\"\"\nreason: \"exec: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\napproval approval_10734c62-83fa-4723-8303-83ce9822c57a: \"exec\" \"node --test check.test.cjs\"\nreason: \"exec: rule 'anon' (ask) matched\"\nallow/deny> allowed for this call\n"
+      },
+      "approvals": 3,
+      "finalSha256": "a95bc4f26775eb0fb603e8e51dd11bc4a040f90c4ca5a5ef6074943b5d6ba6dd",
+      "independentTest": {
+        "code": 0,
+        "signal": null,
+        "stdout": "✔ CODING_THREE_VALUES (2.482855ms)\nℹ tests 1\nℹ suites 0\nℹ pass 1\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 100.287956\n",
+        "stderr": ""
+      },
+      "diff": "diff --git a/values.cjs b/values.cjs\nindex 103a44c..2f3babc 100644\n--- a/values.cjs\n+++ b/values.cjs\n@@ -1,3 +1,3 @@\n-exports.first = 1;\n-exports.second = 2;\n-exports.third = 3;\n+exports.first = 10;\n+exports.second = 20;\n+exports.third = 30;\n",
+      "calls": {
+        "total": 4,
+        "read": 1,
+        "edit": 1,
+        "exec": 1,
+        "map": 1
+      }
+    },
+    {
+      "arm": "candidate",
+      "surface": "web",
+      "sourceSha": "7a596f058d4f7df28cbc39bc1740b725916e00d5",
+      "sourceTreeClean": false,
+      "requests": 5,
+      "edited": 3,
+      "toolCalls": [
+        {
+          "name": "repo_map",
+          "args": {
+            "query": "formatInvoice",
+            "maxFiles": 1,
+            "maxCodeTokens": 1600,
+            "queryPath": "zzz-target"
+          }
+        },
+        {
+          "name": "read_file",
+          "args": {
+            "path": "values.cjs",
+            "versioned": true
+          }
+        },
+        {
+          "name": "edit_file",
+          "args": {
+            "path": "values.cjs",
+            "expectedSha256": "4e8a49fd734b96efaf6cdaae91388f93b50d7a2cee71057179a2837da839ae59",
+            "edits": [
+              {
+                "oldText": "= 1;",
+                "newText": "= 10;"
+              },
+              {
+                "oldText": "= 2;",
+                "newText": "= 20;"
+              },
+              {
+                "oldText": "= 3;",
+                "newText": "= 30;"
+              }
+            ]
+          }
+        },
+        {
+          "name": "exec",
+          "args": {
+            "command": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+            "args": [
+              "--test",
+              "check.test.cjs"
+            ]
+          }
+        }
+      ],
+      "schema": {
+        "canBatch": true,
+        "canScope": true
+      },
+      "phase": "done",
+      "retrieval": {
+        "scope": "zzz-target",
+        "filesIndexed": 2,
+        "complete": true,
+        "targetFound": true,
+        "paths": [
+          "zzz-target/target.ts",
+          "zzz-target/caller.ts"
+        ]
+      },
+      "completedEvent": {
+        "id": "event_81cc9ce9-116e-4b4a-a878-51550afdaacf",
+        "sessionId": "session_f4310436-bd90-4563-a421-dfb946d898db",
+        "turnId": "turn_14384d59-8b2a-4955-8896-f7127f65bd81",
+        "timestamp": 1792342621938,
+        "type": "turn.completed",
+        "payload": {
+          "turnId": "turn_14384d59-8b2a-4955-8896-f7127f65bd81",
+          "status": "completed",
+          "statusDetail": "completed",
+          "terminationReason": "verified_complete",
+          "grade": "verified_complete",
+          "completionEvidence": {
+            "passedSteps": 1,
+            "totalSteps": 1
+          }
+        },
+        "sequence": 91,
+        "schemaVersion": 1
+      },
+      "approvals": 3,
+      "finalSha256": "a95bc4f26775eb0fb603e8e51dd11bc4a040f90c4ca5a5ef6074943b5d6ba6dd",
+      "independentTest": {
+        "code": 0,
+        "signal": null,
+        "stdout": "✔ CODING_THREE_VALUES (1.885927ms)\nℹ tests 1\nℹ suites 0\nℹ pass 1\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 67.931585\n",
+        "stderr": ""
+      },
+      "diff": "diff --git a/values.cjs b/values.cjs\nindex 103a44c..2f3babc 100644\n--- a/values.cjs\n+++ b/values.cjs\n@@ -1,3 +1,3 @@\n-exports.first = 1;\n-exports.second = 2;\n-exports.third = 3;\n+exports.first = 10;\n+exports.second = 20;\n+exports.third = 30;\n",
+      "calls": {
+        "total": 4,
+        "read": 1,
+        "edit": 1,
+        "exec": 1,
+        "map": 1
+      }
+    }
+  ],
+  "limitation": "A scripted provider selects actions from actual advertised schemas and observed tool results. Counts exclude the host verification command, identical in both arms. No real-model quality claim."
+}
