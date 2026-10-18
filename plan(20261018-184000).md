@@ -25,3 +25,12 @@
 - 类型、相关发布回归、安全及同一 clean SHA 的完整 suite 成功；主 CI 十项和原生 Windows、两类安装流程全部成功，核对 SHA、分支和 attempt。
 - 最终发布 tar.gz 在 Ubuntu/Windows 上经过 Web/CLI 验收，所有收据的 sourceSha/sourceTree/version/archiveSha256 完全一致。
 - 正式 release 与 tag 指向已验证源码；公开资产大小、SHA-256 与已验证字节一致；旧 release 不改写。完整证据附 release，付费模型质量仍单独报告。
+
+
+## 发布前追加：可用临时目录与产品锁契约
+
+做什么：修复首个发布候选60bc1a5f本地完整suite的测试准备错误。该候选的Web/CLI真实跨平台与下载包复验成功，但本地完整suite仍有1失败，保留原件，不作为完整工程通过。
+
+怎么做：用真实lease占据临时目录固定端口，确定性复现原owner在开始业务断言前被正确拒绝。测试最多选择16个新临时目录，仅重试明确busy的初始准备，原进程退出后才进入下一个候选；API准备保留已取得的lease。产品不切换随机端口，也不改变固定端口/拒绝契约。竞争、保护持久数据、SIGKILL和同目录接管仍使用同一已选目录且不重试。非busy失败和耗尽必须明确失败。
+
+怎么验收：原红对照保留；新增busy初候选/非busy传播/16次耗尽三项通过；原断言保持。Windows专项加入该文件和3个必跑名，与旧14项合计17个必跑。原候选四工作流全部结束后才能推送新main；新源码重新通过clean完整、安全、类型、全部CI和同字节UI/CLI安装验收，才发布。旧private draft改为带源码后缀的未发布候选以保留全部原证据；历史正式版本不改写。原件见[验收归档](docs/evidence/release-v111-lease-fixture-20261018/README.md)。

@@ -1,0 +1,11 @@
+{
+  "status": "REPRODUCED",
+  "sourceSha": "60bc1a5fbd8582bc4ced86363492bb90c2355b8e",
+  "scenario": "A fresh temporary directory has an occupied fixed port before the first test owner is admitted. Original unqualified owner setup fails before SIGKILL or any ownership assertion.",
+  "controlledBusyPort": 57401,
+  "originalOwnerExitCode": 73,
+  "stdout": "",
+  "stderr": "{\"code\":\"HARNESS_DATA_DIR_IN_USE\",\"message\":\"HARNESS_DATA_DIR_IN_USE: \\\"/tmp/harness-lease-fixture-repro-nREyo1\\\": another local CLI/Web host or service already owns the directory's fixed lock port (127.0.0.1:57401). Close the owning host or choose a different HARNESS_DATA_DIR. No random port fallback is allowed. This lease requires all writers to share one local network namespace.\"}\n",
+  "productionRefusalPreserved": true,
+  "originalCIBusyPortHolder": "NOT_IDENTIFIED"
+}

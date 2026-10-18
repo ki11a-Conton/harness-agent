@@ -62,6 +62,11 @@ function main() {
   const required = skipped.filter(test => test.file.startsWith('packages/tools/src/process/')).map(test => test.test);
   for (const mode of ['cancel', 'timeout']) required.push(`Windows native process-tree completion boundary ${mode} waits for both the child and its real grandchild to terminate`);
   for (const delay of [0, 11000]) required.push(`C7 actual commands, edits and verification remain separate in the browser status (command delay ${delay} ms)`);
+  for (const name of [
+    'a busy initial fixture is replaced before assertions while its actual owner stays locked',
+    'non-busy owner startup failures propagate without reallocating a fixture',
+    'unavailable owner fixture allocation is bounded and never writes durable data',
+  ]) required.push(`single local product host per persistent data directory ${name}`);
   const host = { platform: process.platform, osType: type(), osRelease: release(), arch: arch(), nodeVersion: process.version,
     sourceSha: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), workflowSha: process.env.GITHUB_SHA ?? '',
     treeClean: execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' }).trim() === '',
