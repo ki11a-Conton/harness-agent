@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
 import { createHarness, type Harness } from "@ar/harness";
 import { ScriptedModelProvider } from "@ar/model";
-import { newEventId, newPromptId, type SandboxPolicy, type SessionId } from "@ar/contracts";
+import { newEventId, newPromptId, type SandboxPolicy } from "@ar/contracts";
 import { unzipSync, strFromU8 } from "fflate";
 import { createHostTools } from "./host-tools.js";
 import { createFilesService, workspaceMkdirTool, workspaceReadTool } from "./files.js";
@@ -31,14 +31,6 @@ async function setup(options: { provider?: ScriptedModelProvider; sandbox?: Sand
   const session = await harness.runtime.createSession({ agent: harness.agents[0]!, cwd });
   const signal = new AbortController().signal;
   return { root, cwd, dataDir, harness, host, tools, workspace, files, terminal, deliverables, session, signal };
-}
-async function settle(harness: Harness, sessionId: SessionId) {
-  for (let i = 0; i < 500; i++) {
-    const turns = await harness.store.listTurns(sessionId);
-    if (turns.length > 0 && turns.every(turn => ["completed", "failed", "cancelled"].includes(turn.status))) return turns;
-    await new Promise(done => setTimeout(done, 5));
-  }
-  throw new Error("Actual Harness turn did not settle");
 }
 
 it("returns real bounded pages, byte ranges and the workspace file tree", async () => {
@@ -184,7 +176,10 @@ it("turn captures compare actual coding edits with stable source coordinates, an
     return committed;
   };
   const actor = await s.harness.sessions.load(s.session.id); await actor.enqueueFollowup({ sessionId: s.session.id, text: "Edit actual.txt" });
-  await settle(s.harness, s.session.id);
+  // The terminal event is emitted only after the terminal record is durable.
+  // Wait for the actual observer/capture boundary, not a 500-poll speed budget.
+  await captureCompletion;
+  expect(await s.harness.store.listTurns(s.session.id)).toMatchObject([{ status: "completed" }]);
   let announcement = (await s.harness.events.list(s.session.id)).find(event => event.payload.tool === "web_workspace_changes");
   for (let i = 0; i < 100 && !announcement; i++) { await new Promise(done => setTimeout(done, 5)); announcement = (await s.harness.events.list(s.session.id)).find(event => event.payload.tool === "web_workspace_changes"); }
   expect(announcement).toBeDefined();
@@ -202,11 +197,13 @@ it("turn captures compare actual coding edits with stable source coordinates, an
   expect((await restarted.fetch(new Request(`http://localhost/api/changes.summary?sessionId=${s.session.id}&seq=${announcement!.sequence}`)))?.status).toBe(404);
 });
 
-it.each([
-  { before: "line", after: "line\n", marker: "No newline at end of file" },
-  { before: "line\n", after: "\uFEFFline\n", marker: "\uFEFFline" },
-])("actual turn capture retains a format-only coding change ($marker)", async ({ before, after, marker }) => {
-  const s = await setup({ provider: new ScriptedModelProvider([ScriptedModelProvider.toolCall("write_file", { path: "format.txt", content: after }), ScriptedModelProvider.text("Written")]) });
+async function checkFormatCapture(before: string, after: string, marker: string, delayMs = 0) {
+  const edit = ScriptedModelProvider.toolCall("write_file", { path: "format.txt", content: after });
+  const provider = new ScriptedModelProvider([delayMs === 0 ? edit : (async function* () {
+    await new Promise(done => setTimeout(done, delayMs));
+    yield* edit;
+  })(), ScriptedModelProvider.text("Written")]);
+  const s = await setup({ provider });
   await writeFile(join(s.cwd, "format.txt"), before);
   const append = s.harness.events.appendNew.bind(s.harness.events);
   let captured!: () => void; const ready = new Promise<void>(resolve => { captured = resolve; });
@@ -216,13 +213,27 @@ it.each([
     return committed;
   };
   const actor = await s.harness.sessions.load(s.session.id); await actor.enqueueFollowup({ sessionId: s.session.id, text: "Change file format" });
-  await settle(s.harness, s.session.id); await ready;
+  await ready;
+  expect(await s.harness.store.listTurns(s.session.id)).toMatchObject([{ status: "completed" }]);
   const announcement = (await s.harness.events.list(s.session.id)).find(event => event.payload.tool === "web_workspace_changes")!;
   expect(announcement).toBeDefined();
   const response = await s.deliverables.fetch(new Request(`http://localhost/api/changes.diff?sessionId=${s.session.id}&seq=${announcement.sequence}&index=0`));
   const diff = await response!.json() as { hunks: Array<{ lines: string[] }> };
   expect(diff.hunks).not.toEqual([]); expect(JSON.stringify(diff.hunks)).toContain(marker);
   expect(await readFile(join(s.cwd, "format.txt"), "utf8")).toBe(after);
+}
+
+it.each([
+  { before: "line", after: "line\n", marker: "No newline at end of file" },
+  { before: "line\n", after: "\uFEFFline\n", marker: "\uFEFFline" },
+])("actual turn capture retains a format-only coding change ($marker)", async ({ before, after, marker }) => {
+  await checkFormatCapture(before, after, marker);
+});
+
+it("actual format-only capture waits for committed completion beyond the old polling budget", async () => {
+  // The real provider delays its first result; no terminal record or filesystem
+  // output is fabricated. The old 500 x 5ms store polling must fail here.
+  await checkFormatCapture("line\n", "\uFEFFline\n", "\uFEFFline", 3500);
 });
 
 it("exports a genuine ZIP of owned durable records and rejects malformed coordinates/native desktop actions", async () => {

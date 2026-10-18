@@ -52,3 +52,12 @@
 怎么做：仅限定 scripts/e4/r97-mutation-check.mjs 的账本独有上下文，仍施加完全相同的语义变异；不改生产代码或放宽反作弊门。
 
 怎么验收：86 项锚点/保护测试通过；clean 新源码实际 S7 注入必须 KILLED 并完整还原。旧四工作流全部终结后才推送新 main；新 SHA 首次运行四工作流，主 CI 十项、原生 Windows20项必跑、完整/安全/类型及同字节跨平台和本地下载包 Web/CLI 全通过才能发布。旧失败 draft 保留，原手机观察仍未确定根因。证据见 [归档](docs/evidence/release-v111-mutation-scope-20261018/README.md)。
+
+
+## 工作区 capture 验收等待追加
+
+做什么：修复 ff86ace7 Windows 主 CI 中格式变更用例自有500次/5ms轮询误判，保留原失败，不重跑候选。
+
+怎么做：真实模型首次返回延迟3500ms，原实现确定性FAIL；改为等待已存在的持久完成/capture事件，保留文件字节、diff和即时可见断言，并增加必须成功完成。仅测试层更改，不改变产品时限或重试业务。
+
+怎么验收：22项相邻回归通过；新延迟案例纳入Windows必跑，合计21项。前候选四工作流终结后快进新main，新SHA重新完整、安全、四类CI、同包跨平台与本地实际下载交互全通过才发布。本地直接--maxWorkers=2避免8GiB环境OOM，测试选择范围不变。详见 [原件及反例](docs/evidence/release-v111-capture-wait-20261018/README.md)。

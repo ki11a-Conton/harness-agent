@@ -62,3 +62,5 @@ node $harnessEntry web
 Windows主CI另暴露claim锁遗漏EPERM竞争分类，已复用同文件账本锁的既有分类并补拒绝/活owner回归。原一次手机发送未触发请求的现象尚未稳定复现；保留原件，新增原生click及唯一prompt断言，并在新实际包重新验收，详见[追加归档](evidence/release-v111-claim-lock-20261018/README.md)。
 
 发布验收还修正了账本变异测试的重复文字锚点：保持真实 EPERM 故障注入和全部保护断言，仅限定账本上下文，见[原始失败与修复](evidence/release-v111-mutation-scope-20261018/README.md)。
+
+工作区格式变更集成验收从短轮询改为实际持久完成/capture边界，真实3500ms延迟反例验证，不改产品超时；原生Windows新增必跑案例，合计21项，见[记录](evidence/release-v111-capture-wait-20261018/README.md)。
