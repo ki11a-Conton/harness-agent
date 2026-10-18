@@ -36,7 +36,7 @@ jobs:
       - name: Verify pinned UI navigation regressions
         run: node --test scripts/research/web-navigation.test.mjs scripts/research/web-workspace-composer.test.mjs scripts/research/web-connection.test.mjs scripts/research/web-daily-20261016/tcp-latency.test.mjs
       - name: Build the pinned clean source once
-        run: node scripts/release/portable.mjs build --out .ci/deepseek/assets --version 1.10.0 --source-sha ${{ github.sha }}
+        run: node scripts/release/portable.mjs build --out .ci/deepseek/assets --version 1.11.0 --source-sha ${{ github.sha }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -73,9 +73,9 @@ jobs:
         working-directory: ${{ runner.temp }}
         run: npx playwright install chromium
       - name: Run the same installed archive through the real official UI
-        run: node scripts/release/deepseek-installed.mjs --archive .ci/deepseek/assets/harness-agent-1.10.0-portable.tar.gz --out .ci/deepseek/installed --version 1.10.0 --source-sha ${{ github.sha }} --playwright-module "${{ runner.temp }}/node_modules/playwright/index.mjs"
+        run: node scripts/release/deepseek-installed.mjs --archive .ci/deepseek/assets/harness-agent-1.11.0-portable.tar.gz --out .ci/deepseek/installed --version 1.11.0 --source-sha ${{ github.sha }} --playwright-module "${{ runner.temp }}/node_modules/playwright/index.mjs"
       - name: Run actual CLI coding and tamper checks on the same archive
-        run: node scripts/release/portable-smoke.mjs --archive .ci/deepseek/assets/harness-agent-1.10.0-portable.tar.gz --out .ci/deepseek/cli-installed --version 1.10.0 --source-sha ${{ github.sha }}
+        run: node scripts/release/portable-smoke.mjs --archive .ci/deepseek/assets/harness-agent-1.11.0-portable.tar.gz --out .ci/deepseek/cli-installed --version 1.11.0 --source-sha ${{ github.sha }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:

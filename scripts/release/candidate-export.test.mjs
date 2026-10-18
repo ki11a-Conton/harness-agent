@@ -9,7 +9,7 @@ import { digest, makeArchive } from './portable-lib.mjs';
 
 const script = fileURLToPath(new URL('./candidate-export.mjs', import.meta.url));
 const repository = 'ki11a-Conton/harness-agent';
-const version = '1.10.0';
+const version = '1.11.0';
 async function scenario(change, expected) {
   const root = await mkdtemp(join(tmpdir(), 'qualified-candidate-export-'));
   try {

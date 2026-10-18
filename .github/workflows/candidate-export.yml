@@ -1,4 +1,4 @@
-name: export qualified v1.10 candidate
+name: export qualified v1.11 candidate
 
 on:
   workflow_dispatch:
@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       release_id:
-        description: Existing v1.10.0 draft bound to this source SHA
+        description: Existing v1.11.0 draft bound to this source SHA
         required: true
         type: string
 

@@ -6,7 +6,7 @@ import { digest, verifyPortable } from './portable-lib.mjs';
 import { verifyArchive } from './portable.mjs';
 
 const repository = 'ki11a-Conton/harness-agent';
-const version = '1.10.0';
+const version = '1.11.0';
 const sha = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
 const sourceTree = execFileSync('git', ['rev-parse', 'HEAD^{tree}'], { encoding: 'utf8' }).trim();
 const runId = process.env.CANDIDATE_ACCEPTANCE_RUN_ID;
