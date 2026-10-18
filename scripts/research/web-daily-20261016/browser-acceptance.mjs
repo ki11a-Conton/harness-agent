@@ -297,12 +297,18 @@ const cases = {
     assert.equal(copied[0], text); assert.equal(copied[1].trim(), 'export const value = 1;'); assert(copied[2].startsWith('# Actual Harness browser answer'));
     check(checks, 'User, code block and assistant copy buttons put their distinct actual contents on the clipboard');
     await button(page, 'Wrap lines').click(); await button(page, 'Wrap lines').click();
-    await button(page, 'Usage 124 tok').click(); const usage = await page.getByRole('dialog').last().innerText();
+    await button(page, 'Usage 124 tok').click(); const usageDialog = page.getByRole('dialog').last(); const usage = await usageDialog.innerText();
     assert(usage.includes('openai/web-loopback-fixture') && usage.includes('64 tok') && usage.includes('60 tok'));
-    await page.keyboard.press('Escape'); check(checks, 'Actual per-turn usage popover displays the executed provider and token totals');
-    await page.getByRole('tab', { name: 'Trajectory', exact: true }).click();
+    await page.keyboard.press('Escape'); await usageDialog.waitFor({ state: 'hidden' });
+    check(checks, 'Actual per-turn usage popover displays the executed provider and token totals');
+    // Native click acknowledgement can outlast the six-second state budget on
+    // a busy renderer. Keep a bounded action budget and verify the real view;
+    // never swallow an action timeout or replace the actual mouse event.
+    await page.getByRole('tab', { name: 'Trajectory', exact: true }).click({ timeout: 30000 });
+    await page.getByRole('tab', { name: 'Trajectory', exact: true, selected: true }).waitFor();
     assert((await page.locator('body').innerText()).includes('read_file{"path":"demo.js"}'));
-    await page.getByRole('tab', { name: 'Chat', exact: true }).click(); await finished(page);
+    await page.getByRole('tab', { name: 'Chat', exact: true }).click({ timeout: 30000 });
+    await page.getByRole('tab', { name: 'Chat', exact: true, selected: true }).waitFor(); await finished(page);
     check(checks, 'Trajectory and Chat tabs retain the actual read tool and conversation');
   },
   'input-queue-stop': async (page, context, checks) => {

@@ -1,0 +1,13 @@
+# 原生 Trajectory 点击完成等待
+
+原main `adaa847f1011de0cd522b5e617807020e486c12f`：本地完整suite9966pass/16skip，主CI十项、原生Windows503pass/2skip（14必跑含C7普通/11秒）、普通安装通过；Windows UI的desktop/presentation-controls原生click6秒失败，原失败保留。
+
+trajectory-forensics是原失败artifact的只读投影，不是重跑应用。原失败场景原始字节数13043，SHA256139d27cd993b461191991e39c593cec4988e227e8772d1695c5389086b54b0fa；投影保留visibleText中的实际Trajectory/read_file数据、无页面/RPC错误、未关闭socket。诊断run39101041479/分支diagnostics/windows-ui-trajectory-20261018只读取原件，未修改main或原verdict。没有识别原Windows实例具体延迟持有者。
+
+- trajectory-click-red：隔离故障探针，在真实Trajectory点击事件处理时阻塞7秒，不改DOM内容、不替换RPC，精确复现performing click后6秒超时；截图时实际工具轨迹已出现。
+- trajectory-click-green：相同故障探针，两个原生click有界30秒等待，并要求aria-selected=true与实际工具/Chat内容，1场景3检查通过。探针源码单独保存，不能作普通用户或性能SLO验收。
+- trajectory-click-full：无故障处理器的普通实际浏览器，42场景/117检查通过，0付费模型、0应用响应替换。修改驱动SHA256 `b38b941959cae3fc3d2ae9e74b1d88e5aed508801523ee75babec49606405be2`。
+
+本地浏览器对照在未提交的修正驱动上运行，不把整个工作树冒充clean；产品编译源码仍为 `adaa847f1011de0cd522b5e617807020e486c12f`，结果另绑定实际driverHash。local中的原adaa完整回执确为clean源码，不是新驱动整树验收。最终新main必须独立四工作流/十项CI与clean完整suite。
+
+只改验收驱动的弹层关闭/原生动作等待/选中状态检查。普通状态等待仍6秒，不catch超时继续、不force、不静默重试，产品UI与Runtime未变。原失败不重跑或取消。PNG原字节；json/log/mjs确定性gzip；copy-map原件/归档双摘要；SHA256SUMS覆盖除自身全部文件。

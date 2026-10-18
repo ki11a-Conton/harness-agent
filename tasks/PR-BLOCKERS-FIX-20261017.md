@@ -43,3 +43,12 @@ Windows 回执补充 W-3：76caf6a3 的原生专项 498 passed / 0 failed、必�
 怎么验收：原10s信号对11s真命令必须复现相同失败；修正后两种命令完成，4项既有显式取消回归保持通过，Linux的2项原生Windows取消用例仍明确跳过。类型、安全、相关集成与文档通过；上一main全部四工作流结束后才能正常快进推送。新main四工作流由push触发，首次attempt、精确SHA、主CI十项全部成功，再完成任务。不猜测原Windows实例的具体延迟持有者，不重跑/取消旧失败。
 
 W-5 原生回执进一步要求两项 C7 用例按完整名称各执行一次且 passed；缺失、重复或跳过不能生成 PASS。
+
+
+## W-6：原生点击完成与视图状态等待分开
+
+做什么：修正 adaa847f 的 Windows 安装UI（run39100358049/job117595340559）在 desktop/presentation-controls 点击Trajectory时的6秒假失败，保留该原始失败。adaa的本地完整suite为9966pass/16skip，原生Windows503pass/2skip且14必跑全通过，正式Windows也成功；不能把这次UI失败归因于C7取消逻辑。
+
+怎么做：复用只读artifact诊断，在独立diagnostics分支运行，不重跑原应用、不改main。原始失败记录明确显示Trajectory已含实际read_file数据，页面/RPC/套接字均无错误。给实际点击处理加7秒受控事件循环延迟的故障探针，精确复现“元素可见/可用/稳定→performing click→6秒超时”，超时后视图仍已切换；不声称查明原Windows延迟持有者。只为Trajectory/Chat两次原生click设置30秒有界动作完成等待，普通状态等待仍6秒；先等待用量弹层关闭，再点击、要求对应aria-selected=true和实际工具/Chat内容。不force、不重试吞错、不改UI/后端。
+
+怎么验收：旧动作6秒在7秒事件延迟探针下必须失败；新动作与选中/内容检查在同一探针下通过。普通真实浏览器42场景/117检查须全部通过，没有注入延迟处理器或替换RPC。上一main四工作流全结束后才推送；新mainCI/UI由push触发，仅未被路径触发的原生Windows/普通安装在同一新mainSHA各首次dispatch，不重跑旧失败。最终精确SHA四工作流、主CI十项、本地clean完整suite均通过才完成。

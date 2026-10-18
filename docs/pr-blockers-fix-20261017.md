@@ -86,3 +86,18 @@ C7 唯一的外部取消信号来自测试自己的 AbortSignal.timeout(10000)�
 W-5 原生回执进一步要求两项 C7 用例按完整名称各执行一次且 passed；缺失、重复或跳过不能生成 PASS。
 
 W-5 原始CI、11秒真实命令反例及6pass/2skip取消邻接回归见[证据归档](evidence/pr-blockers-status-fixture-20261018/README.md)。产品实现不变，修正源码及最终main的类型/安全/定向/完整CI另按精确SHA记录。
+
+
+## W-6：原始 Windows 点击超时与已完成视图的对照
+
+adaa847f 的原生Windows回执为503pass/0fail/2skip，14个必跑用例含两项C7各passed一次；正式Windows也成功，同一clean本地完整suite9966pass/16skip，证据保留。其Windows安装UI（run39100358049/job117595340559）在desktop/presentation-controls的Trajectory原生click6秒超时，实际断在“visible/enabled/stable、已滚动、performing click”。
+
+使用只读诊断工作流39101041479从原失败artifact投影daily记录，既不重跑应用也不更改原验收结论。原始失败记录的visibleText已包含Trajectory的Duration/Turns/Calls、实际read_file{path:demo.js}及工具输出，errors、RPC失败和外部请求均为空，socket未关闭。因此有“自动化点击未在6秒内完成”证据，没有“后端/视图完全没有响应”证据；不声称识别原Windows实例的具体调度或渲染延迟来源。
+
+隔离故障探针仅在真实Trajectory click事件处理中阻塞7秒，不替换任何DOM内容或应用/RPC响应，精确复现同一performing click超时，超时后仍出现实际Trajectory工具数据。该探针用于故障对照，不当作普通用户验收；其源码、红绿记录单独归档。
+
+修正测试的等待语义：先确认用量弹层关闭；只对Trajectory/Chat两次原生click允许最多30秒完成，保留真实可见/可用/稳定/命中测试；随后仍以原6秒状态等待要求aria-selected=true，再验证实际工具数据和Chat内容。没有catch超时后继续、force click或静默重试。普通42场景验收不注入故障处理器，也未修改产品UI或Runtime，更不作UI性能SLO证明。
+
+新main须等adaa全部四工作流结束后正常快进推送，再完成四工作流精确SHA首次验收；路径未触发的Windows/普通安装只在新SHA首次dispatch，旧失败保留。
+
+W-6同延迟红绿探针、普通42/117浏览器验收及原始Windows artifact只读投影见[证据归档](evidence/pr-blockers-ui-trajectory-20261018/README.md)。原adaa完整9966/16通过，但原Windows UI仍保持失败；最终新main另验。
