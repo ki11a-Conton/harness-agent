@@ -71,3 +71,18 @@ W-3：run 39055712482/job 117463135869 的步骤 9 原生回归成功，公开 W
 原 e39fc612 的所有工作流结束前不推送下一 main；新源码第一次运行 CI，未因路径触发的原生 Windows/普通安装工作流显式首次 dispatch 到同一新 main SHA，保留旧失败。证据及精确驱动哈希见追加归档，不能把旧分支绿结果或原生 Windows 单项通过冒充 e39fc612 全绿。
 
 本地 W-4 结果：三尺寸目标 3/9、完整日常 42/117、Node 导航/连接/延迟 19 项通过、0 失败。详见 [原始失败与浏览器记录](evidence/pr-blockers-ui-capability-20261018/README.md)。这是驱动修正前后对照，未把整树冒充 clean；产品代码与先前 9965/16 的验收源码保持相同。最终新 main 四工作流另验。
+
+
+## W-5：正式 Windows C7 的验收信号错误
+
+3736aff7 的 UI 安装验收首次在 Linux/Windows 全部成功，原生 Windows/普通安装也成功，W-4 修正得到了实际验证。随后主 CI 的 Windows 正式 gate（run 39098597891/job 117590045045）中，C7 预期 completed 却观察到 cancelled。其余已完成步骤及原始失败均保留，不能记为四工作流全绿。
+
+C7 唯一的外部取消信号来自测试自己的 AbortSignal.timeout(10000)，该用例验证的是命令退出码、文件修改与verification状态区分，并没有产品10秒完成SLO。保留该旧信号、改用合法11秒实际Node命令，即可确定性复现：signal.aborted=true、reason=TimeoutError、outcome=cancelled，以及同一个 completed 断言失败。exec 默认允许60秒。这个反例证明测试把“挂起守护”转换成了真实用户取消；不声称查明原 Windows 实例的特定I/O持有者。
+
+修正仅作用于测试：应完成场景传入未取消的signal，由Vitest独立60秒外层看门狗识别挂起（仓库原默认300秒），不是把 Runtime 的 cancelled 状态改写成 completed。保留正常/11秒真实进程两项、命令exitCode=2/failed=true、文件URI转义、verification=unrun及新turn重置等全部原断言。两项C7与4项既有显式取消回归通过；Linux上2项原生Windows取消用例按既有条件跳过。C7加入真实Windows专项，避免只在长正式gate末尾验证。
+
+产品Runtime、工具执行限制、取消机制和UI实现均未改变。原始10秒失败和真实长命令反例保留，最终新main按四工作流/十项主CI独立验收，不重跑或取消3736aff7失败。
+
+W-5 原生回执进一步要求两项 C7 用例按完整名称各执行一次且 passed；缺失、重复或跳过不能生成 PASS。
+
+W-5 原始CI、11秒真实命令反例及6pass/2skip取消邻接回归见[证据归档](evidence/pr-blockers-status-fixture-20261018/README.md)。产品实现不变，修正源码及最终main的类型/安全/定向/完整CI另按精确SHA记录。
