@@ -1,0 +1,37 @@
+{
+  "status": "PASS",
+  "source": "76caf6a3c7c3e33d9b463594481e58f6ee494acc",
+  "sourceClean": true,
+  "providerCalls": 2,
+  "externalPaidCalls": 0,
+  "requests": [
+    {
+      "model": "model-a"
+    },
+    {
+      "model": "model-b"
+    }
+  ],
+  "legacyMessages": 2,
+  "immutablePrefixRecords": 12,
+  "selectionObservedByOldFollow": true,
+  "restartPrefixIdentical": true,
+  "branchAnswerModels": [
+    {
+      "providerId": "legacy",
+      "modelId": "model-a"
+    },
+    {
+      "providerId": "legacy",
+      "modelId": "model-b"
+    }
+  ],
+  "scenarios": [
+    "legacy-format",
+    "old-follow-selection",
+    "immutable-prefix",
+    "restart-reload",
+    "actual-selected-http-model",
+    "branch-provenance"
+  ]
+}

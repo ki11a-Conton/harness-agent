@@ -43,7 +43,24 @@ interface WireFrame {
   error?: { code: string; message: string };
 }
 
-type PendingRes = (frame: { result?: unknown; error?: { code: string; message: string } }) => void;
+/** Handle pair kept per in-flight request so `close()` can settle it. */
+interface PendingCall {
+  resolve: (result: unknown) => void;
+  reject: (err: unknown) => void;
+}
+
+/**
+ * EXT-001: rejection delivered to every request that was still in flight when
+ * the transport closed. Extends AgentError so callers that branch on
+ * `instanceof AgentError` keep their error-surface behavior; the stable,
+ * greppable marker is `info.message === "transport closed"`.
+ */
+export class TransportClosedError extends AgentError {
+  constructor(message = "transport closed") {
+    super(errorInfo("INTERNAL_ERROR", message));
+    this.name = "TransportClosedError";
+  }
+}
 
 /**
  * JSONL transport peer.
@@ -54,9 +71,11 @@ export class StdioTransport {
   private readonly role: StdioRole;
   private readonly serverSurface?: RpcServer;
   private peer?: StdioTransport;
-  private readonly pending = new Map<number, PendingRes>();
+  private readonly pending = new Map<number, PendingCall>();
   private nextSeq = 0;
   private pushHandler?: (topic: string, payload: unknown) => void;
+  /** EXT-001: close() is terminal — no new writes, no new requests. */
+  private closed = false;
 
   constructor(opts: StdioTransportOptions) {
     this.role = opts.role;
@@ -83,16 +102,12 @@ export class StdioTransport {
    *  the transported AgentError (same surface as InMemoryTransport). */
   request(method: string, params?: unknown, _ctx?: RpcContext): Promise<unknown> {
     if (this.role !== "client") throw new Error("request(): client role only");
+    // EXT-001: a request issued after close must fail fast, never hang.
+    if (this.closed) return Promise.reject(new TransportClosedError());
     const seq = this.nextSeq;
     this.nextSeq += 1;
     return new Promise((resolve, reject) => {
-      this.pending.set(seq, (frame) => {
-        if (frame.error !== undefined) {
-          reject(new AgentError(errorInfo(frame.error.code as never, frame.error.message)));
-        } else {
-          resolve(frame.result);
-        }
-      });
+      this.pending.set(seq, { resolve, reject });
       this.writeFrame({ id: seq, method, ...(params !== undefined ? { params } : {}) });
     });
   }
@@ -146,10 +161,14 @@ export class StdioTransport {
       if (typeof p?.topic === "string") this.pushHandler?.(p.topic, p.payload);
       return;
     }
-    const resolve = this.pending.get(frame.id);
-    if (resolve === undefined) return;
+    const call = this.pending.get(frame.id);
+    if (call === undefined) return;
     this.pending.delete(frame.id);
-    resolve({ result: frame.result, error: frame.error });
+    if (frame.error !== undefined) {
+      call.reject(new AgentError(errorInfo(frame.error.code as never, frame.error.message)));
+    } else {
+      call.resolve(frame.result);
+    }
   }
 
   /** Number of in-flight requests (pending id correlations). */
@@ -157,12 +176,31 @@ export class StdioTransport {
     return this.pending.size;
   }
 
+  /**
+   * EXT-001: close the pipe. Any request still awaiting a reply is REJECTED
+   * with a `TransportClosedError` — dropping the handles (the old
+   * `pending.clear()`) left those callers hanging forever, so the host process
+   * could never exit. Idempotent: the second call is a no-op.
+   */
   async close(): Promise<void> {
+    if (this.closed) return;
+    this.closed = true;
+    const inFlight = [...this.pending.values()];
     this.pending.clear();
+    // Detach BOTH directions before settling, so nothing can be written onto a
+    // closed pipe while the rejections are delivered.
+    this.detachPeer();
+    for (const call of inFlight) call.reject(new TransportClosedError());
+  }
+
+  private detachPeer(): void {
+    const peer = this.peer;
     this.peer = undefined;
+    if (peer !== undefined && peer.peer === this) peer.peer = undefined;
   }
 
   private writeFrame(frame: WireFrame): void {
+    if (this.closed) return;
     this.peer?.readLine(JSON.stringify(frame));
   }
 }

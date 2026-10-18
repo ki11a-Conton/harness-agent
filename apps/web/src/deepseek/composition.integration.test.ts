@@ -7,6 +7,7 @@ import { createHarness, type Harness } from "@ar/harness";
 import { ScriptedModelProvider } from "@ar/model";
 import type { AgentEvent, ApprovalRequest, ModelProvider, SessionId, TurnId } from "@ar/contracts";
 import { createDeepseekComposition } from "./composition.js";
+import { projectSessionHistory } from "./projections.js";
 
 const cleanup: Array<() => Promise<void>> = [];
 afterEach(async () => { for (const action of cleanup.splice(0).reverse()) await action(); });
@@ -224,7 +225,7 @@ it("a memory-only host still changes a draft model and still refuses durable tas
   await expect(stack.composition.activity.call("schedule/catalog", {}, signal())).rejects.toMatchObject({ code: "schedule/unavailable" });
 });
 
-it("repeated memory-only draft selection runs the selected HTTP model and freezes after input", async () => {
+it("repeated memory-only selection runs each selected HTTP model, including after a turn", async () => {
   const requests: Array<Record<string, unknown>> = [];
   const server = createServer(async (request, response) => {
     let body = ""; for await (const chunk of request) body += chunk;
@@ -249,5 +250,92 @@ it("repeated memory-only draft selection runs the selected HTTP model and freeze
   expect((await stack.composition.harness.store.listTurns(id)).map(turn => turn.status)).toEqual(["completed"]);
   expect(requests).toHaveLength(1); expect(requests[0]).toHaveProperty("model", "model-a");
   expect((await stack.composition.harness.store.listMessages(id)).some(message => message.content === "actual memory model answer")).toBe(true);
-  await expect(stack.composition.catalog.call("session/selectModel", { request: { sessionId: id, provider: "review", model: "model-b" } }, signal())).rejects.toMatchObject({ code: "session/model-frozen" });
+  const project = async () => projectSessionHistory({
+    session: (await stack.composition.harness.store.getSession(id))!,
+    events: await stack.composition.harness.events.list(id),
+    messages: await stack.composition.harness.store.listMessages(id),
+  });
+  const beforeSwitch = await project();
+  // A session that already produced a turn keeps its identity and its journal:
+  // the new selection applies to the next request instead of being refused.
+  const native = stack.composition.owners.nativeSessionId(id);
+  await expect(stack.composition.catalog.call("session/selectModel", { request: { sessionId: id, provider: "review", model: "model-b" } }, signal()))
+    .resolves.toEqual({ selected: { provider: "review", model: "model-b" } });
+  expect(stack.composition.owners.nativeSessionId(id)).toBe(native);
+  expect((await stack.composition.harness.store.getSession(id))!.model).toEqual({ providerId: "review", modelId: "model-b" });
+  // A client already holds the durable prefix above. Switching the model changes
+  // what the NEXT request uses; it must never rewrite a published record (that
+  // is exactly what the follow stream rejects as a changed prefix), and every
+  // settled answer keeps the model that actually produced it.
+  const afterSwitch = await project();
+  expect(afterSwitch.records.slice(0, beforeSwitch.records.length).map(record => JSON.stringify(record)))
+    .toEqual(beforeSwitch.records.map(record => JSON.stringify(record)));
+  const settled = afterSwitch.records.find(record => record.event.type === "assistant/message")!.event;
+  expect((settled.data as { message: { source: unknown } }).message.source).toEqual({ kind: "model", provider: "review", model: "model-a" });
+  expect(afterSwitch.projections.values.modelSelection).toEqual({ lastUsed: { provider: "review", model: "model-a" }, next: { provider: "review", model: "model-b" } });
+  await stack.composition.sessions.call("session/prompt", { request: { sessionId: id, requestId: "review-real-memory-turn-two", mode: "queue", content: [{ type: "text", text: "Give the second configured answer" }] } }, signal());
+  const switchedDeadline = performance.now() + 10000;
+  while (performance.now() < switchedDeadline && (await stack.composition.harness.store.listTurns(id)).filter(turn => turn.status === "completed").length < 2) await new Promise(done => setTimeout(done, 10));
+  expect((await stack.composition.harness.store.listTurns(id)).map(turn => turn.status)).toEqual(["completed", "completed"]);
+  expect(requests).toHaveLength(2); expect(requests[1]).toHaveProperty("model", "model-b");
+});
+
+
+it("review PR13: an idle real Web owner must not replay the full physical journal per events poll", async () => {
+  const stack = await fixture(); const id = await stack.createSession();
+  const owner = await stack.composition.owners.ownerOf(id);
+  const list = owner.events.list.bind(owner.events); let fullPhysicalReads = 0;
+  let observed!: () => void; const fourReads = new Promise<void>(done => { observed = done; });
+  const spy = vi.spyOn(owner.events, "list").mockImplementation(async (sid, options) => {
+    if (options?.afterSequence === undefined) {
+      fullPhysicalReads += 1; if (fullPhysicalReads >= 4) observed();
+    }
+    return list(sid, options);
+  });
+  const { createEventsService } = await import("./events.js");
+  const service = createEventsService({ harness: stack.composition.harness, pollDelayMs: 1,
+    answerAsk: async () => { throw new Error("unused"); } });
+  const controller = new AbortController();
+  const running = (async () => { for await (const _frame of service.stream("$events", {}, controller.signal)) {} })();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await Promise.race([fourReads, new Promise<void>(done => { timer = setTimeout(done, 250); })]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+    controller.abort(); await running.catch(error => { if (error?.name !== "AbortError") throw error; }); spy.mockRestore();
+  }
+  expect(fullPhysicalReads).toBeLessThanOrEqual(1);
+});
+
+it("review PR13: an idle replaced stable draft owner must not replay the full physical journal per events poll", async () => {
+  const stack = await fixture(); const id = await stack.createSession();
+  await stack.composition.catalog.call("credentials/set", { ref: "REVIEW_OWNER_ROUTE", value: "synthetic-local-provider-key" }, signal());
+  await stack.composition.catalog.call("settings/update", { ns: "llm-pi-ai", patch: { providers: { review: {
+    api: "openai-completions", baseURL: "http://127.0.0.1:1/v1", apiKeyEnv: "REVIEW_OWNER_ROUTE",
+    models: [{ id: "review-model" }],
+  } } } }, signal());
+  await stack.composition.owners.selectModel(id, { providerKey: "review", modelId: "review-model" }, signal());
+  expect(stack.composition.owners.nativeSessionId(id)).not.toBe(id);
+  const owner = await stack.composition.owners.ownerOf(id);
+  const list = owner.events.list.bind(owner.events); let fullPhysicalReads = 0;
+  let observed!: () => void; const fourReads = new Promise<void>(done => { observed = done; });
+  const spy = vi.spyOn(owner.events, "list").mockImplementation(async (sid, options) => {
+    if (options?.afterSequence === undefined) {
+      fullPhysicalReads += 1; if (fullPhysicalReads >= 4) observed();
+    }
+    return list(sid, options);
+  });
+  const { createEventsService } = await import("./events.js");
+  const service = createEventsService({ harness: stack.composition.harness, pollDelayMs: 1,
+    answerAsk: async () => { throw new Error("unused"); } });
+  const controller = new AbortController();
+  const running = (async () => { for await (const _frame of service.stream("$events", {}, controller.signal)) {} })();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await Promise.race([fourReads, new Promise<void>(done => { timer = setTimeout(done, 250); })]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+    controller.abort(); await running.catch(error => { if (error?.name !== "AbortError") throw error; }); spy.mockRestore();
+  }
+  expect(fullPhysicalReads).toBeLessThanOrEqual(1);
 });

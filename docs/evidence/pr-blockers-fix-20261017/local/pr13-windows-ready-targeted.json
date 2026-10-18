@@ -1,0 +1,38 @@
+{
+  "sourceSha": "76caf6a3c7c3e33d9b463594481e58f6ee494acc",
+  "command": [
+    "pnpm",
+    "exec",
+    "vitest",
+    "run",
+    "packages/core/src/runtime/runtime.test.ts",
+    "packages/core/src/runtime/runtime-policy-drift.test.ts",
+    "packages/core/src/runtime/effective-config.test.ts",
+    "packages/harness/src/config-drift-create-session.test.ts",
+    "packages/harness/src/session-model-selection.regressions.test.ts",
+    "packages/events/src/event-store.test.ts",
+    "packages/evaluation/src/pr13-review-redaction.test.ts",
+    "packages/evaluation/src/gate-evidence-v2.test.ts",
+    "packages/evaluation/src/r97-claim-visibility.regressions.test.ts",
+    "packages/evaluation/src/r97-budget-ledger.test.ts",
+    "packages/evaluation/src/r97-claim-anchor-rename.test.ts",
+    "packages/evaluation/src/gen1-budget-bootstrap-race.regressions.test.ts",
+    "packages/evaluation/src/gen1-budget-lock-bounds.regressions.test.ts",
+    "apps/cli/src/argv-launch.test.ts",
+    "apps/cli/src/release-artifacts-gate-launch.test.ts",
+    "apps/web/src/deepseek"
+  ],
+  "before": {
+    "head": "76caf6a3c7c3e33d9b463594481e58f6ee494acc",
+    "porcelain": ""
+  },
+  "after": {
+    "head": "76caf6a3c7c3e33d9b463594481e58f6ee494acc",
+    "porcelain": ""
+  },
+  "exitCode": 0,
+  "start": "2026-10-17T17:42:57.266424+00:00",
+  "end": "2026-10-17T17:43:54.769738+00:00",
+  "durationSeconds": 57.50331289396854,
+  "logSha256": "e187518687d8dddba5647ced39a98a22e4e784d29f6fb0fe56ccc6732e565f0a"
+}

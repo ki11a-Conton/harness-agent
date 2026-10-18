@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -14,9 +14,11 @@ import {
   gateEvidenceV2Issues,
   classifyChildFailure,
   buildGateErrorSummary,
+  redactSecrets,
   GATE_EVIDENCE_V2_SCHEMA_VERSION,
   type GateEvidenceV2,
 } from "./gate-evidence-v2.js";
+import { detectSecrets } from "@ar/security";
 
 const HEAD = "deadbeef";
 const CMD = ["pnpm", "capability:audit"];
@@ -599,5 +601,68 @@ describe("E4-R19 gate evidence integrity (N17/N18/N19)", () => {
     expect(r.issues.map((i) => i.code)).toContain("INVALID");
     // The SAME object is also rejected by the strict parser and the loader.
     expect(() => parseGateEvidenceV2(incomplete)).toThrow();
+  });
+});
+
+// EXT-002 (audit code-audit-20261017 §3): the gate-evidence redactor carried a
+// private THREE-pattern copy of the secret taxonomy, so eight of the eleven
+// families `@ar/security` already knew (AWS / GitHub / Slack / Stripe / Google
+// keys, private-key blocks, Bearer tokens, DB URIs) reached the persisted
+// evidence log — and the sha256'd error summary folded into the evidence — in
+// clear text. The taxonomy must live in exactly one place.
+describe("EXT-002 redaction reuses the whole @ar/security secret taxonomy", () => {
+  // Two samples are assembled at runtime instead of written as literals: the
+  // repository's push protection refuses any commit that contains a shape
+  // matching a live Slack or Stripe credential, and a fixture is not worth
+  // disarming that protection for. The detector still sees the real shape.
+  const slackToken = ["xoxb", "123456789012", "abcdefghijklmn"].join("-");
+  const stripeKey = ["sk", "live", "0123456789abcdefghijABCD"].join("_");
+  // One sample per family the old local three-pattern copy never matched.
+  const SAMPLES = [
+    { family: "aws-access-key", secret: "AKIAIOSFODNN7EXAMPLE" },
+    { family: "github-token", secret: "ghp_0123456789abcdefghijABCDEFGHIJ012345" },
+    { family: "slack-token", secret: slackToken },
+    { family: "stripe-key", secret: stripeKey },
+    { family: "google-api-key", secret: "AIzaSyA1234567890abcdefghijklmnopqrstuv" },
+    { family: "private-key", secret: "-----BEGIN RSA PRIVATE KEY-----" },
+    { family: "bearer-token", secret: "Bearer abcdefghijklmnopqrstuvwxyz0123456789" },
+    { family: "db-credentials", secret: "postgres://admin:hunter2secret@db:5432/app" },
+  ] as const;
+
+  it("N20: every sample really is a family @ar/security detects (guards the fixture)", () => {
+    for (const { family, secret } of SAMPLES) {
+      expect(detectSecrets(secret).secrets, `${family} sample`).toContain(family);
+    }
+  });
+
+  it("N21: redactSecrets hides all eight families the local pattern copy missed", () => {
+    for (const { family, secret } of SAMPLES) {
+      expect(redactSecrets(`gate output: ${secret} (end)`), `${family} leaked`).not.toContain(secret);
+    }
+  });
+
+  it("N22: no family reaches the persisted evidence log or the error summary", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "ext-002-"));
+    try {
+      const stderr = [
+        "error: child failed with leaked credentials",
+        ...SAMPLES.map(({ family, secret }) => `  error ${family}: ${secret}`),
+      ].join("\n");
+      const ev = await runGateV2({
+        gate: "ext002", command: ["x"], cwd: dir, toolVersion: "t",
+        logDir: join(dir, "logs"),
+        run: async () => ({ exitCode: 1, stdout: "", stderr }),
+      });
+      expect(ev.passed).toBe(false);
+      const logRel = ev.logRef === undefined ? "" : ev.logRef.path;
+      expect(logRel).not.toBe("");
+      const saved = await readFile(join(dir, logRel), "utf8");
+      for (const { family, secret } of SAMPLES) {
+        expect(saved, `${family} leaked into the persisted log`).not.toContain(secret);
+        expect(ev.errorSummary, `${family} leaked into errorSummary`).not.toContain(secret);
+      }
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 });

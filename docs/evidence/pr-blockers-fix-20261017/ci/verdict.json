@@ -1,0 +1,101 @@
+{
+  "status": "PASS",
+  "checkedAtEpoch": 1792297283.5800245,
+  "previousMain": "0acbb9040cb8491133f388e0c144f69a6b0b0d21",
+  "pullRequests": {
+    "11": "13efccd27790848fdabb989a73dfee9ccf4b8b12",
+    "13": "b35bff6487396d5ad78877600ba79fed9b286ea7"
+  },
+  "workflows": [
+    {
+      "pr": 11,
+      "sha": "13efccd27790848fdabb989a73dfee9ccf4b8b12",
+      "workflow": "genuine Windows acceptance",
+      "event": "push",
+      "id": 39052101234,
+      "jobs": 1,
+      "conclusion": "success"
+    },
+    {
+      "pr": 11,
+      "sha": "13efccd27790848fdabb989a73dfee9ccf4b8b12",
+      "workflow": "first-generation installed acceptance",
+      "event": "push",
+      "id": 39052101296,
+      "jobs": 4,
+      "conclusion": "success"
+    },
+    {
+      "pr": 11,
+      "sha": "13efccd27790848fdabb989a73dfee9ccf4b8b12",
+      "workflow": "ci",
+      "event": "pull_request",
+      "id": 39052100331,
+      "jobs": 10,
+      "conclusion": "success"
+    },
+    {
+      "pr": 11,
+      "sha": "13efccd27790848fdabb989a73dfee9ccf4b8b12",
+      "workflow": "official DeepSeek UI installed acceptance",
+      "event": "push",
+      "id": 39052099283,
+      "jobs": 3,
+      "conclusion": "success"
+    },
+    {
+      "pr": 11,
+      "sha": "13efccd27790848fdabb989a73dfee9ccf4b8b12",
+      "workflow": "ci",
+      "event": "push",
+      "id": 39052099286,
+      "jobs": 10,
+      "conclusion": "success"
+    },
+    {
+      "pr": 13,
+      "sha": "b35bff6487396d5ad78877600ba79fed9b286ea7",
+      "workflow": "ci",
+      "event": "pull_request",
+      "id": 39057312644,
+      "jobs": 10,
+      "conclusion": "success"
+    },
+    {
+      "pr": 13,
+      "sha": "b35bff6487396d5ad78877600ba79fed9b286ea7",
+      "workflow": "genuine Windows acceptance",
+      "event": "push",
+      "id": 39057310426,
+      "jobs": 1,
+      "conclusion": "success"
+    },
+    {
+      "pr": 13,
+      "sha": "b35bff6487396d5ad78877600ba79fed9b286ea7",
+      "workflow": "first-generation installed acceptance",
+      "event": "push",
+      "id": 39057310396,
+      "jobs": 4,
+      "conclusion": "success"
+    },
+    {
+      "pr": 13,
+      "sha": "b35bff6487396d5ad78877600ba79fed9b286ea7",
+      "workflow": "official DeepSeek UI installed acceptance",
+      "event": "push",
+      "id": 39057310392,
+      "jobs": 3,
+      "conclusion": "success"
+    },
+    {
+      "pr": 13,
+      "sha": "b35bff6487396d5ad78877600ba79fed9b286ea7",
+      "workflow": "ci",
+      "event": "push",
+      "id": 39057310382,
+      "jobs": 10,
+      "conclusion": "success"
+    }
+  ]
+}

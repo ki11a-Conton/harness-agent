@@ -1,0 +1,32 @@
+{
+  "sourceSha": "b4e6efe46b26115f16d90efd66419e6f83880835",
+  "command": [
+    "pnpm",
+    "exec",
+    "vitest",
+    "run",
+    "packages/evaluation/src/pr13-review-redaction.test.ts",
+    "packages/evaluation/src/gate-evidence-v2.test.ts",
+    "packages/harness/src/config-drift-create-session.test.ts",
+    "packages/harness/src/session-model-selection.regressions.test.ts",
+    "packages/core/src/runtime/runtime-policy-drift.test.ts",
+    "packages/core/src/runtime/effective-config.test.ts",
+    "apps/cli/src/argv-launch.test.ts",
+    "apps/cli/src/release-artifacts-gate-launch.test.ts",
+    "packages/events/src/event-store.test.ts",
+    "apps/web/src/deepseek"
+  ],
+  "before": {
+    "head": "b4e6efe46b26115f16d90efd66419e6f83880835",
+    "porcelain": ""
+  },
+  "after": {
+    "head": "b4e6efe46b26115f16d90efd66419e6f83880835",
+    "porcelain": ""
+  },
+  "exitCode": 0,
+  "start": "2026-10-17T17:08:39.458041+00:00",
+  "end": "2026-10-17T17:09:52.397419+00:00",
+  "durationSeconds": 72.93937760498375,
+  "logSha256": "e08565b4e35eee0a98c22836a856fef2e7c3f4f651ba3453a3e6628f2efd9931"
+}

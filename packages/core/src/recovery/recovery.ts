@@ -58,6 +58,17 @@ export class RecoveryPolicy {
     this.askOn = opts.askOn ?? new Set();
   }
 
+  /** Canonical, complete effective policy. Unlike sampling the first few
+   * decisions this also captures askOn behind arbitrarily large attempt caps. */
+  getConfigIdentity(): readonly { kind: FailureKind; maxAttempts: number; retryDelayMs: number; exhaustedAction: RecoveryAction }[] {
+    const kinds: readonly FailureKind[] = ["tool_failure", "test_failure", "timeout", "context_overflow", "model_error"];
+    return kinds.map(kind => ({ kind,
+      maxAttempts: this.maxAttemptsByKind[kind] ?? this.maxAttempts,
+      retryDelayMs: this.retryDelayByKind[kind] ?? this.retryDelayMs,
+      exhaustedAction: kind === "context_overflow" || this.askOn.has(kind) ? "ask" : "fail_safe",
+    }));
+  }
+
   /** Decide what to do for the given failure kind on the given (1-based) attempt. */
   decide(kind: FailureKind, attempt: number): RecoveryDecision {
     if (!Number.isInteger(attempt) || attempt <= 0) {

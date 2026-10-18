@@ -63,6 +63,9 @@ export function createSessionService(host: SessionHost) {
     const tool = sessionMetadataTool(metadata, mutation, host.harness, commitTitle);
     const result = await host.executeHostTool!(id, tool, { path: metadata.path ?? resolve(host.cwd, ".deepseek-memory-metadata"), sessionId: id }, signal);
     if (result.status !== "success") fail(result.error?.code ?? "gateway/internal", result.error?.message ?? "Session metadata operation failed");
+    // Metadata is written through a host tool, so a title or receipt commit
+    // appends no journal event: the control frame must be invalidated explicitly.
+    if (mutation !== undefined || commitTitle) invalidateControl(id as SessionId);
     return result.output as SessionMetadata;
   }
   async function projectUnlocked(id: SessionId, signal: AbortSignal) {
@@ -476,14 +479,16 @@ export function createSessionService(host: SessionHost) {
         const previous = new Map<string, string>();
         const baselines: Record<string, unknown> = {};
         for (const row of await host.harness.store.listSessions()) if (row.status !== "failed") {
-          const baseline = (await projectSnapshot(row.id, signal)).projections; baselines[row.id] = baseline; previous.set(row.id, JSON.stringify(baseline.values));
+          const baseline = await controlProjection(row, signal);
+          baselines[row.id] = { kind: "sequenced", asOfSeq: baseline.asOfSeq, values: baseline.values };
+          previous.set(row.id, baseline.encoded);
         }
         yield { type: "baseline", value: { projections: baselines } };
         while (!signal.aborted) {
           for (const row of await host.harness.store.listSessions()) if (row.status !== "failed") {
-            const baseline = (await projectSnapshot(row.id, signal)).projections; const encoded = JSON.stringify(baseline.values);
-            if (previous.get(row.id) === encoded) continue;
-            previous.set(row.id, encoded);
+            const baseline = await controlProjection(row, signal);
+            if (previous.get(row.id) === baseline.encoded) continue;
+            previous.set(row.id, baseline.encoded);
             // Only the opening baseline/list hints support the empty cursor
             // -1. A live control frame needs a committed non-negative seq;
             // RemoteSnapshotStream also forbids a second opening baseline.
@@ -524,6 +529,30 @@ export function createSessionService(host: SessionHost) {
       }
     },
   };
+  // P41 audit WEB-021: `session/control` polls every ~25 ms, and one projection
+  // reads the session row, the metadata host tool, every message, the full
+  // journal, the child list and the inbox. A session that appended no event and
+  // mutated no metadata since its last frame must not repeat that work, so the
+  // frame is reused while the journal watermark, the session status and the
+  // metadata revision are unchanged.
+  const controlCache = new Map<SessionId, { sequence: number; status: string; revision: number; encoded: string;
+    asOfSeq: number; values: Record<string, unknown> }>();
+  const controlRevision = new Map<SessionId, number>();
+  function invalidateControl(id: SessionId): void {
+    controlRevision.set(id, (controlRevision.get(id) ?? 0) + 1);
+  }
+  async function controlProjection(row: { id: SessionId; status: string }, signal: AbortSignal) {
+    // `nextSequence` is a single indexed `MAX(sequence)` read, not a journal replay.
+    const sequence = (await host.harness.events.nextSequence(row.id)) - 1;
+    const revision = controlRevision.get(row.id) ?? 0;
+    const cached = controlCache.get(row.id);
+    if (cached !== undefined && cached.sequence === sequence && cached.status === row.status && cached.revision === revision) return cached;
+    const projection = (await projectSnapshot(row.id, signal)).projections;
+    const entry = { sequence, status: row.status, revision, encoded: JSON.stringify(projection.values),
+      asOfSeq: projection.asOfSeq, values: projection.values };
+    controlCache.set(row.id, entry);
+    return entry;
+  }
   const dispatch = service.call.bind(service);
   service.call = async (endpoint, args, signal) => {
     if (stopped) fail("gateway/cancelled", "Session service is closed");

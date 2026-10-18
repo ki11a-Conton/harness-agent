@@ -445,6 +445,22 @@ describe("P5-4: JSONL → SQLite migration", () => {
     const reopened = trackStore(new SqliteRuntimeStore({ dataDir: dir }));
     expect(await reopened.list(sid)).toHaveLength(1);
   });
+  it("PKG-002: the flush-whole-session sentinel VALIDATES instead of silently passing", async () => {
+    const store = trackStore(new SqliteRuntimeStore({ dataDir: await freshDir() }));
+    const sid = newSessionId();
+    // Empty session: no committed event exists, so the fence cannot prove a
+    // prefix is durable. Old behavior: return successfully (the guard was
+    // skipped for MAX_SAFE_INTEGER), turning the fence into a bare checkpoint.
+    await expect(store.flushThrough(sid, Number.MAX_SAFE_INTEGER)).rejects.toThrow(
+      /no committed events/,
+    );
+    const a = await store.appendNew({
+      id: newEventId(), sessionId: sid, timestamp: 1, type: "model.started", payload: {},
+    });
+    // With a committed tail the sentinel resolves to it and passes.
+    await expect(store.flushThrough(sid, Number.MAX_SAFE_INTEGER)).resolves.toBeUndefined();
+    await expect(store.flushThrough(sid, a.sequence)).resolves.toBeUndefined();
+  });
   it("P26-6: commitToolOutcome commits message + event + checkpoint atomically", async () => {
     const store = trackStore(new SqliteRuntimeStore({ dataDir: await freshDir() }));
     const sid = newSessionId();

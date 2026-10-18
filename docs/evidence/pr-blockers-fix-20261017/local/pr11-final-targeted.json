@@ -1,0 +1,28 @@
+{
+  "sourceSha": "13efccd27790848fdabb989a73dfee9ccf4b8b12",
+  "command": [
+    "pnpm",
+    "exec",
+    "vitest",
+    "run",
+    "packages/core/src/runtime/effective-config.test.ts",
+    "packages/harness/src/session-model-selection.regressions.test.ts",
+    "packages/session/src/service.test.ts",
+    "apps/web/src/deepseek/projections.test.ts",
+    "apps/web/src/deepseek/owners.test.ts",
+    "apps/web/src/deepseek/composition.integration.test.ts"
+  ],
+  "before": {
+    "head": "13efccd27790848fdabb989a73dfee9ccf4b8b12",
+    "porcelain": ""
+  },
+  "after": {
+    "head": "13efccd27790848fdabb989a73dfee9ccf4b8b12",
+    "porcelain": ""
+  },
+  "exitCode": 0,
+  "start": "2026-10-17T17:03:06.635895+00:00",
+  "end": "2026-10-17T17:03:20.739428+00:00",
+  "durationSeconds": 14.10352691099979,
+  "logSha256": "1ea315f5bcf71e0a154007da18dd282d324615b877d1be81e6fd9dc56e077e9f"
+}

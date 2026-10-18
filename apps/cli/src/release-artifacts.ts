@@ -23,7 +23,10 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 import { runGateV2, writeGateEvidenceV2, type GateEvidenceV2 } from "@ar/evaluation";
 
+import { runGateCommand, type GateSpawn } from "./argv-launch.js";
 import { releaseGateTimeoutMs } from "./release-verify.js";
+
+export { runGateCommand } from "./argv-launch.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -68,6 +71,8 @@ export async function collectReleaseArtifacts(deps: {
   execFn?: (cmd: string, args: string[], opts: { cwd: string; timeoutMs: number }) => Promise<string>;
   /** Injectable gate runner for tests (defaults to the real runGateV2). */
   gateFn?: typeof runGateV2;
+  /** Injectable child-process launch for tests (defaults to the real spawn). */
+  gateSpawnFn?: GateSpawn;
 }): Promise<ReleaseArtifactResult> {
   const outDir = deps.outDir;
   await mkdir(outDir, { recursive: true });
@@ -185,15 +190,24 @@ export async function collectReleaseArtifacts(deps: {
   // cleanness, and digests the gate's artifacts; a nonzero exit or a missing
   // artifact records state=failed, never a fabricated PASS.
   const gateEvidencePath = join(outDir, "gate-evidence-capability-audit.json");
-  const gateEvidence: GateEvidenceV2 = await gateFn({
+  const gateMeta = {
     gate: "capability_audit",
+    // The DECLARED command is the gate's identity — it must stay exactly what
+    // the release documents. Only the LAUNCH is platform-resolved (CLI-001).
     command: ["pnpm", "capability:audit"],
     cwd: deps.root,
     toolVersion: "e4-10",
-    environmentClass: "offline",
+    environmentClass: "offline" as const,
     providerCalls: 0,
     artifactPaths: [join(outDir, "capability", "CAPABILITY_MATRIX.md")],
-  });
+  };
+  const gateRun = async (command: string[], cwd: string) =>
+    runGateCommand(command, {
+      cwd,
+      timeoutMs: releaseGateTimeoutMs("capability_audit"),
+      ...(deps.gateSpawnFn !== undefined ? { spawnFn: deps.gateSpawnFn } : {}),
+    });
+  const gateEvidence: GateEvidenceV2 = await gateFn({ ...gateMeta, run: gateRun });
   await writeGateEvidenceV2(gateEvidence, gateEvidencePath);
   put("gate-evidence", gateEvidence.passed, `GateEvidenceV2 (state=${gateEvidence.state}, exit=${String(gateEvidence.exitCode)}) from a real command run`, gateEvidencePath);
 
