@@ -102,9 +102,18 @@ async function finished(page) {
   await button(page, 'Stop generating').waitFor({ state: 'hidden', timeout: 15000 });
 }
 async function send(page, text) {
-  await composer(page).fill(text); const wait = observations.get(page).waitForResult('session/prompt');
-  await button(page, 'Send message').click(); const response = await wait;
+  await composer(page).fill(text);
+  const rpc = observations.get(page);
+  const before = rpc.calls.filter(call => call.endpoint === 'session/prompt').length;
+  const clicks = await page.evaluate(() => window.__harnessDailySendClicks.length);
+  const wait = rpc.waitForResult('session/prompt');
+  await button(page, 'Send message').click();
+  assert.equal(await page.evaluate(() => window.__harnessDailySendClicks.length), clicks + 1,
+    'The native Send click must actually reach the button before checking its backend response');
+  const response = await wait;
   if (response.error) throw response.error; assert.equal(response.result.ok, true, JSON.stringify(response.result));
+  assert.equal(rpc.calls.filter(call => call.endpoint === 'session/prompt').length, before + 1,
+    'One actual Send click must issue exactly one prompt request');
   return observations.get(page).results.filter(result => result.endpoint === 'session/create' && result.ok).at(-1)?.value?.sessionId;
 }
 async function newSession(page) {
@@ -481,6 +490,17 @@ try {
   for (const viewport of viewports) for (const [name, run] of Object.entries(cases)) {
     if (chosen && !chosen.has(name)) continue;
     const context = await browser.newContext({ viewport: catalog[viewport], permissions: ['clipboard-read', 'clipboard-write'] });
+    await context.addInitScript(() => {
+      window.__harnessDailySendClicks = [];
+      for (const type of ['pointerdown', 'pointerup', 'click']) document.addEventListener(type, event => {
+        const target = event.target instanceof Element ? event.target.closest('button') : null;
+        if (!target || !['Send message', '发送消息'].includes(target.getAttribute('aria-label'))) return;
+        const record = { type, at: Date.now(), disabled: target.disabled };
+        window.__harnessDailyPointerTrace ??= [];
+        window.__harnessDailyPointerTrace.push(record);
+        if (type === 'click') window.__harnessDailySendClicks.push(record);
+      }, true);
+    });
     const page = await context.newPage(); page.setDefaultTimeout(6000);
     const rpc = observeProductionRpc(page, origin); observations.set(page, rpc);
     const errors = [], assets = [], checks = []; let failure;
@@ -494,7 +514,8 @@ try {
     if (!failure && (errors.length || unexpected.length || rpc.externalRequests.length)) failure = 'Unexpected actual browser, RPC or external request errors';
     const screenshot = viewport + '-' + name + '.png'; await page.screenshot({ path: path.join(output, screenshot), fullPage: true });
     const result = { name, viewport, status: failure ? 'FAIL' : 'PASS', checks, failure, errors, calls: rpc.calls, results: rpc.results,
-      sockets: rpc.sockets, externalRequests: rpc.externalRequests, assets, screenshot, visibleText: await page.locator('body').innerText() };
+      sockets: rpc.sockets, externalRequests: rpc.externalRequests, assets, screenshot, visibleText: await page.locator('body').innerText(),
+      sendPointerTrace: await page.evaluate(() => window.__harnessDailyPointerTrace ?? []) };
     results.push(result); await writeFile(path.join(output, viewport + '-' + name + '.json'), JSON.stringify(result, null, 2) + '\n');
     console.log(JSON.stringify({ name, viewport, status: result.status, checks: checks.length, failure: failure?.split('\n')[0] }));
     await context.close();

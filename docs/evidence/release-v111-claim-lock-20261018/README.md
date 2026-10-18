@@ -1,0 +1,19 @@
+# v1.11.0 第二候选的 Windows 审批锁失败与交互复验
+
+原候选9c9d39fa的本地clean全量9969PASS/16SKIP、真实Windows512PASS/2SKIP/17必跑均通过；同一安装包Ubuntu/Windows的30基础UI、42日常和连接恢复也通过。主CI39122959439的Windows任务117662136784却在单元集成中失败：claim visibility第一项报rawEPERM open claim-*.json.lock；gate目录缺失是单元失败后未生成证据的后果。原失败与工作流全部结束后的记录保留，不重跑/取消。
+
+## 确定性的产品基础设施缺陷
+
+acquireClaimLock只接收exclusive open的EEXIST，没有接收Windows短暂名称竞争的EPERM。同一文件acquireLock已经具有相同情形的EEXIST/EPERM处理。原始未修改生产9c9代码配合FS边界故障注入固定得到4FAIL/3PASS，复现同一个rawEPERM及具名超时被绕过；最小修正复用现有分类，不变更期限、token、活owner检查或写入许可。持续EPERM仍具名拒绝、不改审批记录；EACCES/ENOSPC立即传播。新建的7项claim回归通过，连同预算锁、期限、账本、原子替换邻接5文件77项通过。
+
+第一次邻接执行中3个子进程用例因独立工作区尚未编译dist而在测试入口前失败，该日志也保留。完成新工作区tsc后同套77项全通过，不更改它们的断言。最终clean源码另行完成整套验收。Windows回执增加原claim-gap、transientEPERM和persistentEPERM三个必跑名，旧17项保留，共20项。
+
+## 原一次手机发送观察仍按证据限定
+
+原9c9安装包的本地复验为30基础UI通过、日常41通过/1失败：mobile/coding-draft-ownership第二条消息等待RPC超时。截图保留PanelB草稿，socket打开、无浏览器/RPC错误，只有PanelA的prompt发出；原驱动没有原生click记录，因此不能确定点击是否送达或输入控制器是否未消费。这个现象不能归因于上面的审批锁，也没有宣称被该修正解决。
+
+只读pointerdown/pointerup/click探针在零延迟及真实350ms单向TCP延迟下各执行5个独立手机场景，共10场景均观察到两次实际click和两次实际prompt。未稳定复现，原失败保留。没有添加产品UI猜测补丁、提高RPC超时或自动补发/重试。
+
+日常驱动增加捕获阶段的只读事件证据，每次send必须有一个实际click到达按钮且新增恰好一个prompt请求。没有篡改DOM内容或后端响应。增强后的普通三尺寸42场景117检查全通过。最终新源码及同一分发包还须重新通过四工作流、完整suite和本地实际下载复验；同类交互若再现须停止发布继续定位，不能用探针成功改写旧失败。
+
+inventory.json绑定每份原件与存储字节；文本以mtime=0无损gzip保存，PNG保持原件。旧candidate保留为未发布草稿，正式历史tag/release不改。

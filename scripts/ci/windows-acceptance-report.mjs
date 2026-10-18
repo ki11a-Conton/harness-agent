@@ -67,6 +67,7 @@ function main() {
     'non-busy owner startup failures propagate without reallocating a fixture',
     'unavailable owner fixture allocation is bounded and never writes durable data',
   ]) required.push(`single local product host per persistent data directory ${name}`);
+  for (const name of ["an ENOENT observed while the real writer owns the claim lock is not an unclaimed approval", "transient EPERM creating the claim anchor lock still updates one established approval", "persistent claim lock EPERM fails within the original deadline without changing approval"]) required.push(name);
   const host = { platform: process.platform, osType: type(), osRelease: release(), arch: arch(), nodeVersion: process.version,
     sourceSha: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), workflowSha: process.env.GITHUB_SHA ?? '',
     treeClean: execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' }).trim() === '',

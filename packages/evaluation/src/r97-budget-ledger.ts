@@ -589,7 +589,11 @@ async function acquireClaimLock(lockPath: string, now: () => number, isAlive: (p
         }
         return { token };
       } catch (err) {
-        if ((err as { code?: string }).code !== "EEXIST") throw err;
+        // Like the ledger lock below, Windows can report EPERM while another
+        // owner releases this name. Keep the same inspection, ownership and
+        // deadline checks; unrelated open failures still propagate immediately.
+        const code = (err as { code?: string }).code;
+        if (code !== "EEXIST" && code !== "EPERM") throw err;
       }
 
       // The lock exists. Decide whether its owner is still alive.

@@ -58,3 +58,5 @@ node $harnessEntry web
 工程验收使用实际生产工具、权限、存储和本地 HTTP 脚本模型，付费调用为0，真实模型 coding 质量仍需实际模型评测。覆盖的是已列明按钮和 coding 流程；PTY/Cordis、goal/Plan continuation、队列原子编辑等完整 UI 能力不因本次发布自动成立，详见 [交付矩阵](web-deepseek-delivery-matrix.json)。
 
 发布前完整suite另发现测试准备的固定端口冲突：产品正确拒绝占用端口，测试不应假设新目录必有可用端口。已补初始分配、非busy传播与耗尽对照，产品锁语义保持；原始失败和修正见[归档](evidence/release-v111-lease-fixture-20261018/README.md)。最终版本仍须以新固定源码重新完成全部工程与实际安装验收。
+
+Windows主CI另暴露claim锁遗漏EPERM竞争分类，已复用同文件账本锁的既有分类并补拒绝/活owner回归。原一次手机发送未触发请求的现象尚未稳定复现；保留原件，新增原生click及唯一prompt断言，并在新实际包重新验收，详见[追加归档](evidence/release-v111-claim-lock-20261018/README.md)。
