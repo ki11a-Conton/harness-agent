@@ -810,8 +810,16 @@ export const MUTATIONS = [
     // racing another acquirer. Narrowing the absorbed set back to EEXIST alone
     // restores the defect: a live campaign aborts instead of retrying.
     file: "packages/evaluation/src/r97-budget-ledger.ts",
-    find: `    if (code !== "EEXIST" && code !== "EPERM") throw err;`,
-    replace: `    if (code !== "EEXIST") throw err;`,
+    // Claim-anchor acquisition now shares this classification. Keep this
+    // ledger-only mutant bound to its own context rather than either branch.
+    find: `        // spinning forever. Any other code (ENOENT, EACCES on a real permission
+        // problem, ENOSPC, …) is still a hard error and still propagates.
+        const code = (err as { code?: string }).code;
+        if (code !== "EEXIST" && code !== "EPERM") throw err;`,
+    replace: `        // spinning forever. Any other code (ENOENT, EACCES on a real permission
+        // problem, ENOSPC, …) is still a hard error and still propagates.
+        const code = (err as { code?: string }).code;
+        if (code !== "EEXIST") throw err;`,
     suite: "packages/evaluation/src/r97-budget-ledger-lock-eperm.test.ts",
     test: "EPERM\-4",
     catchExpectation:

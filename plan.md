@@ -43,3 +43,12 @@
 怎么做：先在原生产源码用真实FS seam确定性得到4FAIL/3PASS；claim anchor采用同文件预算锁已有的EEXIST/EPERM分类，保持既有期限、所有权和拒绝语义。补持续EPERM、活owner不被夺、非相关错误立即传播及真实writer/name-gap回归。仅额外增强日常驱动的原生click与唯一prompt断言，不给尚未复现的手机现象添加猜测UI补丁。
 
 怎么验收：77项邻接与新7项claim场景通过，20项原生Windows必跑（旧17+3）。原手机发送失败保持UNKNOWN_CLICK_DELIVERY，零延迟/350ms只读探针10场景及增强普通三尺寸42/117通过；最终新安装包若再现则停止发布。旧9c9所有工作流结束后，正常快进新main；新源码全部四工作流、主CI十项、clean完整、安全、实际包Ubuntu/Windows与本地下载复验通过才正式发布。原件见[归档](docs/evidence/release-v111-claim-lock-20261018/README.md)。
+
+
+## 变异验收锚点消歧追加
+
+做什么：修复 daa619ed 新增 claim EPERM 分类后，S7 账本变异单行锚点出现两次的验收耦合。主 CI 失败保留，不发布该候选。
+
+怎么做：仅限定 scripts/e4/r97-mutation-check.mjs 的账本独有上下文，仍施加完全相同的语义变异；不改生产代码或放宽反作弊门。
+
+怎么验收：86 项锚点/保护测试通过；clean 新源码实际 S7 注入必须 KILLED 并完整还原。旧四工作流全部终结后才推送新 main；新 SHA 首次运行四工作流，主 CI 十项、原生 Windows20项必跑、完整/安全/类型及同字节跨平台和本地下载包 Web/CLI 全通过才能发布。旧失败 draft 保留，原手机观察仍未确定根因。证据见 [归档](docs/evidence/release-v111-mutation-scope-20261018/README.md)。
