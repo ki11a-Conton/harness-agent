@@ -58,3 +58,16 @@ W-3：run 39055712482/job 117463135869 的步骤 9 原生回归成功，公开 W
 固定 clean 源码 `b35bff6487396d5ad78877600ba79fed9b286ea7` 的类型、文档、报告脚本 7、安全 2147、定向 530（Linux 原生 Windows 用例 1 项明确跳过）、完整 suite 与独立旧会话验收均通过；精确数量与源码/工作树状态以 [原始回执](evidence/pr-blockers-fix-20261017/README.md) 为准。修复后的两个 PR head 均已首次通过四类分支工作流和主 CI 十项；真实 Windows 专项执行包含空格/空参数/中文/尾斜杠的实际 batch 启动、持久化故障与旧会话重建。所有原失败保留，包括原生 498 项已通过但注释预算导致报告失败的 76caf6a3。最终回执的大报告保留完整 artifact 并公开绑定哈希索引。
 
 本次保留两条 PR 历史组合合入 main；最终 main 的新 SHA 必须重新完成四工作流及主 CI 十项，结果见 GitHub Checks 和工作区独立最终 CI 报告。本记录不把离线工程验收等同于付费模型质量，不发布 release。
+
+
+## W-4：首个 main 的真实 UI 失败
+
+#11/#13 的修复 head 均首次通过四类分支工作流及 push/PR 两次十项主 CI 后，已保留历史合入 e39fc6129bdf8998f6f1eeb18a2ca651ac38ba2c，GitHub 确认两 PR merged=true。该 main 的 Linux 安装 UI 在 daily/narrow/capabilities-and-task-filters 失败：按钮已出现并禁用，但脚本立即读取 body 时，pluginInventory/list 仍在返回；原始 run 39096821251/job 117585051194 保留为 NOT_GREEN。CLI 安装产物缺失是前置 UI 步骤失败后未运行 CLI 的后果，不另算作 CLI 产品缺陷。
+
+真实 Chromium 加 350ms 单向 TCP 延迟、不拦截或改写任何 RPC，确定性复现同一 body 断言失败。进一步改成可见 status 等待时，desktop/mobile 通过，narrow 仍失败；浏览器明确记录 status 存在但宽度为零，导航侧栏占据 320px 视口的大部分空间，RPC 已正常成功。不能只增加等待，也不能把 DOM 存在当作内容可见。
+
+修正验收流程：通过真实的收起侧栏按钮进入内容区域，等待 `role=status` 的实际能力说明可见，再断言 Add plugin 禁用；进入自动化任务时重新打开导航、选择后收起。能力场景保留 350ms 延迟，默认 6s 超时不变，没有 sleep、响应替换、去除用例或放宽结果断言。产品 Runtime、工具权限和宿主能力实现不变。桌面/390px/320px 目标场景均已通过；完整日常回归和最终精确 SHA CI 另记原始回执。
+
+原 e39fc612 的所有工作流结束前不推送下一 main；新源码第一次运行 CI，未因路径触发的原生 Windows/普通安装工作流显式首次 dispatch 到同一新 main SHA，保留旧失败。证据及精确驱动哈希见追加归档，不能把旧分支绿结果或原生 Windows 单项通过冒充 e39fc612 全绿。
+
+本地 W-4 结果：三尺寸目标 3/9、完整日常 42/117、Node 导航/连接/延迟 19 项通过、0 失败。详见 [原始失败与浏览器记录](evidence/pr-blockers-ui-capability-20261018/README.md)。这是驱动修正前后对照，未把整树冒充 clean；产品代码与先前 9965/16 的验收源码保持相同。最终新 main 四工作流另验。

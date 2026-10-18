@@ -1,6 +1,6 @@
 # Harness Agent 当前执行计划入口
 
-当前追加任务：[修复并合并 PR #11/#13](plan(20261018-005000).md)，合同：[PR-BLOCKERS-FIX-20261017](tasks/PR-BLOCKERS-FIX-20261017.md)。已修复原七组阻塞及旧会话验收新增的 JSON/漂移轮询/重启分支问题，固定 clean b35bff64 的类型、文档、安全 2147、定向 530、完整 suite 和独立真实 JSONL/HTTP/follow 验收通过，并修复 Windows 锚点可见性/准入验收问题；两 PR 最终 head 分支 CI 已通过，保留历史组合合入 main。最终 main 的精确 SHA 四工作流另据 GitHub Checks 与独立 CI 报告核对。原审查与失败证据保持历史绑定。
+当前追加任务：[修复并合并 PR #11/#13](plan(20261018-005000).md)，合同：[PR-BLOCKERS-FIX-20261017](tasks/PR-BLOCKERS-FIX-20261017.md)。已修复原七组阻塞及旧会话验收新增的 JSON/漂移轮询/重启分支问题，固定 clean b35bff64 的类型、文档、安全 2147、定向 530、完整 suite 和独立真实 JSONL/HTTP/follow 验收通过，并修复 Windows 锚点可见性/准入验收问题；两 PR 最终 head 分支 CI 已通过，保留历史组合合入 main。最终 main 的精确 SHA 四工作流另据 GitHub Checks 与独立 CI 报告核对。#11/#13 已合入 e39fc612；其首次 main CI 在窄屏能力说明断言失败，追加 W-4 的真实延迟/导航可见性修正，最终结果必须以新 main 精确 SHA 四工作流核对。原审查与失败证据保持历史绑定。
 
 当前执行任务：[剩余 PR 代码审查与安全合入](plan(20261017-115200).md)，合同：[PR-REMAINING-REVIEW-20261017](tasks/PR-REMAINING-REVIEW-20261017.md)。已审查 #11–#14：#12/#14 可合入，#11/#13 的兼容性、持久化、脱敏及真实 owner 性能反例失败，保留开放。安全组合 clean 499bc4e9 全仓 9874/15/0，安全 2146、类型、文档门禁通过；之前 UI main 3b3f4e9f 精确四工作流/十项主 CI 已通过，见[审查报告](docs/pr-remaining-review-20261017.md)。保留原 PR 历史，正常推送后验收最终 main 的全部 CI，不发布 release。
 

@@ -429,11 +429,19 @@ const cases = {
     await button(page, 'Increase font size').waitFor();
     assert.equal(await button(page, 'Open configuration file').count(), 0);
     check(checks, 'A Web host without a native configuration opener does not advertise that unavailable action');
-    await button(page, 'Close').click(); await button(page, 'Plugins').click();
-    await button(page, 'Add plugin').waitFor(); assert.equal(await button(page, 'Add plugin').isDisabled(), true);
-    assert((await page.locator('body').innerText()).includes('without a manageable profile'));
+    await button(page, 'Close').click();
+    await latency(context, page, async () => {
+      await button(page, 'Plugins').click(); await collapseMobile(page);
+      await button(page, 'Add plugin').waitFor();
+      // The button is also disabled while inventory is loading. Await the
+      // actual capability result, rather than mistaking that initial state
+      // for a completed pluginInventory/list response.
+      await page.getByRole('status').filter({ hasText: 'without a manageable profile' }).waitFor();
+      assert.equal(await button(page, 'Add plugin').isDisabled(), true);
+    });
     check(checks, 'Unavailable plugin installation is disabled with the actual host capability explanation');
-    await button(page, 'Automation tasks').click(); await page.locator('input[aria-label="Search tasks"]').waitFor();
+    await sidebar(page); await button(page, 'Automation tasks').click(); await collapseMobile(page);
+    await page.locator('input[aria-label="Search tasks"]').waitFor();
     await button(page, 'Enabled').click(); await button(page, 'Inactive').click(); await button(page, 'All').click();
     check(checks, 'The real automation catalog responds to its three list filters without inventing an installed plugin');
   },
