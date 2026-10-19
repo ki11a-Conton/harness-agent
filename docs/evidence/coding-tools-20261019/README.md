@@ -39,3 +39,5 @@ node scripts/research/coding-tools-20261019/acceptance.mjs .ci/coding-tools /pat
 ## Windows CI后续修复
 
 第一次远端主CI未通过：连续模型切换的后续派生owner端口冲突。完整记录、测试专用准备修复和新增6项回归见[Windows跟进](windows-fixture-followup/README.md)。前三类专项当次通过；最终交付以修复提交的完整CI为准。
+
+后续106c9e64的Windows formal完整测试又暴露公共初始子owner同类冲突；统一准备修复、额外真实回归和原断言保留审查见[初始owner跟进](windows-initial-fixture-followup/README.md)。最终新SHA结果以交付报告为准，两次远端失败均保留。

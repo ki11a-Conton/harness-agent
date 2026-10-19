@@ -75,7 +75,8 @@ function main() {
     'a real runtime recovers from batch preflight failure without partial writes and verifies the repaired file');
   required.push('a busy derived owner replaces the complete fixture before assertions and leaves the genuine blocker locked',
     'complete owner fixture admission remains bounded when every derived lease is occupied',
-    'a genuinely busy later model owner reallocates setup without changing the original stable journal');
+    'a genuinely busy later model owner reallocates setup without changing the original stable journal',
+    'a genuinely busy initial workspace owner reallocates setup before attachment assertions and preserves the blocker');
   const host = { platform: process.platform, osType: type(), osRelease: release(), arch: arch(), nodeVersion: process.version,
     sourceSha: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), workflowSha: process.env.GITHUB_SHA ?? '',
     treeClean: execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' }).trim() === '',

@@ -5,3 +5,5 @@
 复用现有ToolOrchestrator、PermissionEngine、SandboxManager、Verification和文件协调边界；本轮无Core/Runtime改造或默认Agent策略推广。候选新参数显式选择，保持旧调用。相关/全量/安全/类型及实际CLI/Web与远端精确SHA CI完成后交付。没有真实模型凭据时只报告离线工具效率，不把脚本模型当质量提升证明。
 
 W1跟进：首轮远端Windows完整test gate暴露连续模型切换的派生owner固定端口冲突。按计划W1仅补测试准备阶段的完整、有界夹具分配和6项真实回归，保留生产租约与原断言；失败CI和新证据分开归档，修复后等待精确新SHA四类CI。
+
+W2跟进：106c9e64的Windows formal完整测试暴露初始子owner同类占用；审查整个owner测试准备，统一完整夹具分配、补真实初始owner拒绝回归及异步失败观察。197个原断言保留，新增7个；分配器内断言为0。生产租约不变；原有28项Windows必验加1项为29。原始失败与新回归归档分开，必须再完成干净新提交全量与四类CI。
