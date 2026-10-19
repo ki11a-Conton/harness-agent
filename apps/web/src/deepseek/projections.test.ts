@@ -320,6 +320,21 @@ describe("official DeepSeek Harness history projection", () => {
     const client = officialClient(); for (const record of completed.records) client.assertEvent(record.event);
   });
 
+  it("advances an after-write controls fence with an officially decodable ignorable marker and no private payload", () => {
+    const f = fixture(); f.event("session.created", {}, false); const original = f.project();
+    f.event("tool.completed", { hostOnly: true, tool: "web_session_metadata", kind: "web_session_controls" }, false);
+    const before = f.project(); expect(before.records).toEqual(original.records);
+    const committed = f.event("tool.completed", { hostOnly: true, tool: "web_session_metadata", kind: "web_controls_committed",
+      outputPreview: "SECRET-PRIVATE-CONTROL-METADATA", privateInput: "SECRET-PRIVATE-COMMAND" }, false);
+    const after = f.project(), marker = after.records.at(-1)!.event;
+    expect(after.cursor).toBe(before.cursor + 1);
+    expect(after.records.slice(0, before.records.length)).toEqual(before.records);
+    expect(marker).toMatchObject({ type: "harness/tool.completed", ignorable: true });
+    expect(after.sourceSequenceBySeq[marker.seq]).toBe(committed.sequence);
+    expect(JSON.stringify(marker)).not.toContain("SECRET-PRIVATE");
+    officialClient().assertEvent(marker);
+  });
+
   it("holds the reply-message append gap so a later answer cannot renumber the followed durable prefix", () => {
     const f = fixture();
     f.message("user", "ask"); f.event("turn.started", { text: "ask" });

@@ -35,6 +35,9 @@
 [data-harness-controls] :is(button, select, textarea):focus-visible { outline: 2px solid var(--dsw-focus-ring-color, #2563eb); outline-offset: 2px; }
 [data-harness-controls] :is(button, select):disabled { opacity: .55; cursor: default; }
 [data-harness-controls] > :is(button, select) { flex-shrink: 0; white-space: nowrap; }
+[data-harness-permission-pending], [data-harness-permission-error] { flex-basis: 100%; min-width: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; font-size: 12px; }
+[data-harness-permission-error] { color: var(--dsw-alias-state-error-primary); }
+[data-harness-composer-modes]:has([data-harness-permission-pending], [data-harness-permission-error]) { min-width: 0; max-width: 100%; flex-wrap: wrap; }
 [data-harness-controls] textarea { box-sizing: border-box; width: 100%; max-width: 100%; min-height: 60px; border: 1px solid var(--dsw-alias-border-l1, #d1d5db); border-radius: 6px; padding: 8px; background: var(--dsw-alias-bg-base, transparent); color: inherit; font: inherit; resize: vertical; }
 [data-harness-plan-review] { min-width: 0; max-width: 100%; padding: 6px; }
 [data-harness-plan-review] summary { cursor: pointer; }

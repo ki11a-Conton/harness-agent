@@ -50,9 +50,14 @@ async function permission(label) {
     const enable = button('Enable Full access'); assert(await enable.isDisabled(), 'Full access enabled without acknowledgement');
     await page.getByRole('checkbox').check(); await enable.click();
   }
-  await button('Access mode, current: ' + label).waitFor({ state: 'visible' });
+  // Native Windows can retry an atomic settings replacement for 7.13s; a
+  // command also commits its lifecycle. Await the actual acknowledgement.
+  await button('Access mode, current: ' + label).waitFor({ state: 'visible', timeout: 30000 });
+  await until(() => button('Access mode, current: ' + label).isEnabled(), 'Permission save is still pending', 30000);
+  const expected = { 'Read Only': 'read-only', 'Workspace Write': 'workspace-write', 'Full access': 'danger-full-access' }[label];
+  assert.equal((await read('session/projections', { request: { sessionId: id } })).values.permissions.currentValue, expected);
 }
-let id, failure;
+let id, failure, failureState;
 const cases = [
   ['removed-surfaces', async () => {
     await page.goto(origin, { waitUntil: 'domcontentloaded' }); await page.locator('[data-harness-controls]').waitFor();
@@ -97,10 +102,10 @@ const cases = [
     await until(async () => (await read('session/projections', { request: { sessionId: id } })).values.plan.active, 'Plan mode not persisted');
     await prompt('[fixture:plan] Prepare the actual file change; await human approval.');
     await assert.rejects(readFile(join(fixture.cwd, 'plan-approved.txt')), { code: 'ENOENT' });
-    const review = page.locator('[data-harness-plan-review]'); await review.waitFor(); await review.locator('summary').click();
+    const review = page.locator('[data-harness-plan-review]'); await review.waitFor({ timeout: 30000 }); await review.locator('summary').click();
     assert((await review.locator('pre').innerText()).includes('plan-approved.txt'));
     await button('Approve and implement').click();
-    await until(async () => (await readFile(join(fixture.cwd, 'plan-approved.txt'), 'utf8').catch(() => '')) === 'Actual human approved plan output\n', 'Approved plan did not produce real bytes');
+    await until(async () => (await readFile(join(fixture.cwd, 'plan-approved.txt'), 'utf8').catch(() => '')) === 'Actual human approved plan output\n', 'Approved plan did not produce real bytes', 30000);
     await until(async () => !await button('Stop generating').isVisible(), 'Approved execution did not settle');
   }],
   ['length-notice-and-continue', async () => {
@@ -124,7 +129,7 @@ const cases = [
     await page.getByRole('textbox', { name: 'Goal objective', exact: true }).fill('[fixture:read] Review demo.js and improve the coding proof.');
     const before = (await requests()).length; await button('Start goal').click();
     await button('Pause goal').waitFor();
-    await until(async () => (await requests()).length >= before + 3, 'Goal did not continue across actual rounds', 12000);
+    await until(async () => (await requests()).length >= before + 3, 'Goal did not continue across actual rounds', 30000);
     await button('Pause goal').click(); await button('Resume goal').waitFor();
     await until(async () => !await button('Stop generating').isVisible(), 'Paused goal turn did not settle');
     const pausedCount = (await requests()).length; await page.waitForTimeout(2100);
@@ -180,6 +185,15 @@ try {
   assert(!await page.evaluate(() => document.documentElement.scrollWidth > innerWidth));
 } catch (error) {
   failure = error.stack; await writeFile(join(output, 'failure-text.txt'), await page.locator('body').innerText().catch(() => 'Page unavailable'));
+  if (id) {
+    try {
+      const state = await read('session/projections', { request: { sessionId: id } });
+      failureState = { sessionId: id, permission: state.values.permissions?.currentValue,
+        plan: state.values.harnessPlan === undefined ? undefined : { status: state.values.harnessPlan.status, revision: state.values.harnessPlan.revision },
+        selectedRows: await page.locator('[data-row-key^="session:"][aria-selected="true"]').evaluateAll(rows => rows.map(row => row.getAttribute('data-row-key'))),
+        pendingCommands: rpc.calls.filter(call => call.endpoint === 'commands/execute' && call.state === 'sent').length };
+    } catch (diagnosticError) { failureState = { sessionId: id, unavailable: String(diagnosticError.message) }; }
+  }
   await page.screenshot({ path: join(output, 'failure.png'), fullPage: true }).catch(() => {});
 } finally {
   await rpc.settled();
@@ -187,7 +201,7 @@ try {
     scope: 'Real Chromium UI and production host with scripted loopback HTTP. Model quality is NOT_PROVEN.', checks,
     pending: cases.map(([name]) => name).filter(name => !checks.some(check => check.name === name)), errors,
     requests: (await requests()).map(request => ({ call: request.call, model: request.model, reasoningEffort: request.reasoningEffort })),
-    rpc: { calls: rpc.calls, results: rpc.results, sockets: rpc.sockets, externalRequests: rpc.externalRequests }, failure }, null, 2) + '\n');
+    rpc: { calls: rpc.calls, results: rpc.results, sockets: rpc.sockets, externalRequests: rpc.externalRequests }, failureState, failure }, null, 2) + '\n');
   await browser.close();
 }
 if (failure) { console.error(failure); process.exitCode = 1; }

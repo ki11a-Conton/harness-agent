@@ -21,7 +21,10 @@ const output = path.resolve(values.output), fixtureRoot = path.join(output, 'fix
 await mkdir(output, { recursive: true });
 let upstream;
 let transportLatency = 0;
+let transportPaused = false;
 const connections = new Set();
+function pauseTransport() { transportPaused = true; for (const socket of connections) socket.pause(); }
+function resumeTransport() { transportPaused = false; for (const socket of connections) socket.resume(); }
 // Transparent TCP forwarding delays real bytes in order, including existing
 // WebSockets (CDP HTTP throttling alone does not delay established WS frames).
 // No HTTP/RPC payload is parsed, intercepted, substituted or fabricated.
@@ -30,6 +33,7 @@ const relay = createServer(socket => {
   connections.add(socket); connections.add(peer);
   const delay = () => createLatencyStream(() => transportLatency);
   socket.pipe(delay()).pipe(peer); peer.pipe(delay()).pipe(socket);
+  if (transportPaused) { socket.pause(); peer.pause(); }
   for (const [from, to] of [[socket, peer], [peer, socket]]) {
     from.on('error', () => to.destroy()); from.on('close', () => { connections.delete(from); to.destroy(); });
   }
@@ -473,6 +477,29 @@ const cases = {
     assert.equal(await button(page, 'Plugins').count(), 0);
     assert.equal(await page.locator('[data-harness-coding="panel"]').count(), 0);
     check(checks, 'Removed plugin, preset, version and floating coding surfaces have no remaining user-facing entry');
+    await collapseMobile(page);
+    const access = button(page, /^Access mode, current:/);
+    assert.equal(await access.getAttribute('aria-label'), 'Access mode, current: Workspace Write');
+    await access.click();
+    const saved = observations.get(page).waitForResult('commands/execute', 20000);
+    // Pause real TCP reads, not HTTP/RPC data. This deterministically observes
+    // the same pending-save interval that a slow Windows commit exposes.
+    pauseTransport();
+    try {
+      await page.getByRole('menuitem', { name: 'Read Only', exact: true }).click();
+      assert.equal(await access.getAttribute('aria-label'), 'Access mode, current: Workspace Write');
+      assert.equal(await access.getAttribute('aria-busy'), 'true');
+      assert.equal(await access.isDisabled(), true);
+    } finally { resumeTransport(); }
+    const receipt = await saved; if (receipt.error) throw receipt.error; assert.equal(receipt.result.ok, true);
+    await button(page, 'Access mode, current: Read Only').waitFor();
+    await page.reload(); await button(page, 'Access mode, current: Read Only').waitFor({ timeout: 15000 });
+    await button(page, 'Access mode, current: Read Only').click();
+    const restored = observations.get(page).waitForResult('commands/execute', 20000);
+    await page.getByRole('menuitem', { name: 'Workspace Write', exact: true }).click();
+    const restoredReceipt = await restored; if (restoredReceipt.error) throw restoredReceipt.error; assert.equal(restoredReceipt.result.ok, true);
+    await button(page, 'Access mode, current: Workspace Write').waitFor();
+    check(checks, 'Permission labels wait for actual saved state during a real TCP pause and remain correct after reload');
     await sidebar(page); await button(page, 'Automation tasks').click(); await collapseMobile(page);
     await page.locator('input[aria-label="Search tasks"]').waitFor();
     await button(page, 'Enabled').click(); await button(page, 'Inactive').click(); await button(page, 'All').click();
@@ -550,7 +577,7 @@ const planned = viewports.flatMap(viewport => Object.keys(cases).filter(name => 
 const pending = planned.filter(item => !results.some(result => result.viewport === item.viewport && result.name === item.name));
 const report = { status: results.length === planned.length && results.length > 0 && results.every(r => r.status === 'PASS') ? 'PASS' : 'FAIL',
   complete: pending.length === 0, pending, paidModelCalls: 0,
-  origin, upstreamOrigin: upstream.origin, latency: '350 ms one-way byte arrival delay in each direction during named race scenarios; preserves order without per-chunk bandwidth throttling', fixture: {
+  origin, upstreamOrigin: upstream.origin, latency: '350 ms one-way byte arrival delay during named race scenarios, plus a bounded real TCP pause during the permission-save check; no payload substitution or per-chunk bandwidth throttling', fixture: {
     launchId: fixture.launchId, compiledDigest: fixture.compiledDigest, installed: fixture.installed, sourceSha: fixture.sourceSha },
   driverSha256: createHash('sha256').update(await readFile(new URL(import.meta.url))).digest('hex'),
   engine: { node: process.version, chromium: browser.version(), viewportScope: 'Desktop Chromium responsive sizes; no physical mobile or Windows claim' },

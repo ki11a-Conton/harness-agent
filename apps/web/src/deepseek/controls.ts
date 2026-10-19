@@ -44,7 +44,7 @@ export function createControlsService(host: ControlsHost) {
       // A durable after-write fence invalidates control projections even when
       // their poll observed the earlier intent before the file committed.
       await host.harness.events.appendNew({ id: newEventId(), sessionId: id as SessionId, timestamp: Date.now(), type: "tool.completed",
-        payload: { tool: tool.name, hostOnly: true, kind: "web_session_controls", outputPreview: JSON.stringify({ permission: next.permission,
+        payload: { tool: tool.name, hostOnly: true, kind: "web_controls_committed", outputPreview: JSON.stringify({ permission: next.permission,
           plan: { status: next.plan.status, revision: next.plan.revision }, goal: next.goal === undefined ? null : { id: next.goal.id, revision: next.goal.revision, phase: next.goal.phase },
           compactionPending: next.compaction?.pending ?? false }) } });
       return result;

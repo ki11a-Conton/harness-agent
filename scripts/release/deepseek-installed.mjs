@@ -142,7 +142,8 @@ try {
       for (const item of cases.filter(item => item.status !== 'PASS').slice(0, remainingDiagnostics)) {
         remainingDiagnostics--;
         console.error('::error title=Installed UI case failed::' + escape(JSON.stringify({
-          phase, name: item.name, viewport: item.viewport, status: item.status, failure: item.failure,
+          phase, name: item.name, viewport: item.viewport, status: item.status,
+          ...(report.failureState === undefined ? {} : { failureState: report.failureState }), failure: item.failure,
         }).slice(0, 2000)));
       }
     } catch (diagnosticError) { console.error('Installed UI ' + phase + ' diagnostics unavailable: ' + diagnosticError.message); }

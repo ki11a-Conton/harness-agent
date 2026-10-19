@@ -308,6 +308,15 @@ export function projectSessionHistory(input: SessionProjectionInput): PageProjec
     }
     if (event.payload.hostOnly === true && !(event.type === "tool.completed" && toolNameOf(event.payload) === "web_workspace_changes"
       && event.payload.status === "success" && event.payload.derived === true)) {
+      if (event.type === "tool.completed" && toolNameOf(event.payload) === "web_session_metadata"
+        && event.payload.kind === "web_controls_committed") {
+        // This real after-write fence must advance the official wire cursor:
+        // the native projection store rejects changed values at the same seq.
+        // Carry only its identity, never private metadata or command inputs.
+        // The older web_session_controls kind stays ignored: replaying an
+        // existing journal must not renumber its previously published prefix.
+        appendHarnessEvent(append, { ...event, payload: { hostOnly: true, tool: "web_session_metadata", kind: "web_controls_committed" } });
+      }
       // Private file/terminal/settings tools belong to the host UI, never to
       // a model attempt. Do not expose their inputs or fabricate chat tools.
       framesBySourceSequence.set(event.sequence, frameBatch); sourceCursor = event.sequence; continue;

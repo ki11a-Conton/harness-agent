@@ -49,6 +49,22 @@ it('PR15 controls are session-scoped and do not mutate frozen agent policy', asy
   expect(persisted.sessions[f.sessionId].controls.permission).toBe('read-only');
 });
 
+it('PR15 a committed control-only mutation advances the native projection watermark', async () => {
+  const f = await fixture(); await f.command('/plan on'); // Keep the goal driver inactive.
+  const snapshot = () => f.composition.sessions.call('session/projections', { request: { sessionId: f.sessionId } }, signal()) as Promise<{ asOfSeq: number; values: Record<string, unknown> }>;
+  const before = await snapshot(); expect(before.asOfSeq).toBeGreaterThanOrEqual(0);
+  await f.composition.activity.call('goals/create', { agentId: f.sessionId, request: { objective: 'CONTROL_PROJECTION_PRIVATE_GOAL' } }, signal());
+  const after = await snapshot(); expect(JSON.stringify(after.values.goal)).toContain('CONTROL_PROJECTION_PRIVATE_GOAL');
+  // The retained native store rejects seq <= its current row, even if the
+  // value changed. A real post-commit fence must advance the wire cursor.
+  expect(after.asOfSeq).toBeGreaterThan(before.asOfSeq);
+  const page = await f.composition.sessions.call('session/page', { request: { address: { kind: 'session', sessionId: f.sessionId }, throughSeq: after.asOfSeq } }, signal()) as { records: Array<{ event: { seq: number; type: string; ignorable?: boolean } }> };
+  const fence = page.records.find(record => record.event.seq === after.asOfSeq)!;
+  expect(fence.event).toMatchObject({ type: 'harness/tool.completed', ignorable: true });
+  expect(JSON.stringify(fence)).not.toContain('CONTROL_PROJECTION_PRIVATE_GOAL');
+  expect(await f.composition.harness.inbox.listAll(f.sessionId as SessionId)).toHaveLength(0);
+});
+
 it('PR15 mode guidance is included in the actual context budget without promoting the user goal to system authority', async () => {
   const f = await fixture();
   const owner = await f.composition.owners.ownerOf(f.sessionId), nativeId = f.composition.owners.nativeSessionId(f.sessionId);
@@ -83,14 +99,28 @@ it('PR15 read-only guidance is budgeted and isolated from another session', asyn
 
 it('PR15 goal continuation uses a real durable inbox and stops at its round budget', async () => {
   const f = await fixture();
+  const owner = await f.composition.owners.ownerOf(f.sessionId), execute = owner.orchestrator.executeBound.bind(owner.orchestrator);
+  let delayed = false;
+  owner.orchestrator.executeBound = async (request, context) => {
+    if (!delayed && request.binding.definition.name === 'write_file') {
+      delayed = true;
+      // One legitimate slow operation exceeds the old six-second assertion.
+      // Still use the real binding, permission engine, sandbox and file tool.
+      await new Promise(resolve => setTimeout(resolve, 7200));
+    }
+    return execute(request, context);
+  };
   await f.composition.activity.call('goals/create', { agentId: f.sessionId, request: { objective: 'Write the proof and verify', maxGoalRounds: 1 } }, signal());
-  await expect.poll(async () => (await f.composition.controls.read(f.sessionId)).goal?.phase, { timeout: 6000 }).toBe('blocked');
+  // Include the deliberate 7.2s operation, durable admission/settlement and the
+  // next driver tick. Six seconds rejected legal progress on native Windows.
+  await expect.poll(async () => (await f.composition.controls.read(f.sessionId)).goal?.phase, { timeout: 30000 }).toBe('blocked');
+  expect(delayed).toBe(true);
   const goal = (await f.composition.controls.read(f.sessionId)).goal!;
   expect(goal.roundsStarted).toBe(1); expect(goal.blockedReason?.code).toBe('round-limit');
   const inbox = await f.composition.harness.inbox.listAll(f.sessionId as SessionId);
   expect(inbox).toHaveLength(1); expect(inbox[0]!.status).toBe('consumed');
   expect(await readFile(join(f.cwd, 'proof.txt'), 'utf8')).toBe('real bytes');
-});
+}, 40000);
 
 it('PR15 manual compression emits an actual context event and retains the full transcript', async () => {
   const f = await fixture(); await f.command('/permission read-only'); await f.command('/compact');

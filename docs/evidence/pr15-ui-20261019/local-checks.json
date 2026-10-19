@@ -272,6 +272,152 @@
       "scenarios": 2,
       "assertions": 10,
       "caseCount": 2
+    },
+    {
+      "file": "full-clean-a10e15b8.json",
+      "bytes": 3627047,
+      "sha256": "fcda42217d1d53265e16c89be2292e8ae7a5e4d4b52fa974a37381a00251f769",
+      "passed": 10057,
+      "failed": 0,
+      "skipped": 16
+    },
+    {
+      "file": "full-source-a10e15b8.json",
+      "bytes": 267,
+      "sha256": "d5c25c1a95e9a25979c666612c94d85ec48d3c6a08a42e2ffbb3011efde3df2f"
+    },
+    {
+      "file": "ci-a10e15b8/runs.json",
+      "bytes": 61227,
+      "sha256": "9d245c860c4021f390ba86492f1c168770170aebbff77478b4c7da3a730a19ea"
+    },
+    {
+      "file": "ci-a10e15b8/annotations-118195869069.json",
+      "bytes": 3282,
+      "sha256": "eb5e587d5d0b8d2ca886bf60328539f9f4a167b73e0e29f5d5df810dba2bf0ae"
+    },
+    {
+      "file": "ci-a10e15b8/annotations-118195424515.json",
+      "bytes": 13847,
+      "sha256": "52c17e2789522afb146f9bb26d52abfeff1d34f86646dad8cfefd61aa1770b0c"
+    },
+    {
+      "file": "permission-ui-before.log",
+      "bytes": 2928,
+      "sha256": "1b554c8d20ab80a75feb359437eecf534464e43cfb38249d4febb2a4406b3668"
+    },
+    {
+      "file": "permission-ui-after.log",
+      "bytes": 650,
+      "sha256": "91804cd23dbd3d755b7af554a4f6b01c96fb79bd46599929a82d5de9c828cbe9"
+    },
+    {
+      "file": "permission-network-before/result.json",
+      "bytes": 12510,
+      "sha256": "477f35bfb08cd4111cc64842a31a7f234a48516fa35e1ecd97ae60a5358b760d",
+      "status": "FAIL",
+      "complete": true,
+      "caseCount": 1,
+      "pendingCount": 0
+    },
+    {
+      "file": "permission-network-after/result.json",
+      "bytes": 63324,
+      "sha256": "5fecfebb801a50dcb9ddbc2abcd19e22d7523a26a7b0c83270623ab888278c7d",
+      "status": "PASS",
+      "complete": true,
+      "caseCount": 3,
+      "pendingCount": 0
+    },
+    {
+      "file": "goal-slow-operation-before.json",
+      "bytes": 6942,
+      "sha256": "35ce4ed530163ac84bd03986a3b3dd8b854249aa2949a4b8b3920611dd78d655",
+      "passed": 0,
+      "failed": 1,
+      "skipped": 21
+    },
+    {
+      "file": "goal-slow-operation-after.json",
+      "bytes": 6957,
+      "sha256": "bb1160e98bd915a975da2560873187e8d294a486a70dd2d9083f84a16d151e6b",
+      "passed": 22,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "file": "permission-e2e-final/result.json",
+      "bytes": 21862,
+      "sha256": "df35a261b0880e72260563b2482ec54a4b0156a4f36016af9eae9385ad6e2fe0",
+      "status": "FAIL",
+      "pendingCount": 6
+    },
+    {
+      "file": "control-watermark-before.json",
+      "bytes": 6941,
+      "sha256": "12574343598e6e9a5c48ae19d40e0fab01b01b9c84b6a146170a4e01b67c066b",
+      "passed": 0,
+      "failed": 1,
+      "skipped": 22
+    },
+    {
+      "file": "control-watermark-after.json",
+      "bytes": 14176,
+      "sha256": "84ba1ff3a044289f376357300c5fc6393e820d1080a732a1a535a1d5bb1b271b",
+      "passed": 37,
+      "failed": 1,
+      "skipped": 0
+    },
+    {
+      "file": "control-watermark-after2.json",
+      "bytes": 13487,
+      "sha256": "e4cb11940172f0a4685c8ed85b368eb51b550adcbf4fdcf002112ecc950656ea",
+      "passed": 38,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "file": "control-committed-final.json",
+      "bytes": 13484,
+      "sha256": "d7457dd04e7b3bcbc8020ef7aaec229c76a32f61cfb06fb22e68134e802cc4f2",
+      "passed": 38,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "file": "permission-committed-e2e/result.json",
+      "bytes": 55105,
+      "sha256": "567de366bb9a23de85d7c714400642a13b609f0146601af589d07a4b8320f7ea",
+      "status": "PASS",
+      "pendingCount": 0
+    },
+    {
+      "file": "node-permission-final.log",
+      "bytes": 3205,
+      "sha256": "1f091c517c9e620e2a96ddb9c15f92b41df273aa7d13dec8eb9e1b38d50e1c12"
+    },
+    {
+      "file": "branding-permission-final/result.json",
+      "bytes": 4271,
+      "sha256": "bd002263713c6bc7c9f614565c586c1e54b79c0937c2c96680d766ff74c6ab03",
+      "status": "PASS",
+      "scenarios": 6,
+      "assertions": 96,
+      "caseCount": 6
+    },
+    {
+      "file": "daily-permission-final/result.json",
+      "bytes": 835815,
+      "sha256": "5cf3b7660e5de2569b637d8ad64ae4cf4c3d6148b4e2dc0826786093e606ac99",
+      "status": "PASS",
+      "complete": true,
+      "caseCount": 42,
+      "pendingCount": 0
+    },
+    {
+      "file": "vendor-post-ci-final.log",
+      "bytes": 332,
+      "sha256": "5306d1a3b01c3d3429d3b3eee05d6e3bafbc72f2a7759667248984009300afbb"
     }
   ]
 }

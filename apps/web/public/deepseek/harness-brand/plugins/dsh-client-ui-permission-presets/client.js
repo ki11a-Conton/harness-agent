@@ -189,6 +189,7 @@ window.__ModuleLoader__.load({
 		/** Simplified Chinese dictionary for the current-session popup gate. */
 		const accessZh = {
 			"mode": "访问模式，当前：{name}",
+ "save.pending": "正在保存权限…",
 			"close": "关闭",
 			"preset.readOnly": "仅可查看",
 			"preset.workspaceWrite": "工作区内修改",
@@ -209,6 +210,7 @@ window.__ModuleLoader__.load({
 		/** English dictionary for the current-session popup gate. */
 		const accessEn = {
 			"mode": "Access mode, current: {name}",
+ "save.pending": "Saving permissions…",
 			"close": "Close",
 			"preset.readOnly": "Read Only",
 			"preset.workspaceWrite": "Workspace Write",
@@ -308,6 +310,7 @@ window.__ModuleLoader__.load({
 			const selection = useProjection("permissions");
 			const catalog = usePermissionCatalog((state) => state.value);
 			const [pick, setPick] = (0, react.useState)(null);
+ const [error, setError] = (0, react.useState)("");
 			const [open, setOpen] = (0, react.useState)(false);
 			const [confirmation, setConfirmation] = (0, react.useState)(null);
 			const [acknowledged, setAcknowledged] = (0, react.useState)(false);
@@ -323,7 +326,7 @@ window.__ModuleLoader__.load({
 				selection
 			]);
 			if (selection === void 0 || catalog === null) return null;
-			const currentValue = pick !== null && catalog.options.some((option) => option.value === pick) ? pick : selection.currentValue;
+			const currentValue = selection.currentValue;
 			const current = catalog.options.find((option) => option.value === currentValue);
 			const currentLabel = current === void 0 ? permissionLabel(currentValue, currentValue, t) : permissionLabel(current.value, current.name, t);
 			const busy = pick !== null || confirmation !== null;
@@ -347,12 +350,12 @@ window.__ModuleLoader__.load({
 					...icon === void 0 ? {} : { icon }
 				};
 			});
-			const submit = (id) => {
-				setPick(id);
-				select(id).catch(() => false).then(() => {
-					setPick(null);
-				});
-			};
+			const submit = async (id) => {
+      setPick(id); setError("");
+      try { if (await select(id) === false) throw new Error("Permission change was rejected"); }
+      catch (failure) { setError(failure instanceof Error ? failure.message : String(failure)); }
+      finally { setPick(null); }
+    };
 			const choose = (id) => {
 				setOpen(false);
 				if (id === selection.currentValue) return;
@@ -393,6 +396,7 @@ window.__ModuleLoader__.load({
 					"aria-label": t("mode", { name: currentAccessibleLabel }),
 					title: current === void 0 ? void 0 : optionDescription(current, t),
 					disabled: locked || busy,
+ "aria-busy": pick !== null,
 					onClick: () => {
 						setOpen(!open);
 					},
@@ -417,7 +421,9 @@ window.__ModuleLoader__.load({
 						})
 					]
 				})
-			}), confirmation !== null && (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.RiskConfirmation, {
+			}), pick !== null ? (0, react_jsx_runtime.jsx)("span", { role: "status", "data-harness-permission-pending": true, children: t("save.pending") }) : null,
+      error ? (0, react_jsx_runtime.jsx)("span", { role: "alert", "data-harness-permission-error": true, children: error }) : null,
+      confirmation !== null && (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.RiskConfirmation, {
 				open: true,
 				title: confirmationTitle,
 				description: confirmationDescription,
@@ -782,6 +788,7 @@ window.__ModuleLoader__.load({
 				const result = await live.command(`/permission ${preset}${preset === "danger-full-access" ? " --confirmed" : ""}`);
 				if (!result.ok) throw new Error(`permission switch failed: ${result.error.code}: ${result.error.message}`);
 				if (!result.value.matched) throw new Error("the host offers no /permission command");
+ if (result.value.result?.kind === "error") throw new Error(result.value.result.text || "Permission command failed");
 				return true;
 			};
 			const catalog = new PermissionCatalogDirectory(ctx);

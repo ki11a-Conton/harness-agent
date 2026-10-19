@@ -77,6 +77,36 @@ export function addControlsUi(stem, source) {
     const before = 'live.command(`/permission ${preset}`)';
     if (source.split(before).length !== 2) throw new Error('Unreviewed permission confirmation boundary');
     source = source.replace(before, 'live.command(`/permission ${preset}${preset === "danger-full-access" ? " --confirmed" : ""}`)');
+    const start = source.indexOf('function PermissionSelect('), end = source.indexOf('\n\t\t//#endregion', start);
+    if (start < 0 || end < start) throw new Error('Unreviewed permission component');
+    let component = source.slice(start, end);
+    const replace = (before, after) => {
+      if (component.split(before).length !== 2) throw new Error('Unreviewed permission state boundary: ' + before.slice(0, 60));
+      component = component.replace(before, after);
+    };
+    replace('const [pick, setPick] = (0, react.useState)(null);', 'const [pick, setPick] = (0, react.useState)(null);\n const [error, setError] = (0, react.useState)("");');
+    replace('const currentValue = pick !== null && catalog.options.some((option) => option.value === pick) ? pick : selection.currentValue;',
+      'const currentValue = selection.currentValue;');
+    const submit = /const submit = \(id\) => \{[\s\S]*?\n\t\t\t\};/g;
+    if ([...component.matchAll(submit)].length !== 1) throw new Error('Unreviewed permission save boundary');
+    component = component.replace(submit, `const submit = async (id) => {
+      setPick(id); setError("");
+      try { if (await select(id) === false) throw new Error("Permission change was rejected"); }
+      catch (failure) { setError(failure instanceof Error ? failure.message : String(failure)); }
+      finally { setPick(null); }
+    };`);
+    replace('disabled: locked || busy,', 'disabled: locked || busy,\n "aria-busy": pick !== null,');
+    replace('}), confirmation !== null && (0, react_jsx_runtime.jsx)', `}), pick !== null ? (0, react_jsx_runtime.jsx)("span", { role: "status", "data-harness-permission-pending": true, children: t("save.pending") }) : null,
+      error ? (0, react_jsx_runtime.jsx)("span", { role: "alert", "data-harness-permission-error": true, children: error }) : null,
+      confirmation !== null && (0, react_jsx_runtime.jsx)`);
+    source = source.slice(0, start) + component + source.slice(end);
+    for (const [marker, text] of [['"mode": "Access mode, current: {name}",', 'Saving permissions…'], ['"mode": "访问模式，当前：{name}",', '正在保存权限…']]) {
+      if (source.split(marker).length !== 2) throw new Error('Unreviewed permission locale boundary');
+      source = source.replace(marker, marker + '\n "save.pending": ' + JSON.stringify(text) + ',');
+    }
+    const matched = 'if (!result.value.matched) throw new Error("the host offers no /permission command");';
+    if (source.split(matched).length !== 2) throw new Error('Unreviewed permission result boundary');
+    source = source.replace(matched, matched + '\n if (result.value.result?.kind === "error") throw new Error(result.value.result.text || "Permission command failed");');
   }
   if (stem === 'dsh-client-ui-model-selection') {
     const marker = '}), reasoning !== void 0 && (0, react_jsx_runtime.jsxs)("button", {';
