@@ -22316,8 +22316,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 							(0, react_jsx_runtime.jsxs)("div", {
 								ref: rowRef,
 								className: InputBar_module_css_default.row,
+ "data-harness-composer-row": true,
 								children: [(0, react_jsx_runtime.jsxs)("div", {
 									className: InputBar_module_css_default.tools,
+ "data-harness-composer-tools": true,
 									hidden: activity,
 									children: [
 										(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
@@ -22346,6 +22348,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 										}),
 										(0, react_jsx_runtime.jsxs)("div", {
 											className: InputBar_module_css_default.modes,
+ "data-harness-composer-modes": true,
 											children: [sessionId === void 0 ? null : renderSlot("conversation.input.permission", { locked }), sessionId === void 0 ? null : renderSlot("conversation.input.plan", { locked })]
 										}),
 										input === void 0 || sessionId === void 0 ? null : renderSlot("conversation.input.left", {})

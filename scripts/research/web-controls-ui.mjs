@@ -63,6 +63,11 @@ const registration = String.raw`
 `;
 export function addControlsUi(stem, source) {
   if (stem === 'dsh-client-ui-conversation') {
+    for (const part of ['row', 'tools', 'modes']) {
+      const boundary = `className: InputBar_module_css_default.${part},`;
+      if (source.split(boundary).length !== 2) throw new Error('Unreviewed composer layout boundary: ' + part);
+      source = source.replace(boundary, boundary + `\n "data-harness-composer-${part}": true,`);
+    }
     const marker = '\t\tfunction apply(ctx, config = Config({})) {';
     const at = source.lastIndexOf(marker);
     if (at < 0 || !source.slice(at).includes('conversation.input.left')) throw new Error('Unreviewed conversation control boundary');

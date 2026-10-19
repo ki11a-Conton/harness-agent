@@ -34,7 +34,16 @@
 [data-harness-controls] :is(button, select):hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover); }
 [data-harness-controls] :is(button, select, textarea):focus-visible { outline: 2px solid var(--dsw-focus-ring-color, #2563eb); outline-offset: 2px; }
 [data-harness-controls] :is(button, select):disabled { opacity: .55; cursor: default; }
+[data-harness-controls] > :is(button, select) { flex-shrink: 0; white-space: nowrap; }
 [data-harness-controls] textarea { box-sizing: border-box; width: 100%; max-width: 100%; min-height: 60px; border: 1px solid var(--dsw-alias-border-l1, #d1d5db); border-radius: 6px; padding: 8px; background: var(--dsw-alias-bg-base, transparent); color: inherit; font: inherit; resize: vertical; }
 [data-harness-plan-review] { min-width: 0; max-width: 100%; padding: 6px; }
 [data-harness-plan-review] summary { cursor: pointer; }
 [data-harness-plan-review] pre { max-width: 100%; overflow-wrap: anywhere; }
+/* Slots use display: contents. Wrap their real toolbar, and give controls a
+ * full row on narrow screens rather than squeezing native permission/plan chips. */
+@media (max-width: 600px) {
+  [data-harness-composer-row] { flex-wrap: wrap; row-gap: 8px; }
+  [data-harness-composer-tools] { flex: 1 0 100%; max-width: 100%; flex-wrap: wrap; row-gap: 6px; }
+  [data-harness-composer-modes] { flex-shrink: 0; white-space: nowrap; }
+  [data-harness-controls] { flex: 1 0 100%; width: 100%; }
+}

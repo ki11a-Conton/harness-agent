@@ -70,6 +70,15 @@ try {
         assert.equal(surface.whaleSvgs, 0, label + ': upstream whale/wordmark rendered');
         assert(!surface.images.some(src => /onboarding-welcome|favicon-dark|\/deepseek\/favicon\.svg/.test(src ?? '')), label + ': original illustration visible');
         assert(!surface.overflow, label + ': horizontal overflow');
+        if (dimensions.width <= 600 && ['plan-mode', 'goal-editor'].includes(label)) {
+          const layout = await page.locator('[data-harness-controls]').evaluate(element => {
+            let parent = element.parentElement;
+            while (parent && getComputedStyle(parent).display === 'contents') parent = parent.parentElement;
+            return { width: element.getBoundingClientRect().width, available: parent?.getBoundingClientRect().width ?? 0 };
+          });
+          assert(layout.available > 0, label + ': controls need a real containing box');
+          assert(layout.width >= layout.available - 2, label + ': narrow controls need their own full row ' + JSON.stringify(layout));
+        }
         if (requireMark) {
           assert(surface.marks.length > 0, label + ': actual brand slot must render');
           assert(surface.marks.every(value => value === markPath), label + ': incorrect mark artwork');

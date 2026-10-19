@@ -62,6 +62,26 @@ const cases = [
     await button('Settings').click(); const settings = await page.locator('body').innerText();
     assert(!/插件|\bPlugins\b|Agent presets|Agent 预设|Current version|当前版本/u.test(settings));
     await button('Close').click();
+    await page.setViewportSize({ width: 320, height: 1100 });
+    const mode = page.getByRole('combobox', { name: 'Task mode', exact: true });
+    await mode.selectOption('plan');
+    await until(() => mode.inputValue().then(value => value === 'plan'), 'Narrow plan mode did not settle');
+    const layout = await page.locator('[data-harness-controls]').evaluate(element => {
+      let parent = element.parentElement;
+      while (parent && getComputedStyle(parent).display === 'contents') parent = parent.parentElement;
+      return { width: element.getBoundingClientRect().width, available: parent?.getBoundingClientRect().width ?? 0 };
+    });
+    assert(layout.available > 0, 'Narrow controls must have a real containing box');
+    assert(layout.width >= layout.available - 2, 'Narrow controls need their own full row: ' + JSON.stringify(layout));
+    await page.screenshot({ path: join(output, 'narrow-plan-mode.png'), fullPage: true });
+    await mode.selectOption('default');
+    await until(() => mode.inputValue().then(value => value === 'default'), 'Narrow plan mode did not exit');
+    await mode.selectOption('goal');
+    await page.getByRole('textbox', { name: 'Goal objective', exact: true }).waitFor();
+    await page.screenshot({ path: join(output, 'narrow-goal-editor.png'), fullPage: true });
+    await button('Cancel').click();
+    await page.getByRole('textbox', { name: 'Goal objective', exact: true }).waitFor({ state: 'hidden' });
+    await page.setViewportSize({ width: 1440, height: 900 });
   }],
   ['permission-real-denial-and-confirmation', async () => {
     await permission('Read Only'); await prompt('[fixture:write-deny] PR15 read-only must deny the actual write.');
