@@ -54,6 +54,18 @@ export function createControlsService(host: ControlsHost) {
     return next;
   }
   function revoke(id: string) { for (const controller of inflight.get(id) ?? []) controller.abort(); }
+  function reportBackgroundFailure(context: string, error: unknown) {
+    console.error(`[degraded] web-controls.${context}`, error instanceof Error ? error.message : String(error));
+  }
+  function modeGuidance(state: SessionControls): string {
+    // Only fixed host policy belongs in this channel. The goal itself is user
+    // data, already carried by the durable inbox; never promote it to system.
+    return [
+      state.permission === "read-only" ? "The human selected read-only. Inspect code and explain; do not modify files or run commands." : "",
+      ["draft", "review"].includes(state.plan.status) ? "The human selected PLAN MODE. Inspect using read-only tools, then present a concrete implementation plan with validation steps. Do not write files, execute commands, delegate side effects or implement until the human approves the plan." : "",
+      state.goal?.phase === "active" ? "Continue the user goal from the conversation with concrete verified progress. Respect its round budget and report blockers; do not claim completion without evidence." : "",
+    ].filter(Boolean).join("\n");
+  }
   async function controlled<T extends ToolResult>(id: string, definition: ToolDefinition, context: ToolExecutionContext,
     execute: (context: ToolExecutionContext) => Promise<T>): Promise<T> {
     const controller = new AbortController(), registered = new Set<string>();
@@ -96,6 +108,14 @@ export function createControlsService(host: ControlsHost) {
   }
   function attach(owner: Harness) {
     if (attached.has(owner)) return; attached.add(owner);
+    const build = owner.context.pipeline.build.bind(owner.context.pipeline);
+    owner.context.pipeline.build = async options => {
+      if (options.telemetrySessionId === undefined) return build(options);
+      const guidance = modeGuidance(await read(host.externalSessionId(options.telemetrySessionId)));
+      // Enter the existing authoritative block BEFORE admission/compaction so
+      // the same production budget accounts for every mode instruction.
+      return build(guidance ? { ...options, systemPrompt: [options.systemPrompt, guidance].filter(Boolean).join("\n\n") } : options);
+    };
     const execute = owner.orchestrator.execute.bind(owner.orchestrator);
     const executeBound = owner.orchestrator.executeBound.bind(owner.orchestrator);
     owner.orchestrator.execute = async (request, context) => {
@@ -273,15 +293,7 @@ export function createControlsService(host: ControlsHost) {
     },
     async transform(request: ModelRequest): Promise<ModelRequest> {
       if (closed) fail("gateway/cancelled", "Session controls are closed");
-      const nativeId = request.messages.at(-1)?.sessionId;
-      if (nativeId === undefined) return request;
-      const state = await read(host.externalSessionId(nativeId));
-      const instructions = [
-        state.permission === "read-only" ? "The human selected read-only. Inspect code and explain; do not modify files or run commands." : "",
-        ["draft", "review"].includes(state.plan.status) ? "The human selected PLAN MODE. Inspect using read-only tools, then present a concrete implementation plan with validation steps. Do not write files, execute commands, delegate side effects or implement until the human approves the plan." : "",
-        state.goal?.phase === "active" ? `Current user goal (continue with concrete verified progress):\n${state.goal.objective}` : "",
-      ].filter(Boolean).join("\n");
-      return instructions ? { ...request, system: [request.system, instructions].filter(Boolean).join("\n\n") } : request;
+      return request;
     },
     observe(event: AgentEvent) {
       if (closed) return;
@@ -291,7 +303,7 @@ export function createControlsService(host: ControlsHost) {
           await write(event.sessionId, data => { data.compaction = { pending: current?.pending === true && (event.payload.manual !== true || current.requestedAt > event.timestamp),
             requestedAt: current?.requestedAt ?? event.timestamp, lastCompletedAt: event.timestamp }; });
         });
-        pending.add(action); void action.catch(() => {}).finally(() => pending.delete(action)); return;
+        pending.add(action); void action.catch(error => reportBackgroundFailure("compaction-projection", error)).finally(() => pending.delete(action)); return;
       }
       if (event.type !== "turn.completed") return;
       const action = serial(event.sessionId, async () => {
@@ -300,7 +312,7 @@ export function createControlsService(host: ControlsHost) {
         const content = messages.filter(message => message.turnId === event.turnId && message.role === "assistant" && !message.toolCalls?.length).map(message => message.content).filter(Boolean).join("\n\n").slice(0, 32000);
         if (content) await write(event.sessionId, data => { data.plan = { status: "review", revision: data.plan.revision + 1, content }; });
       });
-      pending.add(action); void action.catch(() => { /* durable event remains retryable on next projection/turn */ }).finally(() => pending.delete(action));
+      pending.add(action); void action.catch(error => reportBackgroundFailure("plan-projection", error)).finally(() => pending.delete(action));
     },
     async start() {
       if (closed || timer !== undefined) return;
@@ -312,7 +324,7 @@ export function createControlsService(host: ControlsHost) {
         }
       }
       if (closed) return;
-      timer = setInterval(() => { if (driving !== undefined || closed || activeGoals.size === 0) return; driving = drive().catch(() => { /* no receipt is fabricated; retry durable claim on next tick */ }).finally(() => { driving = undefined; }); }, 1000); timer.unref();
+      timer = setInterval(() => { if (driving !== undefined || closed || activeGoals.size === 0) return; driving = drive().catch(error => reportBackgroundFailure("goal-drive", error)).finally(() => { driving = undefined; }); }, 1000); timer.unref();
     },
     async stopGoal(id: string) { await serial(id, async () => { if ((await read(id)).goal?.phase === "active") await write(id, data => { data.goal!.phase = "paused"; data.goal!.revision++; data.goal!.updatedAt = Date.now(); }); }); },
     async close() { closed = true; activeGoals.clear(); if (timer !== undefined) clearInterval(timer); for (const id of inflight.keys()) revoke(id); await driving; await Promise.allSettled([...pending]); },

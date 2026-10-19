@@ -49,6 +49,38 @@ it('PR15 controls are session-scoped and do not mutate frozen agent policy', asy
   expect(persisted.sessions[f.sessionId].controls.permission).toBe('read-only');
 });
 
+it('PR15 mode guidance is included in the actual context budget without promoting the user goal to system authority', async () => {
+  const f = await fixture();
+  const owner = await f.composition.owners.ownerOf(f.sessionId), nativeId = f.composition.owners.nativeSessionId(f.sessionId);
+  const frozenBefore = JSON.stringify(await owner.runtime.getSessionAgent(nativeId));
+  const build = () => owner.context.pipeline.build({ cwd: f.cwd, telemetrySessionId: nativeId, systemPrompt: 'Base policy.', priorBlocks: [], messages: [],
+    budget: { maxTokens: 2000, reserved: { system: 0, task: 0, output: 0 }, dynamic: 2000 } });
+  const initial = await build();
+  await f.command('/plan on');
+  const objective = ('GOAL_DATA_ONLY_' + 'user-supplied objective '.repeat(500)).trim();
+  await f.command('/goal ' + objective);
+  const planned = await build(), system = planned.blocks.find(block => block.source === 'system')!;
+  expect(system.content).toContain('PLAN MODE');
+  expect(system.content).not.toContain('GOAL_DATA_ONLY_');
+  expect(system.tokens).toBeGreaterThan(initial.blocks.find(block => block.source === 'system')!.tokens);
+  expect(planned.report.used).toBe(planned.blocks.reduce((sum, block) => sum + block.tokens, 0));
+  expect(planned.report.used).toBeLessThan(500);
+  expect((await f.composition.controls.read(f.sessionId)).goal?.objective).toBe(objective);
+  await f.command('/goal pause'); await f.command('/plan off');
+  expect((await build()).blocks.find(block => block.source === 'system')!.content).toBe('Base policy.');
+  expect(JSON.stringify(await owner.runtime.getSessionAgent(nativeId))).toBe(frozenBefore);
+});
+
+it('PR15 read-only guidance is budgeted and isolated from another session', async () => {
+  const f = await fixture(); await f.command('/permission read-only');
+  const second = await f.composition.sessions.call('session/create', { request: {} }, signal()) as { sessionId: string };
+  const build = async (id: string) => (await f.composition.owners.ownerOf(id)).context.pipeline.build({ cwd: f.cwd,
+    telemetrySessionId: f.composition.owners.nativeSessionId(id), systemPrompt: 'Base policy.', priorBlocks: [], messages: [],
+    budget: { maxTokens: 2000, reserved: { system: 0, task: 0, output: 0 }, dynamic: 2000 } });
+  expect((await build(f.sessionId)).blocks.find(block => block.source === 'system')!.content).toContain('human selected read-only');
+  expect((await build(second.sessionId)).blocks.find(block => block.source === 'system')!.content).toBe('Base policy.');
+});
+
 it('PR15 goal continuation uses a real durable inbox and stops at its round budget', async () => {
   const f = await fixture();
   await f.composition.activity.call('goals/create', { agentId: f.sessionId, request: { objective: 'Write the proof and verify', maxGoalRounds: 1 } }, signal());

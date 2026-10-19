@@ -62,7 +62,7 @@ describe("Official Web platform HTTP routes", () => {
     const boot = JSON.parse(await readFile(new URL("../../public/deepseek/boot-manifest.json", import.meta.url), "utf8")) as {
       entries: Array<{ id: string; rev: string; url: string; brandOverride?: boolean }>;
     };
-    const derivatives = boot.entries.filter(row => row.brandOverride); expect(derivatives).toHaveLength(13);
+    const derivatives = boot.entries.filter(row => row.brandOverride); expect(derivatives).toHaveLength(19);
     expect(derivatives.map(row => row.id)).toContain("@deepseek-ai/dsh-client-ui-conversation");
     expect(derivatives.map(row => row.id)).toContain("@deepseek-ai/dsh-client-ui-chat");
     expect(derivatives.map(row => row.id)).toContain("@deepseek-ai/dsh-client-ui-workspace");
@@ -70,6 +70,9 @@ describe("Official Web platform HTTP routes", () => {
     expect(derivatives.map(row => row.id)).toContain("@deepseek-ai/dsh-api-terminal-controller");
     expect(derivatives.map(row => row.id)).toContain("@deepseek-ai/dsh-client-connection");
     expect(derivatives.map(row => row.id)).toContain("@deepseek-ai/dsh-client-ui-settings-general");
+    for (const module of ["agent-preset", "settings-plugins", "settings-plugin-inventory", "permission-presets", "model-selection", "goal"]) {
+      expect(derivatives.map(row => row.id)).toContain(`@deepseek-ai/dsh-client-ui-${module}`);
+    }
     for (const row of derivatives) {
       const served = await fetch(base + row.url); expect(served.status).toBe(200);
       const text = await served.text(); expect(text).not.toContain("DeepSeek Harness");
