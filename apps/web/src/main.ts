@@ -116,7 +116,7 @@ async function startMain(lease: DataDirLease | undefined): Promise<number> {
     } } : {},
     initialCredentials: process.env.OPENAI_API_KEY ? { OPENAI_API_KEY: process.env.OPENAI_API_KEY } : {},
     environment: { ...process.env },
-  }, { installRouteResolver: routedProvider.install }); }
+  }, { installRouteResolver: routedProvider.install, installRequestTransform: routedProvider.installRequestTransform }); }
   catch (error) { await harness.close(); throw error; }
   const server = new WebServer({
     adapter,

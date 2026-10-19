@@ -144,6 +144,7 @@ export function projectSessionHistory(input: SessionProjectionInput): PageProjec
   const { session, events, messages } = input;
   const initialModel = session.modelSelection?.initialModel ?? session.model;
   const plan = planMessageAnchors(input);
+  const outputLimitedTurns = new Set(input.events.filter(event => event.type === "model.completed" && event.payload.finishReason === "length").map(event => event.turnId));
   const activity = createActivityProjection(session, messages, input.children, input.agentPreset);
   const records: SessionHistoryRecord[] = [];
   const sourceSequenceBySeq: number[] = [];
@@ -391,7 +392,7 @@ export function projectSessionHistory(input: SessionProjectionInput): PageProjec
         append("turn/end", event.timestamp, { turn, reason: event.type === "turn.cancelled"
           ? { kind: "aborted", reason: { kind: "user" } }
           : event.type === "turn.failed" ? { kind: "error", error: failureOf(event.payload.error) }
-            : event.payload.terminationReason === "max_tokens" ? { kind: "max-tokens" } : { kind: "completed" } });
+            : (event.payload.terminationReason === "max_tokens" || event.payload.terminationReason === "context_limit" && outputLimitedTurns.has(event.turnId)) ? { kind: "max-tokens" } : { kind: "completed" } });
         openTurnStartSeq = null;
         break;
       default: {

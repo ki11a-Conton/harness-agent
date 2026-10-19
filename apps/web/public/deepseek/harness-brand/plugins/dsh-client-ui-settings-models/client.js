@@ -248,7 +248,7 @@ window.__ModuleLoader__.load({
 					]
 				}), props.expanded ? (0, react_jsx_runtime.jsxs)("div", {
 					className: ModelsSection_module_css_default["modelAdvanced"],
-					children: [["contextWindow", "maxTokens"].map((field) => (0, react_jsx_runtime.jsxs)("label", {
+					children: [(0, react_jsx_runtime.jsxs)("label", { children: [(0, react_jsx_runtime.jsx)("span", { children: t("modelReasoning") }), (0, react_jsx_runtime.jsx)("textarea", { "aria-label": t("modelReasoning") + " " + position, disabled, value: typeof model.reasoningEfforts === "string" ? model.reasoningEfforts : model.reasoningEfforts === undefined ? "" : JSON.stringify(model.reasoningEfforts), placeholder: '{"low":"low","medium":"medium","high":"high"}', onChange: event => { const raw = event.target.value; let value; try { value = raw.trim() ? JSON.parse(raw) : undefined; } catch { value = raw; } props.onFieldChange("reasoningEfforts", value); } })] }), ["contextWindow", "maxTokens"].map((field) => (0, react_jsx_runtime.jsxs)("label", {
 						className: ModelsSection_module_css_default["modelField"],
 						children: [(0, react_jsx_runtime.jsx)("span", {
 							className: ModelsSection_module_css_default["modelFieldLabel"],
@@ -364,7 +364,9 @@ window.__ModuleLoader__.load({
 					index,
 					key: "modelContextInvalid"
 				};
-				const maxTokens = model["maxTokens"];
+				const efforts = model.reasoningEfforts;
+      if (efforts !== undefined && efforts !== false && (typeof efforts !== "object" || efforts === null || Array.isArray(efforts) || !Object.keys(efforts).some(key => key !== "off") || Object.entries(efforts).some(([key, wire]) => !["off","minimal","low","medium","high","xhigh","max"].includes(key) || typeof wire !== "string" || !/^[A-Za-z0-9_-]{1,100}$/.test(wire)))) return { index, key: "modelReasoningInvalid" };
+      const maxTokens = model["maxTokens"];
 				if (maxTokens !== void 0 && (typeof maxTokens !== "number" || !Number.isInteger(maxTokens) || maxTokens <= 0)) return {
 					index,
 					key: "modelMaxTokensInvalid"
@@ -2894,7 +2896,7 @@ window.__ModuleLoader__.load({
 			modelId: "Model ID",
 			modelName: "Display name",
 			modelNamePlaceholder: "Uses the model ID when empty",
-			contextWindow: "Context window",
+			modelReasoning: "Supported reasoning levels (JSON; leave empty if unsupported)", modelReasoningInvalid: "Invalid reasoning level map", contextWindow: "Context window",
 			contextWindowPlaceholder: "Uses the provider default",
 			maxTokens: "Max output tokens",
 			maxTokensPlaceholder: "Uses the provider default",
@@ -3010,7 +3012,7 @@ window.__ModuleLoader__.load({
 			modelId: "模型 ID",
 			modelName: "显示名称",
 			modelNamePlaceholder: "留空时使用模型 ID",
-			contextWindow: "上下文窗口",
+			modelReasoning: "支持的推理档位（JSON；不支持请留空）", modelReasoningInvalid: "推理档位映射无效", contextWindow: "上下文窗口",
 			contextWindowPlaceholder: "使用提供商默认值",
 			maxTokens: "最大输出 token 数",
 			maxTokensPlaceholder: "使用提供商默认值",

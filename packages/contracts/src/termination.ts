@@ -79,6 +79,7 @@ export function isTerminationReason(value: unknown): value is TerminationReason 
  */
 export const LIMIT_TERMINATION_REASON: Readonly<Record<string, TerminationReason>> = {
   maxTokens: "context_limit",
+  maxOutputTokens: "context_limit",
   maxDurationMs: "time_limit",
   maxToolCalls: "tool_limit",
   maxRepeatedToolCalls: "tool_limit",

@@ -1,0 +1,107 @@
+{
+  "baseMain": "2617098bdcb50cba8e1ac2db9c29dd94ae797aa0",
+  "prHead": "13ca69e73826f3bf3df707931161c1d344046333",
+  "paidModelCalls": 0,
+  "realModelQuality": "NOT_PROVEN",
+  "scope": "Precommit focused checks; overlapping suites are not additive. Clean fixed-commit full tests and exact CI are recorded in the external final acceptance report.",
+  "checks": [
+    {
+      "file": "length-before.json",
+      "bytes": 17390,
+      "sha256": "8c36ae681ec8d73499bd38113baff5b74fa662bb768c1808fefd5ad521e53571",
+      "passed": 25,
+      "failed": 6,
+      "skipped": 0
+    },
+    {
+      "file": "length-after.json",
+      "bytes": 35129,
+      "sha256": "fd84b3b257e26b52c9d795fe9d0b2e406f142a6686c6b3fd39808b3f88e5345d",
+      "passed": 79,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "file": "compaction-before.json",
+      "bytes": 8565,
+      "sha256": "de461178b35af821d1164265c699595b09acac2babe17975f2cd73156b3c179c",
+      "passed": 0,
+      "failed": 1,
+      "skipped": 24
+    },
+    {
+      "file": "pr15-focused-attempt1.json",
+      "bytes": 38691,
+      "sha256": "f1c6bf83946cb7f255982aac0467c464e3c73c3667ef585773f2e6fe9ad4375e",
+      "passed": 94,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "file": "goal-restart-before.json",
+      "bytes": 5357,
+      "sha256": "1befc80904657444a2c630f82eac2965589b5759827933d708b8846f14c2d85f",
+      "passed": 0,
+      "failed": 1,
+      "skipped": 15
+    },
+    {
+      "file": "goal-restart-after.json",
+      "bytes": 30373,
+      "sha256": "d149023c15328ac7a2c93e0d9167380d2360baa2f3fc8ac82bf05317f212f2f0",
+      "passed": 85,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "file": "precommit-controls.json",
+      "bytes": 6328,
+      "sha256": "1e4356e787903388181143aebbed4454812c818ffce14b2511787b39f04c0c39",
+      "passed": 20,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "file": "fixed-security.json",
+      "bytes": 16121,
+      "sha256": "7df5a63e68d8651b47252ef57d16c433c49654ea1bcc4278617fea53fec5ed03",
+      "passed": 38,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "file": "node-final.log",
+      "bytes": 2924,
+      "sha256": "6ac207d5e20a3c1df1cd1808405fc420bd2488f0587efcf8f70e42a5fb88f538"
+    },
+    {
+      "file": "typecheck-precommit.log",
+      "bytes": 9,
+      "sha256": "faeaa94bcf7012d86f91ca647580449f56a263fb7eaf572c54789764f60a9b8f"
+    },
+    {
+      "file": "docs-verify-corrected.log",
+      "bytes": 1734,
+      "sha256": "c8716cc657cb3a797b552506a248bb1d6f0f51f918b34352665b70c4400e1643"
+    },
+    {
+      "file": "vendor-final-verify.log",
+      "bytes": 332,
+      "sha256": "5306d1a3b01c3d3429d3b3eee05d6e3bafbc72f2a7759667248984009300afbb"
+    },
+    {
+      "file": "branding-controls-final/result.json",
+      "bytes": 4271,
+      "sha256": "bd002263713c6bc7c9f614565c586c1e54b79c0937c2c96680d766ff74c6ab03",
+      "status": "PASS",
+      "checks": 96
+    },
+    {
+      "file": "pr15-browser-attempt8/result.json",
+      "bytes": 55329,
+      "sha256": "d0584f200cefb3a294c52fd211bab25dec1f58f353aac00c01c3b860ef06fb0c",
+      "status": "PASS",
+      "checks": 8
+    }
+  ]
+}

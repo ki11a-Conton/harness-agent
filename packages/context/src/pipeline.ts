@@ -83,6 +83,8 @@ export interface ContextPipelineResult {
   report: ContextReport;
   /** Whether compaction ran in this build. */
   compacted: boolean;
+  /** Explicit one-shot human request, consumed by the same production path. */
+  manualCompaction?: boolean;
   /** P17-8: true when the compaction circuit breaker was OPEN — the build
    *  proceeded WITHOUT compacting (no compact loop). */
   compactionBreakerOpen?: boolean;
@@ -218,6 +220,8 @@ export function estimateMessageTokens(messages: readonly MessageTokenInput[], es
  * the caller untouched.
  */
 export class ContextPipeline {
+  private readonly manualRequests = new Set<string>();
+  requestCompaction(sessionId: string): void { this.manualRequests.add(sessionId); }
   private readonly discovery: InstructionDiscovery;
   private readonly planner: BudgetPlanner;
   private readonly compactor: Compactor;
@@ -277,6 +281,7 @@ export class ContextPipeline {
   }
 
   async build(opts: ContextPipelineBuildOptions): Promise<ContextPipelineResult> {
+    const manualCompaction = opts.telemetrySessionId !== undefined && this.manualRequests.delete(opts.telemetrySessionId);
     // 1. Discovery (async; its errors propagate).
     const discovered = await this.discovery.discover(opts.cwd, opts.instructionOpts);
     const injected: ContextInjection[] = [];
@@ -483,7 +488,7 @@ export class ContextPipeline {
     //    is always 0 from the planner today, but is part of the trigger for
     //    forward-compat with planners that pre-compress.
     const overflow =
-      plan.dropped.length > 0 ||
+      manualCompaction || plan.dropped.length > 0 ||
       plan.report.used > opts.budget.maxTokens ||
       plan.report.compressed > 0;
     if (!overflow) {
@@ -499,7 +504,7 @@ export class ContextPipeline {
     // P17-8: an OPEN breaker stops auto-compaction (no compact loop) — the
     // build proceeds WITHOUT compacting and reports the breaker so the
     // runtime can surface a degraded event.
-    if (this.compactionBreaker !== undefined && !this.compactionBreaker.canCompact) {
+    if (!manualCompaction && this.compactionBreaker !== undefined && !this.compactionBreaker.canCompact) {
       return {
         blocks: plan.selected,
         report: { ...plan.report, messagesTokens },
@@ -587,6 +592,7 @@ export class ContextPipeline {
       blocks,
       report,
       compacted: true,
+      manualCompaction,
       summary: blocks.find((block) => block.id === "compaction-summary"),
       discovered,
       injected,

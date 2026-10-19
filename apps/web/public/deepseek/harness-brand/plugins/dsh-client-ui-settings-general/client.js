@@ -887,7 +887,7 @@ window.__ModuleLoader__.load({
 			"general.currentVersion": "当前版本：{version}",
 			"developerTools.title": "显示代码工作视图",
 			"developerTools.error": "保存失败，请重试",
-			"developerTools.description": "开启后，显示轨迹、本轮代码差异，可选择完整的 Agent 预设切换",
+			"developerTools.description": "开启后，显示轨迹和本轮代码差异",
 			"connection.error": "连接异常，刷新重试",
 			"connection.connecting": "重新连接中",
 			"connection.connected": "连接成功",
@@ -924,7 +924,7 @@ window.__ModuleLoader__.load({
 			"general.currentVersion": "Current version: {version}",
 			"developerTools.title": "Show coding view",
 			"developerTools.error": "Could not save. Please try again.",
-			"developerTools.description": "Shows trajectory, code diffs, and all Agent presets",
+			"developerTools.description": "Shows trajectory and code diffs",
 			"connection.error": "Disconnected",
 			"connection.connecting": "Reconnecting",
 			"connection.connected": "Connected",
@@ -965,12 +965,7 @@ window.__ModuleLoader__.load({
 					setEnabled: (enabled) => ctx.configForms.developerTools.setEnabled(enabled)
 				})
 			}, DeveloperToolsRow));
-			ctx.slots.inject("settings.general.item", () => ctx.slots.register({
-				name: "settings.general.item",
-				id: "current-version",
-				order: 100,
-				locale: NS
-			}, CurrentVersionRow));
+			// The published frontend version is not the host version and is not an end-user setting.
 			ctx.effect(() => ctx.locale.register(NS, {
 				zh,
 				en

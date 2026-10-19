@@ -43,7 +43,7 @@ async function serve(req, res) {
   let raw = ""; for await (const chunk of req) { raw += chunk; if (raw.length > 2_000_000) throw new Error("Fixture request too large"); }
   const request = JSON.parse(raw), call = ++calls;
   await appendFile(resolve(evidence, "requests.jsonl"), JSON.stringify({ launchId, call, model: request.model,
-    messages: request.messages, tools: request.tools?.map(tool => tool.function.name) }) + "\n");
+    messages: request.messages, tools: request.tools?.map(tool => tool.function.name), ...(request.reasoning_effort === undefined ? {} : { reasoningEffort: request.reasoning_effort }) }) + "\n");
   const userIndex = request.messages.findLastIndex(message => message.role === "user");
   const text = String(request.messages[userIndex]?.content ?? "");
   const tail = request.messages.slice(userIndex + 1);
@@ -53,11 +53,17 @@ async function serve(req, res) {
   if (/\[fixture:read\]/.test(text) && !hasTool) tool = { name: "read_file", args: { path: "demo.js" } };
   if (/\[fixture:write\]/.test(text) && !hasTool) tool = { name: "write_file", args: { path: "browser-created.txt", content: "Actual approved browser coding output\n" } };
   if (/\[fixture:write-deny\]/.test(text) && !hasTool) tool = { name: "write_file", args: { path: "browser-rejected.txt", content: "This write must never occur\n" } };
+  if (/\[fixture:plan\]/.test(text) && !hasTool) tool = { name: "write_file", args: { path: "plan-approved.txt", content: "Actual human approved plan output\n" } };
   if (/\[fixture:ask\]/.test(text) && !hasTool && !hasAnsweredQuestion) tool = { name: "ask_user", args: { question: "Which browser target?", reason: "choice_required", options: ["target-blue", "target-red"] } };
   if (tool && !request.tools?.some(candidate => candidate.function.name === tool.name)) throw new Error(`Actual model catalog lacks ${tool.name}`);
   res.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-cache" });
   const frame = (delta, finish_reason = null, usage) => res.write("data: " + JSON.stringify({ id: "local-" + call,
     object: "chat.completion.chunk", choices: [{ index: 0, delta, finish_reason }], ...(usage ? { usage } : {}) }) + "\n\n");
+  if (/\[fixture:length\]/.test(text)) {
+    frame({ content: "Partial coding result retained before the output limit." });
+    frame({}, "length", { prompt_tokens: 32, completion_tokens: 20, total_tokens: 52 });
+    res.end("data: [DONE]\n\n"); return;
+  }
   if (tool) {
     const args = JSON.stringify(tool.args), id = `fixture-tool-${call}`;
     frame({ tool_calls: [{ index: 0, id, type: "function", function: { name: tool.name, arguments: args.slice(0, 12) } }] });
@@ -66,7 +72,8 @@ async function serve(req, res) {
     frame({}, "tool_calls", { prompt_tokens: 32, completion_tokens: 20, total_tokens: 52 });
   } else {
     const answer = "# Actual Harness browser answer\n\n**Bold result** and [local documentation](https://example.invalid/docs).\n\n- First item\n- Second item\n\n| File | Status |\n| --- | --- |\n| demo.js | reviewed |\n\n```js\nexport const value = 1;\n```\n\n" +
-      (hasTool ? "The actual tool result was received.\n" : "") + (hasAnsweredQuestion ? "The browser answer was received.\n" : "");
+      (hasTool ? "The actual tool result was received.\n" : "") + (hasAnsweredQuestion ? "The browser answer was received.\n" : "") +
+      (/\[fixture:plan\]/.test(text) ? "Plan [fixture:plan]: inspect demo.js, write plan-approved.txt, then verify the actual bytes.\n" : "");
     for (const chunk of [answer.slice(0, 30), answer.slice(30, 95), answer.slice(95)]) {
       if (res.destroyed) break; frame({ content: chunk }); await new Promise(done => setTimeout(done, /\[fixture:slow\]/.test(text) ? 2500 : 250));
     }

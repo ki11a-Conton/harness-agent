@@ -4,6 +4,7 @@ import { constants } from "node:fs";
 import { lstat, mkdir, open, unlink } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { feedbackHistorySchema, type FeedbackHistory } from "./feedback-records.js";
+import { controlsSchema, type SessionControls } from "./controls-state.js";
 
 /** Host presentation/admission facts. Runtime snapshots never live in this file. */
 export interface SessionMetadata {
@@ -15,6 +16,7 @@ export interface SessionMetadata {
   feedback?: FeedbackHistory;
   /** UI text keyed by the SHA-256 of immutable model input, including on forks. */
   displayTexts?: Record<string, string>;
+  controls?: SessionControls;
 }
 export interface PromptReceipt {
   fingerprint: string;
@@ -50,6 +52,13 @@ export class SessionMetadataStore {
   constructor(readonly path?: string) {}
 
   async drain(): Promise<void> { await this.chain; }
+
+  /** One bootstrap read; private control drivers must not scan every session
+   * and reread the complete metadata document on each idle timer tick. */
+  async listControls(): Promise<Array<{ sessionId: string; controls: SessionControls }>> {
+    await this.chain;
+    return Object.entries((await this.load()).sessions).flatMap(([sessionId, row]) => row.controls === undefined ? [] : [{ sessionId, controls: structuredClone(row.controls) }]);
+  }
 
   async read(sessionId: string): Promise<SessionMetadata> {
     await this.chain;
@@ -107,6 +116,7 @@ export class SessionMetadataStore {
             || !["claimed", "started", "settled"].includes(String(answer.status))) throw new Error("Invalid answer continuation");
         }
         if (value.feedback !== undefined && !feedbackHistorySchema.safeParse(value.feedback).success) throw new Error("Invalid feedback history");
+        if (value.controls !== undefined && !controlsSchema.safeParse(value.controls).success) throw new Error("Invalid session controls");
         if (value.displayTexts !== undefined && (!record(value.displayTexts) || Object.entries(value.displayTexts).some(([hash, text]) =>
           !/^[a-f0-9]{64}$/.test(hash) || typeof text !== "string" || text.length > 64000))) throw new Error("Invalid session display text");
       }

@@ -44,6 +44,7 @@ import type { ContextPipeline, InstructionDiscoveryOptions } from "@ar/context";
 import { protectedFieldsMissing } from "@ar/context";
 import { AgentState } from "../state/agent-state.js";
 import { protectToolOutputText } from "./tool-output-security.js";
+import { historyCarryover } from "./history-carryover.js";
 import type { RecoveryPolicy } from "../recovery/recovery.js";
 import {
   activeUserMessages,
@@ -161,6 +162,8 @@ export class ContextController {
   ): Promise<ContextUpdate> {
     const { sessionId, turnId, session } = ctx;
     const activeUsers = activeUserMessages(history, turnId);
+    let compaction: { manual: boolean; beforeTokens: number; afterTokens: number } | undefined;
+    let historyTrimmed = false;
     let system = agent.systemPrompt;
     // P32-1/P32-3: step-witness values — the selected skill manifest-of
     // record and the instruction sources (system + AGENTS.md) assembled from
@@ -361,7 +364,8 @@ export class ContextController {
             this.deps.compactCounter.value += 1;
             await this.deps.emit(sessionId, "context.compacted", {
               compressed: 1,
-              reason: "auto-compact (context budget)",
+              reason: built.manualCompaction ? "manual compaction requested by user" : "auto-compact (context budget)",
+              phase: "blocks",
               reactive: false,
               totalCount: this.deps.compactCounter.value,
             }, turnId);
@@ -417,9 +421,11 @@ export class ContextController {
           // the store (transcript fallback). The trim runs BEFORE the
           // system-side overflow check below: the system side has priority.
           if (built.report.used < this.deps.context.budget.maxTokens) {
-            const headroom = this.deps.context.budget.maxTokens - built.report.used;
+            const available = this.deps.context.budget.maxTokens - built.report.used;
             const messagesTokens = built.report.messagesTokens ?? 0;
-            if (messagesTokens > headroom) {
+            const headroom = built.manualCompaction ? Math.min(available, Math.max(this.deps.context.pipeline.estimateMessageTokens(activeUsers), Math.floor(messagesTokens * 0.6))) : available;
+            if (messagesTokens > headroom || built.manualCompaction) {
+              historyTrimmed = true;
               await this.deps.emit(sessionId, "context.compacted", {
                 compressed: 1,
                 reason: "message-history trim (context budget)",
@@ -436,7 +442,14 @@ export class ContextController {
               });
               history = await this.deps.store.listMessages(sessionId);
               const pipeline = this.deps.context.pipeline;
-              history = trimMessageHistory(history, headroom, (message) => pipeline.estimateMessageTokens([message]), activeUsers);
+              const carryover = historyCarryover(history, Math.min(512, Math.floor(headroom / 3)),
+                messages => pipeline.estimateMessageTokens(messages), text => {
+                  const safe = protectToolOutputText(text, { redact: this.deps.outputRedactor, detect: this.deps.injectionDetector });
+                  return safe.injection.hasInjection ? undefined : safe.content;
+                });
+              const reservedNotes = carryover === undefined ? 0 : pipeline.estimateMessageTokens([carryover]);
+              history = trimMessageHistory(history, Math.max(0, headroom - reservedNotes), (message) => pipeline.estimateMessageTokens([message]), activeUsers);
+              if (carryover !== undefined) history = [carryover, ...history];
             }
           }
           // The budget may retain a short recent tail above its estimate, but
@@ -462,6 +475,10 @@ export class ContextController {
               ) };
             }
           }
+          if (built.compacted || historyTrimmed) {
+            compaction = { manual: built.manualCompaction === true, beforeTokens: built.report.messagesTokens ?? 0,
+              afterTokens: this.deps.context.pipeline.estimateMessageTokens(history) };
+          }
         }
 
     // Feedback is based on final blocks, after protected-context overflow
@@ -476,6 +493,11 @@ export class ContextController {
     if (this.deps.onSkillBodiesAdmitted !== undefined && admittedSkillBodies.length > 0) {
       await this.deps.onSkillBodiesAdmitted({ sessionId, turnId, blocks: admittedSkillBodies });
     }
+    if (compaction !== undefined) await this.deps.emit(sessionId, "context.compacted", {
+      phase: "completed", reason: compaction.manual ? "manual context preparation completed" : "automatic context preparation completed",
+      ...compaction, compressed: compaction.afterTokens < compaction.beforeTokens ? 1 : 0,
+      totalCount: this.deps.compactCounter.value,
+    }, turnId);
 
     return {
       action: "proceed",

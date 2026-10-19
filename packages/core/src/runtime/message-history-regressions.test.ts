@@ -126,6 +126,25 @@ const AGENT: AgentDefinition = {
 };
 
 describe("real runtime message-budget regressions", () => {
+  it("PR15 preserves an early coding conclusion and path across real history compaction", async () => {
+    const pipeline = new ContextPipeline({ discovery: { discover: async () => [] } });
+    const store = new MemorySessionStore(), events = new MemoryEventStore();
+    const provider = new RecordingProvider([ScriptedModelProvider.text("continued")]);
+    const runtime = new AgentRuntime({ store, events, modelProvider: provider, orchestrator: new FakeOrchestrator(), agents: [AGENT],
+      toolRegistry: defaultTestToolCatalog(), permissiveToolResolution: true,
+      context: { pipeline, budget: { maxTokens: 1200, reserved: { system: 0, task: 0, output: 0 }, dynamic: 0 } } });
+    const session = await runtime.createSession({ agent: AGENT, cwd: "/history-regression" });
+    await store.appendMessage({ ...message("assistant", "Decision: authenticate the socket before subscribing. File: apps/web/src/socket-auth.ts"), sessionId: session.id });
+    for (let i = 0; i < 25; i++) await store.appendMessage({ ...message(i % 2 ? "assistant" : "user", `${i} ${"noise ".repeat(120)}`), sessionId: session.id });
+    const turn = await runtime.startTurn(session.id, "Continue the socket fix");
+    await runtime.runTurn(session.id, turn.id, new AbortController().signal);
+    const sent = provider.requests[0]!.messages.map(item => item.content).join("\n");
+    expect(sent).toContain("authenticate the socket before subscribing");
+    expect(sent).toContain("apps/web/src/socket-auth.ts");
+    assertToolProtocol(provider.requests[0]!.messages);
+    expect((await store.listMessages(session.id)).length).toBeGreaterThan(25);
+  });
+
   it.each(["tool-arguments", "reasoning", "custom-estimator"])("trims %s using the reported budget while retaining durable evidence", async (scenario) => {
     const estimator = scenario === "custom-estimator" ? { estimate: (text: string) => 4 * Buffer.byteLength(text, "utf8") } : DEFAULT_TOKEN_ESTIMATOR;
     const pipeline = new ContextPipeline({ discovery: { discover: async () => [] }, tokenEstimator: estimator });

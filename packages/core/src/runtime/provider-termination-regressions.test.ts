@@ -63,7 +63,6 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe("R1: incomplete native-provider output never reaches tools or successful verification", () => {
   const abnormal = [
-    { name: "length", suffix: [terminal("length")] },
     { name: "content_filter", suffix: [terminal("content_filter")] },
     { name: "unknown finish reason", suffix: [terminal("unexpected")] },
     { name: "natural EOF", suffix: [] },
@@ -102,7 +101,6 @@ describe("R1: incomplete native-provider output never reaches tools or successfu
   }
 
   it.each([
-    { name: "length", parts: [sse({ choices: [{ delta: { content: "partial answer" }, finish_reason: "length" }] })] },
     { name: "content filter", parts: [sse({ choices: [{ delta: { content: "partial answer" }, finish_reason: "content_filter" }] })] },
     { name: "DONE-only text", parts: [sse({ choices: [{ delta: { content: "partial answer" } }] }), "data: [DONE]\n\n"] },
     { name: "missing body", parts: null },
@@ -114,6 +112,22 @@ describe("R1: incomplete native-provider output never reaches tools or successfu
     expect(outcome.status).toBe("failed");
     expect(env.verify).not.toHaveBeenCalled();
     expect(env.orchestrator.calls).toHaveLength(0);
+  });
+
+  it.each(["", toolIntent, sse({ choices: [{ delta: { tool_calls: [{ index: 0, id: "broken", function: { name: "write_file", arguments: '{"path":"x' } }] } }] })])("ends a length-capped turn without executing any truncated intent or passing verification (%s)", async intent => {
+    const env = setup([...(intent === toolIntent ? [] : [sse({ choices: [{ delta: { content: "partial answer" } }] })]), intent, terminal("length")]);
+    const session = await env.runtime.createSession({ agent: env.agent, cwd: "/offline" });
+    const turn = await env.runtime.startTurn(session.id, "first task");
+    const outcome = await env.runtime.runTurn(session.id, turn.id, new AbortController().signal);
+    expect(outcome.status).toBe("completed"); expect(outcome.error).toBeUndefined();
+    expect(outcome.grade).toBe("unverified_complete"); expect(outcome.terminationReason).toBe("context_limit");
+    expect(env.verify).not.toHaveBeenCalled(); expect(env.orchestrator.calls).toHaveLength(0);
+    expect(env.store.messages.some(message => message.role === "assistant" && message.content === "partial answer")).toBe(true);
+    expect(() => assertToolProtocol(env.store.messages)).not.toThrow();
+    env.fetch.mockResolvedValue(new Response(stop));
+    const next = await env.runtime.startTurn(session.id, "continue");
+    expect((await env.runtime.runTurn(session.id, next.id, new AbortController().signal)).status).toBe("completed");
+    expect(env.fetch).toHaveBeenCalledTimes(2);
   });
 
   it("does not replay rejected intents when resuming the pre-model checkpoint", async () => {

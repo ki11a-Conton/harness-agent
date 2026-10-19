@@ -4,6 +4,7 @@ import { z } from "zod";
 import { newEventId, type Session, type SessionId, type ToolDefinition, type Turn } from "@ar/contracts";
 import type { Harness } from "@ar/harness";
 import { resolveProfile } from "@ar/harness";
+import type { createControlsService } from "./controls.js";
 import { fail, keys, object, pause, string } from "./events.js";
 import type { SessionHost } from "./session.js";
 import { activityStore, type ScheduleDocument, type ScheduleTask } from "./activity-store.js";
@@ -16,6 +17,7 @@ import { resolveScheduleUpdate } from "./schedule-pure/update.js";
 import type { ScheduleCreateRequest, ScheduleRecord, ScheduleTimingChange } from "./schedule-pure/types.js";
 
 export interface ActivityHost extends SessionHost {
+  controls?: ReturnType<typeof createControlsService>;
   now?(): number;
   /** Actual shipped client inventory, from the verified local boot manifest. */
   pluginEntries?: readonly { id: string; version?: string; description?: string }[];
@@ -420,10 +422,19 @@ export function createActivityService(host: ActivityHost) {
         });
       }
       if (endpoint === "permissionPresets/catalog") {
-        keys(args, []); const permissions = host.harness.agents[0]?.permissions ?? resolveProfile(host.harness.profile).permissions;
-        const edits = permissions.rules.find(rule => rule.action === "edit" && rule.resource === "file" && rule.pattern === undefined)?.effect ?? permissions.defaultEffect ?? "ask";
-        const option = { value: host.harness.profile, name: host.harness.profile, description: `Native ${host.harness.profile} composition: file edits ${edits}; existing sessions retain frozen permissions.` };
-        return { options: [option], defaultOptions: [option], defaultPreset: option.value };
+        keys(args, []);
+        if (host.controls === undefined) {
+          const permissions = host.harness.agents[0]?.permissions ?? resolveProfile(host.harness.profile).permissions;
+          const edits = permissions.rules.find(rule => rule.action === "edit" && rule.resource === "file" && rule.pattern === undefined)?.effect ?? permissions.defaultEffect ?? "ask";
+          const option = { value: host.harness.profile, name: host.harness.profile, description: `Native ${host.harness.profile} composition: file edits ${edits}; existing sessions retain frozen permissions.` };
+          return { options: [option], defaultOptions: [option], defaultPreset: option.value };
+        }
+        const options = [
+          { value: "read-only", name: "read-only", description: "Inspect files; project edits and commands are denied." },
+          { value: "workspace-write", name: "workspace-write", description: "Use the existing workspace policy and approval requirements." },
+          { value: "danger-full-access", name: "danger-full-access", description: "Explicitly confirmed access beyond the workspace; resource limits still apply." },
+        ];
+        return { options, defaultOptions: options, defaultPreset: "workspace-write" };
       }
       if (endpoint === "dynamicCordisRunner/syncInspectManifest") {
         keys(args, ["providers"]);
@@ -447,20 +458,32 @@ export function createActivityService(host: ActivityHost) {
       }
       if (endpoint === "dynamicCordisRunner/inventory") { keys(args, []); return [...dynamicPlugins.values()]; }
       if (endpoint.startsWith("dynamicCordisRunner/")) fail("cordis/unavailable", "Dynamic Cordis host execution is not mounted in this native Harness process");
-      if (endpoint === "goals/get") { keys(args, ["agentId"]); await session(args.agentId); return undefined; } // No goal continuation owner is mounted.
+      if (endpoint.startsWith("goals/") && host.controls !== undefined) return host.controls.goalCall(endpoint, args, signal);
+      if (endpoint === "goals/get") { keys(args, ["agentId"]); await session(args.agentId); return undefined; }
       if (endpoint.startsWith("goals/")) fail("goal/unavailable", "This host has no durable goal continuation owner");
       if (endpoint === "commands/list") {
         keys(args, ["agentId"]); await session(args.agentId);
         return [{ name: "cancel", description: "Cancel this session's actual active or waiting turn" }, { name: "skills", description: "List the actual skills available to this session" },
-          { name: "schedule", description: "Create a durable reminder from JSON timing/title/prompt", input: { hint: '{"title":"Review","prompt":"Run tests","after_seconds":60}' } }];
+          { name: "schedule", description: "Create a durable reminder from JSON timing/title/prompt", input: { hint: '{"title":"Review","prompt":"Run tests","after_seconds":60}' } },
+          ...(host.controls?.commands ?? []).map(name => ({ name, description: `Manage this session's ${name}` }))];
       }
       if (endpoint === "commands/execute") {
         keys(args, ["agentId", "line", "submittedAttachments"]); const owner = await session(args.agentId); const line = string(args.line, "line");
         if (!Array.isArray(args.submittedAttachments) || args.submittedAttachments.length > 0) fail("command/attachment-invalid", "These commands accept no attachments");
-        const match = /^\/([a-z][a-z0-9-]*)(?:\s+([\s\S]*))?$/.exec(line); if (match === null || !["cancel", "skills", "schedule"].includes(match[1]!)) return undefined;
+        const match = /^\/([a-z][a-z0-9-]*)(?:\s+([\s\S]*))?$/.exec(line); if (match === null || !["cancel", "skills", "schedule", ...(host.controls?.commands ?? [])].includes(match[1]!)) return undefined;
         const commandId = `command-${randomUUID()}`;
         await recordCommand(owner, { phase: "run", commandId, name: match[1]!, args: match[2] ?? "" }, signal);
         let result: { kind: "success" | "error"; text?: string };
+        if (host.controls?.commands.includes(match[1]!)) {
+          try {
+            result = { kind: "success", text: await host.controls.command(owner.id, line, signal) };
+            await recordCommand(owner, { phase: "done", commandId, ...result }, new AbortController().signal);
+            return { commandId, result };
+          } catch (error) {
+            await recordCommand(owner, { phase: "done", commandId, kind: "error", text: error instanceof Error ? error.message : String(error) }, new AbortController().signal);
+            throw error;
+          }
+        }
         try {
           if (match[1] === "cancel") { await interrupt(owner, signal); result = { kind: "success", text: "Cancellation was admitted." }; }
           else if (match[1] === "skills") result = { kind: "success", text: (await (await ownerHarness(owner.id)).listSkills())

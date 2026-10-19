@@ -11,6 +11,7 @@ import { pageSessionHistory, projectSessionHistory } from "./projections.js";
 import { codingStatusOf } from "./coding-status.js";
 import { createFeedbackService, type FeedbackAction } from "./feedback.js";
 import { createSessionReferences } from "./session-references.js";
+import { controlProjections, defaultControls } from "./controls-state.js";
 
 export interface SessionHost {
   harness: Harness;
@@ -24,6 +25,7 @@ export interface SessionHost {
    * methods under this action must not independently acquire this same lock. */
   withSessionLock?<T>(sessionId: string, action: () => Promise<T>): Promise<T>;
   bindSession?(sessionId: string): Promise<void> | void;
+  beforePrompt?(sessionId: string, requestId: string): Promise<void>;
   executeHostTool?(sessionId: string | undefined, definition: ToolDefinition, args: Record<string, unknown>, signal: AbortSignal): Promise<ToolResult>;
   /** The file owner validates the receipt's session, immutable bytes and UTF-8
    * encoding through its private admission tool. This is text context, never
@@ -119,8 +121,15 @@ export function createSessionService(host: SessionHost) {
     // This is a complete owner journal, including every retired prefix. Its
     // first observed event cannot prove a baseline: accepting it would conceal
     // lost history. Only explicitly bounded projection callers may declare one.
-    return projectSessionHistory({ session: current, messages, agentPreset,
+    const projected = projectSessionHistory({ session: current, messages, agentPreset,
       events: visible, title: details.title, requestIds, displayTexts, children });
+    Object.assign(projected.projections.values, controlProjections(details.controls ?? defaultControls()));
+    const reasoning = details.controls?.reasoning;
+    if (reasoning?.provider === current.model.providerId && reasoning.model === current.model.modelId && reasoning.effort !== undefined) {
+      const selection = projected.projections.values.modelSelection as { next: Record<string, unknown> };
+      Object.assign(selection.next, { reasoningEffort: reasoning.effort });
+    }
+    return projected;
   }
   async function projectSnapshot(id: SessionId, signal: AbortSignal) {
     return serial(id, () => projectUnlocked(id, signal));
@@ -256,6 +265,7 @@ export function createSessionService(host: SessionHost) {
         await meta(id, signal, data => { data.requests[requestId]!.status = "accepted"; data.requests[requestId]!.promptId = candidates[0]!.id; });
         return { accepted: true };
       }
+      await host.beforePrompt?.(id, requestId);
       const content: Array<{ text: string; references: boolean }> = [];
       for (const part of parts) {
         if (part.type === "text") content.push({ text: part.text, references: true });

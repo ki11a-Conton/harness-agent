@@ -395,6 +395,10 @@ async function* streamChatCompletion(
     }
     body[opts.chatCompatibility.maxTokensField] = request.maxTokens;
   }
+  if (request.reasoningEffort !== undefined) {
+    if (!/^[A-Za-z0-9_-]{1,100}$/u.test(request.reasoningEffort)) throw new AgentError(errorInfo("MODEL_ERROR", "Invalid reasoning effort", { retryable: false, safeToRetry: false, provider: { kind: "protocol" } }));
+    body.reasoning_effort = request.reasoningEffort;
+  }
   if (request.temperature !== undefined) {
     if (!Number.isFinite(request.temperature) || request.temperature < 0 || request.temperature > 2) {
       throw new AgentError(errorInfo("MODEL_ERROR", "temperature must be between 0 and 2", { retryable: false, safeToRetry: false, provider: { kind: "protocol" } }));
@@ -561,7 +565,7 @@ async function* streamChatCompletion(
   const toolCalls = new Map<number, { id: string; name: string; args: string }>();
   let usage: Usage | undefined;
   let aborted = false;
-  let normalReason: "stop" | "tool_calls" | undefined;
+  let normalReason: "stop" | "tool_calls" | "length" | undefined;
 
   let abortResolve: (() => void) | undefined;
   const onAbort = () => { aborted = true; abortResolve?.(); };
@@ -671,7 +675,7 @@ async function* streamChatCompletion(
     // abnormal terminal reason aborted the whole turn on the first frame, before
     // any tool call, so `""` must mean "not finished yet", exactly like absent.
     if (reason !== undefined && reason !== null && reason !== "") {
-      if (reason !== "stop" && reason !== "tool_calls") {
+      if (reason !== "stop" && reason !== "tool_calls" && reason !== "length") {
         return { events: [...events, ...finishEvents("error", streamTerminationError("finish_reason", reason))], finished: true };
       }
       normalReason = reason;

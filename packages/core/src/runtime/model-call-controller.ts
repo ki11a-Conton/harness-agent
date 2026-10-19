@@ -235,7 +235,9 @@ export class ModelCallController {
     // repair evidence preserved via `protocol.repaired`. If the resulting set
     // is empty on a tool_calls turn the turn FAILS SAFE via
     // `protocol.repair_failed` — never a fabricated completion.
-    let repairedCalls = final.toolCalls ?? calls;
+    // A length cap is not completed tool intent. Keep partial text but never
+    // repair/execute a possibly truncated operation or leave dangling calls.
+    let repairedCalls = final.finishReason === "length" ? [] : final.toolCalls ?? calls;
     if (repairedCalls.length > 0) {
       const dedup = repairDuplicateToolCallIds(repairedCalls, () => newRepairId());
       repairedCalls = dedup.calls;
@@ -315,6 +317,14 @@ export class ModelCallController {
         });
       }
     };
+
+    if (final.finishReason === "length") {
+      await this.deps.emit(sessionId, "run.limit_reached", { limit: "maxOutputTokens", finishReason: "length", discardedToolCalls: (final.toolCalls ?? calls).length }, turnId);
+      state.terminate("completed");
+      // Preserve the partial answer and let the user continue in a new turn.
+      // No verification ran, so this cannot be graded verified_complete.
+      return { action: "finish", outcome: await this.deps.finishTurn(ctx, "completed", state, working, undefined, "context_limit", toolLedger) };
+    }
 
     if (final.finishReason === "stop") {
       // A provider may report `stop` (or any non-`tool_calls` reason) while the

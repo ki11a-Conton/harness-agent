@@ -26,7 +26,9 @@ export interface RouteAwareProvider {
   /** Drop-in replacement for the wrapped provider. */
   readonly provider: ModelProvider;
   install(resolver: RouteResolver): void;
+  installRequestTransform(transform: RequestTransform): void;
 }
+export type RequestTransform = (request: ModelRequest, model: ModelRef) => Promise<ModelRequest>;
 
 /** P27 compares a provider without `getConfigIdentity` by its own enumerable
  * fields, functions included by name. The wrapper must therefore present exactly
@@ -56,15 +58,18 @@ function identityNeutralProvider(inner: ModelProvider, overrides: Record<string,
  */
 export function routeAwareProvider(inner: ModelProvider): RouteAwareProvider {
   let resolver: RouteResolver | undefined;
+  let transform: RequestTransform | undefined;
   const clamped = (client: ModelClient, maximum: number | undefined): ModelClient => maximum === undefined ? client : {
     generate: (request: ModelRequest, signal: AbortSignal) =>
       client.generate({ ...request, maxTokens: Math.min(request.maxTokens ?? maximum, maximum) }, signal),
   };
   const listModels = () => inner.listModels();
   const createClient: ModelProvider["createClient"] = (model: ModelRef, config: ProviderConfig): ModelClient => {
-    if (model.providerId === inner.id) return inner.createClient(model, config);
+    const ownClient = model.providerId === inner.id ? inner.createClient(model, config) : undefined;
     return {
       generate: async function* (request: ModelRequest, signal: AbortSignal) {
+        if (transform !== undefined) request = await transform(request, model);
+        if (ownClient !== undefined) { yield* ownClient.generate(request, signal); return; }
         const route = resolver === undefined ? undefined : await resolver(model.providerId, model.modelId, signal);
         // An unresolvable route stays a provider-level failure: never send
         // another route's model id to this route's upstream.
@@ -76,5 +81,5 @@ export function routeAwareProvider(inner: ModelProvider): RouteAwareProvider {
     };
   };
   const provider = identityNeutralProvider(inner, { listModels, createClient });
-  return { inner, provider, install: (next: RouteResolver) => { resolver = next; } };
+  return { inner, provider, install: (next: RouteResolver) => { resolver = next; }, installRequestTransform: next => { transform = next; } };
 }

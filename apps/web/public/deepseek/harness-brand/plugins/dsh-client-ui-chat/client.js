@@ -6120,7 +6120,7 @@ window.__ModuleLoader__.load({
 			"message.context.relay.from": "来自会话 {session}",
 			"message.context.recall.counts": "保留 {retained} 条 · 省略 {omitted} 条",
 			"message.context.recall.truncated": "已截断",
-			"message.compaction": "上下文已压缩",
+			"message.compaction": "上下文整理完成",
 			"message.compaction.running": "正在压缩…",
 			"message.compaction.completed": "已压缩 {items} 条历史记录（约 {tokens} tokens）",
 			"message.compaction.expand": "点击查看压缩摘要",

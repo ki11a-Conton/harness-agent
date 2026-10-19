@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "defaultClientCount": 66,
-  "publishedArtifactPolicy": "Original browser JS/CSS/fonts/images remain byte-identical to pinned npm artifacts. 13 explicitly marked Harness Agent UI derivatives, including preview removal, workspace navigation/composer guards, and actual loopback connectivity with monotonic status timing, and two independent SVG assets are deterministically verified separately under harness-brand/. HTML, PWA, boot, carrier and notices are reviewed adaptations; original HTML/PWA inputs and copyrights remain preserved.",
+  "publishedArtifactPolicy": "Original browser JS/CSS/fonts/images remain byte-identical to pinned npm artifacts. 19 explicitly marked Harness Agent UI derivatives, including preview removal, workspace navigation/composer guards, and actual loopback connectivity with monotonic status timing, and two independent SVG assets are deterministically verified separately under harness-brand/. HTML, PWA, boot, carrier and notices are reviewed adaptations; original HTML/PWA inputs and copyrights remain preserved.",
   "sourceRelationship": "npm gitHead is absent; the separately frozen Git source reference does not establish release/source equivalence.",
-  "rootIndexSha256": "fdcfa2f981dec07ed5768f821602b65512e3792df6fc2c666be8dda64571d16c",
+  "rootIndexSha256": "40352d617778c0dfc734925ba2aeea2178ca24ca81ba2069599e238e3b94721d",
   "releaseArtifacts": [
     {
       "name": "@deepseek-ai/dsh-api-gateway",
@@ -3658,13 +3658,13 @@
     },
     {
       "path": "boot-manifest.js",
-      "bytes": 35838,
-      "sha256": "33d54145132e2b4178c51508bc2a46d5212468546c5fbe934e404fa59427eea1"
+      "bytes": 35964,
+      "sha256": "8add5c18596bbbb100d715d4424b20b4b8fcb7a0b681ad4352c00df1df37f89a"
     },
     {
       "path": "boot-manifest.json",
-      "bytes": 45850,
-      "sha256": "466ae0efc23086b4afd5773274d5d68440c7450cef93de389806c6191aeae659"
+      "bytes": 46024,
+      "sha256": "1950869f72fbbabade05d89df5bfb96c4164f0d231b18cb6d3a504e2a9f6a918"
     },
     {
       "path": "favicon-dark.svg",
@@ -3678,8 +3678,8 @@
     },
     {
       "path": "harness-adaptations.css",
-      "bytes": 1048,
-      "sha256": "83a2a0e86341341dceeaa8ca7956a428c1ad93e7b93d44275ea5e3fdb668aa63"
+      "bytes": 2339,
+      "sha256": "bc84e3405287a43238e9d9e7d5574a1fa20a13f153c0db3d0f0b1dab4794223b"
     },
     {
       "path": "harness-brand/favicon.svg",
@@ -3697,19 +3697,29 @@
       "sha256": "9bbcae0551d74581f7d44b48f6bd548c8011361a78f20af89e3b852b3acc55a8"
     },
     {
+      "path": "harness-brand/plugins/dsh-client-ui-agent-preset/client.js",
+      "bytes": 104411,
+      "sha256": "a05872bb76f19cb81d89144c2dfe2b6c50b29c0a5653c274e9da544731b24bfa"
+    },
+    {
       "path": "harness-brand/plugins/dsh-client-ui-brand-official/client.js",
       "bytes": 1185,
       "sha256": "4c340fcec3cf2235a4235b89a55d55c7631e27a887f350e40d84cb1695e39f43"
     },
     {
       "path": "harness-brand/plugins/dsh-client-ui-chat/client.js",
-      "bytes": 589783,
-      "sha256": "2352ce0665f342b0703016f86a5a5acae4ed722817c2946a677dda62a6ca79fb"
+      "bytes": 589786,
+      "sha256": "7319efa773bf19eab23acc6e8c5e0d3ef73dfe35f839668066b7fe94c579d2e4"
     },
     {
       "path": "harness-brand/plugins/dsh-client-ui-conversation/client.js",
-      "bytes": 878309,
-      "sha256": "e0861618a394f48589dcf8792d56154183a7d5e30c347cfb4a3d3bb44635dfb9"
+      "bytes": 883779,
+      "sha256": "cbb12036d41c7fc7f3623a19e63c193895ee68ef5767c74ca8499c60e46c4eb6"
+    },
+    {
+      "path": "harness-brand/plugins/dsh-client-ui-goal/client.js",
+      "bytes": 26315,
+      "sha256": "736794dd5343e8830318f7ccc0c47aaf2a713add86a2d3975c69b768cf4b2635"
     },
     {
       "path": "harness-brand/plugins/dsh-client-ui-layout/client.js",
@@ -3717,9 +3727,19 @@
       "sha256": "96ac3acb97124dad50e4f8000aee0c26758f624633984cfbfb82206a890d1a29"
     },
     {
+      "path": "harness-brand/plugins/dsh-client-ui-model-selection/client.js",
+      "bytes": 78653,
+      "sha256": "e81c378bbcb8a5134feb1722725f75d35db237bedd3352409395846ade688e12"
+    },
+    {
+      "path": "harness-brand/plugins/dsh-client-ui-permission-presets/client.js",
+      "bytes": 37609,
+      "sha256": "bf27c11e134e7cb2d6aaa7013434b2bd74a04b2c5a1dc960119642432991ccd0"
+    },
+    {
       "path": "harness-brand/plugins/dsh-client-ui-plugin-manager/client.js",
-      "bytes": 192203,
-      "sha256": "7ff91ea3e970abb5fc44178a99b73f3b0fdd47dcf4811f944a216b76deef43c1"
+      "bytes": 189236,
+      "sha256": "6328ebe5d99cfe6e018030ed8db266f6854f48088ece6ba029a31c7226ac4e83"
     },
     {
       "path": "harness-brand/plugins/dsh-client-ui-settings-account/client.js",
@@ -3728,13 +3748,23 @@
     },
     {
       "path": "harness-brand/plugins/dsh-client-ui-settings-general/client.js",
-      "bytes": 52384,
-      "sha256": "587aad1d9c7501f01b447dc2aee9ccf0198ca8f8f4e825d7664505fda4aab9f0"
+      "bytes": 52225,
+      "sha256": "b0b930770bdf4b874d39cd320e4495806f7766c514bed630c56cdcb899aa431a"
     },
     {
       "path": "harness-brand/plugins/dsh-client-ui-settings-models/client.js",
-      "bytes": 185627,
-      "sha256": "c28677d935abafed560c4e607ad9a6bd876dca6b48b9784a4750ceebc2dfdcac"
+      "bytes": 187001,
+      "sha256": "7e5bf3688790848a227750dd9077b9b34b4abbd15fc7199d3ebe6a8215e118b4"
+    },
+    {
+      "path": "harness-brand/plugins/dsh-client-ui-settings-plugin-inventory/client.js",
+      "bytes": 42513,
+      "sha256": "77ced6a998dcc8043b4195f5bd767150bc3f3dc8958763784f7fb8b40b03dc9d"
+    },
+    {
+      "path": "harness-brand/plugins/dsh-client-ui-settings-plugins/client.js",
+      "bytes": 8344,
+      "sha256": "20b477097f33fd0fe903c050adba47a9c61d9990cf446dbeec31aef8fa7560a4"
     },
     {
       "path": "harness-brand/plugins/dsh-client-ui-sidebar-documentpreview/client.js",
@@ -4518,8 +4548,8 @@
     },
     {
       "path": "licenses/harness-brand-adaptations.md",
-      "bytes": 1698,
-      "sha256": "f20ae545acc36d0a7da535f8313ae94aec4b8b555acb55660f8b4e3de5def4bd"
+      "bytes": 2487,
+      "sha256": "ff137fffce5eaba45c3279790e366b302b2fda5234f2f9f9fa6d24d8cb611a39"
     },
     {
       "path": "licenses/icons/CC-BY-3.0.txt",

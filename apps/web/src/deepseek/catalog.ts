@@ -8,6 +8,7 @@ import { z } from "zod";
 import type { ModelInfo, ModelProvider, SessionId, ToolDefinition, ToolResult } from "@ar/contracts";
 import type { Harness } from "@ar/harness";
 import { RemoteFailure } from "./transport.js";
+import { reasoningCatalog, reasoningEffortsSchema, type ReasoningEfforts } from "./reasoning.js";
 
 export interface CatalogSelection { provider: string; model: string; reasoningEffort?: string }
 export interface ModelProfile {
@@ -15,7 +16,7 @@ export interface ModelProfile {
   displayName?: string;
   baseURL?: string;
   apiKeyEnv?: string;
-  models?: Array<{ id: string; name?: string; contextWindow?: number; maxTokens?: number; input?: Array<"text"> }>;
+  models?: Array<{ id: string; name?: string; contextWindow?: number; maxTokens?: number; input?: Array<"text">; reasoningEfforts?: ReasoningEfforts }>;
   defaultContextWindow?: number;
   defaultMaxTokens?: number;
 }
@@ -39,6 +40,10 @@ export interface CatalogHost {
   selectModel?(sessionId: string, selection: CatalogSelection, signal: AbortSignal): Promise<CatalogSelection>;
   openSettingsDocument?(path: string, signal: AbortSignal): Promise<void>;
   publish?(topic: string, args: readonly unknown[]): void;
+}
+
+function reasoningFields(efforts: ReasoningEfforts | undefined) {
+  const reasoning = reasoningCatalog(efforts); return reasoning === undefined ? {} : { reasoning };
 }
 
 const REF = /^[A-Za-z_][A-Za-z0-9_]*$/;
@@ -96,6 +101,7 @@ const modelFields = {
   id: Schema.string().required(), name: Schema.string(),
   contextWindow: Schema.number().step(1).min(1), maxTokens: Schema.number().step(1).min(1),
   input: Schema.array(Schema.union(["text"])),
+  reasoningEfforts: Schema.union([Schema.const(false), Schema.dict(Schema.string())]),
 };
 const profileSchema = Schema.object({
   apiKeyEnv: Schema.string().role("credential-ref"), displayName: Schema.string(),
@@ -122,7 +128,7 @@ const profileValidation = z.object({
   api: z.literal("openai-completions").optional(), baseURL: z.string().min(1).max(2000).optional(),
   models: z.array(z.object({ id: z.string().min(1).max(200), name: z.string().min(1).max(200).optional(),
     contextWindow: z.number().int().positive().safe().optional(), maxTokens: z.number().int().positive().safe().optional(),
-    input: z.array(z.literal("text")).min(1).max(1).optional() }).strict()).min(1).max(1000).optional(),
+    input: z.array(z.literal("text")).min(1).max(1).optional(), reasoningEfforts: reasoningEffortsSchema.optional() }).strict()).min(1).max(1000).optional(),
   defaultContextWindow: z.number().int().positive().safe().optional(), defaultMaxTokens: z.number().int().positive().safe().optional(),
 }).strict();
 const validation = {
@@ -308,7 +314,7 @@ export function createCatalogService(host: CatalogHost) {
     // The resolver's secret values remain host-only; only safe DTO fields below
     // enter the Remote catalog.
     const configured = await resolvedModelProfiles(signal);
-    const groups: Array<{ id: string; name: string; models: Array<{ id: string; name: string }> }> = [];
+    const groups: Array<{ id: string; name: string; models: Array<{ id: string; name: string; reasoning?: ReturnType<typeof reasoningCatalog> }> }> = [];
     const failures: Array<{ id: string; name: string; message: string }> = [];
     for (const provider of providers) {
       signal.throwIfAborted();
@@ -318,7 +324,8 @@ export function createCatalogService(host: CatalogHost) {
         // An empty discovery API does not erase the actual deployment's explicitly configured route.
         if (provider.id === host.harness.config.model.providerId && !actual.some(model => model.id === host.harness.config.model.modelId)) actual.push({ id: host.harness.config.model.modelId });
         for (const model of configured[provider.id]?.models ?? []) if (!actual.some(item => item.id === model.id)) actual.push({ id: model.id, name: model.name });
-        if (actual.length > 0) groups.push({ id: provider.id, name: configured[provider.id]?.displayName ?? provider.id, models: actual.map(model => ({ id: model.id, name: model.name ?? model.id })) });
+        if (actual.length > 0) groups.push({ id: provider.id, name: configured[provider.id]?.displayName ?? provider.id, models: actual.map(model => ({ id: model.id, name: model.name ?? model.id,
+          ...reasoningFields(configured[provider.id]?.models?.find(item => item.id === model.id)?.reasoningEfforts) })) });
       } catch { signal.throwIfAborted(); failures.push({ id: provider.id, name: provider.id, message: "Provider model catalog could not be loaded" }); }
     }
     if (host.validateModelProfiles !== undefined) for (const [name, profile] of Object.entries(configured)) {
@@ -327,7 +334,7 @@ export function createCatalogService(host: CatalogHost) {
         failures.push({ id: name, name: profile.displayName ?? name, message: "The configured adapter or credential is unavailable" });
         continue;
       }
-      groups.push({ id: name, name: profile.displayName ?? name, models: profile.models.map(model => ({ id: model.id, name: model.name ?? model.id })) });
+      groups.push({ id: name, name: profile.displayName ?? name, models: profile.models.map(model => ({ id: model.id, name: model.name ?? model.id, ...reasoningFields(model.reasoningEfforts) })) });
     }
     return { default: { provider: host.harness.config.model.providerId, model: host.harness.config.model.modelId }, routableProviders: groups.map(group => group.id), groups, failures };
   }
@@ -404,12 +411,14 @@ export function createCatalogService(host: CatalogHost) {
       if (name === "session/selectModel") {
         keys(args, ["request"]); const request = object(args.request); keys(request, ["sessionId", "provider", "model"], ["reasoningEffort"]);
         const id = text(request.sessionId, "sessionId", 200); const provider = text(request.provider, "provider", 200); const model = text(request.model, "model", 200);
-        if (request.reasoningEffort !== undefined) throw new RemoteFailure("session/model-unavailable", "This provider does not declare selectable reasoning efforts", { provider, model });
         const owner = await host.harness.store.getSession(id as SessionId);
         if (owner === undefined || owner.status === "failed") throw new RemoteFailure("session/not-found", "Session is unavailable", { sessionId: id });
         const catalog = await modelCatalog(signal);
         if (!catalog.groups.some(group => group.id === provider && group.models.some(item => item.id === model))) throw new RemoteFailure("session/model-unavailable", "The requested model is not configured", { provider, model });
-        const selected = { provider, model };
+        const declared = catalog.groups.find(group => group.id === provider)?.models.find(item => item.id === model)?.reasoning?.efforts ?? [];
+        const reasoningEffort = request.reasoningEffort === undefined ? undefined : text(request.reasoningEffort, "reasoning effort", 100);
+        if (reasoningEffort !== undefined && !declared.some(effort => effort.id === reasoningEffort)) throw new RemoteFailure("session/model-unavailable", "This model does not declare the requested reasoning effort", { provider, model });
+        const selected = { provider, model, ...(reasoningEffort === undefined ? {} : { reasoningEffort }) };
         if (host.selectModel !== undefined) return { selected: await host.selectModel(id, selected, signal) };
         if (owner.model.providerId !== provider || owner.model.modelId !== model) throw new RemoteFailure("session/model-unavailable", "This native session has a frozen model identity; create a fresh session to change models", { provider, model });
         return { selected };

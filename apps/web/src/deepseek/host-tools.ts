@@ -10,7 +10,8 @@ import { RemoteFailure } from "./transport.js";
 
 /** UI-only tools never enter the model-visible catalog. Contexts are minted here. */
 export function createHostTools(harness: Harness, cwd: string, dataDir?: string, ownerOf?: (sessionId: string) => Promise<Harness> | Harness,
-  nativeSessionId?: (sessionId: string) => SessionId) {
+  nativeSessionId?: (sessionId: string) => SessionId,
+  controlProjectTool?: (sessionId: string, definition: ToolDefinition, context: ToolExecutionContext, execute: (context: ToolExecutionContext) => Promise<ToolResult>) => Promise<ToolResult>) {
   const root = resolve(dataDir ?? cwd, "deepseek");
   const registry = new ToolRegistry();
   const hidden = new Set<string>();
@@ -118,7 +119,13 @@ export function createHostTools(harness: Harness, cwd: string, dataDir?: string,
         if (endpoint !== undefined) context = { ...context, permissions: { defaultEffect: "deny", rules: [{ action: "exec", resource: "network", effect: "allow", scope: "call" }] },
           sandboxPolicy: { filesystem: { mode: "read-only", allowedPaths: [root] }, network: { mode: "allowlist", hosts: [endpoint] }, process: { allowedCommands: [] } } };
       }
-      return projectOrchestrator(context.cwd, actualOwner).executeBound(bound(definition, physicalId, agent.id, args), context);
+      const execute = (next: ToolExecutionContext) => projectOrchestrator(next.cwd, actualOwner).executeBound(bound(definition, physicalId, agent.id, args), next);
+      // Human cleanup of an already owned terminal retains the original
+      // permission/sandbox/ownership checks. A restrictive task mode must not
+      // trap a resource that the human is trying to stop; new input/create
+      // operations still traverse the session control policy below.
+      const cleanup = name === "web_terminal_control" && args.operation === "close";
+      return sessionId === undefined || controlProjectTool === undefined || cleanup ? execute(context) : controlProjectTool(sessionId, definition, context, execute);
     },
   };
 }

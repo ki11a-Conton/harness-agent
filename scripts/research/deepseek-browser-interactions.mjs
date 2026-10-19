@@ -140,10 +140,12 @@ const cases = {
     await clickVisible(page, "Cancel");
   },
   "plugin-management": async (page, checks) => {
-    await clickVisible(page, "Plugins");
-    const add = page.getByRole("button", { name: "Add plugin", exact: true }); await add.waitFor({ state: "visible" });
-    if (await add.isDisabled()) throw new Blocked("Actual plugin inventory is readable, but this host exposes no manageable Cordis/plugin profile; install/enable/configure parity is unfinished.");
-    checks.push({ label: "plugin manager admits installation controls", status: "PASS" });
+    assert.equal(await page.getByRole("button", { name: "Plugins", exact: true }).count(), 0);
+    await clickVisible(page, "Settings");
+    assert.equal(await page.getByRole("button", { name: "Built-in plugins", exact: true }).count(), 0);
+    assert.equal(await page.getByRole("button", { name: "Agent presets", exact: true }).count(), 0);
+    checks.push({ label: "PR15 removes component management and agent preset entry points", status: "PASS" });
+    await clickVisible(page, "Close");
   },
   "automation-list": async (page, checks) => {
     await clickVisible(page, "Automation tasks");

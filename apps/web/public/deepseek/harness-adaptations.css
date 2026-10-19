@@ -28,3 +28,13 @@
 @media (max-width: 600px) {
   body:has([data-approval-key]) [data-rightbar-col="true"] { display: none !important; }
 }
+/* First-party composer controls share the native UI palette and focus ring. */
+[data-harness-controls] { min-width: 0; max-width: 100%; font-size: 12px; color: var(--dsw-alias-label-secondary); }
+[data-harness-controls] :is(button, select) { box-sizing: border-box; max-width: 100%; min-height: 28px; border: 0; border-radius: 6px; padding: 3px 7px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+[data-harness-controls] :is(button, select):hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover); }
+[data-harness-controls] :is(button, select, textarea):focus-visible { outline: 2px solid var(--dsw-focus-ring-color, #2563eb); outline-offset: 2px; }
+[data-harness-controls] :is(button, select):disabled { opacity: .55; cursor: default; }
+[data-harness-controls] textarea { box-sizing: border-box; width: 100%; max-width: 100%; min-height: 60px; border: 1px solid var(--dsw-alias-border-l1, #d1d5db); border-radius: 6px; padding: 8px; background: var(--dsw-alias-bg-base, transparent); color: inherit; font: inherit; resize: vertical; }
+[data-harness-plan-review] { min-width: 0; max-width: 100%; padding: 6px; }
+[data-harness-plan-review] summary { cursor: pointer; }
+[data-harness-plan-review] pre { max-width: 100%; overflow-wrap: anywhere; }

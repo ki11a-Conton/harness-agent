@@ -48,6 +48,26 @@ it("official settings envelopes rehydrate with the exact Schemastery implementat
   for (const item of described.namespaces) expect(() => new Schema(item.schema)(item.value)).not.toThrow();
 });
 
+it("PR15 advertises only declared model effort levels and validates the complete selection", async () => {
+  const selected: unknown[] = [];
+  const stack = await setup({ initialProviderProfiles: { gateway: { api: "openai-completions", baseURL: "http://127.0.0.1:4321/v1", apiKeyEnv: "REASONING_KEY",
+    models: [{ id: "reasoner", reasoningEfforts: { low: "low", high: "high" } }, { id: "plain" }] } },
+    initialCredentials: { REASONING_KEY: "local-test-only" }, selectModel: async (_id, selection) => { selected.push(selection); return selection; } });
+  const catalog = await stack.call("session/modelCatalog") as { groups: Array<{ id: string; models: Array<{ id: string; reasoning?: { efforts: Array<{ id: string }> } }> }> };
+  const models = catalog.groups.find(group => group.id === "gateway")!.models;
+  expect(models[0]!.reasoning?.efforts.map(effort => effort.id)).toEqual(["low", "high"]); expect(models[1]).not.toHaveProperty("reasoning");
+  expect(await stack.call("session/selectModel", { request: { sessionId: stack.id, provider: "gateway", model: "reasoner", reasoningEffort: "high" } })).toMatchObject({ selected: { reasoningEffort: "high" } });
+  await expect(stack.call("session/selectModel", { request: { sessionId: stack.id, provider: "gateway", model: "plain", reasoningEffort: "high" } })).rejects.toMatchObject({ code: "session/model-unavailable" });
+  await expect(stack.call("session/selectModel", { request: { sessionId: stack.id, provider: "gateway", model: "reasoner", reasoningEffort: "max" } })).rejects.toMatchObject({ code: "session/model-unavailable" });
+  expect(selected).toHaveLength(1);
+});
+
+it.each([{}, { off: "off" }, { invented: "high" }, { high: "bad\nwire" }])("PR15 rejects an invalid effort declaration before committing settings: %j", async reasoningEfforts => {
+  const stack = await setup();
+  await expect(stack.call("settings/mutate", { ns: "llm-pi-ai", ops: [{ op: "set", path: ["providers", "gateway"], value: { api: "openai-completions", models: [{ id: "m", reasoningEfforts }] } }] })).rejects.toBeDefined();
+  await expect(readFile(join(stack.directory, "deepseek/settings.json"))).rejects.toMatchObject({ code: "ENOENT" });
+});
+
 it("advertises a settings document action only with its actual host opener and honors controlled access denial", async () => {
   const unavailable = await setup();
   await expect(unavailable.call("settings/openSettingsDocument")).rejects.toMatchObject({ code: "gateway/unavailable" });

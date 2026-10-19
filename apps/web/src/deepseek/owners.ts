@@ -649,6 +649,7 @@ export async function createOwnerManager(base: Harness, hooks: OwnerHooks): Prom
         runTurn: async (...args: Parameters<typeof actor.runTurn>) => { currentActor(); return outwardOutcome(await actor.runTurn(...args)); },
         steer: async (input: Parameters<typeof actor.steer>[0]) => actor.steer(inputForActor(input)),
         enqueueFollowup: async (input: Parameters<typeof actor.enqueueFollowup>[0]) => actor.enqueueFollowup(inputForActor(input)),
+        wakePending: () => { currentActor(); if (actor.wakePending === undefined) throw new RemoteFailure("session/recovery-unavailable", "This actor cannot wake its existing inbox"); actor.wakePending(); },
         interrupt: async () => { currentActor(); const result = await actor.interrupt(); return result === undefined ? undefined : outwardOutcome(result); },
         cancelTurn: async (...args: Parameters<typeof actor.cancelTurn>) => { currentActor(); return actor.cancelTurn(...args); },
         status: () => { currentActor(); return outward(actor.status()); },

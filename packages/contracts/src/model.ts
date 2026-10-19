@@ -36,6 +36,8 @@ export interface ModelRequest {
   tools?: readonly ToolSpec[];
   temperature?: number;
   maxTokens?: number;
+  /** Explicit per-request provider wire value, only set for declared models. */
+  reasoningEffort?: string;
 }
 
 /** Provider usage may be partial; missing counters are unknown, never zero. */
@@ -72,7 +74,7 @@ export interface UsageSnapshot {
   source?: "measured" | "estimated" | "unknown";
 }
 
-export type FinishReason = "stop" | "tool_calls" | "error" | "cancelled";
+export type FinishReason = "stop" | "tool_calls" | "length" | "error" | "cancelled";
 
 export interface ModelFinalResult {
   finishReason: FinishReason;

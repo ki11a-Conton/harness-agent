@@ -75,6 +75,14 @@ function officialClient() {
 }
 
 describe("official DeepSeek Harness history projection", () => {
+  it("PR15 preserves a real length boundary as the native max-tokens warning", () => {
+    const f = fixture(); f.message("user", "Write code"); f.event("turn.started", { text: "Write code" });
+    f.event("model.started", { callId: "truncated" }); f.message("assistant", "partial result");
+    f.event("model.completed", { text: "partial result", toolCalls: 0, finishReason: "length" });
+    f.event("turn.completed", { terminationReason: "context_limit", grade: "unverified_complete" });
+    const end = f.project().records.find(record => record.event.type === "turn/end")!;
+    expect(JSON.stringify(end)).toContain("max-tokens"); officialClient().assertEvent(end.event);
+  });
   it("preserves actual message ids, tool arguments, full results, and official surface envelopes", () => {
     const f = fixture();
     f.event("session.created", {}, false);

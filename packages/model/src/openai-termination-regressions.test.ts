@@ -37,7 +37,6 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe("R1: OpenAI stream termination evidence", () => {
   const abnormal = [
-    { label: "output length", suffix: [terminal("length")], reason: "length", boundary: "finish_reason" },
     { label: "content filter", suffix: [terminal("content_filter")], reason: "content_filter", boundary: "finish_reason" },
     { label: "unknown finish reason", suffix: [terminal("unexpected")], reason: "unexpected", boundary: "finish_reason" },
     // N5 (measured): a stream whose LAST frame carries an EMPTY finish_reason is
@@ -80,8 +79,17 @@ describe("R1: OpenAI stream termination evidence", () => {
 
   it("retains an incomplete tool argument string for protocol-repair audit without certifying execution", async () => {
     const { result } = await generate([sse(toolDelta('{"path":"a.txt","content":"par')), terminal("length")]);
-    expect(result.finishReason).toBe("error");
+    expect(result.finishReason).toBe("length");
+    expect(result.error).toBeUndefined();
     expect(result.toolCalls?.[0]).toMatchObject({ id: "call_one", name: "write_file", args: '{"path":"a.txt","content":"par' });
+  });
+
+  it.each([false, true])("accepts the legal output cap with tool intent=%s while preserving partial data", async withTool => {
+    const { result } = await generate([partial, ...(withTool ? [sse(toolDelta())] : []), terminal("length"), "data: [DONE]\n\n"]);
+    expect(result.finishReason).toBe("length"); expect(result.error).toBeUndefined();
+    expect(result.text).toBe("partial answer"); expect(result.reasoningContent).toBe("partial reasoning");
+    expect(result.usage).toEqual({ inputTokens: 11, outputTokens: 7 });
+    expect(result.toolCalls?.length ?? 0).toBe(withTool ? 1 : 0);
   });
 
   it("bounds and redacts unsupported finish reasons in diagnostics", async () => {

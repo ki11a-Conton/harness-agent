@@ -287,6 +287,9 @@ export interface SessionActor {
   steer(input: UserMessage): Promise<void>;
   /** Queue a follow-up turn — starts AFTER the current turn settles. */
   enqueueFollowup(input: UserMessage): Promise<void>;
+  /** Wake the existing durable inbox after a host handover. No new prompt,
+   * turn, permission, or execution algorithm is created by this request. */
+  wakePending?(): void;
   /** Hard-abort the active turn (if any) and await its outcome. */
   interrupt(): Promise<TurnOutcome | undefined>;
   /** Abort the active turn only when it matches `turnId`.
@@ -1378,6 +1381,11 @@ export class DefaultSessionActor implements SessionActor {
   async enqueueFollowup(input: UserMessage): Promise<void> {
     this.assertOpen();
     await this.inputQueue.enqueueFollowup(input);
+    this.assertOpen();
+    this.requestFollowupWake();
+  }
+
+  wakePending(): void {
     this.assertOpen();
     this.requestFollowupWake();
   }

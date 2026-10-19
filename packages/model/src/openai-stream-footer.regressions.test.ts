@@ -132,11 +132,19 @@ describe("OpenAI stream footer, cancellation and reader ownership", () => {
     expect(events.filter((event) => event.type === "tool_call_delta")).toHaveLength(1);
   });
 
-  it.each(["length", "content_filter", "unexpected"])("fails abnormal %s immediately and releases an open stream", async (reason) => {
+  it.each(["content_filter", "unexpected"])("fails abnormal %s immediately and releases an open stream", async (reason) => {
     const body = hangingResponse(tool + terminal(reason));
     const events = await collect(body.response);
     expect(result(events)).toMatchObject({ finishReason: "error", error: { retryable: false, safeToRetry: false, provider: { kind: "protocol" } } });
     expect(body.cancel).toHaveBeenCalledTimes(1);
+    expect(body.stream.locked).toBe(false);
+  });
+
+  it("accepts a length-capped finish with measured usage and releases an open stream", async () => {
+    const body = hangingResponse(tool + sse({ choices: [{ delta: {}, finish_reason: "length" }], usage }));
+    const events = await collect(body.response);
+    expect(result(events)).toMatchObject({ finishReason: "length", usage: { inputTokens: 137, outputTokens: 23 } });
+    expect(result(events).error).toBeUndefined(); expect(body.cancel).toHaveBeenCalledTimes(1);
     expect(body.stream.locked).toBe(false);
   });
 

@@ -15,7 +15,8 @@ import { createCatalogService, type CatalogHost, type ModelProfile } from "./cat
 import { createActivityService } from "./activity.js";
 import { createDeliverablesService } from "./deliverables.js";
 import { RemoteFailure, type DeepseekService } from "./transport.js";
-import type { RouteResolver } from "./routes.js";
+import type { RequestTransform, RouteResolver } from "./routes.js";
+import { createControlsService } from "./controls.js";
 
 /** The production Web host composes services over the same Harness contracts as CLI. */
 export interface DeepseekLaunchFacts {
@@ -31,6 +32,7 @@ export interface DeepseekLaunchFacts {
  */
 export interface DeepseekCompositionHooks {
   installRouteResolver?: (resolver: RouteResolver) => void;
+  installRequestTransform?: (transform: RequestTransform) => void;
 }
 export async function createDeepseekComposition(base: Harness, dataDir?: string, facts: DeepseekLaunchFacts = {},
   hooks: DeepseekCompositionHooks = {}) {
@@ -88,15 +90,32 @@ export async function createDeepseekComposition(base: Harness, dataDir?: string,
           ...(maxTokens === undefined ? {} : { maxOutputTokens: maxTokens }) } };
     });
     return { ...selection, billing, nativeModel, adapterFingerprint,
-      configuredModels, configuredLimits: configuredModels.map(({ id, capabilities }) => ({ id, ...capabilities })) };
+      configuredModels, configuredLimits: configuredModels.map(({ id, capabilities }) => {
+        const reasoningEfforts = profile.models?.find(model => model.id === id)?.reasoningEfforts;
+        return { id, ...capabilities, ...(reasoningEfforts === undefined ? {} : { reasoningEfforts }) };
+      }) };
   };
   type Route = Awaited<ReturnType<typeof resolveRoute>>;
   const routeClient = (route: Route, model: ModelRef, config: ProviderConfig): ModelClient => {
     const client = route.billing.provider.createClient({ ...model, providerId: route.billing.provider.id }, config);
     const maximum = route.configuredModels.find(item => item.id === model.modelId)?.capabilities.maxOutputTokens;
-    return { generate: (request, signal) => client.generate(maximum === undefined
-      ? request : { ...request, maxTokens: Math.min(request.maxTokens ?? maximum, maximum) }, signal) };
+    return { generate: async function* (request, signal) {
+      request = await transformRequest(request, model, signal);
+      yield* client.generate(maximum === undefined ? request : { ...request, maxTokens: Math.min(request.maxTokens ?? maximum, maximum) }, signal);
+    } };
   };
+  const transformRequest = async (request: import("@ar/contracts").ModelRequest, model: ModelRef, signal: AbortSignal) => {
+    if (controls === undefined) return request;
+    const transformed = await controls.transform(request);
+    const nativeId = request.messages.at(-1)?.sessionId;
+    if (nativeId === undefined) return transformed;
+    const selected = (await controls.read(owners.externalSessionId(nativeId))).reasoning;
+    if (selected?.provider !== model.providerId || selected.model !== model.modelId || selected.effort === undefined) return transformed;
+    const efforts = (await catalog.resolvedModelProfiles(signal))[model.providerId]?.models?.find(item => item.id === model.modelId)?.reasoningEfforts;
+    const wire = efforts && efforts[selected.effort as keyof typeof efforts];
+    return typeof wire === "string" ? { ...transformed, reasoningEffort: wire } : transformed;
+  };
+  hooks.installRequestTransform?.((request, model) => transformRequest(request, model, neverAborted));
   hooks.installRouteResolver?.(async (providerKey, modelId, signal) => {
     if (providerKey === base.config.modelProvider.id && modelId === base.config.model.modelId) return undefined;
     const route = await resolveRoute({ providerKey, modelId }, signal ?? neverAborted);
@@ -105,10 +124,12 @@ export async function createDeepseekComposition(base: Harness, dataDir?: string,
   let workspace!: ReturnType<typeof createWorkspaceService>;
   const observed = new WeakSet<Harness>();
   let activity: ReturnType<typeof createActivityService> | undefined;
+  let controls: ReturnType<typeof createControlsService> | undefined;
   let boundOwners: OwnerManager | undefined;
   let capture: ((event: AgentEvent) => Promise<void>) | undefined;
   const observers = new Set<(event: AgentEvent) => Promise<void>>();
   const configureOwner = (harness: Harness): void => {
+    controls?.attach(harness);
     for (const tool of activity?.modelTools ?? []) {
       if (!harness.registry.has(tool.name)) harness.registry.register(tool);
       for (const agent of harness.agents) if (agent.tools.allow !== undefined && !agent.tools.allow.includes(tool.name)) agent.tools.allow = [...agent.tools.allow, tool.name];
@@ -119,6 +140,7 @@ export async function createDeepseekComposition(base: Harness, dataDir?: string,
       const committed = await append(event);
       const projected = boundOwners === undefined ? committed : await boundOwners.projectEvent(committed);
       if (projected !== undefined) {
+        controls?.observe(projected);
         await capture?.(projected);
         for (const observer of observers) await observer(projected);
       }
@@ -173,11 +195,13 @@ export async function createDeepseekComposition(base: Harness, dataDir?: string,
   let terminal: ReturnType<typeof createTerminalService> | undefined;
   try {
   const harness = owners.harnessFacade;
-  const tools = createHostTools(harness, cwd, dataDir, owners.ownerOf, owners.nativeSessionId);
+  const tools = createHostTools(harness, cwd, dataDir, owners.ownerOf, owners.nativeSessionId,
+    (id, definition, context, execute) => controls === undefined ? execute(context) : controls.controlled(id, definition, context, execute));
   for (const definition of bootstrapTools.registeredTools()) tools.registerTool(definition);
   Object.assign(catalogHost, { harness, ...tools,
-    selectModel: async (sessionId: string, selected: { provider: string; model: string }, signal: AbortSignal) => {
-      await owners.selectModel(sessionId, { providerKey: selected.provider, modelId: selected.model }, signal); return selected;
+    selectModel: async (sessionId: string, selected: import("./catalog.js").CatalogSelection, signal: AbortSignal) => {
+      await owners.selectModel(sessionId, { providerKey: selected.provider, modelId: selected.model }, signal);
+      await controls!.selectReasoning(sessionId, selected, signal); return selected;
     },
   });
   tools.registerTool(workspaceReadTool); tools.registerTool(workspaceMkdirTool);
@@ -190,6 +214,7 @@ export async function createDeepseekComposition(base: Harness, dataDir?: string,
   let deliverables!: ReturnType<typeof createDeliverablesService>;
   const sessionHost = { harness, cwd, dataDir, rpc: owners.rpcFacade, ...tools,
     withSessionLock: owners.withSessionLock,
+    beforePrompt: (id: string, requestId: string) => controls?.beforePrompt(id, requestId) ?? Promise.resolve(),
     resolveWorkspace: (id: string, signal: AbortSignal) => workspace.workspace(id, signal),
     createSession: async (workspaceId, signal) => {
       const session = await owners.createSession(workspaceId, signal);
@@ -198,20 +223,22 @@ export async function createDeepseekComposition(base: Harness, dataDir?: string,
     resolveUpload: (sessionId: string, receiptId: string, signal: AbortSignal) => deliverables.resolveUpload(sessionId, receiptId, signal),
   } satisfies import("./session.js").SessionHost;
   const sessions = createSessionService(sessionHost);
+  const submitPrompt = async (request: { sessionId: string; requestId: string; mode: "queue" | "steer"; content: Array<{ type: "text"; text: string }> }, signal: AbortSignal) => {
+    await sessions.call("session/prompt", { request }, signal);
+    const promptId = (await sessions.metadata.read(request.sessionId)).requests[request.requestId]?.promptId;
+    if (promptId === undefined) throw new RemoteFailure("session/admission-uncertain", "No durable inbox receipt was committed");
+    return { messageId: promptId };
+  };
+  controls = createControlsService({ ...sessionHost, externalSessionId: owners.externalSessionId, submitPrompt, resolveHarness: owners.ownerOf, nativeSessionId: owners.nativeSessionId });
   deliverables = createDeliverablesService({ ...workspaceHost, sourceSequence: sessions.sourceSequence, withSessionLock: owners.withSessionLock });
   for (const tool of deliverables.tools) tools.registerTool(tool);
   capture = deliverables.observe;
   const boot = JSON.parse(await readFile(fileURLToPath(new URL("../../public/deepseek/boot-manifest.json", import.meta.url)), "utf8")) as { entries: { id: string }[] };
   catalogHost.publish = (topic, args) => sessions.publish(topic, args);
-  activity = createActivityService({ ...sessionHost, pluginEntries: boot.entries, resolveHarness: owners.ownerOf,
+  activity = createActivityService({ ...sessionHost, controls, pluginEntries: boot.entries, resolveHarness: owners.ownerOf,
     externalSessionId: owners.externalSessionId,
     publish: (topic, args) => sessions.publish(topic, args),
-    submitPrompt: async (request, signal) => {
-      await sessions.call("session/prompt", { request }, signal);
-      const promptId = (await sessions.metadata.read(request.sessionId)).requests[request.requestId]?.promptId;
-      if (promptId === undefined) throw new RemoteFailure("session/admission-uncertain", "No durable inbox receipt was committed");
-      return { messageId: promptId };
-    },
+    submitPrompt,
   });
   // Recovered owners are constructed before the activity service. Register its
   // real tools too, without changing any existing session's frozen tool set.
@@ -235,12 +262,14 @@ export async function createDeepseekComposition(base: Harness, dataDir?: string,
       const active = await activity!.sessionActivity(ownedId, signal);
       if (active.activeSchedules || active.pendingDispatches || active.unresolvedClaims) result.push({ kind: "schedule" });
       if (active.jobs.some(job => job.status === "running")) result.push({ kind: "job", items: active.jobs.filter(job => job.status === "running").map(job => ({ id: job.id, label: job.label })) });
+      if ((await controls!.read(ownedId)).goal?.phase === "active") result.push({ kind: "goal" });
     }
     return result;
   };
   workspaceHost.stopSessionActivity = async (id, signal) => {
     for (const ownedId of (await ownedSessionIds(id)).reverse()) {
       signal.throwIfAborted();
+      await controls!.stopGoal(ownedId);
       await activity!.stopSessionActivity(ownedId, signal);
       await terminalService.closeSession(ownedId, signal);
       await sessions.call("session/cancel", { request: { sessionId: ownedId } }, signal);
@@ -249,13 +278,14 @@ export async function createDeepseekComposition(base: Harness, dataDir?: string,
     // atomic queue cancellation. Archive never claims those records stopped.
   };
   await activity.start();
+  await controls.start();
   const services: DeepseekService[] = [sessions, workspace, files, { ...terminal, close: terminal.dispose }, catalog, activity, deliverables];
   let closing: Promise<void> | undefined;
-  return { services, owners, harness, sessions, workspace, files, terminal, catalog, activity, deliverables, tools,
+  return { services, owners, harness, sessions, workspace, files, terminal, catalog, activity, deliverables, tools, controls,
     http: deliverables.fetch,
     observe(callback: (event: AgentEvent) => Promise<void>): void { observers.add(callback); },
     close: (): Promise<void> => closing ??= (async () => {
-      try { await activity?.close(); }
+      try { await controls?.close(); await activity?.close(); }
       finally {
         try { await terminalService.dispose(); }
         finally { try { await sessions.close(); } finally { await owners.close(); } }
@@ -263,7 +293,7 @@ export async function createDeepseekComposition(base: Harness, dataDir?: string,
     })(),
   };
   } catch (error) {
-    const results = await Promise.allSettled([activity?.close(), terminal?.dispose(), owners.close()]);
+    const results = await Promise.allSettled([controls?.close(), activity?.close(), terminal?.dispose(), owners.close()]);
     const failures = results.filter(result => result.status === "rejected");
     if (failures.length) throw new AggregateError([error, ...failures.map(result => (result as PromiseRejectedResult).reason)], "DeepSeek composition startup and cleanup failed");
     throw error;

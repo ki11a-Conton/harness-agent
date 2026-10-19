@@ -17,7 +17,7 @@
  *
  * An empty string carries no terminal meaning; it means "not finished yet" and
  * must behave exactly like an absent field. A GENUINE abnormal reason (e.g.
- * "length") must still fail closed — asserted below so the tolerance cannot
+ * "content_filter") must still fail closed — asserted below so the tolerance cannot
  * silently swallow a real truncation.
  */
 
@@ -82,11 +82,11 @@ describe("OpenAI stream: empty finish_reason is not a terminal reason", () => {
   });
 
   it("still fails closed on a GENUINE abnormal finish reason", async () => {
-    const events = await collect(frame({ content: "partial" }, "length") + "data: [DONE]\n\n");
+    const events = await collect(frame({ content: "partial" }, "content_filter") + "data: [DONE]\n\n");
     const done = completed(events);
     expect(done).toHaveLength(1);
     expect(done[0]!.result.finishReason).toBe("error");
     expect(done[0]!.result.error?.code).toBe("MODEL_ERROR");
-    expect(done[0]!.result.error?.evidence).toContain("length");
+    expect(done[0]!.result.error?.evidence).toContain("content_filter");
   });
 });

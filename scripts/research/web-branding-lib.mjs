@@ -1,6 +1,8 @@
 /** Reviewed deterministic UI derivatives; upstream bytes remain frozen. */
 import { createHash } from 'node:crypto';
 import { guardConversationNavigation, guardWorkspaceNavigation } from './web-navigation-ui.mjs';
+import { removeProductUi, removedUiModules } from './web-product-ui.mjs';
+import { addControlsUi } from './web-controls-ui.mjs';
 
 export const brandedModules = Object.freeze([
   'dsh-client-ui-brand-official', 'dsh-client-ui-layout', 'dsh-client-ui-plugin-manager',
@@ -12,6 +14,12 @@ export const brandedModules = Object.freeze([
   'dsh-api-terminal-controller',
   'dsh-client-connection',
   'dsh-client-ui-settings-general',
+  'dsh-client-ui-agent-preset',
+  'dsh-client-ui-settings-plugins',
+  'dsh-client-ui-settings-plugin-inventory',
+  'dsh-client-ui-permission-presets',
+  'dsh-client-ui-model-selection',
+  'dsh-client-ui-goal',
 ]);
 export const brandRoot = 'harness-brand';
 export const hash = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -48,7 +56,7 @@ export function deriveBrandModule(stem, original) {
   if (!brandedModules.includes(stem)) throw new Error('Unreviewed branding module: ' + stem);
   if (stem === 'dsh-client-ui-brand-official') return Buffer.from(brandModule);
   let source = original.toString('utf8');
-  if (!['dsh-client-ui-conversation', 'dsh-client-ui-chat', 'dsh-client-ui-workspace', 'dsh-client-ui-sidebar-right', 'dsh-api-terminal-controller', 'dsh-client-connection', 'dsh-client-ui-settings-general'].includes(stem) && !source.includes('DeepSeek Harness')) throw new Error('Branding source changed: ' + stem);
+  if (![...removedUiModules, 'dsh-client-ui-conversation', 'dsh-client-ui-chat', 'dsh-client-ui-workspace', 'dsh-client-ui-sidebar-right', 'dsh-api-terminal-controller', 'dsh-client-connection', 'dsh-client-ui-settings-general', 'dsh-client-ui-permission-presets', 'dsh-client-ui-model-selection', 'dsh-client-ui-goal'].includes(stem) && !source.includes('DeepSeek Harness')) throw new Error('Branding source changed: ' + stem);
   source = source.replaceAll('DeepSeek Harness', 'Harness Agent');
   if (stem === 'dsh-client-ui-chat') {
     const marker = 'className: TurnUsagePanel_module_css_default.trigger,';
@@ -126,9 +134,10 @@ export function deriveBrandModule(stem, original) {
       (_, declaration) => { replaced++; return declaration + JSON.stringify('/deepseek/harness-brand/welcome.svg'); });
     if (replaced !== 4) throw new Error('Expected exactly four account onboarding illustrations');
   }
+  source = addControlsUi(stem, removeProductUi(stem, source));
   // Derived files have their own provenance, rather than claiming an original source map.
   source = source.replace(/\n\/\/# sourceMappingURL=[^\n]+/g, '');
-  const kind = ['dsh-client-ui-conversation', 'dsh-client-ui-chat', 'dsh-client-ui-workspace', 'dsh-client-ui-sidebar-right', 'dsh-api-terminal-controller', 'dsh-client-connection', 'dsh-client-ui-settings-general'].includes(stem) ? 'UI' : 'presentation';
+  const kind = ['dsh-client-ui-conversation', 'dsh-client-ui-chat', 'dsh-client-ui-workspace', 'dsh-client-ui-sidebar-right', 'dsh-api-terminal-controller', 'dsh-client-connection', 'dsh-client-ui-settings-general', 'dsh-client-ui-permission-presets', 'dsh-client-ui-model-selection', 'dsh-client-ui-goal'].includes(stem) ? 'UI' : 'presentation';
   return Buffer.from(`// Harness Agent ${kind} derivative; original retained under plugins/.\n` + source);
 }
 
