@@ -13,6 +13,7 @@ import { createHostTools } from "./host-tools.js";
 import { createOwnerManager, type OwnerHooks, type OwnerManager } from "./owners.js";
 import { createDeliverablesService } from "./deliverables.js";
 import { createFilesService, workspaceReadTool } from "./files.js";
+import { allocateAvailableLeaseFixture } from "./test-support/lease-fixture.js";
 
 const cleanup: Array<() => Promise<void>> = [];
 afterEach(async () => { for (const action of cleanup.splice(0).reverse()) await action(); });
@@ -284,16 +285,47 @@ it("a stable Web draft changes its real HTTP model without editing native frozen
   expect(JSON.stringify(await readFile(join(stack.dataDir, "deepseek", "owners-index.json"), "utf8"))).not.toContain("private-draft-model-key");
 });
 
-it("successive pristine model selections keep a dense stable journal and hide every physical replacement", async () => {
+it("a genuinely busy later model owner reallocates setup without changing the original stable journal", async () => {
   const selected = new ScriptedModelProvider([ScriptedModelProvider.text("new route")]);
-  const stack = await fixture(undefined, { newSessionsUseChildren: true,
-    resolveSelection: async choice => ({ modelProvider: selected, model: { providerId: selected.id, modelId: choice.modelId } }) });
-  const session = await stack.manager.createSession("secondary", signal());
-  const originalPrefix = await stack.manager.harnessFacade.events.list(session.id);
-  await stack.manager.selectModel(session.id, { providerKey: "route-one", modelId: "one" }, signal()); const first = stack.manager.nativeSessionId(session.id);
-  const firstPrefix = await stack.manager.harnessFacade.events.list(session.id);
-  await stack.manager.selectModel(session.id, { providerKey: "route-two", modelId: "two" }, signal()); const second = stack.manager.nativeSessionId(session.id);
-  const all = await stack.manager.harnessFacade.events.list(session.id);
+  const options: Partial<OwnerHooks> = { newSessionsUseChildren: true,
+    resolveSelection: async choice => ({ modelProvider: selected, model: { providerId: selected.id, modelId: choice.modelId } }) };
+  const one = { providerKey: "route-one", modelId: "one" }; const two = { providerKey: "route-two", modelId: "two" };
+  const blocked = await allocateAvailableLeaseFixture(async () => {
+    const stack = await fixture(undefined, options); const session = await stack.manager.createSession("secondary", signal());
+    await stack.manager.selectModel(session.id, one, signal());
+    const id = createHash("sha256").update(JSON.stringify({ path: process.platform === "win32" ? stack.secondary.toLowerCase() : stack.secondary, selection: two })).digest("hex");
+    const path = join(stack.dataDir, "deepseek", "owners", id); const held = await acquireDataDirLease(path);
+    if (!held) throw new Error("Expected a persistent model owner lease"); cleanup.push(() => held.release());
+    return { stack, session, path, prefix: await stack.manager.harnessFacade.events.list(session.id) };
+  }, cleanup);
+  let attempts = 0;
+  const admitted = await allocateAvailableLeaseFixture(async () => {
+    const stack = ++attempts === 1 ? blocked.stack : await fixture(undefined, options);
+    const session = stack === blocked.stack ? blocked.session : await stack.manager.createSession("secondary", signal());
+    await stack.manager.selectModel(session.id, one, signal()); await stack.manager.selectModel(session.id, two, signal());
+    return { stack, session, events: await stack.manager.harnessFacade.events.list(session.id) };
+  }, cleanup);
+  expect(attempts).toBeGreaterThanOrEqual(2); expect(admitted.stack.directory).not.toBe(blocked.stack.directory);
+  expect(admitted.events.map(event => event.sequence)).toEqual([0, 1, 2, 3, 4]);
+  expect((await admitted.stack.manager.harnessFacade.store.getSession(admitted.session.id))?.model.modelId).toBe("two");
+  expect(await blocked.stack.manager.harnessFacade.events.list(blocked.session.id)).toEqual(blocked.prefix);
+  expect((await blocked.stack.manager.harnessFacade.store.getSession(blocked.session.id))?.model.modelId).toBe("one");
+  await expect(acquireDataDirLease(blocked.path)).rejects.toMatchObject({ code: "HARNESS_DATA_DIR_IN_USE" });
+});
+
+it("successive pristine model selections keep a dense stable journal and hide every physical replacement", async () => {
+  const { stack, session, originalPrefix, first, firstPrefix, second, all } = await allocateAvailableLeaseFixture(async () => {
+    const selected = new ScriptedModelProvider([ScriptedModelProvider.text("new route")]);
+    const stack = await fixture(undefined, { newSessionsUseChildren: true,
+      resolveSelection: async choice => ({ modelProvider: selected, model: { providerId: selected.id, modelId: choice.modelId } }) });
+    const session = await stack.manager.createSession("secondary", signal());
+    const originalPrefix = await stack.manager.harnessFacade.events.list(session.id);
+    await stack.manager.selectModel(session.id, { providerKey: "route-one", modelId: "one" }, signal()); const first = stack.manager.nativeSessionId(session.id);
+    const firstPrefix = await stack.manager.harnessFacade.events.list(session.id);
+    await stack.manager.selectModel(session.id, { providerKey: "route-two", modelId: "two" }, signal()); const second = stack.manager.nativeSessionId(session.id);
+    const all = await stack.manager.harnessFacade.events.list(session.id);
+    return { stack, session, originalPrefix, first, firstPrefix, second, all };
+  }, cleanup);
   expect(all.map(event => event.sequence)).toEqual([0, 1, 2, 3, 4]); expect(all.slice(0, originalPrefix.length)).toEqual(originalPrefix);
   expect(all.slice(0, firstPrefix.length)).toEqual(firstPrefix); expect(all.every(event => event.sessionId === session.id)).toBe(true);
   expect(await stack.manager.harnessFacade.events.nextSequence(session.id)).toBe(5);

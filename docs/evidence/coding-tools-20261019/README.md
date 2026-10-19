@@ -35,3 +35,7 @@ node scripts/research/coding-tools-20261019/acceptance.mjs .ci/coding-tools /pat
 ```
 
 第三个位置参数为可选的已构建基线 checkout；省略时仅验证当前版本真实 CLI/Web 的新 schema 和执行链，CI 使用此方式。运行目录必须有足够的临时空间；可通过 `TMPDIR` 指向工作区内目录。脚本本地启动 HTTP provider，不需要真实模型密钥。
+
+## Windows CI后续修复
+
+第一次远端主CI未通过：连续模型切换的后续派生owner端口冲突。完整记录、测试专用准备修复和新增6项回归见[Windows跟进](windows-fixture-followup/README.md)。前三类专项当次通过；最终交付以修复提交的完整CI为准。

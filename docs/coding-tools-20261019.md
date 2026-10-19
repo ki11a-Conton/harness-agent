@@ -67,3 +67,5 @@ ZCode/Claude 的旧分析不作为本轮新阅读或新增代码的证据。pi �
 主 CI 的双平台验收及原生 Windows 流程均执行新的真实 CLI/Web 脚本；Windows 回执额外强制核对四项新用例，原有必验项目保留。
 
 本轮结果证明工具接口和工程链路的效率及正确性。付费真实模型调用为 0，真实模型的自主成功率、提示词服从、长任务质量仍为 `NOT_PROVEN`。不推广 challenger 为默认策略，不据此发布新 release。批量编辑沿用进程内锁和落盘前的 best-effort 版本复核，不承诺与任意外部写进程之间的原子 CAS、断电安全或多文件事务。
+
+真实Windows主CI另暴露了测试夹具的派生owner端口可用性缺口，已补充完整准备阶段的有界分配及6项真实回归；详见[跟进证据](evidence/coding-tools-20261019/windows-fixture-followup/README.md)。此修复不改生产租约协议，第一次失败保留，新提交继续执行完整CI。
