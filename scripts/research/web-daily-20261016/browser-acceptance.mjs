@@ -74,27 +74,30 @@ const browser = await chromium.launch({ headless: true, executablePath: values.c
 await mkdir(output, { recursive: true });
 const results = [], observations = new WeakMap();
 const composer = page => page.locator('[data-composer-input=true][contenteditable=true]').filter({ visible: true });
-const panel = page => page.locator('[data-harness-coding="panel"]');
 const button = (page, name) => page.getByRole('button', { name, exact: true }).filter({ visible: true });
 const check = (checks, label, detail) => checks.push({ label, status: 'PASS', ...(detail ? { detail } : {}) });
 async function sidebar(page) { const open = button(page, 'Open sidebar'); if (await open.isVisible()) await open.click(); }
 async function collapseMobile(page) {
   if (page.viewportSize().width >= 700) return;
-  const close = button(page, 'Collapse sidebar');
+  const close = button(page, /^(Collapse sidebar|收起侧边栏)$/);
   if (await close.isVisible()) {
     try { await close.click(); }
     catch (error) {
       // Navigation can finish its own responsive collapse after this visibility
       // read. Accept only that observed postcondition, never a missed action.
-      if (!await button(page, 'Open sidebar').isVisible()) throw error;
+      if (!await button(page, /^(Open sidebar|打开侧边栏)$/).isVisible()) throw error;
     }
   }
 }
 async function boot(page) {
   await page.goto(origin, { waitUntil: 'domcontentloaded' });
-  await button(page, 'Choose workspace').waitFor({ timeout: 15000 }); await button(page, 'Choose workspace').click();
+  await composer(page).waitFor({ timeout: 15000 }); await sidebar(page);
+  const before = createCount(page);
+  await button(page, 'New session').last().click(); await collapseMobile(page);
+  const picker = button(page, /^(Choose workspace|project)$/).first();
+  await picker.waitFor({ timeout: 15000 }); await picker.click();
   await page.getByRole('menuitem', { name: 'project', exact: true }).click();
-  await composer(page).waitFor({ timeout: 10000 });
+  await createdSince(page, before);
 }
 async function finished(page) {
   await page.getByRole('heading', { name: 'Actual Harness browser answer', exact: true }).last().waitFor({ timeout: 15000 });
@@ -117,17 +120,28 @@ async function send(page, text) {
   return observations.get(page).results.filter(result => result.endpoint === 'session/create' && result.ok).at(-1)?.value?.sessionId;
 }
 async function newSession(page) {
-  await sidebar(page); await button(page, 'New session').last().click(); await collapseMobile(page);
-  await page.getByText('Into the Unknown', { exact: true }).waitFor(); await composer(page).waitFor();
+  await sidebar(page); const before = createCount(page);
+  await button(page, 'New session').last().click(); await collapseMobile(page);
+  await createdSince(page, before);
 }
-async function openPanel(page) {
-  await panel(page).locator('#launch').click(); await panel(page).locator('#session option').first().waitFor({ state: 'attached' });
+function createCount(page) {
+  return observations.get(page).calls.filter(call => call.endpoint === 'session/create').length;
 }
-async function selectPanel(page, id) {
+async function createdSince(page, before) {
+  const rpc = observations.get(page);
+  await deadline((async () => {
+    while (rpc.results.filter(result => result.endpoint === 'session/create' && result.ok).length <= before) await page.waitForTimeout(30);
+  })(), 12000, 'The real new-session admission did not complete');
+  await composer(page).waitFor();
+  await page.getByRole('heading', { name: 'Actual Harness browser answer', exact: true }).last().waitFor({ state: 'hidden' });
+}
+async function selectSession(page, id) {
   assert(id, 'The actual create result must name the selected session');
-  const p = panel(page); await p.locator('#session').selectOption(id);
-  await p.locator('#refresh').click();
-  await p.locator('#state').filter({ hasText: /Task ended|Not started|任务已结束|未开始/ }).waitFor({ timeout: 10000 });
+  // Native narrow review tabs are fullscreen. Leave that view through its
+  // actual controls before trying to operate navigation underneath it.
+  if (await button(page, 'Exit fullscreen').isVisible()) await button(page, 'Exit fullscreen').click();
+  if (await button(page, 'Collapse right sidebar').isVisible()) await button(page, 'Collapse right sidebar').click();
+  await sidebar(page); await page.locator('[data-row-key="session:' + id + '"]').click(); await collapseMobile(page); await finished(page);
 }
 async function latency(context, page, action) {
   transportLatency = 350;
@@ -188,8 +202,9 @@ const cases = {
     await composer(page).fill('PRIVATE_EXISTING_TASK_DRAFT');
     await sidebar(page);
     await latency(context, page, async () => {
+      const before = createCount(page);
       await button(page, 'New session').last().click(); await collapseMobile(page);
-      await composer(page).fill('PASTED_AFTER_NEW_SESSION'); await page.getByText('Into the Unknown', { exact: true }).waitFor();
+      await composer(page).fill('PASTED_AFTER_NEW_SESSION'); await createdSince(page, before);
       assert.equal(await composer(page).innerText(), 'PASTED_AFTER_NEW_SESSION', 'New-task paste was lost or assigned to the previous session');
     });
     check(checks, 'A paste immediately after New Session belongs to the new task under real network latency');
@@ -198,16 +213,16 @@ const cases = {
     check(checks, 'Returning to the previous task preserves its independent composer draft');
   },
   'coding-draft-ownership': async (page, context, checks) => {
-    const a = 'Panel A ' + Date.now(), b = 'Panel B ' + Date.now();
+    const a = 'Composer A ' + Date.now(), b = 'Composer B ' + Date.now();
     const aId = await send(page, a); await finished(page); await newSession(page); const bId = await send(page, b); await finished(page);
-    await openPanel(page); await selectPanel(page, aId); const p = panel(page);
-    await p.locator('#prompt').fill('ONLY_A_DRAFT'); await selectPanel(page, bId);
-    assert.equal(await p.locator('#prompt').inputValue(), '', 'A private coding draft leaked into B');
-    assert.equal(await p.locator('#continue').isDisabled(), true); check(checks, 'Empty coding draft cannot submit');
-    await p.locator('#prompt').fill('ONLY_B_DRAFT'); await selectPanel(page, aId);
-    assert.equal(await p.locator('#prompt').inputValue(), 'ONLY_A_DRAFT'); check(checks, 'A/B coding panel drafts remain separate through selection');
-    await p.locator('#close').click(); await openPanel(page); assert.equal(await p.locator('#prompt').inputValue(), 'ONLY_A_DRAFT');
-    check(checks, 'Closing and reopening the coding dialog retains its selected session draft');
+    await selectSession(page, aId); await composer(page).fill('ONLY_A_DRAFT'); await selectSession(page, bId);
+    assert.equal(await composer(page).innerText(), '', 'A private coding draft leaked into B');
+    assert.equal(await button(page, 'Send message').isDisabled(), true); check(checks, 'Empty native coding draft cannot submit');
+    await composer(page).fill('ONLY_B_DRAFT'); await selectSession(page, aId);
+    assert.equal(await composer(page).innerText(), 'ONLY_A_DRAFT'); check(checks, 'A/B native coding drafts remain separate through selection');
+    await sidebar(page); await button(page, 'Settings').click(); await button(page, 'Close').click(); await collapseMobile(page);
+    assert.equal(await composer(page).innerText(), 'ONLY_A_DRAFT');
+    check(checks, 'Closing native settings retains the selected coding session draft');
   },
   'feedback-roundtrip': async (page, context, checks) => {
     await send(page, 'Feedback target ' + Date.now()); await finished(page);
@@ -231,14 +246,15 @@ const cases = {
   },
   'coding-modal-keyboard': async (page, context, checks) => {
     await send(page, 'Modal keyboard task ' + Date.now()); await finished(page); await bindNewSession(page);
-    await openPanel(page); const p = panel(page); await p.locator('#prompt').click(); await p.locator('#prompt').fill('MODAL_PRIVATE_DRAFT');
+    await composer(page).fill('MODAL_PRIVATE_DRAFT'); await sidebar(page); await button(page, 'Settings').click();
+    const dialog = page.getByRole('dialog', { name: 'Settings', exact: true }); await dialog.waitFor();
     const rpc = observations.get(page), before = rpc.calls.filter(c => c.endpoint === 'session/create').length, title = await page.title();
     await page.keyboard.press('Control+Shift+,'); await page.waitForTimeout(500);
-    assert.equal(rpc.calls.filter(c => c.endpoint === 'session/create').length, before, 'A global shortcut created a hidden session behind the native dialog');
-    assert.equal(await page.title(), title); assert.equal(await p.locator('#prompt').inputValue(), 'MODAL_PRIVATE_DRAFT');
-    check(checks, 'An assigned New Session shortcut cannot navigate behind the open coding dialog');
-    await page.keyboard.press('Escape'); await p.locator('dialog').waitFor({ state: 'hidden' });
-    await page.keyboard.press('Control+Shift+,'); await page.getByText('Into the Unknown', { exact: true }).waitFor();
+    assert.equal(rpc.calls.filter(c => c.endpoint === 'session/create').length, before, 'A global shortcut created a hidden session behind native settings');
+    assert.equal(await page.title(), title); assert.equal(await composer(page).innerText(), 'MODAL_PRIVATE_DRAFT');
+    check(checks, 'An assigned New Session shortcut cannot navigate behind the open native settings dialog');
+    await page.keyboard.press('Escape'); await dialog.waitFor({ state: 'hidden' }); await collapseMobile(page);
+    await page.keyboard.press('Control+Shift+,'); await createdSince(page, before);
     assert.equal(rpc.calls.filter(c => c.endpoint === 'session/create').length, before + 1);
     check(checks, 'Escape closes the native dialog and the global shortcut works again');
   },
@@ -247,20 +263,29 @@ const cases = {
     // shared by these cases, so a prior identical write would have no diff.
     try { await unlink(path.join(fixture.cwd, 'browser-created.txt')); }
     catch (error) { if (error.code !== 'ENOENT') throw error; }
+    await sidebar(page); await button(page, 'Settings').click(); await button(page, 'General').click();
+    const coding = page.getByRole('switch', { name: 'Show coding view', exact: true });
+    if (await coding.getAttribute('aria-checked') !== 'true') await coding.click();
+    await button(page, 'Close').click(); await collapseMobile(page);
     const a = '[fixture:write] Diff owner A ' + Date.now(), b = 'Diff owner B ' + Date.now();
     const aId = await send(page, a); await button(page, 'Allow once').waitFor({ timeout: 10000 }); await button(page, 'Allow once').click(); await finished(page);
     assert.equal(await readFile(path.join(fixture.cwd, 'browser-created.txt'), 'utf8'), 'Actual approved browser coding output\n');
-    await newSession(page); const bId = await send(page, b); await finished(page); await openPanel(page); await selectPanel(page, aId); const p = panel(page);
-    await p.locator('#diff:not(:disabled)').waitFor({ timeout: 10000 });
+    await newSession(page); const bId = await send(page, b); await finished(page); await selectSession(page, aId);
+    const changes = button(page, 'View changes to browser-created.txt'); await changes.waitFor({ timeout: 10000 });
     await latency(context, page, async () => {
-      const response = page.waitForResponse(r => new URL(r.url()).pathname === '/api/changes.summary').then(value => ({ value }), error => ({ error }));
-      await p.locator('#diff').click(); await selectPanel(page, bId); const result = await response;
-      if (result.error) throw result.error; await result.value.finished(); await page.waitForTimeout(500);
-      assert.equal(await p.locator('#changes').isVisible(), false, 'The previous session diff was rendered in the new selection');
+      const response = page.waitForResponse(r => new URL(r.url()).pathname === '/api/changes.diff' && new URL(r.url()).searchParams.get('sessionId') === aId)
+        .then(value => ({ value }), error => ({ error }));
+      await changes.click(); await selectSession(page, bId); const result = await response;
+      if (result.error) throw result.error;
+      const diff = await result.value.json(); assert.equal(diff.path, 'browser-created.txt');
+      assert(JSON.stringify(diff.hunks).includes('Actual approved browser coding output'));
+      assert.equal(await page.locator('[data-changed-files]').count(), 0, 'The previous session change card was rendered in the new conversation');
     });
-    check(checks, 'A real delayed diff response cannot render into another selected coding session');
-    await selectPanel(page, aId); await p.locator('#diff').click(); await p.locator('#changes').filter({ hasText: 'browser-created.txt' }).waitFor({ timeout: 10000 });
-    check(checks, 'Selecting the original owner still displays its actual captured diff');
+    check(checks, 'A real delayed native diff request stays bound to its announced owner while the other conversation has no leaked change card');
+    await selectSession(page, aId); await changes.click();
+    await page.getByRole('tab', { name: /Review · turn/ }).waitFor();
+    await page.getByText('Actual approved browser coding output', { exact: false }).last().waitFor();
+    check(checks, 'Selecting the original owner opens its actual captured diff in the native review tab');
   },
   'session-reference-menu': async (page, context, checks) => {
     const title = 'Reference UI source ' + Date.now(), nickname = 'R' + Date.now();
@@ -387,7 +412,7 @@ const cases = {
   'shortcuts-persist-conflict-reset': async (page, context, checks) => {
     await bindNewSession(page); await page.reload(); await composer(page).waitFor({ timeout: 15000 });
     const rpc = observations.get(page), before = rpc.calls.filter(c => c.endpoint === 'session/create').length;
-    await page.keyboard.press('Control+Shift+,'); await page.getByText('Into the Unknown', { exact: true }).waitFor();
+    await page.keyboard.press('Control+Shift+,'); await createdSince(page, before);
     assert.equal(rpc.calls.filter(c => c.endpoint === 'session/create').length, before + 1);
     check(checks, 'An edited shortcut persists through real reload and actually creates one new session');
     const d = await shortcuts(page); await d.getByRole('searchbox', { name: 'Search shortcuts', exact: true }).fill('Toggle left sidebar');
@@ -419,11 +444,10 @@ const cases = {
     });
     assert.equal(await page.evaluate(() => document.documentElement.lang), 'zh-CN');
     await button(page, '关闭').click(); await collapseMobile(page);
-    await panel(page).locator('#launch').click(); const p = panel(page);
-    assert.equal(await p.locator('#launch').getAttribute('aria-label'), '打开编码状态');
-    assert.equal(await p.locator('dialog').getAttribute('aria-label'), 'Harness 编码状态');
-    assert(await p.locator('dialog').evaluate(e => { const r = e.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth; }));
-    await page.keyboard.press('Escape'); check(checks, 'The actual language setting localizes the coding dialog and its narrow-screen modal fits');
+    const mode = page.getByRole('combobox', { name: '任务模式', exact: true }); await mode.waitFor();
+    await button(page, '压缩上下文').waitFor();
+    assert(await page.locator('[data-harness-controls]').evaluate(e => { const r = e.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth; }));
+    check(checks, 'The actual language setting localizes native coding controls and keeps them inside the viewport');
     const open = button(page, '打开侧边栏'); if (await open.isVisible()) await open.click();
     await button(page, '设置').click(); await button(page, '通用设置').click(); await button(page, '中文').click();
     await latency(context, page, async () => {
@@ -433,28 +457,22 @@ const cases = {
     });
     assert.equal(await page.evaluate(() => document.documentElement.lang), 'en');
     await button(page, 'Close').click(); await collapseMobile(page);
-    assert.equal(await panel(page).locator('#launch').getAttribute('aria-label'), 'Open coding status');
+    await page.getByRole('combobox', { name: 'Task mode', exact: true }).waitFor();
     await page.reload(); await composer(page).waitFor({ timeout: 15000 });
     assert.equal(await page.evaluate(() => document.documentElement.lang), 'en');
-    assert.equal(await panel(page).locator('#launch').getAttribute('aria-label'), 'Open coding status');
-    check(checks, 'Returning to English updates native/shadow components and survives an actual reload');
+    await page.getByRole('combobox', { name: 'Task mode', exact: true }).waitFor();
+    check(checks, 'Returning to English updates native coding components and survives an actual reload');
   },
   'capabilities-and-task-filters': async (page, context, checks) => {
     await sidebar(page); await button(page, 'Settings').click(); await button(page, 'General').click();
     await button(page, 'Increase font size').waitFor();
     assert.equal(await button(page, 'Open configuration file').count(), 0);
     check(checks, 'A Web host without a native configuration opener does not advertise that unavailable action');
+    assert(!/\bPlugins\b|Agent presets|Current version/u.test(await page.getByRole('dialog', { name: 'Settings', exact: true }).innerText()));
     await button(page, 'Close').click();
-    await latency(context, page, async () => {
-      await button(page, 'Plugins').click(); await collapseMobile(page);
-      await button(page, 'Add plugin').waitFor();
-      // The button is also disabled while inventory is loading. Await the
-      // actual capability result, rather than mistaking that initial state
-      // for a completed pluginInventory/list response.
-      await page.getByRole('status').filter({ hasText: 'without a manageable profile' }).waitFor();
-      assert.equal(await button(page, 'Add plugin').isDisabled(), true);
-    });
-    check(checks, 'Unavailable plugin installation is disabled with the actual host capability explanation');
+    assert.equal(await button(page, 'Plugins').count(), 0);
+    assert.equal(await page.locator('[data-harness-coding="panel"]').count(), 0);
+    check(checks, 'Removed plugin, preset, version and floating coding surfaces have no remaining user-facing entry');
     await sidebar(page); await button(page, 'Automation tasks').click(); await collapseMobile(page);
     await page.locator('input[aria-label="Search tasks"]').waitFor();
     await button(page, 'Enabled').click(); await button(page, 'Inactive').click(); await button(page, 'All').click();
@@ -487,7 +505,7 @@ const cases = {
 };
 try {
   if (chosen) for (const name of chosen) assert(Object.hasOwn(cases, name), 'Unknown case: ' + name);
-  for (const viewport of viewports) for (const [name, run] of Object.entries(cases)) {
+  scenarioLoop: for (const viewport of viewports) for (const [name, run] of Object.entries(cases)) {
     if (chosen && !chosen.has(name)) continue;
     const context = await browser.newContext({ viewport: catalog[viewport], permissions: ['clipboard-read', 'clipboard-write'] });
     await context.addInitScript(() => {
@@ -519,6 +537,7 @@ try {
     results.push(result); await writeFile(path.join(output, viewport + '-' + name + '.json'), JSON.stringify(result, null, 2) + '\n');
     console.log(JSON.stringify({ name, viewport, status: result.status, checks: checks.length, failure: failure?.split('\n')[0] }));
     await context.close();
+    if (failure) break scenarioLoop;
   }
 } finally {
   await browser.close(); for (const socket of connections) socket.destroy(); await new Promise(resolve => relay.close(resolve));
@@ -527,7 +546,10 @@ try {
   await writeFile(path.join(output, 'host-logs.json'), JSON.stringify({ stdout: hostOut, stderr: hostErr, exit }, null, 2) + '\n');
   assert.equal(exit.code, 0, 'Actual production fixture shutdown must complete');
 }
-const report = { status: results.length && results.every(r => r.status === 'PASS') ? 'PASS' : 'FAIL', paidModelCalls: 0,
+const planned = viewports.flatMap(viewport => Object.keys(cases).filter(name => !chosen || chosen.has(name)).map(name => ({ viewport, name })));
+const pending = planned.filter(item => !results.some(result => result.viewport === item.viewport && result.name === item.name));
+const report = { status: results.length === planned.length && results.length > 0 && results.every(r => r.status === 'PASS') ? 'PASS' : 'FAIL',
+  complete: pending.length === 0, pending, paidModelCalls: 0,
   origin, upstreamOrigin: upstream.origin, latency: '350 ms one-way byte arrival delay in each direction during named race scenarios; preserves order without per-chunk bandwidth throttling', fixture: {
     launchId: fixture.launchId, compiledDigest: fixture.compiledDigest, installed: fixture.installed, sourceSha: fixture.sourceSha },
   driverSha256: createHash('sha256').update(await readFile(new URL(import.meta.url))).digest('hex'),
