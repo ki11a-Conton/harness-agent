@@ -401,7 +401,7 @@ it("model selection and durable prompt admission serialize on the same stable se
     const stack = await fixture(undefined, { newSessionsUseChildren: true,
       resolveSelection: async choice => ({ modelProvider: selected, model: { providerId: selected.id, modelId: choice.modelId } }) });
     const first = await stack.manager.createSession("secondary", signal());
-    let release!: () => void; let entered!: () => void; let lockedSession: Awaited<ReturnType<typeof stack.manager.harnessFacade.store.getSession>> = undefined;
+    let release!: () => void; let entered!: () => void; let lockedSession: Awaited<ReturnType<typeof stack.manager.harnessFacade.store.getSession>>;
     const enter = new Promise<void>(done => { entered = done; }); const wait = new Promise<void>(done => { release = done; });
     const admission = stack.manager.withSessionLock(first.id, async () => {
       entered(); lockedSession = await stack.manager.harnessFacade.store.getSession(first.id); await wait;
