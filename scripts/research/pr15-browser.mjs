@@ -20,7 +20,14 @@ const playwright = await import(pathToFileURL(resolve(values['playwright-module'
 const browser = await playwright.chromium.launch({ executablePath: values.chromium, headless: true, args: ['--no-sandbox'] });
 const context = await browser.newContext({ locale: 'en-US', viewport: { width: 1440, height: 900 } });
 const page = await context.newPage(); page.setDefaultTimeout(10000);
-const errors = [], checks = [], rpc = observeProductionRpc(page, origin);
+const errors = [], checks = [], permissionFrames = [], rpc = observeProductionRpc(page, origin);
+page.on('websocket', socket => socket.on('framereceived', event => {
+  let frame; try { frame = JSON.parse(String(event.payload)); } catch { return; }
+  const value = frame.type === 'frame' ? frame.value : undefined;
+  if (value?.type !== 'projection' || value.key !== 'permissions') return;
+  permissionFrames.push({ at: Date.now(), sessionId: value.sessionId, seq: value.seq, currentValue: value.value?.currentValue });
+  if (permissionFrames.length > 80) permissionFrames.shift();
+}));
 page.on('pageerror', error => errors.push(error.message));
 page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
 const button = name => page.getByRole('button', { name, exact: typeof name === 'string' }).filter({ visible: true }).first();
@@ -37,12 +44,16 @@ async function read(endpoint, args) {
   const result = await response.json(); assert.equal(result.ok, true, JSON.stringify(result.error)); return result.value;
 }
 async function prompt(text) {
+  const previousTurn = (await read('session/projections', { request: { sessionId: id } })).values.turnBoundary.lastTurn;
   const before = rpc.results.length;
   await page.locator('[data-composer-input=true][contenteditable=true]').fill(text);
   await button('Send message').click();
   await until(() => rpc.results.slice(before).some(item => item.endpoint === 'session/prompt' && item.ok), 'UI admission missing');
   await until(async () => (await requests()).some(request => request.messages.some(message => message.role === 'user' && message.content.includes(text))), 'Actual HTTP model request missing');
-  await until(async () => !await button('Stop generating').isVisible(), 'Actual turn did not settle');
+  await until(async () => {
+    const boundary = (await read('session/projections', { request: { sessionId: id } })).values.turnBoundary;
+    return boundary.lastTurn > previousTurn && boundary.openTurnStartSeq === null && !await button('Stop generating').isVisible();
+  }, 'Actual admitted turn did not settle', 30000);
 }
 async function permission(label) {
   await button(/^Access mode, current:/).click(); await page.getByRole('menuitem', { name: label, exact: true }).click();
@@ -131,9 +142,22 @@ const cases = [
     await button('Pause goal').waitFor();
     await until(async () => (await requests()).length >= before + 3, 'Goal did not continue across actual rounds', 30000);
     await button('Pause goal').click(); await button('Resume goal').waitFor();
-    await until(async () => !await button('Stop generating').isVisible(), 'Paused goal turn did not settle');
+    const paused = await read('goals/get', { agentId: id }); assert.equal(paused.phase, 'paused');
+    await until(async () => {
+      const boundary = (await read('session/projections', { request: { sessionId: id } })).values.turnBoundary;
+      return boundary.openTurnStartSeq === null && !await button('Stop generating').isVisible();
+    }, 'Paused goal turn did not settle', 30000);
     const pausedCount = (await requests()).length; await page.waitForTimeout(2100);
-    assert.equal((await requests()).length, pausedCount, 'Paused goal started another model round');
+    const stillPaused = await read('goals/get', { agentId: id });
+    assert.equal(stillPaused.phase, 'paused');
+    assert.equal(stillPaused.roundsStarted, paused.roundsStarted, 'Paused goal started another goal round');
+    // An already admitted read round can make its tool-result model request
+    // after pause. Verify goal rounds, rather than miscounting every HTTP call.
+    for (const request of (await requests()).slice(pausedCount)) {
+      const text = request.messages.findLast(message => message.role === 'user')?.content ?? '';
+      const round = /^Continue the user goal \((\d+)\/(\d+)\):/u.exec(text);
+      assert(round && Number(round[1]) <= paused.roundsStarted, 'Pause admitted an unclaimed goal round');
+    }
     await button('Edit goal').click(); await page.getByRole('textbox', { name: 'Goal objective', exact: true }).fill('[fixture:read] Updated proof goal.');
     await button('Save goal').click(); await button('Resume goal').waitFor();
     assert.equal((await read('goals/get', { agentId: id })).objective, '[fixture:read] Updated proof goal.');
@@ -191,7 +215,12 @@ try {
       failureState = { sessionId: id, permission: state.values.permissions?.currentValue,
         plan: state.values.harnessPlan === undefined ? undefined : { status: state.values.harnessPlan.status, revision: state.values.harnessPlan.revision },
         selectedRows: await page.locator('[data-row-key^="session:"][aria-selected="true"]').evaluateAll(rows => rows.map(row => row.getAttribute('data-row-key'))),
-        pendingCommands: rpc.calls.filter(call => call.endpoint === 'commands/execute' && call.state === 'sent').length };
+        pendingCommands: rpc.calls.filter(call => call.endpoint === 'commands/execute' && call.state === 'sent').length,
+        asOfSeq: state.asOfSeq, turnBoundary: state.values.turnBoundary,
+        goal: state.values.harnessGoal === null ? null : { phase: state.values.harnessGoal?.phase, roundsStarted: state.values.harnessGoal?.roundsStarted },
+        permissionButtons: await page.getByRole('button', { name: /^Access mode, current:/ }).evaluateAll(buttons => buttons.map(button => ({ label: button.getAttribute('aria-label'), busy: button.getAttribute('aria-busy'), disabled: button.disabled }))),
+        permissionFrames: permissionFrames.filter(frame => frame.sessionId === id).slice(-10),
+        transportErrors: rpc.results.filter(result => result.ok === false).map(result => ({ endpoint: result.endpoint, error: result.error })) };
     } catch (diagnosticError) { failureState = { sessionId: id, unavailable: String(diagnosticError.message) }; }
   }
   await page.screenshot({ path: join(output, 'failure.png'), fullPage: true }).catch(() => {});
@@ -201,7 +230,7 @@ try {
     scope: 'Real Chromium UI and production host with scripted loopback HTTP. Model quality is NOT_PROVEN.', checks,
     pending: cases.map(([name]) => name).filter(name => !checks.some(check => check.name === name)), errors,
     requests: (await requests()).map(request => ({ call: request.call, model: request.model, reasoningEffort: request.reasoningEffort })),
-    rpc: { calls: rpc.calls, results: rpc.results, sockets: rpc.sockets, externalRequests: rpc.externalRequests }, failureState, failure }, null, 2) + '\n');
+    rpc: { calls: rpc.calls, results: rpc.results, sockets: rpc.sockets, externalRequests: rpc.externalRequests }, permissionFrames, failureState, failure }, null, 2) + '\n');
   await browser.close();
 }
 if (failure) { console.error(failure); process.exitCode = 1; }

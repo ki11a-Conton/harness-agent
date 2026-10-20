@@ -5,7 +5,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { createHarness, type Harness } from "@ar/harness";
 import { createRuntimeRpc } from "@ar/gateway";
 import { ScriptedModelProvider } from "@ar/model";
-import { newToolCallId, toToolSemantics, type SessionId } from "@ar/contracts";
+import { newEventId, newMessageId, newTurnId, newToolCallId, toToolSemantics, type SessionId } from "@ar/contracts";
 import { ToolOrchestrator, ToolRegistry } from "@ar/tools";
 import { createSessionService, type SessionHost } from "./session.js";
 import { createEventsService } from "./events.js";
@@ -134,4 +134,52 @@ it("session/control reuses its projection while idle and refreshes it after a me
     expect(renamed.value).toBe("P41 renamed session");
     controller.abort(); await control.finished;
   } finally { spy.mockRestore(); }
+});
+
+it("session/control retries a message commit barrier and republishes unchanged values at the newer watermark", async () => {
+  const stack = await setup();
+  const controller = new AbortController();
+  const control = pump(stack.service.stream("session/control", {}, controller.signal)[Symbol.asyncIterator]());
+  try {
+    await control.waitFor(frame => frame.type === "baseline");
+    const turnId = newTurnId(), text = "The journal is visible before this message read catches up";
+    // Reproduce the supported split-read window with real durable writes: the
+    // projection must stop at this journal/message barrier until the message
+    // becomes visible, even when no later journal append will invalidate it.
+    await stack.harness.events.appendNew({ id: newEventId(), sessionId: stack.id, turnId,
+      type: "turn.started", timestamp: Date.now(), payload: { text } });
+    const title = "Committed while history is catching up";
+    const renamed = await stack.call("session/rename", { sessionId: stack.id, title }) as { seq: number };
+    const early = await control.waitFor(frame => frame.type === "projection" && frame.key === "title" && frame.value === title);
+    expect(early.seq).toBe(renamed.seq);
+    // Let the polling cache observe the complete journal watermark while the
+    // message remains genuinely absent. This models a slow durable read, not
+    // an RPC replacement or a forged successful tool result.
+    await new Promise(done => setTimeout(done, 80));
+    const journalTail = await stack.harness.events.nextSequence(stack.id);
+    await stack.harness.store.appendMessage({ id: newMessageId(), sessionId: stack.id, turnId,
+      role: "user", content: text, createdAt: Date.now() });
+    expect(await stack.harness.events.nextSequence(stack.id)).toBe(journalTail);
+    const caughtUp = await control.waitFor(frame => frame.type === "projection" && frame.key === "title"
+      && frame.value === title && Number(frame.seq) > renamed.seq);
+    expect(caughtUp.seq).toBeGreaterThan(renamed.seq);
+  } finally { controller.abort(); await control.finished; }
+});
+
+it("session/control publishes a new committed watermark even when projection values are unchanged", async () => {
+  const stack = await setup();
+  const controller = new AbortController();
+  const control = pump(stack.service.stream("session/control", {}, controller.signal)[Symbol.asyncIterator]());
+  try {
+    const initial = await control.waitFor(frame => frame.type === "baseline");
+    const baseline = (initial.value as { projections: Record<string, { asOfSeq: number; values: Record<string, unknown> }> }).projections[stack.id]!;
+    // A metadata commit can finish a previously held projection without
+    // changing its values again. Native stores still need the newer seq to
+    // accept the value they rejected at an earlier history cut.
+    await stack.harness.events.appendNew({ id: newEventId(), sessionId: stack.id, timestamp: Date.now(), type: "tool.completed",
+      payload: { hostOnly: true, tool: "web_session_metadata", kind: "web_controls_committed" } });
+    const newer = await control.waitFor(frame => frame.type === "projection" && frame.key === "permissions"
+      && Number(frame.seq) > baseline.asOfSeq);
+    expect(newer.value).toEqual(baseline.values.permissions);
+  } finally { controller.abort(); await control.finished; }
 });

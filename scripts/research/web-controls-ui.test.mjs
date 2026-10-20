@@ -54,6 +54,25 @@ test('permission submission rejects a matched command whose actual result failed
   await assert.rejects(submit('session-a', 'read-only'), /Permission storage denied/);
 });
 
+test('permission submission propagates a host rejection through the actual native session command adapter', async () => {
+  const native = await source('dsh-api-session-controller');
+  const commandStart = native.indexOf('async command(line) {'), commandEnd = native.indexOf('\n\t\t\t/** First open:', commandStart);
+  assert(commandStart >= 0 && commandEnd > commandStart);
+  const command = vm.runInNewContext('({' + native.slice(commandStart, commandEnd) + '}).command');
+  const calls = [], live = { sessionId: 'session-a', remote: { commands: { async execute(...args) {
+    calls.push(args); return { ok: false, error: { code: 'permission/write-failed', message: 'Actual host save rejected' } };
+  } } } };
+  live.command = command.bind(live);
+  const derived = addControlsUi('dsh-client-ui-permission-presets', await source('dsh-client-ui-permission-presets'));
+  const start = derived.indexOf('const submit = async (sessionId, preset) =>'), end = derived.indexOf('const catalog =', start);
+  const submit = vm.runInNewContext('(() => {' + derived.slice(start, end) + '; return submit; })()', {
+    sessions: { binding() { return { session: live }; } },
+  });
+  await assert.rejects(submit('session-a', 'read-only'), /Actual host save rejected/);
+  assert.equal(calls.length, 1); assert.equal(calls[0][0], 'session-a'); assert.equal(calls[0][1], '/permission read-only');
+  assert(Array.isArray(calls[0][2]) && calls[0][2].length === 0);
+});
+
 test('actual composer registration uses the injected live session instead of an unavailable remote service', async () => {
   const derived = addControlsUi('dsh-client-ui-conversation', await source('dsh-client-ui-conversation'));
   const start = derived.indexOf('ctx.slots.inject("conversation.input.left", () => ctx.slots.register({ name: "conversation.input.left", id: "harness-controls"');

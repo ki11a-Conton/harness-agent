@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
@@ -121,6 +121,34 @@ it('PR15 goal continuation uses a real durable inbox and stops at its round budg
   expect(inbox).toHaveLength(1); expect(inbox[0]!.status).toBe('consumed');
   expect(await readFile(join(f.cwd, 'proof.txt'), 'utf8')).toBe('real bytes');
 }, 40000);
+
+it('PR15 pausing a goal lets its admitted read round settle without starting another round', async () => {
+  const f = await fixture('test', { name: 'read_file', args: { path: 'proof.txt' } });
+  await writeFile(join(f.cwd, 'proof.txt'), 'An actual readable proof');
+  const owner = await f.composition.owners.ownerOf(f.sessionId), execute = owner.orchestrator.executeBound.bind(owner.orchestrator);
+  let entered = false, release!: () => void;
+  const blocked = new Promise<void>(done => { release = done; });
+  owner.orchestrator.executeBound = async (request, context) => {
+    if (request.binding.definition.name === 'read_file') { entered = true; await blocked; }
+    return execute(request, context);
+  };
+  try {
+    await f.composition.activity.call('goals/create', { agentId: f.sessionId, request: { objective: 'Read the proof and explain it' } }, signal());
+    await expect.poll(() => entered, { timeout: 10000 }).toBe(true);
+    const goal = (await f.composition.controls.read(f.sessionId)).goal!;
+    expect(goal.roundsStarted).toBe(1); expect(f.config.modelProvider.calls).toHaveLength(1);
+    await f.composition.activity.call('goals/pause', { agentId: f.sessionId, ref: { id: goal.id, revision: goal.revision } }, signal());
+    release();
+    await expect.poll(async () => (await f.composition.harness.store.listTurns(f.sessionId as SessionId)).map(turn => turn.status), { timeout: 15000 }).toEqual(['completed']);
+    // The second model request consumes this admitted round's real read result;
+    // counting every HTTP/model request as a new goal round is incorrect.
+    expect(f.config.modelProvider.calls).toHaveLength(2);
+    await new Promise(done => setTimeout(done, 1200));
+    expect((await f.composition.controls.read(f.sessionId)).goal).toMatchObject({ phase: 'paused', roundsStarted: 1 });
+    expect(await f.composition.harness.inbox.listAll(f.sessionId as SessionId)).toHaveLength(1);
+    expect(f.config.modelProvider.calls).toHaveLength(2);
+  } finally { release(); }
+}, 20000);
 
 it('PR15 manual compression emits an actual context event and retains the full transcript', async () => {
   const f = await fixture(); await f.command('/permission read-only'); await f.command('/compact');

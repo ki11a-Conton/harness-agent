@@ -486,19 +486,23 @@ export function createSessionService(host: SessionHost) {
       if (events.endpoints.includes(endpoint)) { yield* events.stream(endpoint, args, signal); return; }
       if (endpoint === "session/control") {
         keys(args, []);
-        const previous = new Map<string, string>();
+        const previous = new Map<string, { asOfSeq: number; encoded: string }>();
         const baselines: Record<string, unknown> = {};
         for (const row of await host.harness.store.listSessions()) if (row.status !== "failed") {
           const baseline = await controlProjection(row, signal);
           baselines[row.id] = { kind: "sequenced", asOfSeq: baseline.asOfSeq, values: baseline.values };
-          previous.set(row.id, baseline.encoded);
+          previous.set(row.id, baseline);
         }
         yield { type: "baseline", value: { projections: baselines } };
         while (!signal.aborted) {
           for (const row of await host.harness.store.listSessions()) if (row.status !== "failed") {
             const baseline = await controlProjection(row, signal);
-            if (previous.get(row.id) === baseline.encoded) continue;
-            previous.set(row.id, baseline.encoded);
+            const prior = previous.get(row.id);
+            // A changed value can first be observed behind a history commit
+            // barrier, at a seq the native store already holds and rejects.
+            // Publish it again when the barrier clears and the seq advances.
+            if (prior?.encoded === baseline.encoded && prior.asOfSeq === baseline.asOfSeq) continue;
+            previous.set(row.id, baseline);
             // Only the opening baseline/list hints support the empty cursor
             // -1. A live control frame needs a committed non-negative seq;
             // RemoteSnapshotStream also forbids a second opening baseline.
@@ -557,8 +561,12 @@ export function createSessionService(host: SessionHost) {
     const revision = controlRevision.get(row.id) ?? 0;
     const cached = controlCache.get(row.id);
     if (cached !== undefined && cached.sequence === sequence && cached.status === row.status && cached.revision === revision) return cached;
-    const projection = (await projectSnapshot(row.id, signal)).projections;
-    const entry = { sequence, status: row.status, revision, encoded: JSON.stringify(projection.values),
+    const projected = await projectSnapshot(row.id, signal), projection = projected.projections;
+    // A split message/journal read or an inbox admission binding can hold a
+    // real commit barrier. The journal's MAX is then ahead of the processed
+    // prefix. Keep polling that prefix until it catches up, even if only the
+    // message/inbox write completes and no new journal event follows.
+    const entry = { sequence: projected.sourceCursor, status: row.status, revision, encoded: JSON.stringify(projection.values),
       asOfSeq: projection.asOfSeq, values: projection.values };
     controlCache.set(row.id, entry);
     return entry;
