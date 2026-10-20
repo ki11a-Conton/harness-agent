@@ -83,7 +83,7 @@ async function fixture(withInjection = false): Promise<Fixture> {
 }
 
 interface ScriptOptions {
-  /** Called before the second model call is answered (between the two reads). */
+  /** Called before the second coding call is answered (between the two reads). */
   betweenReads?: () => Promise<void>;
   /** The path the scripted agent asks for. */
   path?: string;
@@ -94,6 +94,7 @@ interface ScriptOptions {
 /** A scripted provider that performs a real read, then a real RE-READ, then stops. */
 function provider(requests: ModelRequest[], opts: ScriptOptions = {}): ModelProvider {
   const path = opts.path ?? "spec/limits.txt";
+  let codingCalls = 0;
   return {
     id: "n6-context-safe",
     async listModels() {
@@ -103,7 +104,15 @@ function provider(requests: ModelRequest[], opts: ScriptOptions = {}): ModelProv
       return {
         async *generate(request: ModelRequest): AsyncGenerator<ModelEvent> {
           requests.push(structuredClone(request));
-          const call = requests.length;
+          // Context preparation is a separate model purpose, not the next
+          // coding step. Keep the two real reads and their betweenReads hook
+          // tied to coding calls, while answering the no-tool handoff safely.
+          if (request.system?.includes("CONTEXT CHECKPOINT COMPACTION")) {
+            expect(request.tools ?? []).toEqual([]);
+            yield { type: "completed", result: { finishReason: "stop", text: "Earlier evidence was folded into this handoff. Re-read spec/limits.txt for the exact binding limit before editing." }, timestamp: 0 };
+            return;
+          }
+          const call = ++codingCalls;
           yield { type: "started", timestamp: 0 };
           if (opts.alwaysTool === true || call <= 2) {
             if (call === 2) await opts.betweenReads?.();
@@ -162,6 +171,7 @@ async function runLoop(
 const systemOf = (r: ModelRequest): string => r.system ?? "";
 const messageText = (r: ModelRequest): string =>
   r.messages.map((m) => (typeof m.content === "string" ? m.content : JSON.stringify(m.content))).join("\n");
+const codingRequests = (requests: ModelRequest[]): ModelRequest[] => requests.filter(request => !request.system?.includes("CONTEXT CHECKPOINT COMPACTION"));
 const payloadText = (events: { type: string; payload?: unknown }[], type: string): string =>
   events
     .filter((e) => e.type === type)
@@ -174,12 +184,12 @@ describe("N6/N4 — context-safe tool-call efficiency on the REAL harness tool l
   it("1. the guidance is INSTALLED into the real model request, and is absent at the default", async () => {
     const withGuidance = await runLoop(await fixture(), { maxTokens: 32_000 });
     try {
-      expect(withGuidance.requests.length).toBeGreaterThanOrEqual(3);
-      for (const r of withGuidance.requests) {
+      expect(codingRequests(withGuidance.requests).length).toBeGreaterThanOrEqual(3);
+      for (const r of codingRequests(withGuidance.requests)) {
         expect(systemOf(r)).toContain(CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_V1);
       }
       // The evidence the rule talks about is still in front of the model here.
-      expect(messageText(withGuidance.requests[1]!)).toContain(SENTINEL);
+      expect(messageText(codingRequests(withGuidance.requests)[1]!)).toContain(SENTINEL);
     } finally {
       await withGuidance.harness.close();
     }
@@ -187,11 +197,11 @@ describe("N6/N4 — context-safe tool-call efficiency on the REAL harness tool l
     const atDefault = await runLoop(await fixture(), { guidance: false, maxTokens: 32_000 });
     try {
       expect(atDefault.requests.length).toBeGreaterThan(0);
-      for (const r of atDefault.requests) {
+      for (const r of codingRequests(atDefault.requests)) {
         expect(systemOf(r)).not.toContain(CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_V1);
       }
       // …and the default run still works: the read happened.
-      expect(messageText(atDefault.requests[1]!)).toContain(SENTINEL);
+      expect(messageText(codingRequests(atDefault.requests)[1]!)).toContain(SENTINEL);
     } finally {
       await atDefault.harness.close();
     }
@@ -200,17 +210,18 @@ describe("N6/N4 — context-safe tool-call efficiency on the REAL harness tool l
   it("2. a small budget really compacts, the guidance survives, and the re-read is a real new tool call through the orchestrator AND the permission engine", async () => {
     const { harness, requests, events } = await runLoop(await fixture(), { maxTokens: 1_200 });
     try {
-      expect(requests.length).toBeGreaterThanOrEqual(3);
+      expect(codingRequests(requests).length).toBeGreaterThanOrEqual(3);
 
       // The runtime really compacted under pressure …
       expect(countOf(events, "context.compacted")).toBeGreaterThan(0);
       expect(countOf(events, "context.dropped")).toBeGreaterThan(0);
       // … and the transcript carries the digest/summary that replaced the folds.
-      expect(messageText(requests[1]!)).toMatch(/compaction|summary|transcript is preserved/i);
+      const checkpoint = codingRequests(requests)[1]!.messages.find(message => message.contextCheckpoint?.version === 1);
+      expect(checkpoint?.role).toBe("assistant"); expect(checkpoint?.content.trim()).toBeTruthy();
 
       // The strategy is a system-level install: it survives compaction, so the
       // model still holds the rule after the evidence it needed was folded away.
-      for (const r of requests) expect(systemOf(r)).toContain(CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_V1);
+      for (const r of codingRequests(requests)) expect(systemOf(r)).toContain(CONTEXT_SAFE_TOOL_CALL_EFFICIENCY_GUIDANCE_V1);
 
       // The re-read was a REAL tool call: two requested reads for the same path,
       // each authorised by the permission engine, started and completed by the
@@ -234,13 +245,13 @@ describe("N6/N4 — context-safe tool-call efficiency on the REAL harness tool l
       },
     });
     try {
-      expect(requests.length).toBeGreaterThanOrEqual(3);
+      expect(codingRequests(requests).length).toBeGreaterThanOrEqual(3);
       // The versioned read reports a content digest to the model; after the file
       // is rewritten, the SECOND read must report a digest the first one never
       // showed. That is what makes "read it again if it changed" a fact the
       // agent can observe rather than something it has to remember.
-      const first = new Set(sha256sIn(messageText(requests[1]!)));
-      const later = sha256sIn(messageText(requests[2]!));
+      const first = new Set(sha256sIn(messageText(codingRequests(requests)[1]!)));
+      const later = sha256sIn(messageText(codingRequests(requests)[2]!));
       expect(later.length, "the read tool reported no version digest at all").toBeGreaterThanOrEqual(1);
       const fresh = later.filter((d) => !first.has(d));
       expect(fresh.length, "no new version digest appeared after the file changed").toBeGreaterThanOrEqual(1);

@@ -9,7 +9,7 @@ import { createHarness } from "./create-harness.js";
 const roots: string[] = [];
 afterEach(async () => { await Promise.all(roots.splice(0).map(root => rm(root, { recursive: true, force: true }))); });
 
-async function fixture(maxTokens: number, options: { memory?: boolean; outputReserved?: number; goal?: string } = {}) {
+async function fixture(blockBudget: number, options: { memory?: boolean; outputReserved?: number; goal?: string; absoluteBudget?: boolean } = {}) {
   const cwd = await mkdtemp(join(tmpdir(), "ar-rehydration-headroom-")); roots.push(cwd);
   const requests: ModelRequest[] = [];
   const provider: ModelProvider = { id: "rehydration-headroom", listModels: async () => [{ id: "scripted", capabilities: { contextWindowTokens: 128_000 } }], createClient: () => ({ async *generate(request) {
@@ -19,9 +19,14 @@ async function fixture(maxTokens: number, options: { memory?: boolean; outputRes
   } }) };
   const memory = options.memory ?? true;
   const goal = options.goal ?? "continue";
+  // These cases isolate block admission/rehydration. Reserve actual rendered
+  // context envelope space without changing their original spendable block
+  // budget; the separate absolute-budget case exercises the hard wire check.
+  const envelopeReserve = options.absoluteBudget ? 0 : 512;
+  const maxTokens = blockBudget + envelopeReserve;
   const h = await createHarness({ cwd, dataDir: join(cwd, "data"), profile: "test", modelProvider: provider, model: { providerId: provider.id, modelId: "scripted" },
     ...(memory ? { memory: { enabled: true, scope: "workspace" } } : {}), featureFlags: { skills: false, mcp: false, delegation: false, learning: false },
-    contextBudget: { maxTokens, reserved: { system: 0, task: 0, output: options.outputReserved ?? 0 }, dynamic: 0 },
+    contextBudget: { maxTokens, reserved: { system: envelopeReserve, task: 0, output: options.outputReserved ?? 0 }, dynamic: 0 },
   });
   if (memory) {
     const now = Date.now();
@@ -29,7 +34,12 @@ async function fixture(maxTokens: number, options: { memory?: boolean; outputRes
   }
   const session = await h.runtime.createSession({ agent: h.agents[0]!, cwd });
   const turn = await h.runtime.startTurn(session.id, goal);
-  const run = async () => ({ outcome: await h.runtime.runTurn(session.id, turn.id, new AbortController().signal), events: await h.events.list(session.id) });
+  const run = async () => {
+    const outcome = await h.runtime.runTurn(session.id, turn.id, new AbortController().signal);
+    for (const request of requests) expect(h.context.pipeline.estimateTextTokens(request.system ?? "")
+      + h.context.pipeline.estimateMessageTokens(request.messages) + (options.outputReserved ?? 0)).toBeLessThanOrEqual(maxTokens);
+    return { outcome, events: await h.events.list(session.id) };
+  };
   return { h, requests, run, goal };
 }
 
@@ -96,11 +106,11 @@ describe("actual Harness rehydration within effective user/output reservation", 
   });
 
   it("still fails an irreducible protected system/user overflow before any provider call", async () => {
-    const f = await fixture(129);
+    const f = await fixture(129, { absoluteBudget: true });
     try {
       const { outcome, events } = await f.run();
       expect(outcome.status).toBe("failed"); expect(f.requests).toEqual([]);
-      expect(events.find(event => event.type === "run.limit_reached")?.payload).toMatchObject({ limit: "maxTokens", used: 140 });
+      expect(events.find(event => event.type === "run.limit_reached")?.payload).toMatchObject({ limit: "maxTokens", used: 235 });
     } finally { await f.h.close(); }
   });
 });
