@@ -230,6 +230,7 @@ export function projectSessionHistory(input: SessionProjectionInput): PageProjec
     return content;
   }
   function publishMessage(message: Message, event: AgentEvent, modelSettlement = false): void {
+    if (message.contextCheckpoint !== undefined) return;
     if (publishedMessages.has(message.id)) return;
     const content = contentOf(message);
     const outcome = message.toolCallId === undefined ? undefined : toolOutcomes.get(message.toolCallId);
@@ -338,6 +339,7 @@ export function projectSessionHistory(input: SessionProjectionInput): PageProjec
         break;
       }
       case "model.started": {
+        if (event.payload.purpose === "compaction") break;
         modelStarted = true;
         const key = `${turnKey ?? turn}:${stringOf(event.payload.stepId) ?? event.id}`;
         if (active !== undefined) finishAttempt(event.timestamp, { kind: "error", failure: { code: "MODEL_ERROR", message: "The model attempt restarted without a completion record." } });
@@ -369,11 +371,13 @@ export function projectSessionHistory(input: SessionProjectionInput): PageProjec
         }
         break;
       case "model.completed":
+        if (event.payload.purpose === "compaction") break;
         for (const message of anchored) publishMessage(message, event, message.role === "assistant" && plan.modelMessages.has(message.id));
         appendHarnessEvent(append, event);
         break;
       case "model.retry":
       case "model.failed":
+        if (event.payload.purpose === "compaction") break;
         for (const message of anchored) publishMessage(message, event);
         finishAttempt(event.timestamp, { kind: "error", failure: failureOf(event.payload.error) });
         appendHarnessEvent(append, event);
@@ -498,7 +502,7 @@ function planMessageAnchors(input: SessionProjectionInput): AnchorPlan {
       if (index === undefined) barriers.add(event.sequence);
       else anchor(index, event);
     }
-    if (event.type === "model.completed") {
+    if (event.type === "model.completed" && event.payload.purpose !== "compaction") {
       const index = find(message => message.role === "assistant" && message.turnId === event.turnId
         && (typeof event.payload.text !== "string" || message.content === event.payload.text)
         && (typeof event.payload.toolCalls !== "number" || (message.toolCalls?.length ?? 0) === event.payload.toolCalls));
@@ -521,7 +525,7 @@ function planMessageAnchors(input: SessionProjectionInput): AnchorPlan {
     if (callId !== undefined && (event.type === "tool.requested" || event.type === "tool.started")) {
       anchor(find(message => message.role === "assistant" && message.toolCalls?.some(call => call.id === callId) === true), event);
     }
-    if (event.type === "model.started" && Array.isArray(event.payload.contextMessageIds)) {
+    if (event.type === "model.started" && event.payload.purpose !== "compaction" && Array.isArray(event.payload.contextMessageIds)) {
       for (const id of event.payload.contextMessageIds) anchor(find(message => message.id === id), event);
     }
     if (event.type === "turn.completed" || event.type === "turn.failed" || event.type === "turn.cancelled" || event.type === "ask.turn_waiting" || event.type === "session.forked") {

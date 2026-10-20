@@ -27,6 +27,7 @@ for (const [name, content] of [["README.md", "# Browser fixture\n"], ["demo.js",
   }
 }
 let calls = 0;
+const interruptedPrompts = new Set();
 const sockets = new Set();
 const server = createServer((req, res) => { void serve(req, res).catch(error => {
   void appendFile(resolve(evidence, "provider-errors.jsonl"), JSON.stringify({ message: error.message }) + "\n");
@@ -42,10 +43,17 @@ async function serve(req, res) {
   if (req.method !== "POST" || req.url !== "/v1/chat/completions") { res.writeHead(404); res.end(); return; }
   let raw = ""; for await (const chunk of req) { raw += chunk; if (raw.length > 2_000_000) throw new Error("Fixture request too large"); }
   const request = JSON.parse(raw), call = ++calls;
+  const compaction = request.messages.some(message => message.role === "system" && String(message.content).includes("CONTEXT CHECKPOINT COMPACTION"));
   await appendFile(resolve(evidence, "requests.jsonl"), JSON.stringify({ launchId, call, model: request.model,
-    messages: request.messages, tools: request.tools?.map(tool => tool.function.name), ...(request.reasoning_effort === undefined ? {} : { reasoningEffort: request.reasoning_effort }) }) + "\n");
+    messages: request.messages, purpose: compaction ? "compaction" : "coding", maxTokens: request.max_tokens ?? request.max_completion_tokens,
+    tools: request.tools?.map(tool => tool.function.name), ...(request.reasoning_effort === undefined ? {} : { reasoningEffort: request.reasoning_effort }) }) + "\n");
   const userIndex = request.messages.findLastIndex(message => message.role === "user");
   const text = String(request.messages[userIndex]?.content ?? "");
+  if (compaction) {
+    res.writeHead(200, { "content-type": "text/event-stream" });
+    const handoff = "Progress: inspected demo.js and retained previous coding actions. Decision: BROWSER-CONTEXT-EARLY-FACT uses invoiceId. Next: continue the current human task and verify the actual files. This is a deterministic local fixture handoff.";
+    res.end("data: " + JSON.stringify({ choices: [{ index: 0, delta: { content: handoff }, finish_reason: "stop" }], usage: { prompt_tokens: 1800, completion_tokens: 60 } }) + "\n\ndata: [DONE]\n\n"); return;
+  }
   const tail = request.messages.slice(userIndex + 1);
   const hasTool = tail.some(message => message.role === "tool");
   const hasAnsweredQuestion = request.messages.slice(userIndex).some(message => /User answer|target-blue|target-red/i.test(JSON.stringify(message)));
@@ -55,10 +63,15 @@ async function serve(req, res) {
   if (/\[fixture:write-deny\]/.test(text) && !hasTool) tool = { name: "write_file", args: { path: "browser-rejected.txt", content: "This write must never occur\n" } };
   if (/\[fixture:plan\]/.test(text) && !hasTool) tool = { name: "write_file", args: { path: "plan-approved.txt", content: "Actual human approved plan output\n" } };
   if (/\[fixture:ask\]/.test(text) && !hasTool && !hasAnsweredQuestion) tool = { name: "ask_user", args: { question: "Which browser target?", reason: "choice_required", options: ["target-blue", "target-red"] } };
+  if (/\[fixture:reset-before-output\]/.test(text) && !hasTool) tool = { name: "write_file", args: { path: "browser-reset-recovered.txt", content: "Actual recovered write exactly once\n" } };
   if (tool && !request.tools?.some(candidate => candidate.function.name === tool.name)) throw new Error(`Actual model catalog lacks ${tool.name}`);
   res.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-cache" });
   const frame = (delta, finish_reason = null, usage) => res.write("data: " + JSON.stringify({ id: "local-" + call,
     object: "chat.completion.chunk", choices: [{ index: 0, delta, finish_reason }], ...(usage ? { usage } : {}) }) + "\n\n");
+  if (/\[fixture:reset-before-output\]/.test(text) && !interruptedPrompts.has(text)) {
+    interruptedPrompts.add(text); res.flushHeaders(); res.write(": keepalive\n\n");
+    setTimeout(() => res.destroy(), 30); return;
+  }
   if (/\[fixture:length\]/.test(text)) {
     frame({ content: "Partial coding result retained before the output limit." });
     frame({}, "length", { prompt_tokens: 32, completion_tokens: 20, total_tokens: 52 });

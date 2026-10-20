@@ -61,6 +61,29 @@ function setup(firstResponse: string[] | null) {
 
 afterEach(() => vi.unstubAllGlobals());
 
+it("recovers a connection reset before any model output within the existing retry budget", async () => {
+  const env = setup([stop]);
+  env.fetch.mockImplementationOnce(async () => new Response(new ReadableStream({ pull(controller) { controller.error(new TypeError("socket reset before output")); } })));
+  const session = await env.runtime.createSession({ agent: env.agent, cwd: "/offline" });
+  const turn = await env.runtime.startTurn(session.id, "finish this task");
+  const outcome = await env.runtime.runTurn(session.id, turn.id, new AbortController().signal);
+  expect(outcome.status).toBe("completed");
+  expect(env.fetch).toHaveBeenCalledTimes(2);
+  expect(env.orchestrator.calls).toHaveLength(0);
+  expect((await env.events.list(session.id)).filter(event => event.type === "model.retry")).toHaveLength(1);
+});
+
+it("recognizes a pre-output SSE context overflow and rebuilds context once instead of silently stopping", async () => {
+  const overflow = sse({ error: { status: 400, message: "maximum context length exceeded" } });
+  const env = setup([overflow]);
+  env.fetch.mockResolvedValueOnce(new Response(overflow)); env.fetch.mockResolvedValue(new Response(stop));
+  const session = await env.runtime.createSession({ agent: env.agent, cwd: "/offline" });
+  const turn = await env.runtime.startTurn(session.id, "continue coding after context reduction");
+  const outcome = await env.runtime.runTurn(session.id, turn.id, new AbortController().signal);
+  expect(outcome.status).toBe("completed"); expect(env.fetch).toHaveBeenCalledTimes(2);
+  expect((await env.events.list(session.id)).filter(event => event.type === "context.compacted" && event.payload.reactive === true)).toHaveLength(1);
+});
+
 describe("R1: incomplete native-provider output never reaches tools or successful verification", () => {
   const abnormal = [
     { name: "content_filter", suffix: [terminal("content_filter")] },

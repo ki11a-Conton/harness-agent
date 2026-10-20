@@ -252,7 +252,7 @@ export function createActivityService(host: ActivityHost) {
 
   async function projectJob(owner: Session, child: Session, turn: Turn): Promise<Job> {
     const messages = await host.harness.store.listMessagesByTurn(child.id, turn.id);
-    const bytes = Buffer.from(messages.filter(message => message.role === "assistant" || message.role === "tool").map(message => message.content).join("\n"));
+    const bytes = Buffer.from(messages.filter(message => message.contextCheckpoint === undefined && (message.role === "assistant" || message.role === "tool")).map(message => message.content).join("\n"));
     return { child, turn, bytes, view: { id: `subagent-${turn.id}`, kind: "subagent", label: turn.input.text.replace(/\s+/gu, " ").slice(0, 160), owner: owner.id,
       status: turn.status === "completed" ? "completed" : turn.status === "failed" ? "failed" : turn.status === "cancelled" ? "killed" : "running",
       startedAt: turn.startedAt, ...(turn.completedAt === undefined ? {} : { finishedAt: turn.completedAt }),
@@ -465,7 +465,10 @@ export function createActivityService(host: ActivityHost) {
         keys(args, ["agentId"]); await session(args.agentId);
         return [{ name: "cancel", description: "Cancel this session's actual active or waiting turn" }, { name: "skills", description: "List the actual skills available to this session" },
           { name: "schedule", description: "Create a durable reminder from JSON timing/title/prompt", input: { hint: '{"title":"Review","prompt":"Run tests","after_seconds":60}' } },
-          ...(host.controls?.commands ?? []).map(name => ({ name, description: `Manage this session's ${name}` }))];
+          // Identify the native Compact face (localized copy + generic icon)
+          // already shipped by the retained command UI. Execution is ours.
+          ...(host.controls?.commands ?? []).map(name => ({ name, description: `Manage this session's ${name}`,
+            ...(name === "compact" ? { definitionId: "@deepseek-ai/dsh-command-compact" } : {}) }))];
       }
       if (endpoint === "commands/execute") {
         keys(args, ["agentId", "line", "submittedAttachments"]); const owner = await session(args.agentId); const line = string(args.line, "line");

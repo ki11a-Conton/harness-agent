@@ -297,19 +297,28 @@ export function createControlsService(host: ControlsHost) {
     },
     observe(event: AgentEvent) {
       if (closed) return;
+      if (event.type === "context.compacted" && event.payload.phase === "started") {
+        const action = serial(event.sessionId, () => write(event.sessionId, data => {
+          data.compaction = { ...(data.compaction ?? { pending: false, requestedAt: event.timestamp }), running: true };
+        }));
+        pending.add(action); void action.catch(error => reportBackgroundFailure("compaction-start", error)).finally(() => pending.delete(action)); return;
+      }
       if (event.type === "context.compacted" && event.payload.phase === "completed") {
         const action = serial(event.sessionId, async () => {
           const current = (await read(event.sessionId)).compaction;
           await write(event.sessionId, data => { data.compaction = { pending: current?.pending === true && (event.payload.manual !== true || current.requestedAt > event.timestamp),
-            requestedAt: current?.requestedAt ?? event.timestamp, lastCompletedAt: event.timestamp }; });
+            requestedAt: current?.requestedAt ?? event.timestamp, running: false, lastCompletedAt: event.timestamp,
+            ...(event.payload.summarySource === "model" || event.payload.summarySource === "extractive" ? { lastSummarySource: event.payload.summarySource } : {}) }; });
         });
         pending.add(action); void action.catch(error => reportBackgroundFailure("compaction-projection", error)).finally(() => pending.delete(action)); return;
       }
-      if (event.type !== "turn.completed") return;
+      if (!["turn.completed", "turn.failed", "turn.cancelled"].includes(event.type)) return;
       const action = serial(event.sessionId, async () => {
-        const state = await read(event.sessionId); if (state.plan.status !== "draft" && state.plan.status !== "review") return;
+        const state = await read(event.sessionId);
+        if (state.compaction?.running) await write(event.sessionId, data => { data.compaction!.running = false; });
+        if (event.type !== "turn.completed" || state.plan.status !== "draft" && state.plan.status !== "review") return;
         const messages = await host.harness.store.listMessages(event.sessionId);
-        const content = messages.filter(message => message.turnId === event.turnId && message.role === "assistant" && !message.toolCalls?.length).map(message => message.content).filter(Boolean).join("\n\n").slice(0, 32000);
+        const content = messages.filter(message => message.turnId === event.turnId && message.role === "assistant" && message.contextCheckpoint === undefined && !message.toolCalls?.length).map(message => message.content).filter(Boolean).join("\n\n").slice(0, 32000);
         if (content) await write(event.sessionId, data => { data.plan = { status: "review", revision: data.plan.revision + 1, content }; });
       });
       pending.add(action); void action.catch(error => reportBackgroundFailure("plan-projection", error)).finally(() => pending.delete(action));
@@ -317,6 +326,7 @@ export function createControlsService(host: ControlsHost) {
     async start() {
       if (closed || timer !== undefined) return;
       for (const row of await store.listControls()) {
+        if (row.controls.compaction?.running) await serial(row.sessionId, () => write(row.sessionId, data => { data.compaction!.running = false; }));
         if (row.controls.goal?.phase === "active") activeGoals.add(row.sessionId);
         if (row.controls.compaction?.pending) {
           const current = await host.harness.store.getSession(row.sessionId as SessionId);

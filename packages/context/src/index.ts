@@ -41,3 +41,4 @@ export { HeuristicTokenEstimator, DEFAULT_TOKEN_ESTIMATOR } from "./tokenizer.js
 export type { TokenEstimator } from "./tokenizer.js";
 
 export * from "./coding-summary.js";
+export * from "./history-checkpoint.js";

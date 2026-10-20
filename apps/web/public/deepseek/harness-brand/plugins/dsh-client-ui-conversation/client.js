@@ -22803,10 +22803,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					react_jsx_runtime.jsx("option", { value: "plan", children: t("harness.mode.plan") }),
 					react_jsx_runtime.jsx("option", { value: "goal", children: t("harness.mode.goal") })
 				] }),
-				react_jsx_runtime.jsx("button", { type: "button", disabled: busy || compact?.pending, onClick: () => run("/compact"), children: t(compact?.pending ? "harness.compact.pending" : "harness.compact") }),
+				compact?.pending || compact?.running ? react_jsx_runtime.jsx("span", { role: "status", children: t(compact?.running ? "harness.compact.running" : "harness.compact.pending") }) : null,
 				goal ? react_jsx_runtime.jsx("span", { role: "status", children: t("harness.goal.rounds") + " " + goal.roundsStarted + "/" + goal.goal.maxGoalRounds }) : null,
 				goal?.goal.blockedReason ? react_jsx_runtime.jsx("span", { role: "status", children: goal.goal.blockedReason.message }) : null,
-				compact?.lastCompletedAt ? react_jsx_runtime.jsx("span", { role: "status", children: t("harness.compact.done") }) : null,
+				compact?.lastCompletedAt && !compact?.pending && !compact?.running ? react_jsx_runtime.jsx("span", { role: "status", children: t(compact.lastSummarySource === "extractive" ? "harness.compact.fallback" : "harness.compact.done") }) : null,
 				editing ? react_jsx_runtime.jsxs("div", { role: "group", "aria-label": t("harness.mode.goal"), style: { flexBasis: "100%" }, children: [
 					react_jsx_runtime.jsx("textarea", { "aria-label": t("harness.objective"), value: objective, maxLength: 16000, onChange: event => setObjective(event.target.value) }),
 					react_jsx_runtime.jsx("button", { type: "button", disabled: busy || !objective.trim(), onClick: async () => { if (await run("/goal " + objective.trim())) { setEditing(false); setObjective(""); } }, children: t("harness.goal.start") }),
@@ -22822,8 +22822,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		}
 		function apply(ctx, config = Config({})) {
 			ctx.locale.register("harness.controls", {
-				en: { "harness.mode": "Task mode", "harness.mode.default": "Code", "harness.mode.plan": "Plan", "harness.mode.goal": "Goal", "harness.objective": "Goal objective", "harness.goal.rounds": "Goal rounds", "harness.goal.start": "Start goal", "harness.cancel": "Cancel", "harness.plan.review": "Review implementation plan", "harness.plan.approve": "Approve and implement", "harness.compact": "Compress context", "harness.compact.pending": "Will compress next request", "harness.compact.done": "Context prepared" },
-				zh: { "harness.mode": "任务模式", "harness.mode.default": "编程", "harness.mode.plan": "计划", "harness.mode.goal": "目标", "harness.objective": "目标内容", "harness.goal.rounds": "目标轮次", "harness.goal.start": "开始目标", "harness.cancel": "取消", "harness.plan.review": "审阅实施计划", "harness.plan.approve": "批准并实施", "harness.compact": "压缩上下文", "harness.compact.pending": "下一次请求前压缩", "harness.compact.done": "上下文整理完成" }
+				en: { "harness.mode": "Task mode", "harness.mode.default": "Code", "harness.mode.plan": "Plan", "harness.mode.goal": "Goal", "harness.objective": "Goal objective", "harness.goal.rounds": "Goal rounds", "harness.goal.start": "Start goal", "harness.cancel": "Cancel", "harness.plan.review": "Review implementation plan", "harness.plan.approve": "Approve and implement", "harness.compact": "Compress context", "harness.compact.running": "Compressing context…", "harness.compact.fallback": "Context prepared with a limited extractive summary; original transcript retained", "harness.compact.pending": "Will compress next request", "harness.compact.done": "Context prepared" },
+				zh: { "harness.mode": "任务模式", "harness.mode.default": "编程", "harness.mode.plan": "计划", "harness.mode.goal": "目标", "harness.objective": "目标内容", "harness.goal.rounds": "目标轮次", "harness.goal.start": "开始目标", "harness.cancel": "取消", "harness.plan.review": "审阅实施计划", "harness.plan.approve": "批准并实施", "harness.compact": "压缩上下文", "harness.compact.running": "正在压缩上下文…", "harness.compact.fallback": "摘要服务不可用，已用有限摘录整理；完整对话仍保留", "harness.compact.pending": "下一次请求前压缩", "harness.compact.done": "上下文整理完成" }
 			});
 			ctx.slots.inject("conversation.input.left", () => ctx.slots.register({ name: "conversation.input.left", id: "harness-controls", order: 5, locale: "harness.controls", inject: sessionId => ({ runCommand: async line => {
 				const live = ctx.sessions.binding(sessionId)?.session;

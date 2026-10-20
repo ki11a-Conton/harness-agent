@@ -35,6 +35,8 @@ export interface Message {
    *  records the ask id. Used as the exactly-once key so a crash between
    *  "ask answered" and "reply appended" cannot double-inject the reply. */
   askId?: AskId;
+  /** Runtime-owned historical DATA checkpoint; never a user instruction. */
+  contextCheckpoint?: { version: 1; throughMessageId: MessageId; source: "model" | "extractive" };
   createdAt: number;
 }
 

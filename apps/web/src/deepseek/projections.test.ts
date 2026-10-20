@@ -24,6 +24,23 @@ function fixture() {
   return { session, turnId, events, messages, event, message, project };
 }
 function recordData(event: SessionWireEvent): Record<string, unknown> { return event.data as Record<string, unknown>; }
+
+it("private compaction calls and checkpoint text cannot become chat answers or history barriers", () => {
+  const f = fixture(); const prompt = f.message("user", "continue coding");
+  f.event("turn.started", { text: prompt.content });
+  f.event("model.started", { callId: "summary-call", purpose: "compaction" });
+  f.event("model.completed", { callId: "summary-call", purpose: "compaction", text: "", final: false, toolCalls: 0, finishReason: "stop" });
+  f.message("assistant", "PRIVATE_HANDOFF_DATA", { contextCheckpoint: { version: 1, throughMessageId: prompt.id, source: "model" } });
+  f.event("context.compacted", { phase: "completed" });
+  f.event("model.started", { callId: "actual-coding" });
+  f.message("assistant", "actual coding answer");
+  f.event("model.completed", { callId: "actual-coding", text: "actual coding answer", final: true, toolCalls: 0, finishReason: "stop" });
+  f.event("turn.completed");
+  const projection = f.project();
+  expect(JSON.stringify(projection.records)).not.toContain("PRIVATE_HANDOFF_DATA");
+  expect(JSON.stringify(projection.records)).toContain("actual coding answer");
+  expect(projection.sourceCursor).toBe(f.events.at(-1)!.sequence);
+});
 function wireMessage(event: SessionWireEvent): Record<string, unknown> {
   return (event.type === "user/message" ? event.data : recordData(event).message) as Record<string, unknown>;
 }

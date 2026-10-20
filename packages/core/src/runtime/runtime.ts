@@ -1277,6 +1277,48 @@ export class AgentRuntime {
         const ctxUpdate = await this.contextController.buildContext(
           ctx, ctx.agent, turn, working, priorBlocks, state, toolLedger,
           history, ctx.agent.systemPrompt, lastReportTokens, digestAppended, overflowAttempt, reactiveCompacted,
+          async (request, maxTokens) => {
+            const before = budget.onDurationCheck();
+            if (before) return { limit: before };
+            // A summary is a normal metered model request with NO tools. Use
+            // the same provider/client and finite retry controller, but never
+            // project its private output as the agent's answer.
+            const run = budget.snapshot();
+            const deadline = AbortSignal.timeout(Math.max(1, Math.min(45_000,
+              run.limits.maxDurationMs === undefined ? 45_000 : run.limits.maxDurationMs - run.durationMs)));
+            const summaryCtx = { ...ctx, signal: AbortSignal.any([signal, deadline]) };
+            // Freeze this auxiliary request's actual context and empty tool
+            // world too. It has its own StepId, at the upcoming coding index;
+            // it never resolves MCP dependencies or advances coding state.
+            const preparationStep = await buildStepExecutionSnapshot({ sessionId, turnId, agent: ctx.agent,
+              cwd: ctx.session.cwd, stepIndex, priorBlocks: [], system: request.system ?? "", compacted: true,
+              history: [...request.messages], registry: { get: () => undefined, list: () => [], specs: () => [] },
+              goal: working.goal, semanticsOf: name => this.semanticsOf(name), sandboxPolicy: this.sandboxPolicy, now: this.now });
+            const result = await this.modelCallController.callModelWithRetry(summaryCtx, client,
+              [...request.messages], request.system ?? "", working, state, toolLedger,
+              lastReportTokens, true, budget, preparationStep, { maxTokens });
+            const duration = budget.onDurationCheck();
+            if (result.status !== "completed") {
+              if (duration) { await this.emit(sessionId, "run.limit_reached", { ...duration }, turnId); return { limit: duration }; }
+              const spent = budget.snapshot();
+              if (result.status === "failed" && result.error.code === "RESOURCE_LIMIT" && spent.limits.maxRetries !== undefined && spent.retries > spent.limits.maxRetries) {
+                return { limit: { limit: "maxRetries" as const, used: spent.retries, allowed: spent.limits.maxRetries } };
+              }
+              return { reason: signal.aborted ? "cancelled" : deadline.aborted ? "summary-timeout" : "summary-model-error" };
+            }
+            const usage = finalizeUsage(result.usage);
+            await this.emit(sessionId, "model.completed", { callId: result.callId, purpose: "compaction",
+              finishReason: result.final?.finishReason ?? "error", final: false, text: "", toolCalls: 0,
+              durationMs: this.now() - result.callStartedAt, usage }, turnId, { spanId: result.callId });
+            this.reportModelUsage?.(sessionId, usage);
+            const cost = budget.onModelUsage(usage.inputTokens ?? 0, usage.outputTokens ?? 0, usage.estimatedCostUsd ?? 0);
+            const limit = duration ?? cost ?? budget.onDurationCheck();
+            if (limit) { await this.emit(sessionId, "run.limit_reached", { ...limit }, turnId); return { limit }; }
+            if (signal.aborted) return { reason: "cancelled" };
+            if (deadline.aborted) return { reason: "summary-timeout" };
+            if (result.final?.finishReason !== "stop" || result.calls.length || result.final.toolCalls?.length) return { reason: "summary-incomplete-or-tool-intent" };
+            return { text: result.final.text ?? result.assistantText };
+          },
         );
         if (ctxUpdate.action === "finish") return ctxUpdate.outcome;
         let system = ctxUpdate.system;

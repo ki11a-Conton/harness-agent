@@ -39,7 +39,7 @@ import { AgentError } from "../errors.js";
 import { validAskGateArgs } from "./ask-gate.js";
 import type { ToolSelector } from "../tools/tool-selector.js";
 import { AgentState } from "../state/agent-state.js";
-import type { RecoveryPolicy } from "../recovery/recovery.js";
+import { RecoveryPolicy } from "../recovery/recovery.js";
 import {
   ASK_GATE_TOOL,
   buildStateDigest,
@@ -54,11 +54,16 @@ import type {
   TurnOutcome,
   TurnOutcomeStatus,
 } from "./turn-helpers.js";
+
 import type { VerificationGateResult } from "./verification-controller.js";
 
 import type {
   UsageSnapshot,
 } from "@ar/contracts";
+
+// A production Harness need not opt into tool/strategy recovery to survive a
+// transport reset before output. Explicit policies still take precedence.
+const STREAM_START_RECOVERY = new RecoveryPolicy({ maxAttempts: 3, retryDelayMs: 250 });
 
 /**
  * P0-9: merge a usage snapshot into an accumulator. CONTRACT: `usage` events
@@ -465,6 +470,7 @@ export class ModelCallController {
     /** P15-2: the immutable step this model call belongs to — its id rides the
      *  model.started event so the step and its tool batch are attributable. */
     step?: StepExecutionSnapshot,
+    compaction?: { maxTokens: number },
   ): Promise<ModelCallResult> {
     const { sessionId, turnId, signal } = ctx;
 
@@ -497,6 +503,7 @@ export class ModelCallController {
         "model.started",
         {
           callId,
+          ...(compaction ? { purpose: "compaction" } : {}),
           ...(step !== undefined
             ? {
                 stepId: step.record.stepId,
@@ -527,7 +534,7 @@ export class ModelCallController {
         // P23-3: the model-visible tool set is the FROZEN step advertisement —
         // formed once at snapshot build (selector + deferred applied there).
         // The controller never re-selects and never touches the live catalog.
-        const tools: readonly ToolSpec[] = [...step?.tools.modelVisibleSpecs ?? [], ...step?.tools.formalActionSpecs ?? []];
+        const tools: readonly ToolSpec[] = compaction ? [] : [...step?.tools.modelVisibleSpecs ?? [], ...step?.tools.formalActionSpecs ?? []];
         // P7-3: selection is observable (availability vs admitted vs dropped).
         // P18-2: advertisedTokens prices the advertisement so full vs deferred
         // schema cost is measurable end-to-end.
@@ -543,7 +550,7 @@ export class ModelCallController {
           },
           turnId,
         );
-        for await (const ev of client.generate({ messages: history, system, tools: [...tools] }, signal)) {
+        for await (const ev of client.generate({ messages: history, system, tools: [...tools], ...(compaction ? { maxTokens: compaction.maxTokens } : {}) }, signal)) {
           if (signal.aborted) break;
           await this.deps.failAt("model.stream", { sessionId, turnId });
           switch (ev.type) {
@@ -553,7 +560,7 @@ export class ModelCallController {
                 timeToFirstTokenMs = this.deps.now() - callStartedAt;
               }
               assistantText += ev.text;
-              await this.deps.emit(sessionId, "model.delta", { kind: "text", text: ev.text }, turnId);
+              if (!compaction) await this.deps.emit(sessionId, "model.delta", { kind: "text", text: ev.text }, turnId);
               break;
             case "reasoning_delta":
               if (!firstTokenSeen) {
@@ -567,7 +574,7 @@ export class ModelCallController {
               break;
             case "tool_call_delta":
               calls.push(ev.toolCall);
-              await this.deps.emit(sessionId, "model.delta", { kind: "tool_call", name: ev.toolCall.name }, turnId);
+              if (!compaction) await this.deps.emit(sessionId, "model.delta", { kind: "tool_call", name: ev.toolCall.name }, turnId);
               break;
             case "completed":
               final = ev.result;
@@ -587,7 +594,7 @@ export class ModelCallController {
             case "retry":
               // Provider-internal retry (retry taxonomy kind "provider",
               // Phase 11): observable, never swallowed.
-              await this.deps.emit(sessionId, "retry.provider", { attempt: ev.attempt, error: ev.error }, turnId);
+              await this.deps.emit(sessionId, "retry.provider", { attempt: ev.attempt, error: ev.error, ...(compaction ? { purpose: "compaction" } : {}) }, turnId);
               break;
           }
         }
@@ -605,7 +612,8 @@ export class ModelCallController {
       const retryAction = decideModelRetry(
         modelFailed,
         reactiveCompacted,
-        this.deps.recovery?.decide("model_error", attempt),
+        (this.deps.recovery ?? (modelFailed?.retryable === true && modelFailed.safeToRetry === true
+          && ["network", "server_error", "rate_limit"].includes(modelFailed.provider?.kind ?? "") ? STREAM_START_RECOVERY : undefined))?.decide("model_error", attempt),
         attempt,
       );
 
@@ -633,7 +641,7 @@ export class ModelCallController {
           }
         }
         const retryPayload: ModelRetryPayload = { callId, attempt, error: modelFailed };
-        await this.deps.emit(sessionId, "model.retry", { ...retryPayload }, turnId);
+        await this.deps.emit(sessionId, "model.retry", { ...retryPayload, ...(compaction ? { purpose: "compaction" } : {}) }, turnId);
         if (retryAction.retryDelayMs > 0) {
           await timerSleep(this.deps.timer, retryAction.retryDelayMs, signal);
         }
@@ -645,8 +653,8 @@ export class ModelCallController {
       }
 
       // fail
-      await this.deps.emit(sessionId, "model.failed", { callId, error: modelFailed }, turnId);
-      if (retryAction.suppressLimitEvent !== true && attempt >= retryAction.maxAttempts) {
+      await this.deps.emit(sessionId, "model.failed", { callId, error: modelFailed, ...(compaction ? { purpose: "compaction" } : {}) }, turnId);
+      if (!compaction && retryAction.suppressLimitEvent !== true && attempt >= retryAction.maxAttempts) {
         await this.deps.emit(sessionId, "run.limit_reached", { limit: "maxRetries", used: attempt, allowed: retryAction.maxAttempts }, turnId);
       }
       return { status: "failed", error: modelFailed! };

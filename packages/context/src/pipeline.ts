@@ -20,6 +20,8 @@ import { detectPromptInjection } from "@ar/security";
 import { DEFAULT_TOKEN_ESTIMATOR, type TokenEstimator } from "./tokenizer.js";
 
 export interface ContextPipelineDeps {
+  /** Agent strategy: durable model-generated history checkpoints. */
+  historyCompaction?: boolean;
   /** Default: new HierarchicalInstructionDiscovery(). */
   discovery?: InstructionDiscovery;
   /** P17-8: compaction circuit breaker. When it opens (consecutive
@@ -220,6 +222,7 @@ export function estimateMessageTokens(messages: readonly MessageTokenInput[], es
  * the caller untouched.
  */
 export class ContextPipeline {
+  readonly historyCompaction: boolean;
   private readonly manualRequests = new Set<string>();
   requestCompaction(sessionId: string): void { this.manualRequests.add(sessionId); }
   private readonly discovery: InstructionDiscovery;
@@ -233,6 +236,7 @@ export class ContextPipeline {
   private lastStageReports: import("./compaction.js").CompactionStageReport[] = [];
 
   constructor(deps: ContextPipelineDeps = {}) {
+    this.historyCompaction = deps.historyCompaction ?? false;
     this.discovery = deps.discovery ?? new HierarchicalInstructionDiscovery();
     this.planner = deps.planner ?? new BudgetPlannerImpl();
     this.tokenEstimator = deps.tokenEstimator ?? DEFAULT_TOKEN_ESTIMATOR;
@@ -279,6 +283,8 @@ export class ContextPipeline {
   estimateMessageTokens(messages: readonly MessageTokenInput[]): number {
     return estimateMessageTokens(messages, this.tokenEstimator);
   }
+
+  estimateTextTokens(text: string): number { return this.tokenEstimator.estimate(text); }
 
   async build(opts: ContextPipelineBuildOptions): Promise<ContextPipelineResult> {
     const manualCompaction = opts.telemetrySessionId !== undefined && this.manualRequests.delete(opts.telemetrySessionId);

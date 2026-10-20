@@ -62,7 +62,7 @@ export function createSessionReferences(harness: Harness, titleOf: (id: string, 
       for (const [sourceId, label] of references) {
         signal.throwIfAborted(); if (sourceId === id) fail("session/reference-self", "A session cannot reference itself");
         const source = await owned(sourceId), messages = await harness.store.listMessages(source.id);
-        const visible = messages.filter(message => message.role === "user" || message.role === "assistant").slice(-20);
+        const visible = messages.filter(message => message.contextCheckpoint === undefined && (message.role === "user" || message.role === "assistant")).slice(-20);
         let remaining = 6000;
         const retained = visible.slice().reverse().flatMap(message => {
           if (remaining <= 0) return [];
@@ -70,7 +70,7 @@ export function createSessionReferences(harness: Harness, titleOf: (id: string, 
           return [{ role: message.role, text: content, messageId: message.id }];
         }).reverse();
         snapshots.push({ sessionId: source.id, label, capturedUpdatedAt: source.updatedAt,
-          omittedMessages: messages.filter(message => message.role === "user" || message.role === "assistant").length - retained.length,
+          omittedMessages: messages.filter(message => message.contextCheckpoint === undefined && (message.role === "user" || message.role === "assistant")).length - retained.length,
           truncated: remaining < 0 || visible.some(message => Buffer.byteLength(message.content) > 3000) || retained.length < visible.length
             || messages.filter(message => message.role === "user" || message.role === "assistant").length > visible.length, messages: retained });
       }

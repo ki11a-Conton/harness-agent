@@ -7,17 +7,18 @@ import { createHarness } from '@ar/harness';
 import { ScriptedModelProvider } from '@ar/model';
 import type { SessionId } from '@ar/contracts';
 import { createDeepseekComposition } from './composition.js';
+import { projectSessionHistory } from './projections.js';
 import { allocateAvailableLeaseFixture } from './test-support/lease-fixture.js';
 import { sessionMetadataTool } from './session.js';
 
 const cleanup: Array<() => Promise<void>> = [];
 afterEach(async () => { for (const close of cleanup.splice(0).reverse()) await close(); });
 const signal = () => new AbortController().signal;
-async function fixture(profile: 'test' | 'interactive' = 'test', tool = { name: 'write_file', args: { path: 'proof.txt', content: 'real bytes' } as Record<string, unknown> }) {
+async function fixture(profile: 'test' | 'interactive' = 'test', tool: { name: string; args: Record<string, unknown> } | null = { name: 'write_file', args: { path: 'proof.txt', content: 'real bytes' } }) {
   return allocateAvailableLeaseFixture(async () => {
     const root = await mkdtemp(join(tmpdir(), 'pr15-controls-')); cleanup.push(() => rm(root, { recursive: true, force: true, maxRetries: 8 }));
     const cwd = join(root, 'work'); await mkdir(cwd);
-    const provider = new ScriptedModelProvider([ScriptedModelProvider.toolCall(tool.name, tool.args), ScriptedModelProvider.text('Plan: write proof.txt, then verify its contents.')]);
+    const provider = new ScriptedModelProvider([...(tool ? [ScriptedModelProvider.toolCall(tool.name, tool.args)] : []), ScriptedModelProvider.text('Plan: write proof.txt, then verify its contents.')]);
     const config = { cwd, dataDir: join(root, 'data'), profile, modelProvider: provider, model: { providerId: provider.id, modelId: 'test' } };
     const base = await createHarness(config);
     cleanup.push(() => base.close()); const composition = await createDeepseekComposition(base, join(root, 'data')); cleanup.push(() => composition.close());
@@ -203,6 +204,19 @@ it.each(['workspace-write', 'danger-full-access'] as const)('PR15 enforces actua
   await f.command('/permission ' + preset + (preset === 'danger-full-access' ? ' --confirmed' : '')); await f.run();
   if (preset === 'workspace-write') await expect(readFile(join(f.root, 'outside-proof.txt'))).rejects.toMatchObject({ code: 'ENOENT' });
   else expect(await readFile(join(f.root, 'outside-proof.txt'), 'utf8')).toBe('explicit full access bytes');
+});
+
+it('manual compaction in a fresh production session never rewrites a published history prefix', async () => {
+  const f = await fixture('test', null); await f.command('/compact'); await f.run();
+  const session = (await f.composition.harness.store.getSession(f.sessionId as SessionId))!;
+  const messages = await f.composition.harness.store.listMessages(f.sessionId as SessionId);
+  const events = await f.composition.harness.events.list(f.sessionId as SessionId);
+  let prefix: ReturnType<typeof projectSessionHistory>['records'] = [];
+  for (let count = 1; count <= events.length; count++) {
+    const snapshot = projectSessionHistory({ session, messages, events: events.slice(0, count) });
+    expect(snapshot.records.slice(0, prefix.length), `Projection changed at source event ${events[count - 1]!.type}`).toEqual(prefix);
+    prefix = snapshot.records;
+  }
 });
 
 it('PR15 a restarted production composition restores controls and still denies actual project writes', async () => {

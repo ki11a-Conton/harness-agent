@@ -30,10 +30,10 @@ const controls = String.raw`
 					react_jsx_runtime.jsx("option", { value: "plan", children: t("harness.mode.plan") }),
 					react_jsx_runtime.jsx("option", { value: "goal", children: t("harness.mode.goal") })
 				] }),
-				react_jsx_runtime.jsx("button", { type: "button", disabled: busy || compact?.pending, onClick: () => run("/compact"), children: t(compact?.pending ? "harness.compact.pending" : "harness.compact") }),
+				compact?.pending || compact?.running ? react_jsx_runtime.jsx("span", { role: "status", children: t(compact?.running ? "harness.compact.running" : "harness.compact.pending") }) : null,
 				goal ? react_jsx_runtime.jsx("span", { role: "status", children: t("harness.goal.rounds") + " " + goal.roundsStarted + "/" + goal.goal.maxGoalRounds }) : null,
 				goal?.goal.blockedReason ? react_jsx_runtime.jsx("span", { role: "status", children: goal.goal.blockedReason.message }) : null,
-				compact?.lastCompletedAt ? react_jsx_runtime.jsx("span", { role: "status", children: t("harness.compact.done") }) : null,
+				compact?.lastCompletedAt && !compact?.pending && !compact?.running ? react_jsx_runtime.jsx("span", { role: "status", children: t(compact.lastSummarySource === "extractive" ? "harness.compact.fallback" : "harness.compact.done") }) : null,
 				editing ? react_jsx_runtime.jsxs("div", { role: "group", "aria-label": t("harness.mode.goal"), style: { flexBasis: "100%" }, children: [
 					react_jsx_runtime.jsx("textarea", { "aria-label": t("harness.objective"), value: objective, maxLength: 16000, onChange: event => setObjective(event.target.value) }),
 					react_jsx_runtime.jsx("button", { type: "button", disabled: busy || !objective.trim(), onClick: async () => { if (await run("/goal " + objective.trim())) { setEditing(false); setObjective(""); } }, children: t("harness.goal.start") }),
@@ -146,6 +146,8 @@ export function addControlsUi(stem, source) {
     source = source.replace('contextWindow: "上下文窗口",', 'modelReasoning: "支持的推理档位（JSON；不支持请留空）", modelReasoningInvalid: "推理档位映射无效", contextWindow: "上下文窗口",');
   }
   return source.replace('Context compressed', 'Context prepared').replace('上下文已压缩', '上下文整理完成')
+    .replace('"harness.compact.pending": "Will compress next request"', '"harness.compact.running": "Compressing context…", "harness.compact.fallback": "Context prepared with a limited extractive summary; original transcript retained", "harness.compact.pending": "Will compress next request"')
+    .replace('"harness.compact.pending": "下一次请求前压缩"', '"harness.compact.running": "正在压缩上下文…", "harness.compact.fallback": "摘要服务不可用，已用有限摘录整理；完整对话仍保留", "harness.compact.pending": "下一次请求前压缩"')
     .replace('"harness.goal.start": "Start goal"', '"harness.goal.rounds": "Goal rounds", "harness.goal.start": "Start goal"')
     .replace('"harness.goal.start": "开始目标"', '"harness.goal.rounds": "目标轮次", "harness.goal.start": "开始目标"');
 }

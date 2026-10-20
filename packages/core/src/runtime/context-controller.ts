@@ -41,7 +41,7 @@ import type {
   WorkingState,
 } from "@ar/contracts";
 import type { ContextPipeline, InstructionDiscoveryOptions } from "@ar/context";
-import { protectedFieldsMissing } from "@ar/context";
+import { protectedFieldsMissing, checkpointView, historySummaryRequest, renderHistoryCheckpoint } from "@ar/context";
 import { AgentState } from "../state/agent-state.js";
 import { protectToolOutputText } from "./tool-output-security.js";
 import { historyCarryover } from "./history-carryover.js";
@@ -52,6 +52,7 @@ import {
   renderToolResult,
   TRUST_BOUNDARY_PROMPT,
   trimMessageHistory,
+  retainMessageHistoryTail,
   workingStateToCompactionSummary,
 } from "./turn-helpers.js";
 import type {
@@ -159,10 +160,13 @@ export class ContextController {
     digestAppended: boolean,
     overflowAttempt: number,
     reactiveCompacted: boolean,
+    summarizeHistory?: (request: import("@ar/contracts").ModelRequest, maxTokens: number) => Promise<{
+      text?: string; reason?: string; limit?: import("@ar/contracts").LimitBreach;
+    }>,
   ): Promise<ContextUpdate> {
     const { sessionId, turnId, session } = ctx;
-    const activeUsers = activeUserMessages(history, turnId);
-    let compaction: { manual: boolean; beforeTokens: number; afterTokens: number } | undefined;
+    let activeUsers = activeUserMessages(history, turnId);
+    let compaction: { manual: boolean; beforeTokens: number; afterTokens: number; strategy?: string; summarySource?: string; fallbackReason?: string } | undefined;
     let historyTrimmed = false;
     let system = agent.systemPrompt;
     // P32-1/P32-3: step-witness values — the selected skill manifest-of
@@ -172,6 +176,8 @@ export class ContextController {
     let skillSnapshotEntries: import("@ar/contracts").SkillSnapshot["selected"] | undefined;
     let instructionSources: readonly import("@ar/contracts").InstructionSource[] | undefined;
     let admittedSkillBodies: readonly ContextBlock[] = [];
+
+    if (this.deps.context?.pipeline.historyCompaction) history = checkpointView(history, activeUsers);
 
         if (this.deps.context !== undefined) {
           // Task 3: skill index — awaited once per build; provider errors
@@ -360,6 +366,96 @@ export class ContextController {
             compacted: built.compacted,
             messagesTokens: built.report.messagesTokens ?? 0,
           }, turnId);
+          const pipeline = this.deps.context.pipeline;
+          if (pipeline.historyCompaction) {
+            // Price the rendered system, not just bare block bodies. Leave
+            // output space and compact BEFORE an upstream context overflow.
+            const headroom = Math.max(0, this.deps.context.budget.maxTokens
+              - pipeline.estimateTextTokens(system) - this.deps.context.budget.reserved.output);
+            let beforeTokens = pipeline.estimateMessageTokens(history);
+            const activeIds = new Set(activeUsers.map(message => message.id));
+            const historical = history.filter(message => !activeIds.has(message.id));
+            const freshHistoricalTokens = pipeline.estimateMessageTokens(historical.filter(message => message.contextCheckpoint === undefined));
+            // Hysteresis: a large protected user task alone must not cause
+            // another model summary before every small tool round.
+            const usefulAutomatic = beforeTokens > Math.floor(headroom * 0.85)
+              && (beforeTokens > headroom || freshHistoricalTokens >= Math.max(256, Math.floor(headroom * 0.1)));
+            if (historical.length > 0 && (built.manualCompaction || usefulAutomatic)) {
+              const maxSummaryTokens = Math.min(2048, Math.floor(headroom * 0.35));
+              const protect = (text: string) => {
+                const safe = protectToolOutputText(text, { redact: this.deps.outputRedactor, detect: this.deps.injectionDetector });
+                return safe.injection.hasInjection ? undefined : safe.content;
+              };
+              const request = historySummaryRequest(history, Math.floor(this.deps.context.budget.maxTokens * 0.7),
+                text => pipeline.estimateTextTokens(text), protect);
+              const coveredInputIds = new Set(history.map(message => message.id));
+              await this.deps.emit(sessionId, "context.compacted", { phase: "started", strategy: "codex-v1",
+                manual: built.manualCompaction === true, beforeTokens }, turnId);
+              const summary = request && maxSummaryTokens >= 128 && summarizeHistory
+                ? await summarizeHistory(request, maxSummaryTokens) : { reason: "summary-input-budget" };
+              if (summary.limit) return { action: "finish", outcome: await this.deps.finishTurn(ctx, "failed", state, working,
+                errorInfo("RESOURCE_LIMIT", `${summary.limit.limit} reached during context compaction`), "agent_limit", toolLedger) };
+              if (ctx.signal.aborted) return { action: "finish", outcome: await this.deps.finishTurn(ctx, "cancelled", state, working, undefined, "cancelled", toolLedger) };
+              // A summary can take time. Admit corrections that arrived during
+              // it before the coding request, through the existing exactly-once
+              // inbox boundary. The handoff did NOT summarize these new inputs.
+              history = await this.injectSteeringPrompts(ctx, history);
+              activeUsers = activeUserMessages(history, turnId);
+              activeIds.clear(); for (const message of activeUsers) activeIds.add(message.id);
+              beforeTokens = pipeline.estimateMessageTokens(history);
+              const safeSummary = summary.text ? protect(summary.text) : undefined;
+              const modelText = safeSummary?.trim() && pipeline.estimateTextTokens(renderHistoryCheckpoint(safeSummary)) <= maxSummaryTokens ? safeSummary : undefined;
+              const carryover = modelText === undefined ? historyCarryover(history, Math.min(512, Math.max(0, maxSummaryTokens)),
+                messages => pipeline.estimateMessageTokens(messages), protect) : undefined;
+              const text = modelText ?? carryover?.content ?? "Previous context exceeded the available budget. Consult the original transcript for full details. No model-generated handoff is available; continue the current user task without assuming earlier checks passed.";
+              const durable = await this.deps.store.listMessages(sessionId);
+              // Keep the recent protocol-valid tail as raw evidence. A model
+              // must still see the latest completed tool batch, rather than
+              // accidentally reissuing it immediately after compaction.
+              const rawBudget = Math.max(0, Math.min(Math.floor(headroom * 0.4),
+                Math.floor(beforeTokens * (built.manualCompaction ? 0.25 : 0.4)),
+                headroom - pipeline.estimateMessageTokens(activeUsers) - maxSummaryTokens - 32));
+              let tailStart = history.length, rawTokens = 0;
+              while (tailStart > 0) {
+                const message = history[tailStart - 1]!;
+                const cost = activeIds.has(message.id) || message.contextCheckpoint ? 0 : pipeline.estimateMessageTokens([message]);
+                if (rawTokens + cost > rawBudget) break;
+                rawTokens += cost; tailStart--;
+              }
+              const recentIds = new Set(retainMessageHistoryTail(history, tailStart, activeUsers)
+                .filter(message => !activeIds.has(message.id) && message.contextCheckpoint === undefined).map(message => message.id));
+              const firstRecent = durable.findIndex(message => recentIds.has(message.id));
+              // A view can end in an old protected user anchor after a newer
+              // checkpoint. Use the latest durable input position, not the
+              // last element's position, so coverage never moves backwards.
+              const coveredInputEnd = durable.reduce((end, message, index) => coveredInputIds.has(message.id) ? index + 1 : end, 0);
+              const through = durable.slice(0, Math.min(firstRecent < 0 ? durable.length : firstRecent, coveredInputEnd))
+                .filter(message => message.contextCheckpoint === undefined).at(-1);
+              if (through) {
+                const checkpoint: Message = { id: newMessageId(), sessionId, turnId, role: "assistant",
+                  content: renderHistoryCheckpoint(text), contextCheckpoint: { version: 1, throughMessageId: through.id,
+                    source: modelText ? "model" : "extractive" }, createdAt: this.deps.now() };
+                const view = checkpointView([...durable, checkpoint], activeUsers);
+                if (pipeline.estimateMessageTokens(view) < beforeTokens && pipeline.estimateMessageTokens(view) <= headroom) {
+                  // Persist BEFORE publishing success or advancing the model.
+                  await this.deps.store.appendMessage(checkpoint);
+                  this.deps.compactCounter.value++;
+                  history = view; historyTrimmed = true;
+                  compaction = { manual: built.manualCompaction === true, beforeTokens,
+                    afterTokens: pipeline.estimateMessageTokens(history), strategy: "codex-v1",
+                    summarySource: checkpoint.contextCheckpoint!.source,
+                    ...(modelText ? {} : { fallbackReason: summary.reason ?? "invalid-summary" }) };
+                  await this.deps.failAt("context.compacted", { sessionId, turnId });
+                  await this.deps.checkpoint(ctx, working, state, toolLedger, "context:history-checkpoint");
+                } else if (beforeTokens > headroom) {
+                  // Even the fallback cannot fit protected human input.
+                  await this.deps.emit(sessionId, "run.limit_reached", { limit: "maxTokens", used: beforeTokens, allowed: headroom }, turnId);
+                  return { action: "finish", outcome: await this.deps.finishTurn(ctx, "failed", state, working,
+                    errorInfo("RESOURCE_LIMIT", "Context cannot fit after bounded compaction; shorten the active user input."), "context_limit", toolLedger) };
+                }
+              }
+            }
+          }
           if (built.compacted) {
             this.deps.compactCounter.value += 1;
             await this.deps.emit(sessionId, "context.compacted", {
@@ -396,13 +492,13 @@ export class ContextController {
                   digestLength: digestText.length,
                 }, turnId);
               }
-              await this.deps.store.appendMessage({
-                id: newMessageId(),
-                sessionId,
-                turnId,
-                role: "system",
-                content: digestText,
-                createdAt: this.deps.now(),
+              // The checkpoint strategy already retains the durable working
+              // state and the structured block digest. A second synthetic
+              // system message is neither sampled in this view nor needed;
+              // publishing it later would move an already-followed prefix.
+              if (!pipeline.historyCompaction) await this.deps.store.appendMessage({
+                id: newMessageId(), sessionId, turnId, role: "system",
+                content: digestText, createdAt: this.deps.now(),
               });
             }
             // P1-3: after compaction is a checkpoint safety boundary. (P1-5: a kill
@@ -420,7 +516,7 @@ export class ContextController {
           // the goal/context survives the trim. The full transcript stays in
           // the store (transcript fallback). The trim runs BEFORE the
           // system-side overflow check below: the system side has priority.
-          if (built.report.used < this.deps.context.budget.maxTokens) {
+          if (!pipeline.historyCompaction && built.report.used < this.deps.context.budget.maxTokens) {
             const available = this.deps.context.budget.maxTokens - built.report.used;
             const messagesTokens = built.report.messagesTokens ?? 0;
             const headroom = built.manualCompaction ? Math.min(available, Math.max(this.deps.context.pipeline.estimateMessageTokens(activeUsers), Math.floor(messagesTokens * 0.6))) : available;
@@ -455,7 +551,9 @@ export class ContextController {
           // The budget may retain a short recent tail above its estimate, but
           // active user authority itself must never be evicted to fit. Detect
           // that irreducible overflow before any provider/tool call.
-          const protectedTokens = built.report.used + this.deps.context.pipeline.estimateMessageTokens(activeUsers);
+          const protectedTokens = pipeline.historyCompaction
+            ? pipeline.estimateTextTokens(system) + this.deps.context.budget.reserved.output + pipeline.estimateMessageTokens(history)
+            : built.report.used + pipeline.estimateMessageTokens(activeUsers);
           if (protectedTokens > this.deps.context.budget.maxTokens) {
             overflowAttempt += 1;
             const decision =
@@ -475,7 +573,7 @@ export class ContextController {
               ) };
             }
           }
-          if (built.compacted || historyTrimmed) {
+          if (compaction === undefined && (built.compacted || historyTrimmed)) {
             compaction = { manual: built.manualCompaction === true, beforeTokens: built.report.messagesTokens ?? 0,
               afterTokens: this.deps.context.pipeline.estimateMessageTokens(history) };
           }

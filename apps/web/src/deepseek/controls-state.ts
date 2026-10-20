@@ -15,7 +15,8 @@ export const controlsSchema = z.object({
     content: z.string().max(32000).optional(), requestId: z.string().max(200).optional(), admitted: z.boolean().optional() }).strict(),
   goal: goalSchema.optional(),
   reasoning: z.object({ provider: z.string().min(1).max(200), model: z.string().min(1).max(200), effort: z.string().min(1).max(100).optional() }).strict().optional(),
-  compaction: z.object({ pending: z.boolean(), requestedAt: z.number().finite(), lastCompletedAt: z.number().finite().optional() }).strict().optional(),
+  compaction: z.object({ pending: z.boolean(), requestedAt: z.number().finite(), running: z.boolean().optional(),
+    lastCompletedAt: z.number().finite().optional(), lastSummarySource: z.enum(["model", "extractive"]).optional() }).strict().optional(),
 }).strict();
 export type SessionControls = z.infer<typeof controlsSchema>;
 export type Goal = z.infer<typeof goalSchema>;

@@ -115,6 +115,7 @@ export function withOpenAIRequestPolicy(provider: ModelProvider, policy: Readonl
 const BODY_SUMMARY_LIMIT = 200;
 
 interface ChatChunk {
+  error?: { message?: unknown; code?: unknown; type?: unknown; status?: unknown };
   choices?: Array<{
     delta?: {
       content?: string;
@@ -334,7 +335,8 @@ async function backoff(
  * line by line. Transient failures (network errors, HTTP 429/5xx) BEFORE the
  * response stream starts are retried internally with exponential backoff
  * (retry taxonomy kind "provider", Phase 11); each retry is observable via
- * ModelEvent "retry". Streaming-phase failures are never retried.
+ * ModelEvent "retry". The provider never internally replays a stream; the
+ * Runtime can retry a transient failure before any semantic output.
  */
 let diagnosticRequestObserver: RequestPrefixObserver | undefined;
 
@@ -566,6 +568,7 @@ async function* streamChatCompletion(
   let usage: Usage | undefined;
   let aborted = false;
   let normalReason: "stop" | "tool_calls" | "length" | undefined;
+  let semanticOutputSeen = false;
 
   let abortResolve: (() => void) | undefined;
   const onAbort = () => { aborted = true; abortResolve?.(); };
@@ -620,7 +623,18 @@ async function* streamChatCompletion(
       // Non-JSON SSE keepalive line — nothing to emit.
       return { events: [], finished: false };
     }
+    if (chunk === null || typeof chunk !== "object" || Array.isArray(chunk)) return { events: [], finished: false };
     const events: ModelEvent[] = [];
+    if (chunk.error && normalReason === undefined) {
+      const status = Number(chunk.error.status ?? chunk.error.code);
+      const kind = status === 429 || chunk.error.type === "rate_limit_error" ? "rate_limit"
+        : status >= 500 && status <= 599 ? "server_error" : "http";
+      const safe = !semanticOutputSeen && (kind === "rate_limit" || kind === "server_error");
+      const info = errorInfo("MODEL_ERROR", `OpenAI SSE provider error: ${summarize(chunk.error.message ?? chunk.error.type ?? "unknown provider error")}`, {
+        retryable: safe, safeToRetry: safe, provider: { kind, ...(Number.isSafeInteger(status) && status >= 400 && status <= 599 ? { status } : {}) },
+      });
+      return { events: !semanticOutputSeen ? [{ type: "error", error: info, timestamp: Date.now() }] : finishEvents("error", info), finished: true };
+    }
     const choice = chunk.choices?.[0];
     if (chunk.usage) {
       const snapshot = parseOpenAIUsage(chunk.usage);
@@ -650,6 +664,7 @@ async function* streamChatCompletion(
         : { events, finished: false };
     }
     const delta = choice?.delta;
+    if (delta?.content || delta?.reasoning_content || delta?.tool_calls?.length) semanticOutputSeen = true;
     if (delta?.content) {
       text += delta.content;
       events.push({ type: "text_delta", text: delta.content, timestamp: Date.now() });
@@ -741,13 +756,19 @@ async function* streamChatCompletion(
   } catch (err) {
     // Native fetch can reject reader.read() before the abort race resolves.
     // Classify by the effective signal rather than leaking an AbortError or
-    // treating a timeout as caller cancellation. Streaming errors never retry.
+    // treating a timeout as caller cancellation. Partial output never retries.
     if (effectiveSignal.aborted) aborted = true;
-    else streamError = errorInfo("MODEL_ERROR", `OpenAI chat completion stream failed: ${summarize(err)}`, {
-      retryable: false,
-      safeToRetry: false,
-      provider: { kind: "network" },
-    });
+    else {
+      // A connection reset before any semantic output is safe to replay via
+      // the Runtime's existing finite retry policy. Once even reasoning or
+      // partial tool arguments arrived, preserve the no-replay boundary.
+      const safe = !semanticOutputSeen && normalReason === undefined;
+      streamError = errorInfo("MODEL_ERROR", `OpenAI chat completion stream failed: ${summarize(err)}`, {
+        retryable: safe,
+        safeToRetry: safe,
+        provider: { kind: "network" },
+      });
+    }
   } finally {
     effectiveSignal.removeEventListener("abort", onAbort);
     // The generator owns the body reader, including when its consumer returns

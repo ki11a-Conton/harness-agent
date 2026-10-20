@@ -47,6 +47,7 @@ export async function composeContext(
   // harness routes them into the event stream (never content, only
   // source/priority/tokens/reason).
   const pipelineDeps: import("@ar/context").ContextPipelineDeps = {
+    historyCompaction: true,
     ...(config.contextSummary !== undefined ? { summarize: createCodingSummaryAdapter(config.contextSummary) } : {}),
     onTelemetry: (event) => {
       // candidate facts without a quarantine reason are noise — skip.

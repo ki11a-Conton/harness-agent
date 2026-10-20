@@ -79,7 +79,7 @@ try {
     await writeFile(join(output, 'pr15.log'), controlsLog);
   }
   const controls = JSON.parse(await readFile(join(output, 'pr15/result.json'), 'utf8'));
-  assert.equal(controls.status, 'PASS'); assert.equal(controls.checks.length, 8); assert.deepEqual(controls.pending, []); assert.equal(controls.paidModelCalls, 0);
+  assert.equal(controls.status, 'PASS'); assert.equal(controls.checks.length, 10); assert.deepEqual(controls.pending, []); assert.equal(controls.paidModelCalls, 0);
   await verifyPortable(root, { version: values.version, sourceSha: values['source-sha'] });
   host.send({ type: 'fixture-stop' });
   const exit = await timeout(hostExit, 15_000, 'Installed host failed to close');

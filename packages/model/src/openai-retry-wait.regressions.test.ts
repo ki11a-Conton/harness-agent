@@ -172,12 +172,12 @@ describe("OpenAI retry wait deadline, cancellation and native listener ownership
     expect(vi.getTimerCount()).toBe(0); expect(getEventListeners(c.signal, "abort")).toHaveLength(0);
   });
 
-  it("streaming read failure never enters provider retry backoff", async () => {
+  it("a pre-output streaming read failure leaves finite recovery to the Runtime without provider backoff", async () => {
     const stream = new ReadableStream<Uint8Array>({ pull(controller) { controller.error(new TypeError("offline read failed")); } });
     const fetch = vi.fn(async () => new Response(stream)); vi.stubGlobal("fetch", fetch);
     const c = new AbortController(); const r = run(c); await vi.runAllTimersAsync(); const events = await r.pending;
     expect(fetch).toHaveBeenCalledTimes(1); expect(events.filter(e => e.type === "retry")).toEqual([]);
-    expect(terminals(events)).toEqual([expect.objectContaining({ type: "error", error: expect.objectContaining({ provider: { kind: "network" }, retryable: false, safeToRetry: false }) })]);
+    expect(terminals(events)).toEqual([expect.objectContaining({ type: "error", error: expect.objectContaining({ provider: { kind: "network" }, retryable: true, safeToRetry: true }) })]);
     expect(vi.getTimerCount()).toBe(0); expect(getEventListeners(c.signal, "abort")).toHaveLength(0);
   });
 

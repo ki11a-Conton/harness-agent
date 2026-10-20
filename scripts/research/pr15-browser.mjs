@@ -56,6 +56,10 @@ async function prompt(text) {
   }, 'Actual admitted turn did not settle', 30000);
 }
 async function permission(label) {
+  const expected = { 'Read Only': 'read-only', 'Workspace Write': 'workspace-write', 'Full access': 'danger-full-access' }[label];
+  if ((await read('session/projections', { request: { sessionId: id } })).values.permissions.currentValue === expected) {
+    await button('Access mode, current: ' + label).waitFor(); return;
+  }
   await button(/^Access mode, current:/).click(); await page.getByRole('menuitem', { name: label, exact: true }).click();
   if (label === 'Full access') {
     const enable = button('Enable Full access'); assert(await enable.isDisabled(), 'Full access enabled without acknowledgement');
@@ -65,7 +69,6 @@ async function permission(label) {
   // command also commits its lifecycle. Await the actual acknowledgement.
   await button('Access mode, current: ' + label).waitFor({ state: 'visible', timeout: 30000 });
   await until(() => button('Access mode, current: ' + label).isEnabled(), 'Permission save is still pending', 30000);
-  const expected = { 'Read Only': 'read-only', 'Workspace Write': 'workspace-write', 'Full access': 'danger-full-access' }[label];
   assert.equal((await read('session/projections', { request: { sessionId: id } })).values.permissions.currentValue, expected);
 }
 let id, failure, failureState;
@@ -128,11 +131,28 @@ const cases = [
     assert(!/provider.*protocol.*length|finish_reason.*length.*error/i.test(await page.locator('body').innerText()));
   }],
   ['manual-compaction-real-completion', async () => {
-    await button('Compress context').click(); await button('Will compress next request').waitFor();
+    assert.equal(await button('Compress context').count(), 0, 'Manual compaction must live in the native plus menu');
+    await button('Add files or run commands').click();
+    await page.getByRole('option').filter({ hasText: 'Compact older conversation history' }).click();
+    await page.getByText('Will compress next request', { exact: true }).waitFor();
+    await page.setViewportSize({ width: 320, height: 1100 });
+    await button('Add files or run commands').press('Enter');
+    const compactOption = page.getByRole('option').filter({ hasText: 'Compact older conversation history' });
+    await compactOption.waitFor();
+    const editor = page.locator('[data-composer-input=true][contenteditable=true]');
+    for (let index = 0; index < 20 && await compactOption.getAttribute('aria-selected') !== 'true'; index++) await editor.press('ArrowDown');
+    assert.equal(await compactOption.getAttribute('aria-selected'), 'true', 'Native Compact must be reachable with the keyboard');
+    await page.screenshot({ path: join(output, 'narrow-compact-plus-keyboard.png'), fullPage: true });
+    await editor.press('Enter');
+    await compactOption.waitFor({ state: 'hidden' });
+    await page.setViewportSize({ width: 1440, height: 900 });
     await prompt('Continue after explicit PR15 context compression.');
     await page.getByText('Context prepared', { exact: true }).waitFor();
     const state = await read('session/projections', { request: { sessionId: id } });
     assert.equal(state.values.harnessCompaction.pending, false); assert(state.values.harnessCompaction.lastCompletedAt > 0);
+    assert.equal(state.values.harnessCompaction.lastSummarySource, 'model');
+    const summary = (await requests()).filter(request => request.purpose === 'compaction').at(-1);
+    assert(summary && (!summary.tools || summary.tools.length === 0) && summary.maxTokens <= 2048);
     assert(await page.getByText('Output token limit reached', { exact: true }).isVisible(), 'Compression lost the previous turn');
   }],
   ['goal-create-pause-edit-resume-clear', async () => {
@@ -197,6 +217,40 @@ const cases = [
     assert.equal(state.values.modelSelection.next.reasoningEffort, undefined);
     assert.equal(state.values.plan.active, false); assert.equal(state.values.goal, null);
     await button('Access mode, current: Workspace Write').waitFor();
+  }],
+  ['automatic-context-checkpoint-keeps-history', async () => {
+    // Return to the populated session through the native sidebar. All new
+    // history below is sent through the actual composer, never seeded by RPC.
+    await page.locator(`[data-row-key="session:${id}"]`).click();
+    await prompt('BROWSER-CONTEXT-EARLY-FACT: the reconciliation key is invoiceId in src/reconcile.ts. Keep this decision.');
+    const before = (await requests()).length;
+    for (let round = 0; round < 3 && !(await requests()).slice(before).some(request => request.purpose === 'compaction'); round++) {
+      await prompt('Investigate context history round ' + round + ': ' + 'ordinary coding observation '.repeat(1600) + 'End of observations.');
+    }
+    const automatic = (await requests()).slice(before).filter(request => request.purpose === 'compaction');
+    assert(automatic.length > 0, 'Automatic compaction never ran without clicking Compact');
+    assert(automatic.some(request => JSON.stringify(request.messages).includes('BROWSER-CONTEXT-EARLY-FACT')), 'Summary input lost the earlier decision');
+    assert(automatic.every(request => !request.tools?.length && request.maxTokens <= 2048));
+    await prompt('Continue coding using the earlier invoiceId decision.');
+    const coding = (await requests()).at(-1);
+    assert.equal(coding.purpose, 'coding'); assert(JSON.stringify(coding.messages).includes('invoiceId'));
+    assert(!JSON.stringify(coding.messages).includes('Investigate context history round 0:'), 'Covered history was sent again');
+    assert(await page.getByText('Output token limit reached', { exact: true }).isVisible(), 'Compaction deleted rendered original history');
+    assert(!(await page.locator('body').innerText()).includes('deterministic local fixture handoff'), 'Private summary leaked into chat');
+    await page.reload(); await page.locator('[data-harness-controls]').waitFor(); await page.locator(`[data-row-key="session:${id}"]`).click();
+    await prompt('Continue using the persisted handoff after refresh.');
+    assert(JSON.stringify((await requests()).at(-1).messages).includes('invoiceId'));
+  }],
+  ['pre-output-reset-recovers-real-write-once', async () => {
+    await permission('Full access');
+    const before = (await requests()).length;
+    await prompt('[fixture:reset-before-output] Recover this actual HTTP interruption and write the proof once.');
+    assert.equal(await readFile(join(fixture.cwd, 'browser-reset-recovered.txt'), 'utf8'), 'Actual recovered write exactly once\n');
+    const actual = (await requests()).slice(before).filter(request => request.purpose === 'coding');
+    assert.equal(actual.length, 3); assert.deepEqual(actual[0].messages, actual[1].messages);
+    const lastUser = actual[2].messages.findLastIndex(message => message.role === 'user');
+    const toolResults = actual[2].messages.slice(lastUser + 1).filter(message => message.role === 'tool'); assert.equal(toolResults.length, 1);
+    await permission('Workspace Write');
   }],
 ];
 try {
