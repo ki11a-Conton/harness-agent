@@ -59,6 +59,7 @@ import {
 } from "@ar/contracts";
 import type {
   CheckpointBudgetUsage,
+  CheckpointData,
   CheckpointId,
   CheckpointPolicy,
   CheckpointStore,
@@ -128,6 +129,26 @@ import { ReadOnlyPrefetch } from "./read-only-prefetch.js";
 /** P1-6: deterministic hash of a policy value (session fingerprinting). */
 function stableHashOf(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex").slice(0, 16);
+}
+
+/** Carry durable consumption past the snapshot into either recovery path. */
+function replayCheckpointBudget(checkpoint: CheckpointData, budget: RunBudget, events: readonly AgentEvent[]): RunBudget {
+  // Legacy snapshots cannot identify an interrupted turn. Preserve their
+  // checkpoint-only seed rather than attributing another task's journal.
+  if (checkpoint.turnId === undefined) return structuredClone(budget);
+  const replay = events.filter(event => event.sequence > checkpoint.lastEventSequence &&
+    event.turnId === checkpoint.turnId);
+  const requested = new Map(replay.filter(event => event.type === "tool.requested")
+    .filter(event => typeof event.payload.toolCallId === "string").map(event => [event.payload.toolCallId as string, event]));
+  const restored = structuredClone(budget);
+  restored.usedToolCalls += [...requested.values()].filter(event => event.payload.name !== "update_plan").length;
+  for (const event of replay.filter(event => event.type === "model.completed")) {
+    const usage = event.payload.usage as import("@ar/contracts").UsageSnapshot | undefined;
+    restored.estimatedCostUsd += usage?.estimatedCostUsd ?? 0;
+    if (event.payload.purpose !== "compaction" && typeof event.payload.text === "string") restored.outputChars += event.payload.text.length;
+  }
+  restored.retries += replay.filter(event => event.type === "model.retry").length;
+  return restored;
 }
 
 /** PKG-003: deterministic hash of a policy VALUE for drift detection. Object
@@ -1139,16 +1160,7 @@ export class AgentRuntime {
     const completedThroughCheckpoint = turnEvents.filter(event => event.sequence <= checkpoint.lastEventSequence &&
       event.type === "model.completed" && event.payload.purpose !== "compaction").length;
     const modelCompletions = replay.filter(event => event.type === "model.completed" && event.payload.purpose !== "compaction");
-    const requested = new Map(replay.filter(event => event.type === "tool.requested")
-      .filter(event => typeof event.payload.toolCallId === "string").map(event => [event.payload.toolCallId as string, event]));
-    const budgetSeed = structuredClone(usage.run);
-    budgetSeed.usedToolCalls += [...requested.values()].filter(event => event.payload.name !== "update_plan").length;
-    for (const event of replay.filter(event => event.type === "model.completed")) {
-      const modelUsage = event.payload.usage as import("@ar/contracts").UsageSnapshot | undefined;
-      budgetSeed.estimatedCostUsd += modelUsage?.estimatedCostUsd ?? 0;
-      if (event.payload.purpose !== "compaction" && typeof event.payload.text === "string") budgetSeed.outputChars += event.payload.text.length;
-    }
-    budgetSeed.retries += replay.filter(event => event.type === "model.retry").length;
+    const budgetSeed = replayCheckpointBudget(checkpoint, usage.run, turnEvents);
     const failedVerifications = replay.filter(event => event.type === "verification.failed");
     return { continuing: true, options: { ...opts, initialState: recovered.working,
       toolLedgerSeed: [...checkpoint.toolLedger, ...recovered.replayedToolLedger],
@@ -1240,7 +1252,7 @@ export class AgentRuntime {
     // Replay may have incorporated a completion committed after the last
     // checkpoint. Check its already-spent cost/output before any new model or
     // retrieval work; recovery never grants another call after a known breach.
-    if (continuing) {
+    if (opts.budgetSeed !== undefined) {
       const restoredBreach = budget.onModelUsage(0, 0, 0) ?? budget.onOutput(0);
       if (restoredBreach !== undefined) {
         await this.emit(sessionId, "run.limit_reached", { ...restoredBreach }, turnId);
@@ -2134,11 +2146,13 @@ export class AgentRuntime {
       interruptedUsers = activeUserMessages(history, turnId);
     }
     const resumePrompt = buildResumePrompt(working, committedSideEffects, unresolvedTools, verdicts, interruptedUsers);
-    const turn = await this.startTurn(sessionId, resumePrompt);
     const bu = checkpoint.budgetUsage;
+    const budgetSeed = bu?.run === undefined ? undefined : replayCheckpointBudget(checkpoint, bu.run,
+      await this.events.list(sessionId, { afterSequence: checkpoint.lastEventSequence }));
+    const turn = await this.startTurn(sessionId, resumePrompt);
     const outcome = await this.runTurn(sessionId, turn.id, signal, {
       initialState: working,
-      ...(bu?.run !== undefined ? { budgetSeed: bu.run } : {}),
+      ...(budgetSeed !== undefined ? { budgetSeed } : {}),
       ...(bu?.recoveryUsage !== undefined ? { recoveryUsageSeed: bu.recoveryUsage } : {}),
       ...(bu?.verificationRetries !== undefined ? { verificationRetriesSeed: bu.verificationRetries } : {}),
       ...(bu?.stallRecoveryCount !== undefined ? { stallRecoverySeed: bu.stallRecoveryCount } : {}),
