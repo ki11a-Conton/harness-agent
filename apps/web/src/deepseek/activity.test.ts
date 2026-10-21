@@ -2,7 +2,7 @@ import { mkdtemp, mkdir, readFile, rm, writeFile, realpath } from "node:fs/promi
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, expect, it, onTestFailed, vi } from "vitest";
 import { createHarness } from "@ar/harness";
 import { createRuntimeRpc } from "@ar/gateway";
 import { ScriptedModelProvider } from "@ar/model";
@@ -374,8 +374,22 @@ it("the displayed todo timeline is derived from actual successful native update_
   const provider = new ScriptedModelProvider([ScriptedModelProvider.toolCall("update_plan", { mutations: [{ op: "set_plan", steps: ["Inspect", "Verify"] }] }),
     ScriptedModelProvider.toolCall("update_plan", { mutations: [{ op: "mark_completed", step: "Inspect" }] }), ScriptedModelProvider.text("Verified actual plan")]);
   const stack = await setup({ provider });
+  const started = performance.now();
+  let observed: { elapsedMs: number; statuses: string[]; actor?: string; lastEvent?: string } = { elapsedMs: 0, statuses: [] };
+  // Failure diagnostics use facts already observed by the polling owner. Never
+  // await a stalled store in the failure hook or log private Turn.input text.
+  onTestFailed(() => console.error("Error: activity-timeline", JSON.stringify(observed)));
   await stack.sessions.call("session/prompt", { request: { requestId: "native-plan", sessionId: stack.id, mode: "queue", content: [{ type: "text", text: "Make and complete plan" }] } }, stack.signal);
-  await eventually(() => stack.harness.store.listTurns(stack.id), values => values[0]?.status === "completed");
+  const actor = await stack.harness.sessions.load(stack.id);
+  // Admission is not completion. Three model requests and two durable native
+  // plan updates can legitimately outlive the helper's 400 x 5ms polling span.
+  await expect.poll(async () => {
+    const turns = await stack.harness.store.listTurns(stack.id);
+    observed = { elapsedMs: Math.round(performance.now() - started), statuses: turns.slice(0, 4).map(turn => turn.status), actor: actor.executionState };
+    const events = await stack.harness.events.list(stack.id);
+    observed.lastEvent = events.at(-1)?.type;
+    return turns[0]?.status === "completed";
+  }, { timeout: 30000, interval: 50 }).toBe(true);
   const projection = projectSessionHistory({ session: (await stack.harness.store.getSession(stack.id))!, messages: await stack.harness.store.listMessages(stack.id), events: await stack.harness.events.list(stack.id) });
   expect(projection.projections.values.todos).toEqual([{ content: "Inspect", status: "completed" }, { content: "Verify", status: "pending" }]);
   expect(projection.records.filter(record => record.event.type === "todo/write")).toHaveLength(2);

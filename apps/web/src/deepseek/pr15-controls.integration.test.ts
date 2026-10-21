@@ -14,8 +14,9 @@ import { sessionMetadataTool } from './session.js';
 const cleanup: Array<() => Promise<void>> = [];
 afterEach(async () => { for (const close of cleanup.splice(0).reverse()) await close(); });
 const signal = () => new AbortController().signal;
-// This is a coarse hang guard for fixture allocation, durable setup and cleanup
-// as well as the business assertions. The narrower 30s / 10s / 15s polling
+// This is a coarse hang guard for the test body, including fixture allocation,
+// durable setup and turn settlement. afterEach teardown has its own hook timeout.
+// The narrower 30s / 10s / 15s polling
 // deadlines below remain unchanged. In particular, 10s + 15s + 1.2s cannot fit
 // inside the old 20s outer guard, even before Windows durable IO and leases.
 const goalIntegrationTimeoutMs = 120_000;

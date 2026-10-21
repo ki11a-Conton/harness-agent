@@ -15,7 +15,9 @@ interface ControlsHost extends SessionHost {
 }
 const commands = ["permission", "plan", "goal", "compact"];
 const signal = () => new AbortController().signal;
-const isGoalRequestId = (id: string) => /^goal-[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}-[1-9]\d*$/u.test(id);
+// Retain legacy revision-number claims on restart. New round claims use a
+// separate namespace so they cannot collide with a legacy numeric receipt.
+const isGoalRequestId = (id: string) => /^goal-[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}-(?:round-)?[1-9]\d*$/u.test(id);
 
 /** Human controls live in the Web owner. Every mutation uses its private
  * Orchestrator; project effects still traverse the original frozen tool binding,
@@ -267,8 +269,12 @@ export function createControlsService(host: ControlsHost) {
         }
         if (goal.roundsStarted >= goal.maxGoalRounds) { await write(id, data => { data.goal!.phase = "blocked"; data.goal!.blockedReason = { code: "round-limit", message: "Goal round limit reached without verified completion." }; data.goal!.revision++; data.goal!.updatedAt = Date.now(); delete data.goal!.pending; }); return; }
         const next = await write(id, data => {
-          const current = data.goal!; current.roundsStarted++; current.revision++; current.updatedAt = Date.now();
-          current.pending = { requestId: `goal-${current.id}-${current.revision}`, text: `Continue the user goal (${current.roundsStarted}/${current.maxGoalRounds}):\n${current.objective}\nUse the repository tools, verify concrete results, and report remaining blockers. Do not claim completion without evidence.` };
+          // Ordinary progress must not invalidate the human's rendered pause /
+          // edit ref. Human edits and lifecycle transitions still advance the
+          // goal revision; the metadata revision + committed fence publish all
+          // progress. A persisted round ordinal owns each dispatch independently.
+          const current = data.goal!; current.roundsStarted++; current.updatedAt = Date.now();
+          current.pending = { requestId: `goal-${current.id}-round-${current.roundsStarted}`, text: `Continue the user goal (${current.roundsStarted}/${current.maxGoalRounds}):\n${current.objective}\nUse the repository tools, verify concrete results, and report remaining blockers. Do not claim completion without evidence.` };
         }); return next.goal!.pending;
       });
       if (claim !== undefined && !closed) {
