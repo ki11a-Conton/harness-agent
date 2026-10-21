@@ -274,7 +274,10 @@ it('PR15 a restarted production composition restores controls and still denies a
 });
 
 it('PR15 resumes the same admitted goal inbox after restart without inventing another prompt', async () => {
-  const f = await fixture(); await f.command('/plan on'); await f.command('/goal Resume the actual proof');
+  const mark = goalStages('goal-resume-inbox');
+  let observedInboxStatus: 'pending' | 'promoted' | 'consumed' | undefined;
+  onTestFailed(() => console.error('Error: goal-resume-inbox-state', JSON.stringify({ observedInboxStatus: observedInboxStatus ?? 'not-observed' })));
+  const f = await fixture('test', undefined, mark); await f.command('/plan on'); await f.command('/goal Resume the actual proof');
   await f.composition.controls.close(); // Fault window: host driver stopped before inbox drain.
   const owner = await f.composition.owners.ownerOf(f.sessionId), nativeId = f.composition.owners.nativeSessionId(f.sessionId);
   const text = 'Continue the actual admitted goal proof after restart', requestId = `goal-${(await f.composition.controls.read(f.sessionId)).goal!.id}-2`;
@@ -287,13 +290,30 @@ it('PR15 resumes the same admitted goal inbox after restart without inventing an
       text, mode: 'queue', startedAt: prompt.admittedAt, beforePromptIds: [], status: 'accepted', promptId: prompt.id };
   });
   expect((await f.composition.tools.executeHostTool(f.sessionId, tool, { path: f.composition.sessions.metadata.path!, sessionId: f.sessionId }, signal())).status).toBe('success');
+  mark('restart:admission-seeded');
+  mark('restart:original-close');
   await f.composition.close(); await f.base.close();
+  mark('restart:original-closed');
+  mark('restart:harness-open');
   const base = await createHarness(f.config); cleanup.push(() => base.close());
+  mark('restart:harness-ready');
+  mark('restart:composition-open');
   const restored = await createDeepseekComposition(base, f.config.dataDir); cleanup.push(() => restored.close());
+  mark('restart:composition-ready');
+  mark('proof:wait');
   await expect.poll(() => readFile(join(f.cwd, 'proof.txt'), 'utf8').catch(() => ''), { timeout: 5000 }).toBe('real bytes');
-  await expect.poll(async () => (await restored.harness.inbox.listAll(f.sessionId as SessionId))[0]?.status).toBe('consumed');
+  mark('proof:visible');
+  // The write is an intermediate effect. The second model response, terminal
+  // persistence and durable inbox acknowledgement still have to finish.
+  mark('inbox:wait-consumed');
+  await expect.poll(async () => {
+    observedInboxStatus = (await restored.harness.inbox.listAll(f.sessionId as SessionId))[0]?.status;
+    return observedInboxStatus;
+  }, { timeout: 15000 }).toBe('consumed');
+  mark('inbox:consumed');
   const inbox = await restored.harness.inbox.listAll(f.sessionId as SessionId);
   expect(inbox).toHaveLength(1); expect(inbox[0]!.id).toBe(prompt.id); expect(inbox[0]!.promotedTurnId).toBeDefined();
+  mark('assertions:complete');
 });
 
 it('PR15 workspace permission retains the real allowed file execution', async () => {
