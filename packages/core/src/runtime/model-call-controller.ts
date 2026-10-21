@@ -185,11 +185,31 @@ export interface ModelCallControllerDeps {
     ledger: ToolExecutionRecord[],
   ) => Promise<TurnOutcome>;
   runVerificationGate: (ctx: TurnContext) => Promise<VerificationGateResult | undefined>;
+  /** Accepted input for this turn must be sampled before a successful stop. */
+  hasPendingSteering?: (ctx: TurnContext) => Promise<boolean>;
+  /** Close actor admission before awaited successful completion commits.
+   * False means an already-admitted correction requires another sample. */
+  closeSteeringForCompletion?: (ctx: TurnContext) => Promise<boolean>;
   wallClockExceeded: (agent: AgentDefinition, turn: Turn) => number | undefined;
 }
 
 export class ModelCallController {
   constructor(private readonly deps: ModelCallControllerDeps) {}
+
+  private async continueForSteering(ctx: TurnContext, state: AgentState, verificationFailures: number): Promise<CompletionResult | undefined> {
+    if (!await this.deps.hasPendingSteering?.(ctx)) return undefined;
+    // Re-enter the existing bounded loop: its next sampling boundary performs
+    // the durable append/consume, including crash reconciliation, exactly once.
+    state.nextIteration();
+    return { action: "continue_loop", verificationFailures };
+  }
+
+  private async prepareSuccessfulCompletion(ctx: TurnContext, state: AgentState, verificationFailures: number): Promise<CompletionResult | undefined> {
+    if (this.deps.closeSteeringForCompletion === undefined) return this.continueForSteering(ctx, state, verificationFailures);
+    if (await this.deps.closeSteeringForCompletion(ctx)) return undefined;
+    state.nextIteration();
+    return { action: "continue_loop", verificationFailures };
+  }
 
   /**
    * Q-1: post-completion processing extracted from runTurn. Handles:
@@ -210,11 +230,13 @@ export class ModelCallController {
     lastReportTokens: number | undefined,
     verificationFailures: number,
     step?: StepExecutionSnapshot,
+    /** Record the call first, then meter once before any continuation/finish. */
+    accountCompletion?: () => Promise<{ error: ReturnType<typeof errorInfo>; terminationReason: TerminationReason } | undefined>,
   ): Promise<CompletionResult> {
     const { sessionId, turnId, signal, agent } = ctx;
     const { assistantText, reasoningText, calls, final, callStartedAt, timeToFirstTokenMs, callId, usage } = modelResult;
 
-    if (signal.aborted) {
+    if (signal.aborted && !final) {
       return { action: "finish", outcome: await this.deps.finishTurn(ctx, "cancelled", state, working, undefined, "cancelled", toolLedger) };
     }
     if (!final) {
@@ -224,15 +246,6 @@ export class ModelCallController {
     }
 
     const wallElapsedAfterModel = this.deps.wallClockExceeded(agent, turn);
-    if (wallElapsedAfterModel !== undefined) {
-      await this.deps.emit(sessionId, "run.limit_reached", { limit: "maxDurationMs", used: wallElapsedAfterModel, allowed: agent.limits.maxDurationMs }, turnId);
-      return { action: "finish", outcome: await this.deps.finishTurn(
-        ctx, "failed", state, working,
-        errorInfo("RESOURCE_LIMIT", `maxDurationMs (${agent.limits.maxDurationMs}ms) exceeded after ${wallElapsedAfterModel}ms`),
-        "time_limit",
-        toolLedger,
-      ) };
-    }
 
     // P19-5: typed protocol self-heal BEFORE anything executes. Duplicate call
     // ids are deduped (first wins — double execution is a double-effect risk)
@@ -243,6 +256,7 @@ export class ModelCallController {
     // A length cap is not completed tool intent. Keep partial text but never
     // repair/execute a possibly truncated operation or leave dangling calls.
     let repairedCalls = final.finishReason === "length" ? [] : final.toolCalls ?? calls;
+    let malformedFailure: ReturnType<typeof errorInfo> | undefined;
     if (repairedCalls.length > 0) {
       const dedup = repairDuplicateToolCallIds(repairedCalls, () => newRepairId());
       repairedCalls = dedup.calls;
@@ -261,9 +275,7 @@ export class ModelCallController {
           kind: "malformed_structured_output",
           reason: "every requested tool call was unrecoverable (duplicate/malformed)",
         }, turnId);
-        const info = errorInfo("MODEL_ERROR", "model requested tool calls but all were unrecoverable");
-        await this.deps.emit(sessionId, "model.failed", { error: info }, turnId);
-        return { action: "finish", outcome: await this.deps.finishTurn(ctx, "failed", state, working, info, "model_error", toolLedger) };
+        malformedFailure = errorInfo("MODEL_ERROR", "model requested tool calls but all were unrecoverable");
       }
     }
     const toolCalls = repairedCalls;
@@ -323,6 +335,33 @@ export class ModelCallController {
       }
     };
 
+    const completionBreach = await accountCompletion?.();
+    // Even a response that cannot proceed has completed and consumed usage.
+    // Preserve the original terminal reason only after the durable call and
+    // its single accounting callback; no rejected/cancelled intent may run.
+    if (signal.aborted) {
+      await settleUnexecutedToolCalls(call => `[not executed] the turn was cancelled after the model completed; "${call.name}" did not run.`);
+      return { action: "finish", outcome: await this.deps.finishTurn(ctx, "cancelled", state, working, undefined, "cancelled", toolLedger) };
+    }
+    if (wallElapsedAfterModel !== undefined) {
+      await settleUnexecutedToolCalls(call => `[not executed] the completed model call exceeded the turn duration; "${call.name}" did not run.`);
+      await this.deps.emit(sessionId, "run.limit_reached", { limit: "maxDurationMs", used: wallElapsedAfterModel, allowed: agent.limits.maxDurationMs }, turnId);
+      return { action: "finish", outcome: await this.deps.finishTurn(
+        ctx, "failed", state, working,
+        errorInfo("RESOURCE_LIMIT", `maxDurationMs (${agent.limits.maxDurationMs}ms) exceeded after ${wallElapsedAfterModel}ms`),
+        "time_limit", toolLedger,
+      ) };
+    }
+    if (malformedFailure !== undefined) {
+      await this.deps.emit(sessionId, "model.failed", { error: malformedFailure }, turnId);
+      return { action: "finish", outcome: await this.deps.finishTurn(ctx, "failed", state, working, malformedFailure, "model_error", toolLedger) };
+    }
+    if (completionBreach !== undefined) {
+      await settleUnexecutedToolCalls(call => `[not executed] the completed model call exhausted its budget; "${call.name}" did not run.`);
+      return { action: "finish", outcome: await this.deps.finishTurn(ctx, "failed", state, working,
+        completionBreach.error, completionBreach.terminationReason, toolLedger) };
+    }
+
     if (final.finishReason === "length") {
       await this.deps.emit(sessionId, "run.limit_reached", { limit: "maxOutputTokens", finishReason: "length", discardedToolCalls: (final.toolCalls ?? calls).length }, turnId);
       state.terminate("completed");
@@ -339,6 +378,8 @@ export class ModelCallController {
       await settleUnexecutedToolCalls(
         (call) => `[not executed] the model finished with "stop" after requesting "${call.name}"; no tool ran.`,
       );
+      const correction = await this.continueForSteering(ctx, state, verificationFailures);
+      if (correction !== undefined) return correction;
       await this.deps.failAt("verification.started", { sessionId, turnId });
       const verificationStartedAt = this.deps.now();
       const gate = await this.deps.runVerificationGate(ctx);
@@ -346,22 +387,15 @@ export class ModelCallController {
         return { action: "finish", outcome: await this.deps.finishTurn(ctx, "cancelled", state, working, undefined, "cancelled", toolLedger) };
       }
       if (gate !== undefined) {
-        // P1-3: after a verification gate (passed or failed) is a
-        // checkpoint safety boundary.
-        if (this.deps.afterVerificationCheckpoint) {
-          await this.deps.checkpoint(
-            ctx, working, state, toolLedger,
-            gate.status === "passed" ? "verification:passed" : "verification:failed",
-            lastReportTokens !== undefined ? { maxTokens: this.deps.contextBudgetMaxTokens, usedTokens: lastReportTokens } : undefined,
-          );
-        }
         if (gate.status !== "passed") {
           verificationFailures += 1;
+          state.nextIteration();
+          working.failures.push(`verification: ${gate.reason}`);
+          await this.deps.emit(sessionId, "verification.failed", { error: gate.reason, attempt: verificationFailures, maxAttempts: this.deps.maxVerificationFailures, durationMs: this.deps.now() - verificationStartedAt }, turnId);
           if (verificationFailures < this.deps.maxVerificationFailures) {
             // plan.md Phase 4/7: MODEL_STOPPED ≠ done. Inject a structured
             // failure observation and continue the loop; the model gets a
             // bounded number of chances to fix the reported problem.
-            await this.deps.emit(sessionId, "verification.failed", { error: gate.reason, attempt: verificationFailures, maxAttempts: this.deps.maxVerificationFailures, durationMs: this.deps.now() - verificationStartedAt }, turnId);
             await this.deps.store.appendMessage({
               id: newMessageId(),
               sessionId,
@@ -373,9 +407,18 @@ export class ModelCallController {
                 "The task is NOT complete. Fix the reported problem and verify again.",
               createdAt: this.deps.now(),
             });
+          }
+          // Persist the observed failure and its consumed retry BEFORE the
+          // boundary can be acknowledged or another model request can start.
+          if (this.deps.afterVerificationCheckpoint) {
+            await this.deps.checkpoint(ctx, working, state, toolLedger, "verification:failed", {
+              ...(lastReportTokens !== undefined ? { maxTokens: this.deps.contextBudgetMaxTokens, usedTokens: lastReportTokens } : { maxTokens: this.deps.contextBudgetMaxTokens }),
+              verificationRetries: verificationFailures,
+            });
+          }
+          if (verificationFailures < this.deps.maxVerificationFailures) {
             return { action: "continue_loop", verificationFailures };
           }
-          await this.deps.emit(sessionId, "verification.failed", { error: gate.reason, attempt: verificationFailures, maxAttempts: this.deps.maxVerificationFailures, durationMs: this.deps.now() - verificationStartedAt }, turnId);
           await this.deps.emit(sessionId, "run.limit_reached", { limit: "maxVerificationFailures", used: verificationFailures, allowed: this.deps.maxVerificationFailures }, turnId);
           return { action: "finish", outcome: await this.deps.finishTurn(
             ctx, "failed", state, working,
@@ -384,6 +427,12 @@ export class ModelCallController {
             toolLedger,
           ) };
         }
+        if (this.deps.afterVerificationCheckpoint) {
+          await this.deps.checkpoint(ctx, working, state, toolLedger, "verification:passed",
+            lastReportTokens !== undefined ? { maxTokens: this.deps.contextBudgetMaxTokens, usedTokens: lastReportTokens } : undefined);
+        }
+        const correctionAfterVerification = await this.prepareSuccessfulCompletion(ctx, state, verificationFailures);
+        if (correctionAfterVerification !== undefined) return correctionAfterVerification;
         if (signal.aborted) {
           return { action: "finish", outcome: await this.deps.finishTurn(ctx, "cancelled", state, working, undefined, "cancelled", toolLedger) };
         }
@@ -392,6 +441,11 @@ export class ModelCallController {
         // P19-1: carry the gate's evidence into finishTurn so the terminal
         // grade is verified_complete (all checks) or verified_partial (some).
         return { action: "finish", outcome: await this.deps.finishTurn(ctx, "completed", state, working, undefined, "verified_complete", toolLedger, gate.evidence) };
+      }
+      const correctionAfterGate = await this.prepareSuccessfulCompletion(ctx, state, verificationFailures);
+      if (correctionAfterGate !== undefined) return correctionAfterGate;
+      if (signal.aborted) {
+        return { action: "finish", outcome: await this.deps.finishTurn(ctx, "cancelled", state, working, undefined, "cancelled", toolLedger) };
       }
       state.terminate("completed");
       return { action: "finish", outcome: await this.deps.finishTurn(ctx, "completed", state, working, undefined, "model_stopped", toolLedger) };
@@ -653,7 +707,21 @@ export class ModelCallController {
       }
 
       // fail
-      await this.deps.emit(sessionId, "model.failed", { callId, error: modelFailed, ...(compaction ? { purpose: "compaction" } : {}) }, turnId);
+      // Commit only the text already shown to the user. A failed stream is no
+      // completed model call: do not persist reasoning/tool intent, emit a
+      // completion/usage record, or send this response through verification.
+      // The new failure fence follows the append so read-side projections can
+      // settle the existing stream without rewriting its published prefix.
+      let partial: Message | undefined;
+      if (!compaction && assistantText.length > 0) {
+        partial = { id: newMessageId(), sessionId, turnId, role: "assistant", model: ctx.agent.model,
+          content: assistantText, incomplete: { reason: "model_error", callId }, createdAt: this.deps.now() };
+        await this.deps.store.appendMessage(partial);
+      }
+      await this.deps.emit(sessionId, "model.failed", { callId, error: modelFailed,
+        ...(compaction ? { purpose: "compaction" } : {}),
+        ...(partial ? { messageId: partial.id, text: partial.content, incomplete: partial.incomplete } : {}),
+      }, turnId);
       if (!compaction && retryAction.suppressLimitEvent !== true && attempt >= retryAction.maxAttempts) {
         await this.deps.emit(sessionId, "run.limit_reached", { limit: "maxRetries", used: attempt, allowed: retryAction.maxAttempts }, turnId);
       }

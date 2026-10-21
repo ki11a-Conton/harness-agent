@@ -268,6 +268,72 @@ describe("official DeepSeek Harness history projection", () => {
     for (const { event } of projection.records) client.assertEvent(event);
   });
 
+  it("C2 settles an incomplete visible answer at its failure fence without rewriting its followed prefix", () => {
+    const f = fixture();
+    f.message("user", "continue after an interrupted answer"); f.event("turn.started", { text: "continue after an interrupted answer" });
+    f.event("model.started", { callId: "partial-call", stepId: "partial-step" });
+    f.event("model.delta", { kind: "text", text: "Visible " });
+    const reconnect = f.project();
+    f.event("model.delta", { kind: "text", text: "partial answer." });
+    f.event("model.delta", { kind: "tool_call", name: "unexecuted_partial_intent" });
+    const followed = f.project();
+    const incomplete = { reason: "model_error" as const, callId: "partial-call" as never };
+    const answer = f.message("assistant", "Visible partial answer.", { incomplete, model: { providerId: "original-route", modelId: "original-model" } });
+    const failed = f.event("model.failed", { callId: incomplete.callId, messageId: answer.id, text: answer.content, incomplete,
+      error: { code: "HTTP_ERROR", message: "connection closed during the answer" } });
+    f.event("turn.failed", { terminationReason: "model_error", error: { code: "HTTP_ERROR", message: "connection closed during the answer" } });
+    const projection = f.project();
+    expect(projection.records.slice(0, followed.records.length)).toEqual(followed.records);
+    for (const [sequence, frames] of followed.framesBySourceSequence) expect(projection.framesBySourceSequence.get(sequence)).toEqual(frames);
+    expect(projection.records.filter(record => record.event.type === "assistant/message")).toHaveLength(1);
+    expect(projection.records.filter(record => record.event.type === "assistant/attempt")).toHaveLength(0);
+    expect(projection.records.filter(record => record.event.type === "tool/call")).toHaveLength(0);
+    const settlement = projection.records.find(record => record.event.type === "assistant/message")!;
+    expect(projection.sourceSequenceBySeq[settlement.event.seq]).toBe(failed.sequence);
+    expect(wireMessage(settlement.event)).toMatchObject({ id: answer.id, role: "assistant", content: [{ type: "text", text: answer.content }],
+      source: { kind: "model", provider: "original-route", model: "original-model" } });
+    expect(recordData(settlement.event)).toMatchObject({ interrupted: true, stream: [
+      { type: "chunk", chunk: { type: "block-start", index: 0, blockType: "text" } },
+      { type: "chunk", chunk: { type: "text-delta", index: 0, text: "Visible " } },
+      { type: "chunk", chunk: { type: "text-delta", index: 0, text: "partial answer." } },
+      { type: "chunk", chunk: { type: "block-end", index: 0, block: { type: "text", text: answer.content } } },
+      { type: "chunk", chunk: { type: "finish", reason: { kind: "error", failure: { code: "HTTP_ERROR", message: "connection closed during the answer" } } } },
+    ] });
+    expect(recordData(settlement.event).usage).toBeUndefined();
+    expect(projection.assistantStream.activeAttempt).toBeUndefined();
+    const client = officialClient();
+    for (const { event } of projection.records) client.assertEvent(event);
+    const resumed = new client.AssistantFold();
+    resumed.replace(reconnect.records, reconnect.assistantStream);
+    for (const frame of followFrames(projection, reconnect.sourceCursor)) {
+      const decision = frame.type === "assistant-stream" ? resumed.acceptFrame(frame.frame) : frame.type === "event" ? resumed.acceptDurable(frame) : undefined;
+      expect(decision?.type).not.toBe("rebaseline");
+    }
+  });
+
+  it("C2 withholds the failed-message read gap and never publishes a private compaction partial", () => {
+    const f = fixture(); f.message("user", "work"); f.event("turn.started", { text: "work" });
+    f.event("model.started", { callId: "partial-call" }); f.event("model.delta", { kind: "text", text: "visible partial" });
+    const before = f.project();
+    const id = newMessageId(); const incomplete = { reason: "model_error" as const, callId: "partial-call" as never };
+    const failed = f.event("model.failed", { callId: incomplete.callId, messageId: id, text: "visible partial", incomplete, error: { code: "MODEL_ERROR", message: "interrupted" } });
+    expect(f.project().records).toEqual(before.records);
+    expect(f.project().sourceCursor).toBe(before.sourceCursor);
+    f.message("assistant", "visible partial", { id, incomplete });
+    const committed = f.project();
+    expect(committed.records.slice(0, before.records.length)).toEqual(before.records);
+    expect(committed.sourceCursor).toBe(failed.sequence);
+    expect(committed.records.filter(record => record.event.type === "assistant/message")).toHaveLength(1);
+    f.event("model.started", { callId: "private-summary", purpose: "compaction" });
+    f.event("model.failed", { callId: "private-summary", purpose: "compaction", messageId: newMessageId(), text: "PRIVATE_SUMMARY_PARTIAL",
+      incomplete: { reason: "model_error", callId: "private-summary" }, error: { code: "MODEL_ERROR", message: "summary interrupted" } });
+    const privateExcluded = f.project();
+    expect(privateExcluded.sourceCursor).toBe(f.events.at(-1)!.sequence);
+    expect(JSON.stringify(privateExcluded.records)).not.toContain("PRIVATE_SUMMARY_PARTIAL");
+    expect(privateExcluded.records.filter(record => record.event.type === "assistant/message")).toHaveLength(1);
+    for (const { event } of privateExcluded.records) officialClient().assertEvent(event);
+  });
+
   it("reconciles accepted prompt ids from message or inbox identity and only logs real metadata commits", () => {
     const f = fixture();
     const prompt = f.message("user", "rename me"); f.event("turn.started", { text: prompt.content });

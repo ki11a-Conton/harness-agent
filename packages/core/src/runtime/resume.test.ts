@@ -168,7 +168,7 @@ describe("AgentRuntime resume (P1-4)", () => {
     const lastEventSequence = (await events.nextSequence(session.id)) - 1;
 
     const interruptedTurn = newTurnId();
-    await events.append(requestedEvent(session.id, "toolcall_w", "write_file", { path: "CHANGELOG.md", content: "x" }));
+    await events.append({ ...requestedEvent(session.id, "toolcall_w", "write_file", { path: "CHANGELOG.md", content: "x" }), turnId: interruptedTurn });
     await store.appendMessage({
       id: "message_m" as never,
       sessionId: session.id,

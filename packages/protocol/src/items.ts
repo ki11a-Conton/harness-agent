@@ -62,6 +62,8 @@ export interface AgentMessageItem {
   text: string;
   /** True when this is the final response of the turn. */
   final?: boolean;
+  /** Text preserved from a failed stream; never a final or verified answer. */
+  incomplete?: true;
   usage?: { inputTokens: number; outputTokens: number };
 }
 

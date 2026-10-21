@@ -86,6 +86,7 @@ import {
   type HarnessFeatureFlags,
   type HarnessProfile,
 } from "./config.js";
+import { resolveMaxIterationsPerTurn } from "./config.js";
 import type { AgentEvent } from "@ar/contracts";
 import { eventSinkFromStore } from "@ar/contracts";
 import type { HarnessIntrospection } from "./introspection.js";
@@ -224,6 +225,12 @@ export const DEFAULT_MAIN_SYSTEM_PROMPT = [
 ].join("\n");
 
 export async function createHarness(config: HarnessConfig): Promise<Harness> {
+  const maxIterationsPerTurn = resolveMaxIterationsPerTurn(config.maxIterationsPerTurn);
+  // Keep the validated scalar stable across asynchronous composition and
+  // preserve omission so an unconfigured host retains its existing identity.
+  config = { ...config };
+  if (maxIterationsPerTurn === undefined) delete config.maxIterationsPerTurn;
+  else config.maxIterationsPerTurn = maxIterationsPerTurn;
   if (config.contextSummary !== undefined) config = { ...config, contextSummary: normalizeCodingSummaryPolicy(config.contextSummary) };
   if (config.skillSelector !== undefined && config.skillSelection !== undefined) {
     throw new TypeError("skillSelector and skillSelection are mutually exclusive");
@@ -464,6 +471,7 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
     modelProvider: config.modelProvider,
     orchestrator,
     agents,
+    ...(maxIterationsPerTurn !== undefined ? { maxIterationsPerTurn } : {}),
     // P16-5: the runtime shares the harness's injected clock so event
     // timestamps are deterministic under test (never a bare Date.now()).
     ...(config.now !== undefined ? { now: config.now } : {}),

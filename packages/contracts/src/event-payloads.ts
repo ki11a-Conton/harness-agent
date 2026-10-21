@@ -182,6 +182,10 @@ export interface ModelStartedPayload {
 export interface ModelFailedPayload {
   callId?: string;
   error?: unknown;
+  /** Present only after a visible incomplete assistant message was persisted. */
+  messageId?: string;
+  text?: string;
+  incomplete?: import("./message.js").Message["incomplete"];
 }
 
 /** verification.completed — the verification gate passed. */

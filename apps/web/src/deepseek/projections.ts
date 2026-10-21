@@ -246,6 +246,7 @@ export function projectSessionHistory(input: SessionProjectionInput): PageProjec
       lastPromptAt = message.createdAt;
       if (title === null) title = (input.displayTexts?.[message.id] ?? message.content).replace(/\s+/g, " ").trim().slice(0, 80) || null;
     } else if (message.role === "assistant") {
+      const incomplete = message.incomplete !== undefined;
       // The provenance recorded when the response was produced, never the
       // session row: a live model switch must not relabel published history.
       if (plan.modelMessages.has(message.id)) usedModel = { ...(message.model ?? initialModel) };
@@ -268,17 +269,18 @@ export function projectSessionHistory(input: SessionProjectionInput): PageProjec
         }
         const usage = usageOf(event.payload.usage);
         if (usage !== undefined) chunk(event.timestamp, { type: "usage", usage });
-        chunk(event.timestamp, { type: "finish", reason: finishReasonOf(event.payload.finishReason, event.payload.error) });
+        chunk(event.timestamp, { type: "finish", reason: finishReasonOf(incomplete ? "error" : event.payload.finishReason, event.payload.error) });
         const attempt = active;
         const settled = append("assistant/message", message.createdAt, {
           turn: attempt.turn, step: attempt.step, message: wireMessage, stream: attempt.stream,
           ...(usage === undefined ? {} : { usage }),
-          ...(event.payload.finishReason === "cancelled" ? { interrupted: true } : {}),
+          ...(incomplete || event.payload.finishReason === "cancelled" ? { interrupted: true } : {}),
         }, true);
         frame({ type: "end", attemptId: attempt.attemptId, revision: ++revision, index: attempt.nextIndex,
           outcome: { kind: "committed", eventType: "assistant/message", seq: settled.seq } });
         active = undefined;
-      } else append("assistant/message", message.createdAt, { turn: currentTurn, step: currentStep, message: wireMessage, stream: [] }, true);
+      } else append("assistant/message", message.createdAt, { turn: currentTurn, step: currentStep, message: wireMessage, stream: [],
+        ...(incomplete ? { interrupted: true } : {}) }, true);
     } else if (message.role === "system") append("system/message", message.createdAt, { turn: currentTurn, step: currentStep, message: wireMessage }, true);
     else {
       if (message.toolCallId !== undefined && !emittedCalls.has(message.toolCallId)) {
@@ -378,7 +380,8 @@ export function projectSessionHistory(input: SessionProjectionInput): PageProjec
       case "model.retry":
       case "model.failed":
         if (event.payload.purpose === "compaction") break;
-        for (const message of anchored) publishMessage(message, event);
+        for (const message of anchored) publishMessage(message, event,
+          event.type === "model.failed" && message.incomplete !== undefined && plan.modelMessages.has(message.id));
         finishAttempt(event.timestamp, { kind: "error", failure: failureOf(event.payload.error) });
         appendHarnessEvent(append, event);
         break;
@@ -503,11 +506,27 @@ function planMessageAnchors(input: SessionProjectionInput): AnchorPlan {
       else anchor(index, event);
     }
     if (event.type === "model.completed" && event.payload.purpose !== "compaction") {
-      const index = find(message => message.role === "assistant" && message.turnId === event.turnId
+      const index = find(message => message.role === "assistant" && message.incomplete === undefined && message.turnId === event.turnId
         && (typeof event.payload.text !== "string" || message.content === event.payload.text)
         && (typeof event.payload.toolCalls !== "number" || (message.toolCalls?.length ?? 0) === event.payload.toolCalls));
       if (index === undefined) barriers.add(event.sequence);
       else { anchor(index, event); modelMessages.add(messages[index]!.id); }
+    }
+    if (event.type === "model.failed" && event.payload.purpose !== "compaction") {
+      const incomplete = event.payload.incomplete;
+      // The failure event is the after-append fence for this visible prefix.
+      // Older failures remain attempts; never infer a new message from deltas.
+      if (typeof incomplete === "object" && incomplete !== null && !Array.isArray(incomplete)
+        && (incomplete as Record<string, unknown>).reason === "model_error"
+        && typeof (incomplete as Record<string, unknown>).callId === "string"
+        && (incomplete as Record<string, unknown>).callId === event.payload.callId
+        && typeof event.payload.messageId === "string" && typeof event.payload.text === "string") {
+        const index = find(message => message.id === event.payload.messageId && message.role === "assistant"
+          && message.turnId === event.turnId && message.content === event.payload.text
+          && message.incomplete?.reason === "model_error" && message.incomplete.callId === event.payload.callId);
+        if (index === undefined) barriers.add(event.sequence);
+        else { anchor(index, event); modelMessages.add(messages[index]!.id); }
+      }
     }
     if (event.type === "ask.user_replied") {
       const index = find(message => message.role === "user" && message.askId === event.payload.askId && message.turnId === event.turnId);

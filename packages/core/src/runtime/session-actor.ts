@@ -315,7 +315,7 @@ export interface LoadedSessionManager {
 
 export interface SessionActorDeps {
   persistent: PersistentSession;
-  runtime: Pick<AgentRuntime, "startTurn" | "runTurn"> & Partial<Pick<AgentRuntime, "releasePausedTurn">>;
+  runtime: Pick<AgentRuntime, "startTurn" | "runTurn"> & Partial<Pick<AgentRuntime, "releasePausedTurn" | "isSteeringOpen">>;
   store: SessionStore;
   inbox?: InboxStore;
   askUserStore?: AskUserStore;
@@ -366,7 +366,7 @@ export interface FollowupDeferred {
 }
 
 export interface LoadedSessionManagerDeps {
-  runtime: Pick<AgentRuntime, "startTurn" | "runTurn"> & Partial<Pick<AgentRuntime, "releasePausedTurn">>;
+  runtime: Pick<AgentRuntime, "startTurn" | "runTurn"> & Partial<Pick<AgentRuntime, "releasePausedTurn" | "isSteeringOpen">>;
   store: SessionStore;
   inbox?: InboxStore;
   askUserStore?: AskUserStore;
@@ -411,7 +411,10 @@ export class InboxSessionInputQueue implements SessionInputQueue {
   /** P38-2: the followup reserved for promotion but NOT yet consumed. */
   private reserved: { id: string; input: UserMessage; promptId?: PromptId } | undefined;
 
-  constructor(private readonly deps: { sessionId: SessionId; inbox?: InboxStore; store?: SessionStore; now?: () => number }) {}
+  constructor(private readonly deps: { sessionId: SessionId; inbox?: InboxStore; store?: SessionStore; now?: () => number;
+    /** Actor-owned admission binds a correction before durable IO begins. */
+    steerTurnId?: () => TurnId | undefined;
+  }) {}
 
   get sessionId(): SessionId {
     return this.deps.sessionId;
@@ -423,7 +426,39 @@ export class InboxSessionInputQueue implements SessionInputQueue {
 
   async enqueueSteer(input: UserMessage): Promise<void> {
     if (this.deps.inbox !== undefined) {
-      await this.admit(input.text, "steer");
+      const boundTurnId = this.deps.steerTurnId?.();
+      if (this.deps.steerTurnId !== undefined && boundTurnId === undefined) {
+        throw new AgentError(errorInfo("NO_ACTIVE_TURN", "steer requires a currently running turn"));
+      }
+      const promptId = newPromptId();
+      try {
+        await this.admit(input.text, "steer", promptId, boundTurnId);
+      } catch (cause) {
+        // A store may commit and then reject its promise. A failed admission
+        // cannot leave an unacknowledged bound correction reserving capacity.
+        if (boundTurnId !== undefined) {
+          const prompt = (await this.deps.inbox.listAll(this.sessionId)).find(row => row.id === promptId);
+          if (prompt?.status === "promoted" && prompt.promotedTurnId === boundTurnId) {
+            await this.deps.inbox.markConsumed(promptId);
+          }
+        }
+        throw cause;
+      }
+      if (boundTurnId !== undefined) {
+        // A durable admission can settle after this turn closes. A consumed
+        // correction with its canonical message was applied by the original T
+        // and may still be acknowledged. Otherwise settle that bound record
+        // before rejecting, so it neither leaks to another T nor holds capacity.
+        const turn = await this.deps.store?.getTurn(boundTurnId);
+        if (this.deps.steerTurnId?.() !== boundTurnId ||
+          turn?.status === "completed" || turn?.status === "failed" || turn?.status === "cancelled") {
+          const prompt = (await this.deps.inbox.listAll(this.sessionId)).find(row => row.id === promptId);
+          if (prompt?.status === "consumed" && (await this.deps.store?.listMessages(this.sessionId))?.some(message =>
+            message.role === "user" && message.turnId === boundTurnId && message.promptId === promptId)) return;
+          await this.deps.inbox.markConsumed(promptId);
+          throw new AgentError(errorInfo("NO_ACTIVE_TURN", `turn ${boundTurnId} ended before the correction could be applied; submit a new task`));
+        }
+      }
     }
     // Steer is NOT queued locally: the runtime drains steer prompts at the
     // next safe sampling boundary via injectSteeringPrompts.
@@ -480,15 +515,17 @@ export class InboxSessionInputQueue implements SessionInputQueue {
     this.reserved = undefined;
   }
 
-  private async admit(text: string, kind: "steer" | "followup", id = newPromptId()): Promise<PromptId> {
+  private async admit(text: string, kind: "steer" | "followup", id = newPromptId(), boundTurnId?: TurnId): Promise<PromptId> {
     const inbox = this.deps.inbox!;
+    const admittedAt = (this.deps.now ?? Date.now)();
     await inbox.admit({
       id,
       sessionId: this.sessionId,
       text,
       kind,
-      status: "pending",
-      admittedAt: (this.deps.now ?? Date.now)(),
+      status: boundTurnId === undefined ? "pending" : "promoted",
+      admittedAt,
+      ...(boundTurnId === undefined ? {} : { promotedTurnId: boundTurnId, promotedAt: admittedAt }),
     });
     return id;
   }
@@ -762,6 +799,9 @@ export class DefaultSessionActor implements SessionActor {
       inbox: deps.inbox,
       store: deps.store,
       now: deps.now,
+      steerTurnId: () => this.state.kind === "running" &&
+        deps.runtime.isSteeringOpen?.(deps.persistent.id, this.state.turn.id) !== false
+        ? this.state.turn.id : undefined,
     });
     this.resourceScope = new DefaultSessionResourceScope(deps.persistent.id);
     this.cancellation = new AbortController();
@@ -1719,6 +1759,10 @@ export class DefaultSessionActor implements SessionActor {
       }
       this._recoverableChecked = true;
     }
+    // Discovery performs durable IO without owning the execution slot. A
+    // foreground start may reserve it while that IO is pending; this drain
+    // must never replace that newer reservation or recover concurrently.
+    if (this.closed || this.state.kind !== "idle") return;
     // E3-10: recover same-T BEFORE draining new followups. The head is a
     // PEEK — it is never shift()ed before its recovery record reaches a
     // durable terminal transition (plan E3-10 item 2). If the head is
@@ -1731,7 +1775,7 @@ export class DefaultSessionActor implements SessionActor {
       }
     }
     // close may have revoked ownership during recovery/discovery IO.
-    if (this.closed) return;
+    if (this.closed || this.state.kind !== "idle") return;
     // P38-1 (INV-P38-001): RESERVE the actor slot BEFORE the awaited dequeue.
     // A concurrent startTurn will see "starting" and be refused — no
     // reservation overwrite.

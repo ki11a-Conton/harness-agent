@@ -1,5 +1,5 @@
 import { execSync } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -65,13 +65,27 @@ describe("ProcessExecutor (EXEC-001)", () => {
 
   it("kills the process tree on timeout (no orphan)", async () => {
     const exe = new ProcessExecutor();
-    const out = await exe.run({
-      // Spawns a child that outlives the parent; tree kill must reap it.
-      command: `${JSON.stringify(NODE)} -e "const {spawn}=require('child_process'); spawn(process.execPath,['-e','setTimeout(()=>{},10000)'],{detached:true}); setTimeout(()=>{},10000)"`,
-      cwd: ws,
-      timeoutMs: 300,
-    });
-    expect(out.status).toBe("timeout");
+    const release = join(ws, "no-orphan-release"), marker = join(ws, "no-orphan-marker"), script = join(ws, "no-orphan-parent.cjs"), pidPath = join(ws, "no-orphan-pids.json");
+    const child = `const fs=require('fs');setTimeout(()=>process.exit(0),10_000);setInterval(()=>{if(fs.existsSync(${JSON.stringify(release)})){fs.writeFileSync(${JSON.stringify(marker)},'orphan wrote');process.exit(0)}},10)`;
+    // Ordinary descendants belong to the command. A child that deliberately
+    // starts another session is covered by the explicit POSIX boundary test.
+    writeFileSync(script, `setTimeout(()=>process.exit(0),10_000);const c=require('child_process').spawn(process.execPath,['-e',${JSON.stringify(child)}],{stdio:'ignore'});const pids=JSON.stringify({parent:process.pid,child:c.pid});require('fs').writeFileSync(${JSON.stringify(pidPath)},pids);console.log(pids);setInterval(()=>{},1000)`);
+    let pids: { parent: number; child: number } | undefined;
+    try {
+      const out = await exe.run({ command: `${JSON.stringify(NODE)} ${JSON.stringify(script)}`, cwd: ws, timeoutMs: 2_000 });
+      pids = JSON.parse(out.stdout.trim()) as { parent: number; child: number };
+      expect(out.status).toBe("timeout");
+      writeFileSync(release, "released after timeout returned");
+      await new Promise(resolve => setTimeout(resolve, 120));
+      expect(existsSync(marker), "a terminal result must not leave an ordinary descendant writing").toBe(false);
+    } finally {
+      // Keep a failing test from leaking the fixture on a broken executor.
+      if (pids === undefined && existsSync(pidPath)) pids = JSON.parse(readFileSync(pidPath, "utf8")) as { parent: number; child: number };
+      for (const pid of [pids?.parent, pids?.child]) if (pid !== undefined) {
+        try { process.kill(pid, "SIGKILL"); }
+        catch (error) { if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error; }
+      }
+    }
   });
 
   it("returns cancelled when the signal aborts", async () => {

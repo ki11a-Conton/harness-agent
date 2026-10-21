@@ -15,6 +15,7 @@
  */
 
 import {
+  applyWorkingStateMutation,
   buildCheckpoint,
   computeArgsHash,
   EFFECTIVE_AGENT_SNAPSHOT_KEY,
@@ -47,6 +48,7 @@ import type {
   TurnStatus,
   UnresolvedToolExecution,
   WorkingState,
+  WorkingStateMutation,
 } from "@ar/contracts";
 import { AgentError } from "../errors.js";
 import { AgentState } from "../state/agent-state.js";
@@ -381,11 +383,13 @@ export class RecoveryController {
   ): Promise<{
     working: WorkingState;
     committedSideEffects: ToolExecutionRecord[];
+    replayedToolLedger: ToolExecutionRecord[];
     unresolvedTools: UnresolvedToolExecution[];
     replayedEventCount: number;
   }> {
     const working: WorkingState = structuredClone(checkpoint.state) as WorkingState;
-    const events = (await this.deps.events.list(sessionId, { afterSequence: checkpoint.lastEventSequence })).sort(
+    const events = (await this.deps.events.list(sessionId, { afterSequence: checkpoint.lastEventSequence }))
+      .filter(event => turnId === undefined || event.turnId === turnId).sort(
       (a, b) => a.sequence - b.sequence,
     );
     const replayedEventCount = events.length;
@@ -430,6 +434,7 @@ export class RecoveryController {
     }
 
     const committedSideEffects: ToolExecutionRecord[] = [];
+    const replayedToolLedger: ToolExecutionRecord[] = [];
     const unresolvedTools: UnresolvedToolExecution[] = [];
     for (const info of requested.values()) {
       const semantics = this.deps.semanticsOf(info.name);
@@ -453,14 +458,13 @@ export class RecoveryController {
       // that were not reported failed are committed — never blindly replayed.
       const failed = failedIds.has(info.id);
       const fakeCall = { id: info.id as ToolCallId, name: info.name, args: info.args };
-      updateWorkingState(
-        fakeCall,
-        { status: failed ? "failed" : "success", output: "" },
-        working,
-        this.deps.semanticsOf(fakeCall.name),
-      );
-      if (sideEffect) {
-        committedSideEffects.push({
+      if (fakeCall.name === "update_plan" && !failed && Array.isArray(fakeCall.args.mutations)) {
+        for (const mutation of fakeCall.args.mutations as WorkingStateMutation[]) applyWorkingStateMutation(working, mutation);
+      } else {
+        updateWorkingState(fakeCall, { status: failed ? "failed" : "success", output: "" },
+          working, this.deps.semanticsOf(fakeCall.name));
+      }
+      const record: ToolExecutionRecord = {
           toolCallId: info.id as ToolCallId,
           tool: info.name,
           argsHash: computeArgsHash(info.args),
@@ -468,10 +472,16 @@ export class RecoveryController {
           completed: info.started,
           status: failed ? "failed" : "success",
           sideEffect,
-        });
+        };
+      replayedToolLedger.push(record);
+      if (sideEffect) committedSideEffects.push(record);
+    }
+    for (const event of events) {
+      if (event.type === "verification.failed" && typeof event.payload.error === "string") {
+        working.failures.push(`verification: ${event.payload.error}`);
       }
     }
 
-    return { working, committedSideEffects, unresolvedTools, replayedEventCount };
+    return { working, committedSideEffects, replayedToolLedger, unresolvedTools, replayedEventCount };
   }
 }

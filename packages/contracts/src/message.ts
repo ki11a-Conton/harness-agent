@@ -1,4 +1,4 @@
-import type { AskId, MessageId, PromptId, SessionId, ToolCallId, TurnId } from "./ids.js";
+import type { AskId, MessageId, ModelCallId, PromptId, SessionId, ToolCallId, TurnId } from "./ids.js";
 import type { ModelRef } from "./model.js";
 import type { ToolCall } from "./tool.js";
 
@@ -10,6 +10,10 @@ export interface Message {
   turnId?: TurnId;
   role: MessageRole;
   content: string;
+  /** Visible text from a terminally failed model stream. The original text is
+   *  retained verbatim; this is not a completed answer or executable tool intent.
+   *  Private reasoning and partial tool calls are never saved on this record. */
+  incomplete?: { reason: "model_error"; callId: ModelCallId };
   /** Set when role === "tool": the tool call this message answers. */
   toolCallId?: ToolCallId;
   /** Set when role === "assistant": tool calls requested by the model. */

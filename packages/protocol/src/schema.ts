@@ -50,6 +50,7 @@ const THREAD_ITEM_B = OBJECT_SCHEMA(
     threadId: STRING_SCHEMA,
     text: STRING_SCHEMA,
     final: BOOLEAN_SCHEMA,
+    incomplete: BOOLEAN_SCHEMA,
   },
   ["kind", "sequence", "threadId", "text"],
 );

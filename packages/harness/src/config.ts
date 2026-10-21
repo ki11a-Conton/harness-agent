@@ -50,6 +50,24 @@ export interface HarnessDelegationConfig {
   maxToolCalls?: number;
 }
 
+/** Validate the existing runtime loop budget before the host creates stores. */
+export function resolveMaxIterationsPerTurn(value: unknown): number | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value <= 0) {
+    throw new RangeError("maxIterationsPerTurn must be a finite positive safe integer");
+  }
+  return value;
+}
+
+/** Shared CLI/Web environment entry; never read ambient environment in core. */
+export function parseMaxIterationsPerTurn(value: string | undefined): number | undefined {
+  if (value === undefined) return undefined;
+  if (!/^[1-9]\d*$/u.test(value.trim())) {
+    throw new RangeError("HARNESS_MAX_ITERATIONS_PER_TURN must be a finite positive safe integer");
+  }
+  return resolveMaxIterationsPerTurn(Number(value.trim()));
+}
+
 export interface HarnessConfig {
   cwd: string;
   dataDir?: string;
@@ -71,6 +89,11 @@ export interface HarnessConfig {
 
   featureFlags?: Partial<HarnessFeatureFlags>;
   limits?: Partial<RunLimits>;
+
+  /** Finite model/tool loop ceiling for one turn. Omitted preserves the
+   * runtime's default 20. Frozen when a session is created; all other run
+   * limits still apply, and reaching this ceiling never starts a new turn. */
+  maxIterationsPerTurn?: number;
 
   /** Overrides the profile's default sandbox policy. Needed to admit real
    *  network access for http MCP tools (the default sandbox denies network;

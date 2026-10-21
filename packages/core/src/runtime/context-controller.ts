@@ -64,6 +64,13 @@ import type {
   TurnOutcomeStatus,
 } from "./turn-helpers.js";
 
+const INCOMPLETE_HISTORY_NOTE = "\n\n[Historical DATA: incomplete assistant response after a model stream failure. This partial text does not establish completion or verification; no tool calls from this response were executed.]";
+function incompleteHistoryView(history: Message[]): Message[] {
+  return history.map(message => message.role === "assistant" && message.incomplete?.reason === "model_error"
+    && !message.content.endsWith(INCOMPLETE_HISTORY_NOTE)
+    ? { ...message, content: message.content + INCOMPLETE_HISTORY_NOTE } : message);
+}
+
 /** Q-1: result of buildContext — either proceed with updated context state
  *  or finish the turn on overflow. */
 export type ContextUpdate =
@@ -165,6 +172,10 @@ export class ContextController {
     }>,
   ): Promise<ContextUpdate> {
     const { sessionId, turnId, session } = ctx;
+    // This is model-view DATA, not a new system instruction or a change to
+    // the visible transcript. Render before context admission/compaction so
+    // its tokens and the actual sampled bytes enter the normal step witness.
+    history = incompleteHistoryView(history);
     let activeUsers = activeUserMessages(history, turnId);
     let compaction: { manual: boolean; beforeTokens: number; afterTokens: number; strategy?: string; summarySource?: string; fallbackReason?: string } | undefined;
     let historyTrimmed = false;
@@ -399,7 +410,7 @@ export class ContextController {
               // A summary can take time. Admit corrections that arrived during
               // it before the coding request, through the existing exactly-once
               // inbox boundary. The handoff did NOT summarize these new inputs.
-              history = await this.injectSteeringPrompts(ctx, history);
+              history = incompleteHistoryView(await this.injectSteeringPrompts(ctx, history));
               activeUsers = activeUserMessages(history, turnId);
               activeIds.clear(); for (const message of activeUsers) activeIds.add(message.id);
               beforeTokens = pipeline.estimateMessageTokens(history);
@@ -408,7 +419,7 @@ export class ContextController {
               const carryover = modelText === undefined ? historyCarryover(history, Math.min(512, Math.max(0, maxSummaryTokens)),
                 messages => pipeline.estimateMessageTokens(messages), protect) : undefined;
               const text = modelText ?? carryover?.content ?? "Previous context exceeded the available budget. Consult the original transcript for full details. No model-generated handoff is available; continue the current user task without assuming earlier checks passed.";
-              const durable = await this.deps.store.listMessages(sessionId);
+              const durable = incompleteHistoryView(await this.deps.store.listMessages(sessionId));
               // Keep the recent protocol-valid tail as raw evidence. A model
               // must still see the latest completed tool batch, rather than
               // accidentally reissuing it immediately after compaction.
@@ -536,7 +547,7 @@ export class ContextController {
                 content: buildStateDigest(working, "message history trimmed — older messages folded into this summary; continue concisely", activeUsers),
                 createdAt: this.deps.now(),
               });
-              history = await this.deps.store.listMessages(sessionId);
+              history = incompleteHistoryView(await this.deps.store.listMessages(sessionId));
               const pipeline = this.deps.context.pipeline;
               const carryover = historyCarryover(history, Math.min(512, Math.floor(headroom / 3)),
                 messages => pipeline.estimateMessageTokens(messages), text => {

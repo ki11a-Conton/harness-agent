@@ -63,6 +63,12 @@ export class SessionInbox {
   }
 }
 
+/** Pending work reserves capacity until a steer is consumed. A promoted
+ * followup already owns a running turn and no longer occupies the queue. */
+function occupiesPendingCapacity(prompt: AdmittedPrompt): boolean {
+  return prompt.status === "pending" || (prompt.kind === "steer" && prompt.status === "promoted");
+}
+
 export class MemInboxStore implements InboxStore {
   prompts: AdmittedPrompt[] = [];
   private readonly maxPending: number;
@@ -74,11 +80,11 @@ export class MemInboxStore implements InboxStore {
   }
 
   async admit(prompt: AdmittedPrompt): Promise<void> {
-    const pending = this.prompts.filter((p) => p.status === "pending");
+    const pending = this.prompts.filter(occupiesPendingCapacity);
     if (pending.length >= this.maxPending) {
       throw new SessionStoreError(
         "QUEUE_FULL",
-        `inbox full: ${pending.length} pending prompts exceed maxPending ${this.maxPending}`,
+        `inbox full: ${pending.length} queued prompts exceed maxPending ${this.maxPending}`,
       );
     }
     this.prompts.push(prompt);
@@ -142,7 +148,7 @@ export class MemInboxStore implements InboxStore {
 
 export interface JSONLInboxStoreOptions {
   dataDir: string;
-  /** P15-3: bound on pending prompts; overflow rejects with QUEUE_FULL. */
+  /** P15-3: bound on pending prompts and promoted steer awaiting consumption. */
   maxPending?: number;
 }
 
@@ -170,11 +176,11 @@ export class JSONLInboxStore implements InboxStore {
     // P2-35: read-modify-persist serialized under a per-file lock.
     return withLock(this.lockKey(), async () => {
       await this.load();
-      const pending = this.prompts.filter((p) => p.status === "pending");
+      const pending = this.prompts.filter(occupiesPendingCapacity);
       if (pending.length >= this.maxPending) {
         throw new SessionStoreError(
           "QUEUE_FULL",
-          `inbox full: ${pending.length} pending prompts exceed maxPending ${this.maxPending}`,
+          `inbox full: ${pending.length} queued prompts exceed maxPending ${this.maxPending}`,
         );
       }
       this.prompts.push(prompt);

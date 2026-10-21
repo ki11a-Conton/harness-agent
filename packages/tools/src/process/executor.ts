@@ -404,31 +404,81 @@ function collect(
   return new Promise<ExecOutcome>((resolve) => {
     let forced: { status: "timeout" | "cancelled"; error: string } | undefined;
     let terminating = false;
+    let cleanupStarted = false;
+    let closed = false;
+    let exit: { code: number | null; signal: NodeJS.Signals | null } | undefined;
+    let cleanupError: string | undefined;
+    let drainTimer: ReturnType<typeof setTimeout> | undefined;
+    const posix = process.platform !== "win32";
 
     const done = (status: ExecStatus, exitCode: number | null, error?: string) => {
       if (settled || terminating) return;
       const o = forced === undefined ? finish(status, exitCode, error) : finish(forced.status, null, forced.error);
       clearTimeout(timer);
+      clearTimeout(drainTimer);
       for (const l of listeners) l();
       resolve(o);
     };
 
-    const terminate = async (status: "timeout" | "cancelled", error: string) => {
-      if (settled || forced !== undefined) return;
-      forced = { status, error };
+    const complete = () => {
+      if (cleanupError !== undefined) {
+        forced = undefined;
+        done("error", null, cleanupError);
+      } else if (forced !== undefined) {
+        done(forced.status, null, forced.error);
+      } else if (exit?.code === 0) {
+        done("success", 0);
+      } else if (exit?.code !== null && exit?.code !== undefined) {
+        done("failed", exit.code, `exited with code ${exit.code}${exit.signal ? ` (${exit.signal})` : ""}`);
+      } else {
+        done("error", null, `process closed without exit code${exit?.signal ? ` (${exit.signal})` : ""}`);
+      }
+    };
+
+    const flushStreams = () => {
+      // Collector.end is idempotent; EOF and close cannot duplicate UTF-8.
+      deliver("stdout", streams.stdout.end());
+      deliver("stderr", streams.stderr.end());
+    };
+
+    const cleanup = async () => {
+      if (settled || cleanupStarted) return;
+      cleanupStarted = true;
       terminating = true;
       clearTimeout(timer);
       try {
         // taskkill is asynchronous. Its successful completion, rather than
         // starting it, is the Windows process-tree termination boundary.
         await killTree();
-        terminating = false;
-        done(status, null, error);
       } catch (err) {
-        terminating = false;
-        forced = undefined;
-        done("error", null, `process-tree termination failed: ${err instanceof Error ? err.message : String(err)}`);
+        cleanupError = `process-tree termination failed: ${err instanceof Error ? err.message : String(err)}`;
       }
+      terminating = false;
+      if (!posix || closed) {
+        complete();
+        return;
+      }
+      // A child can exit while descendants still hold its inherited pipes.
+      // Kill ordinary members of our group, then drain already-written output.
+      // A daemon that explicitly escapes the group may keep a pipe open: bound
+      // that wait without replacing the real root exit code with a timeout.
+      drainTimer = setTimeout(() => {
+        if (exit === undefined && cleanupError === undefined) {
+          cleanupError = `process-tree termination did not observe process exit within ${POSIX_OUTPUT_DRAIN_MS}ms`;
+        }
+        child.stdout?.destroy();
+        child.stderr?.destroy();
+        flushStreams();
+        complete();
+      }, POSIX_OUTPUT_DRAIN_MS);
+    };
+
+    const terminate = (status: "timeout" | "cancelled", error: string) => {
+      // Once POSIX root exit is observed, only its output/group cleanup remains.
+      // A later abort cannot replace the command's already-known exit result.
+      if (settled || forced !== undefined || (posix && exit !== undefined)) return;
+      forced = { status, error };
+      void cleanup();
     };
 
     const timer =
@@ -440,18 +490,19 @@ function collect(
       done("error", null, err instanceof Error ? err.message : String(err));
     });
 
+    if (posix) child.on("exit", (code, signal) => {
+      exit = { code, signal };
+      // `exit` describes the command, while `close` also waits for inherited
+      // pipes. Stop the command deadline and clean the group at the first one.
+      void cleanup();
+    });
+
     child.on("close", (code, signal) => {
       // Close also flushes test/failed-spawn streams that do not emit end.
-      // Collector.end is idempotent; normal EOF and close cannot duplicate it.
-      deliver("stdout", streams.stdout.end());
-      deliver("stderr", streams.stderr.end());
-      if (code === 0) {
-        done("success", 0);
-      } else if (code !== null) {
-        done("failed", code, `exited with code ${code}${signal ? ` (${signal})` : ""}`);
-      } else {
-        done("error", null, `process closed without exit code${signal ? ` (${signal})` : ""}`);
-      }
+      closed = true;
+      exit ??= { code, signal };
+      flushStreams();
+      complete();
     });
 
     const abortHandler = () => {
@@ -466,6 +517,7 @@ function collect(
 
 const DEFAULT_TIMEOUT_MS = 60_000;
 const DEFAULT_MAX_OUTPUT_BYTES = 1_048_576;
+const POSIX_OUTPUT_DRAIN_MS = 1_000;
 
 /** Kill a directly-spawned (shell-less) child and its descendants. */
 function killDirectTree(child: ChildProcess): void | Promise<void> {
@@ -495,7 +547,13 @@ function killDirectTree(child: ChildProcess): void | Promise<void> {
       });
     });
   } else {
-    child.kill("SIGKILL");
+    // Every POSIX launch owns a fresh group (`detached: true`). The leader
+    // may already have exited while its ordinary children retain the pipes.
+    // Never target our caller's group, or fall back to an unrelated PID.
+    try { process.kill(-child.pid, "SIGKILL"); }
+    catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "ESRCH") throw err;
+    }
   }
 }
 
@@ -529,6 +587,7 @@ export class ProcessExecutor {
         env: { ...process.env, ...opts.env },
         windowsHide: true,
         stdio: ["ignore", "pipe", "pipe"],
+        detached: process.platform !== "win32",
       };
       if (isCmd) {
         shellArgs.push("/d", "/s", "/c", `"${opts.command}"`);
@@ -585,7 +644,7 @@ export class ProcessExecutor {
     // cmd.exe /d /s /c "<command>" with windowsVerbatimArguments:true.
     // Node's default arg escaping mangles cmd's quote handling.
     const shellArgs: string[] = [];
-    const spawnOpts: Parameters<typeof spawn>[2] = { cwd: opts.cwd, env: { ...process.env, ...opts.env }, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] };
+    const spawnOpts: Parameters<typeof spawn>[2] = { cwd: opts.cwd, env: { ...process.env, ...opts.env }, windowsHide: true, stdio: ["ignore", "pipe", "pipe"], detached: process.platform !== "win32" };
     if (isCmd) {
       shellArgs.push("/d", "/s", "/c", `"${opts.command}"`);
       spawnOpts.windowsVerbatimArguments = true;
@@ -664,6 +723,7 @@ export class ProcessExecutor {
       env: launch.env,
       windowsHide: true,
       stdio: ["ignore", "pipe", "pipe"],
+      detached: process.platform !== "win32",
       // The whole point: no shell re-interprets the argument text. For the
       // `.cmd` route cmd.exe IS the launched program, but it is still spawned
       // with `shell:false` and a real argv vector — Node never concatenates a

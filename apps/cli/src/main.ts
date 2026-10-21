@@ -3,7 +3,7 @@ import { join, resolve } from "node:path";
 import { homedir } from "node:os";
 import { stat } from "node:fs/promises";
 import type { ModelProvider, PermissionPolicy, TaskSpec } from "@ar/contracts";
-import { defaultSandboxPolicy, DEFAULT_MAIN_SYSTEM_PROMPT, resolveAgentPromptPolicy, resolveCodingSummaryPolicy } from "@ar/harness";
+import { defaultSandboxPolicy, DEFAULT_MAIN_SYSTEM_PROMPT, resolveAgentPromptPolicy, resolveCodingSummaryPolicy, resolveMaxIterationsPerTurn, parseMaxIterationsPerTurn } from "@ar/harness";
 import { createHarnessWithChampion } from "./champion-application.js";
 import { createRuntimeRpc, InMemoryTransport } from "@ar/gateway";
 import {
@@ -80,6 +80,9 @@ export interface DefaultDepsOptions {
   memory?: boolean;
   /** Explicit Agent policy; otherwise HARNESS_AGENT_PROMPT (default legacy). */
   agentPrompt?: "legacy" | "coding-v1" | "coding-v2";
+  /** Explicit per-turn loop budget; otherwise HARNESS_MAX_ITERATIONS_PER_TURN.
+   * Omitted preserves 20 and does not alter any tool, time or cost limit. */
+  maxIterationsPerTurn?: number;
 }
 
 export function registerBuiltinTools(registry: ToolRegistry): void {
@@ -402,6 +405,9 @@ export function extractDataDirFlag(argv: string[]): { args: string[]; dataDir?: 
 export async function createDefaultDeps(options: DefaultDepsOptions = {}): Promise<CommandDeps> {
   const cwd = resolve(options.cwd ?? process.cwd());
   const dataDir = options.dataDir;
+  const maxIterationsPerTurn = options.maxIterationsPerTurn === undefined
+    ? parseMaxIterationsPerTurn(process.env.HARNESS_MAX_ITERATIONS_PER_TURN)
+    : resolveMaxIterationsPerTurn(options.maxIterationsPerTurn);
   // Resolve before provider construction; invalid policies fail closed.
   const agentPromptPolicy = resolveAgentPromptPolicy(options.agentPrompt ?? process.env.HARNESS_AGENT_PROMPT);
   const modelProvider = options.provider ?? (await resolveModelProvider({ modelId: options.model?.modelId ?? (process.env.OPENAI_MODEL || DEFAULT_MODEL_ID) })).provider;
@@ -418,6 +424,7 @@ export async function createDefaultDeps(options: DefaultDepsOptions = {}): Promi
     runtimeEntrypoint: "cli",
     baseConfig: {
       cwd,
+      ...(maxIterationsPerTurn !== undefined ? { maxIterationsPerTurn } : {}),
       ...(options.task !== undefined ? { task: options.task } : {}),
       ...(dataDir !== undefined ? { dataDir } : {}),
       profile: "interactive",

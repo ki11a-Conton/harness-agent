@@ -11,8 +11,10 @@ import {
   newEventId,
   newMessageId,
   newPromptId,
+  newRunId,
   newSessionId,
   newTurnId,
+  newWorkingState,
   type AdmittedPrompt,
   type AgentEvent,
   type AskUserRequest,
@@ -249,6 +251,31 @@ describe("SqliteRuntimeStore (P5-3)", () => {
     const latest = await store.checkpoints.loadLatest(sid);
     expect(latest?.state).toEqual({ goal: "gb" });
     expect(await store.checkpoints.list(sid)).toHaveLength(2);
+  });
+
+  it("checkpoints: equal timestamps retain the last saved state and budget after reopen", async () => {
+    const dir = await freshDir();
+    const store = trackStore(new SqliteRuntimeStore({ dataDir: dir }));
+    const sid = newSessionId(), tid = newTurnId(), aid = newAgentId(), runId = newRunId();
+    const checkpoint = (used: number, sessionId = sid): CheckpointData => buildCheckpoint({
+      checkpointId: newCheckpointId(), schemaVersion: 1, sessionId, turnId: tid, agentId: aid,
+      createdAt: 1000, reason: "verification:failed", phase: "thinking", iteration: used, toolCallsExecuted: used,
+      state: newWorkingState(`consumed ${used}`), toolLedger: [], childSessions: [], lastEventSequence: used,
+      effectiveAgentConfigRef: "cfg", contextRefs: [], budgetUsage: { maxTokens: 0, verificationRetries: used,
+        run: { runId, limits: { maxToolCalls: 2 }, usedTurns: 1, usedToolCalls: used, startedAt: 0,
+          durationMs: 100, outputChars: used, retries: 0, subagentsSpawned: 0, estimatedCostUsd: used / 10 } },
+    });
+    const first = checkpoint(1), latest = checkpoint(2);
+    await store.checkpoints.save(first);
+    await store.checkpoints.save(checkpoint(3, newSessionId()));
+    await store.checkpoints.save(latest);
+    expect(await store.checkpoints.loadLatest(sid)).toEqual(latest);
+    expect(await store.checkpoints.list(sid)).toEqual([latest, first]);
+    store.close();
+
+    const reopened = trackStore(new SqliteRuntimeStore({ dataDir: dir }));
+    expect(await reopened.checkpoints.loadLatest(sid)).toEqual(latest);
+    expect(await reopened.checkpoints.list(sid)).toEqual([latest, first]);
   });
 });
 

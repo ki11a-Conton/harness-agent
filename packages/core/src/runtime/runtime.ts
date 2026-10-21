@@ -85,7 +85,7 @@ import type {
 } from "@ar/contracts";
 import type { ContextPipeline, InstructionDiscoveryOptions } from "@ar/context";
 import type { ToolSelector } from "../tools/tool-selector.js";
-import { estimateMessageTokens, hashPolicyConfig } from "@ar/context";
+import { checkpointView, estimateMessageTokens, hashPolicyConfig } from "@ar/context";
 import { applyWorkingStateMutation, type WorkingStateMutation } from "@ar/contracts";
 import { buildStateDigest } from "./turn-helpers.js";
 import { AgentError } from "../errors.js";
@@ -629,6 +629,8 @@ export class AgentRuntime {
    *  session, enforced at the runtime boundary (the SessionActor owns the
    *  authority, this map defends against bypassing callers). */
   private readonly runningTurns = new Map<SessionId, TurnId>();
+  /** Successful completion closes admission before its first awaited commit. */
+  private readonly closingTurns = new Map<SessionId, TurnId>();
   private readonly checkpointStore?: CheckpointStore;
   private readonly checkpointPolicy: CheckpointPolicy;
   /** P16-3: live per-turn budget-usage provider (set by runTurnCore so every
@@ -781,7 +783,7 @@ export class AgentRuntime {
       compactCounter: this.compactCounter,
       checkpoint: (ctx, working, state, toolLedger, reason, budgetUsage) =>
         this.recoveryController.checkpoint(ctx, working, state, toolLedger, reason,
-          budgetUsage ?? this.activeBudgetUsage.get(ctx.sessionId)?.()),
+          { maxTokens: this.context?.budget.maxTokens ?? 0, ...this.activeBudgetUsage.get(ctx.sessionId)?.(), ...budgetUsage }),
       finishTurn: (ctx, status, state, working, error, terminationReason, ledger, completionEvidence) =>
         this.recoveryController.finishTurn(ctx, status, state, working, error, terminationReason, ledger, completionEvidence),
       toolOutputBudget: this.toolOutputBudget,
@@ -867,7 +869,7 @@ export class AgentRuntime {
       contextBudgetMaxTokens: this.context?.budget.maxTokens ?? 0,
       checkpoint: (ctx, working, state, toolLedger, reason, budgetUsage) =>
         this.recoveryController.checkpoint(ctx, working, state, toolLedger, reason,
-          budgetUsage ?? this.activeBudgetUsage.get(ctx.sessionId)?.()),
+          { maxTokens: this.context?.budget.maxTokens ?? 0, ...this.activeBudgetUsage.get(ctx.sessionId)?.(), ...budgetUsage }),
       finishTurn: (ctx, status, state, working, error, terminationReason, ledger, completionEvidence) =>
         this.recoveryController.finishTurn(ctx, status, state, working, error, terminationReason, ledger, completionEvidence),
       parkForUserInput: async (ctx, state, working, call, ledger) => {
@@ -894,6 +896,18 @@ export class AgentRuntime {
         return outcome;
       },
       runVerificationGate: (ctx) => this.verificationController.runVerificationGate(ctx),
+      hasPendingSteering: (ctx) => this.hasPendingSteering(ctx),
+      closeSteeringForCompletion: async (ctx) => {
+        // Close synchronously, before durable reads can yield to an admission.
+        // A correction already visible belongs to this turn and reopens its
+        // existing bounded loop. Later admissions cannot be acknowledged.
+        this.closingTurns.set(ctx.sessionId, ctx.turnId);
+        if (await this.hasPendingSteering(ctx)) {
+          this.closingTurns.delete(ctx.sessionId);
+          return false;
+        }
+        return true;
+      },
       wallClockExceeded: (agent, turn) => this.wallClockExceeded(agent, turn),
     });
   }
@@ -1015,6 +1029,17 @@ export class AgentRuntime {
     return turn;
   }
 
+  /** Actor admission query; this grants no authority to execute or mutate. */
+  isSteeringOpen(sessionId: SessionId, turnId: TurnId): boolean {
+    return this.runningTurns.get(sessionId) === turnId && this.closingTurns.get(sessionId) !== turnId;
+  }
+
+  private async hasPendingSteering(ctx: TurnContext): Promise<boolean> {
+    const prompts = await this.inbox?.listRecoverable(ctx.sessionId) ?? [];
+    return prompts.some(prompt => prompt.kind === "steer" &&
+      (prompt.promotedTurnId === undefined || prompt.promotedTurnId === ctx.turnId));
+  }
+
   /** Execute one turn: model round-trips + tool calls, bounded and cancellable.
    *  `opts.initialState` seeds the working state from a restored checkpoint
    *  (P1-4 resume) instead of the turn input text.
@@ -1041,8 +1066,9 @@ export class AgentRuntime {
       if (stored?.status === "completed" || stored?.status === "cancelled") throw new AgentError(errorInfo("INTERNAL_ERROR", `turn ${turnId} is terminal (${stored.status}); create a new turn instead of replaying it`));
       if (stored?.sessionId !== sessionId) throw new AgentError(errorInfo("INTERNAL_ERROR", `turn ${turnId} does not belong to session ${sessionId}`));
       const continuing = stored.status === "waiting_for_user";
-      const options = continuing ? await this.restoreQuestionPause(sessionId, turnId, signal) : opts;
-      const outcome = await this.runTurnCore(sessionId, turnId, signal, options, continuing);
+      const restoration = continuing ? { options: await this.restoreQuestionPause(sessionId, turnId, signal), continuing: true }
+        : await this.restoreInterruptedTurn(sessionId, turnId, opts);
+      const outcome = await this.runTurnCore(sessionId, turnId, signal, restoration.options, restoration.continuing);
       if (outcome.status !== "waiting_for_user") this.pausedTurns.delete(turnId);
       // P2-5: post-turn reflection hook — fired exactly once per terminal
       // outcome (the host owns the reflection pipeline). Errors are swallowed:
@@ -1075,10 +1101,62 @@ export class AgentRuntime {
       return outcome;
     } finally {
       this.activeBudgetUsage.delete(sessionId);
+      if (this.closingTurns.get(sessionId) === turnId) this.closingTurns.delete(sessionId);
       if (this.runningTurns.get(sessionId) === turnId) {
         this.runningTurns.delete(sessionId);
       }
     }
+  }
+
+  /** The actor recovers an existing durable turn through runTurn, using the
+   * same checkpoint/replay state as explicit resume instead of fresh budgets. */
+  private async restoreInterruptedTurn(sessionId: SessionId, turnId: TurnId, opts: RunTurnOptions): Promise<{ options: RunTurnOptions; continuing: boolean }> {
+    if (opts.initialState !== undefined) return { options: opts, continuing: false };
+    let checkpoint = await this.checkpointStore?.loadLatest(sessionId);
+    if (checkpoint?.turnId !== turnId) checkpoint = (await this.checkpointStore?.list(sessionId))?.find(candidate => candidate.turnId === turnId);
+    if (checkpoint === undefined) {
+      const alreadyExecuted = (await this.events.list(sessionId)).some(event => event.turnId === turnId &&
+        (event.type === "model.started" || event.type === "tool.requested"));
+      if (alreadyExecuted) throw new AgentError(errorInfo("RESUME_FAILED", `turn ${turnId} was interrupted without a durable checkpoint; refusing to reset task state or budget`));
+      return { options: opts, continuing: false }; // A created, never-executed turn.
+    }
+    const usage = checkpoint.budgetUsage;
+    if (usage?.run === undefined) throw new AgentError(errorInfo("RESUME_FAILED", `turn ${turnId} has no intact checkpoint budget; refusing to reset consumed limits`));
+    const recovered = await this.recoveryController.reconstructResumeState(sessionId, turnId, checkpoint);
+    for (const unresolved of recovered.unresolvedTools) {
+      const verdict = classifyUnknownOutcome(unresolved.tool, this.semanticsOf(unresolved.tool));
+      await this.emit(sessionId, "retry.reconciliation", { toolCallId: unresolved.toolCallId, tool: unresolved.tool,
+        sideEffect: unresolved.sideEffect, sideEffectScope: unresolved.sideEffectScope,
+        started: unresolved.started, decision: verdict.decision, reason: verdict.reason }, turnId);
+    }
+    if (recovered.unresolvedTools.length > 0) throw new AgentError(errorInfo("RESUME_FAILED", `turn ${turnId} has unresolved tool outcomes; reconciliation is required before same-turn recovery`));
+    const turnEvents = (await this.events.list(sessionId)).filter(event => event.turnId === turnId);
+    const replay = turnEvents.filter(event => event.sequence > checkpoint.lastEventSequence);
+    // A successful verification checkpoint can cover the final completed
+    // sampling before the controller advances its live iteration counter.
+    // Durable completions are a lower bound; do not refund that sample when
+    // terminal persistence crashes. Compaction is an auxiliary model purpose.
+    const completedThroughCheckpoint = turnEvents.filter(event => event.sequence <= checkpoint.lastEventSequence &&
+      event.type === "model.completed" && event.payload.purpose !== "compaction").length;
+    const modelCompletions = replay.filter(event => event.type === "model.completed" && event.payload.purpose !== "compaction");
+    const requested = new Map(replay.filter(event => event.type === "tool.requested")
+      .filter(event => typeof event.payload.toolCallId === "string").map(event => [event.payload.toolCallId as string, event]));
+    const budgetSeed = structuredClone(usage.run);
+    budgetSeed.usedToolCalls += [...requested.values()].filter(event => event.payload.name !== "update_plan").length;
+    for (const event of replay.filter(event => event.type === "model.completed")) {
+      const modelUsage = event.payload.usage as import("@ar/contracts").UsageSnapshot | undefined;
+      budgetSeed.estimatedCostUsd += modelUsage?.estimatedCostUsd ?? 0;
+      if (event.payload.purpose !== "compaction" && typeof event.payload.text === "string") budgetSeed.outputChars += event.payload.text.length;
+    }
+    budgetSeed.retries += replay.filter(event => event.type === "model.retry").length;
+    const failedVerifications = replay.filter(event => event.type === "verification.failed");
+    return { continuing: true, options: { ...opts, initialState: recovered.working,
+      toolLedgerSeed: [...checkpoint.toolLedger, ...recovered.replayedToolLedger],
+      iterationSeed: Math.max(checkpoint.iteration, completedThroughCheckpoint) + modelCompletions.length,
+      toolCallsExecutedSeed: (checkpoint.toolCallsExecuted ?? checkpoint.toolLedger.length) + recovered.replayedToolLedger.length,
+      budgetSeed, recoveryUsageSeed: usage.recoveryUsage,
+      verificationRetriesSeed: (usage.verificationRetries ?? 0) + failedVerifications.length,
+      stallRecoverySeed: usage.stallRecoveryCount } };
   }
 
   private async restoreQuestionPause(sessionId: SessionId, turnId: TurnId, signal: AbortSignal): Promise<RunTurnOptions> {
@@ -1158,6 +1236,24 @@ export class AgentRuntime {
         "agent_limit",
         toolLedger,
       );
+    }
+    // Replay may have incorporated a completion committed after the last
+    // checkpoint. Check its already-spent cost/output before any new model or
+    // retrieval work; recovery never grants another call after a known breach.
+    if (continuing) {
+      const restoredBreach = budget.onModelUsage(0, 0, 0) ?? budget.onOutput(0);
+      if (restoredBreach !== undefined) {
+        await this.emit(sessionId, "run.limit_reached", { ...restoredBreach }, turnId);
+        return this.recoveryController.finishTurn(ctx, "failed", state, working,
+          errorInfo("RESOURCE_LIMIT", `${restoredBreach.limit} (${restoredBreach.allowed}) exceeded before recovery (${restoredBreach.used})`),
+          "agent_limit", toolLedger);
+      }
+    }
+    if (verificationFailures >= this.maxVerificationFailures) {
+      await this.emit(sessionId, "run.limit_reached", { limit: "maxVerificationFailures", used: verificationFailures, allowed: this.maxVerificationFailures }, turnId);
+      return this.recoveryController.finishTurn(ctx, "failed", state, working,
+        errorInfo("VERIFICATION_FAILED", working.failures.at(-1) ?? "verification retry budget exhausted before recovery"),
+        "verification_failed", toolLedger);
     }
 
     try {
@@ -1267,7 +1363,16 @@ export class AgentRuntime {
           // P2-41/PROTOCOL: a tail slice can cut an assistant `tool_calls`
           // message away while its `tool` results remain; an orphan tool result
           // is rejected by a strict upstream, so the view is repaired.
-          history = retainMessageHistoryTail(history, history.length - 12, activeUserMessages(history, turnId));
+          const activeUsers = activeUserMessages(history, turnId);
+          // Apply durable coverage BEFORE taking a suffix. Otherwise a saved
+          // handoff older than twelve raw records disappears before the
+          // ContextController can find it. Keep that handoff alongside the
+          // bounded protocol-valid tail and current user corrections.
+          if (this.context?.pipeline.historyCompaction) history = checkpointView(history, activeUsers);
+          const handoff = history[0]?.contextCheckpoint !== undefined ? history[0] : undefined;
+          const tail = retainMessageHistoryTail(history, Math.max(0, history.length - 12), activeUsers);
+          history = handoff !== undefined && !tail.some(message => message.id === handoff.id)
+            ? [handoff, ...tail] : tail;
         }
 
         // Q-1: context pipeline + compaction + overflow extracted to buildContext.
@@ -1379,52 +1484,47 @@ export class AgentRuntime {
 
         // completed
         reactiveCompacted = modelResult.reactiveCompacted;
-        // Q-1: post-completion processing extracted to handleModelCompletion.
+        // The controller persists the canonical assistant/usage event before
+        // this single metering boundary. A verification retry is still a paid
+        // call, and a cap breach retains the observation without running tools.
         const completion = await this.modelCallController.handleModelCompletion(
           ctx, modelResult, turn, working, state, toolLedger, lastReportTokens, verificationFailures, step,
+          async () => {
+            // P0-11/P20-1: report per-call usage (with provenance) to the tree
+            // budget (scheduler). finalizeUsage() marks a provider-less call
+            // "unknown" — NEVER a fabricated 0-token record.
+            if (this.reportModelUsage !== undefined) {
+              this.reportModelUsage(sessionId, finalizeUsage(modelResult.usage));
+            }
+            // P0-10: maxEstimatedCostUsd — check immediately after model usage so a
+            // runaway cost stops BEFORE the next model call.
+            if (modelResult.usage !== undefined) {
+              const costBreach = budget.onModelUsage(
+                modelResult.usage.inputTokens ?? 0,
+                modelResult.usage.outputTokens ?? 0,
+                modelResult.usage.estimatedCostUsd ?? 0,
+              );
+              if (costBreach !== undefined) {
+                await this.emit(sessionId, "run.limit_reached", { ...costBreach }, turnId);
+                return { error: errorInfo("RESOURCE_LIMIT", `maxEstimatedCostUsd (${costBreach.allowed}) exceeded after ${costBreach.used}`), terminationReason: "agent_limit" };
+              }
+            }
+            // P0-10: maxOutputChars — assistant text counts toward the output cap
+            // (tool output is metered separately by toolOutputBudget). A breach
+            // stops the turn before more tokens are generated.
+            if (modelResult.assistantText !== undefined) {
+              const outputBreach = budget.onOutput(modelResult.assistantText.length);
+              if (outputBreach !== undefined) {
+                await this.emit(sessionId, "run.limit_reached", { ...outputBreach }, turnId);
+                return { error: errorInfo("RESOURCE_LIMIT", `maxOutputChars (${outputBreach.allowed}) exceeded after ${outputBreach.used}`), terminationReason: "agent_limit" };
+              }
+            }
+            return undefined;
+          },
         );
         if (completion.action === "continue_loop") {
           verificationFailures = completion.verificationFailures;
           continue;
-        }
-        // P0-11/P20-1: report per-call usage (with provenance) to the tree
-        // budget (scheduler). finalizeUsage() marks a provider-less call
-        // "unknown" — NEVER a fabricated 0-token record.
-        if (this.reportModelUsage !== undefined) {
-          this.reportModelUsage(sessionId, finalizeUsage(modelResult.usage));
-        }
-        // P0-10: maxEstimatedCostUsd — check immediately after model usage so a
-        // runaway cost stops BEFORE the next model call.
-        if (modelResult.usage !== undefined) {
-          const costBreach = budget.onModelUsage(
-            modelResult.usage.inputTokens ?? 0,
-            modelResult.usage.outputTokens ?? 0,
-            modelResult.usage.estimatedCostUsd ?? 0,
-          );
-          if (costBreach !== undefined) {
-            await this.emit(sessionId, "run.limit_reached", { ...costBreach }, turnId);
-            return this.recoveryController.finishTurn(
-              ctx, "failed", state, working,
-              errorInfo("RESOURCE_LIMIT", `maxEstimatedCostUsd (${costBreach.allowed}) exceeded after ${costBreach.used}`),
-              "agent_limit",
-              toolLedger,
-            );
-          }
-        }
-        // P0-10: maxOutputChars — assistant text counts toward the output cap
-        // (tool output is metered separately by toolOutputBudget). A breach
-        // stops the turn before more tokens are generated.
-        if (modelResult.assistantText !== undefined) {
-          const outputBreach = budget.onOutput(modelResult.assistantText.length);
-          if (outputBreach !== undefined) {
-            await this.emit(sessionId, "run.limit_reached", { ...outputBreach }, turnId);
-            return this.recoveryController.finishTurn(
-              ctx, "failed", state, working,
-              errorInfo("RESOURCE_LIMIT", `maxOutputChars (${outputBreach.allowed}) exceeded after ${outputBreach.used}`),
-              "agent_limit",
-              toolLedger,
-            );
-          }
         }
         if (completion.action === "finish") return completion.outcome;
 
@@ -1720,18 +1820,26 @@ export class AgentRuntime {
         // progress — clear the stall window so a later similar call is not
         // misjudged as stagnation.
         state.recordProgress("new_artifact");
-        // P1-5: kill after the effect landed but BEFORE its checkpoint —
-        // the window where only the store result message proves it.
-        await this.failAt("tool.completed", { sessionId, turnId, toolCallId: call.id, tool: call.name });
-        if (this.checkpointPolicy.afterSideEffectTools) {
-          await this.recoveryController.checkpoint(
-            ctx, working, state, toolLedger, `tool:completed:${call.name}`,
-            this.activeBudgetUsage.get(sessionId)?.(),
-          );
-          // P1-5: kill AFTER the checkpoint persisted (a durable safety
-          // boundary exists — resume can proceed from it).
-          await this.failAt("tool.checkpointed", { sessionId, turnId, toolCallId: call.id, tool: call.name });
-        }
+      }
+    }
+
+    // The execution layer already settled the entire batch. A checkpoint's
+    // event watermark therefore covers the entire batch too: its canonical
+    // results, working state and ledger must all be complete before saving
+    // even the first successful effect's checkpoint.
+    for (const { call, result } of executed) {
+      if (call.name === "update_plan" || this.semanticsOf(call.name).sideEffectScope === "none" || result.status !== "success") continue;
+      // P1-5: kill after the effect landed but BEFORE its checkpoint —
+      // the window where only the store result message proves it.
+      await this.failAt("tool.completed", { sessionId, turnId, toolCallId: call.id, tool: call.name });
+      if (this.checkpointPolicy.afterSideEffectTools) {
+        await this.recoveryController.checkpoint(
+          ctx, working, state, toolLedger, `tool:completed:${call.name}`,
+          this.activeBudgetUsage.get(sessionId)?.(),
+        );
+        // P1-5: kill AFTER the checkpoint persisted (a durable safety
+        // boundary exists — resume can proceed from it).
+        await this.failAt("tool.checkpointed", { sessionId, turnId, toolCallId: call.id, tool: call.name });
       }
     }
 

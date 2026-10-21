@@ -69,6 +69,19 @@ export class ProtocolEventMapper {
             usage: visibleUsage(event.payload.usage),
           },
         };
+      case "model.failed":
+        // Only the new persist-before-publish failure fence carries a body.
+        // Old journals and private compaction failures retain their mapping.
+        const incomplete = event.payload.incomplete;
+        if (event.payload.purpose === "compaction" || typeof event.payload.messageId !== "string"
+          || typeof event.payload.text !== "string" || typeof incomplete !== "object" || incomplete === null
+          || Array.isArray(incomplete) || (incomplete as Record<string, unknown>).reason !== "model_error"
+          || typeof (incomplete as Record<string, unknown>).callId !== "string"
+          || (incomplete as Record<string, unknown>).callId !== event.payload.callId) return null;
+        return { ...base, type: "item/completed", item: {
+          kind: "agent_message", sequence: event.sequence, threadId, turnId: event.turnId,
+          timestamp: event.timestamp, text: event.payload.text, final: false, incomplete: true,
+        } };
       case "tool.started":
         return {
           ...base,

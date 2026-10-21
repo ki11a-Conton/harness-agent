@@ -217,6 +217,9 @@ describe("P29-10 schema generation / fixtures", () => {
               },
               "final": {
                 "type": "boolean"
+              },
+              "incomplete": {
+                "type": "boolean"
               }
             },
             "required": [

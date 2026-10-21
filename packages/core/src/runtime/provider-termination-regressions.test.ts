@@ -3,6 +3,7 @@ import type { AgentDefinition, CheckpointData, CheckpointStore, VerificationResu
 import { assertToolProtocol, buildCheckpoint, newAgentId, newCheckpointId, newWorkingState } from "@ar/contracts";
 import { OpenAICompatibleProvider } from "@ar/model";
 import { AgentRuntime } from "./runtime.js";
+import { RunBudgetTracker } from "./run-budget.js";
 import { RecoveryPolicy } from "../recovery/recovery.js";
 import { MemoryEventStore, MemorySessionStore, defaultTestToolCatalog } from "../test/fakes.js";
 import { FakeOrchestrator } from "../test/fake-orchestrator.js";
@@ -168,6 +169,10 @@ describe("R1: incomplete native-provider output never reaches tools or successfu
       state: newWorkingState("task"), toolLedger: [], childSessions: [],
       lastEventSequence: (await env.events.list(session.id)).at(-1)!.sequence,
       effectiveAgentConfigRef: "effectiveAgent", contextRefs: [],
+      budgetUsage: { maxTokens: 0, run: (() => {
+        const budget = new RunBudgetTracker(env.agent.limits, () => turn.startedAt);
+        budget.onTurnStart(); return budget.snapshot();
+      })() },
     }));
     expect((await env.runtime.runTurn(session.id, turn.id, new AbortController().signal)).status).toBe("failed");
     expect(env.orchestrator.calls).toHaveLength(0);
