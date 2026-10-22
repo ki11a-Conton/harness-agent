@@ -97,12 +97,51 @@ async function collapseMobile(page) {
 async function boot(page) {
   await page.goto(origin, { waitUntil: 'domcontentloaded' });
   await composer(page).waitFor({ timeout: 15000 }); await sidebar(page);
-  const before = createCount(page);
+  const before = await createBoundary(page);
   await button(page, 'New session').last().click(); await collapseMobile(page);
-  const picker = button(page, /^(Choose workspace|project)$/).first();
+  const owner = await admittedOwnerSince(page, before);
+  const picker = button(owner, 'Choose workspace');
   await picker.waitFor({ timeout: 15000 }); await picker.click();
+  const workspaceBefore = await createBoundary(page);
   await page.getByRole('menuitem', { name: 'project', exact: true }).click();
-  await createdSince(page, before);
+  await admittedOwnerSince(page, workspaceBefore);
+}
+async function createBoundary(page) {
+  const rpc = observations.get(page);
+  const creates = () => ({
+    calls: rpc.calls.filter(call => call.endpoint === 'session/create'),
+    results: rpc.results.filter(result => result.endpoint === 'session/create'),
+  });
+  await deadline((async () => {
+    while (creates().calls.length !== creates().results.length) await page.waitForTimeout(30);
+  })(), 12000, 'Prior session admissions did not settle before bootstrap navigation');
+  const { calls, results } = creates();
+  assert(results.every(result => result.ok === true), 'A prior session admission failed');
+  return { calls: calls.length, results: results.length };
+}
+async function admittedOwnerSince(page, before) {
+  const rpc = observations.get(page);
+  const results = () => rpc.results.filter(result => result.endpoint === 'session/create');
+  await deadline((async () => {
+    while (results().length <= before.results) await page.waitForTimeout(30);
+  })(), 12000, 'The bootstrap navigation did not receive its session admission');
+  // A quiescent boundary and exactly one new request/result make this receipt
+  // unambiguous without guessing from an unrelated successful response.
+  assert.equal(rpc.calls.filter(call => call.endpoint === 'session/create').length, before.calls + 1,
+    'Bootstrap navigation must issue exactly one session admission');
+  assert.equal(results().length, before.results + 1, 'Bootstrap admission results are ambiguous');
+  const admitted = results()[before.results];
+  assert.equal(admitted.ok, true, 'The bootstrap session admission failed');
+  const id = admitted.value?.sessionId;
+  assert.equal(typeof id, 'string', 'The real admission must identify its session');
+  selectionTargets.set(page, id);
+  const owner = page.locator('[data-conversation-content][data-conversation-session="' + id + '"]').filter({ visible: true });
+  await owner.waitFor();
+  assert.equal(await owner.count(), 1, 'The admitted session must own one visible conversation');
+  await ownedComposer(owner).waitFor();
+  assert.equal(await ownedComposer(owner).count(), 1, 'The admitted owner must have one editable composer');
+  await owner.getByRole('heading', { name: 'Actual Harness browser answer', exact: true }).last().waitFor({ state: 'hidden' });
+  return owner;
 }
 async function finished(page) {
   await page.getByRole('heading', { name: 'Actual Harness browser answer', exact: true }).last().waitFor({ timeout: 15000 });
