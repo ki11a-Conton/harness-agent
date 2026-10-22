@@ -140,14 +140,18 @@ async function createdSince(page, before) {
   await composer(page).waitFor();
   await page.getByRole('heading', { name: 'Actual Harness browser answer', exact: true }).last().waitFor({ state: 'hidden' });
 }
-async function selectSession(page, id) {
+async function selectSession(page, id, title) {
   assert(id, 'The actual create result must name the selected session');
+  assert(title, 'Navigation must identify the visible session title');
   selectionTargets.set(page, id);
   // Native narrow review tabs are fullscreen. Leave that view through its
   // actual controls before trying to operate navigation underneath it.
   if (await button(page, 'Exit fullscreen').isVisible()) await button(page, 'Exit fullscreen').click();
   if (await button(page, 'Collapse right sidebar').isVisible()) await button(page, 'Collapse right sidebar').click();
-  await sidebar(page); await page.locator('[data-row-key="session:' + id + '"]').click();
+  await sidebar(page);
+  // The row also contains independent action buttons. Its geometric center
+  // can hit one of those controls on narrow layouts, which does not navigate.
+  await page.locator('[data-row-key="session:' + id + '"]').getByText(title, { exact: true }).click();
   const owner = await selectedSessionOwner(page, id);
   await collapseMobile(page); await finished(owner); return owner;
 }
@@ -234,10 +238,10 @@ const cases = {
   'coding-draft-ownership': async (page, context, checks) => {
     const a = 'Composer A ' + Date.now(), b = 'Composer B ' + Date.now();
     const aId = await send(page, a); await finished(page); await newSession(page); const bId = await send(page, b); await finished(page);
-    let owner = await selectSession(page, aId); await ownedComposer(owner).fill('ONLY_A_DRAFT'); owner = await selectSession(page, bId);
+    let owner = await selectSession(page, aId, a); await ownedComposer(owner).fill('ONLY_A_DRAFT'); owner = await selectSession(page, bId, b);
     assert.equal(await ownedComposer(owner).innerText(), '', 'A private coding draft leaked into B');
     assert.equal(await button(owner, 'Send message').isDisabled(), true); check(checks, 'Empty native coding draft cannot submit');
-    await ownedComposer(owner).fill('ONLY_B_DRAFT'); owner = await selectSession(page, aId);
+    await ownedComposer(owner).fill('ONLY_B_DRAFT'); owner = await selectSession(page, aId, a);
     assert.equal(await ownedComposer(owner).innerText(), 'ONLY_A_DRAFT'); check(checks, 'A/B native coding drafts remain separate through selection');
     await sidebar(page); await button(page, 'Settings').click(); await button(page, 'Close').click(); await collapseMobile(page);
     owner = await selectedSessionOwner(page, aId);
@@ -290,19 +294,19 @@ const cases = {
     const a = '[fixture:write] Diff owner A ' + Date.now(), b = 'Diff owner B ' + Date.now();
     const aId = await send(page, a); await button(page, 'Allow once').waitFor({ timeout: 10000 }); await button(page, 'Allow once').click(); await finished(page);
     assert.equal(await readFile(path.join(fixture.cwd, 'browser-created.txt'), 'utf8'), 'Actual approved browser coding output\n');
-    await newSession(page); const bId = await send(page, b); await finished(page); await selectSession(page, aId);
+    await newSession(page); const bId = await send(page, b); await finished(page); await selectSession(page, aId, a);
     const changes = button(page, 'View changes to browser-created.txt'); await changes.waitFor({ timeout: 10000 });
     await latency(context, page, async () => {
       const response = page.waitForResponse(r => new URL(r.url()).pathname === '/api/changes.diff' && new URL(r.url()).searchParams.get('sessionId') === aId)
         .then(value => ({ value }), error => ({ error }));
-      await changes.click(); await selectSession(page, bId); const result = await response;
+      await changes.click(); await selectSession(page, bId, b); const result = await response;
       if (result.error) throw result.error;
       const diff = await result.value.json(); assert.equal(diff.path, 'browser-created.txt');
       assert(JSON.stringify(diff.hunks).includes('Actual approved browser coding output'));
       assert.equal(await page.locator('[data-changed-files]').count(), 0, 'The previous session change card was rendered in the new conversation');
     });
     check(checks, 'A real delayed native diff request stays bound to its announced owner while the other conversation has no leaked change card');
-    await selectSession(page, aId); await changes.click();
+    await selectSession(page, aId, a); await changes.click();
     await page.getByRole('tab', { name: /Review · turn/ }).waitFor();
     await page.getByText('Actual approved browser coding output', { exact: false }).last().waitFor();
     check(checks, 'Selecting the original owner opens its actual captured diff in the native review tab');
