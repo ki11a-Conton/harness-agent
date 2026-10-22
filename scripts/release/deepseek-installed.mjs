@@ -143,6 +143,12 @@ try {
         remainingDiagnostics--;
         console.error('::error title=Installed UI case failed::' + escape(JSON.stringify({
           phase, name: item.name, viewport: item.viewport, status: item.status,
+          ...(item.navigationDiagnostics === undefined ? {} : { navigationState: {
+            target: item.navigationDiagnostics.target,
+            selected: item.navigationDiagnostics.selected?.slice(0, 4),
+            owners: item.navigationDiagnostics.owners?.slice(0, 4),
+            lastClick: item.navigationDiagnostics.clicks?.at(-1),
+          } }),
           ...(report.failureState === undefined ? {} : { failureState: report.failureState }), failure: item.failure,
         }).slice(0, 2000)));
       }

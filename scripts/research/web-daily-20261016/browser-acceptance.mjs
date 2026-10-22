@@ -76,8 +76,9 @@ const chosen = values.cases && new Set(values.cases.split(','));
 const { chromium } = await import(pathToFileURL(path.resolve(values['playwright-module'])).href);
 const browser = await chromium.launch({ headless: true, executablePath: values.chromium, args: ['--no-sandbox'] });
 await mkdir(output, { recursive: true });
-const results = [], observations = new WeakMap();
+const results = [], observations = new WeakMap(), selectionTargets = new WeakMap();
 const composer = page => page.locator('[data-composer-input=true][contenteditable=true]').filter({ visible: true });
+const ownedComposer = owner => owner.locator('[data-composer-input=true][contenteditable=true]').filter({ visible: true });
 const button = (page, name) => page.getByRole('button', { name, exact: true }).filter({ visible: true });
 const check = (checks, label, detail) => checks.push({ label, status: 'PASS', ...(detail ? { detail } : {}) });
 async function sidebar(page) { const open = button(page, 'Open sidebar'); if (await open.isVisible()) await open.click(); }
@@ -141,11 +142,25 @@ async function createdSince(page, before) {
 }
 async function selectSession(page, id) {
   assert(id, 'The actual create result must name the selected session');
+  selectionTargets.set(page, id);
   // Native narrow review tabs are fullscreen. Leave that view through its
   // actual controls before trying to operate navigation underneath it.
   if (await button(page, 'Exit fullscreen').isVisible()) await button(page, 'Exit fullscreen').click();
   if (await button(page, 'Collapse right sidebar').isVisible()) await button(page, 'Collapse right sidebar').click();
-  await sidebar(page); await page.locator('[data-row-key="session:' + id + '"]').click(); await collapseMobile(page); await finished(page);
+  await sidebar(page); await page.locator('[data-row-key="session:' + id + '"]').click();
+  const owner = await selectedSessionOwner(page, id);
+  await collapseMobile(page); await finished(owner); return owner;
+}
+async function selectedSessionOwner(page, id) {
+  // Identical fixture replies can still belong to the previous view. Confirm
+  // navigation identity before reading or editing a private session draft.
+  await page.locator('[data-row-key="session:' + id + '"][aria-selected="true"]').waitFor({ state: 'attached' });
+  const owner = page.locator('[data-conversation-content][data-conversation-session="' + id + '"]').filter({ visible: true });
+  await owner.waitFor();
+  assert.equal(await owner.count(), 1, 'The selected session must own exactly one visible conversation');
+  await ownedComposer(owner).waitFor();
+  assert.equal(await ownedComposer(owner).count(), 1, 'The selected conversation must own exactly one editable composer');
+  return owner;
 }
 async function latency(context, page, action) {
   transportLatency = 350;
@@ -219,13 +234,14 @@ const cases = {
   'coding-draft-ownership': async (page, context, checks) => {
     const a = 'Composer A ' + Date.now(), b = 'Composer B ' + Date.now();
     const aId = await send(page, a); await finished(page); await newSession(page); const bId = await send(page, b); await finished(page);
-    await selectSession(page, aId); await composer(page).fill('ONLY_A_DRAFT'); await selectSession(page, bId);
-    assert.equal(await composer(page).innerText(), '', 'A private coding draft leaked into B');
-    assert.equal(await button(page, 'Send message').isDisabled(), true); check(checks, 'Empty native coding draft cannot submit');
-    await composer(page).fill('ONLY_B_DRAFT'); await selectSession(page, aId);
-    assert.equal(await composer(page).innerText(), 'ONLY_A_DRAFT'); check(checks, 'A/B native coding drafts remain separate through selection');
+    let owner = await selectSession(page, aId); await ownedComposer(owner).fill('ONLY_A_DRAFT'); owner = await selectSession(page, bId);
+    assert.equal(await ownedComposer(owner).innerText(), '', 'A private coding draft leaked into B');
+    assert.equal(await button(owner, 'Send message').isDisabled(), true); check(checks, 'Empty native coding draft cannot submit');
+    await ownedComposer(owner).fill('ONLY_B_DRAFT'); owner = await selectSession(page, aId);
+    assert.equal(await ownedComposer(owner).innerText(), 'ONLY_A_DRAFT'); check(checks, 'A/B native coding drafts remain separate through selection');
     await sidebar(page); await button(page, 'Settings').click(); await button(page, 'Close').click(); await collapseMobile(page);
-    assert.equal(await composer(page).innerText(), 'ONLY_A_DRAFT');
+    owner = await selectedSessionOwner(page, aId);
+    assert.equal(await ownedComposer(owner).innerText(), 'ONLY_A_DRAFT');
     check(checks, 'Closing native settings retains the selected coding session draft');
   },
   'feedback-roundtrip': async (page, context, checks) => {
@@ -546,7 +562,17 @@ try {
     const context = await browser.newContext({ viewport: catalog[viewport], permissions: ['clipboard-read', 'clipboard-write'] });
     await context.addInitScript(() => {
       window.__harnessDailySendClicks = [];
+      window.__harnessDailyNavigationTrace = [];
       for (const type of ['pointerdown', 'pointerup', 'click']) document.addEventListener(type, event => {
+        const row = event.target instanceof Element ? event.target.closest('[data-row-key^="session:"]') : null;
+        if (row) {
+          const visible = node => node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
+          window.__harnessDailyNavigationTrace.push({ type, at: Date.now(), rowKey: row.getAttribute('data-row-key'),
+            tag: event.target.tagName, button: event.target.closest('button') !== null,
+            selected: [...document.querySelectorAll('[data-row-key^="session:"][aria-selected="true"]')].map(node => node.getAttribute('data-row-key')),
+            owners: [...document.querySelectorAll('[data-conversation-content]')].filter(visible).map(node => node.getAttribute('data-conversation-session')) });
+          if (window.__harnessDailyNavigationTrace.length > 32) window.__harnessDailyNavigationTrace.shift();
+        }
         const target = event.target instanceof Element ? event.target.closest('button') : null;
         if (!target || !['Send message', '发送消息'].includes(target.getAttribute('aria-label'))) return;
         const record = { type, at: Date.now(), disabled: target.disabled };
@@ -567,7 +593,12 @@ try {
     const unexpected = rpc.results.filter(result => result.ok === false && !result.expected);
     if (!failure && (errors.length || unexpected.length || rpc.externalRequests.length)) failure = 'Unexpected actual browser, RPC or external request errors';
     const screenshot = viewport + '-' + name + '.png'; await page.screenshot({ path: path.join(output, screenshot), fullPage: true });
+    const navigationDiagnostics = failure ? await page.evaluate(target => ({ target,
+      selected: [...document.querySelectorAll('[data-row-key^="session:"][aria-selected="true"]')].map(node => node.getAttribute('data-row-key')),
+      owners: [...document.querySelectorAll('[data-conversation-content]')].filter(node => node.getBoundingClientRect().width > 0).map(node => node.getAttribute('data-conversation-session')),
+      clicks: window.__harnessDailyNavigationTrace ?? [] }), selectionTargets.get(page) ?? null) : undefined;
     const result = { name, viewport, status: failure ? 'FAIL' : 'PASS', checks, failure, errors, calls: rpc.calls, results: rpc.results,
+      ...(navigationDiagnostics === undefined ? {} : { navigationDiagnostics }),
       sockets: rpc.sockets, externalRequests: rpc.externalRequests, assets, screenshot, visibleText: await page.locator('body').innerText(),
       sendPointerTrace: await page.evaluate(() => window.__harnessDailyPointerTrace ?? []) };
     results.push(result); await writeFile(path.join(output, viewport + '-' + name + '.json'), JSON.stringify(result, null, 2) + '\n');
