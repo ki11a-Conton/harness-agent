@@ -6,7 +6,7 @@ import { digest, verifyPortable } from './portable-lib.mjs';
 import { verifyArchive } from './portable.mjs';
 
 const repository = 'ki11a-Conton/harness-agent';
-const version = '1.11.0';
+const version = '1.12.0';
 const sha = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
 const sourceTree = execFileSync('git', ['rev-parse', 'HEAD^{tree}'], { encoding: 'utf8' }).trim();
 const runId = process.env.CANDIDATE_ACCEPTANCE_RUN_ID;
@@ -30,9 +30,15 @@ for (const name of ['archive', 'installed (ubuntu-latest)', 'installed (windows-
   const matches = jobs.jobs.filter(job => job.name === name);
   if (matches.length !== 1 || matches[0].status !== 'completed' || matches[0].conclusion !== 'success') throw new Error('CANDIDATE_REQUIRED_JOB_REJECTED');
 }
-const release = await (await request(`${api}/releases/${releaseId}`)).json();
-if (String(release.id) !== releaseId || release.tag_name !== `v${version}` || release.draft !== true
-  || release.target_commitish !== sha) throw new Error('CANDIDATE_EXISTING_DRAFT_SOURCE_REQUIRED');
+async function existingDraft() {
+  const release = await (await request(`${api}/releases/${releaseId}`, {
+    cache: 'no-store', headers: { 'Cache-Control': 'no-cache' },
+  })).json();
+  if (String(release.id) !== releaseId || release.tag_name !== `v${version}` || release.draft !== true
+    || release.target_commitish !== sha) throw new Error('CANDIDATE_EXISTING_DRAFT_SOURCE_REQUIRED');
+  return release;
+}
+await existingDraft();
 const base = resolve('.ci/candidate');
 const filename = `harness-agent-${version}-portable.tar.gz`;
 const archive = await readFile(join(base, 'assets', filename));
@@ -48,6 +54,7 @@ const build = JSON.parse(buildBytes);
 if (build.version !== version || build.sourceSha !== sha || build.sourceTree !== sourceTree || build.filename !== filename
   || build.sha256 !== archiveSha256) throw new Error('CANDIDATE_BUILD_RECEIPT_REJECTED');
 const installed = {};
+const countAtLeast = (value, minimum) => Number.isSafeInteger(value) && value >= minimum;
 for (const [name, platform, kind] of [
   ['web-linux', 'linux', 'harness-official-ui-installed'], ['web-windows', 'win32', 'harness-official-ui-installed'],
   ['cli-linux', 'linux', 'harness-agent-portable-cleanroom'], ['cli-windows', 'win32', 'harness-agent-portable-cleanroom'],
@@ -57,8 +64,12 @@ for (const [name, platform, kind] of [
     || receipt.sourceSha !== sha || receipt.sourceTree !== manifest.sourceTree || receipt.archiveSha256 !== archiveSha256
     || receipt.workspaceLinks !== 0 || receipt.paidModelCalls !== 0) throw new Error('CANDIDATE_INSTALLED_RECEIPT_REJECTED');
   if (name.startsWith('cli') && (receipt.doctorErrors !== 0 || receipt.tamperRejected !== true || receipt.tamperedStartupRejected !== true
-    || !(receipt.codingAssertions > 0))) throw new Error('CANDIDATE_CLI_CONTROLS_REJECTED');
-  if (name.startsWith('web') && (receipt.installedApplication !== true || receipt.cases !== 30 || !(receipt.assertions > 0))) throw new Error('CANDIDATE_WEB_CONTROLS_REJECTED');
+    || !countAtLeast(receipt.codingAssertions, 50) || !countAtLeast(receipt.requests, 19)
+    || receipt.cleanroomOutsideRepository !== true)) throw new Error('CANDIDATE_CLI_CONTROLS_REJECTED');
+  if (name.startsWith('web') && (receipt.installedApplication !== true || receipt.cases !== 30
+    || !countAtLeast(receipt.assertions, 75) || receipt.pr15Controls !== 10 || receipt.dailyScenarios !== 42
+    || !countAtLeast(receipt.dailyAssertions, 120) || receipt.connectionScenarios !== 2
+    || !countAtLeast(receipt.connectionAssertions, 10))) throw new Error('CANDIDATE_WEB_CONTROLS_REJECTED');
   installed[name] = receipt;
 }
 const evidence = Buffer.from(JSON.stringify({ schemaVersion: 1, status: 'ACCEPTED_NOT_PUBLISHED', version, sourceSha: sha,
@@ -67,6 +78,9 @@ const assets = new Map([[filename, archive], ['SHA256SUMS', checksums],
   ['BUILD-RECEIPT.json', buildBytes], ['SOURCE-ACCEPTANCE.json', evidence]]);
 const uploaded = [];
 for (const [name, bytes] of assets) {
+  // Revalidate immediately before each write/reuse decision. A published or
+  // retargeted draft and assets added meanwhile must not use a stale snapshot.
+  const release = await existingDraft();
   const existing = release.assets.find(asset => asset.name === name);
   if (existing) {
     if (existing.digest !== `sha256:${digest(bytes)}` || existing.size !== bytes.length) throw new Error('CANDIDATE_EXISTING_ASSET_DIFFERS');

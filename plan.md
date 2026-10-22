@@ -1,3 +1,3 @@
 # 当前执行计划入口
 
-当前任务：研究 pi、Codex、DeepSeek Harness 并修复 coding 长任务基础设施。做什么、怎么做、怎么验收：[plan(20261020-161914).md](plan(20261020-161914).md)。合同：[LONGRUN-HARNESS-20261020](tasks/LONGRUN-HARNESS-20261020.md)。前序压缩与中断修复：[plan(20261020-102019).md](plan(20261020-102019).md)。
+当前任务：收尾 coding 长任务与 Web 验收，发布 v1.12.0，再开展下一轮 harness 优化。做什么、怎么做、怎么验收：[plan(20261022-release-v112).md](plan(20261022-release-v112).md)。合同：[RELEASE-V112-20261022](tasks/RELEASE-V112-20261022.md)。前序研究与实现：[长任务计划](plan(20261020-161914).md)；[压缩与中断修复](plan(20261020-102019).md)。

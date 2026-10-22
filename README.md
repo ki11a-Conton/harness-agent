@@ -4,7 +4,7 @@ The first personal coding-agent generation adds persistent CLI chat, corrected s
 
 For long coding tasks, see [harness responsibilities, source comparisons, and explicit execution budgets](docs/longrun-harness.md). Increasing the iteration budget preserves tool, time, cost, permission, and verification limits.
 
-The first-generation update is [v1.11.0](https://github.com/ki11a-Conton/harness-agent/releases/tag/v1.11.0), with a portable CLI/Web distribution and the Harness Agent interface at `/`. Preview Notice and the homepage Preview badge have been removed. See [installation and release acceptance](docs/release-v1.11.0.md), [remaining capabilities](docs/web-deepseek-delivery.md), and the [execution plan](plan.md). Ordinary coding flows passed on the same archive on Ubuntu and Windows; full default UI parity and paid-model quality remain unproven. The previous UI remains at `/legacy/index.html`.
+The next first-generation release is [v1.12.0](https://github.com/ki11a-Conton/harness-agent/releases/tag/v1.12.0), with a portable CLI/Web distribution and the Harness Agent interface at `/`. The release page is authoritative for publication status. See [installation, long-task changes and release acceptance](docs/release-v1.12.0.md), [remaining capabilities](docs/web-deepseek-delivery.md), and the [execution plan](plan.md). Full default UI parity and paid-model quality remain unproven. Previous releases and the UI at `/legacy/index.html` remain available.
 
 A TypeScript **agent runtime** with a single-owner session actor, live-streaming
 SDK, defense-in-depth security gates, and benchmark-driven mechanism evolution.
