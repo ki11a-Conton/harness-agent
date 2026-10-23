@@ -1,0 +1,96 @@
+name: Windows session actions diagnostic on fixed 54cd package
+
+on:
+  push:
+    branches:
+      - diagnostics/ui-session-actions-54cd-20261023
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  diagnose:
+    if: github.repository == 'ki11a-Conton/harness-agent' && github.ref == 'refs/heads/diagnostics/ui-session-actions-54cd-20261023'
+    runs-on: windows-latest
+    timeout-minutes: 20
+    env:
+      OPENAI_API_KEY: ''
+      OPENAI_MODEL: ''
+      OPENAI_BASE_URL: ''
+      ANTHROPIC_API_KEY: ''
+      RUN_PAID_BENCHMARKS: ''
+    steps:
+      - name: Check out only the diagnostic addition
+        uses: actions/checkout@v4
+        env:
+          GIT_CONFIG_COUNT: '1'
+          GIT_CONFIG_KEY_0: core.autocrlf
+          GIT_CONFIG_VALUE_0: 'false'
+        with:
+          path: diagnostic
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.github/workflows/ui-session-actions-diagnostic.yml
+            /scripts/research/ui-session-actions-diagnostic.mjs
+            /plan(20261023-ui-session-actions-diagnostic).md
+      - name: Check out the immutable original acceptance tooling
+        uses: actions/checkout@v4
+        env:
+          GIT_CONFIG_COUNT: '1'
+          GIT_CONFIG_KEY_0: core.autocrlf
+          GIT_CONFIG_VALUE_0: 'false'
+        with:
+          ref: 54cd148eae82c2d9b9f4ab00ee7e0c2eb5ce2d5e
+          path: baseline
+          sparse-checkout: |
+            scripts/release
+            scripts/research
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify the original failed run and successful archive producer
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('node:fs');
+            const repo = context.repo;
+            const source = '54cd148eae82c2d9b9f4ab00ee7e0c2eb5ce2d5e';
+            const name = `deepseek-portable-${source}-39978722387`;
+            const {data: run} = await github.rest.actions.getWorkflowRun({...repo, run_id: 39978722387});
+            const {data: job} = await github.rest.actions.getJobForWorkflowRun({...repo, job_id: 120500072458});
+            const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {...repo, run_id: 39978722387, per_page: 100});
+            const matches = artifacts.filter(row => row.name === name && !row.expired);
+            if (run.head_sha !== source || run.head_branch !== 'main' || run.status !== 'completed' || run.conclusion !== 'failure'
+              || run.path !== '.github/workflows/deepseek-ui-installed.yml' || job.run_id !== run.id
+              || job.name !== 'archive' || job.status !== 'completed' || job.conclusion !== 'success' || matches.length !== 1
+              || matches[0].workflow_run?.head_sha !== source) throw new Error('Original archive producer identity rejected');
+            fs.mkdirSync('.ci/session-actions', {recursive:true});
+            fs.writeFileSync('.ci/session-actions/archive-producer.json', JSON.stringify({sourceSha:source,
+              originalRun:{id:run.id,status:run.status,conclusion:run.conclusion,path:run.path},
+              archiveJob:{id:job.id,name:job.name,status:job.status,conclusion:job.conclusion},
+              artifact:{id:matches[0].id,name:matches[0].name,digest:matches[0].digest,sizeBytes:matches[0].size_in_bytes}},null,2)+'\n');
+      - name: Download the original successful archive job artifact
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: '39978722387'
+          name: deepseek-portable-54cd148eae82c2d9b9f4ab00ee7e0c2eb5ce2d5e-39978722387
+          path: .ci/session-actions/assets
+      - name: Install the formal browser tooling outside the application
+        working-directory: ${{ runner.temp }}
+        run: npm install --no-save --ignore-scripts playwright@1.55.1
+      - name: Install the matching Chromium test browser
+        working-directory: ${{ runner.temp }}
+        run: npx playwright install chromium
+      - name: Verify additive instrumentation without running a browser
+        run: node diagnostic/scripts/research/ui-session-actions-diagnostic.mjs --self-check --baseline baseline --out .ci/session-actions/self-check
+      - name: Run the original browser sequence once with passive diagnostics
+        run: node diagnostic/scripts/research/ui-session-actions-diagnostic.mjs --baseline baseline --archive .ci/session-actions/assets/harness-agent-1.12.0-portable.tar.gz --out .ci/session-actions/diagnostic --playwright-module "${{ runner.temp }}/node_modules/playwright/index.mjs"
+      - name: Preserve original results and diagnostic packets
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-session-actions-diagnostic-windows-${{ github.sha }}-${{ github.run_id }}
+          path: .ci/session-actions/
+          if-no-files-found: error
