@@ -35,3 +35,17 @@
 b1c4c982 已通过四组 CI，导出工作流随后失败。实际 Checks 收据证实新增发布门禁把 Linux 的50/19误用于 Windows 的完整49/18。按平台修正计数合同，保留原始失败和收据，不修改生产编码验收或凑断言。旧源码验收作为历史证据；修复后重新固定 SHA，完整执行上述门禁再发布。
 
 本轮空草稿的受控恢复：新源码全部门禁通过后，fresh确认本次自己创建的 draft421052090 仍为 `draft=true`、tag=v1.12.0、target=b1c4c982、assets为空，旧export39830447189已终态失败且没有活跃导出，v1.12.0 tag尚不存在；仅将该空草稿的 target_commitish 更新为最终新SHA，保存前后观测。不得删除/替换资产、改历史版本或正在上传的草稿。随后仍须由新版 exporter 对新源码实际资产验收并导出成功，才可正式发布。
+
+## 2026-10-23 持久化恢复测试的固定 lease 准入
+
+**做什么：** 补强 `composition.integration.test.ts` 的 restored child owners 准备流程。e1c07385 主 CI 的 [coverage job120222545067](https://github.com/ki11a-Conton/harness-agent/actions/runs/39894775938/job/120222545067) 在固定 `127.0.0.1:59802` 收到真实 EADDRINUSE；临时目录唯一不保证其派生 TCP 端口可用。历史端口占用者和失败发生于初建还是重开仍为 NOT_PROVEN。
+
+**怎么做：** 复用现有 `allocateAvailableLeaseFixture`，只把完整真实准备纳入准入：初建、创建持久会话、读取初始工具注册布尔值、实际关闭、用相同 config/dataDir 重开、取得原 session 的 restored owner。各次独立临时 attempt 内数据根和 session 始终保持；只有真实 busy lease 能在业务断言前重新分配完整准备，资源清理失败及其它异常继续失败。四项原始业务断言留在准入外，仅运行一次；不改生产关闭、lease 协议、固定端口、测试时限或覆盖阈值。
+
+**怎么验收：** 受控真实 listener 分别占住初建前和真实关闭后重开前的 child 固定端口，均能触发真实 lease 拒绝；完整准备重新分配后四项恢复检查通过，原 blocker 和成功 owner 继续持锁。生产生命周期独立 probe 证明 close 等待 lease OS 回调，同根同端口可立即重获，连续真实恢复通过；不把该对照当历史 CI 的占用者证据。运行该恢复用例、composition 整文件、lease fixture 回归及 web 类型检查；最终新 SHA 仍须完整全量、同包安装和四组 CI 成功后才允许空草稿改绑与发布。原始对照与哈希记录在工作树外的 `coverage-e1-fixture-collision`、`coverage-e1-lease-audit`，由最终工程归档保留。
+
+### 同轮 Windows PR15 普通请求的完成验收
+
+- **做什么：** 修正该条测试将队列准入、文件内容和 turn 完成混为同一信号的问题。[独立记录](docs/evidence/release-v112-windows-pr15-20261023/README.md)的真实受控反例证明：原默认1秒 poll 可在合法工作仍进行时过早失败；文件已有十字节时 turn/inbox 也可能尚未完成。历史 Windows 的确切失败阶段或读取错误仍为 NOT_PROVEN。
+- **怎么做：** 在真实请求准入前订阅原 owner 的 `markConsumed`，委托原持久化方法成功后才确认消费；错误拒绝等待并继续传播。使用报告实际阶段的有限 hang guard，在 `finally` 恢复原方法。生产 inbox/turn、权限、文件写入和原字节要求保持。
+- **怎么验收：** 联合核对唯一 consumed inbox、对应的唯一 completed turn、accepted 普通请求 metadata、无 goal、两次模型调用及真实十字节 `real bytes`。真实提前失败/提前成功控制、focused 用例及新源码真实 Windows CI 必须通过；不将本地控制当成历史根因或新 Windows 成功结果。

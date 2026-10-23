@@ -8,6 +8,7 @@ import { ScriptedModelProvider } from "@ar/model";
 import type { AgentEvent, ApprovalRequest, ModelProvider, SessionId, TurnId } from "@ar/contracts";
 import { createDeepseekComposition } from "./composition.js";
 import { projectSessionHistory } from "./projections.js";
+import { allocateAvailableLeaseFixture } from "./test-support/lease-fixture.js";
 
 const cleanup: Array<() => Promise<void>> = [];
 afterEach(async () => { for (const action of cleanup.splice(0).reverse()) await action(); });
@@ -101,12 +102,18 @@ it("official secondary workspace creation and file read use the actual owner and
 });
 
 it("restored child owners register their frozen schedule model tools before loading a session", async () => {
-  const stack = await fixture(undefined, { durableStorage: true }); const id = await stack.createSession();
-  expect((await stack.composition.owners.ownerOf(id)).registry.has("schedule_create")).toBe(true);
-  await stack.composition.close(); await stack.base.close();
-  const base = await createHarness(stack.config); cleanup.push(() => base.close());
-  const restarted = await createDeepseekComposition(base, stack.dataDir); cleanup.push(() => restarted.close());
-  const restored = await restarted.owners.ownerOf(id);
+  // Admit the complete real restart before assertions. A unique temporary
+  // directory does not reserve its child owner's fixed TCP lease port.
+  const { id, initialScheduleTool, restarted, restored } = await allocateAvailableLeaseFixture(async () => {
+    const stack = await fixture(undefined, { durableStorage: true }); const id = await stack.createSession();
+    const initialScheduleTool = (await stack.composition.owners.ownerOf(id)).registry.has("schedule_create");
+    await stack.composition.close(); await stack.base.close();
+    const base = await createHarness(stack.config); cleanup.push(() => base.close());
+    const restarted = await createDeepseekComposition(base, stack.dataDir); cleanup.push(() => restarted.close());
+    const restored = await restarted.owners.ownerOf(id);
+    return { id, initialScheduleTool, restarted, restored };
+  }, cleanup);
+  expect(initialScheduleTool).toBe(true);
   expect(restored.registry.has("schedule_create")).toBe(true);
   expect((await restarted.harness.runtime.getSessionAgent(id)).tools.allow).toContain("schedule_create");
   await expect(restarted.harness.sessions.load(id)).resolves.toBeDefined();

@@ -329,10 +329,53 @@ it('PR15 an idle host with no active goal does not poll session metadata', async
 });
 
 it('PR15 ordinary custom request ids beginning with goal are not treated as background claims', async () => {
-  const f = await fixture();
-  await f.composition.sessions.call('session/prompt', { request: { sessionId: f.sessionId, requestId: 'goal-human-task', mode: 'queue', content: [{ type: 'text', text: 'Write the proof normally' }] } }, signal());
-  await expect.poll(() => readFile(join(f.cwd, 'proof.txt'), 'utf8').catch(() => '')).toBe('real bytes');
-});
+  const started = performance.now(), stages = goalStages('ordinary-goal-prefixed-request');
+  let lastStage = 'fixture:start';
+  const mark = (stage: string) => { lastStage = stage; stages(stage); };
+  const f = await fixture('test', undefined, mark);
+  const owner = await f.composition.owners.ownerOf(f.sessionId), nativeId = f.composition.owners.nativeSessionId(f.sessionId);
+  let acknowledged!: (id: string) => void, failed!: (error: unknown) => void;
+  const acknowledgement = new Promise<string>((resolve, reject) => { acknowledged = resolve; failed = reject; });
+  const originalConsume = owner.inbox.markConsumed, consume = originalConsume.bind(owner.inbox);
+  // Subscribe before admission. A queue receipt is not a finished write, and
+  // even the real file effect precedes the second model response and terminal
+  // persistence. Observe the actual durable acknowledgement without replacing
+  // any write, policy check, turn outcome or inbox mutation.
+  owner.inbox.markConsumed = async id => {
+    try { await consume(id); mark('inbox:consumed'); acknowledged(id); }
+    catch (error) { mark('inbox:consume-failed'); failed(error); throw error; }
+  };
+  // A coarse hang guard, inside the existing outer budget, lets finally restore
+  // the observer before teardown even if admission or consumption never settles.
+  // It does not release work or make any intermediate file state acceptable.
+  let hangGuard!: ReturnType<typeof setTimeout>;
+  const timedOut = new Promise<never>((_resolve, reject) => {
+    hangGuard = setTimeout(() => reject(new Error(`Ordinary request did not settle; last stage: ${lastStage}`)),
+      Math.max(1, goalIntegrationTimeoutMs - (performance.now() - started) - 5000));
+  });
+  try {
+    mark('prompt:admission-start');
+    const [admission, promptId] = await Promise.race([Promise.all([
+      f.composition.sessions.call('session/prompt', { request: { sessionId: f.sessionId, requestId: 'goal-human-task', mode: 'queue', content: [{ type: 'text', text: 'Write the proof normally' }] } }, signal())
+        .then(result => { mark('prompt:accepted'); return result; }),
+      acknowledgement,
+    ]), timedOut]);
+    expect(admission).toEqual({ accepted: true });
+    const inbox = await owner.inbox.listAll(nativeId), turns = await owner.store.listTurns(nativeId);
+    expect(inbox).toHaveLength(1);
+    expect(inbox[0]).toMatchObject({ id: promptId, status: 'consumed' });
+    expect(inbox[0]!.promotedTurnId).toBeDefined();
+    expect(turns).toHaveLength(1);
+    expect(turns[0]).toMatchObject({ id: inbox[0]!.promotedTurnId, status: 'completed' });
+    const metadata = await f.composition.sessions.metadata.read(f.sessionId);
+    expect(metadata.requests['goal-human-task']).toMatchObject({ status: 'accepted', promptId });
+    expect(metadata.controls?.goal ?? null).toBeNull();
+    expect(f.config.modelProvider.calls).toHaveLength(2);
+    const bytes = await readFile(join(f.cwd, 'proof.txt'));
+    expect(bytes.byteLength).toBe(10); expect(bytes.toString('utf8')).toBe('real bytes');
+    mark('assertions:complete');
+  } finally { clearTimeout(hangGuard); owner.inbox.markConsumed = originalConsume; }
+}, goalIntegrationTimeoutMs);
 
 it('PR15 full access requires explicit confirmation and is owned by this session', async () => {
   const f = await fixture(); await expect(f.command('/permission danger-full-access')).rejects.toMatchObject({ code: 'permission/confirmation-required' });
