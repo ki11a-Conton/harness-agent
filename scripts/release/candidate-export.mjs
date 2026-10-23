@@ -63,9 +63,14 @@ for (const [name, platform, kind] of [
   if (receipt.status !== 'PASS' || receipt.kind !== kind || receipt.platform !== platform || receipt.version !== version
     || receipt.sourceSha !== sha || receipt.sourceTree !== manifest.sourceTree || receipt.archiveSha256 !== archiveSha256
     || receipt.workspaceLinks !== 0 || receipt.paidModelCalls !== 0) throw new Error('CANDIDATE_INSTALLED_RECEIPT_REJECTED');
-  if (name.startsWith('cli') && (receipt.doctorErrors !== 0 || receipt.tamperRejected !== true || receipt.tamperedStartupRejected !== true
-    || !countAtLeast(receipt.codingAssertions, 50) || !countAtLeast(receipt.requests, 19)
-    || receipt.cleanroomOutsideRepository !== true)) throw new Error('CANDIDATE_CLI_CONTROLS_REJECTED');
+  if (name.startsWith('cli')) {
+    // The POSIX SIGINT case contributes one assertion and one request on Linux.
+    // Native Windows cancellation is covered by the separate publication gate.
+    const minimum = platform === 'win32' ? { assertions: 49, requests: 18 } : { assertions: 50, requests: 19 };
+    if (receipt.doctorErrors !== 0 || receipt.tamperRejected !== true || receipt.tamperedStartupRejected !== true
+      || !countAtLeast(receipt.codingAssertions, minimum.assertions) || !countAtLeast(receipt.requests, minimum.requests)
+      || receipt.cleanroomOutsideRepository !== true) throw new Error('CANDIDATE_CLI_CONTROLS_REJECTED');
+  }
   if (name.startsWith('web') && (receipt.installedApplication !== true || receipt.cases !== 30
     || !countAtLeast(receipt.assertions, 75) || receipt.pr15Controls !== 10 || receipt.dailyScenarios !== 42
     || !countAtLeast(receipt.dailyAssertions, 120) || receipt.connectionScenarios !== 2

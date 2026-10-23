@@ -10,6 +10,9 @@ import { digest, makeArchive } from './portable-lib.mjs';
 const script = fileURLToPath(new URL('./candidate-export.mjs', import.meta.url));
 const repository = 'ki11a-Conton/harness-agent';
 const version = '1.12.0';
+const actualCli = Object.fromEntries(await Promise.all(['linux', 'win32'].map(async platform => [platform,
+  JSON.parse(await readFile(new URL(`../../docs/evidence/release-v112-platform-20261023/actual-${platform}.json`, import.meta.url), 'utf8')),
+])));
 async function scenario(change, expected, expectedUploads = expected ? 0 : 4) {
   const root = await mkdtemp(join(tmpdir(), 'qualified-candidate-export-'));
   try {
@@ -37,8 +40,9 @@ async function scenario(change, expected, expectedUploads = expected ? 0 : 4) {
         kind: name.startsWith('web') ? 'harness-official-ui-installed' : 'harness-agent-portable-cleanroom',
         ...name.startsWith('web') ? { installedApplication: true, cases: 30, assertions: 75,
           pr15Controls: 10, dailyScenarios: 42, dailyAssertions: 120, connectionScenarios: 2, connectionAssertions: 10 }
-          : { doctorErrors: 0, tamperRejected: true, tamperedStartupRejected: true, codingAssertions: 50,
-            requests: 19, cleanroomOutsideRepository: true } }));
+          : { doctorErrors: 0, tamperRejected: true, tamperedStartupRejected: true,
+            codingAssertions: actualCli[platform].assertions.length, requests: actualCli[platform].requests,
+            cleanroomOutsideRepository: true } }));
     }
     const fixture = { run: { head_sha: sha, head_branch: 'main', status: 'completed', conclusion: 'success', path: '.github/workflows/deepseek-ui-installed.yml' },
       jobs: { jobs: ['archive', 'installed (ubuntu-latest)', 'installed (windows-latest)'].map(name => ({ name, status: 'completed', conclusion: 'success' })) },
@@ -83,6 +87,16 @@ globalThis.fetch=async (url,options)=>{
 }
 
 test('exports exact qualified bytes to the existing draft without publishing', () => scenario());
+test('accepts the actual Windows 49-assertion 18-request coding receipt', async () => {
+  const windows = actualCli.win32;
+  assert.equal(windows.status, 'PASS');
+  assert.equal(windows.platform, 'win32');
+  assert.equal(windows.sourceSha, 'b1c4c982d4c3a7bc7270815b90a3a91267045f22');
+  assert.equal(windows.assertions.length, 49);
+  assert.equal(windows.requests, 18);
+  assert.deepEqual(windows.skipped, ['POSIX SIGINT CLI case; native Windows tree cancellation is exercised by windows-acceptance regressions']);
+  await scenario();
+});
 test('rejects a published release before any upload', () => scenario(({ fixture }) => { fixture.release.draft = false; }, /EXISTING_DRAFT_SOURCE_REQUIRED/));
 test('rejects the historical v1.11.0 tag before any upload', () => scenario(({ fixture }) => { fixture.release.tag_name = 'v1.11.0'; }, /EXISTING_DRAFT_SOURCE_REQUIRED/));
 test('stops before another upload if the draft is published after the first asset', () => scenario(({ fixture }) => {
@@ -112,10 +126,15 @@ for (const [field, value] of [['assertions', 74], ['pr15Controls', 9], ['dailySc
     await writeFile(path, JSON.stringify(receipt));
   }, /WEB_CONTROLS_REJECTED/));
 }
-for (const [field, value] of [['codingAssertions', 49], ['requests', 18],
-  ['cleanroomOutsideRepository', false], ['requests', '19']]) {
-  test(`rejects incomplete or nonnumeric CLI evidence: ${field}=${JSON.stringify(value)}`, () => scenario(async ({ base }) => {
-    const path = join(base, 'cli-windows/result.json');
+for (const [name, field, value] of [
+  ['cli-linux', 'codingAssertions', 49], ['cli-linux', 'requests', 18],
+  ['cli-windows', 'codingAssertions', 48], ['cli-windows', 'requests', 17],
+  ['cli-windows', 'cleanroomOutsideRepository', false], ['cli-windows', 'requests', '18'],
+  ['cli-windows', 'codingAssertions', 49.5], ['cli-windows', 'requests', true],
+  ['cli-windows', 'requests', Number.MAX_SAFE_INTEGER + 1],
+]) {
+  test(`rejects incomplete or nonnumeric ${name} evidence: ${field}=${JSON.stringify(value)}`, () => scenario(async ({ base }) => {
+    const path = join(base, name, 'result.json');
     const receipt = JSON.parse(await readFile(path, 'utf8')); receipt[field] = value;
     await writeFile(path, JSON.stringify(receipt));
   }, /CLI_CONTROLS_REJECTED/));

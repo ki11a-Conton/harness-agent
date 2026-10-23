@@ -25,6 +25,13 @@
 - 类型、文档、相关发布/安全/浏览器检查通过，最终 clean 全量0失败，实际跳过逐条归档。
 - exporter 首次上传后 draft=false、target改变、同名资产冲突的对照由红到绿；原同源、hash、固定资产、旧版本和已发布拒绝规则保持。
 - 精确 SHA 四组 CI 全部 success，主 CI 十个 job 全通过；仅 main 上不适用的 export-existing-draft 可跳过。
+- CLI 完整适用项按平台验收：Linux 至少50项断言/19次请求，Windows 至少49项/18次；POSIX SIGINT 原用例保留，Windows 原生取消必须由同源码 Windows 专项通过。计数差异及实际收据见 [平台门禁修复](docs/evidence/release-v112-platform-20261023/README.md)。
 - 同一1.12.0归档的 Ubuntu/Windows Web 和 CLI 收据全部通过，实际包大小/sha256与 BUILD-RECEIPT、PORTABLE-MANIFEST、SOURCE-ACCEPTANCE 一致；本地同包完整 Web/CLI 复验及篡改拒绝通过。
 - 新 release 非 draft、tag精确指向最终源码，公开资产下载与记录哈希一致，旧 release/tag/assets 保持。发布前 ACCEPTED_NOT_PUBLISHED 原收据不被改写成已经发布。
 - 真实付费模型任务成功率、摘要质量及未覆盖 UI 能力仍不由脚本模型门禁代证。发布后下一轮计划及实施证据单独记录。
+
+## 2026-10-23 收尾修正
+
+b1c4c982 已通过四组 CI，导出工作流随后失败。实际 Checks 收据证实新增发布门禁把 Linux 的50/19误用于 Windows 的完整49/18。按平台修正计数合同，保留原始失败和收据，不修改生产编码验收或凑断言。旧源码验收作为历史证据；修复后重新固定 SHA，完整执行上述门禁再发布。
+
+本轮空草稿的受控恢复：新源码全部门禁通过后，fresh确认本次自己创建的 draft421052090 仍为 `draft=true`、tag=v1.12.0、target=b1c4c982、assets为空，旧export39830447189已终态失败且没有活跃导出，v1.12.0 tag尚不存在；仅将该空草稿的 target_commitish 更新为最终新SHA，保存前后观测。不得删除/替换资产、改历史版本或正在上传的草稿。随后仍须由新版 exporter 对新源码实际资产验收并导出成功，才可正式发布。
