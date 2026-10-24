@@ -107,3 +107,18 @@ test('derivative appends the real component after input types and leaves capacit
   assert(result.includes('modelReasoning: "推理等级"'));
   assert.throws(() => addModelReasoningUi(original.replace('function ModelRow(props)', 'function ChangedRow(props)')), /source boundary|reviewed model row/);
 });
+
+test('the text-only host keeps Image unavailable instead of offering a rejected settings write', async () => {
+  const original = await readFile(new URL('../../apps/web/public/deepseek/plugins/dsh-client-ui-settings-models/client.js', import.meta.url), 'utf8');
+  const source = addModelReasoningUi(original);
+  const start = source.indexOf('function ModelInputTypes('), end = source.indexOf('\n\t\t//#endregion', start);
+  assert(start >= 0 && end > start);
+  const render = new Function('react_jsx_runtime', '_deepseek_ai_dsh_client_ui_primitives', 'ModelsSection_module_css_default',
+    'return (' + source.slice(start, end) + ')')({ jsx, jsxs: jsx }, { Checkbox: 'Checkbox' }, {});
+  const tree = render({ model: { id: 'text-only' }, field: 'input', position: 1, disabled: false,
+    t: key => key, onChange: () => assert.fail('Unsupported input must not be offered') });
+  const text = elements(tree, item => item.type === 'Checkbox' && item.props.label === 'modelInputText')[0];
+  const image = elements(tree, item => item.type === 'Checkbox' && item.props.label === 'modelInputImage')[0];
+  assert.equal(text.props.checked, true); assert.equal(image.props.checked, false);
+  assert.equal(image.props.disabled, true);
+});

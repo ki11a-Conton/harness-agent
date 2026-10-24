@@ -83,6 +83,9 @@ const toggle = page => page.getByRole('switch', { name: /^(Reasoning levels|推�
 async function layout(page, label) {
   const appearance = await page.evaluate(() => document.documentElement.style.colorScheme);
   assert.equal(appearance, label.includes('dark') ? 'dark' : 'light');
+  const image = page.getByRole('checkbox', { name: /^(Image|图片)$/, exact: true });
+  assert(await image.isDisabled()); assert(!await image.isChecked());
+  assert(await page.getByRole('checkbox', { name: /^(Text|文本)$/, exact: true }).isChecked());
   const card = page.locator('[class$="_modelEntry"]').filter({ has: group(page) });
   await card.scrollIntoViewIfNeeded();
   const context = await page.getByRole('textbox', { name: /^(Context window|上下文窗口) 1$/ }).boundingBox();

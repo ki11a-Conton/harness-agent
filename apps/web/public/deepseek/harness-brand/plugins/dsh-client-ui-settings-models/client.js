@@ -183,7 +183,7 @@ window.__ModuleLoader__.load({
 					children: ["text", "image"].map((modality) => (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Checkbox, {
 						label: t(modality === "text" ? "modelInputText" : "modelInputImage"),
 						checked: selected.includes(modality),
-						disabled: disabled || selected.length === 1 && selected.includes(modality),
+						disabled: disabled || modality === "image" || selected.length === 1 && selected.includes(modality),
 						onChange: (checked) => {
 							const nextSelected = ["text", "image"].filter((value) => value === modality ? checked : selected.includes(value));
 							const next = {

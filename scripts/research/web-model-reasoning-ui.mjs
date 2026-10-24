@@ -22,6 +22,11 @@ export function addModelReasoningUi(source) {
     (_whole, key) => '.' + classes[key]).replaceAll('.selectInput', '.' + select[1]);
   source = replaceOnce(source, css[0], 'const css$3 = ' + JSON.stringify(JSON.parse(css[1]) + '\n' + adoptedCss) + ';');
 
+  // The current Web Host model schema accepts text input only. Keep the
+  // upstream layout, but do not offer Image and then reject the user's save.
+  source = replaceOnce(source, 'disabled: disabled || selected.length === 1 && selected.includes(modality),',
+    'disabled: disabled || modality === "image" || selected.length === 1 && selected.includes(modality),');
+
   const rowStart = source.indexOf('function ModelRow(props) {');
   const rowEnd = source.indexOf('\n\t\t//#endregion', rowStart);
   if (rowStart < 0 || rowEnd < 0) throw new Error('Missing reviewed model row');
