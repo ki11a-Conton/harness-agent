@@ -2,6 +2,8 @@
 
 合同：[RELEASE-V112-20261022](tasks/RELEASE-V112-20261022.md)。前序研究与长任务实现：[长任务计划](plan(20261020-161914).md)。证据保存在工作树外，历史失败和未推送候选不覆盖。
 
+2026-10-24 独立 UI 缺陷 `UI-WORKSPACE-KEYBOARD-01` 按 [Workspace 操作计划](plan(20261024-workspace-actions).md) 修复并用真实生产宿主留存红绿证据；历史 Windows session-lifecycle 菜单 stable→hidden 的原因保持 `NOT_PROVEN`。新源码仍须完成本发布计划全部固定 SHA 门禁。
+
 ## 做什么
 
 1. 完成 coding 长任务修复和 Web bootstrap 验收收尾，明确历史 CI 未证原因，不用推测修生产。

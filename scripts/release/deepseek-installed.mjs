@@ -64,6 +64,40 @@ try {
   assert.equal(runResult.code, 0, runnerLog);
   const browser = JSON.parse(await readFile(join(output, 'browser/result.json'), 'utf8'));
   assert.equal(browser.results.length, 30); assert(browser.complete);
+  const workspaceAssets = manifest.files.filter(file => file.path.endsWith('harness-brand/plugins/dsh-client-ui-workspace/client.js'));
+  assert.equal(workspaceAssets.length, 1, 'Archive owns exactly one branded workspace asset');
+  const workspaceSha = workspaceAssets[0].sha256;
+  const keyboardRunner = spawn(process.execPath, [join(source, 'scripts/research/deepseek-workspace-actions-acceptance.mjs'),
+    '--url', origin, '--output', join(output, 'workspace-keyboard'), '--fixture-evidence', join(fixture, 'evidence'),
+    '--expected-workspace-sha', workspaceSha, '--viewports', 'desktop,mobile,narrow-tall',
+    '--playwright-module', resolve(values['playwright-module']), '--chromium', chromium],
+    { cwd: cleanroom, windowsHide: true, env: process.env, stdio: ['ignore', 'pipe', 'pipe'] });
+  let keyboardLog = '';
+  keyboardRunner.stdout.on('data', bytes => { keyboardLog += bytes; });
+  keyboardRunner.stderr.on('data', bytes => { keyboardLog += bytes; });
+  try {
+    const result = await timeout(new Promise((done, reject) => {
+      keyboardRunner.once('error', reject); keyboardRunner.once('close', (code, signal) => done({ code, signal }));
+    }), 4 * 60_000, 'Installed workspace keyboard acceptance exceeded its deadline');
+    assert.equal(result.code, 0, keyboardLog);
+  } finally {
+    if (keyboardRunner.exitCode === null && keyboardRunner.signalCode === null) keyboardRunner.kill('SIGTERM');
+    await writeFile(join(output, 'workspace-keyboard.log'), keyboardLog);
+  }
+  const keyboard = JSON.parse(await readFile(join(output, 'workspace-keyboard/result.json'), 'utf8'));
+  assert.equal(keyboard.status, 'PASS'); assert.equal(keyboard.complete, true); assert.equal(keyboard.paidModelCalls, 0);
+  assert.equal(keyboard.expectedWorkspaceSha256, workspaceSha);
+  assert.equal(keyboard.cases.length, 3);
+  assert.deepEqual(keyboard.cases.map(item => item.viewport).sort(), ['desktop', 'mobile', 'narrow-tall']);
+  for (const item of keyboard.cases) {
+    assert.equal(item.status, 'PASS'); assert.equal(item.complete, true); assert.equal(item.mode, 'keyboard-acceptance');
+    assert.equal(item.paidModelCalls, 0); assert.equal(item.expectedWorkspaceSha256, workspaceSha);
+    assert.equal(item.engine.platform, process.platform);
+    assert(Number.isSafeInteger(item.assertions) && item.assertions >= 15);
+    assert.equal(item.assertions, item.checks.length); assert(item.checks.every(check => check.status === 'PASS'));
+    assert(item.assets.length > 0 && item.assets.every(asset => asset.sha256 === workspaceSha));
+  }
+  assert.equal(keyboard.assertions, keyboard.cases.reduce((sum, item) => sum + item.assertions, 0));
   const controlsRunner = spawn(process.execPath, [join(source, 'scripts/research/pr15-browser.mjs'), '--url', origin,
     '--output', join(output, 'pr15'), '--fixture-evidence', join(fixture, 'evidence'),
     '--playwright-module', resolve(values['playwright-module']), '--chromium', chromium],
@@ -123,10 +157,12 @@ try {
     workspaceLinks: 0, installedApplication: true, cases: browser.results.length,
     assertions: browser.results.reduce((sum, item) => sum + item.checks.length, 0), paidModelCalls: 0,
     pr15Controls: controls.checks.length,
+    workspaceKeyboardScenarios: keyboard.cases.length, workspaceKeyboardAssertions: keyboard.assertions,
+    workspaceKeyboardAssetSha256: workspaceSha,
     connectionScenarios: connection.scenarios, connectionAssertions: connection.assertions,
     dailyScenarios: daily.results.length, dailyAssertions: daily.results.reduce((sum, item) => sum + item.checks.length, 0),
     realModelQuality: 'NOT_PROVEN', fullDefaultUiParity: 'NOT_PROVEN',
-    scope: 'Named ordinary coding UI controls on this verified archive, three viewport sizes, plus PR15 permissions, reviewed plans, bounded goals, reasoning and context controls. PTY/Cordis/queue-edit capabilities and real model quality are not claimed.' };
+    scope: 'Named ordinary coding UI controls on this verified archive, three viewport sizes, workspace keyboard and selected-row actions, plus PR15 permissions, reviewed plans, bounded goals, reasoning and context controls. PTY/Cordis/queue-edit capabilities and real model quality are not claimed.' };
   await writeFile(join(output, 'result.json'), JSON.stringify(receipt, null, 2) + '\n');
   console.log(JSON.stringify(receipt));
 } catch (error) {
@@ -135,10 +171,10 @@ try {
   const escape = text => text.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
   console.error('::error title=Installed UI acceptance failed::' + escape(String(error).slice(0, 2000)));
   let remainingDiagnostics = 6;
-  for (const phase of ['browser', 'daily', 'pr15']) {
+  for (const phase of ['browser', 'workspace-keyboard', 'daily', 'pr15']) {
     try {
       const report = JSON.parse(await readFile(join(output, phase, 'result.json'), 'utf8'));
-      const cases = report.results ?? (report.status === 'PASS' ? [] : [{ name: report.pending?.[0] ?? 'PR15 controls', status: 'FAIL', failure: report.failure }]);
+      const cases = report.results ?? (Array.isArray(report.cases) ? report.cases : report.status === 'PASS' ? [] : [{ name: report.pending?.[0] ?? 'PR15 controls', status: 'FAIL', failure: report.failure }]);
       for (const item of cases.filter(item => item.status !== 'PASS').slice(0, remainingDiagnostics)) {
         remainingDiagnostics--;
         console.error('::error title=Installed UI case failed::' + escape(JSON.stringify({

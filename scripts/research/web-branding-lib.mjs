@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { guardConversationNavigation, guardWorkspaceNavigation } from './web-navigation-ui.mjs';
 import { removeProductUi, removedUiModules } from './web-product-ui.mjs';
 import { addControlsUi } from './web-controls-ui.mjs';
+import { addWorkspaceActionsUi } from './web-workspace-actions-ui.mjs';
 
 export const brandedModules = Object.freeze([
   'dsh-client-ui-brand-official', 'dsh-client-ui-layout', 'dsh-client-ui-plugin-manager',
@@ -103,6 +104,7 @@ export function deriveBrandModule(stem, original) {
     source = source.replace(open, 'openSession(target) {\n\t\t\t\tconst navigation = AbortSignal.any([this.ctx.layout.beginNavigation(), this.lifetime.signal]);\n\t\t\t\tthis.replaceMain(target, navigation, "reveal");');
     source = source.replace(clear, 'clearMain() {\n\t\t\t\tthis.ctx.layout.beginNavigation();\n\t\t\t\tconst previous = this.mainReference;');
     source = guardWorkspaceNavigation(source);
+    source = addWorkspaceActionsUi(source);
   }
   if (stem === 'dsh-client-ui-conversation') {
     const badge = /, \(0, react_jsx_runtime\.jsx\)\("span", \{\s*className: HeroShell_module_css_default\.previewBadge,\s*children: t\("hero\.preview"\)\s*\}\)/g;
