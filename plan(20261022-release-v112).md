@@ -51,3 +51,19 @@ b1c4c982 已通过四组 CI，导出工作流随后失败。实际 Checks 收据
 - **做什么：** 修正该条测试将队列准入、文件内容和 turn 完成混为同一信号的问题。[独立记录](docs/evidence/release-v112-windows-pr15-20261023/README.md)的真实受控反例证明：原默认1秒 poll 可在合法工作仍进行时过早失败；文件已有十字节时 turn/inbox 也可能尚未完成。历史 Windows 的确切失败阶段或读取错误仍为 NOT_PROVEN。
 - **怎么做：** 在真实请求准入前订阅原 owner 的 `markConsumed`，委托原持久化方法成功后才确认消费；错误拒绝等待并继续传播。使用报告实际阶段的有限 hang guard，在 `finally` 恢复原方法。生产 inbox/turn、权限、文件写入和原字节要求保持。
 - **怎么验收：** 联合核对唯一 consumed inbox、对应的唯一 completed turn、accepted 普通请求 metadata、无 goal、两次模型调用及真实十字节 `real bytes`。真实提前失败/提前成功控制、focused 用例及新源码真实 Windows CI 必须通过；不将本地控制当成历史根因或新 Windows 成功结果。
+
+## 2026-10-24 发布完成
+
+[v1.12.0 正式发布](https://github.com/ki11a-Conton/harness-agent/releases/tag/v1.12.0)。源码为 `37a16e3d0ac60da12caff5e28c77a20c8a017e2e`，tree 为 `de19e092aa6d0b89d67f09c751bfdf9e86480498`。发行归档 SHA256 为 `68ac1b04c86dacf74cffb806b9646320839a001873a28a3f4c06c9c954566d01`；工程本地构建另记为 `8e6b8a5dd9fd5efabfd3dba06d2b8628c71c3133eb003aad224398f483dd7795`。
+
+- 固定源码全量10,207通过、0失败、16条件跳过；同包本地验收、类型与相关检查通过。
+- [主 CI 40081756964](https://github.com/ki11a-Conton/harness-agent/actions/runs/40081756964) 十个作业全通过；[原生 Windows 40081756954](https://github.com/ki11a-Conton/harness-agent/actions/runs/40081756954)、[通用安装 40081756957](https://github.com/ki11a-Conton/harness-agent/actions/runs/40081756957)、[同包 Web/CLI 40081756935](https://github.com/ki11a-Conton/harness-agent/actions/runs/40081756935) 全部成功。
+- [导出 40084708819](https://github.com/ki11a-Conton/harness-agent/actions/runs/40084708819) 成功。实际下载的 CI 归档与公开归档字节一致，Ubuntu/Windows 四份安装收据通过；键盘阶段两平台均为3视口/45项。
+- 实际草稿下载及公开下载后分别完整安装复验：Web 原30场景/75断言、键盘3视口/45项、10项控制链、日常42场景/120断言、重连2场景/10断言；本地 Linux CLI 50断言/19请求、doctor 0、篡改及篡改后启动拒绝。Windows 原始 CLI 收据为完整49/18。
+- 六个公开资产、版本标签、源码及旧 v1.11 release/tag/assets 均经最终远端核对。`SOURCE-ACCEPTANCE.json` 原件继续保持发布前状态；原始失败和未证实的历史归因保留。
+
+本次空草稿改绑的 API 观察：仅更新 target 后，源码成功改为37a16e3d，草稿标签却变为 `untagged-…`。严格校验拒绝后，保留首次 intent 与原始观测，fresh 确认同一自建草稿仍未发布、无资产、正文一致、版本 tag 不存在，再显式提交 tag_name 与 target_commitish 恢复绑定。正式发布也显式携带这两个字段和 draft=false；没有重写历史标签、删除资产或重复发布。
+
+工程原件冻结于 `/workspace/harness-longrun-acceptance-20261020-37a16e3d-frozen`，7,883项清单核验通过。发布及实际公共安装原件冻结于 `/tmp/harness-v112-release-20261022-37a16e3d-frozen`，1,160项清单核验通过；工作区关键证据快照为 `/workspace/harness-v112-published-20261024`，其范围与公开归档引用单独列明，清单亦通过。付费模型调用为0；真实模型质量继续由独立实验验证。
+
+发布后[下一轮计划](plan(20261024-managed-command-harness).md)及[源码对比](docs/research/managed-commands-20261024/README.md)在独立规划分支交付；新命令会话能力尚未实现或默认启用。
