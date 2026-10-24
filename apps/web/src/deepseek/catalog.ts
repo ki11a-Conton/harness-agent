@@ -101,7 +101,7 @@ const modelFields = {
   id: Schema.string().required(), name: Schema.string(),
   contextWindow: Schema.number().step(1).min(1), maxTokens: Schema.number().step(1).min(1),
   input: Schema.array(Schema.union(["text"])),
-  reasoningEfforts: Schema.union([Schema.const(false), Schema.dict(Schema.string())]),
+  reasoningEfforts: Schema.union([Schema.const(false), Schema.dict(Schema.union([Schema.string(), Schema.const(null)]))]),
 };
 const profileSchema = Schema.object({
   apiKeyEnv: Schema.string().role("credential-ref"), displayName: Schema.string(),

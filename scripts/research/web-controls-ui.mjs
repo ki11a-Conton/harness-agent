@@ -1,4 +1,5 @@
 /** Small native React slot occupants over the existing live session protocol. */
+import { addModelReasoningUi } from './web-model-reasoning-ui.mjs';
 const controls = String.raw`
 		function HarnessControls({ useProjection, runCommand, t }) {
 			const plan = useProjection("harnessPlan");
@@ -133,17 +134,7 @@ export function addControlsUi(stem, source) {
     }
   }
   if (stem === 'dsh-client-ui-settings-models') {
-    const marker = 'children: [["contextWindow", "maxTokens"].map';
-    const field = `children: [(0, react_jsx_runtime.jsxs)("label", { children: [(0, react_jsx_runtime.jsx)("span", { children: t("modelReasoning") }), (0, react_jsx_runtime.jsx)("textarea", { "aria-label": t("modelReasoning") + " " + position, disabled, value: typeof model.reasoningEfforts === "string" ? model.reasoningEfforts : model.reasoningEfforts === undefined ? "" : JSON.stringify(model.reasoningEfforts), placeholder: '{"low":"low","medium":"medium","high":"high"}', onChange: event => { const raw = event.target.value; let value; try { value = raw.trim() ? JSON.parse(raw) : undefined; } catch { value = raw; } props.onFieldChange("reasoningEfforts", value); } })] }), ["contextWindow", "maxTokens"].map`;
-    if (source.split(marker).length !== 2) throw new Error('Unreviewed model reasoning field boundary');
-    source = source.replace(marker, field);
-    const validation = 'const maxTokens = model["maxTokens"];';
-    if (source.split(validation).length !== 2) throw new Error('Unreviewed model reasoning validation boundary');
-    source = source.replace(validation, `const efforts = model.reasoningEfforts;
-      if (efforts !== undefined && efforts !== false && (typeof efforts !== "object" || efforts === null || Array.isArray(efforts) || !Object.keys(efforts).some(key => key !== "off") || Object.entries(efforts).some(([key, wire]) => !["off","minimal","low","medium","high","xhigh","max"].includes(key) || typeof wire !== "string" || !/^[A-Za-z0-9_-]{1,100}$/.test(wire)))) return { index, key: "modelReasoningInvalid" };
-      ` + validation);
-    source = source.replace('contextWindow: "Context window",', 'modelReasoning: "Supported reasoning levels (JSON; leave empty if unsupported)", modelReasoningInvalid: "Invalid reasoning level map", contextWindow: "Context window",');
-    source = source.replace('contextWindow: "上下文窗口",', 'modelReasoning: "支持的推理档位（JSON；不支持请留空）", modelReasoningInvalid: "推理档位映射无效", contextWindow: "上下文窗口",');
+    source = addModelReasoningUi(source);
   }
   return source.replace('Context compressed', 'Context prepared').replace('上下文已压缩', '上下文整理完成')
     .replace('"harness.compact.pending": "Will compress next request"', '"harness.compact.running": "Compressing context…", "harness.compact.fallback": "Context prepared with a limited extractive summary; original transcript retained", "harness.compact.pending": "Will compress next request"')

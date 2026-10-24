@@ -114,6 +114,38 @@ try {
   }
   const controls = JSON.parse(await readFile(join(output, 'pr15/result.json'), 'utf8'));
   assert.equal(controls.status, 'PASS'); assert.equal(controls.checks.length, 10); assert.deepEqual(controls.pending, []); assert.equal(controls.paidModelCalls, 0);
+  const settingsAssets = manifest.files.filter(file => file.path.endsWith('/deepseek/harness-brand/plugins/dsh-client-ui-settings-models/client.js'));
+  assert.equal(settingsAssets.length, 1, 'Verified archive identifies exactly one model settings derivative');
+  const settingsSha = settingsAssets[0].sha256;
+  const modelRunner = spawn(process.execPath, [join(source, 'scripts/research/model-reasoning-browser.mjs'), '--url', origin,
+    '--output', join(output, 'model-reasoning'), '--fixture-evidence', join(fixture, 'evidence'),
+    '--playwright-module', resolve(values['playwright-module']), '--chromium', chromium, '--expected-settings-sha', settingsSha],
+    { cwd: cleanroom, windowsHide: true, env: process.env, stdio: ['ignore', 'pipe', 'pipe'] });
+  let modelLog = '';
+  modelRunner.stdout.on('data', bytes => { modelLog += bytes; }); modelRunner.stderr.on('data', bytes => { modelLog += bytes; });
+  try {
+    const result = await timeout(new Promise((done, reject) => { modelRunner.once('error', reject); modelRunner.once('close', (code, signal) => done({ code, signal })); }),
+      4 * 60_000, 'Installed model reasoning acceptance exceeded its deadline');
+    assert.equal(result.code, 0, modelLog);
+  } finally {
+    if (modelRunner.exitCode === null && modelRunner.signalCode === null) modelRunner.kill('SIGTERM');
+    await writeFile(join(output, 'model-reasoning.log'), modelLog);
+  }
+  const modelEditor = JSON.parse(await readFile(join(output, 'model-reasoning/result.json'), 'utf8'));
+  assert.equal(modelEditor.status, 'PASS'); assert.equal(modelEditor.complete, true); assert.equal(modelEditor.paidModelCalls, 0);
+  assert.equal(modelEditor.platform, process.platform); assert.equal(modelEditor.expectedAsset, settingsSha);
+  assert.deepEqual(modelEditor.errors, []); assert.deepEqual(modelEditor.externalRequests, []);
+  assert(modelEditor.assets.length > 0 && modelEditor.assets.every(asset => asset.sha256 === settingsSha));
+  const modelChecks = new Set(modelEditor.checks.map(check => check.name));
+  assert.equal(modelChecks.size, modelEditor.checks.length); assert(modelEditor.checks.every(check => check.status === 'PASS'));
+  for (const name of ['fresh-session-actual-admission-and-owner', 'desktop-light-off', 'desktop-light-on', 'UI-save-real-settings',
+    'high-wire', 'off-null-omits-wire', 'max-custom-wire', 'reload-retains-custom-wire', 'cancel-keeps-committed-profile',
+    'invalid-off-only-blocked-before-save', 'disabled-capability-omits-wire', 'disabled-form-actually-removes-capability',
+    'desktop-zh-light-off', 'desktop-zh-light-on', 'desktop-zh-light-cancel-keeps-profile',
+    'mobile-en-dark-off', 'mobile-en-dark-on', 'mobile-en-dark-cancel-keeps-profile',
+    'narrow-zh-dark-off', 'narrow-zh-dark-on', 'narrow-zh-dark-cancel-keeps-profile', 'actual-assets-and-browser-errors']) {
+    assert(modelChecks.has(name), 'Missing installed model editor check: ' + name);
+  }
   await verifyPortable(root, { version: values.version, sourceSha: values['source-sha'] });
   host.send({ type: 'fixture-stop' });
   const exit = await timeout(hostExit, 15_000, 'Installed host failed to close');
@@ -159,10 +191,11 @@ try {
     pr15Controls: controls.checks.length,
     workspaceKeyboardScenarios: keyboard.cases.length, workspaceKeyboardAssertions: keyboard.assertions,
     workspaceKeyboardAssetSha256: workspaceSha,
+    modelReasoningChecks: modelEditor.checks.length, modelReasoningAssetSha256: settingsSha,
     connectionScenarios: connection.scenarios, connectionAssertions: connection.assertions,
     dailyScenarios: daily.results.length, dailyAssertions: daily.results.reduce((sum, item) => sum + item.checks.length, 0),
     realModelQuality: 'NOT_PROVEN', fullDefaultUiParity: 'NOT_PROVEN',
-    scope: 'Named ordinary coding UI controls on this verified archive, three viewport sizes, workspace keyboard and selected-row actions, plus PR15 permissions, reviewed plans, bounded goals, reasoning and context controls. PTY/Cordis/queue-edit capabilities and real model quality are not claimed.' };
+    scope: 'Named ordinary coding UI controls on this verified archive, workspace keyboard, model spec/reasoning editor with real HTTP wire checks and responsive light/dark en/zh views, plus PR15 permissions, plans, goals and context controls. PTY/Cordis/queue-edit capabilities and real model quality are not claimed.' };
   await writeFile(join(output, 'result.json'), JSON.stringify(receipt, null, 2) + '\n');
   console.log(JSON.stringify(receipt));
 } catch (error) {
@@ -171,7 +204,7 @@ try {
   const escape = text => text.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
   console.error('::error title=Installed UI acceptance failed::' + escape(String(error).slice(0, 2000)));
   let remainingDiagnostics = 6;
-  for (const phase of ['browser', 'workspace-keyboard', 'daily', 'pr15']) {
+  for (const phase of ['browser', 'workspace-keyboard', 'model-reasoning', 'daily', 'pr15']) {
     try {
       const report = JSON.parse(await readFile(join(output, phase, 'result.json'), 'utf8'));
       const cases = report.results ?? (Array.isArray(report.cases) ? report.cases : report.status === 'PASS' ? [] : [{ name: report.pending?.[0] ?? 'PR15 controls', status: 'FAIL', failure: report.failure }]);

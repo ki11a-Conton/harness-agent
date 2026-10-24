@@ -17,6 +17,7 @@ import { createDeliverablesService } from "./deliverables.js";
 import { RemoteFailure, type DeepseekService } from "./transport.js";
 import type { RequestTransform, RouteResolver } from "./routes.js";
 import { createControlsService } from "./controls.js";
+import { applyModelReasoning } from "./reasoning.js";
 
 /** The production Web host composes services over the same Harness contracts as CLI. */
 export interface DeepseekLaunchFacts {
@@ -112,8 +113,7 @@ export async function createDeepseekComposition(base: Harness, dataDir?: string,
     const selected = (await controls.read(owners.externalSessionId(nativeId))).reasoning;
     if (selected?.provider !== model.providerId || selected.model !== model.modelId || selected.effort === undefined) return transformed;
     const efforts = (await catalog.resolvedModelProfiles(signal))[model.providerId]?.models?.find(item => item.id === model.modelId)?.reasoningEfforts;
-    const wire = efforts && efforts[selected.effort as keyof typeof efforts];
-    return typeof wire === "string" ? { ...transformed, reasoningEffort: wire } : transformed;
+    return applyModelReasoning(transformed, efforts, selected.effort);
   };
   hooks.installRequestTransform?.((request, model) => transformRequest(request, model, neverAborted));
   hooks.installRouteResolver?.(async (providerKey, modelId, signal) => {

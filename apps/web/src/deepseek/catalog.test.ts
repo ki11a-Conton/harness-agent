@@ -68,6 +68,31 @@ it.each([{}, { off: "off" }, { invented: "high" }, { high: "bad\nwire" }])("PR15
   await expect(readFile(join(stack.directory, "deepseek/settings.json"))).rejects.toMatchObject({ code: "ENOENT" });
 });
 
+it("stores upstream Off null and custom max wire values through the real settings contract", async () => {
+  const stack = await setup({ initialProviderProfiles: { gateway: { api: "openai-completions", baseURL: "http://127.0.0.1:4321/v1", apiKeyEnv: "REASONING_KEY",
+    models: [{ id: "reasoner", reasoningEfforts: { high: "high" } }] } }, initialCredentials: { REASONING_KEY: "local-test-only" } });
+  const models = [{ id: "reasoner", contextWindow: 1048576, maxTokens: 128000,
+    reasoningEfforts: { off: null, low: "low", medium: "medium", high: "high", max: "xhigh" } }];
+  await stack.call("settings/mutate", { ns: "llm-pi-ai", ops: [{ op: "set", path: ["providers", "gateway", "models"], value: models }] });
+  const describe = async (service: typeof stack.service) => {
+    const view = await service.call("settings/describe", {}, stack.signal) as { namespaces: Array<{ ns: string; schema: Schema; value: { providers: Record<string, unknown> } }> };
+    const settings = view.namespaces.find(item => item.ns === "llm-pi-ai")!;
+    expect(() => new Schema(settings.schema)(settings.value)).not.toThrow();
+    expect(settings.value.providers.gateway).toMatchObject({ models });
+  };
+  await describe(stack.service);
+  await describe(createCatalogService({ ...stack.host, registerTool: undefined }));
+  const catalog = await stack.call("session/modelCatalog") as { groups: Array<{ id: string; models: Array<{ id: string; reasoning?: { efforts: Array<{ id: string }> } }> }> };
+  expect(catalog.groups.find(group => group.id === "gateway")!.models[0]!.reasoning!.efforts.map(item => item.id)).toEqual(["off", "low", "medium", "high", "max"]);
+});
+
+it.each([{ off: null }, { high: null }, { off: null, high: "" }, { off: null, high: "bad wire" }])("rejects invalid nullable reasoning maps without persisting them: %j", async reasoningEfforts => {
+  const stack = await setup();
+  await expect(stack.call("settings/mutate", { ns: "llm-pi-ai", ops: [{ op: "set", path: ["providers", "gateway"],
+    value: { api: "openai-completions", models: [{ id: "m", reasoningEfforts }] } }] })).rejects.toBeDefined();
+  await expect(readFile(join(stack.directory, "deepseek/settings.json"))).rejects.toMatchObject({ code: "ENOENT" });
+});
+
 it("advertises a settings document action only with its actual host opener and honors controlled access denial", async () => {
   const unavailable = await setup();
   await expect(unavailable.call("settings/openSettingsDocument")).rejects.toMatchObject({ code: "gateway/unavailable" });

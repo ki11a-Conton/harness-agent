@@ -194,7 +194,8 @@ const cases = [
     await page.getByLabel('API key', { exact: true }).fill('local-pr15-reasoning-only');
     await button('Add model').click(); await page.getByRole('textbox', { name: 'Model ID 1', exact: true }).fill('pr15-reasoner');
     await page.getByRole('button', { name: 'Model options 1', exact: true }).click();
-    await page.getByRole('textbox', { name: 'Supported reasoning levels (JSON; leave empty if unsupported) 1', exact: true }).fill('{"low":"low","high":"high"}');
+    await page.getByRole('switch', { name: 'Reasoning levels 1', exact: true }).click();
+    await button('Delete level off').click(); await button('Delete level medium').click();
     await button('Create provider').click(); await page.getByRole('textbox', { name: 'Provider ID', exact: true }).waitFor({ state: 'hidden' }); await button('Close').click();
     await button(/^Select model/).click(); const model = page.getByRole('menuitem', { name: /^Model/ }); if (await model.isVisible()) await model.click();
     await page.getByRole('menuitemradio', { name: 'pr15-reasoner', exact: true }).click();

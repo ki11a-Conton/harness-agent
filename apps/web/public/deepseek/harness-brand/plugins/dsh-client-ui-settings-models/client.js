@@ -56,7 +56,7 @@ window.__ModuleLoader__.load({
 		}
 		//#endregion
 		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-settings-models/src/client/ModelsSection.module.css.mjs
-		const css$3 = ".zGbnIq_section{max-width:720px;color:var(--dsw-alias-label-primary);flex-direction:column;gap:12px;display:flex}.zGbnIq_title{color:var(--dsw-alias-label-primary);margin:0;font-size:16px;font-weight:500;line-height:24px}.zGbnIq_intro{color:var(--dsw-alias-label-tertiary);margin:0;font-size:14px;line-height:22px}.zGbnIq_notice{color:var(--dsw-alias-state-warn-label);margin:0;font-size:12px;line-height:18px}.zGbnIq_savedNotice{color:var(--dsw-alias-state-success-primary);margin:0;font-size:12px;line-height:18px}.zGbnIq_rows{flex-direction:column;gap:8px;margin:12px 0 0;padding:0;list-style:none;display:flex}.zGbnIq_rowCard{border:.5px solid var(--dsw-alias-settings-card-stroke);background:var(--dsw-alias-settings-card-fill);border-radius:var(--dsw-radius-xl);flex-direction:column;gap:12px;padding:12px 14px;display:flex}.zGbnIq_rowHead{align-items:center;gap:10px;display:flex}.zGbnIq_rowIdentity{align-items:center;gap:6px;min-width:0;display:inline-flex}.zGbnIq_rowName{color:var(--dsw-alias-label-primary);font-size:14px;font-weight:500;line-height:22px}.zGbnIq_rowTag{border:.5px solid var(--dsw-alias-border-l3);border-radius:var(--dsw-radius-xs);color:var(--dsw-alias-label-secondary);flex:none;padding:1px 6px;font-size:11px;line-height:16px}.zGbnIq_credentialDot{box-sizing:border-box;corner-shape:round;border-radius:50%;flex:none;width:8px;height:8px;display:inline-block}.zGbnIq_credentialDotConfigured{background:var(--dsw-alias-state-success-primary)}.zGbnIq_credentialDotMissing{background:var(--dsw-alias-state-error-primary)}.zGbnIq_rowActions{align-items:center;gap:4px;margin-left:auto;display:inline-flex}.zGbnIq_primaryButton,.zGbnIq_secondaryButton,.zGbnIq_addButton{box-sizing:border-box;border-radius:var(--dsw-radius-md);height:36px;font:inherit;cursor:pointer;border:none;justify-content:center;align-items:center;gap:4px;padding:0 14px;font-size:14px;line-height:22px;display:inline-flex}.zGbnIq_primaryButton{background:var(--dsw-alias-button-primary-fill);color:var(--dsw-alias-label-primary-foreground)}.zGbnIq_primaryButton:hover:not(:disabled){background:var(--dsw-alias-button-primary-hover)}.zGbnIq_secondaryButton,.zGbnIq_addButton{border:.5px solid var(--dsw-alias-border-l3);color:var(--dsw-alias-label-primary);background:0 0}.zGbnIq_secondaryButton:hover:not(:disabled),.zGbnIq_addButton:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.zGbnIq_secondaryButton:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover-solid)}.zGbnIq_dangerButton{box-sizing:border-box;border-radius:var(--dsw-radius-md);height:36px;color:var(--dsw-alias-state-error-primary);font:inherit;cursor:pointer;background:0 0;border:none;justify-content:center;align-items:center;padding:0 14px;font-size:14px;line-height:22px;display:inline-flex}.zGbnIq_dangerButton:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover-danger)}.zGbnIq_rowActions .zGbnIq_secondaryButton,.zGbnIq_rowActions .zGbnIq_dangerButton{border-radius:var(--dsw-radius-sm);height:28px;padding:0 10px;font-size:12px;line-height:18px}.zGbnIq_primaryButton:disabled,.zGbnIq_secondaryButton:disabled,.zGbnIq_dangerButton:disabled,.zGbnIq_addButton:disabled,.zGbnIq_linkButton:disabled,.zGbnIq_addModelButton:disabled{opacity:.4;cursor:default}.zGbnIq_primaryButton:focus-visible,.zGbnIq_secondaryButton:focus-visible,.zGbnIq_dangerButton:focus-visible,.zGbnIq_addButton:focus-visible,.zGbnIq_linkButton:focus-visible,.zGbnIq_addModelButton:focus-visible,.zGbnIq_iconButton:focus-visible,.zGbnIq_customizedSummary:focus-visible{box-shadow:0 0 0 2px var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline:none}.zGbnIq_editor{border-radius:var(--dsw-radius-lg);background:var(--dsw-alias-bg-module-platform);flex-direction:column;gap:14px;padding:14px 16px;display:flex}.zGbnIq_editorHeader{align-items:baseline;gap:8px;display:flex}.zGbnIq_editorTitle{color:var(--dsw-alias-label-primary);font-size:14px;font-weight:500;line-height:22px}.zGbnIq_editorRoute{color:var(--dsw-alias-label-tertiary);font-size:12px;line-height:18px}.zGbnIq_field{flex-direction:column;gap:6px;display:flex}.zGbnIq_fieldLabel{color:var(--dsw-alias-label-secondary);align-items:center;gap:10px;font-size:12px;font-weight:500;line-height:18px;display:inline-flex}.zGbnIq_linkButton{box-sizing:border-box;border-radius:var(--dsw-radius-sm);height:28px;color:var(--dsw-alias-label-tertiary);font:inherit;cursor:pointer;background:0 0;border:none;align-items:center;padding:0 10px;font-size:12px;line-height:18px;display:inline-flex}.zGbnIq_linkButton:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary)}.zGbnIq_advancedHint{color:var(--dsw-alias-label-tertiary);margin:0;font-size:12px;line-height:18px}.zGbnIq_editorActions{justify-content:flex-end;gap:8px;display:flex}.zGbnIq_addBlock{flex-direction:column;gap:12px;display:flex}.zGbnIq_addActions{display:flex}.zGbnIq_addButton{border:1px dashed var(--dsw-alias-border-l3);border-radius:var(--dsw-radius-lg);flex:1 1 0;gap:6px;min-width:180px;height:44px}.zGbnIq_addModes{flex-direction:column;align-items:flex-start;gap:8px;display:flex}.zGbnIq_addPanel{flex-direction:column;gap:14px;display:flex}.zGbnIq_addPanel[hidden]{display:none}.zGbnIq_addCard,.zGbnIq_setupCard{border-radius:var(--dsw-radius-lg);background:var(--dsw-alias-bg-module-platform);flex-direction:column;gap:14px;padding:14px 16px;list-style:none;display:flex}.zGbnIq_addCard .zGbnIq_editor,.zGbnIq_setupCard .zGbnIq_editor{background:0 0;padding:0}.zGbnIq_customized{border-top:.5px solid var(--dsw-alias-border-l2);padding-top:10px}.zGbnIq_customizedSummary{border-radius:var(--dsw-radius-sm);cursor:pointer;width:fit-content;color:var(--dsw-alias-label-secondary);align-items:center;gap:6px;margin-left:-4px;padding:2px 4px;font-size:12px;font-weight:500;line-height:18px;list-style:none;display:flex}.zGbnIq_customizedSummary::-webkit-details-marker{display:none}.zGbnIq_customizedSummary:before{content:\"\";border-bottom:1.5px solid;border-right:1.5px solid;width:5px;height:5px;transition:transform .12s;transform:rotate(-45deg)translate(-1px,-1px)}.zGbnIq_customized[open]>.zGbnIq_customizedSummary:before{transform:rotate(45deg)translate(-1px,-1px)}.zGbnIq_customizedSummary:hover{color:var(--dsw-alias-label-primary)}.zGbnIq_customizedBody{flex-direction:column;gap:12px;padding-top:12px;display:flex}.zGbnIq_modelCatalog{border-top:.5px solid var(--dsw-alias-border-l2);flex-direction:column;gap:10px;padding-top:12px;display:flex}.zGbnIq_modelCatalogHeading{flex-direction:column;gap:2px;display:flex}.zGbnIq_modelCatalogTitle{color:var(--dsw-alias-label-secondary);font-size:12px;font-weight:500;line-height:18px}.zGbnIq_modelCatalogMeta,.zGbnIq_modelEmpty{color:var(--dsw-alias-label-tertiary);margin:0;font-size:12px;line-height:18px}.zGbnIq_modelList{flex-direction:column;gap:8px;display:flex}.zGbnIq_modelListHead{justify-content:space-between;align-items:flex-start;gap:12px;display:flex}.zGbnIq_modelEntry{border:.5px solid var(--dsw-alias-border-l4);border-radius:var(--dsw-radius-lg);padding:6px}.zGbnIq_modelRow{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto auto;align-items:center;gap:6px;display:grid}.zGbnIq_iconButton{box-sizing:border-box;border-radius:var(--dsw-radius-sm);width:28px;height:28px;color:var(--dsw-alias-label-tertiary);cursor:pointer;background:0 0;border:none;justify-content:center;align-items:center;display:inline-flex}.zGbnIq_iconButton:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.zGbnIq_iconButton:disabled{cursor:default;opacity:.4}.zGbnIq_iconButtonDanger:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover-danger);color:var(--dsw-alias-state-error-primary)}.zGbnIq_modelAdvanced{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:8px 4px 2px;display:grid}.zGbnIq_modelField{flex-direction:column;gap:4px;min-width:0;display:flex}.zGbnIq_modelInputTypes{border:none;grid-column:1/-1;min-width:0;margin:0;padding:0}.zGbnIq_modelInputTypes legend{margin-bottom:4px;padding:0}.zGbnIq_modelInputChoices{flex-wrap:wrap;align-items:center;gap:16px;min-height:32px;display:flex}.zGbnIq_modelFieldLabel{color:var(--dsw-alias-label-tertiary);font-size:12px;line-height:18px}.zGbnIq_modelEmpty{border:1px dashed var(--dsw-alias-border-l3);border-radius:var(--dsw-radius-lg);text-align:center;padding:12px}.zGbnIq_addModelButton{box-sizing:border-box;border:.5px solid var(--dsw-alias-border-l3);border-radius:var(--dsw-radius-sm);height:28px;color:var(--dsw-alias-label-primary);font:inherit;cursor:pointer;background:0 0;align-self:flex-start;align-items:center;gap:4px;padding:0 10px;font-size:12px;line-height:18px;display:inline-flex}.zGbnIq_addModelButton:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.zGbnIq_input{box-sizing:border-box;border:.5px solid var(--dsw-alias-border-l4);border-radius:var(--dsw-radius-md);width:100%;height:32px;font:inherit;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);padding:0 10px;font-size:14px;line-height:22px}select.zGbnIq_input{cursor:pointer;max-width:240px}.zGbnIq_input:focus{border-color:var(--dsw-alias-state-business-primary);outline:none}.zGbnIq_input::placeholder{color:var(--dsw-alias-label-dimmed)}.zGbnIq_input:disabled{opacity:.6;cursor:default}.zGbnIq_selectInput{appearance:none;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%2381858C' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\");background-position:right 12px center;background-repeat:no-repeat;background-size:12px 12px;padding-right:32px}.zGbnIq_error{color:var(--dsw-alias-state-error-primary);margin:0;font-size:12px;line-height:18px}.zGbnIq_deleteDialog{width:min(480px,100%)}.zGbnIq_deleteConfirm:not(:disabled){border-color:var(--dsw-alias-state-error-primary);color:var(--dsw-alias-state-error-primary)}.zGbnIq_deleteConfirm:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover-danger)}.zGbnIq_hiddenLabel{clip:rect(0 0 0 0);white-space:nowrap;width:1px;height:1px;position:absolute;overflow:hidden}@media (prefers-reduced-motion:reduce){.zGbnIq_customizedSummary:before,.zGbnIq_switchThumb{transition:none}}.zGbnIq_fetchDialog{--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l2);--dsh-scrollbar-thumb-hover:var(--dsw-alias-scrollbar-hover-l2);max-width:520px}.zGbnIq_candidateToolbar{align-items:center;gap:8px;margin-bottom:6px;display:flex}.zGbnIq_candidateSearch{flex:240px;min-width:0}.zGbnIq_candidateList{flex-direction:column;gap:2px;max-height:320px;margin:0;padding:0;list-style:none;display:flex;overflow-y:auto}.zGbnIq_candidate{border-radius:var(--dsw-radius-md)}.zGbnIq_candidateLabel{cursor:pointer;align-items:center;gap:8px;padding:6px 8px;display:flex}.zGbnIq_candidateId{min-width:0;font-family:var(--ds-font-family-code);text-overflow:ellipsis;white-space:nowrap;flex:auto;font-size:13px;overflow:hidden}.zGbnIq_candidateEmpty{color:var(--dsw-alias-label-secondary);text-align:center;margin:24px 0;font-size:13px;line-height:20px}";
+		const css$3 = ".zGbnIq_section{max-width:720px;color:var(--dsw-alias-label-primary);flex-direction:column;gap:12px;display:flex}.zGbnIq_title{color:var(--dsw-alias-label-primary);margin:0;font-size:16px;font-weight:500;line-height:24px}.zGbnIq_intro{color:var(--dsw-alias-label-tertiary);margin:0;font-size:14px;line-height:22px}.zGbnIq_notice{color:var(--dsw-alias-state-warn-label);margin:0;font-size:12px;line-height:18px}.zGbnIq_savedNotice{color:var(--dsw-alias-state-success-primary);margin:0;font-size:12px;line-height:18px}.zGbnIq_rows{flex-direction:column;gap:8px;margin:12px 0 0;padding:0;list-style:none;display:flex}.zGbnIq_rowCard{border:.5px solid var(--dsw-alias-settings-card-stroke);background:var(--dsw-alias-settings-card-fill);border-radius:var(--dsw-radius-xl);flex-direction:column;gap:12px;padding:12px 14px;display:flex}.zGbnIq_rowHead{align-items:center;gap:10px;display:flex}.zGbnIq_rowIdentity{align-items:center;gap:6px;min-width:0;display:inline-flex}.zGbnIq_rowName{color:var(--dsw-alias-label-primary);font-size:14px;font-weight:500;line-height:22px}.zGbnIq_rowTag{border:.5px solid var(--dsw-alias-border-l3);border-radius:var(--dsw-radius-xs);color:var(--dsw-alias-label-secondary);flex:none;padding:1px 6px;font-size:11px;line-height:16px}.zGbnIq_credentialDot{box-sizing:border-box;corner-shape:round;border-radius:50%;flex:none;width:8px;height:8px;display:inline-block}.zGbnIq_credentialDotConfigured{background:var(--dsw-alias-state-success-primary)}.zGbnIq_credentialDotMissing{background:var(--dsw-alias-state-error-primary)}.zGbnIq_rowActions{align-items:center;gap:4px;margin-left:auto;display:inline-flex}.zGbnIq_primaryButton,.zGbnIq_secondaryButton,.zGbnIq_addButton{box-sizing:border-box;border-radius:var(--dsw-radius-md);height:36px;font:inherit;cursor:pointer;border:none;justify-content:center;align-items:center;gap:4px;padding:0 14px;font-size:14px;line-height:22px;display:inline-flex}.zGbnIq_primaryButton{background:var(--dsw-alias-button-primary-fill);color:var(--dsw-alias-label-primary-foreground)}.zGbnIq_primaryButton:hover:not(:disabled){background:var(--dsw-alias-button-primary-hover)}.zGbnIq_secondaryButton,.zGbnIq_addButton{border:.5px solid var(--dsw-alias-border-l3);color:var(--dsw-alias-label-primary);background:0 0}.zGbnIq_secondaryButton:hover:not(:disabled),.zGbnIq_addButton:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.zGbnIq_secondaryButton:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover-solid)}.zGbnIq_dangerButton{box-sizing:border-box;border-radius:var(--dsw-radius-md);height:36px;color:var(--dsw-alias-state-error-primary);font:inherit;cursor:pointer;background:0 0;border:none;justify-content:center;align-items:center;padding:0 14px;font-size:14px;line-height:22px;display:inline-flex}.zGbnIq_dangerButton:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover-danger)}.zGbnIq_rowActions .zGbnIq_secondaryButton,.zGbnIq_rowActions .zGbnIq_dangerButton{border-radius:var(--dsw-radius-sm);height:28px;padding:0 10px;font-size:12px;line-height:18px}.zGbnIq_primaryButton:disabled,.zGbnIq_secondaryButton:disabled,.zGbnIq_dangerButton:disabled,.zGbnIq_addButton:disabled,.zGbnIq_linkButton:disabled,.zGbnIq_addModelButton:disabled{opacity:.4;cursor:default}.zGbnIq_primaryButton:focus-visible,.zGbnIq_secondaryButton:focus-visible,.zGbnIq_dangerButton:focus-visible,.zGbnIq_addButton:focus-visible,.zGbnIq_linkButton:focus-visible,.zGbnIq_addModelButton:focus-visible,.zGbnIq_iconButton:focus-visible,.zGbnIq_customizedSummary:focus-visible{box-shadow:0 0 0 2px var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline:none}.zGbnIq_editor{border-radius:var(--dsw-radius-lg);background:var(--dsw-alias-bg-module-platform);flex-direction:column;gap:14px;padding:14px 16px;display:flex}.zGbnIq_editorHeader{align-items:baseline;gap:8px;display:flex}.zGbnIq_editorTitle{color:var(--dsw-alias-label-primary);font-size:14px;font-weight:500;line-height:22px}.zGbnIq_editorRoute{color:var(--dsw-alias-label-tertiary);font-size:12px;line-height:18px}.zGbnIq_field{flex-direction:column;gap:6px;display:flex}.zGbnIq_fieldLabel{color:var(--dsw-alias-label-secondary);align-items:center;gap:10px;font-size:12px;font-weight:500;line-height:18px;display:inline-flex}.zGbnIq_linkButton{box-sizing:border-box;border-radius:var(--dsw-radius-sm);height:28px;color:var(--dsw-alias-label-tertiary);font:inherit;cursor:pointer;background:0 0;border:none;align-items:center;padding:0 10px;font-size:12px;line-height:18px;display:inline-flex}.zGbnIq_linkButton:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary)}.zGbnIq_advancedHint{color:var(--dsw-alias-label-tertiary);margin:0;font-size:12px;line-height:18px}.zGbnIq_editorActions{justify-content:flex-end;gap:8px;display:flex}.zGbnIq_addBlock{flex-direction:column;gap:12px;display:flex}.zGbnIq_addActions{display:flex}.zGbnIq_addButton{border:1px dashed var(--dsw-alias-border-l3);border-radius:var(--dsw-radius-lg);flex:1 1 0;gap:6px;min-width:180px;height:44px}.zGbnIq_addModes{flex-direction:column;align-items:flex-start;gap:8px;display:flex}.zGbnIq_addPanel{flex-direction:column;gap:14px;display:flex}.zGbnIq_addPanel[hidden]{display:none}.zGbnIq_addCard,.zGbnIq_setupCard{border-radius:var(--dsw-radius-lg);background:var(--dsw-alias-bg-module-platform);flex-direction:column;gap:14px;padding:14px 16px;list-style:none;display:flex}.zGbnIq_addCard .zGbnIq_editor,.zGbnIq_setupCard .zGbnIq_editor{background:0 0;padding:0}.zGbnIq_customized{border-top:.5px solid var(--dsw-alias-border-l2);padding-top:10px}.zGbnIq_customizedSummary{border-radius:var(--dsw-radius-sm);cursor:pointer;width:fit-content;color:var(--dsw-alias-label-secondary);align-items:center;gap:6px;margin-left:-4px;padding:2px 4px;font-size:12px;font-weight:500;line-height:18px;list-style:none;display:flex}.zGbnIq_customizedSummary::-webkit-details-marker{display:none}.zGbnIq_customizedSummary:before{content:\"\";border-bottom:1.5px solid;border-right:1.5px solid;width:5px;height:5px;transition:transform .12s;transform:rotate(-45deg)translate(-1px,-1px)}.zGbnIq_customized[open]>.zGbnIq_customizedSummary:before{transform:rotate(45deg)translate(-1px,-1px)}.zGbnIq_customizedSummary:hover{color:var(--dsw-alias-label-primary)}.zGbnIq_customizedBody{flex-direction:column;gap:12px;padding-top:12px;display:flex}.zGbnIq_modelCatalog{border-top:.5px solid var(--dsw-alias-border-l2);flex-direction:column;gap:10px;padding-top:12px;display:flex}.zGbnIq_modelCatalogHeading{flex-direction:column;gap:2px;display:flex}.zGbnIq_modelCatalogTitle{color:var(--dsw-alias-label-secondary);font-size:12px;font-weight:500;line-height:18px}.zGbnIq_modelCatalogMeta,.zGbnIq_modelEmpty{color:var(--dsw-alias-label-tertiary);margin:0;font-size:12px;line-height:18px}.zGbnIq_modelList{flex-direction:column;gap:8px;display:flex}.zGbnIq_modelListHead{justify-content:space-between;align-items:flex-start;gap:12px;display:flex}.zGbnIq_modelEntry{border:.5px solid var(--dsw-alias-border-l4);border-radius:var(--dsw-radius-lg);padding:6px}.zGbnIq_modelRow{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto auto;align-items:center;gap:6px;display:grid}.zGbnIq_iconButton{box-sizing:border-box;border-radius:var(--dsw-radius-sm);width:28px;height:28px;color:var(--dsw-alias-label-tertiary);cursor:pointer;background:0 0;border:none;justify-content:center;align-items:center;display:inline-flex}.zGbnIq_iconButton:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.zGbnIq_iconButton:disabled{cursor:default;opacity:.4}.zGbnIq_iconButtonDanger:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover-danger);color:var(--dsw-alias-state-error-primary)}.zGbnIq_modelAdvanced{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:8px 4px 2px;display:grid}.zGbnIq_modelField{flex-direction:column;gap:4px;min-width:0;display:flex}.zGbnIq_modelInputTypes{border:none;grid-column:1/-1;min-width:0;margin:0;padding:0}.zGbnIq_modelInputTypes legend{margin-bottom:4px;padding:0}.zGbnIq_modelInputChoices{flex-wrap:wrap;align-items:center;gap:16px;min-height:32px;display:flex}.zGbnIq_modelFieldLabel{color:var(--dsw-alias-label-tertiary);font-size:12px;line-height:18px}.zGbnIq_modelEmpty{border:1px dashed var(--dsw-alias-border-l3);border-radius:var(--dsw-radius-lg);text-align:center;padding:12px}.zGbnIq_addModelButton{box-sizing:border-box;border:.5px solid var(--dsw-alias-border-l3);border-radius:var(--dsw-radius-sm);height:28px;color:var(--dsw-alias-label-primary);font:inherit;cursor:pointer;background:0 0;align-self:flex-start;align-items:center;gap:4px;padding:0 10px;font-size:12px;line-height:18px;display:inline-flex}.zGbnIq_addModelButton:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.zGbnIq_input{box-sizing:border-box;border:.5px solid var(--dsw-alias-border-l4);border-radius:var(--dsw-radius-md);width:100%;height:32px;font:inherit;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);padding:0 10px;font-size:14px;line-height:22px}select.zGbnIq_input{cursor:pointer;max-width:240px}.zGbnIq_input:focus{border-color:var(--dsw-alias-state-business-primary);outline:none}.zGbnIq_input::placeholder{color:var(--dsw-alias-label-dimmed)}.zGbnIq_input:disabled{opacity:.6;cursor:default}.zGbnIq_selectInput{appearance:none;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%2381858C' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\");background-position:right 12px center;background-repeat:no-repeat;background-size:12px 12px;padding-right:32px}.zGbnIq_error{color:var(--dsw-alias-state-error-primary);margin:0;font-size:12px;line-height:18px}.zGbnIq_deleteDialog{width:min(480px,100%)}.zGbnIq_deleteConfirm:not(:disabled){border-color:var(--dsw-alias-state-error-primary);color:var(--dsw-alias-state-error-primary)}.zGbnIq_deleteConfirm:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover-danger)}.zGbnIq_hiddenLabel{clip:rect(0 0 0 0);white-space:nowrap;width:1px;height:1px;position:absolute;overflow:hidden}@media (prefers-reduced-motion:reduce){.zGbnIq_customizedSummary:before,.zGbnIq_switchThumb{transition:none}}.zGbnIq_fetchDialog{--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l2);--dsh-scrollbar-thumb-hover:var(--dsw-alias-scrollbar-hover-l2);max-width:520px}.zGbnIq_candidateToolbar{align-items:center;gap:8px;margin-bottom:6px;display:flex}.zGbnIq_candidateSearch{flex:240px;min-width:0}.zGbnIq_candidateList{flex-direction:column;gap:2px;max-height:320px;margin:0;padding:0;list-style:none;display:flex;overflow-y:auto}.zGbnIq_candidate{border-radius:var(--dsw-radius-md)}.zGbnIq_candidateLabel{cursor:pointer;align-items:center;gap:8px;padding:6px 8px;display:flex}.zGbnIq_candidateId{min-width:0;font-family:var(--ds-font-family-code);text-overflow:ellipsis;white-space:nowrap;flex:auto;font-size:13px;overflow:hidden}.zGbnIq_candidateEmpty{color:var(--dsw-alias-label-secondary);text-align:center;margin:24px 0;font-size:13px;line-height:20px}\n/* MIT; selected original rules from ModelsSection.module.css at the recorded revision. */\n.harness-model-reasoning {\n  grid-column: 1 / -1;\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n  min-width: 0;\n}\n\n.harness-model-reasoning-label {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n}\n\n.harness-model-reasoning-head {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 8px;\n}\n\n.harness-model-reasoning-row {\n  display: grid;\n  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;\n  align-items: center;\n  gap: 6px;\n}\n\n.harness-model-reasoning-row .zGbnIq_selectInput {\n  max-width: none;\n}\n\n.harness-model-reasoning-value {\n  font-family: var(--ds-font-family-code);\n  font-size: 13px;\n}\n\n.harness-model-reasoning-help {\n  width: 16px;\n  height: 16px;\n  padding: 0;\n  border: 0.5px solid var(--dsw-alias-border-l3);\n  border-radius: 50%;\n  corner-shape: round;\n  background: transparent;\n  color: var(--dsw-alias-label-tertiary);\n  font: inherit;\n  font-size: 11px;\n  line-height: 15px;\n  text-align: center;\n  cursor: help;\n}\n\n.harness-model-reasoning-help:focus-visible {\n  color: var(--dsw-alias-label-primary);\n  border-color: var(--dsw-alias-label-tertiary);\n}\n";
 		const tagId$3 = "@deepseek-ai/dsh-client-ui-settings-models/ModelsSection.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$3) + "]") === null) {
 			const tag = document.createElement("style");
@@ -207,6 +207,141 @@ window.__ModuleLoader__.load({
 		* @param props - drafted fields and their owning editor's actions.
 		* @returns one expandable model entry.
 		*/
+		const HarnessModelReasoning = (function createModelReasoningEditor(react, jsx, primitives, modelDrafts, styles) {
+  // Copyright (c) 2026 DeepSeek; MIT, retained in /deepseek/licenses/upstream-source-reference/LICENSE.
+  const { useState } = react;
+  const { jsx: _jsx, jsxs: _jsxs, Fragment: _Fragment } = jsx;
+  const { IconPlusOutlineRegular, IconTrashOutlineRegular, Switch, Tooltip } = primitives;
+/** Reasoning-level declarations for a model on a hand-declared pi-ai route. */
+/** Levels a model offers when the switch is turned on, where the schema lists them: Off plus the common OpenAI-compatible trio. */
+const INITIAL_LEVELS = ['off', 'low', 'medium', 'high'];
+/** The wire value a level sends unless its row says otherwise; `null` is the Off entry that sends nothing. */
+function defaultValue(level) {
+    return level === 'off' ? null : level;
+}
+/**
+ * Whether pi-ai accepts a stored value: a non-empty string, or nothing for Off.
+ * @param level - the declared level.
+ * @param wire - the value stored for it.
+ * @returns whether the adapter would resolve the entry.
+ */
+function acceptedValue(level, wire) {
+    return typeof wire === 'string' ? wire.length > 0 : wire === null && level === 'off';
+}
+/**
+ * Read the declared levels from a row in their stored order, including a key
+ * the offered levels do not name, so an edit never drops it.
+ * @param model - model row as drafted.
+ * @returns the entries; empty for a valueless field, which pi-ai refuses, and
+ * `undefined` when the field is absent or `false`.
+ */
+function readEfforts(model) {
+    const value = model['reasoningEfforts'];
+    if (value === null)
+        return [];
+    if (typeof value !== 'object' || Array.isArray(value))
+        return undefined;
+    return Object.entries(value);
+}
+/**
+ * Replace a row's declared levels, preserving every other field.
+ * @param model - model row as drafted.
+ * @param entries - the levels to write in row order, or `undefined` to remove the field.
+ * @returns the replacement row.
+ */
+function withEfforts(model, entries) {
+    const next = { ...model };
+    if (entries === undefined) {
+        // Absent is how a hand-declared model says it does not reason.
+        Reflect.deleteProperty(next, 'reasoningEfforts');
+        return next;
+    }
+    next['reasoningEfforts'] = Object.fromEntries(entries);
+    return next;
+}
+/**
+ * Mirror the pi-ai refusals of a hand-declared `reasoningEfforts`, so a card
+ * names the row instead of failing at the write.
+ * @param value - drafted `models` value, or `undefined` while inherited.
+ * @returns the first refused row, or `undefined` when the adapter will accept every row.
+ */
+function validateReasoningEfforts(value) {
+    for (const [index, model] of modelDrafts(value).entries()) {
+        const entries = readEfforts(model);
+        if (entries === undefined)
+            continue;
+        if (entries.some(([level, wire]) => !acceptedValue(level, wire)))
+            return { index, key: 'modelReasoningValueRequired' };
+        if (!entries.some(([level]) => level !== 'off'))
+            return { index, key: 'modelReasoningNeedsLevel' };
+    }
+    return undefined;
+}
+/**
+ * Edit the `reasoningEfforts` a hand-declared pi-ai model offers: a switch,
+ * then one row per level pairing the level with the value sent for it. Every
+ * row is read from the model, so a reused instance shows its new model.
+ * @param props - model declaration and row replacement action.
+ * @returns the reasoning-level group.
+ */
+function ModelReasoningEfforts({ model, levels, position, disabled, t, onChange }) {
+    const entries = readEfforts(model);
+    // Only the focused field keeps its own text, so a field cleared while typing
+    // stays empty although its level's name is stored. Leaving the field drops
+    // it, and deleting a model, resetting the list, or folding these options all
+    // move focus first, so no text outlives the field it was typed into.
+    const [typing, setTyping] = useState(undefined);
+    const label = `${t('modelReasoning')} ${String(position)}`;
+    const used = entries?.map(([level]) => level) ?? [];
+    const write = (next) => { onChange(withEfforts(model, next)); };
+    const replaceAt = (current, index, entry) => current.map((existing, at) => at === index ? entry : existing);
+    const changeLevel = (current, index, from, wire, to) => {
+        // Only a custom spelling between two thinking levels carries over; a value
+        // still spelled as its old level, or one crossing to or from Off, resets.
+        const carried = typeof wire === 'string' && wire.length > 0 && wire !== from && from !== 'off' && to !== 'off';
+        write(replaceAt(current, index, [to, carried ? wire : defaultValue(to)]));
+    };
+    const addLevel = (current) => {
+        const highest = Math.max(-1, ...used.map(level => levels.indexOf(level)));
+        const level = levels.find((candidate, index) => index > highest && !used.includes(candidate))
+            ?? levels.find(candidate => !used.includes(candidate));
+        /* v8 ignore next -- the add button is disabled once every level has a row */
+        if (level === undefined)
+            return;
+        write([...current, [level, defaultValue(level)]]);
+    };
+    const editValue = (current, index, level, text) => {
+        setTyping({ level, text });
+        const trimmed = text.trim();
+        write(replaceAt(current, index, [level, trimmed.length === 0 ? defaultValue(level) : trimmed]));
+    };
+    const leaveValue = (current, index, level, wire) => {
+        setTyping(undefined);
+        // Leaving a field whose stored value the adapter refuses repairs it with the level name.
+        if (!acceptedValue(level, wire))
+            write(replaceAt(current, index, [level, defaultValue(level)]));
+    };
+    // A stored key the offered levels do not name stays selectable in its own row.
+    const choicesFor = (level) => [
+        ...levels.includes(level) ? [] : [level],
+        ...levels.filter(choice => choice === level || !used.includes(choice)),
+    ];
+    const initialEntries = INITIAL_LEVELS.filter(level => levels.includes(level)).map(level => [level, defaultValue(level)]);
+    const refused = entries?.some(([level, wire]) => !acceptedValue(level, wire)) === true;
+    const missingLevel = entries !== undefined && !used.some(level => level !== 'off');
+    return (_jsxs("div", { className: styles['modelReasoning'], role: "group", "aria-label": label, children: [_jsxs("div", { className: styles['modelReasoningHead'], children: [_jsxs("span", { className: `${styles['modelFieldLabel']} ${styles['modelReasoningLabel']}`, children: [t('modelReasoning'), _jsx(Tooltip, { label: t('modelReasoningHelpText'), side: "right", delayMs: 0, focusDelayMs: 0, portal: true, openOnClick: true, children: _jsx("button", { type: "button", className: styles['helpButton'], "aria-label": t('modelReasoningHelp'), children: "?" }) })] }), _jsx(Switch, { checked: entries !== undefined, label: label, disabled: disabled, onChange: (on) => { write(on ? initialEntries : undefined); } })] }), entries === undefined
+                ? null
+                : (_jsxs(_Fragment, { children: [entries.length > 0
+                            ? (_jsxs("div", { className: styles['modelReasoningRow'], "aria-hidden": "true", children: [_jsx("span", { className: styles['modelFieldLabel'], children: t('modelReasoningLevel') }), _jsx("span", { className: styles['modelFieldLabel'], children: t('modelReasoningValue') })] }))
+                            : null, entries.map(([level, wire], index) => (_jsxs("div", { className: styles['modelReasoningRow'], children: [_jsx("select", { className: `${styles['input']} ${styles['selectInput']}`, value: level, "aria-label": `${t('modelReasoningLevel')} ${String(index + 1)}`, disabled: disabled, onChange: (event) => { changeLevel(entries, index, level, wire, event.target.value); }, children: choicesFor(level).map(choice => (_jsx("option", { value: choice, children: choice }, choice))) }), _jsx("input", { className: `${styles['input']} ${styles['modelReasoningValueInput']}`, type: "text", value: typing?.level === level ? typing.text : typeof wire === 'string' ? wire : '', placeholder: level === 'off' ? t('modelReasoningOffValuePlaceholder') : level, "aria-label": `${level} ${t('modelReasoningValue')}`, "aria-invalid": !acceptedValue(level, wire),
+                                    // Off only turns reasoning off; a value stored in cordis.patch.yml is shown and kept.
+                                    disabled: disabled || level === 'off', onChange: (event) => { editValue(entries, index, level, event.target.value); }, onBlur: () => { leaveValue(entries, index, level, wire); } }), _jsx("button", { type: "button", className: `${styles['iconButton']} ${styles['iconButtonDanger']}`, "aria-label": `${t('modelReasoningRemove')} ${level}`, title: t('modelReasoningRemove'), disabled: disabled, onClick: () => { write(entries.filter((_entry, at) => at !== index)); }, children: _jsx(IconTrashOutlineRegular, { size: 14 }) })] }, index))), refused
+                            ? _jsx("p", { className: styles['error'], children: t('modelReasoningValueRequired') })
+                            : missingLevel ? _jsx("p", { className: styles['error'], children: t('modelReasoningNeedsLevel') }) : null, _jsxs("button", { type: "button", className: styles['addModelButton'], disabled: disabled || levels.every(level => used.includes(level)), onClick: () => { addLevel(entries); }, children: [_jsx(IconPlusOutlineRegular, { size: 14 }), t('modelReasoningAdd')] })] }))] }));
+}
+
+  return { Editor: ModelReasoningEfforts, validate: validateReasoningEfforts };
+})(react, react_jsx_runtime, _deepseek_ai_dsh_client_ui_primitives, modelDrafts, { ...ModelsSection_module_css_default, ...{"modelReasoning":"harness-model-reasoning","modelReasoningLabel":"harness-model-reasoning-label","modelReasoningHead":"harness-model-reasoning-head","modelReasoningRow":"harness-model-reasoning-row","modelReasoningValueInput":"harness-model-reasoning-value","helpButton":"harness-model-reasoning-help"} });
 		function ModelRow(props) {
 			const { model, position, t, disabled } = props;
 			return (0, react_jsx_runtime.jsxs)("div", {
@@ -248,7 +383,7 @@ window.__ModuleLoader__.load({
 					]
 				}), props.expanded ? (0, react_jsx_runtime.jsxs)("div", {
 					className: ModelsSection_module_css_default["modelAdvanced"],
-					children: [(0, react_jsx_runtime.jsxs)("label", { children: [(0, react_jsx_runtime.jsx)("span", { children: t("modelReasoning") }), (0, react_jsx_runtime.jsx)("textarea", { "aria-label": t("modelReasoning") + " " + position, disabled, value: typeof model.reasoningEfforts === "string" ? model.reasoningEfforts : model.reasoningEfforts === undefined ? "" : JSON.stringify(model.reasoningEfforts), placeholder: '{"low":"low","medium":"medium","high":"high"}', onChange: event => { const raw = event.target.value; let value; try { value = raw.trim() ? JSON.parse(raw) : undefined; } catch { value = raw; } props.onFieldChange("reasoningEfforts", value); } })] }), ["contextWindow", "maxTokens"].map((field) => (0, react_jsx_runtime.jsxs)("label", {
+					children: [["contextWindow", "maxTokens"].map((field) => (0, react_jsx_runtime.jsxs)("label", {
 						className: ModelsSection_module_css_default["modelField"],
 						children: [(0, react_jsx_runtime.jsx)("span", {
 							className: ModelsSection_module_css_default["modelFieldLabel"],
@@ -274,7 +409,7 @@ window.__ModuleLoader__.load({
 						disabled: disabled || props.inputLoading === true,
 						t,
 						onChange: props.onChange
-					})]
+					}), (0, react_jsx_runtime.jsx)(HarnessModelReasoning.Editor, { model, levels: ["off","minimal","low","medium","high","xhigh","max"], position, disabled, t, onChange: props.onChange })]
 				}) : null]
 			});
 		}
@@ -365,7 +500,13 @@ window.__ModuleLoader__.load({
 					key: "modelContextInvalid"
 				};
 				const efforts = model.reasoningEfforts;
-      if (efforts !== undefined && efforts !== false && (typeof efforts !== "object" || efforts === null || Array.isArray(efforts) || !Object.keys(efforts).some(key => key !== "off") || Object.entries(efforts).some(([key, wire]) => !["off","minimal","low","medium","high","xhigh","max"].includes(key) || typeof wire !== "string" || !/^[A-Za-z0-9_-]{1,100}$/.test(wire)))) return { index, key: "modelReasoningInvalid" };
+      if (efforts !== undefined && efforts !== false) {
+        if (typeof efforts !== "object" || efforts === null || Array.isArray(efforts)) return { index, key: "modelReasoningInvalid" };
+        const refusal = HarnessModelReasoning.validate([model]);
+        if (refusal) return { index, key: refusal.key };
+        if (Object.entries(efforts).some(([key, wire]) => !["off","minimal","low","medium","high","xhigh","max"].includes(key) ||
+          !(key === "off" && wire === null) && (typeof wire !== "string" || !/^[A-Za-z0-9_-]{1,100}$/.test(wire)))) return { index, key: "modelReasoningInvalid" };
+      }
       const maxTokens = model["maxTokens"];
 				if (maxTokens !== void 0 && (typeof maxTokens !== "number" || !Number.isInteger(maxTokens) || maxTokens <= 0)) return {
 					index,
@@ -2896,7 +3037,18 @@ window.__ModuleLoader__.load({
 			modelId: "Model ID",
 			modelName: "Display name",
 			modelNamePlaceholder: "Uses the model ID when empty",
-			modelReasoning: "Supported reasoning levels (JSON; leave empty if unsupported)", modelReasoningInvalid: "Invalid reasoning level map", contextWindow: "Context window",
+			modelReasoning: "Reasoning levels",
+modelReasoningLevel: "Level",
+modelReasoningValue: "API value",
+modelReasoningHelp: "About reasoning levels",
+modelReasoningHelpText: "The API value is sent in the request's reasoning-effort field, such as OpenAI's reasoning_effort. It defaults to the level name; where the model provider's API documentation specifies a different value, follow it. Off turns reasoning off and needs no value; a value already written in the configuration is kept and sent.",
+modelReasoningNeedsLevel: "Add at least one level besides Off, or turn reasoning levels off.",
+modelReasoningValueRequired: "Every level besides Off needs an API value, and no value can be empty.",
+modelReasoningAdd: "Add level",
+modelReasoningRemove: "Delete level",
+modelReasoningOffValuePlaceholder: "Turns reasoning off",
+modelReasoningInvalid: "Invalid reasoning level or API value",
+contextWindow: "Context window",
 			contextWindowPlaceholder: "Uses the provider default",
 			maxTokens: "Max output tokens",
 			maxTokensPlaceholder: "Uses the provider default",
@@ -3012,7 +3164,18 @@ window.__ModuleLoader__.load({
 			modelId: "模型 ID",
 			modelName: "显示名称",
 			modelNamePlaceholder: "留空时使用模型 ID",
-			modelReasoning: "支持的推理档位（JSON；不支持请留空）", modelReasoningInvalid: "推理档位映射无效", contextWindow: "上下文窗口",
+			modelReasoning: "推理等级",
+modelReasoningLevel: "档位",
+modelReasoningValue: "API 参数值",
+modelReasoningHelp: "推理等级说明",
+modelReasoningHelpText: "API 参数值会写入请求的推理强度字段（如 OpenAI 的 reasoning_effort），默认与档位名相同；如有不同，以模型提供商的 API 文档为准。Off 表示关闭思考，不需要填写参数值；配置中已写入的值会保留并发送。",
+modelReasoningNeedsLevel: "至少添加一个 Off 以外的档位；不需要思考请关闭推理等级。",
+modelReasoningValueRequired: "Off 以外的档位都需要填写 API 参数值，且参数值不能为空字符串。",
+modelReasoningAdd: "添加档位",
+modelReasoningRemove: "删除档位",
+modelReasoningOffValuePlaceholder: "关闭思考",
+modelReasoningInvalid: "推理档位或 API 参数值无效",
+contextWindow: "上下文窗口",
 			contextWindowPlaceholder: "使用提供商默认值",
 			maxTokens: "最大输出 token 数",
 			maxTokensPlaceholder: "使用提供商默认值",
