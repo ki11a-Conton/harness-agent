@@ -206,3 +206,8 @@ docs/evidence/release-v111-claim-lock-20261018/** -text -whitespace
 docs/evidence/release-v111-mutation-scope-20261018/** -text -whitespace
 
 docs/evidence/release-v111-capture-wait-20261018/** -text -whitespace
+
+# The adopted model editor binds the original upstream bytes and generated JS.
+# Prevent core.autocrlf from altering source/license hashes or --check output.
+third_party/deepseek-model-reasoning/** -text
+scripts/research/web-model-reasoning-component.mjs text eol=lf

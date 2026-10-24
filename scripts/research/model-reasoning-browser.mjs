@@ -65,6 +65,13 @@ async function language(page, locale) {
     await until(async () => await page.locator('html').getAttribute('lang') === expected, 'Locale not rendered');
   }
 }
+async function theme(page, appearance) {
+  await button(page, /^(General|通用设置)$/).click();
+  const current = (await settings()).find(item => item.ns === 'ui-theme').value.preference;
+  if (current !== appearance) await button(page, appearance === 'dark' ? /^(Dark|深色)$/ : /^(Light|浅色)$/).click();
+  await until(async () => (await settings()).find(item => item.ns === 'ui-theme').value.preference === appearance, 'Theme write not committed');
+  await until(async () => await page.evaluate(() => document.documentElement.style.colorScheme) === appearance, 'Actual theme not rendered');
+}
 async function edit(page) {
   await button(page, /^(Models|模型)$/).click(); await button(page, /^(Edit|编辑).*\(ui-reasoning\)$/).click();
   await page.getByText(/^(Customized settings|自定义设置)$/, { exact: true }).click();
@@ -74,6 +81,8 @@ const apply = page => button(page, /^(Apply|Save|保存)$/);
 const group = page => page.getByRole('group', { name: /^(Reasoning levels|推理等级) 1$/, exact: true });
 const toggle = page => page.getByRole('switch', { name: /^(Reasoning levels|推理等级) 1$/, exact: true });
 async function layout(page, label) {
+  const appearance = await page.evaluate(() => document.documentElement.style.colorScheme);
+  assert.equal(appearance, label.includes('dark') ? 'dark' : 'light');
   const card = page.locator('[class$="_modelEntry"]').filter({ has: group(page) });
   await card.scrollIntoViewIfNeeded();
   const context = await page.getByRole('textbox', { name: /^(Context window|上下文窗口) 1$/ }).boundingBox();
@@ -89,7 +98,7 @@ async function layout(page, label) {
   assert.equal(await group(page).locator('textarea').count(), 0);
   await page.screenshot({ path: join(output, label + '.png'), fullPage: true });
   await card.screenshot({ path: join(output, label + '-card.png') });
-  check(label, { context, maximum, bounds });
+  check(label, { context, maximum, bounds, appearance });
 }
 let sessionId, owner, modelId = 'spec-reasoner';
 async function chooseModel(page, id) {
@@ -142,7 +151,7 @@ try {
   await button(page, /^Access mode, current:/).click(); await page.getByRole('menuitem', { name: 'Full access', exact: true }).click();
   await page.getByRole('checkbox').check(); await button(page, 'Enable Full access').click();
   await button(page, 'Access mode, current: Full access').waitFor();
-  await openSettings(page); await language(page, 'en'); await button(page, 'Models').click(); await button(page, 'Add model provider').click();
+  await openSettings(page); await language(page, 'en'); await theme(page, 'light'); await button(page, 'Models').click(); await button(page, 'Add model provider').click();
   await page.getByRole('textbox', { name: 'Provider ID', exact: true }).fill('ui-reasoning');
   await page.getByRole('textbox', { name: 'Display name', exact: true }).fill('UI reasoning');
   await page.getByRole('textbox', { name: 'Base URL', exact: true }).fill(fixture.providerOrigin);
@@ -213,13 +222,13 @@ try {
     { name: 'narrow-zh-dark', locale: 'zh', colorScheme: 'dark', width: 320, height: 1100 },
   ]) {
     const p = await pageOf({ locale: scenario.locale === 'zh' ? 'zh-CN' : 'en-US', colorScheme: scenario.colorScheme, viewport: { width: scenario.width, height: scenario.height } });
-    await openSettings(p); await language(p, scenario.locale); await edit(p);
+    await openSettings(p); await language(p, scenario.locale); await theme(p, scenario.colorScheme); await edit(p);
     await layout(p, scenario.name + '-off'); await toggle(p).click();
     await button(p, /^(Add level|添加档位)$/).click();
     await p.getByRole('combobox', { name: /^(Level|档位) 5$/, exact: true }).selectOption('max');
     await p.getByRole('textbox', { name: /^max (API value|API 参数值)$/, exact: true }).fill('xhigh');
     await layout(p, scenario.name + '-on');
-    await button(p, /^(Cancel|取消)$/).click(); await language(p, 'en'); await button(p, 'Close').click();
+    await button(p, /^(Cancel|取消)$/).click(); await language(p, 'en'); await theme(p, 'light'); await button(p, 'Close').click();
     assert(!Object.hasOwn((await profile()).models[0], 'reasoningEfforts')); check(scenario.name + '-cancel-keeps-profile');
   }
   await Promise.all(assetReads); assert(assets.length && assets.every(asset => asset.sha256 === expectedAsset && new URL(asset.url).searchParams.get('rev') === expectedAsset.slice(0, 12)));
