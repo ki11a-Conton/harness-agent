@@ -1,0 +1,72 @@
+name: inspect original model UI CI failure
+on:
+  push:
+    branches:
+      - diagnostics/model-ui-ci-9c693f61-20261024
+    paths:
+      - '.github/workflows/model-ui-ci-diagnostics.yml'
+permissions:
+  actions: read
+  contents: read
+jobs:
+  original-log:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Read the original failed job without rerunning its tests
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { mkdir, writeFile } from 'node:fs/promises';
+          import { createHash } from 'node:crypto';
+          import { gzipSync } from 'node:zlib';
+          const base = 'https://api.github.com/repos/ki11a-Conton/harness-agent';
+          const headers = { Authorization: `Bearer ${process.env.GH_TOKEN}`, Accept: 'application/vnd.github+json' };
+          const get = async path => {
+            const response = await fetch(base + path, { headers, redirect: 'error', signal: AbortSignal.timeout(30000) });
+            assert.equal(response.status, 200); return response.json();
+          };
+          const run = await get('/actions/runs/40114105915');
+          assert.equal(run.head_sha, '9c693f614a5ef48571328a5a94601b0d4cbf3878');
+          assert.equal(run.head_branch, 'main'); assert.equal(run.path, '.github/workflows/deepseek-ui-installed.yml');
+          const job = await get('/actions/jobs/120931952131');
+          assert.equal(job.run_id, run.id); assert.equal(job.name, 'installed (ubuntu-latest)');
+          assert.equal(job.status, 'completed'); assert.equal(job.conclusion, 'failure');
+          const response = await fetch(base + '/actions/jobs/' + job.id + '/logs', {
+            headers, redirect: 'manual', signal: AbortSignal.timeout(30000),
+          });
+          let bytes;
+          if (response.status === 200) bytes = Buffer.from(await response.arrayBuffer());
+          else {
+            assert([301, 302, 303, 307, 308].includes(response.status));
+            const location = response.headers.get('location'); assert.equal(new URL(location).protocol, 'https:');
+            // Signed storage gets no API Authorization header.
+            const signed = await fetch(location, { signal: AbortSignal.timeout(60000) });
+            assert.equal(signed.status, 200); bytes = Buffer.from(await signed.arrayBuffer());
+          }
+          assert(bytes.length > 0 && bytes.length < 10 * 1024 * 1024);
+          await mkdir('forensics'); await writeFile('forensics/original-job.log', bytes);
+          let text = bytes.toString('utf8');
+          const interesting = text.split('\n').filter(line => /error|failed|cannot|unsupported|not found|missing|ubuntu|chromium|playwright|E[A-Z]{3,}/i.test(line)).slice(-80).join('\n').slice(-16000);
+          const record = { schemaVersion: 1, sourceSha: run.head_sha, runId: run.id, jobId: job.id,
+            status: 'ORIGINAL_FAILED_JOB_LOG', originalConclusion: job.conclusion,
+            rawBytes: bytes.length, rawSha256: createHash('sha256').update(bytes).digest('hex'),
+            steps: job.steps, labels: job.labels, head: text.slice(0, 6000), tail: text.slice(-20000), interesting,
+            truncatedProjection: bytes.length > 26000, qualification: false };
+          const json = JSON.stringify(record); await writeFile('forensics/projection.json', json + '\n');
+          const data = gzipSync(Buffer.from(json)).toString('base64'), size = 3600, total = Math.ceil(data.length / size);
+          assert(total <= 7, 'Bounded annotation budget exceeded; raw log stays in artifact');
+          for (let index = 0; index < total; index++) console.log(`::notice title=Model UI original log chunk ${index + 1}/${total}::` +
+            JSON.stringify({ encoding: 'gzip+base64', index, total, data: data.slice(index * size, (index + 1) * size) }));
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: model-ui-original-job-120931952131
+          path: forensics/
+          if-no-files-found: error
