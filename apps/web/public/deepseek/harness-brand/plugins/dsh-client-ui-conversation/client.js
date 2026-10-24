@@ -22135,6 +22135,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			};
 			(0, react.useEffect)(() => {
 				if (locked || editor === null) return;
+				const focusedRow = document.activeElement?.closest?.('[data-row-key^="session:"]');
+				if (focusedRow && focusedRow.getAttribute("data-row-key") !== "session:" + sessionId) return;
 				focusDraftEditor(editor, revealSelection);
 			}, [
 				locked,

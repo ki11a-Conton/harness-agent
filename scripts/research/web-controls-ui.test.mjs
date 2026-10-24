@@ -138,3 +138,29 @@ test('the retained plan review still sends its exact approval revision and surfa
   assert.deepEqual(calls, ['/plan approve 7']);
   assert.equal(controlsElements(ui.render(), node => node.props?.role === 'alert')[0]?.props.children, 'Approval rejected');
 });
+
+function autoFocusCallback(bytes) {
+  const start = bytes.indexOf('(0, react.useEffect)(() => {\n\t\t\t\tif (locked || editor === null) return;');
+  const body = bytes.indexOf('=> {', start) + 4, end = bytes.indexOf('\n\t\t\t}, [', body);
+  assert(start >= 0 && end > body, 'the actual native automatic draft focus effect is present');
+  return new Function('locked', 'editor', 'sessionId', 'document', 'focusDraftEditor', 'revealSelection', bytes.slice(body, end));
+}
+function automaticFocus(run, rowId, { locked = false, editor = {} } = {}) {
+  let calls = 0;
+  const document = { activeElement: { closest(selector) { assert.equal(selector, '[data-row-key^="session:"]');
+    return rowId === undefined ? null : { getAttribute(name) { assert.equal(name, 'data-row-key'); return 'session:' + rowId; } }; } } };
+  run(locked, editor, 'new-owner', document, () => { calls++; }, () => {});
+  return calls;
+}
+test('original delayed draft autofocus takes focus from a different session row the user already focused with Tab', async () => {
+  assert.equal(automaticFocus(autoFocusCallback(await source('dsh-client-ui-conversation')), 'keyboard-target'), 1);
+});
+test('the actual derived draft autofocus preserves keyboard focus on a different session row', async () => {
+  const run = autoFocusCallback(addControlsUi('dsh-client-ui-conversation', await source('dsh-client-ui-conversation')));
+  assert.equal(automaticFocus(run, 'keyboard-target'), 0);
+});
+test('the actual derived autofocus keeps default and selected-owner focus while retaining readiness guards', async () => {
+  const run = autoFocusCallback(addControlsUi('dsh-client-ui-conversation', await source('dsh-client-ui-conversation')));
+  assert.equal(automaticFocus(run, undefined), 1); assert.equal(automaticFocus(run, 'new-owner'), 1);
+  assert.equal(automaticFocus(run, undefined, { locked: true }), 0); assert.equal(automaticFocus(run, undefined, { editor: null }), 0);
+});

@@ -44,6 +44,12 @@ const registration = String.raw`
 `;
 export function addControlsUi(stem, source) {
   if (stem === 'dsh-client-ui-conversation') {
+    const autoFocus = 'if (locked || editor === null) return;\n\t\t\t\tfocusDraftEditor(editor, revealSelection);';
+    if (source.split(autoFocus).length !== 2) throw new Error('Unreviewed automatic composer focus boundary');
+    // Binding a newly mounted editor can finish after a keyboard user tabs
+    // to another session. Only automatic focus yields; explicit plus-menu,
+    // card and command focus still follow the native editor path.
+    source = source.replace(autoFocus, 'if (locked || editor === null) return;\n\t\t\t\tconst focusedRow = document.activeElement?.closest?.(\'[data-row-key^="session:"]\');\n\t\t\t\tif (focusedRow && focusedRow.getAttribute("data-row-key") !== "session:" + sessionId) return;\n\t\t\t\tfocusDraftEditor(editor, revealSelection);');
     for (const part of ['row', 'tools', 'modes']) {
       const boundary = `className: InputBar_module_css_default.${part},`;
       if (source.split(boundary).length !== 2) throw new Error('Unreviewed composer layout boundary: ' + part);
