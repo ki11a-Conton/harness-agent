@@ -31,6 +31,16 @@ page.on('websocket', socket => socket.on('framereceived', event => {
 page.on('pageerror', error => errors.push(error.message));
 page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
 const button = name => page.getByRole('button', { name, exact: typeof name === 'string' }).filter({ visible: true }).first();
+const composer = () => page.locator('[data-composer-input=true][contenteditable=true]');
+async function modeCommand(description) {
+  await button('Add files or run commands').click();
+  await page.getByRole('option').filter({ hasText: description }).click();
+}
+async function enterPlan() {
+  await modeCommand('Enter or leave plan mode');
+  await button('Plan mode on, press to turn off').waitFor();
+  await until(async () => (await read('session/projections', { request: { sessionId: id } })).values.plan.active, 'Plan mode not persisted');
+}
 const requests = async () => (await readFile(join(evidence, 'requests.jsonl'), 'utf8').catch(error => { if (error.code === 'ENOENT') return ''; throw error; })).split('\n').filter(Boolean).map(line => JSON.parse(line));
 async function until(action, label, ms = 15000) {
   const end = Date.now() + ms;
@@ -82,24 +92,28 @@ const cases = [
     assert(!/插件|\bPlugins\b|Agent presets|Agent 预设|Current version|当前版本/u.test(settings));
     await button('Close').click();
     await page.setViewportSize({ width: 320, height: 1100 });
-    const mode = page.getByRole('combobox', { name: 'Task mode', exact: true });
-    await mode.selectOption('plan');
-    await until(() => mode.inputValue().then(value => value === 'plan'), 'Narrow plan mode did not settle');
+    assert.equal(await page.getByRole('combobox', { name: 'Task mode', exact: true }).count(), 0);
+    await enterPlan();
     const layout = await page.locator('[data-harness-controls]').evaluate(element => {
-      let parent = element.parentElement;
-      while (parent && getComputedStyle(parent).display === 'contents') parent = parent.parentElement;
-      return { width: element.getBoundingClientRect().width, available: parent?.getBoundingClientRect().width ?? 0 };
+      const rect = element.getBoundingClientRect();
+      return { left: rect.left, right: rect.right, width: rect.width, viewport: innerWidth,
+        buttons: [...element.querySelectorAll('button')].filter(button => button.getClientRects().length).map(button => button.getBoundingClientRect().toJSON()) };
     });
-    assert(layout.available > 0, 'Narrow controls must have a real containing box');
-    assert(layout.width >= layout.available - 2, 'Narrow controls need their own full row: ' + JSON.stringify(layout));
+    assert(layout.width > 0 && layout.left >= 0 && layout.right <= layout.viewport + 1, JSON.stringify(layout));
+    assert(layout.buttons.length > 0 && layout.buttons.every(rect => rect.width > 0 && rect.left >= 0 && rect.right <= layout.viewport + 1), 'Native composer controls overflow: ' + JSON.stringify(layout));
     await page.screenshot({ path: join(output, 'narrow-plan-mode.png'), fullPage: true });
-    await mode.selectOption('default');
-    await until(() => mode.inputValue().then(value => value === 'default'), 'Narrow plan mode did not exit');
-    await mode.selectOption('goal');
-    await page.getByRole('textbox', { name: 'Goal objective', exact: true }).waitFor();
+    await button('Plan mode on, press to turn off').click();
+    await until(async () => !(await read('session/projections', { request: { sessionId: id } })).values.plan.active, 'Narrow plan mode did not exit');
+    const before = (await requests()).length;
+    await modeCommand('Set or view the goal for a long-running task');
+    await page.locator('[data-composer-input=true][data-phase=claimed]').waitFor();
+    await composer().pressSequentially('An unsent native goal draft');
+    assert.equal(await page.getByRole('textbox', { name: 'Goal objective', exact: true }).count(), 0);
     await page.screenshot({ path: join(output, 'narrow-goal-editor.png'), fullPage: true });
-    await button('Cancel').click();
-    await page.getByRole('textbox', { name: 'Goal objective', exact: true }).waitFor({ state: 'hidden' });
+    await composer().press('ControlOrMeta+A'); await composer().press('Backspace');
+    await until(async () => (await composer().innerText()).trim() === '', 'Native draft did not clear');
+    assert.equal(await read('goals/get', { agentId: id }), undefined);
+    assert.equal((await requests()).length, before, 'Cancelling a goal draft must not call the model');
     await page.setViewportSize({ width: 1440, height: 900 });
   }],
   ['permission-real-denial-and-confirmation', async () => {
@@ -112,8 +126,7 @@ const cases = [
     const state = await read('session/projections', { request: { sessionId: id } }); assert.equal(state.values.permissions.currentValue, 'danger-full-access');
   }],
   ['plan-review-before-real-write', async () => {
-    await page.getByRole('combobox', { name: 'Task mode', exact: true }).selectOption('plan');
-    await until(async () => (await read('session/projections', { request: { sessionId: id } })).values.plan.active, 'Plan mode not persisted');
+    await enterPlan();
     await prompt('[fixture:plan] Prepare the actual file change; await human approval.');
     await assert.rejects(readFile(join(fixture.cwd, 'plan-approved.txt')), { code: 'ENOENT' });
     const review = page.locator('[data-harness-plan-review]'); await review.waitFor({ timeout: 30000 }); await review.locator('summary').click();
@@ -156,9 +169,12 @@ const cases = [
     assert(await page.getByText('Output token limit reached', { exact: true }).isVisible(), 'Compression lost the previous turn');
   }],
   ['goal-create-pause-edit-resume-clear', async () => {
-    await page.getByRole('combobox', { name: 'Task mode', exact: true }).selectOption('goal');
-    await page.getByRole('textbox', { name: 'Goal objective', exact: true }).fill('[fixture:read] Review demo.js and improve the coding proof.');
-    const before = (await requests()).length; await button('Start goal').click();
+    await modeCommand('Set or view the goal for a long-running task');
+    await page.locator('[data-composer-input=true][data-phase=claimed]').waitFor();
+    await composer().pressSequentially('[fixture:read] Review demo.js and improve the coding proof.');
+    const before = (await requests()).length, saved = rpc.waitForResult('commands/execute', 30000);
+    await button('Send message').click();
+    const receipt = await saved; if (receipt.error) throw receipt.error; assert.equal(receipt.result.ok, true);
     await button('Pause goal').waitFor();
     await until(async () => (await requests()).length >= before + 3, 'Goal did not continue across actual rounds', 30000);
     await button('Pause goal').click(); await button('Resume goal').waitFor();

@@ -1,0 +1,24 @@
+# 将 Goal / Plan 移入输入框 ➕
+
+基线 main `086155ec`。上游固定 `22ddee37`：ui-commands 用 definitionId 选择 Goal/Plan 的原生图标、语言及分组，使用 input.hint 将 Goal 作为主输入框的 command claim；现有 Host 只有 Compact 提供 definitionId，Goal 无 input 描述，独立 HarnessControls 另行渲染模式下拉框与目标 textarea。
+
+| 阶段 | 做什么 | 怎么做 | 怎么验收 |
+| --- | --- | --- | --- |
+| C0 | 固定源码与反例 | 读取上游 resolution/presentation/service、Goal command 和 PlanChip；保存摘要。用当前生产宿主观察旧下拉框、➕ 和 bare Goal | 真实浏览器记录旧界面及命令结果；副作用和付费调用为0 |
+| C1 | 复用原生菜单入口 | 给 Host Goal/Plan 提供正确 definitionId，Goal 提供参数 hint；移除独立 select 与目标 textarea。Goal 复用主输入框，Plan 菜单/`/plan` 使用现有切换命令。状态与退出沿用 GoalDock、PlanChip，审阅仍保留 | 无独立任务模式 select；➕ 中英文原生图标项可点且可键盘到达；`/goal` 可准备目标输入，填目标后保存并开始有界轮次；`/plan` 真正切换状态 |
+| C2 | 保留模式与安全语义 | bare Goal 只查询状态/提示用法，不创建空目标。暂停、恢复、清除、Plan 审批、权限及会话隔离沿用原链；取消输入无状态变更，Plan+Goal 组合仍受计划只读约束 | 真实持久化/刷新/新会话；计划批准前不写文件，批准后才写；Goal pause 后不新增轮次；命令错误可见，取消和附件拒绝不丢草稿 |
+| C3 | 更新回归与响应式检查 | 将旧 dropdown 测试改用真实 ➕/指令，保留原业务断言；新增中英、桌面/手机/窄屏、鼠标/键盘和 bare 指令场景 | 新场景、原 PR15 10 场景、日常 42 场景继续通过；无横向溢出/页面错误；Compact 等既有 ➕ 功能保持 |
+| C4 | 干净源码交付 | 生成/许可/vendor 一致性、类型、相关安全和全量测试；同源码安装包验证；提交推送及精确 SHA CI | 实际加载资产与 archive manifest 一致；原始输出和截图可复核；主线 CI 真实 Windows/Ubuntu 通过，旧 release 保留 |
+
+本任务复用现有原生组件和 Host 控制协议，不重写 Goal 引擎或 Core，不提供未接入的附件能力。默认编程状态不额外占用一个模式选择框；Plan 和 Goal 的真实状态仍可见并可退出。
+
+## 实施记录
+
+- 已真实复现旧版缺陷：➕ 的 Goal 缺少参数输入描述，点击即提交空目标，Host 拒绝；独立模式选择框与另一套目标 textarea 重复。现已补齐原生 definitionId / input.hint，并移除重复组件。
+- `/goal` 准备主输入框中的目标指令，填写目标后发送；中文界面使用原生 `/目标` 标记，也接受英文 `/goal`。➕ 的 Plan 或裸 `/plan` 切换计划状态，原生 Plan 标记可退出。裸 Goal 的后端查询不再创建空目标。
+- GoalDock 的暂停、编辑、恢复、清除、目标轮次，以及原 Plan 审阅与精确版本批准保持。Goal 不会绕过未批准计划；两者共存时 Goal driver 等待计划退出。
+- 截图检查发现旧自定义工具栏 CSS 误用于原生行时，会在窄屏把输入滚动区压至 0 高。已将状态样式限定为 data-harness-mode-status，移除旧全行布局覆盖；新增可见高度与文字裁剪断言，保留红例和修复后截图。
+- 原 PR15 十场景保留全部业务断言，只将下拉框/旧目标编辑器改为真实 ➕、主输入框和原生状态标记。日常交互与品牌验收也同步使用新入口。
+- 新增 composer-mode-browser.mjs，安装包验收从 manifest 取实际 composer / commands SHA256，检查新菜单、键盘、取消、刷新、中文英文指令、Goal 与 Plan 的安全组合及真实 loopback HTTP。原安装包 30 场景、键盘 3 场景、PR15 10 场景、模型规格、日常 42 场景、连接和 CLI 验收仍运行。
+
+本地已完成类型检查、Node UI 44/44、控制集成 28/28、PR15 浏览器 10/10，以及原生菜单 24/24（包含输入可见性修复、中文别名和本地化目标提交）。全量回归、干净源码安装包及远端四条 CI 为最终交付守卫；完成状态及精确源码/安装包摘要记录在独立验收收据中，不能用旧 SHA 的结果代替。本次不修改既有 release、tag 或发行资产。

@@ -465,10 +465,12 @@ export function createActivityService(host: ActivityHost) {
         keys(args, ["agentId"]); await session(args.agentId);
         return [{ name: "cancel", description: "Cancel this session's actual active or waiting turn" }, { name: "skills", description: "List the actual skills available to this session" },
           { name: "schedule", description: "Create a durable reminder from JSON timing/title/prompt", input: { hint: '{"title":"Review","prompt":"Run tests","after_seconds":60}' } },
-          // Identify the native Compact face (localized copy + generic icon)
-          // already shipped by the retained command UI. Execution is ours.
+          // Reuse the retained native Goal/Plan/Compact faces and Goal input claim.
+          // These descriptors advertise UI behavior; execution remains Host-owned.
           ...(host.controls?.commands ?? []).map(name => ({ name, description: `Manage this session's ${name}`,
-            ...(name === "compact" ? { definitionId: "@deepseek-ai/dsh-command-compact" } : {}) }))];
+            ...(name === "compact" ? { definitionId: "@deepseek-ai/dsh-command-compact" }
+              : name === "plan" ? { definitionId: "@deepseek-ai/dsh-plan-mode" }
+              : name === "goal" ? { definitionId: "@deepseek-ai/dsh-command-goal", input: { hint: "[<objective>|clear|edit <objective>|pause|resume]" } } : {}) }))];
       }
       if (endpoint === "commands/execute") {
         keys(args, ["agentId", "line", "submittedAttachments"]); const owner = await session(args.agentId); const line = string(args.line, "line");

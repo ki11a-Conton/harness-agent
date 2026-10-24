@@ -28,25 +28,16 @@
 @media (max-width: 600px) {
   body:has([data-approval-key]) [data-rightbar-col="true"] { display: none !important; }
 }
-/* First-party composer controls share the native UI palette and focus ring. */
-[data-harness-controls] { min-width: 0; max-width: 100%; font-size: 12px; color: var(--dsw-alias-label-secondary); }
-[data-harness-controls] :is(button, select) { box-sizing: border-box; max-width: 100%; min-height: 28px; border: 0; border-radius: 6px; padding: 3px 7px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
-[data-harness-controls] :is(button, select):hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover); }
-[data-harness-controls] :is(button, select, textarea):focus-visible { outline: 2px solid var(--dsw-focus-ring-color, #2563eb); outline-offset: 2px; }
-[data-harness-controls] :is(button, select):disabled { opacity: .55; cursor: default; }
-[data-harness-controls] > :is(button, select) { flex-shrink: 0; white-space: nowrap; }
+/* Host status and plan review share the native palette. The native composer
+ * owns its toolbar layout; its readiness marker is not a styling boundary. */
+[data-harness-mode-status] { min-width: 0; max-width: 100%; font-size: 12px; color: var(--dsw-alias-label-secondary); }
+[data-harness-mode-status] button { box-sizing: border-box; max-width: 100%; min-height: 28px; border: 0; border-radius: 6px; padding: 3px 7px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+[data-harness-mode-status] button:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover); }
+[data-harness-mode-status] button:focus-visible { outline: 2px solid var(--dsw-focus-ring-color, #2563eb); outline-offset: 2px; }
+[data-harness-mode-status] button:disabled { opacity: .55; cursor: default; }
 [data-harness-permission-pending], [data-harness-permission-error] { flex-basis: 100%; min-width: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; font-size: 12px; }
 [data-harness-permission-error] { color: var(--dsw-alias-state-error-primary); }
 [data-harness-composer-modes]:has([data-harness-permission-pending], [data-harness-permission-error]) { min-width: 0; max-width: 100%; flex-wrap: wrap; }
-[data-harness-controls] textarea { box-sizing: border-box; width: 100%; max-width: 100%; min-height: 60px; border: 1px solid var(--dsw-alias-border-l1, #d1d5db); border-radius: 6px; padding: 8px; background: var(--dsw-alias-bg-base, transparent); color: inherit; font: inherit; resize: vertical; }
 [data-harness-plan-review] { min-width: 0; max-width: 100%; padding: 6px; }
 [data-harness-plan-review] summary { cursor: pointer; }
 [data-harness-plan-review] pre { max-width: 100%; overflow-wrap: anywhere; }
-/* Slots use display: contents. Wrap their real toolbar, and give controls a
- * full row on narrow screens rather than squeezing native permission/plan chips. */
-@media (max-width: 600px) {
-  [data-harness-composer-row] { flex-wrap: wrap; row-gap: 8px; }
-  [data-harness-composer-tools] { flex: 1 0 100%; max-width: 100%; flex-wrap: wrap; row-gap: 6px; }
-  [data-harness-composer-modes] { flex-shrink: 0; white-space: nowrap; }
-  [data-harness-controls] { flex: 1 0 100%; width: 100%; }
-}

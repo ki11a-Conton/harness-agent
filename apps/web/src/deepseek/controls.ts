@@ -189,7 +189,12 @@ export function createControlsService(host: ControlsHost) {
     if (match === null || !commands.includes(match[1]!)) return undefined;
     await session(id); const name = match[1]!, value = (match[2] ?? "").trim();
     if (name === "goal") {
-      const state = await read(id), action = /^(pause|resume|clear|complete|edit)(?:\s|$)/u.exec(value)?.[1];
+      const state = await read(id);
+      // Like the native command, a bare /goal is a read, never an empty goal.
+      if (value === "") return state.goal === undefined
+        ? "No goal is currently set. Use /goal <objective>, /goal pause, /goal resume, /goal edit <objective>, or /goal clear."
+        : `Goal: ${state.goal.objective}\nStatus: ${state.goal.phase}\nRounds: ${state.goal.roundsStarted}/${state.goal.maxGoalRounds}`;
+      const action = /^(pause|resume|clear|complete|edit)(?:\s|$)/u.exec(value)?.[1];
       if (action === undefined) { await goalCall("goals/create", { agentId: id, request: { objective: value } }, abort); return "Goal saved; bounded continuation is active."; }
       if (state.goal === undefined) fail("goal/not-found", "No current goal");
       await goalCall(`goals/${action}`, { agentId: id, ref: { id: state.goal!.id, revision: state.goal!.revision },

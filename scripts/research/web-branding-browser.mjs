@@ -72,12 +72,10 @@ try {
         assert(!surface.overflow, label + ': horizontal overflow');
         if (dimensions.width <= 600 && ['plan-mode', 'goal-editor'].includes(label)) {
           const layout = await page.locator('[data-harness-controls]').evaluate(element => {
-            let parent = element.parentElement;
-            while (parent && getComputedStyle(parent).display === 'contents') parent = parent.parentElement;
-            return { width: element.getBoundingClientRect().width, available: parent?.getBoundingClientRect().width ?? 0 };
+            const rect = element.getBoundingClientRect();
+            return { left: rect.left, right: rect.right, width: rect.width, viewport: innerWidth };
           });
-          assert(layout.available > 0, label + ': controls need a real containing box');
-          assert(layout.width >= layout.available - 2, label + ': narrow controls need their own full row ' + JSON.stringify(layout));
+          assert(layout.width > 0 && layout.left >= 0 && layout.right <= layout.viewport + 1, label + ': native controls overflow ' + JSON.stringify(layout));
         }
         if (requireMark) {
           assert(surface.marks.length > 0, label + ': actual brand slot must render');
@@ -95,16 +93,21 @@ try {
       checks.push('no-preview-notice');
       await scan('empty-conversation', true);
       const mode = page.getByRole('combobox', { name: language === 'en' ? 'Task mode' : '任务模式', exact: true });
-      await mode.selectOption('plan');
-      await page.waitForFunction(() => document.querySelector('[data-harness-controls] select')?.value === 'plan');
+      assert.equal(await mode.count(), 0, 'Modes belong to the native plus menu');
+      const plus = button(language === 'en' ? 'Add files or run commands' : '添加文件或调用指令');
+      await plus.click();
+      await page.getByRole('option').filter({ hasText: language === 'en' ? 'Enter or leave plan mode' : '进入或退出计划模式' }).click();
+      const plan = button(language === 'en' ? 'Plan mode on, press to turn off' : '计划模式已开启，按下关闭');
+      await plan.waitFor();
       await scan('plan-mode');
-      await mode.selectOption('default');
-      await page.waitForFunction(() => document.querySelector('[data-harness-controls] select')?.value === 'default');
-      await mode.selectOption('goal');
-      const objective = page.getByRole('textbox', { name: language === 'en' ? 'Goal objective' : '目标内容', exact: true });
-      await objective.waitFor({ state: 'visible' });
-      await objective.fill('Review the local coding project'); await scan('goal-editor');
-      await button(language === 'en' ? 'Cancel' : '取消').click(); await objective.waitFor({ state: 'hidden' });
+      await plan.click(); await plan.waitFor({ state: 'hidden' });
+      await plus.click();
+      await page.getByRole('option').filter({ hasText: language === 'en' ? 'Set or view the goal for a long-running task' : '设置或查看长期任务目标' }).click();
+      const objective = page.locator('[data-composer-input=true][contenteditable=true]');
+      await page.locator('[data-composer-input=true][data-phase=claimed]').waitFor();
+      await objective.pressSequentially('Review the local coding project'); await scan('goal-editor');
+      await objective.press('ControlOrMeta+A'); await objective.press('Backspace');
+      assert.equal((await objective.innerText()).trim(), '');
       checks.push('mode-controls-use-live-session');
       assert.equal(await page.title(), 'Harness Agent'); checks.push('document-title');
       const manifest = await (await page.request.get(origin + '/deepseek/manifest.webmanifest')).json();

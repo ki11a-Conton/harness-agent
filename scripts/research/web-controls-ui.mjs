@@ -7,40 +7,20 @@ const controls = String.raw`
 			const compact = useProjection("harnessCompaction");
 			const [busy, setBusy] = react.useState(false);
 			const [error, setError] = react.useState("");
-			const [editing, setEditing] = react.useState(false);
-			const [objective, setObjective] = react.useState("");
-			const activePlan = plan && (plan.status === "draft" || plan.status === "review");
-			const mode = activePlan ? "plan" : goal?.goal.phase === "active" ? "goal" : "default";
 			const run = async (line) => {
 				setBusy(true); setError("");
 				try { await runCommand(line); return true; }
 				catch (error) { setError(error instanceof Error ? error.message : String(error)); return false; }
 				finally { setBusy(false); }
 			};
-			return react_jsx_runtime.jsxs("div", { "data-harness-controls": "composer", style: { display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }, children: [
-				react_jsx_runtime.jsxs("select", { "aria-label": t("harness.mode"), value: mode, disabled: busy, onChange: async (event) => {
-					const value = event.target.value;
-					if (value === "plan") { await run("/plan on"); return; }
-					if (activePlan && !await run("/plan off")) return;
-					if (value === "default") { if (goal?.goal.phase === "active") await run("/goal pause"); return; }
-					if (goal?.goal.phase === "paused" || goal?.goal.phase === "blocked") { await run("/goal resume"); return; }
-					if (goal?.goal.phase === "complete" && !await run("/goal clear")) return;
-					setEditing(true);
-				}, children: [
-					react_jsx_runtime.jsx("option", { value: "default", children: t("harness.mode.default") }),
-					react_jsx_runtime.jsx("option", { value: "plan", children: t("harness.mode.plan") }),
-					react_jsx_runtime.jsx("option", { value: "goal", children: t("harness.mode.goal") })
-				] }),
+			const review = plan?.status === "review" || plan?.status === "approved" && !plan.admitted;
+			if (!compact?.pending && !compact?.running && !compact?.lastCompletedAt && !goal && !review && !error) return null;
+			return react_jsx_runtime.jsxs("div", { "data-harness-mode-status": "composer", style: { display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }, children: [
 				compact?.pending || compact?.running ? react_jsx_runtime.jsx("span", { role: "status", children: t(compact?.running ? "harness.compact.running" : "harness.compact.pending") }) : null,
 				goal ? react_jsx_runtime.jsx("span", { role: "status", children: t("harness.goal.rounds") + " " + goal.roundsStarted + "/" + goal.goal.maxGoalRounds }) : null,
 				goal?.goal.blockedReason ? react_jsx_runtime.jsx("span", { role: "status", children: goal.goal.blockedReason.message }) : null,
 				compact?.lastCompletedAt && !compact?.pending && !compact?.running ? react_jsx_runtime.jsx("span", { role: "status", children: t(compact.lastSummarySource === "extractive" ? "harness.compact.fallback" : "harness.compact.done") }) : null,
-				editing ? react_jsx_runtime.jsxs("div", { role: "group", "aria-label": t("harness.mode.goal"), style: { flexBasis: "100%" }, children: [
-					react_jsx_runtime.jsx("textarea", { "aria-label": t("harness.objective"), value: objective, maxLength: 16000, onChange: event => setObjective(event.target.value) }),
-					react_jsx_runtime.jsx("button", { type: "button", disabled: busy || !objective.trim(), onClick: async () => { if (await run("/goal " + objective.trim())) { setEditing(false); setObjective(""); } }, children: t("harness.goal.start") }),
-					react_jsx_runtime.jsx("button", { type: "button", onClick: () => setEditing(false), children: t("harness.cancel") })
-				] }) : null,
-				plan?.status === "review" || plan?.status === "approved" && !plan.admitted ? react_jsx_runtime.jsxs("details", { "data-harness-plan-review": true, style: { flexBasis: "100%" }, children: [
+				review ? react_jsx_runtime.jsxs("details", { "data-harness-plan-review": true, style: { flexBasis: "100%" }, children: [
 					react_jsx_runtime.jsx("summary", { children: t("harness.plan.review") }),
 					react_jsx_runtime.jsx("pre", { style: { whiteSpace: "pre-wrap", maxHeight: 240, overflow: "auto" }, children: plan.content }),
 					react_jsx_runtime.jsx("button", { type: "button", disabled: busy, onClick: () => run("/plan approve " + (plan.status === "approved" ? plan.revision - 1 : plan.revision)), children: t("harness.plan.approve") })
@@ -51,8 +31,8 @@ const controls = String.raw`
 `;
 const registration = String.raw`
 			ctx.locale.register("harness.controls", {
-				en: { "harness.mode": "Task mode", "harness.mode.default": "Code", "harness.mode.plan": "Plan", "harness.mode.goal": "Goal", "harness.objective": "Goal objective", "harness.goal.start": "Start goal", "harness.cancel": "Cancel", "harness.plan.review": "Review implementation plan", "harness.plan.approve": "Approve and implement", "harness.compact": "Compress context", "harness.compact.pending": "Will compress next request", "harness.compact.done": "Context compressed" },
-				zh: { "harness.mode": "任务模式", "harness.mode.default": "编程", "harness.mode.plan": "计划", "harness.mode.goal": "目标", "harness.objective": "目标内容", "harness.goal.start": "开始目标", "harness.cancel": "取消", "harness.plan.review": "审阅实施计划", "harness.plan.approve": "批准并实施", "harness.compact": "压缩上下文", "harness.compact.pending": "下一次请求前压缩", "harness.compact.done": "上下文已压缩" }
+				en: { "harness.goal.rounds": "Goal rounds", "harness.plan.review": "Review implementation plan", "harness.plan.approve": "Approve and implement", "harness.compact": "Compress context", "harness.compact.pending": "Will compress next request", "harness.compact.done": "Context compressed" },
+				zh: { "harness.goal.rounds": "目标轮次", "harness.plan.review": "审阅实施计划", "harness.plan.approve": "批准并实施", "harness.compact": "压缩上下文", "harness.compact.pending": "下一次请求前压缩", "harness.compact.done": "上下文已压缩" }
 			});
 			ctx.slots.inject("conversation.input.left", () => ctx.slots.register({ name: "conversation.input.left", id: "harness-controls", order: 5, locale: "harness.controls", inject: sessionId => ({ runCommand: async line => {
 				const live = ctx.sessions.binding(sessionId)?.session;
@@ -67,7 +47,7 @@ export function addControlsUi(stem, source) {
     for (const part of ['row', 'tools', 'modes']) {
       const boundary = `className: InputBar_module_css_default.${part},`;
       if (source.split(boundary).length !== 2) throw new Error('Unreviewed composer layout boundary: ' + part);
-      source = source.replace(boundary, boundary + `\n "data-harness-composer-${part}": true,`);
+      source = source.replace(boundary, boundary + `\n "data-harness-composer-${part}": true,` + (part === "row" ? '\n "data-harness-controls": "composer",' : ""));
     }
     const marker = '\t\tfunction apply(ctx, config = Config({})) {';
     const at = source.lastIndexOf(marker);
@@ -138,7 +118,5 @@ export function addControlsUi(stem, source) {
   }
   return source.replace('Context compressed', 'Context prepared').replace('上下文已压缩', '上下文整理完成')
     .replace('"harness.compact.pending": "Will compress next request"', '"harness.compact.running": "Compressing context…", "harness.compact.fallback": "Context prepared with a limited extractive summary; original transcript retained", "harness.compact.pending": "Will compress next request"')
-    .replace('"harness.compact.pending": "下一次请求前压缩"', '"harness.compact.running": "正在压缩上下文…", "harness.compact.fallback": "摘要服务不可用，已用有限摘录整理；完整对话仍保留", "harness.compact.pending": "下一次请求前压缩"')
-    .replace('"harness.goal.start": "Start goal"', '"harness.goal.rounds": "Goal rounds", "harness.goal.start": "Start goal"')
-    .replace('"harness.goal.start": "开始目标"', '"harness.goal.rounds": "目标轮次", "harness.goal.start": "开始目标"');
+    .replace('"harness.compact.pending": "下一次请求前压缩"', '"harness.compact.running": "正在压缩上下文…", "harness.compact.fallback": "摘要服务不可用，已用有限摘录整理；完整对话仍保留", "harness.compact.pending": "下一次请求前压缩"');
 }

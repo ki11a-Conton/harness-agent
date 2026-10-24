@@ -404,3 +404,27 @@ it('PR15 goal create pause edit resume and clear use revisioned durable state', 
   await f.composition.activity.call('goals/clear', { agentId: f.sessionId, ref: { id: resumed.id, revision: resumed.revision } }, signal());
   expect(await read()).toBeUndefined();
 });
+
+it('composer Goal and Plan descriptors use the retained native menu faces and Goal argument input', async () => {
+  const f = await fixture();
+  const commands = await f.composition.activity.call('commands/list', { agentId: f.sessionId }, signal()) as Array<{ name: string; definitionId?: string; input?: { hint: string; attachments?: boolean } }>;
+  expect(commands.find(command => command.name === 'goal')).toMatchObject({ definitionId: '@deepseek-ai/dsh-command-goal', input: { hint: '[<objective>|clear|edit <objective>|pause|resume]' } });
+  expect(commands.find(command => command.name === 'goal')!.input!.attachments).not.toBe(true);
+  expect(commands.find(command => command.name === 'plan')).toMatchObject({ definitionId: '@deepseek-ai/dsh-plan-mode' });
+  expect(commands.find(command => command.name === 'compact')).toMatchObject({ definitionId: '@deepseek-ai/dsh-command-compact' });
+});
+
+it('bare Goal reports how to enter a goal without creating an empty goal or model work', async () => {
+  const f = await fixture(); const before = await f.composition.controls.read(f.sessionId);
+  expect(await f.command('/goal')).toMatchObject({ result: { kind: 'success', text: expect.stringContaining('/goal <objective>') } });
+  expect(await f.composition.controls.read(f.sessionId)).toEqual(before);
+  expect((await f.composition.controls.read(f.sessionId)).goal).toBeUndefined();
+});
+
+it('bare Goal reads the current objective and phase without editing it or leaving plan mode', async () => {
+  const f = await fixture(); await f.command('/plan on'); await f.command('/goal Review the concrete coding task');
+  const before = await f.composition.controls.read(f.sessionId);
+  expect(await f.command('/goal')).toMatchObject({ result: { kind: 'success', text: expect.stringContaining('Review the concrete coding task') } });
+  expect(await f.composition.controls.read(f.sessionId)).toEqual(before);
+  expect(before.plan.status).toBe('draft');
+});

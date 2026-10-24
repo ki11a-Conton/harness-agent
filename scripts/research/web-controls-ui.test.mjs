@@ -99,3 +99,42 @@ test('actual goal CAS ref retains an acknowledged edit while projections catch u
   scope.remember('s', { ok: false, error: { code: 'goal/conflict' } }); assert.equal(scope.refOf('s').revision, 3);
   goal = { id: 'goal-b', revision: 1 }; assert.equal(scope.refOf('s').id, 'goal-b'); assert.equal(scope.refOf('s').revision, 1);
 });
+
+async function controlsRenderer(projections = {}, command = async () => {}) {
+  const derived = addControlsUi('dsh-client-ui-conversation', await source('dsh-client-ui-conversation'));
+  const start = derived.indexOf('function HarnessControls('), end = derived.indexOf('\n\t\tfunction apply(ctx', start);
+  assert(start >= 0 && end > start);
+  const slots = []; let cursor = 0;
+  const jsx = (type, props) => ({ type, props });
+  const component = vm.runInNewContext('(' + derived.slice(start, end).trim() + ')', { Error,
+    react: { useState(initial) { const slot = cursor++; if (!(slot in slots)) slots[slot] = initial;
+      return [slots[slot], value => { slots[slot] = value; }]; } }, react_jsx_runtime: { jsx, jsxs: jsx } });
+  return { derived, render() { cursor = 0; return component({ useProjection: key => projections[key] ?? null, runCommand: command, t: key => key }); } };
+}
+function controlsElements(node, predicate) {
+  if (!node || typeof node !== 'object') return [];
+  if (Array.isArray(node)) return node.flatMap(child => controlsElements(child, predicate));
+  return [...(predicate(node) ? [node] : []), ...controlsElements(node.props?.children, predicate)];
+}
+
+test('default coding uses the native composer without a duplicate mode selector or empty control row', async () => {
+  const ui = await controlsRenderer();
+  assert.equal(ui.render(), null);
+  assert.match(ui.derived, /"data-harness-controls": "composer"/);
+});
+
+test('an actual goal status keeps progress visible without a second goal editor', async () => {
+  const ui = await controlsRenderer({ goal: { goal: { phase: 'active', maxGoalRounds: 10 }, roundsStarted: 2 } });
+  const tree = ui.render();
+  assert.equal(controlsElements(tree, node => node.type === 'select' || node.type === 'textarea').length, 0);
+  assert(controlsElements(tree, node => node.props?.role === 'status').some(node => node.props.children === 'harness.goal.rounds 2/10'));
+});
+
+test('the retained plan review still sends its exact approval revision and surfaces a real refusal', async () => {
+  const calls = [];
+  const ui = await controlsRenderer({ harnessPlan: { status: 'review', revision: 7, content: 'Inspect, change, test' } }, async line => { calls.push(line); throw new Error('Approval rejected'); });
+  const tree = ui.render(), approve = controlsElements(tree, node => node.type === 'button' && node.props.children === 'harness.plan.approve')[0];
+  await approve.props.onClick();
+  assert.deepEqual(calls, ['/plan approve 7']);
+  assert.equal(controlsElements(ui.render(), node => node.props?.role === 'alert')[0]?.props.children, 'Approval rejected');
+});

@@ -114,6 +114,50 @@ try {
   }
   const controls = JSON.parse(await readFile(join(output, 'pr15/result.json'), 'utf8'));
   assert.equal(controls.status, 'PASS'); assert.equal(controls.checks.length, 10); assert.deepEqual(controls.pending, []); assert.equal(controls.paidModelCalls, 0);
+  const composerAssets = manifest.files.filter(file => file.path.endsWith('/deepseek/harness-brand/plugins/dsh-client-ui-conversation/client.js'));
+  const commandAssets = manifest.files.filter(file => file.path.endsWith('/deepseek/plugins/dsh-client-ui-commands/client.js'));
+  assert.equal(composerAssets.length, 1); assert.equal(commandAssets.length, 1);
+  const composerSha = composerAssets[0].sha256, commandsSha = commandAssets[0].sha256;
+  const modeRunner = spawn(process.execPath, [join(source, 'scripts/research/composer-mode-browser.mjs'), '--url', origin,
+    '--output', join(output, 'composer-mode'), '--fixture-evidence', join(fixture, 'evidence'),
+    '--playwright-module', resolve(values['playwright-module']), '--chromium', chromium,
+    '--expected-composer-sha', composerSha, '--expected-commands-sha', commandsSha],
+    { cwd: cleanroom, windowsHide: true, env: process.env, stdio: ['ignore', 'pipe', 'pipe'] });
+  let modeLog = '';
+  modeRunner.stdout.on('data', bytes => { modeLog += bytes; }); modeRunner.stderr.on('data', bytes => { modeLog += bytes; });
+  try {
+    const result = await timeout(new Promise((done, reject) => { modeRunner.once('error', reject); modeRunner.once('close', (code, signal) => done({ code, signal })); }),
+      4 * 60_000, 'Installed native composer mode acceptance exceeded its deadline');
+    assert.equal(result.code, 0, modeLog);
+  } finally {
+    if (modeRunner.exitCode === null && modeRunner.signalCode === null) modeRunner.kill('SIGTERM');
+    await writeFile(join(output, 'composer-mode.log'), modeLog);
+  }
+  const modes = JSON.parse(await readFile(join(output, 'composer-mode/result.json'), 'utf8'));
+  assert.equal(modes.status, 'PASS'); assert.equal(modes.complete, true); assert.equal(modes.paidModelCalls, 0);
+  assert.equal(modes.platform, process.platform);
+  assert.equal(modes.expectedComposerSha256, composerSha); assert.equal(modes.expectedCommandsSha256, commandsSha);
+  assert.deepEqual(modes.errors, []); assert.deepEqual(modes.externalRequests, []);
+  for (const [kind, expected] of [['composer', composerSha], ['commands', commandsSha]]) {
+    const assets = modes.assets.filter(asset => asset.kind === kind);
+    assert(assets.length > 0 && assets.every(asset => asset.sha256 === expected));
+  }
+  const modeChecks = new Set(modes.checks.map(check => check.name));
+  assert.equal(modeChecks.size, modes.checks.length); assert(modes.checks.every(check => check.status === 'PASS'));
+  for (const scenario of ['desktop-en-light', 'desktop-zh-light', 'mobile-en-dark', 'narrow-zh-dark']) {
+    for (const suffix of ['escape-keeps-draft', 'keyboard-plan-persists', 'native-goal-cancel-no-side-effects']) {
+      assert(modeChecks.has(scenario + '-' + suffix), 'Missing installed composer check: ' + scenario + '-' + suffix);
+    }
+  }
+  for (const scenario of ['desktop-zh-light', 'narrow-zh-dark']) {
+    assert(modeChecks.has(scenario + '-canonical-slash-aliases'), 'Canonical slash aliases missing in Chinese: ' + scenario);
+  }
+  for (const name of ['fresh-session-real-admission', 'typed-bare-goal-claims-main-composer', 'typed-bare-plan-enters',
+    'zh-localized-goal-real-command',
+    'goal-preserves-unapproved-plan-and-pauses-driver', 'goal-real-http-pause-and-reload', 'native-goal-edit-resume-clear',
+    'new-session-default-coding-isolation', 'typed-goal-with-objective-executes', 'actual-assets-and-no-browser-errors']) {
+    assert(modeChecks.has(name), 'Missing installed composer check: ' + name);
+  }
   const settingsAssets = manifest.files.filter(file => file.path.endsWith('/deepseek/harness-brand/plugins/dsh-client-ui-settings-models/client.js'));
   assert.equal(settingsAssets.length, 1, 'Verified archive identifies exactly one model settings derivative');
   const settingsSha = settingsAssets[0].sha256;
@@ -192,10 +236,11 @@ try {
     workspaceKeyboardScenarios: keyboard.cases.length, workspaceKeyboardAssertions: keyboard.assertions,
     workspaceKeyboardAssetSha256: workspaceSha,
     modelReasoningChecks: modelEditor.checks.length, modelReasoningAssetSha256: settingsSha,
+    composerModeChecks: modes.checks.length, composerAssetSha256: composerSha, commandsAssetSha256: commandsSha,
     connectionScenarios: connection.scenarios, connectionAssertions: connection.assertions,
     dailyScenarios: daily.results.length, dailyAssertions: daily.results.reduce((sum, item) => sum + item.checks.length, 0),
     realModelQuality: 'NOT_PROVEN', fullDefaultUiParity: 'NOT_PROVEN',
-    scope: 'Named ordinary coding UI controls on this verified archive, workspace keyboard, model spec/reasoning editor with real HTTP wire checks and responsive light/dark en/zh views, plus PR15 permissions, plans, goals and context controls. PTY/Cordis/queue-edit capabilities and real model quality are not claimed.' };
+    scope: 'Named ordinary coding UI controls on this verified archive, workspace keyboard, native Goal/Plan plus menu and typed commands, model spec/reasoning editor with real HTTP wire checks and responsive light/dark en/zh views, plus PR15 permissions, plans, goals and context controls. PTY/Cordis/queue-edit capabilities and real model quality are not claimed.' };
   await writeFile(join(output, 'result.json'), JSON.stringify(receipt, null, 2) + '\n');
   console.log(JSON.stringify(receipt));
 } catch (error) {
@@ -204,7 +249,7 @@ try {
   const escape = text => text.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
   console.error('::error title=Installed UI acceptance failed::' + escape(String(error).slice(0, 2000)));
   let remainingDiagnostics = 6;
-  for (const phase of ['browser', 'workspace-keyboard', 'model-reasoning', 'daily', 'pr15']) {
+  for (const phase of ['browser', 'workspace-keyboard', 'model-reasoning', 'composer-mode', 'daily', 'pr15']) {
     try {
       const report = JSON.parse(await readFile(join(output, phase, 'result.json'), 'utf8'));
       const cases = report.results ?? (Array.isArray(report.cases) ? report.cases : report.status === 'PASS' ? [] : [{ name: report.pending?.[0] ?? 'PR15 controls', status: 'FAIL', failure: report.failure }]);

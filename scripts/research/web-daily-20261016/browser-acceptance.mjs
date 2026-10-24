@@ -507,9 +507,12 @@ const cases = {
     });
     assert.equal(await page.evaluate(() => document.documentElement.lang), 'zh-CN');
     await button(page, '关闭').click(); await collapseMobile(page);
-    const mode = page.getByRole('combobox', { name: '任务模式', exact: true }); await mode.waitFor();
+    await button(page, '添加文件或调用指令').waitFor();
+    assert.equal(await page.getByRole('combobox', { name: '任务模式', exact: true }).count(), 0);
     assert.equal(await button(page, '压缩上下文').count(), 0, 'No duplicate standalone Compact button');
     await button(page, '添加文件或调用指令').click();
+    await page.getByRole('option').filter({ hasText: '设置或查看长期任务目标' }).waitFor();
+    await page.getByRole('option').filter({ hasText: '进入或退出计划模式' }).waitFor();
     const compactSaved = observations.get(page).waitForResult('commands/execute', 20000);
     await page.getByRole('option').filter({ hasText: '压缩以上对话内容' }).click();
     const compactAck = await compactSaved; assert.equal(compactAck.result.ok, true);
@@ -525,14 +528,16 @@ const cases = {
     });
     assert.equal(await page.evaluate(() => document.documentElement.lang), 'en');
     await button(page, 'Close').click(); await collapseMobile(page);
-    await page.getByRole('combobox', { name: 'Task mode', exact: true }).waitFor();
+    await button(page, 'Add files or run commands').waitFor();
+    assert.equal(await page.getByRole('combobox', { name: 'Task mode', exact: true }).count(), 0);
     const compactSession = await send(page, 'Continue after selecting Compact from the Chinese plus menu.'); await finished(page);
     await deadline((async () => {
       while ((await readMetadata(compactSession)).controls?.compaction?.pending !== false) await page.waitForTimeout(50);
     })(), 15000, 'Chinese Compact did not reach its durable completion');
     await page.reload(); await composer(page).waitFor({ timeout: 15000 });
     assert.equal(await page.evaluate(() => document.documentElement.lang), 'en');
-    await page.getByRole('combobox', { name: 'Task mode', exact: true }).waitFor();
+    await button(page, 'Add files or run commands').waitFor();
+    assert.equal(await page.getByRole('combobox', { name: 'Task mode', exact: true }).count(), 0);
     check(checks, 'Returning to English updates native coding components and survives an actual reload');
   },
   'capabilities-and-task-filters': async (page, context, checks) => {
