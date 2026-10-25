@@ -211,7 +211,7 @@ try {
   }
   const managed = JSON.parse(await readFile(join(output, 'managed-commands/result.json'), 'utf8'));
   assert.equal(managed.status, 'PASS'); assert.equal(managed.sourceSha, manifest.sourceSha); assert.equal(managed.archiveSha256, sha256);
-  assert.equal(managed.platform, process.platform); assert.equal(managed.checks, 9); assert.equal(managed.paidModelCalls, 0);
+  assert.equal(managed.platform, process.platform); assert.equal(managed.checks, 9); assert.equal(managed.cli.status, 'PASS'); assert.equal(managed.cli.grade, 'verified_complete'); assert(managed.cli.approvals >= 2); assert.equal(managed.paidModelCalls, 0);
   const dailyRunner = spawn(process.execPath, [join(source, 'scripts/research/web-daily-20261016/browser-acceptance.mjs'),
     '--output', join(output, 'daily'), '--portable-root', root, '--playwright-module', resolve(values['playwright-module']),
     '--chromium', chromium, '--viewports', 'desktop,mobile,narrow'], { cwd: cleanroom, windowsHide: true, env: process.env, stdio: ['ignore', 'pipe', 'pipe'] });

@@ -1,5 +1,7 @@
 # 当前执行计划入口
 
+当前实施：[受管理长命令计划](plan(20261024-managed-command-harness).md)；[任务](tasks/MANAGED-COMMAND-HARNESS-20261024.md)；[使用与边界](docs/managed-commands.md)。默认关闭，依次以 H0–H5 的实际门禁验收；发布标签和资产保持。
+
 当前修复：[输入框 ➕ Goal / Plan 计划](plan(20261024-composer-mode-menu).md)；[任务](tasks/COMPOSER-MODE-MENU-20261024.md)。将独立模式选择框移入原生菜单，并以真实指令/状态/执行验收。
 
 当前修复：按用户截图复用最新上游模型推理规格编辑器，完成实际保存、off/max 参数与响应式验收。做什么、怎么做、怎么验收：[模型编辑器计划](plan(20261024-model-reasoning-editor).md)；[任务](tasks/MODEL-REASONING-EDITOR-20261024.md)。

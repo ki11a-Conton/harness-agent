@@ -1,6 +1,6 @@
 # 下一轮 coding harness：受管理的长命令会话
 
-状态：源码研究与规划完成；H0 时间线实测及 H1–H5 尚待执行，实验实现、公开宿主接入和效果推广分别验收。v1.12.0 已正式发布并通过公开下载包 Web/CLI 复验；研究及实施基线为 `37a16e3d0ac60da12caff5e28c77a20c8a017e2e`，研究期间未修改该发行源码。[发布收尾](plan(20261022-release-v112).md)记录精确版本、归档与验收。
+状态：H0–H5 已有默认关闭的实验实现及自动验收入口；完成以精确 clean SHA 的实际专项、安全、全量、对照和同包跨平台结果为准，不以实现代替验收。原研究与规划阶段如下保留，实施进度见文末。v1.12.0 已正式发布并通过公开下载包 Web/CLI 复验；研究及实施基线为 `37a16e3d0ac60da12caff5e28c77a20c8a017e2e`，研究期间未修改该发行源码。[发布收尾](plan(20261022-release-v112).md)记录精确版本、归档与验收。
 
 ## 为什么选择这一项
 
@@ -56,6 +56,6 @@ Runtime 架构冻结。先在已有 Agent/tool/host 扩展点完成实验；需�
 
 - 实施基线更新到 main `f8db83fd315fd5b692c5c30aad07c6ed1f4cf352`；原发布与历史档案保持。H0 已保存生产 host 的 blocking、真实失败修复和取消时间线。
 - H1–H3 已有默认关闭实现及真实副作用专项测试：复用原 execTool/ProcessExecutor，无 Core/contract 修改；严格 owner、共享宿主容量、规范/嵌套工作区锁、增量输出、绝对期限、关闭屏障、原 verifier、持久 unknown 对账。
-- H4 的24对/48臂协议、固定预算和全部失败保留已预注册；最终 clean SHA 的比较尚待验收，不把临时测试结果当成正式效果。
-- H5 的 CLI/Web 环境入口及 SDK 服务端配置已实现为显式 opt-in；没有可信期限或真实命令 verifier 就拒绝启动。公开推广依赖 H4、全量和同一安装归档的 Ubuntu/原生 Windows 实际按钮验收通过。
+- H4 的24对/48臂协议、固定预算和全部失败保留已预注册；正式运行输出 clean SHA、脚本指纹、逐臂事件/文件/退出码和总表。HTTP 本地权限与外部拒绝在首个臂前实际预检；保留曾因授权冲突和路径 glob 不覆盖子路径而失败的完整臂，不把修正前或调试结果冒充最终门禁。
+- H5 的 CLI/Web 环境入口及 SDK 服务端配置已实现为显式 opt-in；没有可信期限或真实命令 verifier 就拒绝启动。验收接入官方同包 Ubuntu/原生 Windows workflow，包含实际发送、权限确认、Stop 后无晚写、原 verifier 及真实 CLI stdin 审批和 verified_complete。Windows workflow 另执行完整48臂；只有 H4、全量和这些跨平台门禁实际成功才算完成。
 - [使用与边界](docs/managed-commands.md)记录 API、预算、失败替换、取消、重启和不支持的 PTY/stdin；真实模型质量仍为 NOT_PROVEN。

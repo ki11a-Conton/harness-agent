@@ -408,12 +408,12 @@ export async function createDefaultDeps(options: DefaultDepsOptions = {}): Promi
   const maxIterationsPerTurn = options.maxIterationsPerTurn === undefined
     ? parseMaxIterationsPerTurn(process.env.HARNESS_MAX_ITERATIONS_PER_TURN)
     : resolveMaxIterationsPerTurn(options.maxIterationsPerTurn);
+  const managed = parseManagedCommandEnvironment(process.env.HARNESS_MANAGED_COMMANDS, process.env.HARNESS_MANAGED_TURN_MS);
   // Resolve before provider construction; invalid policies fail closed.
   const agentPromptPolicy = resolveAgentPromptPolicy(options.agentPrompt ?? process.env.HARNESS_AGENT_PROMPT);
   const modelProvider = options.provider ?? (await resolveModelProvider({ modelId: options.model?.modelId ?? (process.env.OPENAI_MODEL || DEFAULT_MODEL_ID) })).provider;
   const memoryEnabled = options.memory === true || process.env.HARNESS_MEMORY === "1";
   const contextSummary = resolveCodingSummaryPolicy(process.env.HARNESS_CONTEXT_SUMMARY);
-  const managed = parseManagedCommandEnvironment(process.env.HARNESS_MANAGED_COMMANDS, process.env.HARNESS_MANAGED_TURN_MS);
   const verificationCommand = managed ? process.env.HARNESS_VERIFY_COMMAND?.trim() : undefined;
   const task = options.task ?? (verificationCommand ? { id: "cli-managed-coding", goal: "Complete the user task and pass the configured project check", verification: [{ kind: "command" as const, command: verificationCommand }] } : undefined);
   if (memoryEnabled && dataDir === undefined) {

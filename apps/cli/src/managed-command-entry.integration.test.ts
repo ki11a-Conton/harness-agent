@@ -1,12 +1,116 @@
-import { mkdtemp, realpath, readFile, rm } from 'node:fs/promises'; import { tmpdir } from 'node:os'; import { join } from 'node:path';
-import { afterEach, expect, it, vi } from 'vitest'; import type { Session, TurnId, ModelProvider } from '@ar/contracts'; import { ScriptedModelProvider } from '@ar/model'; import { createDefaultDeps } from './main.js';
-const roots: string[]=[];afterEach(async()=>{vi.unstubAllEnvs();for(const root of roots.splice(0))await rm(root,{recursive:true,force:true});});
-it('CLI environment opt-in reaches actual RPC tools, approvals and original verification',async()=>{
- const cwd=await realpath(await mkdtemp(join(tmpdir(),'managed-cli-')));roots.push(cwd);let step=0;
- const provider: ModelProvider={id:'managed-cli-script',listModels:async()=>[{id:'script',capabilities:{contextWindowTokens:128000}}],createClient:()=>({async *generate(request){step++;const bodies=request.messages.filter(m=>m.role==='tool').map(m=>m.content);const records=bodies.flatMap(body=>{try{return[JSON.parse(body)];}catch{return[];}});const job=records.filter(r=>r.jobId).at(-1);yield*(step===1?ScriptedModelProvider.toolCall('exec_start',{command:process.execPath,args:['-e',"setTimeout(()=>require('node:fs').writeFileSync('actual','ok'),250)"],yieldMs:0}):job?.state==='running'?ScriptedModelProvider.toolCall('exec_poll',{jobId:job.jobId,pollToken:job.pollToken,waitMs:1000}):ScriptedModelProvider.text('Managed command complete.'));}})};
- vi.stubEnv('HARNESS_MANAGED_COMMANDS','1');vi.stubEnv('HARNESS_MANAGED_TURN_MS','10000');
- const deps=await createDefaultDeps({cwd,provider,task:{id:'cli',goal:'actual check',verification:[{kind:'command',command:process.execPath,args:['-e',"require('node:assert/strict').equal(require('node:fs').readFileSync('actual','utf8'),'ok')"]}]}});
- const approved=new Set();const timer=setInterval(()=>{for(const pending of deps.approvalStore!.listPending()){approved.add(pending.id);deps.approvalStore!.resolve(pending.id,'allow','actual-test-user');}},15);
- try{expect(deps.resolvedConfig?.value.managedCommands?.enabled).toBe(true);const agents=await deps.rpc.request('agent.list') as Array<{id:string}>;const session=await deps.rpc.request('session.create',{agentId:agents[0]!.id,cwd}) as Session;const turn=await deps.rpc.request('session.send',{sessionId:session.id,text:'Run and verify the managed command'}) as {turnId:TurnId};const result=await deps.rpc.request('session.run',{sessionId:session.id,turnId:turn.turnId}) as {status:string};expect(result.status).toBe('completed');expect(approved.size).toBeGreaterThanOrEqual(2);expect(await readFile(join(cwd,'actual'),'utf8')).toBe('ok');}finally{clearInterval(timer);await deps.close?.();}
+import { mkdtemp, realpath, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, expect, it, vi } from "vitest";
+import type { Session, TurnId, ModelProvider } from "@ar/contracts";
+import { ScriptedModelProvider } from "@ar/model";
+import { createDefaultDeps } from "./main.js";
+const roots: string[] = [];
+afterEach(async () => {
+  vi.unstubAllEnvs();
+  for (const root of roots.splice(0))
+    await rm(root, { recursive: true, force: true });
 });
-it.each(['yes','true','-1'])('invalid managed flag %s fails closed',async value=>{vi.stubEnv('HARNESS_MANAGED_COMMANDS',value);await expect(createDefaultDeps({provider:new ScriptedModelProvider([])})).rejects.toThrow('HARNESS_MANAGED_COMMANDS');});
+it("CLI environment opt-in reaches actual RPC tools, approvals and original verification", async () => {
+  const cwd = await realpath(await mkdtemp(join(tmpdir(), "managed-cli-")));
+  roots.push(cwd);
+  let step = 0;
+  const provider: ModelProvider = {
+    id: "managed-cli-script",
+    listModels: async () => [
+      { id: "script", capabilities: { contextWindowTokens: 128000 } },
+    ],
+    createClient: () => ({
+      async *generate(request) {
+        step++;
+        const bodies = request.messages
+          .filter((m) => m.role === "tool")
+          .map((m) => m.content);
+        const records = bodies.flatMap((body) => {
+          try {
+            return [JSON.parse(body)];
+          } catch {
+            return [];
+          }
+        });
+        const job = records.filter((r) => r.jobId).at(-1);
+        yield* step === 1
+          ? ScriptedModelProvider.toolCall("exec_start", {
+              command: process.execPath,
+              args: [
+                "-e",
+                "setTimeout(()=>require('node:fs').writeFileSync('actual','ok'),250)",
+              ],
+              yieldMs: 0,
+            })
+          : job?.state === "running"
+            ? ScriptedModelProvider.toolCall("exec_poll", {
+                jobId: job.jobId,
+                pollToken: job.pollToken,
+                waitMs: 1000,
+              })
+            : ScriptedModelProvider.text("Managed command complete.");
+      },
+    }),
+  };
+  vi.stubEnv("HARNESS_MANAGED_COMMANDS", "1");
+  vi.stubEnv("HARNESS_MANAGED_TURN_MS", "10000");
+  const deps = await createDefaultDeps({
+    cwd,
+    provider,
+    task: {
+      id: "cli",
+      goal: "actual check",
+      verification: [
+        {
+          kind: "command",
+          command: process.execPath,
+          args: [
+            "-e",
+            "require('node:assert/strict').equal(require('node:fs').readFileSync('actual','utf8'),'ok')",
+          ],
+        },
+      ],
+    },
+  });
+  const approved = new Set();
+  const timer = setInterval(() => {
+    for (const pending of deps.approvalStore!.listPending()) {
+      approved.add(pending.id);
+      deps.approvalStore!.resolve(pending.id, "allow", "actual-test-user");
+    }
+  }, 15);
+  try {
+    expect(deps.resolvedConfig?.value.managedCommands?.enabled).toBe(true);
+    const agents = (await deps.rpc.request("agent.list")) as Array<{
+      id: string;
+    }>;
+    const session = (await deps.rpc.request("session.create", {
+      agentId: agents[0]!.id,
+      cwd,
+    })) as Session;
+    const turn = (await deps.rpc.request("session.send", {
+      sessionId: session.id,
+      text: "Run and verify the managed command",
+    })) as { turnId: TurnId };
+    const result = (await deps.rpc.request("session.run", {
+      sessionId: session.id,
+      turnId: turn.turnId,
+    })) as { status: string };
+    expect(result.status).toBe("completed");
+    expect(approved.size).toBeGreaterThanOrEqual(2);
+    expect(await readFile(join(cwd, "actual"), "utf8")).toBe("ok");
+  } finally {
+    clearInterval(timer);
+    await deps.close?.();
+  }
+});
+it.each(["yes", "true", "-1"])(
+  "invalid managed flag %s fails closed",
+  async (value) => {
+    vi.stubEnv("HARNESS_MANAGED_COMMANDS", value);
+    await expect(
+      createDefaultDeps({ provider: new ScriptedModelProvider([]) }),
+    ).rejects.toThrow("HARNESS_MANAGED_COMMANDS");
+  },
+);
