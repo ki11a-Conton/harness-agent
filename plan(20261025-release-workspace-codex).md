@@ -1,6 +1,6 @@
 # v1.13 发布、工作区身份与后续 coding harness
 
-状态：R1 已发布；W2 专项通过、待冻结提交后的独立绿例；C1 尚未开始。发布源码与之后的 bug 修复分开。合同见 [任务](tasks/RELEASE-WORKSPACE-CODEX-20261025.md)。
+状态：R1 已发布；W2 在 clean 0085ec4c 的独立浏览器/生命周期/真实 CLI-Web 均转绿；C1 已研究、C2 代码与75项专项完成；最终验收以固定源码收据和CI为准。发布源码与之后的 bug 修复分开。合同见 [任务](tasks/RELEASE-WORKSPACE-CODEX-20261025.md)。
 
 | 阶段 | 做什么 | 怎么做 | 怎么验收 |
 | --- | --- | --- | --- |
@@ -25,3 +25,19 @@ W1 已在同一 a6 源码上通过真实 SDK HTTP、Chromium 目录选择器和�
 W2 做法：只在 Harness 的公共 ContextPipeline 扩展中，将每次 build 的 session cwd 渲染成边界安全的 JSON 环境；默认及 path-scoped 两条装配链共用，进入原 system block 的 token 统计、保护、压缩与实际请求见证。静态 agent prompt、Core、Contracts、权限和沙箱保持原实现。所有 profile 均修复，避免测试专用路径与生产不同。
 
 W2 验收：同一独立浏览器及生命周期 probe 红转绿；真实 Chat HTTP 首轮、并发子目录、自动/手动压缩、JSONL 重启、Web 切模型均携带正确 session cwd；特殊路径不逃出 JSON 边界，原 token estimator 计入开销，path-scoped 发现和外部目录拒绝不退化。现有生产适配器只支持 Chat Completions，不声称完成尚不存在的 Responses/Anthropic 适配。通过专项后再开始 C1 研究，最终统一做 clean SHA 全量及 main 双平台 CI。
+
+
+## C1 对照结论与 C2 具体计划（先定门槛，再编码）
+
+固定来源是 HARNESS-SRC-FORK `1a46ea13de9a3f5e6987c5dd0319b2000fe49c92` 中的 Codex，具体已读文件及 SHA256 见 [sources.json](docs/evidence/codex-env-probes-20261025/sources.json)。Codex environment_context 对环境数据做边界转义，compact 会重新注入 initial context；本次 W2 已独立补齐相应会话 cwd。Codex HeadTailBuffer/格式化输出保留首尾；本项目已有 pi 衍生 ExecDiagnosticTail + Core 首尾 preview，原设想不再重复实施。Codex get_context_remaining 的真实状态查询值得后续评估，但不把 admission 前估算假装成压缩后的精确余额。
+
+选定的实际缺口：Codex process_manager 使用异步等待、截止时间和 cancellation 协调；本项目 env_snapshot 仍使用 execFileSync 做最多12个运行时探测和4个 git 查询。真实 ToolOrchestrator 控制中，750ms 子进程导致心跳停顿约787ms，取消延迟到约783ms且返回success；版本探测的实际 cwd 还是网关宿主目录。见 [红例](docs/evidence/codex-env-probes-20261025/baseline.json)。
+
+| 做什么 | 怎么做 | 怎么验收 |
+| --- | --- | --- |
+| 环境探测不阻塞宿主 | 复用已有 ProcessExecutor.runArgv 替换同步探测，保留逐项顺序和每项原截止时间；每次带实际 cwd | 同一750ms真实子进程对照，Linux心跳最大间隔<200ms，正常版本及子进程cwd正确；不声称命令本身变快 |
+| 用户取消能中止探测 | 从 env_snapshot ToolExecutionContext 传入同一 AbortSignal，执行前/等待后/后续探测前检查，取消返回cancelled | 实际child ready后取消，之后850ms没有完成标记；预取消0次spawn；Windows复用真实argv/进程取消用例并验收生产工具接线 |
+| 保留工具与安全合同 | 输出形状、缺失版本null/false、仅env键名、host网络事实、1MiB上限和原权限链不变；截断探测不能冒充完整版本 | 原环境/工具/安全/UTF8/进程生命周期回归，真实临时git仓库与lockfile；大输出/失败/取消不被吞成成功 |
+| 可审查交付 | 只改tools环境探测和相关测试，在本计划记录对照及局限；不新造执行器或改Core/Contracts | W/C最终clean SHA全量及CLI/Web和四项main CI成功，再推送结果；已发布v1.13 tag/四资产及旧release不变，付费模型0 |
+
+C2 是已有工具的确定性响应性/取消/cwd缺陷修复，不更换Agent策略或改写冻结Runtime。使用现有执行器来落实Codex的异步进程生命周期原则，没有复制其Rust Runtime。独立门槛预先记录在 [registration.json](docs/evidence/codex-env-probes-20261025/registration.json)；计时只证明受控Linux工程行为，不证明真实模型成功率。

@@ -1,0 +1,49 @@
+{
+  "sourceSha": "0085ec4ce948cec56ee405291d666ad614d200b8",
+  "platform": "linux",
+  "probeDelayMs": 750,
+  "probeLimit": 1,
+  "paidModelCalls": 0,
+  "modelRequests": 0,
+  "modes": [
+    {
+      "cancel": false,
+      "status": "success",
+      "durationMs": 788.6528450000001,
+      "maxHeartbeatGapMs": 787.0651620000001,
+      "heartbeatTicks": 1,
+      "abortRequestedAtMs": null,
+      "child": {
+        "pid": 439839,
+        "cwd": "/tmp/harness-v113-release-20261025/workspace-red-a6/gateway-host"
+      },
+      "requestedCwd": "/tmp/harness-v113-release-20261025/env-probe-baseline-0085/responsive/selected-project",
+      "probeCompletedMarker": true,
+      "runtime": {
+        "name": "node",
+        "found": true,
+        "version": "vFIXTURE-750ms"
+      }
+    },
+    {
+      "cancel": true,
+      "status": "success",
+      "durationMs": 784.3666549999998,
+      "maxHeartbeatGapMs": 783.0006659999999,
+      "heartbeatTicks": 1,
+      "abortRequestedAtMs": 783.0800959999999,
+      "child": {
+        "pid": 439847,
+        "cwd": "/tmp/harness-v113-release-20261025/workspace-red-a6/gateway-host"
+      },
+      "requestedCwd": "/tmp/harness-v113-release-20261025/env-probe-baseline-0085/cancel/selected-project",
+      "probeCompletedMarker": true,
+      "runtime": {
+        "name": "node",
+        "found": true,
+        "version": "vFIXTURE-750ms"
+      }
+    }
+  ],
+  "scope": "Real production env_snapshot dispatched through Harness ToolOrchestrator to an actual delayed local version probe. Linux timing/control only; no model quality or Windows timing claim."
+}

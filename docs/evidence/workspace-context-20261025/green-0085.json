@@ -1,0 +1,130 @@
+{
+  "browser": {
+    "status": "PASS",
+    "sourceSha": "0085ec4ce948cec56ee405291d666ad614d200b8",
+    "gatewayProcessCwd": "/tmp/harness-v113-release-20261025/workspace-browser-green-0085/gateway-host",
+    "initialWebCwd": "/tmp/harness-v113-release-20261025/workspace-browser-green-0085/fixture/project",
+    "selectedCwd": "/tmp/harness-v113-release-20261025/workspace-browser-green-0085/fixture/selected-project",
+    "actualUiSelection": true,
+    "actualToolReadSelectedProject": true,
+    "greetingContextContainsSelectedCwd": true,
+    "paidModelCalls": 0,
+    "requests": 3,
+    "browserErrors": [],
+    "externalRequests": [],
+    "compiledDigest": "81b6edd80ec52c34ea608081b6397663f984ea40543a96b69036b34805b85c51",
+    "scope": "Real Chromium path picker and native UI submission -> actual Web host -> loopback provider HTTP and real read_file; deterministic routing/context evidence, not external model quality"
+  },
+  "lifecycle": {
+    "status": "PASS",
+    "sourceSha": "0085ec4ce948cec56ee405291d666ad614d200b8",
+    "hostCwd": "/tmp/harness-v113-release-20261025/workspace-red-a6/gateway-host",
+    "harnessCwd": "/tmp/harness-v113-release-20261025/workspace-lifecycle-green-0085/project",
+    "sessionCwds": {
+      "a": "/tmp/harness-v113-release-20261025/workspace-lifecycle-green-0085/project/A with spaces",
+      "b": "/tmp/harness-v113-release-20261025/workspace-lifecycle-green-0085/project/B with spaces"
+    },
+    "checks": [
+      {
+        "scenario": "concurrent A",
+        "containsExpected": true,
+        "containsOther": false
+      },
+      {
+        "scenario": "concurrent B",
+        "containsExpected": true,
+        "containsOther": false
+      },
+      {
+        "scenario": "after compaction",
+        "containsExpected": true,
+        "containsOther": false
+      },
+      {
+        "scenario": "after durable resume",
+        "containsExpected": true,
+        "containsOther": false
+      }
+    ],
+    "actualReadsIsolated": true,
+    "durableSessionCwdCorrect": true,
+    "automaticCompactionObserved": true,
+    "manualCompactionObserved": true,
+    "compactionEvents": [
+      {
+        "type": "context.compacted",
+        "payload": {
+          "phase": "started",
+          "strategy": "codex-v1",
+          "manual": false,
+          "beforeTokens": 6010
+        }
+      },
+      {
+        "type": "context.compacted",
+        "payload": {
+          "phase": "completed",
+          "reason": "automatic context preparation completed",
+          "manual": false,
+          "beforeTokens": 6010,
+          "afterTokens": 2976,
+          "strategy": "codex-v1",
+          "summarySource": "model",
+          "compressed": 1,
+          "totalCount": 1
+        }
+      },
+      {
+        "type": "context.compacted",
+        "payload": {
+          "source": "compaction-summary",
+          "id": "compaction-summary",
+          "tokens": 247,
+          "reason": "budget-overflow"
+        }
+      },
+      {
+        "type": "context.compacted",
+        "payload": {
+          "phase": "started",
+          "strategy": "codex-v1",
+          "manual": true,
+          "beforeTokens": 117
+        }
+      },
+      {
+        "type": "context.compacted",
+        "payload": {
+          "compressed": 1,
+          "reason": "manual compaction requested by user",
+          "phase": "blocks",
+          "reactive": false,
+          "totalCount": 2
+        }
+      },
+      {
+        "type": "context.compacted",
+        "payload": {
+          "phase": "completed",
+          "reason": "manual context preparation completed",
+          "manual": true,
+          "beforeTokens": 117,
+          "afterTokens": 117,
+          "compressed": 0,
+          "totalCount": 2
+        }
+      }
+    ],
+    "requestCount": 12,
+    "paidModelCalls": 0,
+    "scope": "Actual production SDK actors, concurrent cwd, filesystem reads, automatic/manual compaction, JSONL reopen and loopback provider HTTP; no model-quality claim"
+  },
+  "cliWeb": {
+    "status": "PASS",
+    "sourceSha": "0085ec4ce948cec56ee405291d666ad614d200b8",
+    "storedSessionCwd": "/tmp/harness-real-coding-CIY3be/project with space",
+    "actualCliAndWebRequestsWithCorrectCwd": 19,
+    "codingAssertions": 50,
+    "paidModelCalls": 0
+  }
+}

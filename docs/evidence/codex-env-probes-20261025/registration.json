@@ -1,0 +1,31 @@
+{
+  "registeredAt": "2026-10-25T18:41:17.300730+00:00",
+  "baselineSource": "0085ec4ce948cec56ee405291d666ad614d200b8",
+  "baseline": "/tmp/harness-v113-release-20261025/env-probe-baseline-0085/result.json",
+  "driverSha256": "438d7ce6fb6724e104230215ac710b949d8f252afbf1de67a4bfc42db739b0d3",
+  "input": {
+    "platform": "linux",
+    "probeLimit": 1,
+    "realChildDelayMs": 750,
+    "throughActualHarnessOrchestrator": true
+  },
+  "keep": [
+    "tool surface/output schema",
+    "sequential probes",
+    "runtime1500ms/git2000ms deadline",
+    "1MiB output ceiling",
+    "permissions/sandbox/verifier",
+    "no network probing/no env values"
+  ],
+  "candidateGates": [
+    "normal version result same; actual child cwd equals requested project",
+    "max heartbeat gap below200ms under same750ms child (Linux engineering control)",
+    "cancel after actual ready -> cancelled, no finished marker after850ms",
+    "pre-aborted signal -> no process spawned",
+    "fake/missing/truncated runtime -> foundfalse with no partial version claim",
+    "Git repo identity/dirty count, lockfile, security redaction and supplied network mode preserved",
+    "typecheck, relevant security/unit/integration, final clean full and four main CI"
+  ],
+  "paidModelCalls": 0,
+  "modelQuality": "NOT_PROVEN"
+}

@@ -63,6 +63,7 @@ export function createEnvSnapshotTool(
       try {
         const snap = await snapshotEnvironment({
           cwd: context.cwd,
+          signal: context.signal,
           networkMode: deps.networkMode(),
           probeLimit: input.probeLimit,
           availableTools: [...deps.availableTools()],
@@ -75,6 +76,7 @@ export function createEnvSnapshotTool(
           evidence: [{ type: "file", description: `env_snapshot: ${snapshotSummary(snap)}`, source: context.cwd, timestamp: Date.now() }],
         };
       } catch (err) {
+        if (context.signal.aborted) return { status: "cancelled" };
         return {
           status: "failed",
           error: errorInfo("PROCESS_ERROR", err instanceof Error ? err.message : String(err)),
