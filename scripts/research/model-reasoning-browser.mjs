@@ -7,6 +7,7 @@ import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 import { createHash, randomUUID } from 'node:crypto';
 import { observeProductionRpc } from './deepseek-browser-observe.mjs';
+import { createReadyWorkspaceSession } from './deepseek-browser-session.mjs';
 const { values } = parseArgs({ options: { url: { type: 'string' }, output: { type: 'string' }, 'fixture-evidence': { type: 'string' },
   'playwright-module': { type: 'string' }, chromium: { type: 'string' }, 'expected-settings-sha': { type: 'string' } } });
 for (const key of ['url', 'output', 'fixture-evidence', 'playwright-module', 'chromium', 'expected-settings-sha']) assert(values[key], key);
@@ -21,7 +22,7 @@ const pw = await import(pathToFileURL(resolve(values['playwright-module'])).href
 const browser = await pw.chromium.launch({ executablePath: values.chromium, headless: true, args: ['--no-sandbox'] });
 const checks = [], errors = [], assets = [], assetReads = [], external = [], pages = [];
 const observations = new WeakMap();
-let active, failure;
+let active, failure, navigationDiagnostics;
 const check = (name, detail) => checks.push({ name, status: 'PASS', ...(detail ? { detail } : {}) });
 const button = (page, name) => page.getByRole('button', { name, exact: typeof name === 'string' }).filter({ visible: true }).first();
 async function until(action, label, ms = 15000) {
@@ -135,22 +136,9 @@ async function prompt(page, label, expected) {
 try {
   const page = await pageOf({ locale: 'en-US', colorScheme: 'light', viewport: { width: 1440, height: 1180 } });
   const rpc = observations.get(page);
-  await until(() => rpc.calls.filter(item => item.endpoint === 'session/create').length === rpc.results.filter(item => item.endpoint === 'session/create').length, 'Prior session admissions not settled');
-  const newSession = rpc.waitForResult('session/create');
-  await page.getByRole('button', { name: 'New session', exact: true }).filter({ visible: true }).last().click();
-  const admitted = await newSession; if (admitted.error) throw admitted.error; assert(admitted.result.ok && admitted.result.value?.sessionId);
-  sessionId = admitted.result.value.sessionId;
-  owner = page.locator('[data-conversation-content][data-conversation-session="' + sessionId + '"]').filter({ visible: true }); await owner.waitFor();
-  const choose = owner.getByRole('button', { name: 'Choose workspace', exact: true });
-  if (await choose.isVisible()) {
-    await choose.click(); const adoption = rpc.waitForResult('session/create');
-    await page.getByRole('menuitem', { name: 'project', exact: true }).click();
-    const adopted = await adoption; if (adopted.error) throw adopted.error; assert(adopted.result.ok && adopted.result.value?.sessionId);
-    sessionId = adopted.result.value.sessionId;
-    owner = page.locator('[data-conversation-content][data-conversation-session="' + sessionId + '"]').filter({ visible: true }); await owner.waitFor();
-  }
-  await owner.locator('[data-composer-input=true][contenteditable=true]').waitFor();
-  check('fresh-session-actual-admission-and-owner', { sessionId });
+  const ready = await createReadyWorkspaceSession(page, rpc); sessionId = ready.sessionId; owner = ready.owner;
+  assert((await read('session/list', { _request: {} })).items.some(item => item.sessionId === sessionId && item.cwd === fixture.cwd && item.agentAvailable));
+  check('fresh-session-actual-admission-and-owner', { sessionId, admissionCount: ready.admissionCount });
   await button(page, /^Access mode, current:/).click(); await page.getByRole('menuitem', { name: 'Full access', exact: true }).click();
   await page.getByRole('checkbox').check(); await button(page, 'Enable Full access').click();
   await button(page, 'Access mode, current: Full access').waitFor();
@@ -237,11 +225,21 @@ try {
   await Promise.all(assetReads); assert(assets.length && assets.every(asset => asset.sha256 === expectedAsset && new URL(asset.url).searchParams.get('rev') === expectedAsset.slice(0, 12)));
   assert.deepEqual(errors, []); assert.deepEqual(external, []); check('actual-assets-and-browser-errors');
 } catch (error) {
-  failure = String(error.stack ?? error); if (active) await active.screenshot({ path: join(output, 'failure.png'), fullPage: true }).catch(() => {});
+  failure = String(error.stack ?? error);
+  if (active) {
+    navigationDiagnostics = await active.evaluate(target => ({ target,
+      selected: [...document.querySelectorAll('[data-row-key^="session:"][aria-selected="true"]')].map(row => row.getAttribute('data-row-key')),
+      owners: [...document.querySelectorAll('[data-conversation-content]')].filter(node => node.getClientRects().length).map(node => ({
+        sessionId: node.getAttribute('data-conversation-session'), phase: node.getAttribute('data-phase'),
+        inputs: [...node.querySelectorAll('[data-composer-input]')].map(input => ({ editable: input.getAttribute('contenteditable'), popup: input.getAttribute('aria-haspopup'), lexical: input.getAttribute('data-lexical-editor') })),
+      })),
+    }), sessionId).catch(() => ({ target: sessionId, unavailable: true }));
+    await active.screenshot({ path: join(output, 'failure.png'), fullPage: true }).catch(() => {});
+  }
 } finally {
   await browser.close();
   await writeFile(join(output, 'result.json'), JSON.stringify({ status: failure ? 'FAIL' : 'PASS', complete: !failure, checks, failure,
-    assets, expectedAsset, errors, externalRequests: external, paidModelCalls: 0, platform: process.platform }, null, 2) + '\n');
+    assets, expectedAsset, errors, externalRequests: external, paidModelCalls: 0, platform: process.platform, sessionId, navigationDiagnostics }, null, 2) + '\n');
 }
 if (failure) throw new Error(failure);
 console.log(JSON.stringify({ status: 'PASS', checks: checks.length, paidModelCalls: 0, expectedAsset }));

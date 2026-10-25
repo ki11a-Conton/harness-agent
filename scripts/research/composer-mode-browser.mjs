@@ -8,6 +8,7 @@ import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 import { createHash, randomUUID } from 'node:crypto';
 import { observeProductionRpc, canonicalPluginResource } from './deepseek-browser-observe.mjs';
+import { createReadyWorkspaceSession } from './deepseek-browser-session.mjs';
 const { values } = parseArgs({ options: { url: { type: 'string' }, output: { type: 'string' }, 'fixture-evidence': { type: 'string' },
   'playwright-module': { type: 'string' }, chromium: { type: 'string' }, 'expected-composer-sha': { type: 'string' }, 'expected-commands-sha': { type: 'string' } } });
 for (const key of ['url', 'output', 'fixture-evidence', 'playwright-module', 'chromium', 'expected-composer-sha', 'expected-commands-sha']) assert(values[key], key);
@@ -73,21 +74,8 @@ async function clearDraft() {
 }
 async function freshSession() {
   const sidebar = button(/^(Open sidebar|打开侧边栏)$/); if (await sidebar.isVisible()) await sidebar.click();
-  await until(() => rpc.calls.filter(item => item.endpoint === 'session/create').length === rpc.results.filter(item => item.endpoint === 'session/create').length, 'Prior admissions not settled');
-  const admission = rpc.waitForResult('session/create', 30000);
-  await page.getByRole('button', { name: /^(New session|新建会话)$/, exact: true }).filter({ visible: true }).last().click();
-  const result = await admission; if (result.error) throw result.error; assert(result.result.ok && result.result.value?.sessionId);
-  sessionId = result.result.value.sessionId;
-  let owner = page.locator(`[data-conversation-content][data-conversation-session="${sessionId}"]`).filter({ visible: true }); await owner.waitFor();
-  const choose = owner.getByRole('button', { name: /^(Choose workspace|选择工作区)$/, exact: true });
-  if (await choose.isVisible()) {
-    await choose.click(); const adoption = rpc.waitForResult('session/create', 30000);
-    await page.getByRole('menuitem', { name: 'project', exact: true }).click();
-    const adopted = await adoption; if (adopted.error) throw adopted.error; assert(adopted.result.ok && adopted.result.value?.sessionId);
-    sessionId = adopted.result.value.sessionId;
-    owner = page.locator(`[data-conversation-content][data-conversation-session="${sessionId}"]`).filter({ visible: true }); await owner.waitFor();
-  }
-  await owner.locator('[data-composer-input=true][contenteditable=true]').waitFor();
+  const ready = await createReadyWorkspaceSession(page, rpc); sessionId = ready.sessionId;
+  assert((await read('session/list', { _request: {} })).items.some(item => item.sessionId === sessionId && item.cwd === fixture.cwd && item.agentAvailable));
   const collapse = button(/^(Collapse sidebar|收起侧边栏)$/); if (await collapse.isVisible()) await collapse.click();
 }
 async function appearance(locale, theme) {
@@ -209,10 +197,14 @@ try {
   await freshSession(); const isolated = (await state()).values;
   assert.equal(isolated.goal, null); assert.equal(isolated.plan.active, false); await layout('new-session-default');
   check('new-session-default-coding-isolation');
-  await editor().fill('/goal [fixture:read] Typed goal ' + randomUUID());
+  const typedObjective = '[fixture:read] Typed goal ' + randomUUID();
+  await editor().fill('/goal ' + typedObjective);
   await acknowledged(() => button('Send message').click()); await button('Pause goal').waitFor();
-  assert.match((await goal()).objective, /^\[fixture:read\] Typed goal /u);
-  await button('Pause goal').click(); await button('Resume goal').waitFor(); await button('Clear goal').click();
+  assert.equal((await goal()).objective, typedObjective);
+  await until(async () => (await requests()).some(request => request.messages.some(message => message.role === 'user' && message.content.includes(typedObjective))), 'Typed Goal never reached actual model HTTP', 30000);
+  await button('Pause goal').click(); await button('Resume goal').waitFor();
+  await until(async () => (await state()).values.turnBoundary.openTurnStartSeq === null && !await button('Stop generating').isVisible(), 'Last admitted Goal turn did not settle before handoff', 30000);
+  await button('Clear goal').click();
   await until(async () => (await goal()) === undefined, 'Typed goal did not clear'); check('typed-goal-with-objective-executes');
   await Promise.all(assetReads); await rpc.settled();
   for (const [kind, expected] of [['composer', values['expected-composer-sha']], ['commands', values['expected-commands-sha']]]) {

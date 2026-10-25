@@ -252,7 +252,7 @@ try {
   for (const phase of ['browser', 'workspace-keyboard', 'model-reasoning', 'composer-mode', 'daily', 'pr15']) {
     try {
       const report = JSON.parse(await readFile(join(output, phase, 'result.json'), 'utf8'));
-      const cases = report.results ?? (Array.isArray(report.cases) ? report.cases : report.status === 'PASS' ? [] : [{ name: report.pending?.[0] ?? 'PR15 controls', status: 'FAIL', failure: report.failure }]);
+      const cases = report.results ?? (Array.isArray(report.cases) ? report.cases : report.status === 'PASS' ? [] : [{ name: report.pending?.[0] ?? phase, status: 'FAIL', failure: report.failure, navigationDiagnostics: report.navigationDiagnostics }]);
       for (const item of cases.filter(item => item.status !== 'PASS').slice(0, remainingDiagnostics)) {
         remainingDiagnostics--;
         console.error('::error title=Installed UI case failed::' + escape(JSON.stringify({
