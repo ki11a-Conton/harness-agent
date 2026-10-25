@@ -53,7 +53,7 @@ jobs:
           run-id: ${{ inputs.run_id }}
           name: deepseek-installed-windows-latest-${{ inputs.source_sha }}-${{ inputs.run_id }}
           path: evidence
-      - name: Expose bounded original case records without changing their verdict
+      - name: Expose original composer failure without rerunning the application
         env:
           RUN_ID: ${{ inputs.run_id }}
           SOURCE_SHA: ${{ inputs.source_sha }}
@@ -62,30 +62,23 @@ jobs:
           import { readFile } from 'node:fs/promises';
           import { createHash } from 'node:crypto';
           import { gzipSync } from 'node:zlib';
-          const bytes = await readFile('evidence/browser/result.json');
-          const report = JSON.parse(bytes);
-          const results = report.results.map(({ name, viewport, status, failure, checks, errors, externalRequests, failedHttp, calls }) =>
-            ({ name, viewport, status, failure, checks, errors, externalRequests, failedHttp,
-              rpcFailures: calls.filter(call => call.ok === false).map(({ endpoint, status, ok, error, expected }) =>
-                ({ endpoint, status, ok, error, expected })) }));
-          const hostStderr = await readFile('evidence/host-stderr.log', 'utf8');
-          const requestBytes = await readFile('evidence/fixture/requests.jsonl');
-          const modelRequests = requestBytes.toString('utf8').trim().split('\n').filter(Boolean).map(line => {
-            const { call, model, messages } = JSON.parse(line);
-            return { call, model, messages: messages.filter(message => message.role === 'user').map(({ role, content }) => ({ role, content })) };
-          });
-          const failedCaseRecords = report.results.filter(item => item.status !== 'PASS').map(
-            ({ name, viewport, status, failure, calls, rpcRequests, sockets, observation }) =>
-              ({ name, viewport, status, failure, calls, rpcRequests, sockets, observation }));
-          const record = { schemaVersion: 1, runId: process.env.RUN_ID, sourceSha: process.env.SOURCE_SHA,
-            rawReportSha256: createHash('sha256').update(bytes).digest('hex'), rawReportBytes: bytes.length,
-            requestLogSha256: createHash('sha256').update(requestBytes).digest('hex'), requestLogBytes: requestBytes.length,
-            hostStderr, modelRequests, failedCaseRecords, complete: report.complete, results };
+          const root = 'evidence/';
+          const files = {};
+          for (const path of ['composer-mode/result.json', 'composer-mode/failure-text.txt', 'composer-mode.log', 'host-stderr.log']) {
+            const bytes = await readFile(root + path);
+            files[path] = { bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex'),
+              content: path.endsWith('.json') ? JSON.parse(bytes) : bytes.toString('utf8').slice(-24000) };
+          }
+          try {
+            const bytes = await readFile(root + 'composer-mode/failure.png');
+            files['composer-mode/failure.png'] = { bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex'),
+              ...(bytes.length <= 70000 ? { encoding: 'base64', data: bytes.toString('base64') } : {}) };
+          } catch (error) { if (error.code !== 'ENOENT') throw error; }
+          const record = { schemaVersion: 1, runId: process.env.RUN_ID, originalSourceSha: process.env.SOURCE_SHA,
+            purpose: 'Original failed composer artifacts only: no application rerun, no changed verdict', files };
           const data = gzipSync(Buffer.from(JSON.stringify(record))).toString('base64');
-          const size = 3600, total = Math.ceil(data.length / size);
-          if (total > 7) throw new Error('Diagnostic projection exceeds the bounded per-step annotation budget');
-          for (let index = 0; index < total; index++) console.log(`::notice title=Installed UI evidence chunk ${index + 1}/${total}::` +
+          const size = 3200, total = Math.ceil(data.length / size);
+          if (total > 40) throw new Error('Diagnostic projection exceeds bounded annotation budget');
+          for (let index = 0; index < total; index++) console.log(`::notice title=Original composer evidence ${index + 1}/${total}::` +
             JSON.stringify({ encoding: 'gzip+base64', index, total, data: data.slice(index * size, (index + 1) * size) }));
-          for (const item of results.filter(item => item.status !== 'PASS')) console.log(`::notice title=Original installed UI failure::` +
-            JSON.stringify({ name: item.name, viewport: item.viewport, status: item.status, failure: item.failure }).slice(0, 4000));
           NODE
