@@ -41,3 +41,8 @@ W2 验收：同一独立浏览器及生命周期 probe 红转绿；真实 Chat H
 | 可审查交付 | 只改tools环境探测和相关测试，在本计划记录对照及局限；不新造执行器或改Core/Contracts | W/C最终clean SHA全量及CLI/Web和四项main CI成功，再推送结果；已发布v1.13 tag/四资产及旧release不变，付费模型0 |
 
 C2 是已有工具的确定性响应性/取消/cwd缺陷修复，不更换Agent策略或改写冻结Runtime。使用现有执行器来落实Codex的异步进程生命周期原则，没有复制其Rust Runtime。独立门槛预先记录在 [registration.json](docs/evidence/codex-env-probes-20261025/registration.json)；计时只证明受控Linux工程行为，不证明真实模型成功率。
+
+
+## 最终验收中的旧合同校准
+
+bb1d93bc 本地全量发现2项PR15固定system文本和6项rehydration固定旧系统成本断言失败，原运行完整自然结束（10281通过/8失败/16原跳过），推送器拒绝推进main。按 [合同说明](docs/evidence/workspace-context-20261025/contract-upgrade.md) 保持原模式隔离精确比较、Refs临界有效余量、500-token检查和129-token硬溢出；仅将必须存在的工作区环境纳入测试基线与计价。生产预算不改。相关34项/typecheck已通过，须在新的固定SHA重新完成最终全量/main CI；旧失败完整保留。

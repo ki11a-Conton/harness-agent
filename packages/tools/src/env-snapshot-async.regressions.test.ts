@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -80,7 +80,7 @@ it.each([false, true])("real argv child stays responsive and is reaped on cancel
   const result = await tool().execute({ probeLimit: 1 }, context(cwd, controller.signal));
   expect(childReady).toBe(true);
   const child = JSON.parse(await readFile(ready, "utf8")) as { pid: number; cwd: string };
-  expect(child.cwd).toBe(cwd);
+  expect(await realpath(child.cwd)).toBe(await realpath(cwd));
   if (cancel) {
     expect(result).toEqual({ status: "cancelled" }); expect(execute).toHaveBeenCalledTimes(1);
     expect(existsSync(finished)).toBe(false);

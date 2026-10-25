@@ -4,7 +4,9 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { newMemoryId, newSessionId } from "@ar/contracts";
 import type { ModelProvider, ModelRequest } from "@ar/contracts";
-import { createHarness } from "./create-harness.js";
+import { TRUST_BOUNDARY_PROMPT } from "@ar/core";
+import { createHarness, DEFAULT_MAIN_SYSTEM_PROMPT } from "./create-harness.js";
+import { EffectiveInstructionContextPipeline } from "./effective-instruction-context.js";
 
 const roots: string[] = [];
 afterEach(async () => { await Promise.all(roots.splice(0).map(root => rm(root, { recursive: true, force: true }))); });
@@ -23,7 +25,19 @@ async function fixture(blockBudget: number, options: { memory?: boolean; outputR
   // context envelope space without changing their original spendable block
   // budget; the separate absolute-budget case exercises the hard wire check.
   const envelopeReserve = options.absoluteBudget ? 0 : 512;
-  const maxTokens = blockBudget + envelopeReserve;
+  // Preserve the ORIGINAL free block headroom above the protected policy.
+  // Host workspace context is now mandatory and priced by the real adapter;
+  // adding precisely that cost here does not give memory/refs extra room.
+  // The hard absolute-budget case below keeps its original ceiling unchanged.
+  const calibration = new EffectiveInstructionContextPipeline();
+  const calibrated = await calibration.build({ cwd, systemPrompt: DEFAULT_MAIN_SYSTEM_PROMPT, priorBlocks: [],
+    budget: { maxTokens: 10_000, reserved: { system: 0, task: 0, output: 0 }, dynamic: 0 } });
+  const protectedSystem = calibrated.blocks.find(block => block.source === "system")!;
+  const environmentTokens = protectedSystem.tokens - calibration.estimateTextTokens(DEFAULT_MAIN_SYSTEM_PROMPT);
+  const frame = `${TRUST_BOUNDARY_PROMPT}\n\n---\n\n[context trust=trusted source=system]\n`;
+  const wireEnvironmentTokens = calibration.estimateTextTokens(frame + protectedSystem.content) - calibration.estimateTextTokens(frame + DEFAULT_MAIN_SYSTEM_PROMPT);
+  expect(environmentTokens).toBeGreaterThan(0);
+  const maxTokens = blockBudget + envelopeReserve + (options.absoluteBudget ? 0 : environmentTokens);
   const h = await createHarness({ cwd, dataDir: join(cwd, "data"), profile: "test", modelProvider: provider, model: { providerId: provider.id, modelId: "scripted" },
     ...(memory ? { memory: { enabled: true, scope: "workspace" } } : {}), featureFlags: { skills: false, mcp: false, delegation: false, learning: false },
     contextBudget: { maxTokens, reserved: { system: envelopeReserve, task: 0, output: options.outputReserved ?? 0 }, dynamic: 0 },
@@ -40,7 +54,7 @@ async function fixture(blockBudget: number, options: { memory?: boolean; outputR
       + h.context.pipeline.estimateMessageTokens(request.messages) + (options.outputReserved ?? 0)).toBeLessThanOrEqual(maxTokens);
     return { outcome, events: await h.events.list(session.id) };
   };
-  return { h, requests, run, goal };
+  return { h, requests, run, goal, environmentTokens, wireEnvironmentTokens };
 }
 
 describe("actual Harness rehydration within effective user/output reservation", () => {
@@ -55,7 +69,7 @@ describe("actual Harness rehydration within effective user/output reservation", 
       expect(f.requests[0]!.system).toContain("## Constraints\n- continue");
       expect(f.requests[0]!.system).not.toContain("## Refs");
       expect(f.requests[0]!.messages.filter(message => message.role === "user").map(message => message.content)).toEqual(["continue"]);
-      expect(events.find(event => event.type === "context.built")?.payload.used).toBe(147);
+      expect(events.find(event => event.type === "context.built")?.payload.used).toBe(147 + f.environmentTokens);
       expect(events.find(event => event.type === "memory.retrieved")?.payload.count).toBe(2);
       expect(events.some(event => event.type === "run.limit_reached")).toBe(false);
     } finally { await f.h.close(); }
@@ -67,7 +81,7 @@ describe("actual Harness rehydration within effective user/output reservation", 
       const { outcome, events } = await f.run();
       expect(outcome.status).toBe("completed"); expect(f.requests).toHaveLength(1);
       expect(f.requests[0]!.system).toContain("## Refs\n- full transcript preserved on disk");
-      expect(events.find(event => event.type === "context.built")?.payload.used).toBe(158);
+      expect(events.find(event => event.type === "context.built")?.payload.used).toBe(158 + f.environmentTokens);
     } finally { await f.h.close(); }
   });
 
@@ -77,7 +91,7 @@ describe("actual Harness rehydration within effective user/output reservation", 
       const { outcome, events } = await f.run();
       expect(outcome.status).toBe("completed"); expect(f.requests).toHaveLength(1);
       expect(f.requests[0]!.system).not.toContain("## Refs");
-      expect(events.find(event => event.type === "context.built")?.payload.used).toBe(147);
+      expect(events.find(event => event.type === "context.built")?.payload.used).toBe(147 + f.environmentTokens);
       expect(f.requests[0]!.messages.some(message => message.role === "user" && message.content === "continue")).toBe(true);
     } finally { await f.h.close(); }
   });
@@ -100,7 +114,7 @@ describe("actual Harness rehydration within effective user/output reservation", 
       const { outcome, events } = await f.run();
       expect(outcome.status).toBe("completed"); expect(f.requests).toHaveLength(1);
       expect(f.requests[0]!.system).not.toContain("# Compaction Summary");
-      expect(events.find(event => event.type === "context.built")?.payload.used).toBe(130);
+      expect(events.find(event => event.type === "context.built")?.payload.used).toBe(130 + f.environmentTokens);
       expect(events.some(event => event.type === "memory.retrieved")).toBe(false);
     } finally { await f.h.close(); }
   });
@@ -110,7 +124,7 @@ describe("actual Harness rehydration within effective user/output reservation", 
     try {
       const { outcome, events } = await f.run();
       expect(outcome.status).toBe("failed"); expect(f.requests).toEqual([]);
-      expect(events.find(event => event.type === "run.limit_reached")?.payload).toMatchObject({ limit: "maxTokens", used: 235 });
+      expect(events.find(event => event.type === "run.limit_reached")?.payload).toMatchObject({ limit: "maxTokens", used: 235 + f.wireEnvironmentTokens });
     } finally { await f.h.close(); }
   });
 });
