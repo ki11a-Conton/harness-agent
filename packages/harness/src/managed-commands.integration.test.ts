@@ -1,16 +1,45 @@
 import { mkdtemp, realpath, readFile, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createServer, type ServerResponse } from "node:http";
+import type { AddressInfo } from "node:net";
 import { expect, it } from "vitest";
 import type { ModelProvider, ModelRequest } from "@ar/contracts";
 import { ScriptedModelProvider } from "@ar/model";
 import { createHarness, type Harness } from "./create-harness.js";
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+async function heldCommand() {
+  const responses = new Set<ServerResponse>();
+  let released = false;
+  const server = createServer((_request, response) => {
+    responses.add(response);
+    response.once("close", () => responses.delete(response));
+    if (released) response.end("release");
+  });
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", resolve);
+  });
+  const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}/hold`;
+  return {
+    code: `const fs=require('node:fs');fs.appendFileSync('starts','1');fs.writeFileSync('started','1');require('node:http').get(${JSON.stringify(url)},response=>{response.resume();response.on('end',()=>{fs.writeFileSync('complete','1');console.log('CHECK_OK')})}).on('error',error=>{console.error(error);process.exitCode=1});`,
+    release: () => {
+      released = true;
+      for (const response of responses) response.end("release");
+    },
+    close: () =>
+      new Promise<void>((resolve) => {
+        server.close(() => resolve());
+        server.closeAllConnections();
+      }),
+  };
+}
 async function create(
   enabled: boolean,
   mode: "finish" | "premature" | "cancel" = "finish",
   overrides: Record<string, unknown> = {},
   duration = 900,
+  controlled?: { code: string; observe?: (token: number) => void },
 ) {
   const cwd = await realpath(await mkdtemp(join(tmpdir(), "managed-host-")));
   const requests: ModelRequest[] = [];
@@ -22,9 +51,10 @@ async function create(
   const authority = new AbortController();
   await writeFile(join(cwd, "source"), "RELATED");
   const code =
+    controlled?.code ??
     "const fs=require('node:fs');fs.appendFileSync('starts','1');fs.writeFileSync('started','1');setTimeout(()=>{fs.writeFileSync('complete','1');console.log('CHECK_OK')}," +
-    duration +
-    ")";
+      duration +
+      ")";
   const provider: ModelProvider = {
     id: "managed-host-offline",
     listModels: async () => [
@@ -53,6 +83,7 @@ async function create(
               -1,
             )?.[1] ?? state;
         }
+        controlled?.observe?.(pollToken);
         if (step === 1)
           yield* ScriptedModelProvider.toolCall(
             enabled ? "exec_start" : "exec",
@@ -92,6 +123,18 @@ async function create(
       memory: false,
     },
     limits: { maxDurationMs: 10000, maxToolCalls: 15 },
+    ...(controlled
+      ? {
+          sandboxPolicy: {
+            filesystem: {
+              mode: "workspace-write" as const,
+              allowedPaths: [cwd],
+            },
+            network: { mode: "allowlist" as const, hosts: ["127.0.0.1"] },
+            process: { timeoutMs: 10000, maxOutputBytes: 65536 },
+          },
+        }
+      : {}),
     task: {
       id: "managed-check",
       goal: "Run check and read related source",
@@ -173,13 +216,23 @@ it("real production runtime performs start -> read -> poll -> original command v
   }
 });
 it("a premature model completion cannot verify an active command and the finite budget stays final", async () => {
-  const f = await create(true, "premature", {
-    limits: { maxDurationMs: 10000, maxToolCalls: 15 },
-    maxIterationsPerTurn: 4,
-  });
+  const controlled = await heldCommand();
+  let f: Awaited<ReturnType<typeof create>> | undefined;
   try {
+    f = await create(
+      true,
+      "premature",
+      {
+        limits: { maxDurationMs: 10000, maxToolCalls: 15 },
+        maxIterationsPerTurn: 4,
+      },
+      900,
+      controlled,
+    );
     const result = await f.run();
     expect(result.status).not.toBe("completed");
+    expect(result.grade).not.toBe("verified_complete");
+    expect(await f.h.store.listTurns(f.session.id)).toHaveLength(1);
     const events = await f.h.events.list(f.session.id);
     expect(
       events.some(
@@ -190,11 +243,15 @@ it("a premature model completion cannot verify an active command and the finite 
       events.some(
         (e) =>
           e.type === "turn.completed" &&
-          e.payload.completionStatus === "verified_complete",
+          e.payload.grade === "verified_complete",
       ),
     ).toBe(false);
   } finally {
-    await f.close();
+    try {
+      await f?.close();
+    } finally {
+      await controlled.close();
+    }
   }
 });
 it("owner cancellation after a returned start cleans up before the turn acknowledgement", async () => {
@@ -229,9 +286,24 @@ it("refuses enabling without trusted finite deadline and real task verification"
 });
 
 it("quiet long command polls advance real observation tokens without triggering identical-call recovery", async () => {
-  const f = await create(true, "finish", {}, 3700);
+  const controlled = await heldCommand();
+  let f: Awaited<ReturnType<typeof create>> | undefined;
   try {
-    expect((await f.run()).status).toBe("completed");
+    f = await create(
+      true,
+      "finish",
+      { managedCommands: { enabled: true, maxJobMs: 8000 } },
+      900,
+      {
+        ...controlled,
+        // Four actual observations, independent of machine speed or sleep timing.
+        observe: (token) => {
+          if (token >= 4) controlled.release();
+        },
+      },
+    );
+    const outcome = await f.run();
+    expect(outcome.status, JSON.stringify(outcome)).toBe("completed");
     const polls = f.requests
       .flatMap((r) => r.messages)
       .filter((m) => m.role === "assistant")
@@ -241,6 +313,10 @@ it("quiet long command polls advance real observation tokens without triggering 
       new Set(polls.map((c) => c.args.pollToken)).size,
     ).toBeGreaterThanOrEqual(4);
   } finally {
-    await f.close();
+    try {
+      await f?.close();
+    } finally {
+      await controlled.close();
+    }
   }
 });

@@ -1,0 +1,11 @@
+{
+  "source": "cdb3022adbea0679868ba3f4fe6a16a380365dfc",
+  "managerSourceSha256": "e13badb3e58a703a5c703134dc43f8a897c694eeb6703c8bb77c61e7e930ad83",
+  "test": "managed opt-in preserves legacy tool contexts without granting ownerless command sessions",
+  "reproduce": "pnpm exec vitest run packages/tools/src/managed-commands.test.ts -t 'managed opt-in preserves legacy'",
+  "baseline": "Original ToolOrchestrator real read_file succeeds with an optional turnId context",
+  "candidateBefore": "Managed wrapper rejected the same read before the original pipeline because no managed owner exists",
+  "fix": "Resolve managed owner only for exec_start/poll/cancel/jobs; retain ordinary authorization/sandbox/workspace barriers for legacy calls",
+  "coreOrContractChanges": false,
+  "paidModelCalls": 0
+}

@@ -744,20 +744,25 @@ export class ManagedCommandOrchestrator extends ToolOrchestrator {
     request: ToolCallRequest,
     context: ToolExecutionContext,
   ): Promise<ToolResult> {
+    const managedCall = [
+      "exec_start",
+      "exec_poll",
+      "exec_cancel",
+      "exec_jobs",
+    ].includes(request.call.name);
     try {
-      return await this.managed.inContext(context, async () => {
+      const execute = async () => {
         const tool = this.catalog.get(request.call.name);
-        if (
-          !tool ||
-          ["exec_start", "exec_poll", "exec_cancel", "exec_jobs"].includes(
-            request.call.name,
-          )
-        )
-          return super.execute(request, context);
+        if (!tool || managedCall) return super.execute(request, context);
         return this.managed
           .guard({ ...tool, execute: () => super.execute(request, context) })
           .execute(request.call.args, context);
-      });
+      };
+      // The legacy context contract permits host/delegated reads without a
+      // managed owner. Its original pipeline and workspace barrier still run.
+      return await (managedCall
+        ? this.managed.inContext(context, execute)
+        : execute());
     } catch (err) {
       return denial(
         err instanceof Error ? err.message : "managed owner unavailable",
@@ -768,12 +773,16 @@ export class ManagedCommandOrchestrator extends ToolOrchestrator {
     request: BoundToolCallRequest,
     context: ToolExecutionContext,
   ): Promise<ToolResult> {
+    const managedCall = [
+      "exec_start",
+      "exec_poll",
+      "exec_cancel",
+      "exec_jobs",
+    ].includes(request.call.name);
     try {
-      return await this.managed.inContext(context, () =>
+      const execute = () =>
         super.executeBound(
-          ["exec_start", "exec_poll", "exec_cancel", "exec_jobs"].includes(
-            request.call.name,
-          )
+          managedCall
             ? request
             : {
                 ...request,
@@ -783,8 +792,10 @@ export class ManagedCommandOrchestrator extends ToolOrchestrator {
                 },
               },
           context,
-        ),
-      );
+        );
+      return await (managedCall
+        ? this.managed.inContext(context, execute)
+        : execute());
     } catch (err) {
       return denial(
         err instanceof Error ? err.message : "managed owner unavailable",

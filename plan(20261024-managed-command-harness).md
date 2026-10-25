@@ -59,3 +59,5 @@ Runtime 架构冻结。先在已有 Agent/tool/host 扩展点完成实验；需�
 - H4 的24对/48臂协议、固定预算和全部失败保留已预注册；正式运行输出 clean SHA、脚本指纹、逐臂事件/文件/退出码和总表。HTTP 本地权限与外部拒绝在首个臂前实际预检；保留曾因授权冲突和路径 glob 不覆盖子路径而失败的完整臂，不把修正前或调试结果冒充最终门禁。
 - H5 的 CLI/Web 环境入口及 SDK 服务端配置已实现为显式 opt-in；没有可信期限或真实命令 verifier 就拒绝启动。验收接入官方同包 Ubuntu/原生 Windows workflow，包含实际发送、权限确认、Stop 后无晚写、原 verifier 及真实 CLI stdin 审批和 verified_complete。Windows workflow 另执行完整48臂；只有 H4、全量和这些跨平台门禁实际成功才算完成。
 - [使用与边界](docs/managed-commands.md)记录 API、预算、失败替换、取消、重启和不支持的 PTY/stdin；真实模型质量仍为 NOT_PROVEN。
+
+收尾兼容性门禁：保留普通 ToolExecutionContext 的 optional turn 合同，owner/绝对预算能力仅用于四个新增工具。已保存 original orchestrator 实际读取成功、包装器拒绝的独立反例；修复后 legacy 路径的原权限/沙箱/预算/工作区锁仍执行，不能因此创建无 owner 的新命令。Windows 时序回归采用受控真实命令及实际增量/查询回执，不用墙钟猜测轮询次数。所有旧失败保持，并在新的 clean SHA 上重新验收。

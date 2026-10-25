@@ -18,6 +18,8 @@ import {
 import { ToolRegistry } from "./registry.js";
 import { createProductionTools } from "./production-tools.js";
 import { TaskVerifier } from "./verification/task-verifier.js";
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 const cleanups: (() => Promise<unknown>)[] = [];
 afterEach(async () => {
   for (const close of cleanups.splice(0).reverse()) await close();
@@ -82,11 +84,21 @@ async function fixture(options: Partial<ManagedCommandOptions> = {}) {
       yieldMs: 0,
       ...extra,
     });
-  const pollDone = async (id: string) => {
+  const pollDone = async (id: string, onDelta?: (delta: any) => void) => {
     let result;
+    const deltas: Array<{
+      chunks: Array<{ text: string }>;
+      retainedBytes: number;
+      incomplete: boolean;
+      lostBytes: number;
+    }> = [];
     for (let i = 0; i < 80; i++) {
       result = await call("exec_poll", { jobId: id, waitMs: 100 });
-      if (result.output?.state !== "running") return result;
+      if (result.output) {
+        deltas.push(result.output);
+        onDelta?.(result.output);
+      }
+      if (result.output?.state !== "running") return { ...result, deltas };
     }
     throw new Error("job failed to settle");
   };
@@ -114,20 +126,75 @@ async function fixture(options: Partial<ManagedCommandOptions> = {}) {
 describe("managed commands through real permission/sandbox/executor", () => {
   it("starts once, yields, permits a real read while alive and delivers real exit/output", async () => {
     const f = await fixture();
+    // Explicit fixture authority; the inline command's localhost URL must
+    // still pass the ordinary network-intent sandbox gate.
+    f.context.sandboxPolicy = {
+      ...f.context.sandboxPolicy,
+      network: { mode: "allowlist", hosts: ["127.0.0.1"] },
+    };
+    let release!: () => void;
+    let connected!: () => void;
+    const alive = new Promise<void>((resolve) => {
+      connected = resolve;
+    });
+    const server = createServer((_request, response) => {
+      release = () => response.end("release");
+      connected();
+    });
+    await new Promise<void>((resolve) =>
+      server.listen(0, "127.0.0.1", resolve),
+    );
+    cleanups.push(
+      () =>
+        new Promise<void>((resolve) => {
+          server.close(() => resolve());
+          server.closeAllConnections();
+        }),
+    );
     await writeFile(join(f.cwd, "source"), "RELATED_SOURCE");
     const result = await f.start(
-      "const fs=require('node:fs');fs.appendFileSync('starts','1');setTimeout(()=>{fs.writeFileSync('done','1');console.log('ACTUAL_OK')},650)",
+      `const fs=require('node:fs');fs.appendFileSync('starts','1');console.log('ACTUAL_OK');require('node:http').get('http://127.0.0.1:${(server.address() as AddressInfo).port}/hold',response=>{response.resume();response.on('end',()=>{fs.writeFileSync('done','1')})});`,
     );
+    expect(result.status, JSON.stringify(result)).toBe("success");
     expect(result.output.state).toBe("running");
     const id = result.output.jobId;
+    await new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(
+        () => reject(new Error("actual child did not connect")),
+        5000,
+      );
+      alive.then(
+        () => {
+          clearTimeout(timer);
+          resolve();
+        },
+        (error) => {
+          clearTimeout(timer);
+          reject(error);
+        },
+      );
+    });
     const read = await f.call("read_file", { path: "source" });
     expect(JSON.stringify(read.output)).toContain("RELATED_SOURCE");
     expect(await readFile(join(f.cwd, "done"), "utf8").catch(() => null)).toBe(
       null,
     );
-    const end = await f.pollDone(id);
+    const end = await f.pollDone(id, (delta) => {
+      if (
+        delta.chunks.some((chunk: { text: string }) =>
+          chunk.text.includes("ACTUAL_OK"),
+        )
+      )
+        release();
+    });
     expect(end.output).toMatchObject({ state: "succeeded", exitCode: 0 });
-    expect(JSON.stringify(end.output)).toContain("ACTUAL_OK");
+    expect(JSON.stringify(end.output.chunks)).not.toContain("ACTUAL_OK");
+    expect(
+      end.deltas
+        .flatMap((delta) => delta.chunks)
+        .map((chunk) => chunk.text)
+        .join(""),
+    ).toContain("ACTUAL_OK");
     expect(await readFile(join(f.cwd, "starts"), "utf8")).toBe("1");
     expect((await f.call("exec_poll", { jobId: id })).output.chunks).toEqual(
       [],
@@ -309,11 +376,17 @@ describe("managed commands through real permission/sandbox/executor", () => {
     ).output.jobId;
     const end = await f.pollDone(id);
     expect(end.output.state).toBe("succeeded");
-    expect(end.output.retainedBytes).toBeLessThanOrEqual(256);
-    expect(end.output.incomplete).toBe(true);
-    expect(end.output.lostBytes).toBeGreaterThan(0);
-    expect(JSON.stringify(end.output)).not.toContain("�");
-    expect(JSON.stringify(end.output)).toContain("REAL_ERROR_TAIL");
+    expect(end.deltas.every((delta) => delta.retainedBytes <= 256)).toBe(true);
+    expect(
+      end.deltas.some((delta) => delta.incomplete && delta.lostBytes > 0),
+    ).toBe(true);
+    expect(JSON.stringify(end.deltas)).not.toContain("�");
+    expect(
+      end.deltas
+        .flatMap((delta) => delta.chunks)
+        .map((chunk) => chunk.text)
+        .join(""),
+    ).toContain("REAL_ERROR_TAIL");
   });
   it("blocks false verification and requires the identical failed command to succeed after repair", async () => {
     const f = await fixture();
@@ -510,4 +583,70 @@ it("real multi-command verification keeps its original parallel execution semant
   );
   expect(result.passed).toBe(true);
   expect(result.checks).toHaveLength(2);
+});
+it("managed opt-in preserves legacy tool contexts without granting ownerless command sessions", async () => {
+  const f = await fixture({
+    resolveAuthority: async () => {
+      throw new Error("no managed owner capability");
+    },
+  });
+  await writeFile(join(f.cwd, "legacy-read"), "ACTUAL_LEGACY_READ");
+  const context = { ...f.context, turnId: undefined };
+  const id = newToolCallId();
+  const request = {
+    id,
+    sessionId: context.sessionId,
+    agentId: context.agentId,
+    call: { id, name: "read_file", args: { path: "legacy-read" } },
+  };
+  const { ToolOrchestrator } = await import("./orchestrator.js");
+  const baseline = await new ToolOrchestrator({
+    registry: f.registry,
+    workspaceRoot: f.cwd,
+  }).execute(request, context);
+  expect(baseline.status).toBe("success");
+  const candidate = await f.call("read_file", { path: "legacy-read" }, context);
+  expect(candidate.status, JSON.stringify(candidate)).toBe("success");
+  expect(JSON.stringify(candidate.output)).toContain("ACTUAL_LEGACY_READ");
+  const definition = f.registry.get("read_file")!;
+  const { semanticsOf } = await import("./registry.js");
+  const bound = await new ManagedCommandOrchestrator(
+    { registry: f.registry, workspaceRoot: f.cwd },
+    f.managed,
+  ).executeBound(
+    {
+      ...request,
+      binding: {
+        name: "read_file",
+        definition,
+        spec: f.registry.specs().find((spec) => spec.name === "read_file")!,
+        semantics: semanticsOf(definition),
+        provenance: { kind: "builtin" },
+      },
+    },
+    context,
+  );
+  expect(bound.status, JSON.stringify(bound)).toBe("success");
+  expect(
+    (
+      await f.call(
+        "write_file",
+        { path: "must-not-write", content: "denied" },
+        {
+          ...context,
+          sandboxPolicy: {
+            ...context.sandboxPolicy,
+            filesystem: { mode: "read-only" },
+          },
+        },
+      )
+    ).status,
+  ).toBe("denied");
+  expect(await readFile(join(f.cwd, "must-not-write")).catch(() => null)).toBe(
+    null,
+  );
+
+  expect(
+    (await f.call("exec_start", { command: process.execPath }, context)).status,
+  ).toBe("denied");
 });

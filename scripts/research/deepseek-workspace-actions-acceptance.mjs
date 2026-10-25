@@ -99,7 +99,9 @@ async function archivePointer(id) {
 }
 async function openSearch(query) {
   await button('Search sessions').click();
+  const searched = rpc.waitForResult('session/search', 30000);
   await page.getByPlaceholder('Search session names', { exact: true }).fill(query);
+  await result(searched);
   await page.getByRole('treeitem').filter({ hasText: query }).first().waitFor();
 }
 async function treeSnapshot() { return page.getByRole('treeitem').evaluateAll(nodes => nodes.map(row => ({
