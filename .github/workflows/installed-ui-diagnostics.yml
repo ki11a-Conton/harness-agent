@@ -43,7 +43,8 @@ jobs:
           assert.equal(response.status, 200);
           const run = await response.json();
           assert.equal(run.head_sha, SOURCE_SHA); assert.equal(run.head_branch, 'main');
-          assert.equal(run.path, '.github/workflows/deepseek-ui-installed.yml');
+          assert.equal(run.path, '.github/workflows/ci.yml');
+          assert.equal(run.run_attempt, 1);
           assert.equal(run.status, 'completed');
           console.log(JSON.stringify({ runId: run.id, sourceSha: run.head_sha, conclusion: run.conclusion }));
           NODE
@@ -51,9 +52,9 @@ jobs:
         with:
           github-token: ${{ github.token }}
           run-id: ${{ inputs.run_id }}
-          name: deepseek-installed-windows-latest-${{ inputs.source_sha }}-${{ inputs.run_id }}
+          name: test-report-windows-latest
           path: evidence
-      - name: Expose original composer failure without rerunning the application
+      - name: Expose original unit failure without rerunning tests
         env:
           RUN_ID: ${{ inputs.run_id }}
           SOURCE_SHA: ${{ inputs.source_sha }}
@@ -62,23 +63,18 @@ jobs:
           import { readFile } from 'node:fs/promises';
           import { createHash } from 'node:crypto';
           import { gzipSync } from 'node:zlib';
-          const root = 'evidence/';
-          const files = {};
-          for (const path of ['composer-mode/result.json', 'composer-mode/failure-text.txt', 'composer-mode.log', 'host-stderr.log']) {
-            const bytes = await readFile(root + path);
-            files[path] = { bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex'),
-              content: path.endsWith('.json') ? JSON.parse(bytes) : bytes.toString('utf8').slice(-24000) };
-          }
-          try {
-            const bytes = await readFile(root + 'composer-mode/failure.png');
-            files['composer-mode/failure.png'] = { bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex'),
-              ...(bytes.length <= 70000 ? { encoding: 'base64', data: bytes.toString('base64') } : {}) };
-          } catch (error) { if (error.code !== 'ENOENT') throw error; }
-          const record = { schemaVersion: 1, runId: process.env.RUN_ID, originalSourceSha: process.env.SOURCE_SHA,
-            purpose: 'Original failed composer artifacts only: no application rerun, no changed verdict', files };
+          const bytes = await readFile('evidence/test-report.log');
+          if (bytes.length > 10 * 1024 * 1024) throw new Error('Original log exceeds forensic bound');
+          const text = bytes.toString('utf8').replace(/\u001b\[[0-9;]*m/g, '');
+          const at = text.lastIndexOf('FAIL  packages/harness/src/managed-commands.integration.test.ts');
+          if (at < 0) throw new Error('Named original managed command failure missing');
+          const excerpt = text.slice(Math.max(0, at - 200), at + 12000);
+          const record = { originalRunId: process.env.RUN_ID, originalSourceSha: process.env.SOURCE_SHA,
+            originalLogBytes: bytes.length, originalLogSha256: createHash('sha256').update(bytes).digest('hex'),
+            purpose: 'Original failed unit log excerpt; no test rerun or verdict change', excerpt };
           const data = gzipSync(Buffer.from(JSON.stringify(record))).toString('base64');
           const size = 3200, total = Math.ceil(data.length / size);
-          if (total > 40) throw new Error('Diagnostic projection exceeds bounded annotation budget');
-          for (let index = 0; index < total; index++) console.log(`::notice title=Original composer evidence ${index + 1}/${total}::` +
+          if (total > 7) throw new Error('Forensic projection exceeds per-step annotation budget');
+          for (let index = 0; index < total; index++) console.log(`::notice title=Original managed unit evidence ${index + 1}/${total}::` +
             JSON.stringify({ encoding: 'gzip+base64', index, total, data: data.slice(index * size, (index + 1) * size) }));
           NODE
