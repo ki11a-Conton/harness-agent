@@ -1,4 +1,4 @@
-name: export qualified v1.12 candidate
+name: export qualified v1.13 candidate
 
 on:
   workflow_dispatch:
@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       release_id:
-        description: Existing v1.12.0 draft bound to this source SHA
+        description: Existing v1.13.0 draft bound to this source SHA
         required: true
         type: string
 
@@ -19,7 +19,7 @@ permissions:
 jobs:
   export:
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -38,7 +38,7 @@ jobs:
         with:
           github-token: ${{ github.token }}
           run-id: ${{ inputs.acceptance_run_id }}
-          name: deepseek-installed-ubuntu-latest-${{ github.sha }}-${{ inputs.acceptance_run_id }}
+          name: deepseek-installed-ubuntu-24.04-${{ github.sha }}-${{ inputs.acceptance_run_id }}
           path: .ci/candidate/web-linux
       - uses: actions/download-artifact@v4
         with:
@@ -50,7 +50,7 @@ jobs:
         with:
           github-token: ${{ github.token }}
           run-id: ${{ inputs.acceptance_run_id }}
-          name: harness-cli-installed-ubuntu-latest-${{ github.sha }}-${{ inputs.acceptance_run_id }}
+          name: harness-cli-installed-ubuntu-24.04-${{ github.sha }}-${{ inputs.acceptance_run_id }}
           path: .ci/candidate/cli-linux
       - uses: actions/download-artifact@v4
         with:

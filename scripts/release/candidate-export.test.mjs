@@ -9,7 +9,7 @@ import { digest, makeArchive } from './portable-lib.mjs';
 
 const script = fileURLToPath(new URL('./candidate-export.mjs', import.meta.url));
 const repository = 'ki11a-Conton/harness-agent';
-const version = '1.12.0';
+const version = '1.13.0';
 const actualCli = Object.fromEntries(await Promise.all(['linux', 'win32'].map(async platform => [platform,
   JSON.parse(await readFile(new URL(`../../docs/evidence/release-v112-platform-20261023/actual-${platform}.json`, import.meta.url), 'utf8')),
 ])));
@@ -39,13 +39,15 @@ async function scenario(change, expected, expectedUploads = expected ? 0 : 4) {
         archiveSha256: hash, platform, workspaceLinks: 0, paidModelCalls: 0,
         kind: name.startsWith('web') ? 'harness-official-ui-installed' : 'harness-agent-portable-cleanroom',
         ...name.startsWith('web') ? { installedApplication: true, cases: 30, assertions: 75,
-          pr15Controls: 10, dailyScenarios: 42, dailyAssertions: 120, connectionScenarios: 2, connectionAssertions: 10 }
+          pr15Controls: 10, dailyScenarios: 42, dailyAssertions: 120, connectionScenarios: 2, connectionAssertions: 10,
+          workspaceKeyboardScenarios: 3, workspaceKeyboardAssertions: 45, modelReasoningChecks: 22,
+          composerModeChecks: 24, managedCommandChecks: 9 }
           : { doctorErrors: 0, tamperRejected: true, tamperedStartupRejected: true,
             codingAssertions: actualCli[platform].assertions.length, requests: actualCli[platform].requests,
             cleanroomOutsideRepository: true } }));
     }
     const fixture = { run: { head_sha: sha, head_branch: 'main', status: 'completed', conclusion: 'success', path: '.github/workflows/deepseek-ui-installed.yml' },
-      jobs: { jobs: ['archive', 'installed (ubuntu-latest)', 'installed (windows-latest)'].map(name => ({ name, status: 'completed', conclusion: 'success' })) },
+      jobs: { jobs: ['archive', 'installed (ubuntu-24.04)', 'installed (windows-latest)'].map(name => ({ name, status: 'completed', conclusion: 'success' })) },
       release: { id: 2, tag_name: `v${version}`, draft: true, target_commitish: sha, assets: [] } };
     await change?.({ root, base, fixture });
     await writeFile(join(root, 'responses.json'), JSON.stringify(fixture));
@@ -119,7 +121,9 @@ test('rejects Windows receipts from different archive bytes', () => scenario(asy
   const path = join(base, 'cli-windows/result.json'); const receipt = JSON.parse(await readFile(path, 'utf8')); receipt.archiveSha256 = '0'.repeat(64); await writeFile(path, JSON.stringify(receipt));
 }, /INSTALLED_RECEIPT_REJECTED/));
 for (const [field, value] of [['assertions', 74], ['pr15Controls', 9], ['dailyScenarios', 41],
-  ['dailyAssertions', 119], ['connectionScenarios', 1], ['connectionAssertions', 9], ['assertions', '75']]) {
+  ['dailyAssertions', 119], ['connectionScenarios', 1], ['connectionAssertions', 9], ['assertions', '75'], ['workspaceKeyboardScenarios', 2],
+  ['workspaceKeyboardAssertions', 44], ['modelReasoningChecks', 21], ['composerModeChecks', 23],
+  ['managedCommandChecks', 8], ['managedCommandChecks', '9']]) {
   test(`rejects incomplete or nonnumeric Web evidence: ${field}=${JSON.stringify(value)}`, () => scenario(async ({ base }) => {
     const path = join(base, 'web-windows/result.json');
     const receipt = JSON.parse(await readFile(path, 'utf8')); receipt[field] = value;
@@ -142,3 +146,11 @@ for (const [name, field, value] of [
 test('rejects tampered archive bytes before any upload', () => scenario(async ({ base }) => {
   await writeFile(join(base, `assets/harness-agent-${version}-portable.tar.gz`), 'altered');
 }, /ARCHIVE_CHECKSUM_REJECTED/));
+
+// v1.12 artifacts and the previous runner label cannot qualify this release.
+test('rejects the previous v1.12.0 release before any upload', () => scenario(({ fixture }) => {
+  fixture.release.tag_name = 'v1.12.0';
+}, /EXISTING_DRAFT_SOURCE_REQUIRED/));
+test('rejects stale Ubuntu job naming instead of exporting unrelated receipts', () => scenario(({ fixture }) => {
+  fixture.jobs.jobs[1].name = 'installed (ubuntu-latest)';
+}, /REQUIRED_JOB_REJECTED/));

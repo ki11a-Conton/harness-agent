@@ -1,3 +1,5 @@
+当前任务：[v1.13 发布、工作区身份与 Codex harness](plan(20261025-release-workspace-codex).md)。
+
 # 当前执行计划入口
 
 当前实施：[受管理长命令计划](plan(20261024-managed-command-harness).md)；[任务](tasks/MANAGED-COMMAND-HARNESS-20261024.md)；[使用与边界](docs/managed-commands.md)。默认关闭，依次以 H0–H5 的实际门禁验收；发布标签和资产保持。

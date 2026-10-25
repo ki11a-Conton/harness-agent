@@ -6,7 +6,7 @@ import { digest, verifyPortable } from './portable-lib.mjs';
 import { verifyArchive } from './portable.mjs';
 
 const repository = 'ki11a-Conton/harness-agent';
-const version = '1.12.0';
+const version = '1.13.0';
 const sha = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
 const sourceTree = execFileSync('git', ['rev-parse', 'HEAD^{tree}'], { encoding: 'utf8' }).trim();
 const runId = process.env.CANDIDATE_ACCEPTANCE_RUN_ID;
@@ -26,7 +26,7 @@ const run = await (await request(`${api}/actions/runs/${runId}`)).json();
 if (run.head_sha !== sha || run.head_branch !== 'main' || run.status !== 'completed' || run.conclusion !== 'success'
   || run.path !== '.github/workflows/deepseek-ui-installed.yml') throw new Error('CANDIDATE_ACCEPTANCE_RUN_REJECTED');
 const jobs = await (await request(`${api}/actions/runs/${runId}/jobs?per_page=100`)).json();
-for (const name of ['archive', 'installed (ubuntu-latest)', 'installed (windows-latest)']) {
+for (const name of ['archive', 'installed (ubuntu-24.04)', 'installed (windows-latest)']) {
   const matches = jobs.jobs.filter(job => job.name === name);
   if (matches.length !== 1 || matches[0].status !== 'completed' || matches[0].conclusion !== 'success') throw new Error('CANDIDATE_REQUIRED_JOB_REJECTED');
 }
@@ -74,7 +74,9 @@ for (const [name, platform, kind] of [
   if (name.startsWith('web') && (receipt.installedApplication !== true || receipt.cases !== 30
     || !countAtLeast(receipt.assertions, 75) || receipt.pr15Controls !== 10 || receipt.dailyScenarios !== 42
     || !countAtLeast(receipt.dailyAssertions, 120) || receipt.connectionScenarios !== 2
-    || !countAtLeast(receipt.connectionAssertions, 10))) throw new Error('CANDIDATE_WEB_CONTROLS_REJECTED');
+    || !countAtLeast(receipt.connectionAssertions, 10) || receipt.workspaceKeyboardScenarios !== 3
+    || !countAtLeast(receipt.workspaceKeyboardAssertions, 45) || !countAtLeast(receipt.modelReasoningChecks, 22)
+    || !countAtLeast(receipt.composerModeChecks, 24) || !countAtLeast(receipt.managedCommandChecks, 9))) throw new Error('CANDIDATE_WEB_CONTROLS_REJECTED');
   installed[name] = receipt;
 }
 const evidence = Buffer.from(JSON.stringify({ schemaVersion: 1, status: 'ACCEPTED_NOT_PUBLISHED', version, sourceSha: sha,
