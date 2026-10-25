@@ -1,0 +1,94 @@
+{
+  "scope": "actual production SDK/Web/HTTP fixtures; no external gateway or paid-model quality claim",
+  "baselineSource": "a6a1196bc43f0ad47654ccc534f72b0383aa5ff4",
+  "cases": [
+    {
+      "file": "workspace-red-a6/red.json",
+      "sha256": "df71054b848b8d6772bf8eba12f6e4f79aad84cd05c291d5af0a75229012774f",
+      "sourceSha": "a6a1196bc43f0ad47654ccc534f72b0383aa5ff4",
+      "status": "REPRODUCED_CONTEXT_OMISSION",
+      "actualToolRootCorrect": true,
+      "greetingContainsCwd": false,
+      "checks": null,
+      "automaticCompactionObserved": null,
+      "manualCompactionObserved": null,
+      "paidModelCalls": 0
+    },
+    {
+      "file": "workspace-browser-red-a6-attempt2/result.json",
+      "sha256": "a35f5c5acb519aa7c6cd6cac0d5e5e9d9bec3ca9d7b7279463b58a84405d7e52",
+      "sourceSha": "a6a1196bc43f0ad47654ccc534f72b0383aa5ff4",
+      "status": "REPRODUCED_CONTEXT_OMISSION",
+      "actualToolRootCorrect": true,
+      "greetingContainsCwd": false,
+      "checks": null,
+      "automaticCompactionObserved": null,
+      "manualCompactionObserved": null,
+      "paidModelCalls": 0
+    },
+    {
+      "file": "workspace-lifecycle-red-a6/result.json",
+      "sha256": "5e3660138f2329bf2b2b9043f782d24f685b800fd38829de7488cc2451fe4533",
+      "sourceSha": "a6a1196bc43f0ad47654ccc534f72b0383aa5ff4",
+      "status": "REPRODUCED_CONTEXT_OMISSION",
+      "actualToolRootCorrect": true,
+      "greetingContainsCwd": null,
+      "checks": [
+        {
+          "scenario": "concurrent A",
+          "containsExpected": false,
+          "containsOther": false
+        },
+        {
+          "scenario": "concurrent B",
+          "containsExpected": false,
+          "containsOther": false
+        },
+        {
+          "scenario": "after compaction",
+          "containsExpected": false,
+          "containsOther": false
+        },
+        {
+          "scenario": "after durable resume",
+          "containsExpected": false,
+          "containsOther": false
+        }
+      ],
+      "automaticCompactionObserved": true,
+      "manualCompactionObserved": true,
+      "paidModelCalls": 0
+    }
+  ],
+  "registration": {
+    "registeredAt": "2026-10-25T17:47:10.077131+00:00",
+    "baselineSource": "a6a1196bc43f0ad47654ccc534f72b0383aa5ff4",
+    "implementationNotStarted": true,
+    "releasePublished": false,
+    "bugEvidence": [
+      "workspace-red-a6/red.json",
+      "workspace-browser-red-a6-attempt2/result.json"
+    ],
+    "primaryPolicyBytesMustRemainUnchanged": true,
+    "selectedSource": "per-build persisted session cwd, no process cwd or gateway inference",
+    "extension": "existing Harness context adapter before original budget/compaction",
+    "gates": [
+      "first greeting actual HTTP selected cwd",
+      "real browser path picker plus actual selected-project read",
+      "special paths JSON roundtrip and boundary escaping",
+      "manual/automatic compaction regenerates cwd",
+      "concurrent sessions do not mix cwd",
+      "durable resume and model switches preserve cwd",
+      "outside-gateway read denied by original orchestrator/security",
+      "token budget includes added context",
+      "typecheck focused security full and native CI"
+    ],
+    "paidModelCalls": 0,
+    "driverSha256": "d5f311bb931557d2418ba63be8b0338605aebbc838abdef007de0d3d89d22e87",
+    "externalGatewayPromptInjection": "NOT_PROVEN",
+    "additionalPreImplementationEvidence": [
+      "workspace-lifecycle-red-a6/result.json"
+    ],
+    "lifecycleDriverSha256": "ecad1c43400a16f5053c2d80cb2782054cd133754d910d0bca26b364d484678d"
+  }
+}

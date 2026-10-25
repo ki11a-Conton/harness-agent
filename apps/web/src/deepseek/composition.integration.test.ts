@@ -101,6 +101,38 @@ it("official secondary workspace creation and file read use the actual owner and
   expect(await stack.base.store.getSession(id)).toBeUndefined();
 });
 
+it("switching configured models preserves the selected secondary workspace in actual greeting HTTP", async () => {
+  const requests: Array<{ model: string; messages: Array<{ role: string; content: string }> }> = [];
+  const server = createServer(async (req, res) => {
+    let raw = ""; for await (const chunk of req) raw += chunk; requests.push(JSON.parse(raw));
+    res.writeHead(200, { "content-type": "text/event-stream" });
+    res.end(`data: ${JSON.stringify({ choices: [{ delta: { content: "Hello" }, finish_reason: "stop" }] })}\n\ndata: [DONE]\n\n`);
+  });
+  await new Promise<void>(done => server.listen(0, "127.0.0.1", done));
+  cleanup.push(() => new Promise<void>(done => server.close(() => done())));
+  const stack = await fixture();
+  await stack.composition.catalog.call("credentials/set", { ref: "WORKSPACE_WIRE", value: "local-fixture-only" }, signal());
+  await stack.composition.catalog.call("settings/update", { ns: "llm-pi-ai", patch: { providers: { gateway: {
+    api: "openai-completions", baseURL: `http://127.0.0.1:${(server.address() as { port: number }).port}/v1`, apiKeyEnv: "WORKSPACE_WIRE",
+    models: [{ id: "workspace-first" }, { id: "workspace-second" }],
+  } } } }, signal());
+  const created = await stack.composition.workspace.call("workspace/create", { request: { path: stack.secondary } }, signal()) as { workspace: { workspaceId: string } };
+  const id = await stack.createSession(created.workspace.workspaceId);
+  for (const model of ["workspace-first", "workspace-second"]) {
+    await stack.composition.catalog.call("session/selectModel", { request: { sessionId: id, provider: "gateway", model } }, signal());
+    const session = (await stack.composition.harness.store.getSession(id))!;
+    expect(session.cwd).toBe(stack.secondary);
+    const actor = await stack.composition.harness.sessions.load(id);
+    const turn = await actor.createTurn({ sessionId: id, text: `你好 ${model}` });
+    expect((await actor.runTurn(turn.id)).status).toBe("completed");
+    expect(requests.at(-1)?.model).toBe(model);
+    const system = requests.at(-1)!.messages.filter(message => message.role === "system").map(message => message.content).join("\n");
+    const json = /<workspace_context>\n([^\n]*)\n<\/workspace_context>/u.exec(system);
+    expect(json).not.toBeNull();
+    expect(JSON.parse(json![1]!)).toEqual({ cwd: stack.secondary });
+  }
+});
+
 it("restored child owners register their frozen schedule model tools before loading a session", async () => {
   // Admit the complete real restart before assertions. A unique temporary
   // directory does not reserve its child owner's fixed TCP lease port.

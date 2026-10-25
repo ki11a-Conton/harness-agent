@@ -1,8 +1,9 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { resolve } from "node:path";
 import type { AgentEvent, EventStore } from "@ar/contracts";
-import { ContextPipeline, PathScopedInstructionDiscovery } from "@ar/context";
+import { PathScopedInstructionDiscovery } from "@ar/context";
 import type { ContextPipelineBuildOptions, ContextPipelineDeps, ContextPipelineResult } from "@ar/context";
+import { WorkspaceContextPipeline } from "./workspace-context.js";
 
 export interface PathScopedInstructionsConfig {
   strategy: "path_scoped_instructions_v1";
@@ -46,7 +47,7 @@ export function instructionTargetsFromEvents(events: readonly AgentEvent[], cwd:
 
 /** Request-local scope isolates concurrent sessions sharing a pipeline.
  *  Rehydration reads durable events, so restart/resume needs no target log. */
-export class PathScopedContextPipeline extends ContextPipeline {
+export class PathScopedContextPipeline extends WorkspaceContextPipeline {
   readonly instructionDiscovery: PathScopedInstructionDiscovery;
   private readonly targets: AsyncLocalStorage<readonly string[]>;
   private readonly initialTargets: readonly string[];

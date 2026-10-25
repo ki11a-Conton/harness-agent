@@ -1,6 +1,6 @@
 # v1.13 发布、工作区身份与后续 coding harness
 
-状态：按顺序实施；发布源码与之后的 bug 修复分开。合同见 [任务](tasks/RELEASE-WORKSPACE-CODEX-20261025.md)。
+状态：R1 已发布；W2 专项通过、待冻结提交后的独立绿例；C1 尚未开始。发布源码与之后的 bug 修复分开。合同见 [任务](tasks/RELEASE-WORKSPACE-CODEX-20261025.md)。
 
 | 阶段 | 做什么 | 怎么做 | 怎么验收 |
 | --- | --- | --- | --- |
@@ -15,3 +15,13 @@ v1.13.0 的 release 只对应 R1 固定源码，不将后续 W/C 改动自动塞
 ## R1 首轮门禁收尾
 
 50a294be 的两项 Windows 失败及受控证据见 [独立记录](docs/evidence/release-v113-gates-20261025/README.md)。只补验收输入提交准备及 quiet-command 夹具协调；生产应用和预算不改，原全部失败保留。后续候选必须重新通过精确 clean SHA 的全量、同包安装和四项CI；R1 尚未发布，W/C 尚未实施。
+
+## R1 已发布；W2 具体实施
+
+2026-10-25 18:22:59 UTC 已发布 [v1.13.0](https://github.com/ki11a-Conton/harness-agent/releases/tag/v1.13.0)，固定源码 `a6a1196bc43f0ad47654ccc534f72b0383aa5ff4`，四项 main CI 和 exporter `40220887442` 均为 attempt1 成功。公开四资产下载指纹一致，归档 SHA256 `3a915587b6a7fae172c24171848fa960b008c89d0e6dd80d490ea9758cde78a4`，v1.12.0 元数据、tag、六资产不变。上一节为首轮历史状态，不是当前发布结论。
+
+W1 已在同一 a6 源码上通过真实 SDK HTTP、Chromium 目录选择器和并发/压缩/持久恢复证明：实际 session.cwd、读文件目录正确，但模型系统上下文缺少当前 cwd。具体网关二次注入仍未证明。
+
+W2 做法：只在 Harness 的公共 ContextPipeline 扩展中，将每次 build 的 session cwd 渲染成边界安全的 JSON 环境；默认及 path-scoped 两条装配链共用，进入原 system block 的 token 统计、保护、压缩与实际请求见证。静态 agent prompt、Core、Contracts、权限和沙箱保持原实现。所有 profile 均修复，避免测试专用路径与生产不同。
+
+W2 验收：同一独立浏览器及生命周期 probe 红转绿；真实 Chat HTTP 首轮、并发子目录、自动/手动压缩、JSONL 重启、Web 切模型均携带正确 session cwd；特殊路径不逃出 JSON 边界，原 token estimator 计入开销，path-scoped 发现和外部目录拒绝不退化。现有生产适配器只支持 Chat Completions，不声称完成尚不存在的 Responses/Anthropic 适配。通过专项后再开始 C1 研究，最终统一做 clean SHA 全量及 main 双平台 CI。
