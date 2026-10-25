@@ -3,7 +3,7 @@ import { join, resolve } from "node:path";
 import { homedir } from "node:os";
 import { stat } from "node:fs/promises";
 import type { ModelProvider, PermissionPolicy, TaskSpec } from "@ar/contracts";
-import { defaultSandboxPolicy, DEFAULT_MAIN_SYSTEM_PROMPT, resolveAgentPromptPolicy, resolveCodingSummaryPolicy, resolveMaxIterationsPerTurn, parseMaxIterationsPerTurn } from "@ar/harness";
+import { defaultSandboxPolicy, DEFAULT_MAIN_SYSTEM_PROMPT, resolveAgentPromptPolicy, resolveCodingSummaryPolicy, resolveMaxIterationsPerTurn, parseMaxIterationsPerTurn, parseManagedCommandEnvironment } from "@ar/harness";
 import { createHarnessWithChampion } from "./champion-application.js";
 import { createRuntimeRpc, InMemoryTransport } from "@ar/gateway";
 import {
@@ -413,6 +413,9 @@ export async function createDefaultDeps(options: DefaultDepsOptions = {}): Promi
   const modelProvider = options.provider ?? (await resolveModelProvider({ modelId: options.model?.modelId ?? (process.env.OPENAI_MODEL || DEFAULT_MODEL_ID) })).provider;
   const memoryEnabled = options.memory === true || process.env.HARNESS_MEMORY === "1";
   const contextSummary = resolveCodingSummaryPolicy(process.env.HARNESS_CONTEXT_SUMMARY);
+  const managed = parseManagedCommandEnvironment(process.env.HARNESS_MANAGED_COMMANDS, process.env.HARNESS_MANAGED_TURN_MS);
+  const verificationCommand = managed ? process.env.HARNESS_VERIFY_COMMAND?.trim() : undefined;
+  const task = options.task ?? (verificationCommand ? { id: "cli-managed-coding", goal: "Complete the user task and pass the configured project check", verification: [{ kind: "command" as const, command: verificationCommand }] } : undefined);
   if (memoryEnabled && dataDir === undefined) {
     throw new Error("memory is enabled but no dataDir is configured (--data-dir or HARNESS_DATA_DIR) — refusing to write memories into the workspace");
   }
@@ -425,7 +428,8 @@ export async function createDefaultDeps(options: DefaultDepsOptions = {}): Promi
     baseConfig: {
       cwd,
       ...(maxIterationsPerTurn !== undefined ? { maxIterationsPerTurn } : {}),
-      ...(options.task !== undefined ? { task: options.task } : {}),
+      ...(task !== undefined ? { task } : {}),
+      ...(managed ?? {}),
       ...(dataDir !== undefined ? { dataDir } : {}),
       profile: "interactive",
       ...(agentPromptPolicy !== undefined ? { agentPromptPolicy } : {}),

@@ -1,0 +1,197 @@
+{
+  "schemaVersion": 1,
+  "status": "SOURCE_REVIEW_ONLY",
+  "reviewDate": "2026-10-24",
+  "publishedBaseline": "v1.12.0",
+  "harnessSourceSha": "37a16e3d0ac60da12caff5e28c77a20c8a017e2e",
+  "repositories": [
+    {
+      "name": "harness-agent",
+      "url": "https://github.com/ki11a-Conton/harness-agent",
+      "sha": "37a16e3d0ac60da12caff5e28c77a20c8a017e2e"
+    },
+    {
+      "name": "HARNESS-SRC-FORK",
+      "url": "https://github.com/ki11a-Conton/HARNESS-SRC-FORK",
+      "sha": "1a46ea13de9a3f5e6987c5dd0319b2000fe49c92"
+    },
+    {
+      "name": "deepseek-harness",
+      "url": "https://github.com/deepseek-ai/deepseek-harness",
+      "sha": "5badb15009ae1756c3afe0ae0cef1faafc290ccc"
+    }
+  ],
+  "scope": "Selected command, output, ownership, cancellation, composition, verification and policy modules; targeted source comparison. Future command-session experiments have not run.",
+  "paidModelCalls": 0,
+  "newRuntimeOrToolImplementation": false,
+  "files": [
+    {
+      "repository": "HARNESS-SRC-FORK",
+      "path": "codex-main/codex-rs/core/src/unified_exec/async_watcher.rs",
+      "bytes": 13527,
+      "sha256": "daf5752f16deefc71f9fc1af856ab060010c7e20bad8819e53674ce06e216d26",
+      "matchesRecordedHead": true
+    },
+    {
+      "repository": "HARNESS-SRC-FORK",
+      "path": "codex-main/codex-rs/core/src/unified_exec/mod.rs",
+      "bytes": 7428,
+      "sha256": "0a18f36d400235ca23a9bddd5f16fc85d60844451c211fb48917c214263183a7",
+      "matchesRecordedHead": true
+    },
+    {
+      "repository": "HARNESS-SRC-FORK",
+      "path": "codex-main/codex-rs/core/src/unified_exec/process_manager.rs",
+      "bytes": 60844,
+      "sha256": "25215a46529cb5e8dd61942d5e57e5dee3cd6c33d4aea16c39c476d1ac0754b7",
+      "matchesRecordedHead": true
+    },
+    {
+      "repository": "HARNESS-SRC-FORK",
+      "path": "pi-main/packages/coding-agent/src/core/system-prompt.ts",
+      "bytes": 5875,
+      "sha256": "677c3cf2ca259d15c27466961702a489244e9505829a6c994d0de314b2a469ef",
+      "matchesRecordedHead": true
+    },
+    {
+      "repository": "HARNESS-SRC-FORK",
+      "path": "pi-main/packages/coding-agent/src/core/tools/bash.ts",
+      "bytes": 17650,
+      "sha256": "be7a3e7b56d9d5ab2a7f3ec3410d8d55150d68c2e89bfe1c075c414ca7fc47f5",
+      "matchesRecordedHead": true
+    },
+    {
+      "repository": "deepseek-harness",
+      "path": "packages/session/session-checkpoint-policy/src/index.ts",
+      "bytes": 3361,
+      "sha256": "2b93aae29cfb0b5757656f4e2e54c21d2ab5c11c1bccaed014735ecb9685fe35",
+      "matchesRecordedHead": true
+    },
+    {
+      "repository": "deepseek-harness",
+      "path": "packages/terminal/terminal-bash/src/session.ts",
+      "bytes": 30876,
+      "sha256": "34fb3752c3a69af771c88310e14bbd11aaed6771498d10ce52a4b12aa449dffb",
+      "matchesRecordedHead": true
+    },
+    {
+      "repository": "deepseek-harness",
+      "path": "packages/terminal/terminal/src/index.ts",
+      "bytes": 17458,
+      "sha256": "0264b62850764a5e32f1e2da93540cdcbe6e0e6442314f72b25a8ee2da6d2995",
+      "matchesRecordedHead": true
+    },
+    {
+      "repository": "deepseek-harness",
+      "path": "packages/terminal/terminal/src/types.ts",
+      "bytes": 6801,
+      "sha256": "4755118b8558bdd2a023b42bffcf512fa5d108bd00cbf8c4224a1484fde774c5",
+      "matchesRecordedHead": true
+    },
+    {
+      "repository": "deepseek-harness",
+      "path": "packages/terminal/tool-terminal/src/background.ts",
+      "bytes": 1330,
+      "sha256": "c23ece9fedca0c77de04faf9bf50c91906ef44edf89ca084e8127c9640046384",
+      "matchesRecordedHead": true
+    },
+    {
+      "repository": "harness-agent",
+      "path": "docs/longrun-harness.md",
+      "bytes": 15843,
+      "sha256": "9f3fef7f0afc4945084ce18a19e4749fe2ef89eebef77fa374066c244c45ea60",
+      "matchesRecordedHead": true
+    },
+    {
+      "repository": "harness-agent",
+      "path": "packages/agents/src/coding-prompt-v2.ts",
+      "bytes": 5608,
+      "sha256": "5564e0fee1e454bd74b6da012893f2c2e8beb7423b51bdd8714edb02be3088b0",
+      "matchesRecordedHead": true
+    },
+    {
+      "repository": "harness-agent",
+      "path": "packages/agents/src/coding-prompt.ts",
+      "bytes": 7657,
+      "sha256": "6d1b194e5e71a4b2724697dbd7fa661d94708574f9396aa02f52de27a8284c43",
+      "matchesRecordedHead": true
+    },
+    {
+      "repository": "harness-agent",
+      "path": "packages/contracts/src/plugin.ts",
+      "bytes": 1094,
+      "sha256": "52528373669aa9afd27e4f052811f2181ba366612ee6db43676866f62fd1efe4",
+      "matchesRecordedHead": true
+    },
+    {
+      "repository": "harness-agent",
+      "path": "packages/contracts/src/tool.ts",
+      "bytes": 14573,
+      "sha256": "406146c3810337d620d84f146267a8908524bc2e9e6b07293deeaf810baabe19",
+      "matchesRecordedHead": true
+    },
+    {
+      "repository": "harness-agent",
+      "path": "packages/harness/src/compose/compose-tools.ts",
+      "bytes": 4804,
+      "sha256": "09d959256d953f3bae45764cfdd6c402f964979887d490e11d5ab092c02fce7f",
+      "matchesRecordedHead": true
+    },
+    {
+      "repository": "harness-agent",
+      "path": "packages/harness/src/compose/compose-verification.ts",
+      "bytes": 2921,
+      "sha256": "e9927ace1563ee2ce529d4b8eee2a73cbc11a439ea0065e5f404845f90e4bab0",
+      "matchesRecordedHead": true
+    },
+    {
+      "repository": "harness-agent",
+      "path": "packages/harness/src/config.ts",
+      "bytes": 7986,
+      "sha256": "ba1ed019106ae2fea4225198978863f77690bbbfa4c459e97c6cab7114262f7f",
+      "matchesRecordedHead": true
+    },
+    {
+      "repository": "harness-agent",
+      "path": "packages/harness/src/create-harness.ts",
+      "bytes": 45526,
+      "sha256": "dcf8151a78194c42f9817fa5af0e7e890986720f3bfab01c610b91935fd03921",
+      "matchesRecordedHead": true
+    },
+    {
+      "repository": "harness-agent",
+      "path": "packages/harness/src/lifecycle.ts",
+      "bytes": 1054,
+      "sha256": "a74460fa2d3c990eaae4853ebc6c014ffdb5cf9352b75c196b7c766b40f0ca3f",
+      "matchesRecordedHead": true
+    },
+    {
+      "repository": "harness-agent",
+      "path": "packages/tools/src/orchestrator.ts",
+      "bytes": 33469,
+      "sha256": "bb78ff41143fbf41b4e3e915b6ed9684dac2d898f378aa5736e0949f83d8bd0d",
+      "matchesRecordedHead": true
+    },
+    {
+      "repository": "harness-agent",
+      "path": "packages/tools/src/process/executor.ts",
+      "bytes": 32928,
+      "sha256": "e57b6b74e97eb8b54fa05e1e6c39f62fee7acc83fed1d928353a04bcdc5db6a6",
+      "matchesRecordedHead": true
+    },
+    {
+      "repository": "harness-agent",
+      "path": "packages/tools/src/production-tools.ts",
+      "bytes": 4070,
+      "sha256": "c89a99d7a400f54c164d28241d7d09c4835625232f551546e0fbf50bcf6ff972",
+      "matchesRecordedHead": true
+    },
+    {
+      "repository": "harness-agent",
+      "path": "packages/tools/src/tools/exec.ts",
+      "bytes": 10825,
+      "sha256": "016caf4432fee75a9ee331ca15cc1932b5e2d1e062814b82dbdbaf791c4fe102",
+      "matchesRecordedHead": true
+    }
+  ]
+}

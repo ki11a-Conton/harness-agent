@@ -1,5 +1,6 @@
 export * from "./registry.js";
 export * from "./orchestrator.js";
+export * from "./managed-commands.js";
 export * from "./process/executor.js";
 export * from "./process/sandbox-executor.js";
 export * from "./verification/task-verifier.js";

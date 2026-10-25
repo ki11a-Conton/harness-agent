@@ -1,7 +1,7 @@
 import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
 import type { Harness } from "@ar/harness";
-import { resolveAgentPromptPolicy, resolveCodingSummaryPolicy, parseMaxIterationsPerTurn } from "@ar/harness";
+import { resolveAgentPromptPolicy, resolveCodingSummaryPolicy, parseMaxIterationsPerTurn, parseManagedCommandEnvironment } from "@ar/harness";
 import {
   createHarnessWithChampion,
   DEFAULT_MODEL_ID,
@@ -44,6 +44,7 @@ export async function main(): Promise<number> {
 async function startMain(lease: DataDirLease | undefined): Promise<number> {
   const dir = lease?.dataDir;
   const maxIterationsPerTurn = parseMaxIterationsPerTurn(process.env.HARNESS_MAX_ITERATIONS_PER_TURN);
+  const managed = parseManagedCommandEnvironment(process.env.HARNESS_MANAGED_COMMANDS, process.env.HARNESS_MANAGED_TURN_MS);
   const agentPromptPolicy = resolveAgentPromptPolicy(process.env.HARNESS_AGENT_PROMPT);
   const contextSummary = resolveCodingSummaryPolicy(process.env.HARNESS_CONTEXT_SUMMARY);
   const memoryEnabled = process.env.HARNESS_MEMORY === "1";
@@ -63,6 +64,7 @@ async function startMain(lease: DataDirLease | undefined): Promise<number> {
     runtimeEntrypoint: "web",
     baseConfig: {
       cwd: process.cwd(),
+      ...(managed ?? {}),
       ...(maxIterationsPerTurn !== undefined ? { maxIterationsPerTurn } : {}),
       ...(dir !== undefined && dir.length > 0 ? { dataDir: dir } : {}),
       profile: "interactive",

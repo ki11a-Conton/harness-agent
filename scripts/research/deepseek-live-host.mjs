@@ -16,6 +16,7 @@ const { values } = parseArgs({ options: {
   "portable-root": { type: "string" },
   "ipc-control": { type: "boolean", default: false },
   "preflight-owner": { type: "boolean", default: false },
+  "managed-commands": { type: "boolean", default: false },
 } });
 if (!values.root) throw new Error("Use --root <fresh fixture directory>");
 const root = resolve(values.root), evidence = resolve(root, "evidence"), cwd = resolve(root, "project");
@@ -27,6 +28,10 @@ for (const [name, content] of [["README.md", "# Browser fixture\n"], ["demo.js",
   }
 }
 let calls = 0;
+if (values['managed-commands']) {
+  await writeFile(resolve(cwd, 'managed-check.cjs'), "const fs=require('node:fs');const cancel=process.argv[2]==='cancel';fs.appendFileSync('managed-starts.txt',process.argv[2]+'\\n');fs.writeFileSync('managed-start-'+process.argv[2],String(process.pid));console.log('MANAGED_READY');setTimeout(()=>{fs.writeFileSync(cancel?'managed-late.txt':'managed-done.txt','ACTUAL_MANAGED_OK');console.log('MANAGED_DONE')},cancel?8000:2200);\n");
+  await writeFile(resolve(cwd, 'managed-verify.cjs'), "require('node:assert/strict').equal(require('node:fs').readFileSync('managed-done.txt','utf8'),'ACTUAL_MANAGED_OK');console.log('ACTUAL_VERIFIER_OK');\n");
+}
 const interruptedPrompts = new Set();
 const sockets = new Set();
 const server = createServer((req, res) => { void serve(req, res).catch(error => {
@@ -58,6 +63,15 @@ async function serve(req, res) {
   const hasTool = tail.some(message => message.role === "tool");
   const hasAnsweredQuestion = request.messages.slice(userIndex).some(message => /User answer|target-blue|target-red/i.test(JSON.stringify(message)));
   let tool;
+  if (/\[fixture:managed(?:-cancel)?\]/.test(text)) {
+    const seenRead = tail.some(message => message.tool_calls?.some(call => call.function?.name === 'read_file'));
+    const bodies = tail.filter(message => message.role === 'tool').map(message => String(message.content));
+    const replies = bodies.flatMap(body => { try { return [JSON.parse(body)]; } catch { return []; } });
+    const job = replies.filter(reply => reply.jobId).at(-1);
+    if (!hasTool) tool = { name: 'exec_start', args: { command: process.execPath, args: ['managed-check.cjs', text.includes('managed-cancel') ? 'cancel' : 'finish'], yieldMs: 50 } };
+    else if (!seenRead) tool = { name: 'read_file', args: { path: 'demo.js' } };
+    else if (job?.state === 'running') tool = { name: 'exec_poll', args: { jobId: job.jobId, pollToken: job.pollToken, waitMs: 1000 } };
+  }
   if (/\[fixture:read\]/.test(text) && !hasTool) tool = { name: "read_file", args: { path: "demo.js" } };
   if (/\[fixture:write\]/.test(text) && !hasTool) tool = { name: "write_file", args: { path: "browser-created.txt", content: "Actual approved browser coding output\n" } };
   if (/\[fixture:write-deny\]/.test(text) && !hasTool) tool = { name: "write_file", args: { path: "browser-rejected.txt", content: "This write must never occur\n" } };
@@ -160,10 +174,12 @@ async function createCandidate(index) {
   const candidateRoot = index === 0 ? restoredRoot ?? root : await mkdtemp(resolve(root, 'availability-'));
   const candidateCwd = resolve(candidateRoot, 'project');
   await mkdir(candidateCwd, { recursive: true });
-  if (index !== 0) for (const name of ['README.md', 'demo.js']) await writeFile(resolve(candidateCwd, name), await readFile(resolve(cwd, name)));
+  if (index !== 0) for (const name of ['README.md', 'demo.js', ...(values['managed-commands'] ? ['managed-check.cjs', 'managed-verify.cjs'] : [])]) await writeFile(resolve(candidateCwd, name), await readFile(resolve(cwd, name)));
   const child = spawn(process.execPath, childArgs, { cwd: candidateCwd,
     env: { ...process.env, OPENAI_API_KEY: 'local-fixture-credential', OPENAI_BASE_URL: providerOrigin,
-      OPENAI_MODEL: 'web-loopback-fixture', HARNESS_DATA_DIR: resolve(candidateRoot, 'data'), HARNESS_WEB_PORT: values['web-port'] },
+      OPENAI_MODEL: 'web-loopback-fixture', HARNESS_DATA_DIR: resolve(candidateRoot, 'data'), HARNESS_WEB_PORT: values['web-port'],
+      HARNESS_MANAGED_COMMANDS: values['managed-commands'] ? '1' : '0',
+      ...(values['managed-commands'] ? { HARNESS_VERIFY_COMMAND: '"' + process.execPath + '" managed-verify.cjs', HARNESS_MANAGED_TURN_MS: '30000' } : {}) },
     stdio: controlled ? ['ignore', 'pipe', 'pipe', 'ipc'] : ['ignore', 'pipe', 'pipe'] });
   const candidate = { child, root: candidateRoot, cwd: candidateCwd, stdout: '', stderr: '', exposed: false, closed: false };
   activeCandidate = candidate;
@@ -211,7 +227,7 @@ try {
   server.close(); for (const socket of sockets) socket.destroy(); throw failure;
 }
 const { candidate } = selected, child = candidate.child;
-const launch = { launchId, compiledDigest, providerOrigin, cwd: candidate.cwd, source: artifactRoot,
+const launch = { launchId, compiledDigest, providerOrigin, cwd: candidate.cwd, source: artifactRoot, managedCommands: values['managed-commands'],
   ...(manifest ? { installed: true, sourceSha: manifest.sourceSha, version: manifest.version } : {}),
   ...(values["ipc-control"] ? { shutdownControl: "test-only IPC invokes the actual production SIGTERM handler; not native OS signal delivery" } : {}),
   model: "web-loopback-fixture", paidModelCalls: 0, pid: child.pid, parentPid: process.pid,

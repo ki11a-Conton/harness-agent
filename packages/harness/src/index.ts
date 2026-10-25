@@ -26,3 +26,4 @@ export * from "./delegation-tools.js";
 export { defaultSandboxPolicy } from "@ar/core";
 
 export { resolveCodingSummaryPolicy } from "@ar/context";
+export { parseManagedCommandEnvironment, type ManagedCommandConfig } from "./managed-command-host.js";

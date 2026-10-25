@@ -95,6 +95,10 @@ export interface HarnessConfig {
    * limits still apply, and reaching this ceiling never starts a new turn. */
   maxIterationsPerTurn?: number;
 
+  /** Default OFF: owner-bound non-interactive command sessions. Requires a
+   * finite turn deadline and real command verification; no PTY/stdin. */
+  managedCommands?: import("./managed-command-host.js").ManagedCommandConfig;
+
   /** Overrides the profile's default sandbox policy. Needed to admit real
    *  network access for http MCP tools (the default sandbox denies network;
    *  stdio MCP is local IPC and does not need this). */

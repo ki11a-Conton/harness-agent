@@ -1,0 +1,218 @@
+{
+  "schema": 1,
+  "registeredAt": "2026-10-25T06:46:20.540232+00:00",
+  "base": "f8db83fd315fd5b692c5c30aad07c6ed1f4cf352",
+  "baselineSha256": "7e37d5e50a900fc6894db291e3a86f59c03773327d0617e97a3bc2a6cf0a4032",
+  "pairs": [
+    {
+      "id": "overlap-check-01",
+      "kind": "overlap-check",
+      "order": [
+        "baseline",
+        "candidate"
+      ]
+    },
+    {
+      "id": "overlap-check-02",
+      "kind": "overlap-check",
+      "order": [
+        "candidate",
+        "baseline"
+      ]
+    },
+    {
+      "id": "overlap-check-03",
+      "kind": "overlap-check",
+      "order": [
+        "baseline",
+        "candidate"
+      ]
+    },
+    {
+      "id": "overlap-check-04",
+      "kind": "overlap-check",
+      "order": [
+        "candidate",
+        "baseline"
+      ]
+    },
+    {
+      "id": "overlap-check-05",
+      "kind": "overlap-check",
+      "order": [
+        "baseline",
+        "candidate"
+      ]
+    },
+    {
+      "id": "overlap-check-06",
+      "kind": "overlap-check",
+      "order": [
+        "candidate",
+        "baseline"
+      ]
+    },
+    {
+      "id": "overlap-check-07",
+      "kind": "overlap-check",
+      "order": [
+        "baseline",
+        "candidate"
+      ]
+    },
+    {
+      "id": "overlap-check-08",
+      "kind": "overlap-check",
+      "order": [
+        "candidate",
+        "baseline"
+      ]
+    },
+    {
+      "id": "failure-repair-01",
+      "kind": "failure-repair",
+      "order": [
+        "baseline",
+        "candidate"
+      ]
+    },
+    {
+      "id": "failure-repair-02",
+      "kind": "failure-repair",
+      "order": [
+        "candidate",
+        "baseline"
+      ]
+    },
+    {
+      "id": "failure-repair-03",
+      "kind": "failure-repair",
+      "order": [
+        "baseline",
+        "candidate"
+      ]
+    },
+    {
+      "id": "failure-repair-04",
+      "kind": "failure-repair",
+      "order": [
+        "candidate",
+        "baseline"
+      ]
+    },
+    {
+      "id": "failure-repair-05",
+      "kind": "failure-repair",
+      "order": [
+        "baseline",
+        "candidate"
+      ]
+    },
+    {
+      "id": "failure-repair-06",
+      "kind": "failure-repair",
+      "order": [
+        "candidate",
+        "baseline"
+      ]
+    },
+    {
+      "id": "failure-repair-07",
+      "kind": "failure-repair",
+      "order": [
+        "baseline",
+        "candidate"
+      ]
+    },
+    {
+      "id": "failure-repair-08",
+      "kind": "failure-repair",
+      "order": [
+        "candidate",
+        "baseline"
+      ]
+    },
+    {
+      "id": "http-service-01",
+      "kind": "http-service",
+      "order": [
+        "baseline",
+        "candidate"
+      ]
+    },
+    {
+      "id": "http-service-02",
+      "kind": "http-service",
+      "order": [
+        "candidate",
+        "baseline"
+      ]
+    },
+    {
+      "id": "http-service-03",
+      "kind": "http-service",
+      "order": [
+        "baseline",
+        "candidate"
+      ]
+    },
+    {
+      "id": "http-service-04",
+      "kind": "http-service",
+      "order": [
+        "candidate",
+        "baseline"
+      ]
+    },
+    {
+      "id": "http-service-05",
+      "kind": "http-service",
+      "order": [
+        "baseline",
+        "candidate"
+      ]
+    },
+    {
+      "id": "http-service-06",
+      "kind": "http-service",
+      "order": [
+        "candidate",
+        "baseline"
+      ]
+    },
+    {
+      "id": "http-service-07",
+      "kind": "http-service",
+      "order": [
+        "baseline",
+        "candidate"
+      ]
+    },
+    {
+      "id": "http-service-08",
+      "kind": "http-service",
+      "order": [
+        "candidate",
+        "baseline"
+      ]
+    }
+  ],
+  "limits": {
+    "ownerActive": 4,
+    "globalActive": 16,
+    "retainedBytes": 65536,
+    "retainedJobs": 128,
+    "turnMs": 15000,
+    "toolCalls": 30,
+    "maxJobMs": 5000
+  },
+  "gates": {
+    "crossOwnerLeaks": 0,
+    "duplicateStarts": 0,
+    "lateWritesAfterCancel": 0,
+    "falseVerifiedComplete": 0,
+    "independentSuccessNotBelowBaseline": true
+  },
+  "scope": "Engineering protocol only. Scripted offline models, no model-quality/cache/cost claim; no release mutation.",
+  "paidModelCalls": 0
+}

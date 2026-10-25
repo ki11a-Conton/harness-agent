@@ -1,5 +1,7 @@
 import { createMemorySearchTools } from "./memory-search-tools.js";
 import { normalizeCodingSummaryPolicy } from "@ar/context";
+import { composeManagedCommands, validateManagedCommandConfig } from "./managed-command-host.js";
+import { ManagedCommandOrchestrator, type ManagedCommands, type OrchestratorDeps } from "@ar/tools";
 import { mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { composeStores } from "./compose/compose-stores.js";
@@ -122,6 +124,8 @@ import { explainConfig, type ConfigExplainResult } from "./config-explainer.js";
 export { PRODUCTION_TOOL_NAMES, READONLY_TOOL_NAMES } from "./tool-names.js";
 
 export interface Harness {
+  /** Present only for the explicit managed command challenger. */
+  managedCommands?: ManagedCommands;
   runtime: AgentRuntime;
   store: SessionStore;
   events: EventStore;
@@ -225,6 +229,7 @@ export const DEFAULT_MAIN_SYSTEM_PROMPT = [
 ].join("\n");
 
 export async function createHarness(config: HarnessConfig): Promise<Harness> {
+  validateManagedCommandConfig(config);
   const maxIterationsPerTurn = resolveMaxIterationsPerTurn(config.maxIterationsPerTurn);
   // Keep the validated scalar stable across asynchronous composition and
   // preserve omission so an unconfigured host retains its existing identity.
@@ -266,6 +271,11 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
   // --- tools (P22-1: compose/compose-tools) ----------------------------------
   const composedTools = composeTools(config, features, cwd);
   const registry = composedTools.registry;
+  const managedCommands = await composeManagedCommands(config, store);
+  const managedCommandNames: string[] = [];
+  if (managedCommands) {
+    for (const tool of managedCommands.tools()) { registry.register(tool); managedCommandNames.push(tool.name); }
+  }
   const delegationEnabled = composedTools.delegationEnabled;
   const memoryEnabled = composedTools.memoryEnabled;
   const memorySearchNames: string[] = [];
@@ -309,7 +319,7 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
   // object cannot move it, and it is read through a thunk so the orchestrator
   // always compares against the campaign's single frozen deadline.
   const campaignDeadlineAtMs = config.campaignDeadlineAtMs;
-  const orchestrator = new ToolOrchestrator({
+  const orchestratorDeps: OrchestratorDeps = {
     registry,
     approval: new StoreApprovalResolver(approvalStore),
     workspaceRoot: cwd,
@@ -339,7 +349,8 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
         { ...(intent.turnId !== undefined ? { turnId: intent.turnId } : {}), timestamp: intent.startedAt },
       );
     },
-  });
+  };
+  const orchestrator = managedCommands ? new ManagedCommandOrchestrator(orchestratorDeps, managedCommands) : new ToolOrchestrator(orchestratorDeps);
 
   // --- context pipeline + budget (P22-1: compose/compose-context) ------------
   const context = await composeContext(config, features, cwd, dataDir, appendHarnessEvent, events);
@@ -359,6 +370,7 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
     ...productionTools.map((t) => t.name),
     ...delegationToolNames,
     ...memorySearchNames,
+    ...managedCommandNames,
   ]);
   let schemaAdvert = decideSchemaAdvert(registry.specs(), {
     keepFull: (name) => builtinToolNames.has(name),
@@ -374,7 +386,7 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
     });
   }
   const agents: AgentDefinition[] = [
-    mainAgent(config, mcpToolNames, [...delegationToolNames, ...memorySearchNames], toolLookupName),
+    mainAgent(config, mcpToolNames, [...delegationToolNames, ...memorySearchNames, ...managedCommandNames], toolLookupName),
     ...(workerAgent !== undefined ? [workerAgent] : []),
   ];
   const scheduler = composeScheduler(config, delegationEnabled, store);
@@ -490,7 +502,7 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
     // P8-1: task verification gate — explicit specs win, else the
     // auto-orchestrated plan built from the change set + discovered commands.
     ...(config.task !== undefined ? { task: config.task } : {}),
-    ...(verifier !== undefined ? { verifier } : {}),
+    ...(verifier !== undefined ? { verifier: managedCommands ? managedCommands.verifier(verifier) : verifier } : {}),
     ...(config.task !== undefined ? { verificationPlanner } : {}),
     ...(checkpointStore !== undefined ? { checkpointStore } : {}),
     ...(artifactStore !== undefined ? { artifactStore } : {}),
@@ -547,13 +559,14 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
         }
       : {}),
     // P2-4/P2-5/P2-6/P2-9: turn-end feedback + reflection + skill outcome.
-    ...(memoryBridge !== undefined || reflector !== undefined || skillBodyProvider !== undefined
+    ...(memoryBridge !== undefined || reflector !== undefined || skillBodyProvider !== undefined || managedCommands !== undefined
       ? {
           onTurnComplete: async (input: {
             sessionId: SessionId;
             turnId: TurnId;
             outcome: { status: string; state?: { goal?: string } };
           }) => {
+            await managedCommands?.endOwner(input.sessionId, input.turnId);
             const succeeded = input.outcome.status === "completed";
             // P2-4: usefulness outcome feedback for the injected memories.
             if (memoryBridge !== undefined) {
@@ -869,6 +882,12 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
     close: () => baseSessions.close(),
   };
 
+  if (managedCommands) runtime.getHooks().register("before_tool", async (ctx: import("@ar/contracts").HookContext, call: import("@ar/contracts").ToolCall) => {
+    if (managedCommandNames.includes(call.name)) return call;
+    const session = await store.getSession(ctx.sessionId);
+    return session && await managedCommands.permits(registry.get(call.name), session.cwd) ? call : null;
+  }, { source: "managed-commands:workspace-barrier" });
+
   const lifecycle = new Lifecycle();
   if (sqliteStore !== undefined) {
     lifecycle.add({ close: async () => sqliteStore!.close() });
@@ -878,8 +897,10 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
   lifecycle.add({ close: () => mcp.close() });
   // P25-6: harness close unloads every loaded session actor (idempotent).
   lifecycle.add({ close: () => sessions.close() });
+  if (managedCommands) lifecycle.add(managedCommands);
 
   const harness: Harness = {
+    ...(managedCommands ? { managedCommands } : {}),
     runtime,
     store,
     events,
@@ -960,7 +981,7 @@ function mainAgent(
     description: "default harness agent",
     mode: "primary",
     model: config.model,
-    systemPrompt,
+    systemPrompt: config.managedCommands ? `${systemPrompt}\n\nManaged commands: exec_start yields an owner-bound handle, not completion. Read related files while it runs; use exec_jobs after compaction, exec_poll for bounded incremental diagnostics, and exec_cancel to stop services before finishing. Other writes/commands are blocked while a job runs. Never repeat a start to check progress or replay an unknown handle. After a real failure, repair files and retry the identical command with supersedes=<failed jobId>. All original turn/tool budgets and approvals still apply; do not start another turn to evade them.` : systemPrompt,
     tools: {
       allow: [
         ...PRODUCTION_TOOL_NAMES,

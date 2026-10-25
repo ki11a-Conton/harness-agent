@@ -196,6 +196,22 @@ try {
   assert.equal(exit.code, 0, stderr);
   const launch = JSON.parse(await readFile(join(fixture, 'evidence/launch.json'), 'utf8'));
   assert.equal(launch.installed, true); assert.equal(launch.sourceSha, manifest.sourceSha);
+  const managedRunner = spawn(process.execPath, [join(source, 'scripts/release/managed-installed.mjs'),
+    '--archive', archive, '--out', join(output, 'managed-commands'), '--version', values.version, '--source-sha', values['source-sha'],
+    '--playwright-module', resolve(values['playwright-module']), '--chromium', chromium],
+    { cwd: cleanroom, env: process.env, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+  let managedLog = '';
+  managedRunner.stdout.on('data', bytes => { managedLog += bytes; }); managedRunner.stderr.on('data', bytes => { managedLog += bytes; });
+  try {
+    const result = await timeout(new Promise((done, reject) => { managedRunner.once('error', reject); managedRunner.once('close', (code, signal) => done({ code, signal })); }), 4 * 60_000, 'Installed managed command acceptance deadline');
+    assert.equal(result.code, 0, managedLog);
+  } finally {
+    if (managedRunner.exitCode === null && managedRunner.signalCode === null) managedRunner.kill('SIGTERM');
+    await writeFile(join(output, 'managed-commands.log'), managedLog);
+  }
+  const managed = JSON.parse(await readFile(join(output, 'managed-commands/result.json'), 'utf8'));
+  assert.equal(managed.status, 'PASS'); assert.equal(managed.sourceSha, manifest.sourceSha); assert.equal(managed.archiveSha256, sha256);
+  assert.equal(managed.platform, process.platform); assert.equal(managed.checks, 9); assert.equal(managed.paidModelCalls, 0);
   const dailyRunner = spawn(process.execPath, [join(source, 'scripts/research/web-daily-20261016/browser-acceptance.mjs'),
     '--output', join(output, 'daily'), '--portable-root', root, '--playwright-module', resolve(values['playwright-module']),
     '--chromium', chromium, '--viewports', 'desktop,mobile,narrow'], { cwd: cleanroom, windowsHide: true, env: process.env, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -236,7 +252,7 @@ try {
     workspaceKeyboardScenarios: keyboard.cases.length, workspaceKeyboardAssertions: keyboard.assertions,
     workspaceKeyboardAssetSha256: workspaceSha,
     modelReasoningChecks: modelEditor.checks.length, modelReasoningAssetSha256: settingsSha,
-    composerModeChecks: modes.checks.length, composerAssetSha256: composerSha, commandsAssetSha256: commandsSha,
+    managedCommandChecks: managed.checks, composerModeChecks: modes.checks.length, composerAssetSha256: composerSha, commandsAssetSha256: commandsSha,
     connectionScenarios: connection.scenarios, connectionAssertions: connection.assertions,
     dailyScenarios: daily.results.length, dailyAssertions: daily.results.reduce((sum, item) => sum + item.checks.length, 0),
     realModelQuality: 'NOT_PROVEN', fullDefaultUiParity: 'NOT_PROVEN',

@@ -1,0 +1,560 @@
+{
+  "source": "f8db83fd315fd5b692c5c30aad07c6ed1f4cf352",
+  "kind": "H0 production host timeline",
+  "paidModelCalls": 0,
+  "runs": [
+    {
+      "kind": "overlap",
+      "startedAt": 1792910617070,
+      "finishedAt": 1792910617501,
+      "status": "completed",
+      "files": {
+        "started": "1",
+        "done": "1",
+        "late": null
+      },
+      "timeline": [
+        {
+          "event": "model",
+          "n": 1,
+          "at": 1792910617078,
+          "toolResults": []
+        },
+        {
+          "event": "model",
+          "n": 2,
+          "at": 1792910617492,
+          "toolResults": [
+            "{\"exitCode\":0,\"stdout\":\"CHECK_OK\\n\",\"stderr\":\"\",\"truncated\":false,\"durationMs\":398}"
+          ]
+        },
+        {
+          "event": "model",
+          "n": 3,
+          "at": 1792910617498,
+          "toolResults": [
+            "{\"exitCode\":0,\"stdout\":\"CHECK_OK\\n\",\"stderr\":\"\",\"truncated\":false,\"durationMs\":398}",
+            "module.exports=1;\n"
+          ]
+        },
+        {
+          "event": "tool.requested",
+          "at": 1792910617079,
+          "payload": {
+            "toolCallId": "toolcall_8ffbe49e-417e-4067-b19b-e07adde77e8a",
+            "name": "exec",
+            "args": {
+              "command": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+              "args": [
+                "-e",
+                "require('node:fs').writeFileSync('started','1');setTimeout(()=>{require('node:fs').writeFileSync('done','1');console.log('CHECK_OK')},350);"
+              ]
+            },
+            "stepId": "turn_a16f6145-08fa-4119-8beb-7bb7d746fb0a:0"
+          }
+        },
+        {
+          "event": "tool.permission_resolved",
+          "at": 1792910617082,
+          "payload": {
+            "toolCallId": "toolcall_8ffbe49e-417e-4067-b19b-e07adde77e8a",
+            "tool": "exec",
+            "effect": "allow",
+            "reason": "rule 'anon' (allow) matched"
+          }
+        },
+        {
+          "event": "tool.intent_persisted",
+          "at": 1792910617084,
+          "payload": {
+            "toolCallId": "toolcall_8ffbe49e-417e-4067-b19b-e07adde77e8a",
+            "tool": "exec",
+            "argsHash": "024143f21f1444a4f6c3b138a4992fd89e24466c36ddde46b0c695e2b009983f",
+            "sideEffectScope": "process",
+            "idempotent": false,
+            "readOnly": false,
+            "startedAt": 1792910617084,
+            "sessionId": "session_ef5f1ac6-3d89-4417-bd48-541463753ea1",
+            "turnId": "turn_a16f6145-08fa-4119-8beb-7bb7d746fb0a",
+            "stepId": "turn_a16f6145-08fa-4119-8beb-7bb7d746fb0a:0",
+            "routerFingerprint": "af202e7667ad55bda5e89782d10a9bc80b7726f006676c014c01751efa98c42d",
+            "toolBindingFingerprint": "df21a900ff3f6731d9dd053fecd76211d458206a2ddc20bded15b0d836299c72"
+          }
+        },
+        {
+          "event": "tool.started",
+          "at": 1792910617084,
+          "payload": {
+            "toolCallId": "toolcall_8ffbe49e-417e-4067-b19b-e07adde77e8a",
+            "tool": "exec"
+          }
+        },
+        {
+          "event": "tool.output",
+          "at": 1792910617480,
+          "payload": {
+            "toolCallId": "toolcall_8ffbe49e-417e-4067-b19b-e07adde77e8a",
+            "tool": "exec",
+            "stream": "stdout",
+            "bytes": 9,
+            "withheld": true
+          }
+        },
+        {
+          "event": "tool.completed",
+          "at": 1792910617484,
+          "payload": {
+            "toolCallId": "toolcall_8ffbe49e-417e-4067-b19b-e07adde77e8a",
+            "tool": "exec",
+            "status": "success",
+            "durationMs": 404,
+            "evidence": [
+              {
+                "type": "command",
+                "description": "exec exited 0 (398ms)",
+                "source": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+                "timestamp": 1792910617484
+              }
+            ],
+            "previewWithheld": true
+          }
+        },
+        {
+          "event": "tool.completed",
+          "at": 1792910617484,
+          "payload": {
+            "toolCallId": "toolcall_8ffbe49e-417e-4067-b19b-e07adde77e8a",
+            "tool": "exec",
+            "durationMs": 405
+          }
+        },
+        {
+          "event": "tool.requested",
+          "at": 1792910617492,
+          "payload": {
+            "toolCallId": "toolcall_51f72b6e-4bd5-4ada-8771-6b0e4bd54aac",
+            "name": "read_file",
+            "args": {
+              "path": "source.cjs"
+            },
+            "stepId": "turn_a16f6145-08fa-4119-8beb-7bb7d746fb0a:1"
+          }
+        },
+        {
+          "event": "tool.permission_resolved",
+          "at": 1792910617493,
+          "payload": {
+            "toolCallId": "toolcall_51f72b6e-4bd5-4ada-8771-6b0e4bd54aac",
+            "tool": "read_file",
+            "effect": "allow",
+            "reason": "rule 'anon' (allow) matched"
+          }
+        },
+        {
+          "event": "tool.started",
+          "at": 1792910617493,
+          "payload": {
+            "toolCallId": "toolcall_51f72b6e-4bd5-4ada-8771-6b0e4bd54aac",
+            "tool": "read_file"
+          }
+        },
+        {
+          "event": "tool.completed",
+          "at": 1792910617495,
+          "payload": {
+            "toolCallId": "toolcall_51f72b6e-4bd5-4ada-8771-6b0e4bd54aac",
+            "tool": "read_file",
+            "status": "success",
+            "durationMs": 3,
+            "evidence": [
+              {
+                "type": "file",
+                "description": "read_file executed",
+                "source": "/tmp/managed-h0-Z9K5Wc/source.cjs",
+                "timestamp": 1792910617495
+              }
+            ],
+            "previewWithheld": true
+          }
+        },
+        {
+          "event": "tool.completed",
+          "at": 1792910617496,
+          "payload": {
+            "toolCallId": "toolcall_51f72b6e-4bd5-4ada-8771-6b0e4bd54aac",
+            "tool": "read_file",
+            "durationMs": 3
+          }
+        }
+      ]
+    },
+    {
+      "kind": "repair",
+      "startedAt": 1792910617504,
+      "finishedAt": 1792910617844,
+      "status": "completed",
+      "files": {
+        "started": null,
+        "done": null,
+        "late": null
+      },
+      "timeline": [
+        {
+          "event": "model",
+          "n": 1,
+          "at": 1792910617506,
+          "toolResults": []
+        },
+        {
+          "event": "model",
+          "n": 2,
+          "at": 1792910617801,
+          "toolResults": [
+            "[failed] {\"error\":\"exited with code 1\",\"output\":{\"exitCode\":1,\"stdout\":\"\",\"stderr\":\"CHECK_FAILED\\n\",\"truncated\":false,\"durationMs\":289}}"
+          ]
+        },
+        {
+          "event": "model",
+          "n": 3,
+          "at": 1792910617803,
+          "toolResults": [
+            "[failed] {\"error\":\"exited with code 1\",\"output\":{\"exitCode\":1,\"stdout\":\"\",\"stderr\":\"CHECK_FAILED\\n\",\"truncated\":false,\"durationMs\":289}}",
+            "module.exports=1;\n"
+          ]
+        },
+        {
+          "event": "model",
+          "n": 4,
+          "at": 1792910617843,
+          "toolResults": [
+            "[failed] {\"error\":\"exited with code 1\",\"output\":{\"exitCode\":1,\"stdout\":\"\",\"stderr\":\"CHECK_FAILED\\n\",\"truncated\":false,\"durationMs\":289}}",
+            "module.exports=1;\n",
+            "{\"exitCode\":0,\"stdout\":\"REPAIRED\\n\",\"stderr\":\"\",\"truncated\":false,\"durationMs\":35}"
+          ]
+        },
+        {
+          "event": "tool.requested",
+          "at": 1792910617506,
+          "payload": {
+            "toolCallId": "toolcall_e4860d09-24bd-4eea-baf7-ceeec0b4435d",
+            "name": "exec",
+            "args": {
+              "command": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+              "args": [
+                "-e",
+                "setTimeout(()=>{console.error('CHECK_FAILED');process.exitCode=1},250);"
+              ]
+            },
+            "stepId": "turn_79669810-c827-4a5d-9ab7-cca1b11ac51f:0"
+          }
+        },
+        {
+          "event": "tool.permission_resolved",
+          "at": 1792910617506,
+          "payload": {
+            "toolCallId": "toolcall_e4860d09-24bd-4eea-baf7-ceeec0b4435d",
+            "tool": "exec",
+            "effect": "allow",
+            "reason": "rule 'anon' (allow) matched"
+          }
+        },
+        {
+          "event": "tool.intent_persisted",
+          "at": 1792910617507,
+          "payload": {
+            "toolCallId": "toolcall_e4860d09-24bd-4eea-baf7-ceeec0b4435d",
+            "tool": "exec",
+            "argsHash": "2d28b90c78dbf0c57afb117ef7a469b91f51626de553de51837cc8be902f9c43",
+            "sideEffectScope": "process",
+            "idempotent": false,
+            "readOnly": false,
+            "startedAt": 1792910617507,
+            "sessionId": "session_cad35bdf-a3bf-48ca-9c96-fc62ce907c98",
+            "turnId": "turn_79669810-c827-4a5d-9ab7-cca1b11ac51f",
+            "stepId": "turn_79669810-c827-4a5d-9ab7-cca1b11ac51f:0",
+            "routerFingerprint": "af202e7667ad55bda5e89782d10a9bc80b7726f006676c014c01751efa98c42d",
+            "toolBindingFingerprint": "df21a900ff3f6731d9dd053fecd76211d458206a2ddc20bded15b0d836299c72"
+          }
+        },
+        {
+          "event": "tool.started",
+          "at": 1792910617507,
+          "payload": {
+            "toolCallId": "toolcall_e4860d09-24bd-4eea-baf7-ceeec0b4435d",
+            "tool": "exec"
+          }
+        },
+        {
+          "event": "tool.output",
+          "at": 1792910617793,
+          "payload": {
+            "toolCallId": "toolcall_e4860d09-24bd-4eea-baf7-ceeec0b4435d",
+            "tool": "exec",
+            "stream": "stderr",
+            "bytes": 13,
+            "withheld": true
+          }
+        },
+        {
+          "event": "tool.completed",
+          "at": 1792910617796,
+          "payload": {
+            "toolCallId": "toolcall_e4860d09-24bd-4eea-baf7-ceeec0b4435d",
+            "tool": "exec",
+            "status": "failed",
+            "durationMs": 290,
+            "evidence": [],
+            "previewWithheld": true
+          }
+        },
+        {
+          "event": "tool.failed",
+          "at": 1792910617796,
+          "payload": {
+            "toolCallId": "toolcall_e4860d09-24bd-4eea-baf7-ceeec0b4435d",
+            "tool": "exec",
+            "error": {
+              "code": "PROCESS_ERROR",
+              "message": "exited with code 1",
+              "retryable": true,
+              "safeToRetry": false
+            },
+            "durationMs": 290
+          }
+        },
+        {
+          "event": "tool.requested",
+          "at": 1792910617801,
+          "payload": {
+            "toolCallId": "toolcall_6a544e6f-045e-4a83-b67c-46c4b05080c1",
+            "name": "read_file",
+            "args": {
+              "path": "source.cjs"
+            },
+            "stepId": "turn_79669810-c827-4a5d-9ab7-cca1b11ac51f:1"
+          }
+        },
+        {
+          "event": "tool.permission_resolved",
+          "at": 1792910617801,
+          "payload": {
+            "toolCallId": "toolcall_6a544e6f-045e-4a83-b67c-46c4b05080c1",
+            "tool": "read_file",
+            "effect": "allow",
+            "reason": "rule 'anon' (allow) matched"
+          }
+        },
+        {
+          "event": "tool.started",
+          "at": 1792910617801,
+          "payload": {
+            "toolCallId": "toolcall_6a544e6f-045e-4a83-b67c-46c4b05080c1",
+            "tool": "read_file"
+          }
+        },
+        {
+          "event": "tool.completed",
+          "at": 1792910617802,
+          "payload": {
+            "toolCallId": "toolcall_6a544e6f-045e-4a83-b67c-46c4b05080c1",
+            "tool": "read_file",
+            "status": "success",
+            "durationMs": 1,
+            "evidence": [
+              {
+                "type": "file",
+                "description": "read_file executed",
+                "source": "/tmp/managed-h0-12enGi/source.cjs",
+                "timestamp": 1792910617802
+              }
+            ],
+            "previewWithheld": true
+          }
+        },
+        {
+          "event": "tool.completed",
+          "at": 1792910617802,
+          "payload": {
+            "toolCallId": "toolcall_6a544e6f-045e-4a83-b67c-46c4b05080c1",
+            "tool": "read_file",
+            "durationMs": 1
+          }
+        },
+        {
+          "event": "tool.requested",
+          "at": 1792910617803,
+          "payload": {
+            "toolCallId": "toolcall_b9e42106-595a-454f-8148-261df5024217",
+            "name": "exec",
+            "args": {
+              "command": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+              "args": [
+                "-e",
+                "console.log('REPAIRED')"
+              ]
+            },
+            "stepId": "turn_79669810-c827-4a5d-9ab7-cca1b11ac51f:2"
+          }
+        },
+        {
+          "event": "tool.permission_resolved",
+          "at": 1792910617803,
+          "payload": {
+            "toolCallId": "toolcall_b9e42106-595a-454f-8148-261df5024217",
+            "tool": "exec",
+            "effect": "allow",
+            "reason": "rule 'anon' (allow) matched"
+          }
+        },
+        {
+          "event": "tool.intent_persisted",
+          "at": 1792910617804,
+          "payload": {
+            "toolCallId": "toolcall_b9e42106-595a-454f-8148-261df5024217",
+            "tool": "exec",
+            "argsHash": "b6a335841e5e0597558ad27301f3a8d6767a7ad82ac48e7ccae72506a2f16a97",
+            "sideEffectScope": "process",
+            "idempotent": false,
+            "readOnly": false,
+            "startedAt": 1792910617804,
+            "sessionId": "session_cad35bdf-a3bf-48ca-9c96-fc62ce907c98",
+            "turnId": "turn_79669810-c827-4a5d-9ab7-cca1b11ac51f",
+            "stepId": "turn_79669810-c827-4a5d-9ab7-cca1b11ac51f:2",
+            "routerFingerprint": "af202e7667ad55bda5e89782d10a9bc80b7726f006676c014c01751efa98c42d",
+            "toolBindingFingerprint": "df21a900ff3f6731d9dd053fecd76211d458206a2ddc20bded15b0d836299c72"
+          }
+        },
+        {
+          "event": "tool.started",
+          "at": 1792910617804,
+          "payload": {
+            "toolCallId": "toolcall_b9e42106-595a-454f-8148-261df5024217",
+            "tool": "exec"
+          }
+        },
+        {
+          "event": "tool.output",
+          "at": 1792910617837,
+          "payload": {
+            "toolCallId": "toolcall_b9e42106-595a-454f-8148-261df5024217",
+            "tool": "exec",
+            "stream": "stdout",
+            "bytes": 9,
+            "withheld": true
+          }
+        },
+        {
+          "event": "tool.completed",
+          "at": 1792910617840,
+          "payload": {
+            "toolCallId": "toolcall_b9e42106-595a-454f-8148-261df5024217",
+            "tool": "exec",
+            "status": "success",
+            "durationMs": 37,
+            "evidence": [
+              {
+                "type": "command",
+                "description": "exec exited 0 (35ms)",
+                "source": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+                "timestamp": 1792910617839
+              }
+            ],
+            "previewWithheld": true
+          }
+        },
+        {
+          "event": "tool.completed",
+          "at": 1792910617840,
+          "payload": {
+            "toolCallId": "toolcall_b9e42106-595a-454f-8148-261df5024217",
+            "tool": "exec",
+            "durationMs": 37
+          }
+        }
+      ]
+    },
+    {
+      "kind": "cancel",
+      "startedAt": 1792910617846,
+      "finishedAt": 1792910619701,
+      "status": "cancelled",
+      "files": {
+        "started": "1",
+        "done": null,
+        "late": null
+      },
+      "timeline": [
+        {
+          "event": "model",
+          "n": 1,
+          "at": 1792910617848,
+          "toolResults": []
+        },
+        {
+          "event": "tool.requested",
+          "at": 1792910617848,
+          "payload": {
+            "toolCallId": "toolcall_ca1bed4f-2d27-4b9b-89e7-8f6d8ae9ea1a",
+            "name": "exec",
+            "args": {
+              "command": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+              "args": [
+                "-e",
+                "require('node:fs').writeFileSync('started','1');setTimeout(()=>require('node:fs').writeFileSync('late','bad'),1500);"
+              ]
+            },
+            "stepId": "turn_427f75dc-4758-42f2-9e3e-84358546f381:0"
+          }
+        },
+        {
+          "event": "tool.permission_resolved",
+          "at": 1792910617849,
+          "payload": {
+            "toolCallId": "toolcall_ca1bed4f-2d27-4b9b-89e7-8f6d8ae9ea1a",
+            "tool": "exec",
+            "effect": "allow",
+            "reason": "rule 'anon' (allow) matched"
+          }
+        },
+        {
+          "event": "tool.intent_persisted",
+          "at": 1792910617849,
+          "payload": {
+            "toolCallId": "toolcall_ca1bed4f-2d27-4b9b-89e7-8f6d8ae9ea1a",
+            "tool": "exec",
+            "argsHash": "cef45d265a8331d50096cd9ed0baaa93b43a50b7a0277e5f73dbd59c5e153954",
+            "sideEffectScope": "process",
+            "idempotent": false,
+            "readOnly": false,
+            "startedAt": 1792910617849,
+            "sessionId": "session_53d5e5e8-7059-4fb4-bcb4-9791fe8f0a87",
+            "turnId": "turn_427f75dc-4758-42f2-9e3e-84358546f381",
+            "stepId": "turn_427f75dc-4758-42f2-9e3e-84358546f381:0",
+            "routerFingerprint": "af202e7667ad55bda5e89782d10a9bc80b7726f006676c014c01751efa98c42d",
+            "toolBindingFingerprint": "df21a900ff3f6731d9dd053fecd76211d458206a2ddc20bded15b0d836299c72"
+          }
+        },
+        {
+          "event": "tool.started",
+          "at": 1792910617849,
+          "payload": {
+            "toolCallId": "toolcall_ca1bed4f-2d27-4b9b-89e7-8f6d8ae9ea1a",
+            "tool": "exec"
+          }
+        },
+        {
+          "event": "tool.completed",
+          "at": 1792910618099,
+          "payload": {
+            "toolCallId": "toolcall_ca1bed4f-2d27-4b9b-89e7-8f6d8ae9ea1a",
+            "tool": "exec",
+            "status": "cancelled",
+            "durationMs": 250,
+            "evidence": [],
+            "previewWithheld": true
+          }
+        }
+      ]
+    }
+  ]
+}
