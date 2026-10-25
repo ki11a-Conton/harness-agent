@@ -10,9 +10,14 @@ import { createHarness, type Harness } from "./create-harness.js";
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 async function heldCommand() {
   const responses = new Set<ServerResponse>();
+  let connected!: () => void;
+  const connection = new Promise<void>((resolve) => {
+    connected = resolve;
+  });
   let released = false;
   const server = createServer((_request, response) => {
     responses.add(response);
+    connected();
     response.once("close", () => responses.delete(response));
     if (released) response.end("release");
   });
@@ -27,6 +32,18 @@ async function heldCommand() {
       released = true;
       for (const response of responses) response.end("release");
     },
+    waitUntilConnected: (deadlineAt: number) =>
+      new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(
+          () => reject(new Error("Held command did not connect within the original turn budget")),
+          Math.max(0, deadlineAt - Date.now()),
+        );
+        void connection.then(() => {
+          clearTimeout(timer);
+          resolve();
+        });
+      }),
+    connectedNow: () => responses.size > 0,
     close: () =>
       new Promise<void>((resolve) => {
         server.close(() => resolve());
@@ -39,7 +56,12 @@ async function create(
   mode: "finish" | "premature" | "cancel" = "finish",
   overrides: Record<string, unknown> = {},
   duration = 900,
-  controlled?: { code: string; observe?: (token: number) => void },
+  controlled?: {
+    code: string;
+    observe?: (token: number) => void;
+    ready?: (deadlineAt: number) => Promise<void>;
+    pollWaitMs?: (token: number) => number;
+  },
 ) {
   const cwd = await realpath(await mkdtemp(join(tmpdir(), "managed-host-")));
   const requests: ModelRequest[] = [];
@@ -83,6 +105,10 @@ async function create(
               -1,
             )?.[1] ?? state;
         }
+        if (step === 2 && state === "running" && controlled?.ready !== undefined)
+          await controlled.ready(
+            turn.startedAt + (h.config.limits?.maxDurationMs ?? 10000),
+          );
         controlled?.observe?.(pollToken);
         if (step === 1)
           yield* ScriptedModelProvider.toolCall(
@@ -104,7 +130,7 @@ async function create(
           yield* ScriptedModelProvider.toolCall("exec_poll", {
             jobId,
             pollToken,
-            waitMs: 1000,
+            waitMs: controlled?.pollWaitMs?.(pollToken) ?? 1000,
           });
         else yield* ScriptedModelProvider.text("Checks complete.");
       },
@@ -287,6 +313,7 @@ it("refuses enabling without trusted finite deadline and real task verification"
 
 it("quiet long command polls advance real observation tokens without triggering identical-call recovery", async () => {
   const controlled = await heldCommand();
+  const liveObservations = new Map<number, boolean>();
   let f: Awaited<ReturnType<typeof create>> | undefined;
   try {
     f = await create(
@@ -296,14 +323,24 @@ it("quiet long command polls advance real observation tokens without triggering 
       900,
       {
         ...controlled,
+        // First prove the actual child is connected and quiet, then collect
+        // four nonblocking observations. Four artificial one-second waits
+        // consume the original 10s turn on a busy native Windows runner.
+        ready: controlled.waitUntilConnected,
+        pollWaitMs: (token) => (token < 4 ? 0 : 1000),
         // Four actual observations, independent of machine speed or sleep timing.
         observe: (token) => {
+          if (token > 0 && token <= 4)
+            liveObservations.set(token, controlled.connectedNow());
           if (token >= 4) controlled.release();
         },
       },
     );
     const outcome = await f.run();
     expect(outcome.status, JSON.stringify(outcome)).toBe("completed");
+    expect(liveObservations.size).toBe(4);
+    expect([...liveObservations.values()].every(Boolean)).toBe(true);
+    expect(await readFile(join(f.cwd, "starts"), "utf8")).toBe("1");
     const polls = f.requests
       .flatMap((r) => r.messages)
       .filter((m) => m.role === "assistant")

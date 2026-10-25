@@ -1,0 +1,77 @@
+[
+  {
+    "arm": "original-waits",
+    "providerLatencyMs": 1000,
+    "turnBudgetMs": 10000,
+    "jobBudgetMs": 8000,
+    "durationMs": 10178,
+    "liveObservations": [
+      [
+        1,
+        true
+      ],
+      [
+        2,
+        true
+      ],
+      [
+        3,
+        false
+      ],
+      [
+        4,
+        false
+      ]
+    ],
+    "actualStarts": "1",
+    "complete": null,
+    "paidModelCalls": 0,
+    "outcome": {
+      "status": "failed",
+      "grade": "unverified_complete",
+      "terminationReason": "time_limit",
+      "error": {
+        "code": "RESOURCE_LIMIT",
+        "message": "maxDurationMs (10000ms) exceeded after 10156ms",
+        "retryable": false,
+        "safeToRetry": false
+      }
+    },
+    "rawSha256": "779cc47084bd9e31b9d2f4cbec933c478608b61c75549b3ce1a290474600cc1a"
+  },
+  {
+    "arm": "nonblocking",
+    "providerLatencyMs": 1000,
+    "turnBudgetMs": 10000,
+    "jobBudgetMs": 8000,
+    "durationMs": 8220,
+    "liveObservations": [
+      [
+        1,
+        true
+      ],
+      [
+        2,
+        true
+      ],
+      [
+        3,
+        true
+      ],
+      [
+        4,
+        true
+      ]
+    ],
+    "actualStarts": "1",
+    "complete": "1",
+    "paidModelCalls": 0,
+    "outcome": {
+      "status": "completed",
+      "grade": "verified_complete",
+      "terminationReason": "verified_complete",
+      "error": null
+    },
+    "rawSha256": "f52190fa174167c34f9e0ac23aa343ec8a7c340aa5424501f0dccf3cb7791593"
+  }
+]

@@ -9,6 +9,7 @@ import { parseArgs } from 'node:util';
 import { createHash, randomUUID } from 'node:crypto';
 import { observeProductionRpc, canonicalPluginResource } from './deepseek-browser-observe.mjs';
 import { createReadyWorkspaceSession } from './deepseek-browser-session.mjs';
+import { fillTypedCommand, waitForPlainComposer } from './composer-readiness.mjs';
 const { values } = parseArgs({ options: { url: { type: 'string' }, output: { type: 'string' }, 'fixture-evidence': { type: 'string' },
   'playwright-module': { type: 'string' }, chromium: { type: 'string' }, 'expected-composer-sha': { type: 'string' }, 'expected-commands-sha': { type: 'string' } } });
 for (const key of ['url', 'output', 'fixture-evidence', 'playwright-module', 'chromium', 'expected-composer-sha', 'expected-commands-sha']) assert(values[key], key);
@@ -70,7 +71,7 @@ async function nativeCommand(kind, keyboard = false) {
 }
 async function clearDraft() {
   await editor().press('ControlOrMeta+A'); await editor().press('Backspace');
-  await until(async () => (await editor().innerText()).trim() === '', 'Native draft did not clear');
+  await waitForPlainComposer(editor(), '', until);
 }
 async function freshSession() {
   const sidebar = button(/^(Open sidebar|打开侧边栏)$/); if (await sidebar.isVisible()) await sidebar.click();
@@ -145,11 +146,11 @@ try {
     assert.equal(await goal(), undefined); assert.equal((await requests()).length, before);
     check(label + '-native-goal-cancel-no-side-effects');
     if (locale === 'zh') {
-      await editor().fill('/plan'); await acknowledged(() => editor().press('Enter'));
+      await fillTypedCommand(editor(), '/plan', until); await acknowledged(() => editor().press('Enter'));
       await planChip().waitFor(); assert((await state()).values.plan.active);
-      await editor().fill('/plan'); await acknowledged(() => editor().press('Enter'));
+      await fillTypedCommand(editor(), '/plan', until); await acknowledged(() => editor().press('Enter'));
       await until(async () => !(await state()).values.plan.active, 'Canonical /plan alias did not exit in Chinese');
-      await editor().fill('/goal'); await editor().press('Enter');
+      await fillTypedCommand(editor(), '/goal', until); await editor().press('Enter');
       await page.locator('[data-composer-input=true][data-phase=claimed]').filter({ visible: true }).waitFor();
       // An English alias is accepted and the menu renders its localized chip.
       assert.match(await editor().innerText(), /^\/目标\s/u); await clearDraft();
@@ -169,10 +170,10 @@ try {
     }
   }
   await page.setViewportSize({ width: 1440, height: 1000 }); await frames(); await appearance('en', 'light');
-  await editor().fill('/goal'); await editor().press('Enter');
+  await fillTypedCommand(editor(), '/goal', until); await editor().press('Enter');
   await page.locator('[data-composer-input=true][data-phase=claimed]').filter({ visible: true }).waitFor();
   assert.equal(await goal(), undefined); await clearDraft(); check('typed-bare-goal-claims-main-composer');
-  await editor().fill('/plan'); await acknowledged(() => editor().press('Enter'));
+  await fillTypedCommand(editor(), '/plan', until); await acknowledged(() => editor().press('Enter'));
   await planChip().waitFor(); assert((await state()).values.plan.active); check('typed-bare-plan-enters');
   const objective = '[fixture:read] Native command goal ' + randomUUID(), before = (await requests()).length;
   await nativeCommand('goal'); await editor().pressSequentially(objective); await acknowledged(() => button('Send message').click());
@@ -180,7 +181,7 @@ try {
   assert.equal((await goal()).objective, objective); assert((await state()).values.plan.active);
   assert.equal((await goal()).roundsStarted, 0); assert.equal((await requests()).length, before);
   check('goal-preserves-unapproved-plan-and-pauses-driver');
-  await editor().fill('/plan'); await acknowledged(() => editor().press('Enter'));
+  await fillTypedCommand(editor(), '/plan', until); await acknowledged(() => editor().press('Enter'));
   await until(async () => !(await state()).values.plan.active, 'Typed Plan did not exit');
   await until(async () => (await requests()).length >= before + 3, 'Goal did not run actual loopback HTTP', 30000);
   await button('Pause goal').click(); await button('Resume goal').waitFor();
@@ -198,7 +199,7 @@ try {
   assert.equal(isolated.goal, null); assert.equal(isolated.plan.active, false); await layout('new-session-default');
   check('new-session-default-coding-isolation');
   const typedObjective = '[fixture:read] Typed goal ' + randomUUID();
-  await editor().fill('/goal ' + typedObjective);
+  await fillTypedCommand(editor(), '/goal ' + typedObjective, until);
   await acknowledged(() => button('Send message').click()); await button('Pause goal').waitFor();
   assert.equal((await goal()).objective, typedObjective);
   await until(async () => (await requests()).some(request => request.messages.some(message => message.role === 'user' && message.content.includes(typedObjective))), 'Typed Goal never reached actual model HTTP', 30000);
@@ -214,6 +215,10 @@ try {
   assert.deepEqual(errors, []); assert.deepEqual(rpc.externalRequests, []); check('actual-assets-and-no-browser-errors');
 } catch (error) {
   failure = error.stack; await writeFile(join(output, 'failure-text.txt'), await page.locator('body').innerText().catch(() => 'Page unavailable'));
+  await writeFile(join(output, 'failure-editor.json'), JSON.stringify(await editor().evaluate(element => ({
+    text: element.innerText, phase: element.dataset.phase, composing: element.hasAttribute('data-composer-composing'),
+    editable: element.isContentEditable, active: document.activeElement === element,
+  })).catch(error => ({ unavailable: error.message })), null, 2) + '\n');
   await page.screenshot({ path: join(output, 'failure.png'), fullPage: true }).catch(() => {});
 } finally {
   await Promise.allSettled(assetReads); await rpc.settled();

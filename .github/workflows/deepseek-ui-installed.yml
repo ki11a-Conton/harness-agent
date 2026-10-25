@@ -11,6 +11,7 @@ on:
       - 'scripts/research/deepseek-*'
       - 'scripts/research/pr15-*'
       - 'scripts/research/composer-mode-*'
+      - 'scripts/research/composer-readiness*'
       - 'scripts/research/managed-commands-20261025/**'
       - 'scripts/research/web-controls-*'
       - 'scripts/research/web-product-*'
@@ -44,7 +45,7 @@ jobs:
         with:
           node-version: '22'
       - name: Verify pinned UI navigation regressions
-        run: node --test scripts/research/web-navigation.test.mjs scripts/research/web-workspace-composer.test.mjs scripts/research/web-connection.test.mjs scripts/research/web-controls-ui.test.mjs scripts/research/web-workspace-actions.test.mjs scripts/research/web-model-reasoning-ui.test.mjs scripts/research/web-daily-20261016/tcp-latency.test.mjs
+        run: node --test scripts/research/web-navigation.test.mjs scripts/research/web-workspace-composer.test.mjs scripts/research/web-connection.test.mjs scripts/research/web-controls-ui.test.mjs scripts/research/web-workspace-actions.test.mjs scripts/research/web-model-reasoning-ui.test.mjs scripts/research/composer-readiness.test.mjs scripts/research/web-daily-20261016/tcp-latency.test.mjs
       - name: Build the pinned clean source once
         run: node scripts/release/portable.mjs build --out .ci/deepseek/assets --version 1.13.0 --source-sha ${{ github.sha }}
       - uses: actions/upload-artifact@v4

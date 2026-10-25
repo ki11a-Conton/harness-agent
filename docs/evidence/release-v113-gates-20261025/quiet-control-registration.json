@@ -1,0 +1,16 @@
+{
+  "registeredAt": "2026-10-25T17:15:44.799839+00:00",
+  "productSourceSha": "50a294be2e50825d3f64c1a00b7f9d5c2bbf3aac",
+  "fixtureSourceSha256": "13c1cb6de2a6a5ffb575037be12f1d62875d7a202ed3a4839dd86856ede174f9",
+  "providerLatencyPerCallMs": 1000,
+  "turnBudgetMs": 10000,
+  "jobBudgetMs": 8000,
+  "bothArmsAwaitRealChildHttpConnection": true,
+  "arms": [
+    "original-one-second-observations",
+    "four-nonblocking-observations"
+  ],
+  "policyDifference": "Only initial four poll waitMs; after releasing, both use bounded1000ms terminal poll",
+  "scope": "Deterministic test-fixture budget counterexample; not paid model quality",
+  "paidModelCalls": 0
+}
