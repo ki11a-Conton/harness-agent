@@ -5,6 +5,7 @@ import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { verifyArchive } from "./portable.mjs";
+import { verifyManagedBrowserChecks } from "./managed-checks.mjs";
 const { values: v } = parseArgs({
   options: {
     archive: { type: "string" },
@@ -127,8 +128,7 @@ try {
   const browser = JSON.parse(
     await readFile(join(out, "browser/result.json"), "utf8"),
   );
-  assert.equal(browser.status, "PASS");
-  assert.equal(browser.checks.length, 9);
+  verifyManagedBrowserChecks(browser);
   const launch = JSON.parse(
     await readFile(join(fixture, "evidence/launch.json"), "utf8"),
   );

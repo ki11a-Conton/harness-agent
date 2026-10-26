@@ -33,3 +33,9 @@
 - F8 Windows式glob路径漏搜：真实src/a.ts存在，pattern=src/*.ts命中而src\\*.ts返回空。判断basename前与matcher一致归一化分隔符；验收同一ToolOrchestrator跨分隔符/嵌套路径与basename兼容。
 
 F7边界更正：旧public/coding-workflow.js面板在当前官方页面未挂载，本轮不新增旧入口、不把其浏览器找不到按钮误计为产品回归。修复对象是已有session/codingStatus生产RPC，浏览器验收通过正常UI执行命令后只读RPC核对真实状态。
+
+## CI复核补修
+
+首次提交6a0598e4的安装包Web CI捕获验收封装未同步：新增状态RPC断言后浏览器实际10项通过，但managed-installed与deepseek-installed两层仍固定要求9项。修复共享的必需检查名称合同，精确验证10个唯一PASS、complete、无错误/付费调用，两个封装复用同一合同；增加负控制并接入原安装包CI纯函数测试步骤。保留原失败和未产出CLI证据的次级上传错误，等待原4条CI自然终态后再推送修复提交。类型/完整测试及真实验收重新绑定最终clean SHA，不扩大超时或放松门禁。
+
+候选导出收据校验也复用同一必需检查数量；新增拒绝仅9项的数值收据与字符串伪造负例。合同/候选导出/已有UI纯函数共94项通过，实际10项浏览器收据通过新合同校验。

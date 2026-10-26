@@ -41,7 +41,7 @@ async function scenario(change, expected, expectedUploads = expected ? 0 : 4) {
         ...name.startsWith('web') ? { installedApplication: true, cases: 30, assertions: 75,
           pr15Controls: 10, dailyScenarios: 42, dailyAssertions: 120, connectionScenarios: 2, connectionAssertions: 10,
           workspaceKeyboardScenarios: 3, workspaceKeyboardAssertions: 45, modelReasoningChecks: 22,
-          composerModeChecks: 24, managedCommandChecks: 9 }
+          composerModeChecks: 24, managedCommandChecks: 10 }
           : { doctorErrors: 0, tamperRejected: true, tamperedStartupRejected: true,
             codingAssertions: actualCli[platform].assertions.length, requests: actualCli[platform].requests,
             cleanroomOutsideRepository: true } }));
@@ -123,7 +123,7 @@ test('rejects Windows receipts from different archive bytes', () => scenario(asy
 for (const [field, value] of [['assertions', 74], ['pr15Controls', 9], ['dailyScenarios', 41],
   ['dailyAssertions', 119], ['connectionScenarios', 1], ['connectionAssertions', 9], ['assertions', '75'], ['workspaceKeyboardScenarios', 2],
   ['workspaceKeyboardAssertions', 44], ['modelReasoningChecks', 21], ['composerModeChecks', 23],
-  ['managedCommandChecks', 8], ['managedCommandChecks', '9']]) {
+  ['managedCommandChecks', 8], ['managedCommandChecks', 9], ['managedCommandChecks', '10']]) {
   test(`rejects incomplete or nonnumeric Web evidence: ${field}=${JSON.stringify(value)}`, () => scenario(async ({ base }) => {
     const path = join(base, 'web-windows/result.json');
     const receipt = JSON.parse(await readFile(path, 'utf8')); receipt[field] = value;

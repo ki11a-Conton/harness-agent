@@ -4,6 +4,7 @@ import { join, resolve } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { digest, verifyPortable } from './portable-lib.mjs';
 import { verifyArchive } from './portable.mjs';
+import { MANAGED_BROWSER_CHECKS } from './managed-checks.mjs';
 
 const repository = 'ki11a-Conton/harness-agent';
 const version = '1.13.0';
@@ -76,7 +77,7 @@ for (const [name, platform, kind] of [
     || !countAtLeast(receipt.dailyAssertions, 120) || receipt.connectionScenarios !== 2
     || !countAtLeast(receipt.connectionAssertions, 10) || receipt.workspaceKeyboardScenarios !== 3
     || !countAtLeast(receipt.workspaceKeyboardAssertions, 45) || !countAtLeast(receipt.modelReasoningChecks, 22)
-    || !countAtLeast(receipt.composerModeChecks, 24) || !countAtLeast(receipt.managedCommandChecks, 9))) throw new Error('CANDIDATE_WEB_CONTROLS_REJECTED');
+    || !countAtLeast(receipt.composerModeChecks, 24) || !countAtLeast(receipt.managedCommandChecks, MANAGED_BROWSER_CHECKS.length))) throw new Error('CANDIDATE_WEB_CONTROLS_REJECTED');
   installed[name] = receipt;
 }
 const evidence = Buffer.from(JSON.stringify({ schemaVersion: 1, status: 'ACCEPTED_NOT_PUBLISHED', version, sourceSha: sha,
