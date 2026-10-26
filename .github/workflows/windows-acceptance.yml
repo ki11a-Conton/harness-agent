@@ -51,7 +51,7 @@ jobs:
           pnpm typecheck
           if ($LASTEXITCODE -ne 0) { throw 'typecheck failed' }
       - name: Check the acceptance report parser
-        run: node --test scripts/ci/windows-acceptance-report.test.mjs
+        run: node --test scripts/ci/windows-acceptance-report.test.mjs scripts/research/managed-commands-20261025/observe-read-overlap.test.mjs
       - name: Real CLI and Web coding acceptance (scripted local HTTP)
         run: node scripts/research/coding-audit-20261007/acceptance.mjs .ci/windows-acceptance/coding
       - name: Opt-in coding prompt on actual CLI and Web HTTP requests

@@ -13,6 +13,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import assert from "node:assert/strict";
+import { observeReadOverlap } from "./observe-read-overlap.mjs";
 const workflowMessage = (value) => String(value).replaceAll("%", "%25").replaceAll("\r", "%0D").replaceAll("\n", "%0A");
 // Observe uncaught failures without changing Node's default failing exit.
 process.on("uncaughtExceptionMonitor", error => {
@@ -87,6 +88,7 @@ const registration = {
     retainedBytes: 65536,
   },
   paidModelCalls: 0,
+  overlapMetric: { version: 2, source: "correlated successful read_file evidence within known native start/exit interval; model-request time is not an action; unknown exit is not positive proof" },
   networkPreflight: {
     loopback: "allow",
     external: "deny",
@@ -409,14 +411,16 @@ for (const kind of registration.kinds)
           .split("\n")
           .filter(Boolean)
           .map(JSON.parse);
-        const readAt = timeline.find((e) => e.stage === "observe")?.at;
-        report.overlapObserved =
-          !!readAt &&
-          report.starts.some(
-            (s) =>
-              s.at < readAt &&
-              (report.exits.find((e) => e.at >= s.at)?.at ?? Infinity) > readAt,
-          );
+        const overlap = observeReadOverlap({
+          events: report.events, starts: report.starts, exits: report.exits,
+          sourcePath: join(cwd, kind === "http-service" ? "port.txt" : "source.cjs"),
+        });
+        report.overlapObserved = overlap.overlapObserved;
+        report.readObservations = overlap.reads;
+        report.commandIntervals = overlap.commandIntervals;
+        report.readSource = join(cwd, kind === "http-service" ? "port.txt" : "source.cjs");
+        // Retain scheduling data for diagnosis; it cannot establish read overlap.
+        report.modelObserveAt = timeline.find(e => e.stage === "observe")?.at;
         report.outputBytes = requests.reduce(
           (n, r) =>
             n +
@@ -515,7 +519,9 @@ if (summary.arms !== 48 || summary.failures.length !== 0 || summary.candidatePas
       status: r.outcome?.status, grade: r.outcome?.grade, error: r.error,
       independentError: r.independentError, cleanupError: r.cleanupError,
       cleanupAlive: r.cleanupAlive, overlapObserved: r.overlapObserved,
-      starts: r.starts, exits: r.exits,
+      starts: r.starts, exits: r.exits, readSource: r.readSource,
+      readObservations: r.readObservations, commandIntervals: r.commandIntervals, modelObserveAt: r.modelObserveAt,
+      readEvents: r.events?.filter(e => e.type === "tool.completed" && e.payload?.tool === "read_file" && e.payload?.status !== undefined).map(e => ({ timestamp: e.timestamp, sequence: e.sequence, sessionId: e.sessionId, turnId: e.turnId, payload: e.payload })),
       observations: r.timeline?.filter(e => e.stage === "observe").map(e => ({ at: e.at, stage: e.stage })),
     })),
   };

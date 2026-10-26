@@ -45,3 +45,9 @@ Windows CI另一个取消断言存在已独立复现的因果缺口：原900ms�
 原Windows48arm配对失败的完整日志存储被云代理CONNECT403拒绝，API仅通用退出码，不能猜测根因或记为已修。配对脚本只增加结构化failed-arm/overlap/PID/退出码诊断及不改变Node退出的uncaughtExceptionMonitor；原48arm、24candidate通过、16overlap、零重复启动等断言原样保留。后续Windows据真实诊断决定是否补修。
 
 5262c191本地完整运行期间写入取消验收修改，6个clean-source门禁因此正确拒绝该脏工作树。该次原始10374通过/6失败及dirty状态已保留，不能作为最终验收；所有修改提交后再固定clean SHA复跑，不更改clean-source门禁。
+
+## 配对实验测量正确性
+
+真实Harness反例证明：实际read_file证据时间3807 < 原生命令exit3818 < 下一次model请求3823，旧model时间指标却判false；真正exit后read仍须false。改用同session/turn/callId的started+success completed和精确file/path/time证据，严格关联原生start/exit，不用Infinity猜未知退出。新增43项Node正反例和真实反例脚本，接入原Windows纯测试步骤。公平夹具、两臂策略/ABBA、48arm/24候选/16并行、预算/独立验证/清理门禁均不改。原48arm离线复算non-service仍16，新源码实际48arm须重跑。
+
+本地完整10380通过/0失败/16原跳过在干净ee58f170上完成并保留原SHA/日志。后续仅研究脚本、Node测试、Node CI步骤及此文档变更，apps/packages整体Git树及根依赖/类型配置必须逐项相同才可引用该结果；不把原full改标为新SHA。新脚本做Node43项、真实反例、48arm验证，最终提交的远端CI仍必须完整执行并自然通过；Windows历史paired详细根因仍未知，不把独立测量缺陷归因为历史失败的唯一原因。
