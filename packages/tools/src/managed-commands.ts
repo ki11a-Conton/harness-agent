@@ -201,8 +201,7 @@ export class ManagedCommands {
       ...[...this.jobs.values()].map((j) => ({ ...j.record })),
     ];
   }
-  private save(): Promise<void> {
-    const records = this.records();
+  private save(records = this.records()): Promise<void> {
     const next = this.persistence.then(() => this.options.save?.(records));
     // Keep the queue drainable after an error; the actual caller still receives
     // the rejected write and the corresponding job stays fail-closed.
@@ -713,7 +712,16 @@ export class ManagedCommands {
       await Promise.all([...this.jobs.values()].map((j) => j.done));
       for (const owner of this.owners.values())
         owner.signal.removeEventListener("abort", owner.abort);
-      await this.save();
+      // Persist the drained state before releasing the in-memory reservations.
+      // Recovery deliberately treats every retained record as unknown: saving
+      // a confirmed settled record here would permanently block the workspace
+      // after an otherwise clean shutdown. Unknown/recovered work stays durable.
+      await this.save([
+        ...this.recovered,
+        ...[...this.jobs.values()]
+          .filter((job) => job.record.state === "unknown")
+          .map((job) => ({ ...job.record })),
+      ]);
       for (const job of this.jobs.values())
         if (job.record.state !== "unknown") {
           domainJobs.delete(job);

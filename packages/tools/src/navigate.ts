@@ -321,6 +321,20 @@ export interface RepoTreeInput {
   depth?: number;
   maxEntries?: number;
   signal?: AbortSignal;
+  /** Caller-owned diagnostics; the utility's legacy array shape is unchanged. */
+  summary?: RepoTreeSummary;
+}
+
+export interface RepoTreeSummary {
+  complete: boolean;
+  limitReached: boolean;
+  depthLimitReached: boolean;
+  unreadableDirectories: number;
+  unavailableScope: boolean;
+}
+
+export function createRepoTreeSummary(): RepoTreeSummary {
+  return { complete: true, limitReached: false, depthLimitReached: false, unreadableDirectories: 0, unavailableScope: false };
 }
 
 /** Nested directory/file tree of the repo (for orientation / repo map). */
@@ -332,8 +346,8 @@ export async function repoTree(input: RepoTreeInput): Promise<RepoTreeEntry[]> {
   const startRel = normalizeSlashes(relative(base, start)) || ".";
   const maxDepth = input.depth ?? 6;
   const cap = input.maxEntries ?? 500;
+  const summary = input.summary ?? createRepoTreeSummary();
   const out: RepoTreeEntry[] = [];
-  if (cap <= 0 || depthOf(startRel) >= maxDepth) return out;
 
   // Preserve the old subpath output's ancestors, but verify real directories
   // instead of synthesizing them from a filename. The trusted root itself may
@@ -345,9 +359,24 @@ export async function repoTree(input: RepoTreeInput): Promise<RepoTreeEntry[]> {
       const path = parts.slice(0, i).join("/");
       const stat = await fs.lstat(join(base, path)).catch(() => null);
       input.signal?.throwIfAborted();
-      if (!stat?.isDirectory()) return out;
+      if (!stat?.isDirectory()) {
+        summary.complete = false; summary.unavailableScope = true;
+        return out;
+      }
       ancestors.push({ path, type: "dir", depth: depthOf(path) });
     }
+  }
+
+  if (cap <= 0 || depthOf(startRel) >= maxDepth) {
+    summary.complete = false;
+    if (cap <= 0) summary.limitReached = true;
+    else summary.depthLimitReached = true;
+    return out;
+  }
+
+  function reachedLimit(): false {
+    summary.complete = false; summary.limitReached = true;
+    return false;
   }
 
   function append(entry: RepoTreeEntry): boolean {
@@ -355,13 +384,16 @@ export async function repoTree(input: RepoTreeInput): Promise<RepoTreeEntry[]> {
     // same cap as files and directories and are emitted only for real entries.
     if (out.length === 0) {
       for (const ancestor of ancestors) {
-        if (out.length >= cap) return false;
+        if (out.length >= cap) return reachedLimit();
         out.push(ancestor);
       }
     }
-    if (out.length >= cap) return false;
+    if (out.length >= cap) return reachedLimit();
     out.push(entry);
-    return out.length < cap;
+    // Preserve the work bound: do not enumerate one more entry merely to prove
+    // there are no omitted entries. An exact-cap result is conservatively partial.
+    if (out.length >= cap) return reachedLimit();
+    return true;
   }
 
   async function visit(relDir: string): Promise<boolean> {
@@ -371,6 +403,7 @@ export async function repoTree(input: RepoTreeInput): Promise<RepoTreeEntry[]> {
       entries = await fs.readdir(join(base, relDir), { withFileTypes: true });
     } catch {
       input.signal?.throwIfAborted();
+      summary.complete = false; summary.unreadableDirectories += 1;
       return true;
     }
     input.signal?.throwIfAborted();
@@ -384,7 +417,10 @@ export async function repoTree(input: RepoTreeInput): Promise<RepoTreeEntry[]> {
       if (!append({ path, type: entry.isDirectory() ? "dir" : "file", depth })) return false;
       // At the boundary the directory itself is visible, but its children
       // cannot qualify, so never list them. A filled cap also stops globally.
-      if (entry.isDirectory() && depth < maxDepth && !(await visit(path))) return false;
+      if (entry.isDirectory()) {
+        if (depth >= maxDepth) { summary.complete = false; summary.depthLimitReached = true; }
+        else if (!(await visit(path))) return false;
+      }
     }
     return true;
   }

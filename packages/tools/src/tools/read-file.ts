@@ -2,12 +2,40 @@ import { z } from "zod";
 import type { ToolDefinition, ToolExecutionContext, ToolResult } from "@ar/contracts";
 import { fileSha256, FileOperationCancelled, throwIfFileCancelled, withFileLock } from "../file-coordination.js";
 import { readWindowFromHandle, type ReadWindow } from "../read-window.js";
+import type { FileHandle } from "node:fs/promises";
 
 export interface ReadFileInput { path: string; versioned?: boolean; offset?: number; limit?: number; maxBytes?: number }
 export interface VersionedFileOutput { path: string; content: string; sha256: string; bytes: number }
 export interface PagedFileOutput extends ReadWindow { path: string; bytes: number; sha256?: string }
 /** Full legacy reads retain their shape, but cannot allocate unbounded files. */
 export const MAX_FULL_READ_BYTES = 16 * 1024 * 1024;
+
+function tooLarge(): Error {
+  return new Error(`READ_FILE_TOO_LARGE: full-file reads are limited to ${MAX_FULL_READ_BYTES} bytes; use offset/limit/maxBytes for bounded pagination (versioned=true still hashes the entire raw file).`);
+}
+
+/** The opened file can grow after stat (including from an external editor).
+ * Enforce the limit on actual bytes, reading at most one extra byte to detect
+ * overflow. Descriptor ownership and cancellation remain with the caller. */
+async function readFullFile(handle: FileHandle, signal: AbortSignal): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  let total = 0;
+  for (;;) {
+    throwIfFileCancelled(signal);
+    const chunk = Buffer.allocUnsafe(Math.min(64 * 1024, MAX_FULL_READ_BYTES + 1 - total));
+    let filled = 0;
+    // Short native reads must not retain one full chunk allocation per byte.
+    while (filled < chunk.length) {
+      throwIfFileCancelled(signal);
+      const { bytesRead } = await handle.read(chunk, filled, chunk.length - filled, null);
+      throwIfFileCancelled(signal);
+      if (bytesRead === 0) return Buffer.concat([...chunks, chunk.subarray(0, filled)], total);
+      filled += bytesRead; total += bytesRead;
+      if (total > MAX_FULL_READ_BYTES) throw tooLarge();
+    }
+    chunks.push(chunk);
+  }
+}
 
 /** read_file: filesystem read tool (VS-001). Enforced via orchestrator sandbox. */
 export const readFileTool: ToolDefinition<ReadFileInput, string | VersionedFileOutput | PagedFileOutput> = {
@@ -57,10 +85,8 @@ export const readFileTool: ToolDefinition<ReadFileInput, string | VersionedFileO
             // Control fields precede potentially large text in the model-facing JSON.
             output = { path: target, ...window, content: page };
           } else {
-            if (stat.size > MAX_FULL_READ_BYTES) throw new Error(
-              `READ_FILE_TOO_LARGE: full-file reads are limited to ${MAX_FULL_READ_BYTES} bytes; use offset/limit/maxBytes for bounded pagination (versioned=true still hashes the entire raw file).`,
-            );
-            const bytes = await handle.readFile({ signal: context.signal });
+            if (stat.size > MAX_FULL_READ_BYTES) throw tooLarge();
+            const bytes = await readFullFile(handle, context.signal);
             throwIfFileCancelled(context.signal);
             const content = bytes.toString("utf8");
             output = input.versioned ? { path: target, content, sha256: fileSha256(bytes), bytes: bytes.length } : content;

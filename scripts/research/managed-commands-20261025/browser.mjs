@@ -77,7 +77,7 @@ const requests = async () =>
     .filter(Boolean)
     .map(JSON.parse);
 const read = async (endpoint, args) => {
-  assert(["session/projections", "session/list"].includes(endpoint));
+  assert(["session/projections", "session/list", "session/codingStatus"].includes(endpoint));
   const response = await fetch(origin + "/api/deepseek/call", {
     method: "POST",
     headers: { "content-type": "application/json", origin },
@@ -185,6 +185,16 @@ try {
     "Original TaskVerifier did not pass the actual configured command",
   );
   check("actual-original-verifier-passed", verified.length);
+  // Observe the production status projection after real native UI execution.
+  // This is a read-only receipt, not a claim that the old optional Coding status
+  // panel is mounted in the shipped official client.
+  const coding = await read("session/codingStatus", { request: { address: { kind: "session", sessionId } } });
+  const managedRows = coding.commands.filter(row => row.command.includes("managed-check.cjs"));
+  assert.equal(managedRows.length, 1, "Start and polls must fold into one owner job row");
+  assert.equal(managedRows[0].state, "succeeded"); assert.equal(managedRows[0].exitCode, 0);
+  assert(managedRows[0].detail.includes("MANAGED_DONE"));
+  assert(coding.commands.some(row => row.command.includes("managed-verify.cjs") && row.exitCode === 0));
+  check("actual-ui-command-status-projection-and-verifier", managedRows);
   await page.screenshot({
     path: join(out, "managed-finished.png"),
     fullPage: true,

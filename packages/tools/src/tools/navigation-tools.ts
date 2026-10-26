@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { ToolDefinition, ToolExecutionContext, ToolResult } from "@ar/contracts";
 import { errorInfo } from "@ar/contracts";
-import { createGrepScanSummary, grepFiles, repoTree, symbolSearch, type GrepScanSummary, type GrepHit, type SymbolHit, type RepoTreeEntry } from "../navigate.js";
+import { createGrepScanSummary, createRepoTreeSummary, grepFiles, repoTree, symbolSearch, type GrepScanSummary, type GrepHit, type SymbolHit, type RepoTreeEntry, type RepoTreeSummary } from "../navigate.js";
 import { indexedSymbolSearch } from "../symbol-index.js";
 import { syntaxSymbolSearch } from "../syntax-index.js";
 
@@ -94,16 +94,20 @@ export interface RepoTreeToolInput {
   path?: string;
   depth?: number;
   maxEntries?: number;
+  includeSummary?: boolean;
 }
 
-export const repoTreeTool: ToolDefinition<RepoTreeToolInput, RepoTreeEntry[]> = {
+export type RepoTreeOutput = RepoTreeEntry[] | { summary: RepoTreeSummary; entries: RepoTreeEntry[] };
+
+export const repoTreeTool: ToolDefinition<RepoTreeToolInput, RepoTreeOutput> = {
   name: "repo_tree",
   description:
-    "Return the nested file/dir tree of the workspace (skips .git/node_modules/dist/build). Useful for orientation instead of guessing paths.",
+    "Return the nested file/dir tree of a workspace directory (skips .git/node_modules/dist/build). Bounded by depth (default 6, workspace-relative) and maxEntries (default 500). Use includeSummary=true before claiming completeness: {summary,entries} reports entry/depth bounds and unreadable/unavailable scopes. Legacy arrays are positive orientation evidence only; unavailable or unreadable scopes report SCAN_INCOMPLETE.",
   inputSchema: z.object({
     path: z.string().optional(),
     depth: z.number().int().min(0).max(12).optional(),
     maxEntries: z.number().int().positive().max(5000).optional(),
+    includeSummary: z.boolean().optional().describe("Expose scan completeness and entry/depth limits with the tree entries."),
   }),
   risk: "readonly",
   metadata: {
@@ -117,18 +121,27 @@ export const repoTreeTool: ToolDefinition<RepoTreeToolInput, RepoTreeEntry[]> = 
     retry: "safe",
     concurrencySafe: true,
   },
-  async execute(input: RepoTreeToolInput, context: ToolExecutionContext): Promise<ToolResult<RepoTreeEntry[]>> {
+  async execute(input: RepoTreeToolInput, context: ToolExecutionContext): Promise<ToolResult<RepoTreeOutput>> {
     try {
+      const summary = createRepoTreeSummary();
       const tree = await repoTree({
         root: context.cwd,
         relPath: input.path ?? ".",
         depth: input.depth ?? 6,
         maxEntries: input.maxEntries ?? 500,
         signal: context.signal,
+        summary,
       });
+      context.signal.throwIfAborted();
+      if (!input.includeSummary && (summary.unavailableScope || summary.unreadableDirectories > 0)) {
+        return { status: "failed", output: tree, metadata: { ...summary }, error: errorInfo("PROCESS_ERROR",
+          `SCAN_INCOMPLETE: ${summary.unavailableScope ? "selected scope is unavailable or is not a directory" : `${summary.unreadableDirectories} directory(s) could not be read`}. Returned entries are positive evidence only; select an available directory or use includeSummary=true before claiming absence.`,
+          { retryable: false, safeToRetry: false }) };
+      }
       return {
         status: "success",
-        output: tree,
+        output: input.includeSummary ? { summary, entries: tree } : tree,
+        metadata: { ...summary },
         evidence: [{ type: "file", description: `repo_tree: ${tree.length} entry(ies)`, source: input.path ?? ".", timestamp: Date.now() }],
       };
     } catch (err) {

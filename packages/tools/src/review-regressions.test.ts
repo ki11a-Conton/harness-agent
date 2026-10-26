@@ -255,7 +255,8 @@ describe("R3 search_files truthful outcomes", () => {
     writeFileSync(join(root, "src", "c.txt"), "content");
     const result = await searchFilesTool.execute({ pattern: "**/*.ts" }, context());
     expect(result.status).toBe("success");
-    expect(result.output?.sort()).toEqual(["src/a.ts", "src/b.ts"]);
+    expect(Array.isArray(result.output)).toBe(true);
+    expect(Array.isArray(result.output) ? result.output.sort() : undefined).toEqual(["src/a.ts", "src/b.ts"]);
     const limited = await searchFilesTool.execute({ pattern: "**/*.ts", maxResults: 1 }, context());
     expect(limited.status).toBe("success");
     expect(limited.output).toHaveLength(1);

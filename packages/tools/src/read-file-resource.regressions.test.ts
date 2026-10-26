@@ -53,14 +53,14 @@ describe("read_file owned descriptors and cancellation", () => {
     observe(h => {
       if (boundary === "open") ac.abort();
       if (boundary === "stat") { const stat = h.stat.bind(h); vi.spyOn(h, "stat").mockImplementation(async () => { const st = await stat(); ac.abort(); return st; }); }
-      if (boundary === "read") { const read = h.readFile.bind(h); vi.spyOn(h, "readFile").mockImplementation(async options => { expect(options).toMatchObject({ signal: ac.signal }); ac.abort(); return read(options); }); }
+      if (boundary === "read") { const read = h.read.bind(h); vi.spyOn(h, "read").mockImplementation(async (...args: Parameters<typeof h.read>) => { ac.abort(); return read(...args); }); }
     });
     const result = await setup(ac.signal).invoke("ok"); expect(result.status).toBe("cancelled"); expect(result.output).toBeUndefined(); expect(result.evidence).toBeUndefined();
     expect(handles).toHaveLength(1); expect(handles[0]!.close).toHaveBeenCalledTimes(1); expect(handles[0]!.fd).toBe(-1); expect(fileLockEntryCount()).toBe(0);
   });
   it.each(["stat", "read"])("closes on a native %s failure", async stage => {
     await fs.writeFile(join(root, "ok"), "ok");
-    observe(h => { if (stage === "stat") vi.spyOn(h, "stat").mockRejectedValue(new Error("stat-failure")); else vi.spyOn(h, "readFile").mockRejectedValue(new Error("read-failure")); });
+    observe(h => { if (stage === "stat") vi.spyOn(h, "stat").mockRejectedValue(new Error("stat-failure")); else vi.spyOn(h, "read").mockRejectedValue(new Error("read-failure")); });
     const result = await setup().invoke("ok"); expect(result.status).toBe("failed"); expect(result.error?.message).toContain(`${stage}-failure`);
     expect(handles[0]!.close).toHaveBeenCalledTimes(1); expect(handles[0]!.fd).toBe(-1); expect(fileLockEntryCount()).toBe(0);
   });
@@ -68,13 +68,14 @@ describe("read_file owned descriptors and cancellation", () => {
     await fs.writeFile(join(root, "ok"), "ok"); observe((h, close) => { vi.spyOn(h, "close").mockImplementation(async () => { await close(); throw new Error("close-failure"); }); });
     const result = await setup().invoke("ok"); expect(result.status).toBe("failed"); expect(result.error?.message).toContain("close-failure"); expect(handles[0]!.fd).toBe(-1); expect(fileLockEntryCount()).toBe(0);
   });
-  it("passes an effective timeout signal and cleans up after the race settles", async () => {
-    await fs.writeFile(join(root, "ok"), "ok"); let received: AbortSignal | undefined;
-    observe(h => { vi.spyOn(h, "readFile").mockImplementation(options => new Promise((_resolve, reject) => {
-      received = typeof options === "object" ? options?.signal : undefined;
-      received?.addEventListener("abort", () => reject(Object.assign(new Error("aborted"), { name: "AbortError" })), { once: true });
-    })); });
-    const result = await setup(undefined, 25).invoke("ok"); expect(result.status).toBe("timeout"); expect(received?.aborted).toBe(true);
+  it("closes an in-flight bounded read after an orchestrator timeout", async () => {
+    await fs.writeFile(join(root, "ok"), "ok"); let release!: () => void;
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    observe(h => { const read = h.read.bind(h); vi.spyOn(h, "read").mockImplementation(async (...args: Parameters<typeof h.read>) => {
+      await gate; return read(...args);
+    }); });
+    const result = await setup(undefined, 25).invoke("ok"); expect(result.status).toBe("timeout");
+    expect(result.output).toBeUndefined(); release();
     await vi.waitFor(() => { expect(handles[0]!.fd).toBe(-1); expect(fileLockEntryCount()).toBe(0); }, { timeout: 250, interval: 5 });
   });
   it("cancels a queued reader without opening it", async () => {

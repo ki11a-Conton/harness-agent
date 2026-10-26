@@ -124,6 +124,27 @@ async function probeVersion(name: string, args: string[], cwd: string, signal?: 
   return out === null ? null : out.split("\n")[0]?.trim() || null;
 }
 
+/** A remote identifies the repository, never the credentials used to reach it.
+ * Git accepts arbitrary passwords/tokens in URL userinfo and query parameters;
+ * generic secret-pattern detection cannot recognize all of those values. Keep
+ * SSH scp-style and local paths intact, but remove every URL authentication or
+ * query/fragment component before the snapshot reaches any caller or model. */
+function safeGitRemote(remote: string | null): string | null {
+  if (remote === null || !/^[a-z][a-z\d+.-]*:\/\//i.test(remote)) return remote;
+  try {
+    const url = new URL(remote);
+    url.username = "";
+    url.password = "";
+    url.search = "";
+    url.hash = "";
+    return url.toString();
+  } catch {
+    // Malformed URL-shaped values can still contain credentials. Do not fall
+    // back to returning the original on a parse failure.
+    return "[redacted: invalid remote URL]";
+  }
+}
+
 async function gitState(cwd: string, signal?: AbortSignal): Promise<GitState> {
   const run = async (args: string[]): Promise<string | null> =>
     (await runProbe("git", ["-C", cwd, ...args], cwd, 2000, signal))?.trim() ?? null;
@@ -132,7 +153,7 @@ async function gitState(cwd: string, signal?: AbortSignal): Promise<GitState> {
     return { available: false, branch: null, head: null, dirtyFiles: 0, remote: null };
   }
   const head = await run(["rev-parse", "--short", "HEAD"]);
-  const remote = await run(["remote", "get-url", "origin"]);
+  const remote = safeGitRemote(await run(["remote", "get-url", "origin"]));
   const porcelain = await run(["status", "--porcelain"]);
   const dirtyFiles = porcelain === null || porcelain === "" ? 0 : porcelain.split("\n").length;
   return { available: true, branch, head, remote, dirtyFiles };

@@ -502,6 +502,22 @@ async function* streamChatCompletion(
 
     if (!response.ok) {
       const detail = await summarizeBody(response);
+      // Reading an error body is still part of the request. Native fetch aborts
+      // that read on cancellation/deadline; the best-effort summary deliberately
+      // swallows its exception, so restore the actual terminal cause here before
+      // an HTTP diagnostic or retry can replace it.
+      if (signal.aborted) {
+        yield { type: "completed", result: { finishReason: "cancelled" }, timestamp: Date.now() };
+        return;
+      }
+      if (timedOut()) {
+        yield {
+          type: "error",
+          error: errorInfo("MODEL_ERROR", timeoutMessage, { provider: { kind: "timeout" } }),
+          timestamp: Date.now(),
+        };
+        return;
+      }
       const retryAfterMs = parseRetryAfter(response.headers?.get("retry-after") ?? null);
       const kind = response.status === 429 ? "rate_limit" : response.status >= 500 ? "server_error" : "http";
       const info = errorInfo(
