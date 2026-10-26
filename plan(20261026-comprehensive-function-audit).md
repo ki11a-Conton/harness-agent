@@ -39,3 +39,9 @@ F7边界更正：旧public/coding-workflow.js面板在当前官方页面未挂�
 首次提交6a0598e4的安装包Web CI捕获验收封装未同步：新增状态RPC断言后浏览器实际10项通过，但managed-installed与deepseek-installed两层仍固定要求9项。修复共享的必需检查名称合同，精确验证10个唯一PASS、complete、无错误/付费调用，两个封装复用同一合同；增加负控制并接入原安装包CI纯函数测试步骤。保留原失败和未产出CLI证据的次级上传错误，等待原4条CI自然终态后再推送修复提交。类型/完整测试及真实验收重新绑定最终clean SHA，不扩大超时或放松门禁。
 
 候选导出收据校验也复用同一必需检查数量；新增拒绝仅9项的数值收据与字符串伪造负例。合同/候选导出/已有UI纯函数共94项通过，实际10项浏览器收据通过新合同校验。
+
+Windows CI另一个取消断言存在已独立复现的因果缺口：原900ms命令可在abort之前自然完成，却被误计为取消后迟写。取消用例改为现有真实HTTP闸门，确认进程活且未写入→abort→等待回合返回→确认PID已退出→release后仍无写入，原turn/process预算不变、不跳过Windows。Linux6项集成专项通过，真实Windows仍需最终CI。
+
+原Windows48arm配对失败的完整日志存储被云代理CONNECT403拒绝，API仅通用退出码，不能猜测根因或记为已修。配对脚本只增加结构化failed-arm/overlap/PID/退出码诊断及不改变Node退出的uncaughtExceptionMonitor；原48arm、24candidate通过、16overlap、零重复启动等断言原样保留。后续Windows据真实诊断决定是否补修。
+
+5262c191本地完整运行期间写入取消验收修改，6个clean-source门禁因此正确拒绝该脏工作树。该次原始10374通过/6失败及dirty状态已保留，不能作为最终验收；所有修改提交后再固定clean SHA复跑，不更改clean-source门禁。

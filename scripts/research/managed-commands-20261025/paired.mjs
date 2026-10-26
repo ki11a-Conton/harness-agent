@@ -13,6 +13,11 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import assert from "node:assert/strict";
+const workflowMessage = (value) => String(value).replaceAll("%", "%25").replaceAll("\r", "%0D").replaceAll("\n", "%0A");
+// Observe uncaught failures without changing Node's default failing exit.
+process.on("uncaughtExceptionMonitor", error => {
+  console.error(`::error title=Managed paired uncaught failure::${workflowMessage(error?.stack ?? error)}`);
+});
 const root = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 const out = resolve(process.argv[2] ?? ".ci/managed-commands");
 await mkdir(out, { recursive: true });
@@ -495,6 +500,29 @@ await writeFile(
   JSON.stringify(summary, null, 2) + "\n",
   { flag: "wx" },
 );
+// Keep exact failed-arm diagnostics in the job annotation as well as the raw
+// artifact. A generic process exit is insufficient when artifact downloads are
+// unavailable. The original acceptance assertions below remain authoritative.
+if (summary.arms !== 48 || summary.failures.length !== 0 || summary.candidatePass !== 24
+  || summary.candidatePass < summary.baselinePass || summary.duplicateStarts !== 0 || summary.candidateOverlap !== 16) {
+  const diagnostic = {
+    source, arms: summary.arms, baselinePass: summary.baselinePass,
+    candidatePass: summary.candidatePass, candidateOverlap: summary.candidateOverlap,
+    duplicateStarts: summary.duplicateStarts, failures: summary.failures,
+    observations: all.filter(r => summary.failures.includes(r.id) || (r.duplicateStarts ?? 0) > 0
+      || (r.arm === "candidate" && r.kind !== "http-service" && !r.overlapObserved)).map(r => ({
+      id: r.id, kind: r.kind, arm: r.arm, independentExit: r.independentExit,
+      status: r.outcome?.status, grade: r.outcome?.grade, error: r.error,
+      independentError: r.independentError, cleanupError: r.cleanupError,
+      cleanupAlive: r.cleanupAlive, overlapObserved: r.overlapObserved,
+      starts: r.starts, exits: r.exits,
+      observations: r.timeline?.filter(e => e.stage === "observe").map(e => ({ at: e.at, stage: e.stage })),
+    })),
+  };
+  await writeFile(join(out, "failure-context.json"), JSON.stringify(diagnostic, null, 2) + "\n", { flag: "wx" });
+  const message = workflowMessage(JSON.stringify(diagnostic));
+  console.error(`::error title=Managed paired acceptance failed::${message}`);
+}
 assert.equal(summary.arms, 48);
 assert.equal(summary.failures.length, 0);
 assert.equal(summary.candidatePass, 24);

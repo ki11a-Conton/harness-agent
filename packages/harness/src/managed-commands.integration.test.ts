@@ -27,7 +27,7 @@ async function heldCommand() {
   });
   const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}/hold`;
   return {
-    code: `const fs=require('node:fs');fs.appendFileSync('starts','1');fs.writeFileSync('started','1');require('node:http').get(${JSON.stringify(url)},response=>{response.resume();response.on('end',()=>{fs.writeFileSync('complete','1');console.log('CHECK_OK')})}).on('error',error=>{console.error(error);process.exitCode=1});`,
+    code: `const fs=require('node:fs');fs.appendFileSync('starts','1');fs.writeFileSync('started','1');fs.writeFileSync('process-pid',String(process.pid));require('node:http').get(${JSON.stringify(url)},response=>{response.resume();response.on('end',()=>{fs.writeFileSync('complete','1');console.log('CHECK_OK')})}).on('error',error=>{console.error(error);process.exitCode=1});`,
     release: () => {
       released = true;
       for (const response of responses) response.end("release");
@@ -281,15 +281,40 @@ it("a premature model completion cannot verify an active command and the finite 
   }
 });
 it("owner cancellation after a returned start cleans up before the turn acknowledgement", async () => {
-  const f = await create(true, "cancel");
+  const controlled = await heldCommand();
+  let f: Awaited<ReturnType<typeof create>> | undefined;
+  let pid: number | undefined;
+  const alive = (id: number) => {
+    try { process.kill(id, 0); return true; }
+    catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ESRCH") return false;
+      throw error;
+    }
+  };
   try {
+    f = await create(true, "cancel", {}, 900, {
+      ...controlled,
+      ready: async (deadlineAt) => {
+        await controlled.waitUntilConnected(deadlineAt);
+        pid = Number(await readFile(join(f!.cwd, "process-pid"), "utf8"));
+        expect(Number.isSafeInteger(pid)).toBe(true);
+        expect(pid).toBeGreaterThan(0);
+        expect(alive(pid!)).toBe(true);
+        await expect(readFile(join(f!.cwd, "complete"))).rejects.toMatchObject({ code: "ENOENT" });
+      },
+    });
+    // A timer could finish before the next provider request on a busy host.
+    // Hold the actual effect instead, then cancel the confirmed live command.
     expect((await f.run()).status).toBe("cancelled");
-    await delay(1000);
-    expect(await readFile(join(f.cwd, "complete")).catch(() => null)).toBe(
-      null,
-    );
+    expect(pid).toBeDefined();
+    expect(alive(pid!)).toBe(false);
+    expect(await readFile(join(f.cwd, "starts"), "utf8")).toBe("1");
+    controlled.release();
+    await delay(100);
+    await expect(readFile(join(f.cwd, "complete"))).rejects.toMatchObject({ code: "ENOENT" });
   } finally {
-    await f.close();
+    try { await f?.close(); }
+    finally { await controlled.close(); }
   }
 });
 it("refuses enabling without trusted finite deadline and real task verification", async () => {
