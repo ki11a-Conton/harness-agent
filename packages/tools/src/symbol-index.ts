@@ -1,5 +1,6 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
+import { setImmediate as yieldToEventLoop } from "node:timers/promises";
 import { isNodeErrorCode } from "@ar/contracts";
 import { normalizePath } from "@ar/security";
 import { resolveSearchScope } from "./navigate.js";
@@ -98,7 +99,38 @@ interface RootIndex {
 }
 
 const cache = new Map<string, CacheEntry>();
-const flights = new Map<string, Promise<{ filesIndexed: number } & RootIndex>>();
+type LoadedIndex = { filesIndexed: number } & RootIndex;
+interface IndexFlight {
+  controller: AbortController;
+  promise: Promise<LoadedIndex>;
+  subscribers: number;
+  settled: boolean;
+}
+const flights = new Map<string, IndexFlight>();
+
+/** A caller owns its wait, not other callers' work. Stop the shared scan only
+ * after its last subscriber leaves; always observe the worker's settlement. */
+function subscribe(flight: IndexFlight, signal?: AbortSignal): Promise<LoadedIndex> {
+  flight.subscribers++;
+  return new Promise((resolve, reject) => {
+    let finished = false;
+    const release = (): boolean => {
+      if (finished) return false;
+      finished = true;
+      signal?.removeEventListener("abort", onAbort);
+      flight.subscribers--;
+      if (flight.subscribers === 0 && !flight.settled) flight.controller.abort();
+      return true;
+    };
+    const onAbort = () => { if (release()) reject(signal!.reason); };
+    flight.promise.then(
+      index => { if (release()) resolve(index); },
+      error => { if (release()) reject(error); },
+    );
+    signal?.addEventListener("abort", onAbort, { once: true });
+    if (signal?.aborted) onAbort();
+  });
+}
 
 // P15-5: the module-level symbol-index cache is process-scoped (key = root
 // plus selected scope), but it must never serve STALE cross-repo state and never grow
@@ -120,11 +152,13 @@ function evictIfNeeded(): void {
   }
 }
 
-async function listSourceFiles(dir: string, out: string[]): Promise<void> {
+async function listSourceFiles(dir: string, out: string[], signal: AbortSignal): Promise<void> {
+  signal.throwIfAborted();
   let entries;
   try {
     entries = await readdir(dir, { withFileTypes: true });
   } catch (err) {
+    signal.throwIfAborted();
     // P14-6: an unreadable/vanish directory is skipped — reported unless it
     // simply disappeared (ENOENT).
     if (!isNodeErrorCode(err, "ENOENT")) {
@@ -132,10 +166,14 @@ async function listSourceFiles(dir: string, out: string[]): Promise<void> {
     }
     return;
   }
+  signal.throwIfAborted();
+  let visited = 0;
   for (const entry of entries) {
+    if (++visited % 1024 === 0) await yieldToEventLoop();
+    signal.throwIfAborted();
     if (entry.isDirectory()) {
       if (SKIP_DIRS.has(entry.name)) continue;
-      await listSourceFiles(join(dir, entry.name), out);
+      await listSourceFiles(join(dir, entry.name), out, signal);
       continue;
     }
     if (!entry.isFile()) continue;
@@ -146,29 +184,35 @@ async function listSourceFiles(dir: string, out: string[]): Promise<void> {
 
 async function buildRootIndex(
   scope: NonNullable<Awaited<ReturnType<typeof resolveSearchScope>>>,
+  signal: AbortSignal,
   previous?: RootIndex,
   forceRefresh = false,
 ): Promise<RootIndex> {
+  signal.throwIfAborted();
   const { root } = scope;
   const files = new Map<string, IndexedFile>();
   const sourceFiles: string[] = [];
   if (scope.type === "file") {
     if (SOURCE_EXTENSIONS.has(scope.path.slice(scope.path.lastIndexOf(".")))) sourceFiles.push(scope.path);
   } else {
-    await listSourceFiles(scope.path, sourceFiles);
+    await listSourceFiles(scope.path, sourceFiles, signal);
   }
   for (const file of sourceFiles) {
+    signal.throwIfAborted();
     try {
       const st = await stat(file);
+      signal.throwIfAborted();
       const rel = normalizePath(relative(root, file));
       const existing = previous?.files.get(rel);
       if (!forceRefresh && existing?.mtimeMs === st.mtimeMs && existing.size === st.size) {
         files.set(rel, existing);
       } else {
-        const content = await readFile(file, "utf8");
+        const content = await readFile(file, { encoding: "utf8", signal });
+        signal.throwIfAborted();
         files.set(rel, { relPath: rel, lines: content.split("\n"), mtimeMs: st.mtimeMs, size: st.size });
       }
     } catch (err) {
+      signal.throwIfAborted();
       // P14-6: an unreadable file is skipped from the index — reported unless
       // it vanished (ENOENT), never silent.
       if (!isNodeErrorCode(err, "ENOENT")) {
@@ -181,17 +225,22 @@ async function buildRootIndex(
 
 /** Get a fresh file-level index, sharing both cold builds and warm validation
  *  across callers for the same normalized workspace root and selected scope. */
-export async function getSymbolIndex(root: string, relPath = "."): Promise<{ filesIndexed: number } & RootIndex> {
+export async function getSymbolIndex(root: string, relPath = ".", signal?: AbortSignal): Promise<LoadedIndex> {
+  signal?.throwIfAborted();
   const normalizedRoot = resolve(root);
   const scope = await resolveSearchScope(normalizedRoot, relPath, SKIP_DIRS);
+  signal?.throwIfAborted();
   if (!scope) return { root: normalizedRoot, files: new Map(), builtAt: Date.now(), filesIndexed: 0 };
   const key = JSON.stringify([normalizedRoot, scope.relPath]);
   const pending = flights.get(key);
-  if (pending) return pending;
+  if (pending && !pending.controller.signal.aborted) return subscribe(pending, signal);
+  const controller = new AbortController();
   const load = async () => {
+    controller.signal.throwIfAborted();
     const existing = cache.get(key);
     const forceRefresh = !existing || Date.now() - existing.lastFullRefreshAt >= CACHE_TTL_MS;
-    const built = await buildRootIndex(scope, existing?.index, forceRefresh);
+    const built = await buildRootIndex(scope, controller.signal, existing?.index, forceRefresh);
+    controller.signal.throwIfAborted();
     cache.delete(key);
     cache.set(key, {
       index: built,
@@ -200,13 +249,16 @@ export async function getSymbolIndex(root: string, relPath = "."): Promise<{ fil
     evictIfNeeded();
     return { ...built, filesIndexed: built.files.size };
   };
-  const promise = load();
-  flights.set(key, promise);
-  try {
-    return await promise;
-  } finally {
-    if (flights.get(key) === promise) flights.delete(key);
-  }
+  // Defer the scan until the creator has subscribed. A new flight may replace
+  // an aborted one before its final I/O unwinds; that old finalizer must never
+  // delete the replacement or publish partial data into the cache.
+  const flight: IndexFlight = { controller, subscribers: 0, settled: false, promise: Promise.resolve().then(load) };
+  flight.promise = flight.promise.finally(() => {
+    flight.settled = true;
+    if (flights.get(key) === flight) flights.delete(key);
+  });
+  flights.set(key, flight);
+  return subscribe(flight, signal);
 }
 
 /** P7-4: search the light index; always succeeds with fallback:false. */
@@ -215,14 +267,20 @@ export async function indexedSymbolSearch(input: {
   root: string;
   relPath?: string;
   maxHits?: number;
+  signal?: AbortSignal;
 }): Promise<SymbolSearchIndexResult> {
   const { symbol, root } = input;
-  const index = await getSymbolIndex(root, input.relPath);
+  const index = await getSymbolIndex(root, input.relPath, input.signal);
+  input.signal?.throwIfAborted();
   const needle = symbol.toLowerCase();
   const maxHits = input.maxHits ?? 200;
   const hits: SymbolHit[] = [];
+  let visited = 0;
   for (const file of index.files.values()) {
+    if (hits.length >= maxHits) break;
     for (let i = 0; i < file.lines.length && hits.length < maxHits; i++) {
+      if (++visited % 1024 === 0) await yieldToEventLoop();
+      input.signal?.throwIfAborted();
       const line = file.lines[i]!;
       const lower = line.toLowerCase();
       if (!lower.includes(needle)) continue;
@@ -251,5 +309,6 @@ export async function indexedSymbolSearch(input: {
       hits.push({ file: file.relPath, line: i + 1, kind, name: symbol, text: line.trim(), role });
     }
   }
+  input.signal?.throwIfAborted();
   return { fallback: false, indexer: "ts-regex-index", hits, filesIndexed: index.files.size, indexFresh: true };
 }

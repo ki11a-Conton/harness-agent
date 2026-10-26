@@ -1,0 +1,28 @@
+{
+  "baselineSha": "1f12468343a18b96611b2d2d6ecd5b4bef613ead",
+  "stage": "registered before production code changes",
+  "driverSha256": "c6d595e8806499a6b95e4cfb775fcfbe2d22af1196c3a15490c9758ca42a7b43",
+  "realFiles": 36,
+  "firstReadCoordinationMs": 15,
+  "afterReturnObservationMs": 50,
+  "criteria": {
+    "normal": "success, all36 hits and36 reads",
+    "singleCancel": "cancelled after first actual read; total source reads1 including after return",
+    "sharedOneCancel": "cancelled caller + successful sibling;36 hits and only36 reads",
+    "sharedAllCancel": "both cancelled; total source reads1 including after return"
+  },
+  "additionalRegressionRequirements": [
+    "pre-aborted call does zero indexing I/O",
+    "cancelled build never publishes partial cache",
+    "a new call can restart while an aborted old flight unwinds",
+    "cold and warm queries continue to share work",
+    "queued long matching yields so timers can deliver cancellation",
+    "existing TTL/LRU, selected path, aliases, permission denial and fallback unchanged"
+  ],
+  "notClaimed": [
+    "real model quality",
+    "wall-clock improvement from15ms control barrier",
+    "upstream Codex benchmark parity"
+  ],
+  "paidModelCalls": 0
+}

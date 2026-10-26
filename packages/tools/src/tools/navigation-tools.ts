@@ -190,6 +190,7 @@ export const symbolSearchTool: ToolDefinition<
         root: context.cwd,
         relPath: input.path ?? ".",
         maxHits: input.maxResults ?? 200,
+        signal: context.signal,
       });
       context.signal.throwIfAborted();
       if (indexed.hits.length > 0) {

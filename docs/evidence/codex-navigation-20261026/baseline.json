@@ -1,0 +1,66 @@
+{
+  "status": "REPRODUCED_CANCELLED_CALL_CONTINUES_INDEX_IO",
+  "sourceSha": "1f12468343a18b96611b2d2d6ecd5b4bef613ead",
+  "sourceStatus": "",
+  "modes": [
+    {
+      "name": "normal",
+      "calls": 1,
+      "statuses": [
+        "success"
+      ],
+      "hits": [
+        36
+      ],
+      "readsAtReturn": 36,
+      "readsAfterReturn": 36,
+      "elapsedMs": 64.20865400000001
+    },
+    {
+      "name": "single-cancel",
+      "calls": 1,
+      "statuses": [
+        "cancelled"
+      ],
+      "hits": [
+        null
+      ],
+      "readsAtReturn": 36,
+      "readsAfterReturn": 36,
+      "elapsedMs": 75.72803399999998
+    },
+    {
+      "name": "shared-one-cancel",
+      "calls": 2,
+      "statuses": [
+        "cancelled",
+        "success"
+      ],
+      "hits": [
+        null,
+        36
+      ],
+      "readsAtReturn": 36,
+      "readsAfterReturn": 36,
+      "elapsedMs": 74.03851499999996
+    },
+    {
+      "name": "shared-all-cancel",
+      "calls": 2,
+      "statuses": [
+        "cancelled",
+        "cancelled"
+      ],
+      "hits": [
+        null,
+        null
+      ],
+      "readsAtReturn": 36,
+      "readsAfterReturn": 36,
+      "elapsedMs": 70.72330200000005
+    }
+  ],
+  "modelRequests": 0,
+  "paidModelCalls": 0,
+  "scope": "Actual ToolOrchestrator, permissions and sandbox, real 36-file TS workspace. Builtin filesystem observer preserves actual reads and results; same 15ms first-read coordination and 50ms post-return observation in both arms. I/O counts, not wall-time or model quality, are acceptance criteria."
+}
