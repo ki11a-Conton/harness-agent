@@ -403,6 +403,7 @@ async function withClaimAnchorLock<T>(
   now: () => number,
   isAlive: (pid: number) => boolean,
   run: () => Promise<T>,
+  timeoutMs = DEFAULT_LOCK_TIMEOUT_MS,
 ): Promise<T> {
   let lockPath: string;
   try {
@@ -416,7 +417,7 @@ async function withClaimAnchorLock<T>(
   // A lock that cannot be acquired is a REFUSAL, never a silent unlocked write:
   // proceeding here is what let two processes both observe "not established" and
   // each mint a full allowance for one approval.
-  const { token } = await acquireClaimLock(lockPath, now, isAlive);
+  const { token } = await acquireClaimLock(lockPath, now, isAlive, timeoutMs);
   try {
     return await run();
   } finally {
@@ -568,15 +569,15 @@ async function releaseTakeoverGuard(guard: { lockPath: string; token: string }):
   catch (err) { process.stderr.write(`[degraded] r97-budget-ledger.takeover-guard-cleanup: ${err instanceof Error ? err.message : String(err)}\n`); }
 }
 
-async function acquireClaimLock(lockPath: string, now: () => number, isAlive: (pid: number) => boolean): Promise<{ token: string }> {
-  const deadline = now() + DEFAULT_LOCK_TIMEOUT_MS;
+async function acquireClaimLock(lockPath: string, now: () => number, isAlive: (pid: number) => boolean, timeoutMs: number): Promise<{ token: string }> {
+  const deadline = now() + timeoutMs;
   let attempted = false;
   for (;;) {
     if (attempted && now() >= deadline) throw new Error(
-      `E4-R97: ${R97_CAMPAIGN_CLAIM_LOCK_HELD}: could not acquire the claim anchor lock within ${DEFAULT_LOCK_TIMEOUT_MS}ms (${lockPath}) — refusing to write the claim anchor unserialized`,
+      `E4-R97: ${R97_CAMPAIGN_CLAIM_LOCK_HELD}: could not acquire the claim anchor lock within ${timeoutMs}ms (${lockPath}) — refusing to write the claim anchor unserialized`,
     );
     attempted = true;
-    const guard = await acquireTakeoverGuard(lockPath, deadline, DEFAULT_LOCK_TIMEOUT_MS, now, R97_CAMPAIGN_CLAIM_LOCK_HELD);
+    const guard = await acquireTakeoverGuard(lockPath, deadline, timeoutMs, now, R97_CAMPAIGN_CLAIM_LOCK_HELD);
     try {
       const token = newLockToken();
       try {
@@ -691,7 +692,7 @@ async function acquireClaimLock(lockPath: string, now: () => number, isAlive: (p
       if (now() >= deadline) {
         const who = holder === null ? "an unreadable owner" : `pid ${holder.pid}`;
         throw new Error(
-          `E4-R97: ${R97_CAMPAIGN_CLAIM_LOCK_HELD}: could not acquire the claim anchor lock within ${DEFAULT_LOCK_TIMEOUT_MS}ms (${lockPath}) — it is held by ${who} (age ${age}ms); refusing to write the claim anchor unserialized, because two unserialized writers can each grant one approval a full budget`,
+          `E4-R97: ${R97_CAMPAIGN_CLAIM_LOCK_HELD}: could not acquire the claim anchor lock within ${timeoutMs}ms (${lockPath}) — it is held by ${who} (age ${age}ms); refusing to write the claim anchor unserialized, because two unserialized writers can each grant one approval a full budget`,
         );
       }
     } finally { await releaseTakeoverGuard(guard); }
@@ -810,7 +811,7 @@ export interface R97LedgerOpenOptions {
   campaignModelCalls: number;
   /** See `R97LedgerOpenMode`. Defaults to `"auto"`, which fails closed. */
   mode?: R97LedgerOpenMode;
-  /** Lock acquisition budget in ms. Default 10s. */
+  /** Ledger and bootstrap claim lock acquisition budget in ms. Default 10s. */
   lockTimeoutMs?: number;
   /** Injectable clock, so tests are not wall-clock dependent. */
   now?: () => number;
@@ -1650,7 +1651,7 @@ export async function openR97BudgetLedger(dir: string, opts: R97LedgerOpenOption
         // record it is a refusal, not a warning: an unrecorded establishment is
         // exactly the state in which a later `rm -rf` goes unnoticed.
         await mutateClaimUnderLock(campaignId, establishedClaimMutation(campaignId, dir));
-      });
+      }, lockTimeoutMs);
     } finally {
       await releaseLock(lockPath, token);
     }

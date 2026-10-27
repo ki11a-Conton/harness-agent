@@ -82,6 +82,9 @@ function main() {
     'large source read concurrency limits simultaneous distinct large reads and starts the next when a scan finishes',
     'large source read concurrency queues large sources by reserved bytes even when count slots are available',
     'large source read concurrency rejects a queued source that grows beyond its byte reservation and allows a fresh retry',
+    'Gen1: claim-directory cannot bypass the lock deadline or spin forever',
+    'configured ledger timeout reaches the claim lock under read-eperm without replacing its owner',
+    'configured ledger timeout reaches the claim lock under reclaim-guard without replacing its owner',
     'symbol index scan coverage is visible to the caller stops a huge directory at the entry budget, closes it, and avoids an unbounded fallback',
     'delivers skipped-source coverage to the next real model request');
   const host = { platform: process.platform, osType: type(), osRelease: release(), arch: arch(), nodeVersion: process.version,

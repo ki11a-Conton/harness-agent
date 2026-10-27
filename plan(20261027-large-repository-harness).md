@@ -24,3 +24,9 @@
 `7892fc1f` 本地完整回归 10,423 项通过、16 项跳过；首次 Windows 工作流 `40507982045` 在新增压力探针失败，保留该原始失败。日志和制品重定向到 Azure blob 后被环境代理拒绝，GitHub annotation 仅含通用退出码。先在独立分支补充原始 stdout/stderr 归档和转义后的失败 annotation，用真实 runner 定位具体子用例；不取消 main 正在运行的 CI，不改压力参数或验收断言。
 
 独立诊断提交 `2b454a4b` 的原生工作流 `40538589368` 确认：单文件、超长单行和 16 个范围通过；五个 21.6 MB 文件并发的子进程因 Node 22 堆耗尽退出（134）。修复是在四个并发位置之外，增加 40 MiB 源字节预约预算（解码文本最多约 80 MiB UTF-16 估算值，不是 RSS 上限）。预约持有到所有订阅者完成扫描；FIFO 排队、防止大文件饥饿；队首取消、读取失败必须释放字节预约。实际按预约的快照大小限读，文件增长须报告 `changedFiles` 并可用新索引重试。验收保留原五文件、64 MiB 堆探针，补充字节预算、队首取消和排队期间增长的回归，并再次核对原生 Windows。
+
+## CI 后续：预算锁超时传播
+
+`6665cdc7` 本地完整回归 10,426 项通过、16 项跳过，且 main 原生 Windows、CLI/Web、压力与边界验收通过；但主 CI `40543517989` 的 Windows real-formal job `122327884561` 在原有 Gen1 claim-directory 2 秒守卫失败。根因为 open 的 `lockTimeoutMs=100` 未传到 bootstrap claim 锁与其 takeover guard，它们仍用默认 10,000 ms；Windows EPERM 会进入该重试分支。四个可控时钟反例（活持有者、read EPERM、open EPERM、takeover guard）均复现旧实现错误的 10,000 ms。
+
+修复只沿既有调用链传递每次锁获取的超时，保留独立 claim 操作默认值、owner token、拒绝时不写账本及只释放自己锁的约束。验收要求四种确定性反例转绿、旧三种原生进程 2 秒断言保持、拒绝后原持有者不变且显式移除后可重新打开；预算、claim 竞态、类型、安全和完整回归通过，原生 Windows 收据必须包含 claim-directory 与 EPERM/guard 用例。不取消旧 main CI，在独立分支验证后正常快进 main。
