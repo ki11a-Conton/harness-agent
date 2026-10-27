@@ -1,0 +1,40 @@
+name: original Windows failure forensics
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/current-windows-forensics.yml'
+      - 'scripts/ci/current-windows-forensics.mjs'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - job: '122338942877'
+            run: '40546654496'
+          - job: '122338942703'
+            run: '40546654424'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Read the original failed job without rerunning its commands
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/ci/current-windows-forensics.mjs '${{ matrix.job }}' '${{ matrix.run }}' dd13f39fa812c0c00daf8b33f7aa6c15f271a364
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: original-windows-job-${{ matrix.job }}-${{ github.sha }}
+          path: .ci/original-windows/
+          if-no-files-found: error
