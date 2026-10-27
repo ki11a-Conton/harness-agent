@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { ToolDefinition, ToolExecutionContext, ToolResult } from "@ar/contracts";
 import { errorInfo } from "@ar/contracts";
 import { createGrepScanSummary, createRepoTreeSummary, grepFiles, repoTree, symbolSearch, type GrepScanSummary, type GrepHit, type SymbolHit, type RepoTreeEntry, type RepoTreeSummary } from "../navigate.js";
-import { indexedSymbolSearch } from "../symbol-index.js";
+import { indexedSymbolSearch, isIndexedSourceFile, SYMBOL_INDEX_SKIP_DIRS } from "../symbol-index.js";
 import { syntaxSymbolSearch } from "../syntax-index.js";
 
 /**
@@ -161,13 +161,47 @@ export interface SymbolSearchToolInput {
   mode?: "lexical" | "syntax";
 }
 
+export interface SymbolSearchToolOutput {
+  fallback: boolean;
+  indexer: string;
+  hits: SymbolHit[];
+  filesIndexed?: number;
+  complete?: boolean;
+  scanSummary?: GrepScanSummary;
+  supplementalSearch?: string;
+  supplementalSummary?: GrepScanSummary;
+  supplementalWarning?: string;
+  limitReached?: boolean;
+  limitReason?: string;
+  limitMessage?: string;
+}
+
+// A result-count limit alone still allows thousands of very long snippets to
+// fill a model context. Keep complete JSON objects and report any omission.
+const MAX_SYMBOL_OUTPUT_BYTES = 64 * 1024;
+function boundSymbolOutput<T extends { hits: unknown[] }>(output: T, maxResults: number): T & {
+  limitReached?: boolean; limitReason?: string; limitMessage?: string;
+} {
+  const hits: unknown[] = [];
+  const limited = { ...output, hits, ...("complete" in output ? { complete: false } : {}), limitReached: true, limitReason: "output_bytes",
+    limitMessage: "Results may be incomplete; narrow the path or use read_file for a specific line." };
+  let size = Buffer.byteLength(JSON.stringify(limited), "utf8");
+  for (const hit of output.hits) {
+    const next = Buffer.byteLength(JSON.stringify(hit), "utf8") + (hits.length ? 1 : 0);
+    if (size + next > MAX_SYMBOL_OUTPUT_BYTES) return limited as T & typeof limited;
+    hits.push(hit); size += next;
+  }
+  if (hits.length >= maxResults) return { ...limited, limitReason: "max_results" } as T & typeof limited;
+  return { ...output, hits } as T;
+}
+
 export const symbolSearchTool: ToolDefinition<
   SymbolSearchToolInput,
-  { fallback: boolean; indexer: string; hits: SymbolHit[]; filesIndexed?: number }
+  SymbolSearchToolOutput
 > = {
   name: "symbol_search",
   description:
-    "Find symbols by name in the selected file/directory. mode:syntax uses bounded Tree-sitter AST tags for TS/JS, Python, Rust and Go with source hashes, ignoring comments/strings; references are candidates, not LSP resolution. Default lexical mode preserves the lightweight TS/JS index and regex fallback.",
+    "Find symbols by name in the selected file/directory. mode:syntax uses bounded Tree-sitter AST tags for TS/JS, Python, Rust and Go with source hashes, ignoring comments/strings; references are candidates, not LSP resolution. Default lexical mode combines the TS/JS index with heuristic fallback for other files. Long lines are excerpts (truncated=true). limitReached, supplementalSearch=incomplete/skipped_limit, or scanSummary.complete=false signal incomplete results: narrow the path or read the file. Heuristic results are not semantic resolution.",
   inputSchema: z.object({
     symbol: z.string().min(1),
     path: z.string().optional(),
@@ -189,14 +223,15 @@ export const symbolSearchTool: ToolDefinition<
   async execute(
     input: SymbolSearchToolInput,
     context: ToolExecutionContext,
-  ): Promise<ToolResult<{ fallback: boolean; indexer: string; hits: SymbolHit[]; filesIndexed?: number }>> {
+  ): Promise<ToolResult<SymbolSearchToolOutput>> {
     try {
       context.signal.throwIfAborted();
       // P7-4 (EXPERIMENT): prefer matching TS/JS hits. Unrelated indexed files
       // must not mask other languages' existing heuristic fallback.
       if (input.mode === "syntax") {
-        return { status: "success", output: await syntaxSymbolSearch({ root: context.cwd,
-          path: input.path, symbol: input.symbol, maxResults: input.maxResults, signal: context.signal }) };
+        const result = await syntaxSymbolSearch({ root: context.cwd,
+          path: input.path, symbol: input.symbol, maxResults: input.maxResults, signal: context.signal });
+        return { status: "success", output: boundSymbolOutput(result, input.maxResults ?? 200) };
       }
       const indexed = await indexedSymbolSearch({
         symbol: input.symbol,
@@ -207,29 +242,53 @@ export const symbolSearchTool: ToolDefinition<
       });
       context.signal.throwIfAborted();
       if (indexed.hits.length > 0) {
+        const maxResults = input.maxResults ?? 200;
+        const { hasUnindexedFiles, ...primary } = indexed;
+        let output: typeof primary & { supplementalSearch?: string; supplementalWarning?: string; supplementalSummary?: GrepScanSummary } = primary;
+        if (hasUnindexedFiles) {
+          if (boundSymbolOutput(primary, maxResults).limitReached) {
+            output = { ...primary, supplementalSearch: "skipped_limit" };
+          } else {
+            try {
+              const summary = createGrepScanSummary();
+              const extra = await symbolSearch({ symbol: input.symbol, root: context.cwd,
+                relPath: input.path ?? ".", maxHits: maxResults - primary.hits.length,
+                signal: context.signal, excludeFile: isIndexedSourceFile, ignoredDirectories: SYMBOL_INDEX_SKIP_DIRS, summary });
+              output = { ...primary, hits: [...primary.hits, ...extra.hits],
+                supplementalSearch: summary.complete ? "regex-symbol-fallback" : "incomplete", supplementalSummary: summary };
+            } catch (err) {
+              context.signal.throwIfAborted();
+              output = { ...primary, supplementalSearch: "incomplete", supplementalWarning:
+                `Supplemental search failed: ${err instanceof Error ? err.message.slice(0, 512) : String(err).slice(0, 512)}` };
+            }
+          }
+        }
+        const bounded = boundSymbolOutput(output, maxResults);
         return {
           status: "success",
-          output: indexed,
+          output: bounded,
           evidence: [
             {
               type: "file",
-              description: `symbol_search: ${indexed.hits.length} symbol(s) for ${input.symbol} (${indexed.filesIndexed} files indexed)`,
+              description: `symbol_search: ${bounded.hits.length} symbol(s) for ${input.symbol} (${indexed.filesIndexed} files indexed)`,
               source: input.symbol,
               timestamp: Date.now(),
             },
           ],
         };
       }
+      const summary = createGrepScanSummary();
       const res = await symbolSearch({
         symbol: input.symbol,
         root: context.cwd,
         relPath: input.path ?? ".",
         maxHits: input.maxResults ?? 200,
         signal: context.signal,
+        summary,
       });
       return {
         status: "success",
-        output: res,
+        output: boundSymbolOutput({ ...res, scanSummary: summary }, input.maxResults ?? 200),
         evidence: [{ type: "file", description: `symbol_search: ${res.hits.length} symbol(s) for ${input.symbol}`, source: input.symbol, timestamp: Date.now() }],
       };
     } catch (err) {

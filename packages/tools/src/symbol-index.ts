@@ -29,6 +29,8 @@ export interface SymbolHit {
   name: string;
   text: string;
   role?: SymbolRole;
+  /** The source line was shortened around the match. */
+  truncated?: boolean;
 }
 
 export interface SymbolSearchIndexResult {
@@ -37,10 +39,16 @@ export interface SymbolSearchIndexResult {
   hits: SymbolHit[];
   filesIndexed: number;
   indexFresh: boolean;
+  hasUnindexedFiles: boolean;
 }
 
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"]);
-const SKIP_DIRS = new Set(["node_modules", ".git", "dist", "build", "out", ".cache", "coverage"]);
+export const SYMBOL_INDEX_SKIP_DIRS: ReadonlySet<string> = new Set(["node_modules", ".git", "dist", "build", "out", ".cache", "coverage", ".DS_Store"]);
+const MAX_HIT_LINE = 2000;
+
+export function isIndexedSourceFile(path: string): boolean {
+  return SOURCE_EXTENSIONS.has(path.slice(path.lastIndexOf(".")));
+}
 
 const DECL_PATTERNS: ReadonlyArray<{ kind: string; re: RegExp }> = [
   { kind: "function", re: /(?:export\s+)?(?:async\s+)?function\s+([A-Za-z_$][\w$]*)/ },
@@ -96,6 +104,7 @@ interface RootIndex {
   root: string;
   files: Map<string, IndexedFile>;
   builtAt: number;
+  hasUnindexedFiles: boolean;
 }
 
 const cache = new Map<string, CacheEntry>();
@@ -152,7 +161,7 @@ function evictIfNeeded(): void {
   }
 }
 
-async function listSourceFiles(dir: string, out: string[], signal: AbortSignal): Promise<void> {
+async function listSourceFiles(dir: string, out: { files: string[]; hasUnindexedFiles: boolean }, signal: AbortSignal): Promise<void> {
   signal.throwIfAborted();
   let entries;
   try {
@@ -172,13 +181,13 @@ async function listSourceFiles(dir: string, out: string[], signal: AbortSignal):
     if (++visited % 1024 === 0) await yieldToEventLoop();
     signal.throwIfAborted();
     if (entry.isDirectory()) {
-      if (SKIP_DIRS.has(entry.name)) continue;
+      if (SYMBOL_INDEX_SKIP_DIRS.has(entry.name)) continue;
       await listSourceFiles(join(dir, entry.name), out, signal);
       continue;
     }
     if (!entry.isFile()) continue;
-    const ext = entry.name.slice(entry.name.lastIndexOf("."));
-    if (SOURCE_EXTENSIONS.has(ext)) out.push(join(dir, entry.name));
+    if (isIndexedSourceFile(entry.name)) out.files.push(join(dir, entry.name));
+    else out.hasUnindexedFiles = true;
   }
 }
 
@@ -191,13 +200,14 @@ async function buildRootIndex(
   signal.throwIfAborted();
   const { root } = scope;
   const files = new Map<string, IndexedFile>();
-  const sourceFiles: string[] = [];
+  const sourceFiles = { files: [] as string[], hasUnindexedFiles: false };
   if (scope.type === "file") {
-    if (SOURCE_EXTENSIONS.has(scope.path.slice(scope.path.lastIndexOf(".")))) sourceFiles.push(scope.path);
+    if (isIndexedSourceFile(scope.path)) sourceFiles.files.push(scope.path);
+    else sourceFiles.hasUnindexedFiles = true;
   } else {
     await listSourceFiles(scope.path, sourceFiles, signal);
   }
-  for (const file of sourceFiles) {
+  for (const file of sourceFiles.files) {
     signal.throwIfAborted();
     try {
       const st = await stat(file);
@@ -220,7 +230,7 @@ async function buildRootIndex(
       }
     }
   }
-  return { root, files, builtAt: Date.now() };
+  return { root, files, builtAt: Date.now(), hasUnindexedFiles: sourceFiles.hasUnindexedFiles };
 }
 
 /** Get a fresh file-level index, sharing both cold builds and warm validation
@@ -228,9 +238,9 @@ async function buildRootIndex(
 export async function getSymbolIndex(root: string, relPath = ".", signal?: AbortSignal): Promise<LoadedIndex> {
   signal?.throwIfAborted();
   const normalizedRoot = resolve(root);
-  const scope = await resolveSearchScope(normalizedRoot, relPath, SKIP_DIRS);
+  const scope = await resolveSearchScope(normalizedRoot, relPath, SYMBOL_INDEX_SKIP_DIRS);
   signal?.throwIfAborted();
-  if (!scope) return { root: normalizedRoot, files: new Map(), builtAt: Date.now(), filesIndexed: 0 };
+  if (!scope) return { root: normalizedRoot, files: new Map(), builtAt: Date.now(), filesIndexed: 0, hasUnindexedFiles: false };
   const key = JSON.stringify([normalizedRoot, scope.relPath]);
   const pending = flights.get(key);
   if (pending && !pending.controller.signal.aborted) return subscribe(pending, signal);
@@ -306,9 +316,14 @@ export async function indexedSymbolSearch(input: {
           }
         }
       }
-      hits.push({ file: file.relPath, line: i + 1, kind, name: symbol, text: line.trim(), role });
+      const truncated = line.length > MAX_HIT_LINE;
+      let start = truncated ? Math.max(0, lower.indexOf(needle) - Math.floor((MAX_HIT_LINE - Math.min(needle.length, MAX_HIT_LINE)) / 2)) : 0;
+      if (start > 0 && /[\uDC00-\uDFFF]/u.test(line[start]!)) start--;
+      let end = Math.min(line.length, start + MAX_HIT_LINE);
+      if (end < line.length && /[\uD800-\uDBFF]/u.test(line[end - 1]!)) end--;
+      hits.push({ file: file.relPath, line: i + 1, kind, name: symbol, text: line.slice(start, end).trim(), role, ...(truncated ? { truncated: true } : {}) });
     }
   }
   input.signal?.throwIfAborted();
-  return { fallback: false, indexer: "ts-regex-index", hits, filesIndexed: index.files.size, indexFresh: true };
+  return { fallback: false, indexer: "ts-regex-index", hits, filesIndexed: index.files.size, indexFresh: true, hasUnindexedFiles: index.hasUnindexedFiles };
 }

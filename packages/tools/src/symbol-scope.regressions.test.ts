@@ -100,9 +100,12 @@ describe("symbol search: actual approved scope, mixed languages and isolated cac
     await fixture();
     expect(output(await run({ symbol: "PyOnly" }))).toMatchObject({ fallback: true, hits: [{ file: "py/logic.py", name: "PyOnly", kind: "def" }] });
   });
-  it("retains indexed hits as the priority without merging Python definitions", async () => {
+  it("retains indexed hits as the priority while also returning Python definitions", async () => {
     await fixture();
-    expect(output(await run({ symbol: "SharedSymbol" }))).toMatchObject({ fallback: false, hits: [{ file: "ts/a.ts", name: "SharedSymbol", kind: "const" }] });
+    expect(output(await run({ symbol: "SharedSymbol" }))).toMatchObject({ fallback: false, hits: [
+      { file: "ts/a.ts", name: "SharedSymbol", kind: "const" },
+      { file: "py/logic.py", name: "SharedSymbol", kind: "def" },
+    ] });
   });
   it.each(["ts", "ts/a.ts"])("gives identical root-relative hits for absolute and relative TS scope %s", async (scope) => {
     await fixture();

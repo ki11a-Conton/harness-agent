@@ -151,6 +151,19 @@ describe("Gen1 text tools correctness", () => {
       expect(r.status).toBe("cancelled"); expect(r.output).toBeUndefined(); expect(timerFired).toBe(true);
     } finally { clearTimeout(timer); }
   });
+  it("propagates cancellation during the supplementary scan after an indexed hit", async () => {
+    await fs.writeFile(join(root, "frontend.ts"), "export const SharedSymbol = 1;\n");
+    await fs.writeFile(join(root, "worker.py"), "def SharedSymbol():\n    return 2\n");
+    const ac = new AbortController(); const actual = fs.readFile.bind(fs);
+    const reads = vi.spyOn(fs, "readFile").mockImplementation((async (...args: Parameters<typeof fs.readFile>) => {
+      const result = await actual(...args);
+      if (String(args[0]) === join(root, "worker.py")) ac.abort();
+      return result;
+    }) as typeof fs.readFile);
+    const result = await invoke("symbol_search", { symbol: "SharedSymbol" }, ac.signal);
+    expect(reads.mock.calls.some(([path]) => String(path) === join(root, "worker.py"))).toBe(true);
+    expect(result.status).toBe("cancelled"); expect(result.output).toBeUndefined();
+  });
   it.each([{ kind: "import", text: "import " + "a ".repeat(100000) }, { kind: "export", text: "export {a ".repeat(40000) }]) (
     "handles the actual malformed $kind ReDoS fixture with a linear classifier", async ({ text }) => {
     await fs.writeFile(join(root, "imports.ts"), text);

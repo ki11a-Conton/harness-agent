@@ -18,6 +18,7 @@ const want = workerData.want ? new RegExp(workerData.want, "i") : null;
 parentPort.on("message", ({ text, maxHits }) => {
   if (symbols) {
     const matches = [];
+    const seen = new Set();
     const lineStarts = [0];
     for (let i = 0; i < text.length; i++) if (text[i] === "\n") lineStarts.push(i + 1);
     const lineAt = offset => {
@@ -29,7 +30,14 @@ parentPort.on("message", ({ text, maxHits }) => {
       scanner.lastIndex = 0;
       let found;
       while (matches.length < maxHits && (found = scanner.exec(text)) !== null) {
-        if (!want || want.test(found[0])) matches.push({ line: lineAt(found.index), kind, name: found[1], text: found[0].slice(0, workerData.maxLine) });
+        if (!want || want.test(found[0])) {
+          const line = lineAt(found.index);
+          const key = JSON.stringify([line, found[1]]);
+          if (!seen.has(key)) {
+            seen.add(key);
+            matches.push({ line, kind, name: found[1], text: found[0].slice(0, workerData.maxLine) });
+          }
+        }
         if (found[0].length === 0) scanner.lastIndex++;
       }
       if (matches.length >= maxHits) break;

@@ -106,6 +106,7 @@ export async function walkFiles(
   onDir?: (dirs: string[], abs: string, rel: string) => void,
   signal?: AbortSignal,
   onUnreadableDirectory?: (path: string) => void,
+  ignoredDirectories: ReadonlySet<string> = SKIP_DIRS,
 ): Promise<void> {
   // Keep the public void result; the private recursive result propagates a
   // callback's stop through every ancestor, including later sibling subtrees.
@@ -124,7 +125,7 @@ export async function walkFiles(
     for (const e of entries) {
       signal?.throwIfAborted();
       if (e.isDirectory()) {
-        if (SKIP_DIRS.has(e.name)) continue;
+        if (ignoredDirectories.has(e.name)) continue;
         if (!(await visit(relDir === "." ? e.name : `${relDir}/${e.name}`))) return false;
       } else if (e.isFile()) {
         const relFile = relDir === "." ? e.name : `${relDir}/${e.name}`;
@@ -232,6 +233,8 @@ const SYMBOL_PATTERNS: Array<{ label: string; re: RegExp }> = [
   { label: "class", re: /\bclass\s+([A-Za-z_$][\w$]*)\b/g },
   { label: "type", re: /\b(?:type|interface)\s+([A-Za-z_$][\w$]*)\b/g },
   { label: "const", re: /\bconst\s+([A-Za-z_$][\w$]*)\s*=/g },
+  { label: "function", re: /\bfn\s+([A-Za-z_$][\w$]*)\s*\(/g }, // Rust
+  { label: "function", re: /\bfunc\s+(?:\([^)]*\)\s*)?([A-Za-z_$][\w$]*)\s*\(/g }, // Go, including methods
   { label: "method", re: /\b([A-Za-z_$][\w$]*)\s*\([^)]*\)\s*\{/g },
   { label: "export", re: /\bexport\s+(?:default\s+)?(?:function|class|const|type|interface)\s+([A-Za-z_$][\w$]*)/g },
   { label: "def", re: /\bdef\s+([A-Za-z_$][\w$]*)\s*\(/g }, // python
@@ -244,11 +247,16 @@ export interface SymbolHit {
   kind: string;
   name: string;
   text: string;
+  /** Present when a long indexed line was shortened around the match. */
+  truncated?: boolean;
 }
 
 export interface SymbolSearchInput extends Omit<GrepFilesInput, "pattern" | "maxHits"> {
   symbol: string;
   maxHits?: number;
+  /** Internal filters for supplementing an already indexed file set. */
+  excludeFile?: (relativePath: string) => boolean;
+  ignoredDirectories?: ReadonlySet<string>;
 }
 
 /** Regex fallback symbol search. Returns `fallback: true` + an indexer note. */
@@ -262,37 +270,52 @@ export async function symbolSearch(input: SymbolSearchInput): Promise<{
   // Build a per-marker regex. `//g` not needed; we test the whole matched text.
   const want =
     symbol === "" ? null : `\\b${escapeRegExp(symbol)}\\b`;
+  // This escaped literal is a necessary (not sufficient) condition for a
+  // fallback match. Avoid starting a worker for files that cannot contain one.
+  const candidate = symbol === "" ? null : new RegExp(escapeRegExp(symbol), "i");
   const hits: SymbolHit[] = [];
   const cap = input.maxHits ?? 200;
-  const scope = await resolveSearchScope(root, relPath ?? ".");
+  const scope = await resolveSearchScope(root, relPath ?? ".", input.ignoredDirectories);
+  input.signal?.throwIfAborted();
+  if (!scope && input.summary) { input.summary.complete = false; input.summary.unavailableScope = true; }
   let scanner: SymbolRegexScanner | undefined;
 
   const searchFile = async (abs: string, relFile: string): Promise<boolean | void> => {
     input.signal?.throwIfAborted();
     if (hits.length >= cap) return false;
+    if (input.excludeFile?.(relFile)) return;
     let text: string;
     try {
       const stat = await fs.stat(abs);
       input.signal?.throwIfAborted();
-      if (stat.size > MAX_READ_BYTES) return;
+      if (stat.size > MAX_READ_BYTES) {
+        if (input.summary) { input.summary.skippedOversizedFiles++; input.summary.complete = false; }
+        return;
+      }
       text = await fs.readFile(abs, { encoding: "utf8", signal: input.signal });
     } catch {
       input.signal?.throwIfAborted();
+      if (input.summary) { input.summary.unreadableFiles++; input.summary.complete = false; }
       return;
     }
     input.signal?.throwIfAborted();
-    if (text.includes("\u0000")) return;
+    if (input.summary) input.summary.scannedFiles++;
+    if (text.includes("\u0000")) { if (input.summary) input.summary.skippedBinaryFiles++; return; }
+    if (candidate && !candidate.test(text)) return;
     scanner ??= new SymbolRegexScanner(SYMBOL_PATTERNS, want, input.signal);
     const matched = await scanner.scan(text, cap - hits.length);
     input.signal?.throwIfAborted();
     hits.push(...matched.map(hit => ({ file: relFile, ...hit })));
+    if (hits.length >= cap && input.summary) { input.summary.limitReached = true; input.summary.complete = false; }
     return hits.length < cap;
   };
   try {
     if (scope?.type === "file") {
       await searchFile(scope.path, scope.relPath);
     } else if (scope) {
-      await walkFiles(scope.root, scope.relPath, searchFile, undefined, input.signal);
+      await walkFiles(scope.root, scope.relPath, searchFile, undefined, input.signal, () => {
+        if (input.summary) { input.summary.unreadableDirectories++; input.summary.complete = false; }
+      }, input.ignoredDirectories);
     }
   } finally {
     await scanner?.close();
