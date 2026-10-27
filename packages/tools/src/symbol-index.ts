@@ -78,6 +78,9 @@ const MAX_CACHED_FILE_BYTES = 8 * 1024 * 1024;
 const MAX_SCOPE_CONTENT_BYTES = 16 * 1024 * 1024;
 const MAX_GLOBAL_CACHE_BYTES = 32 * 1024 * 1024;
 const MAX_ACTIVE_LAZY_READS = 4;
+// A count limit alone can retain four 24 MiB strings at once. Reserve source
+// bytes as well; UTF-8 decoding needs at most twice this many UTF-16 bytes.
+const MAX_ACTIVE_LAZY_SOURCE_BYTES = 40 * 1024 * 1024;
 
 function freshSummary(): LexicalScanSummary {
   return { complete: true, scannedFiles: 0, unreadableFiles: 0, unreadableDirectories: 0, skippedOversizedFiles: 0, limitedLongLines: 0,
@@ -203,34 +206,51 @@ interface SharedFlight<T> {
 const flights = new Map<string, SharedFlight<LoadedIndex>>();
 interface LazyReadFlight extends SharedFlight<string> { releaseSlot?: () => void }
 interface LazyReadLease { content: string; release: () => void }
-interface SlotWaiter { signal: AbortSignal; resolve: (release: () => void) => void; reject: (error: unknown) => void; onAbort: () => void }
+interface SlotWaiter { bytes: number; signal: AbortSignal; resolve: (release: () => void) => void; reject: (error: unknown) => void; onAbort: () => void }
 const sourceFlights = new Map<string, LazyReadFlight>();
 const slotWaiters: SlotWaiter[] = [];
 let activeLazyReads = 0;
+let activeLazySourceBytes = 0;
 
-function releaseLazySlot(): () => void {
+function drainLazySlots(): void {
+  while (slotWaiters.length && activeLazyReads < MAX_ACTIVE_LAZY_READS) {
+    const waiter = slotWaiters[0]!;
+    if (waiter.signal.aborted) {
+      slotWaiters.shift(); waiter.signal.removeEventListener("abort", waiter.onAbort);
+      waiter.reject(waiter.signal.reason); continue;
+    }
+    // FIFO prevents a large waiting file being starved by smaller new reads.
+    if (activeLazySourceBytes + waiter.bytes > MAX_ACTIVE_LAZY_SOURCE_BYTES) return;
+    slotWaiters.shift(); waiter.signal.removeEventListener("abort", waiter.onAbort);
+    activeLazyReads++; activeLazySourceBytes += waiter.bytes;
+    waiter.resolve(releaseLazySlot(waiter.bytes));
+  }
+}
+
+function releaseLazySlot(bytes: number): () => void {
   let released = false;
   return () => {
     if (released) return;
     released = true;
-    while (slotWaiters.length) {
-      const waiter = slotWaiters.shift()!;
-      waiter.signal.removeEventListener("abort", waiter.onAbort);
-      if (waiter.signal.aborted) { waiter.reject(waiter.signal.reason); continue; }
-      waiter.resolve(releaseLazySlot());
-      return;
-    }
-    activeLazyReads--;
+    activeLazyReads--; activeLazySourceBytes -= bytes;
+    drainLazySlots();
   };
 }
 
-function acquireLazySlot(signal: AbortSignal): Promise<() => void> {
+function acquireLazySlot(bytes: number, signal: AbortSignal): Promise<() => void> {
   signal.throwIfAborted();
-  if (activeLazyReads < MAX_ACTIVE_LAZY_READS) { activeLazyReads++; return Promise.resolve(releaseLazySlot()); }
+  if (slotWaiters.length === 0 && activeLazyReads < MAX_ACTIVE_LAZY_READS &&
+      activeLazySourceBytes + bytes <= MAX_ACTIVE_LAZY_SOURCE_BYTES) {
+    activeLazyReads++; activeLazySourceBytes += bytes;
+    return Promise.resolve(releaseLazySlot(bytes));
+  }
   return new Promise((resolve, reject) => {
-    const waiter: SlotWaiter = { signal, resolve, reject, onAbort: () => {
+    const waiter: SlotWaiter = { bytes, signal, resolve, reject, onAbort: () => {
       const index = slotWaiters.indexOf(waiter);
-      if (index >= 0) { slotWaiters.splice(index, 1); signal.removeEventListener("abort", waiter.onAbort); reject(signal.reason); }
+      if (index >= 0) {
+        slotWaiters.splice(index, 1); signal.removeEventListener("abort", waiter.onAbort);
+        reject(signal.reason); drainLazySlots();
+      }
     } };
     slotWaiters.push(waiter);
     signal.addEventListener("abort", waiter.onAbort, { once: true });
@@ -490,11 +510,20 @@ function readLazyFile(index: RootIndex, file: IndexedFile, signal?: AbortSignal)
   if (pending && !pending.controller.signal.aborted) return subscribeLazy(key, pending, signal);
   const controller = new AbortController();
   const flight: LazyReadFlight = { controller, subscribers: 0, settled: false, promise: Promise.resolve().then(async () => {
-    flight.releaseSlot = await acquireLazySlot(controller.signal);
+    flight.releaseSlot = await acquireLazySlot(file.size, controller.signal);
     controller.signal.throwIfAborted();
-    return readFile(resolve(index.root, file.relPath), {
-      encoding: "utf8", signal: controller.signal, root: index.root, realRoot: index.realRoot,
-    });
+    try {
+      // The reserved snapshot bounds actual bytes as well as admission. A file
+      // that grows while queued must be retried with fresh index metadata.
+      return await readFile(resolve(index.root, file.relPath), {
+        encoding: "utf8", signal: controller.signal, root: index.root, realRoot: index.realRoot, maxBytes: file.size,
+      });
+    } catch (error) {
+      if (error instanceof IndexedSourceError && error.code === "SOURCE_TOO_LARGE" && file.size < MAX_INDEXED_SOURCE_BYTES) {
+        throw new IndexedSourceError("SOURCE_CHANGED", "source grew beyond the reserved index snapshot");
+      }
+      throw error;
+    }
   }) };
   flight.promise = flight.promise.finally(() => {
     flight.settled = true;

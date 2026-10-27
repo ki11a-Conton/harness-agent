@@ -16,11 +16,31 @@ await writeFile(output, result.stdout ?? "");
 await writeFile(`${output}.stderr.log`, result.stderr ?? "");
 if (result.stdout) process.stdout.write(result.stdout);
 if (result.stderr) process.stderr.write(result.stderr);
-if (result.status !== 0 || result.error) {
-  const details = JSON.stringify({ exit: result.status, signal: result.signal,
-    error: result.error?.message ?? null, stdout: result.stdout?.slice(-12000), stderr: result.stderr?.slice(-6000) });
+function annotate(level, title, details) {
   // Escape the command payload; fixture text must never create new commands.
-  const escaped = details.replaceAll("%", "%25").replaceAll("\r", "%0D").replaceAll("\n", "%0A");
-  console.log(`::error title=Large-repository navigation probe::${escaped}`);
+  const escaped = JSON.stringify(details).replaceAll("%", "%25").replaceAll("\r", "%0D").replaceAll("\n", "%0A");
+  console.log(`::${level} title=${title}::${escaped}`);
+}
+let report;
+try { report = JSON.parse(result.stdout); } catch { /* Raw output remains in the evidence files. */ }
+if (result.status !== 0 || result.error) {
+  // GitHub truncates individual annotation messages at 4 KiB. Keep each
+  // failing child separate, rather than losing its error behind passing rows.
+  for (const name of ["largeFile", "longLine", "cache", "parallel"]) {
+    const child = report?.[name];
+    if (child && (child.exit !== 0 || child.error)) annotate("error", `Large-repository probe ${name}`, {
+      exit: child.exit, signal: child.signal, error: child.error,
+      stdout: child.stdout?.slice(-300), stderr: child.stderrTail?.slice(-1500),
+    });
+  }
+  annotate("error", "Large-repository navigation probe", { exit: result.status, signal: result.signal,
+    error: result.error?.message ?? null, stderr: result.stderr?.slice(-1000) });
   process.exitCode = result.status || 1;
+} else if (report) {
+  const metrics = { fixture: report.fixture };
+  for (const name of ["largeFile", "longLine", "cache", "parallel"]) {
+    try { metrics[name] = JSON.parse(report[name].stdout.trim().split("\n").at(-1)); }
+    catch { metrics[name] = { exit: report[name]?.exit }; }
+  }
+  annotate("notice", "Large-repository navigation probe passed", metrics);
 }
