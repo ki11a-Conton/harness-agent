@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { receiptFromReport, annotationPackets, caseRecordPublication } from './windows-acceptance-report.mjs';
+import { receiptFromReport, annotationPackets, caseRecordPublication, failureAnnotations } from './windows-acceptance-report.mjs';
 import { gunzipSync } from 'node:zlib';
 import { createHash } from 'node:crypto';
 
@@ -58,7 +58,41 @@ test('large-suite publication is bounded and indexes the complete artifact witho
 });
 test('small-suite publication still includes every reconstructible record in public annotations', () => {
   const { files } = receiptFromReport(report, host, ['required native case']);
+  assert.deepEqual(failureAnnotations(files), []);
   const publication = caseRecordPublication(files);
   assert.equal(publication.mode, 'annotations');
   assert.deepEqual(JSON.parse(gunzipSync(Buffer.from(publication.packets.map(packet => packet.data).join(''), 'base64'))), files);
+});
+
+test('failed assertions remain visible when complete records exceed the annotation budget', () => {
+  const files = largeFiles();
+  files[0].assertions[17] = { name: 'native refusal still respects its deadline', status: 'failed', failureMessages: ['expected a bounded refusal, got a pending worker'] };
+  const original = JSON.stringify(files);
+  const failures = failureAnnotations(files);
+  assert.equal(failures.length, 1);
+  assert.equal(failures[0].file, files[0].file);
+  assert.equal(failures[0].name, 'native refusal still respects its deadline');
+  assert.match(failures[0].failure, /pending worker/);
+  const publication = caseRecordPublication(files, 8 - failures.length);
+  assert.equal(publication.mode, 'artifact');
+  assert.equal(publication.index.caseRecordsSha256, createHash('sha256').update(original).digest('hex'));
+  assert.equal(JSON.stringify(files), original);
+});
+
+test('Unicode failure summaries fit message and step budgets while raw failures stay intact', () => {
+  const files = [{ file: '中文路径'.repeat(2000), assertions: Array.from({ length: 11 }, (_, index) => ({
+    name: `${index}: 中文用例`.repeat(2000), status: 'failed', failureMessages: ['中文错误\n%0A::error::'.repeat(2000)],
+  })) }];
+  const original = JSON.stringify(files);
+  const failures = failureAnnotations(files);
+  assert.equal(failures.length, 8);
+  for (const failure of failures) {
+    assert(Buffer.byteLength(JSON.stringify(failure), 'utf8') <= 3500);
+    assert.equal(failure.omittedFailures, 3);
+    assert.equal(failure.truncated, true);
+  }
+  const publication = caseRecordPublication(files, 8 - failures.length);
+  assert.equal(publication.mode, 'artifact');
+  assert(1 + failures.length + 1 <= 10);
+  assert.equal(JSON.stringify(files), original);
 });

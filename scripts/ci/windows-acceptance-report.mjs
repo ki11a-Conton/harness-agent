@@ -39,19 +39,36 @@ export function annotationPackets(files) {
   return Array.from({ length: total }, (_, index) => ({ encoding: 'gzip+base64', index, total, data: encoded.slice(index * 2500, (index + 1) * 2500) }));
 }
 
-export function caseRecordPublication(files) {
+export function caseRecordPublication(files, maxPackets = 9) {
   const packets = annotationPackets(files);
   // One of the ten notices is reserved for the verdict. Large suites keep
   // their complete records in receipt.json, uploaded by the always() step.
   // Publish a verifiable index instead of throwing after a valid verdict or
   // silently allowing GitHub to truncate the records.
-  if (packets.length <= 9) return { mode: 'annotations', packets };
+  if (packets.length <= maxPackets) return { mode: 'annotations', packets };
   return { mode: 'artifact', packets: [], index: {
     artifactPath: '.ci/windows-acceptance/receipt.json',
     caseRecordsSha256: createHash('sha256').update(JSON.stringify(files)).digest('hex'),
     files: files.length, assertions: files.reduce((count, file) => count + file.assertions.length, 0),
     losslessPackets: packets.length, reason: 'PER_STEP_ANNOTATION_BUDGET',
   } };
+}
+
+/** Keep the actionable failure visible even when complete records need an
+ * artifact, and bound each message below GitHub's 4 KiB truncation limit. */
+export function failureAnnotations(files) {
+  const failed = files.flatMap(file => file.assertions.filter(test => test.status === 'failed').map(test => ({ file: file.file, test })));
+  return failed.slice(0, 8).map(({ file, test }) => {
+    const detail = { file, name: test.name, failure: (test.failureMessages ?? []).join('\n'),
+      omittedFailures: Math.max(0, failed.length - 8) };
+    const fields = ['failure', 'name', 'file'];
+    while (Buffer.byteLength(JSON.stringify(detail), 'utf8') > 3500) {
+      const key = fields.reduce((a, b) => detail[a].length >= detail[b].length ? a : b);
+      detail[key] = detail[key].slice(0, Math.floor(detail[key].length * 0.75));
+      detail.truncated = true;
+    }
+    return detail;
+  });
 }
 
 function main() {
@@ -99,7 +116,11 @@ function main() {
   // Public checks preserve the verdict; case records use lossless annotations
   // when they fit, or an explicit artifact index bound to the full-record hash.
   console.log(`::notice title=Windows acceptance receipt::${escape(JSON.stringify(receipt))}`);
-  const publication = caseRecordPublication(files);
+  const failures = failureAnnotations(files);
+  for (const [index, detail] of failures.entries()) console.log(`::error title=Windows regression failure ${index + 1}::${escape(JSON.stringify(detail))}`);
+  // Reserve a verdict and, if needed, an artifact index as well as failure
+  // summaries. Never push a lossless packet beyond the per-step budget.
+  const publication = caseRecordPublication(files, failures.length ? 8 - failures.length : 9);
   if (publication.mode === 'artifact') console.log(`::notice title=Windows case records artifact index::${escape(JSON.stringify(publication.index))}`);
   for (const packet of publication.packets) console.log(`::notice title=Windows case records chunk ${packet.index + 1}/${packet.total}::${escape(JSON.stringify(packet))}`);
   if (receipt.outcome !== 'PASS') process.exitCode = 1;

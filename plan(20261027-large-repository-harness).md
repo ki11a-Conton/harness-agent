@@ -30,3 +30,5 @@
 `6665cdc7` 本地完整回归 10,426 项通过、16 项跳过，且 main 原生 Windows、CLI/Web、压力与边界验收通过；但主 CI `40543517989` 的 Windows real-formal job `122327884561` 在原有 Gen1 claim-directory 2 秒守卫失败。根因为 open 的 `lockTimeoutMs=100` 未传到 bootstrap claim 锁与其 takeover guard，它们仍用默认 10,000 ms；Windows EPERM 会进入该重试分支。四个可控时钟反例（活持有者、read EPERM、open EPERM、takeover guard）均复现旧实现错误的 10,000 ms。
 
 修复只沿既有调用链传递每次锁获取的超时，保留独立 claim 操作默认值、owner token、拒绝时不写账本及只释放自己锁的约束。验收要求四种确定性反例转绿、旧三种原生进程 2 秒断言保持、拒绝后原持有者不变且显式移除后可重新打开；预算、claim 竞态、类型、安全和完整回归通过，原生 Windows 收据必须包含 claim-directory 与 EPERM/guard 用例。不取消旧 main CI，在独立分支验证后正常快进 main。
+
+`dd13f39f` 原生分支验收 `40546654496` 的收据显示所要求的 claim 超时用例均通过，另有一项非必选用例失败（670 passed / 1 failed / 2 skipped）。完整记录需 15 个注释包，超过每步骤预算，只保留了制品索引；因此补充独立的失败用例摘要，保持单条低于 4 KiB、总注释预算受控，原始记录和判定不变，再通过原生 runner 获取具体错误。报告器用大套件失败与 Unicode 长错误测试验证。
