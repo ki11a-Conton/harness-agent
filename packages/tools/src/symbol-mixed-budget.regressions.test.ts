@@ -110,6 +110,15 @@ describe("symbol_search across languages and context budgets", () => {
     expect(result.hits[0]!.text).not.toMatch(/^[\uDC00-\uDFFF]|[\uD800-\uDBFF]$/u);
   });
 
+  it("keeps the match visible when lowercasing expands earlier Unicode characters", async () => {
+    await fs.writeFile(join(root, "unicode.ts"), `${"İ".repeat(6000)} ImportantSymbol ${"z".repeat(5000)}\n`);
+    const result = await run({ symbol: "ImportantSymbol" });
+    expect(result.hits).toHaveLength(1);
+    expect(result.hits[0]).toMatchObject({ file: "unicode.ts", truncated: true });
+    expect(result.hits[0]!.text).toContain("ImportantSymbol");
+    expect(result.hits[0]!.text.length).toBeLessThanOrEqual(2000);
+  });
+
   it("bounds the serialized result and marks omitted hits instead of filling the model context", async () => {
     await fs.writeFile(join(root, "large.ts"), Array.from({ length: 100 }, (_, i) => `const SharedSymbol${i} = '${"a".repeat(1800)}';`).join("\n"));
     const result = await run({ symbol: "SharedSymbol", maxResults: 5000 });

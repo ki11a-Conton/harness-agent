@@ -93,6 +93,20 @@ function importsBinding(line: string, needle: string): boolean {
   return defaultBinding?.[1]?.toLowerCase() === needle;
 }
 
+/** Map an offset in the lowercase search string back to the original line.
+ * For example, lowercasing U+0130 expands it into two UTF-16 code units. */
+async function originalMatchOffset(line: string, lower: string, offset: number, signal?: AbortSignal): Promise<number> {
+  if (line.length === lower.length) return offset;
+  let original = 0, folded = 0, visited = 0;
+  for (const character of line) {
+    if (++visited % 16384 === 0) { await yieldToEventLoop(); signal?.throwIfAborted(); }
+    const next = folded + character.toLowerCase().length;
+    if (offset < next) return original;
+    folded = next; original += character.length;
+  }
+  return line.length;
+}
+
 interface IndexedFile {
   relPath: string;
   lines: string[];
@@ -317,7 +331,8 @@ export async function indexedSymbolSearch(input: {
         }
       }
       const truncated = line.length > MAX_HIT_LINE;
-      let start = truncated ? Math.max(0, lower.indexOf(needle) - Math.floor((MAX_HIT_LINE - Math.min(needle.length, MAX_HIT_LINE)) / 2)) : 0;
+      const offset = truncated ? await originalMatchOffset(line, lower, lower.indexOf(needle), input.signal) : 0;
+      let start = truncated ? Math.max(0, offset - Math.floor((MAX_HIT_LINE - Math.min(needle.length, MAX_HIT_LINE)) / 2)) : 0;
       if (start > 0 && /[\uDC00-\uDFFF]/u.test(line[start]!)) start--;
       let end = Math.min(line.length, start + MAX_HIT_LINE);
       if (end < line.length && /[\uD800-\uDBFF]/u.test(line[end - 1]!)) end--;
