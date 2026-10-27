@@ -1,5 +1,5 @@
 import { promises as fs } from "node:fs";
-import { readFile, readdir, stat } from "node:fs/promises";
+import { opendir, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -9,12 +9,18 @@ import { ToolOrchestrator } from "./orchestrator.js";
 import { ToolRegistry } from "./registry.js";
 import { indexedSymbolSearch } from "./symbol-index.js";
 import { symbolSearchTool } from "./tools/navigation-tools.js";
+import { readIndexedSource as readFile } from "./indexed-source-reader.js";
 
 vi.mock("node:fs/promises", async (importOriginal) => {
   const original = await importOriginal<typeof import("node:fs/promises")>();
-  return { ...original, readFile: vi.fn(original.readFile), readdir: vi.fn(original.readdir), stat: vi.fn(original.stat) };
+  return { ...original, opendir: vi.fn(original.opendir), stat: vi.fn(original.stat) };
+});
+vi.mock("./indexed-source-reader.js", async importOriginal => {
+  const actual = await importOriginal<typeof import("./indexed-source-reader.js")>();
+  return { ...actual, readIndexedSource: vi.fn(actual.readIndexedSource) };
 });
 const actualFs = await vi.importActual<typeof import("node:fs/promises")>("node:fs/promises");
+const actualReader = await vi.importActual<typeof import("./indexed-source-reader.js")>("./indexed-source-reader.js");
 let root: string;
 let fallbackRead: ReturnType<typeof vi.spyOn>;
 let fallbackList: ReturnType<typeof vi.spyOn>;
@@ -22,8 +28,8 @@ let fallbackStat: ReturnType<typeof vi.spyOn>;
 
 beforeEach(async () => {
   root = await fs.mkdtemp(join(tmpdir(), "ar-symbol-scope-"));
-  vi.mocked(readFile).mockReset().mockImplementation(actualFs.readFile);
-  vi.mocked(readdir).mockReset().mockImplementation(actualFs.readdir);
+  vi.mocked(readFile).mockReset().mockImplementation(actualReader.readIndexedSource);
+  vi.mocked(opendir).mockReset().mockImplementation(actualFs.opendir);
   vi.mocked(stat).mockReset().mockImplementation(actualFs.stat);
   fallbackRead = vi.spyOn(fs, "readFile");
   fallbackList = vi.spyOn(fs, "readdir");
@@ -59,7 +65,7 @@ async function run(args: Record<string, unknown>, ctx = context(), orch = orches
     call: { id: newToolCallId(), name: "symbol_search", args } }, ctx);
 }
 function paths(): string[] {
-  return [...vi.mocked(readFile).mock.calls, ...vi.mocked(readdir).mock.calls, ...vi.mocked(stat).mock.calls,
+  return [...vi.mocked(readFile).mock.calls, ...vi.mocked(opendir).mock.calls, ...vi.mocked(stat).mock.calls,
     ...fallbackRead.mock.calls, ...fallbackList.mock.calls, ...fallbackStat.mock.calls].map(([path]) => resolve(String(path)));
 }
 function expectScope(scope: string): void {
@@ -67,7 +73,7 @@ function expectScope(scope: string): void {
   expect(paths().every((path) => path === selected || path.startsWith(`${selected}/`) || path.startsWith(`${selected}\\`)), paths().join("\n")).toBe(true);
 }
 function clearIO(): void {
-  vi.mocked(readFile).mockClear(); vi.mocked(readdir).mockClear(); vi.mocked(stat).mockClear();
+  vi.mocked(readFile).mockClear(); vi.mocked(opendir).mockClear(); vi.mocked(stat).mockClear();
   fallbackRead.mockClear(); fallbackList.mockClear(); fallbackStat.mockClear();
 }
 function output(result: Awaited<ReturnType<typeof run>>) {

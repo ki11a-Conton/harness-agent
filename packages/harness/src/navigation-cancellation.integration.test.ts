@@ -1,5 +1,5 @@
 import { promises as fs } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { open } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { setImmediate as yieldToEventLoop } from "node:timers/promises";
@@ -10,7 +10,7 @@ import { createHarness } from "./create-harness.js";
 
 vi.mock("node:fs/promises", async importOriginal => {
   const actual = await importOriginal<typeof import("node:fs/promises")>();
-  return { ...actual, readFile: vi.fn(actual.readFile) };
+  return { ...actual, open: vi.fn(actual.open) };
 });
 const actualFs = await vi.importActual<typeof import("node:fs/promises")>("node:fs/promises");
 
@@ -19,13 +19,21 @@ it.each(["interactive", "test"] as const)("%s: turn cancellation stops source in
   const authority = new AbortController(), requests: ModelRequest[] = [];
   let sourceReads = 0;
   for (let i = 0; i < 12; i++) await fs.writeFile(join(cwd, `source-${String(i).padStart(2, "0")}.ts`), `export const SharedSymbol = ${i};\n`);
-  vi.mocked(readFile).mockImplementation(async (...args) => {
-    const contents = await actualFs.readFile(...args);
+  vi.mocked(open).mockImplementation(async (...args) => {
+    const handle = await actualFs.open(...args);
     if (/^source-\d+\.ts$/.test(basename(String(args[0])))) {
-      sourceReads++;
-      if (sourceReads === 1) authority.abort();
+      let counted = false;
+      handle.read = new Proxy(handle.read, { apply(target, _thisArg, readArgs) {
+        return Reflect.apply(target, handle, readArgs).then((result: { bytesRead: number }) => {
+          if (!counted && result.bytesRead > 0) {
+            counted = true; sourceReads++;
+            if (sourceReads === 1) authority.abort();
+          }
+          return result;
+        });
+      } });
     }
-    return contents;
+    return handle;
   });
   const provider: ModelProvider = {
     id: "navigation-cancellation-offline",
@@ -58,7 +66,7 @@ it.each(["interactive", "test"] as const)("%s: turn cancellation stops source in
     expect(actualToolMessages).toContain("source-11.ts");
     expect(actualToolMessages).toContain("SharedSymbol");
   } finally {
-    await h?.close(); vi.mocked(readFile).mockReset().mockImplementation(actualFs.readFile);
+    await h?.close(); vi.mocked(open).mockReset().mockImplementation(actualFs.open);
     await fs.rm(cwd, { recursive: true, force: true });
   }
 });

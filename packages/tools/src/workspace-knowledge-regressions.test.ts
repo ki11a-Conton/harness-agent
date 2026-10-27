@@ -1,5 +1,5 @@
 import { promises as fs } from "node:fs";
-import { readFile, readdir, stat } from "node:fs/promises";
+import { readdir, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -11,17 +11,23 @@ import { createRepoMapTool, makeRepoMapResolver } from "./tools/repo-map-tool.js
 import { symbolSearchTool } from "./tools/navigation-tools.js";
 import { ToolRegistry } from "./registry.js";
 import { ToolOrchestrator } from "./orchestrator.js";
+import { readIndexedSource as readFile } from "./indexed-source-reader.js";
 
 vi.mock("node:fs/promises", async (importOriginal) => {
   const original = await importOriginal<typeof import("node:fs/promises")>();
-  return { ...original, readFile: vi.fn(original.readFile), readdir: vi.fn(original.readdir), stat: vi.fn(original.stat) };
+  return { ...original, readdir: vi.fn(original.readdir), stat: vi.fn(original.stat) };
+});
+vi.mock("./indexed-source-reader.js", async importOriginal => {
+  const actual = await importOriginal<typeof import("./indexed-source-reader.js")>();
+  return { ...actual, readIndexedSource: vi.fn(actual.readIndexedSource) };
 });
 const actualFs = await vi.importActual<typeof import("node:fs/promises")>("node:fs/promises");
+const actualReader = await vi.importActual<typeof import("./indexed-source-reader.js")>("./indexed-source-reader.js");
 let root: string;
 
 beforeEach(async () => {
   root = await fs.mkdtemp(join(tmpdir(), "ar-workspace-knowledge-"));
-  vi.mocked(readFile).mockReset().mockImplementation(actualFs.readFile);
+  vi.mocked(readFile).mockReset().mockImplementation(actualReader.readIndexedSource);
   vi.mocked(readdir).mockReset().mockImplementation(actualFs.readdir);
   vi.mocked(stat).mockReset().mockImplementation(actualFs.stat);
 });

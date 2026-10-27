@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { ToolDefinition, ToolExecutionContext, ToolResult } from "@ar/contracts";
 import { errorInfo } from "@ar/contracts";
 import { createGrepScanSummary, createRepoTreeSummary, grepFiles, repoTree, symbolSearch, type GrepScanSummary, type GrepHit, type SymbolHit, type RepoTreeEntry, type RepoTreeSummary } from "../navigate.js";
-import { indexedSymbolSearch, isIndexedSourceFile, SYMBOL_INDEX_SKIP_DIRS } from "../symbol-index.js";
+import { indexedSymbolSearch, isIndexedSourceFile, SYMBOL_INDEX_SKIP_DIRS, type LexicalScanSummary } from "../symbol-index.js";
 import { syntaxSymbolSearch } from "../syntax-index.js";
 
 /**
@@ -167,6 +167,7 @@ export interface SymbolSearchToolOutput {
   hits: SymbolHit[];
   filesIndexed?: number;
   complete?: boolean;
+  lexicalSummary?: LexicalScanSummary;
   scanSummary?: GrepScanSummary;
   supplementalSearch?: string;
   supplementalSummary?: GrepScanSummary;
@@ -201,7 +202,7 @@ export const symbolSearchTool: ToolDefinition<
 > = {
   name: "symbol_search",
   description:
-    "Find symbols by name in the selected file/directory. mode:syntax uses bounded Tree-sitter AST tags for TS/JS, Python, Rust and Go with source hashes, ignoring comments/strings; references are candidates, not LSP resolution. Default lexical mode combines the TS/JS index with heuristic fallback for other files. Long lines are excerpts (truncated=true). limitReached, supplementalSearch=incomplete/skipped_limit, or scanSummary.complete=false signal incomplete results: narrow the path or read the file. Heuristic results are not semantic resolution.",
+    "Find symbols by name in the selected file/directory. mode:syntax uses bounded Tree-sitter AST tags for TS/JS, Python, Rust and Go with source hashes, ignoring comments/strings; references are candidates, not LSP resolution. Default lexical mode combines the TS/JS index with heuristic fallback for other files. Long lines are excerpts (truncated=true); files above 24 MiB are skipped and lines above 1M characters are searched approximately in chunks. complete=false, limitReached, supplementalSearch=incomplete/skipped_limit, or scanSummary.complete=false signal incomplete results; narrow the path, read a specific file, or use an approved command. Heuristic results are not semantic resolution.",
   inputSchema: z.object({
     symbol: z.string().min(1),
     path: z.string().optional(),
@@ -241,11 +242,14 @@ export const symbolSearchTool: ToolDefinition<
         signal: context.signal,
       });
       context.signal.throwIfAborted();
+      const traversalLimited = indexed.lexicalSummary.fileLimitReached || indexed.lexicalSummary.entryLimitReached || indexed.lexicalSummary.depthLimitReached;
       if (indexed.hits.length > 0) {
         const maxResults = input.maxResults ?? 200;
         const { hasUnindexedFiles, ...primary } = indexed;
         let output: typeof primary & { supplementalSearch?: string; supplementalWarning?: string; supplementalSummary?: GrepScanSummary } = primary;
-        if (hasUnindexedFiles) {
+        if (traversalLimited) {
+          output = { ...primary, supplementalSearch: "skipped_limit" };
+        } else if (hasUnindexedFiles) {
           if (boundSymbolOutput(primary, maxResults).limitReached) {
             output = { ...primary, supplementalSearch: "skipped_limit" };
           } else {
@@ -254,11 +258,11 @@ export const symbolSearchTool: ToolDefinition<
               const extra = await symbolSearch({ symbol: input.symbol, root: context.cwd,
                 relPath: input.path ?? ".", maxHits: maxResults - primary.hits.length,
                 signal: context.signal, excludeFile: isIndexedSourceFile, ignoredDirectories: SYMBOL_INDEX_SKIP_DIRS, summary });
-              output = { ...primary, hits: [...primary.hits, ...extra.hits],
+              output = { ...primary, hits: [...primary.hits, ...extra.hits], complete: primary.complete && summary.complete,
                 supplementalSearch: summary.complete ? "regex-symbol-fallback" : "incomplete", supplementalSummary: summary };
             } catch (err) {
               context.signal.throwIfAborted();
-              output = { ...primary, supplementalSearch: "incomplete", supplementalWarning:
+              output = { ...primary, complete: false, supplementalSearch: "incomplete", supplementalWarning:
                 `Supplemental search failed: ${err instanceof Error ? err.message.slice(0, 512) : String(err).slice(0, 512)}` };
             }
           }
@@ -277,6 +281,10 @@ export const symbolSearchTool: ToolDefinition<
           ],
         };
       }
+      if (traversalLimited) {
+        const { hasUnindexedFiles: _hasUnindexedFiles, ...partial } = indexed;
+        return { status: "success", output: boundSymbolOutput({ ...partial, supplementalSearch: "skipped_limit" }, input.maxResults ?? 200) };
+      }
       const summary = createGrepScanSummary();
       const res = await symbolSearch({
         symbol: input.symbol,
@@ -288,7 +296,8 @@ export const symbolSearchTool: ToolDefinition<
       });
       return {
         status: "success",
-        output: boundSymbolOutput({ ...res, scanSummary: summary }, input.maxResults ?? 200),
+        output: boundSymbolOutput({ ...res, scanSummary: summary, complete: indexed.complete && summary.complete,
+          lexicalSummary: indexed.lexicalSummary }, input.maxResults ?? 200),
         evidence: [{ type: "file", description: `symbol_search: ${res.hits.length} symbol(s) for ${input.symbol}`, source: input.symbol, timestamp: Date.now() }],
       };
     } catch (err) {

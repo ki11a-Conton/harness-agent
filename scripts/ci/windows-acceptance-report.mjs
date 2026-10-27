@@ -77,6 +77,11 @@ function main() {
     'complete owner fixture admission remains bounded when every derived lease is occupied',
     'a genuinely busy later model owner reallocates setup without changing the original stable journal',
     'a genuinely busy initial workspace owner reallocates setup before attachment assertions and preserves the blocker');
+  required.push('bounded indexed source reads bounds bytes actually read when a file grows after opening and closes the handle',
+    'bounded lexical index caching evicts old scopes by content weight before the 64-entry count limit',
+    'large source read concurrency limits simultaneous distinct large reads and starts the next when a scan finishes',
+    'symbol index scan coverage is visible to the caller stops a huge directory at the entry budget, closes it, and avoids an unbounded fallback',
+    'delivers skipped-source coverage to the next real model request');
   const host = { platform: process.platform, osType: type(), osRelease: release(), arch: arch(), nodeVersion: process.version,
     sourceSha: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), workflowSha: process.env.GITHUB_SHA ?? '',
     treeClean: execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' }).trim() === '',

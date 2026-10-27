@@ -1,5 +1,5 @@
 import { promises as fs } from "node:fs";
-import { readFile, readdir, stat } from "node:fs/promises";
+import { opendir, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setImmediate as yieldToEventLoop } from "node:timers/promises";
@@ -10,17 +10,23 @@ import { getSymbolIndex, indexedSymbolSearch } from "./symbol-index.js";
 import { symbolSearchTool } from "./tools/navigation-tools.js";
 import { ToolRegistry } from "./registry.js";
 import { ToolOrchestrator } from "./orchestrator.js";
+import { readIndexedSource as readFile } from "./indexed-source-reader.js";
 
 vi.mock("node:fs/promises", async importOriginal => {
   const actual = await importOriginal<typeof import("node:fs/promises")>();
-  return { ...actual, readFile: vi.fn(actual.readFile), readdir: vi.fn(actual.readdir), stat: vi.fn(actual.stat) };
+  return { ...actual, opendir: vi.fn(actual.opendir), stat: vi.fn(actual.stat) };
+});
+vi.mock("./indexed-source-reader.js", async importOriginal => {
+  const actual = await importOriginal<typeof import("./indexed-source-reader.js")>();
+  return { ...actual, readIndexedSource: vi.fn(actual.readIndexedSource) };
 });
 const actualFs = await vi.importActual<typeof import("node:fs/promises")>("node:fs/promises");
+const actualReader = await vi.importActual<typeof import("./indexed-source-reader.js")>("./indexed-source-reader.js");
 let root: string;
 beforeEach(async () => {
   root = await fs.mkdtemp(join(tmpdir(), "ar-symbol-cancel-"));
-  vi.mocked(readFile).mockReset().mockImplementation(actualFs.readFile);
-  vi.mocked(readdir).mockReset().mockImplementation(actualFs.readdir);
+  vi.mocked(readFile).mockReset().mockImplementation(actualReader.readIndexedSource);
+  vi.mocked(opendir).mockReset().mockImplementation(actualFs.opendir);
   vi.mocked(stat).mockReset().mockImplementation(actualFs.stat);
 });
 afterEach(async () => {
@@ -54,18 +60,20 @@ describe("Codex comparison: cancellable shared symbol indexing", () => {
     await expect(getSymbolIndex(root, ".", ac.signal)).rejects.toBe(reason);
     await expect(indexedSymbolSearch({ root, symbol: "SharedSymbol", signal: ac.signal })).rejects.toBe(reason);
     expect((await invoke(ac.signal)).status).toBe("cancelled");
-    expect(readFile).not.toHaveBeenCalled(); expect(readdir).not.toHaveBeenCalled(); expect(stat).not.toHaveBeenCalled();
+    expect(readFile).not.toHaveBeenCalled(); expect(opendir).not.toHaveBeenCalled(); expect(stat).not.toHaveBeenCalled();
   });
 
-  it("stops directory enumeration before reading sources when cancelled during readdir", async () => {
+  it("closes directory enumeration before reading sources when cancelled during opendir", async () => {
     await fixture();
     const ac = new AbortController(), reason = new Error("stop during enumeration");
-    vi.mocked(readdir).mockImplementationOnce(async (...args) => {
-      const entries = await actualFs.readdir(...args); ac.abort(reason); return entries;
+    let close: ReturnType<typeof vi.spyOn> | undefined;
+    vi.mocked(opendir).mockImplementationOnce(async (...args) => {
+      const directory = await actualFs.opendir(...args); close = vi.spyOn(directory, "close"); ac.abort(reason); return directory;
     });
     await expect(getSymbolIndex(root, ".", ac.signal)).rejects.toBe(reason);
     await yieldToEventLoop();
     expect(readFile).not.toHaveBeenCalled(); expect(stat).not.toHaveBeenCalled();
+    expect(close).toHaveBeenCalledOnce();
   });
 
   it("does not read a file after cancellation arrives during its stat", async () => {
@@ -83,7 +91,7 @@ describe("Codex comparison: cancellable shared symbol indexing", () => {
     await fixture();
     const ac = new AbortController();
     vi.mocked(readFile).mockImplementationOnce(async (...args) => {
-      const contents = await actualFs.readFile(...args); ac.abort(); return contents;
+      const contents = await actualReader.readIndexedSource(...args); ac.abort(); return contents;
     });
     expect((await invoke(ac.signal)).status).toBe("cancelled");
     await yieldToEventLoop();
@@ -97,7 +105,7 @@ describe("Codex comparison: cancellable shared symbol indexing", () => {
     await fixture();
     const ac = new AbortController(), reason = new Error("stop after first source");
     vi.mocked(readFile).mockImplementationOnce(async (...args) => {
-      const contents = await actualFs.readFile(...args); ac.abort(reason); return contents;
+      const contents = await actualReader.readIndexedSource(...args); ac.abort(reason); return contents;
     });
     await expect(getSymbolIndex(root, ".", ac.signal)).rejects.toBe(reason);
     await yieldToEventLoop(); vi.mocked(readFile).mockClear();
@@ -109,7 +117,7 @@ describe("Codex comparison: cancellable shared symbol indexing", () => {
     await fixture();
     const started = deferred(), finish = deferred();
     vi.mocked(readFile).mockImplementationOnce(async (...args) => {
-      const contents = await actualFs.readFile(...args); started.release(); await finish.promise; return contents;
+      const contents = await actualReader.readIndexedSource(...args); started.release(); await finish.promise; return contents;
     });
     const a = new AbortController(), b = new AbortController();
     const first = getSymbolIndex(root, ".", a.signal).catch(error => error);
@@ -133,7 +141,7 @@ describe("Codex comparison: cancellable shared symbol indexing", () => {
     await fixture();
     const started = deferred(), finish = deferred();
     vi.mocked(readFile).mockImplementationOnce(async (...args) => {
-      const contents = await actualFs.readFile(...args); started.release(); await finish.promise; return contents;
+      const contents = await actualReader.readIndexedSource(...args); started.release(); await finish.promise; return contents;
     });
     const a = new AbortController(), b = new AbortController();
     const first = getSymbolIndex(root, ".", a.signal).catch(error => error);
@@ -154,9 +162,9 @@ describe("Codex comparison: cancellable shared symbol indexing", () => {
     await fixture();
     const oldStarted = deferred(), oldFinish = deferred(), newStarted = deferred(), newFinish = deferred();
     vi.mocked(readFile).mockImplementationOnce(async (...args) => {
-      const contents = await actualFs.readFile(...args); oldStarted.release(); await oldFinish.promise; return contents;
+      const contents = await actualReader.readIndexedSource(...args); oldStarted.release(); await oldFinish.promise; return contents;
     }).mockImplementationOnce(async (...args) => {
-      const contents = await actualFs.readFile(...args); newStarted.release(); await newFinish.promise; return contents;
+      const contents = await actualReader.readIndexedSource(...args); newStarted.release(); await newFinish.promise; return contents;
     });
     const ac = new AbortController();
     const old = getSymbolIndex(root, ".", ac.signal).catch(error => error);
@@ -190,14 +198,30 @@ describe("Codex comparison: cancellable shared symbol indexing", () => {
 
   it("yields during hot-index matching so a real timer can stop a long query", async () => {
     await fs.writeFile(join(root, "long.ts"), "// actual source line\n".repeat(199999) + "// actual source line");
-    const index = await getSymbolIndex(root), lines = index.files.get("long.ts")!.lines;
-    const firstLine = lines[0]!, lastLine = lines.at(-1)!;
-    const ac = new AbortController(); let timer: ReturnType<typeof setTimeout> | undefined, tailVisited = false;
-    Object.defineProperty(lines, 0, { get() { timer ??= setTimeout(() => ac.abort(), 0); return firstLine; } });
-    Object.defineProperty(lines, lines.length - 1, { get() { tailVisited = true; return lastLine; } });
+    const index = await getSymbolIndex(root);
+    expect(index.files.get("long.ts")?.content).toBeDefined();
+    const ac = new AbortController(); let timer: ReturnType<typeof setTimeout> | undefined;
+    vi.mocked(stat).mockImplementationOnce(async (...args) => {
+      const result = await actualFs.stat(...args);
+      timer = setTimeout(() => ac.abort(), 0);
+      return result;
+    });
     try {
       await expect(indexedSymbolSearch({ root, symbol: "not_present", signal: ac.signal })).rejects.toBeInstanceOf(DOMException);
-      expect(ac.signal.aborted).toBe(true); expect(tailVisited).toBe(false);
+      expect(ac.signal.aborted).toBe(true);
+    } finally { if (timer) clearTimeout(timer); }
+  });
+
+  it("yields while scanning a giant single line so a real timer can stop the query", async () => {
+    await fs.writeFile(join(root, "minified.ts"), "A".repeat(4 * 1024 * 1024));
+    await getSymbolIndex(root);
+    const ac = new AbortController(); let timer: ReturnType<typeof setTimeout> | undefined;
+    vi.mocked(stat).mockImplementationOnce(async (...args) => {
+      const result = await actualFs.stat(...args); timer = setTimeout(() => ac.abort(), 0); return result;
+    });
+    try {
+      await expect(indexedSymbolSearch({ root, symbol: "not_present", signal: ac.signal })).rejects.toBeInstanceOf(DOMException);
+      expect(ac.signal.aborted).toBe(true);
     } finally { if (timer) clearTimeout(timer); }
   });
 
