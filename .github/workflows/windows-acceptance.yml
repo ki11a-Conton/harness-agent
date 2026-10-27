@@ -56,7 +56,7 @@ jobs:
       - name: Bounded large-repository navigation (64 MiB V8 heap)
         run: |
           New-Item -ItemType Directory -Force .ci/windows-acceptance | Out-Null
-          node scripts/research/large-repo-20261027/probe.mjs . --expect-success | Out-File -Encoding utf8 .ci/windows-acceptance/large-repo-probe.json
+          node scripts/research/large-repo-20261027/run.mjs . .ci/windows-acceptance/large-repo-probe.json
           if ($LASTEXITCODE -ne 0) { throw 'large-repository navigation probe failed' }
       - name: Real CLI and Web coding acceptance (scripted local HTTP)
         run: node scripts/research/coding-audit-20261007/acceptance.mjs .ci/windows-acceptance/coding
