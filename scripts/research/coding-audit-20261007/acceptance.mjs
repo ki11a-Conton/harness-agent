@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { gzipSync } from 'node:zlib';
+import { allocateWebStartupFixture, WebStartupExit } from './web-startup-fixture.mjs';
 
 const cli = fileURLToPath(new URL('../../../apps/cli/dist/main.js', import.meta.url));
 const web = fileURLToPath(new URL('../../../apps/web/dist/main.js', import.meta.url));
@@ -118,24 +119,43 @@ export async function runCodingAcceptance(outputDir = '.ci/coding-acceptance', e
     // Real production Web entrypoint: HTTP message + live SSE approval + the
     // same required verification, then a restart and follow-up on that session.
     await writeFile(join(project, 'src/math.cjs'), 'module.exports.add = (a, b) => { return a - b; };\n');
-    const webData = join(root, 'web-data'); let child; let childExit; let webLogs = ''; let stream;
+    let webData = join(root, 'web-data'); let child; let childExit; let webLogs = ''; let stream;
+    runs.webStartupAttempts = [];
     const frames = [];
-    async function startWeb() {
-      child = spawn(process.execPath, [web], { cwd: project, env: { ...env, HARNESS_WEB_PORT: '0', HARNESS_DATA_DIR: webData,
+    async function launchWeb(dataDir) {
+      child = spawn(process.execPath, [web], { cwd: project, env: { ...env, HARNESS_WEB_PORT: '0', HARNESS_DATA_DIR: dataDir,
         HARNESS_VERIFY_COMMAND: 'node --test test/math.test.cjs' }, stdio: ['ignore', 'pipe', 'pipe'] });
       childExit = new Promise(resolve => child.once('close', (code, signal) => resolve({ code, signal })));
+      const attempt = { dataDir, stdout: '', stderr: '', code: null, signal: null }; runs.webStartupAttempts.push(attempt);
       return new Promise((resolve, reject) => {
         const timer = setTimeout(() => reject(new Error('Web startup timed out')), 30_000);
         let output = '';
         child.on('error', reject);
-        child.stderr.on('data', data => { webLogs += data; });
+        child.stderr.on('data', data => { webLogs += data; attempt.stderr += data; });
         child.stdout.on('data', data => {
-          output += data; webLogs += data;
+          output += data; webLogs += data; attempt.stdout += data;
           const match = /listening on (http:\/\/127\.0\.0\.1:\d+)/.exec(output);
           if (match) { clearTimeout(timer); resolve(match[1]); }
         });
-        child.once('close', () => { clearTimeout(timer); if (!output.includes('listening on')) reject(new Error('Web exited before startup')); });
+        child.once('close', (code, signal) => {
+          clearTimeout(timer); attempt.code = code; attempt.signal = signal;
+          if (!output.includes('listening on')) reject(new WebStartupExit(attempt));
+        });
       });
+    }
+    async function startWeb(allowFresh = false) {
+      const fixture = await allocateWebStartupFixture(async dataDir => {
+        webData = dataDir;
+        try { return await launchWeb(dataDir); }
+        catch (error) {
+          if (child) {
+            if (child.exitCode === null && child.signalCode === null) child.kill('SIGTERM');
+            await childExit; child = undefined;
+          }
+          throw error;
+        }
+      }, webData, attempt => join(root, `web-data-${attempt}`), allowFresh);
+      webData = fixture.dataDir; return fixture.address;
     }
     async function stopWeb() { child.kill('SIGTERM'); return childExit; }
     async function webTurn(address, text) {
@@ -172,7 +192,7 @@ export async function runCodingAcceptance(outputDir = '.ci/coding-acceptance', e
     }
     try {
       scenario = 'web-coding'; stage = 0;
-      let address = await startWeb();
+      let address = await startWeb(true);
       runs.webCoding = await webTurn(address, 'Fix addition in this project and verify.');
       check('Web coding repair performs five independently approved operations', runs.webCoding.approvals === 5);
       check('Web final completion follows a real successful verification', frames.some(frame => frame.event?.type === 'verification.completed'));
@@ -192,8 +212,13 @@ export async function runCodingAcceptance(outputDir = '.ci/coding-acceptance', e
       check('restored session runs a new turn', runs.webFollowup.event.turnId !== runs.webCoding.event.turnId);
       runs.webFinalShutdown = await stopWeb(); child = undefined;
       await writeFile(join(output, 'web-frames.json'), JSON.stringify(frames, null, 2));
-      await writeFile(join(output, 'web-process.log'), webLogs);
-    } finally { if (stream) await stream.cancel(); if (child) { child.kill('SIGTERM'); await childExit; } }
+    } finally {
+      try { if (stream) await stream.cancel(); }
+      finally {
+        try { if (child) { if (child.exitCode === null && child.signalCode === null) child.kill('SIGTERM'); await childExit; } }
+        finally { await writeFile(join(output, 'web-process.log'), webLogs); }
+      }
+    }
     const sourceSha = entrypoints.sourceSha ?? (await command('git', ['rev-parse', 'HEAD'], sourceRoot)).stdout.trim();
     const sourceTreeClean = entrypoints.sourceTreeClean ?? ((await command('git', ['status', '--porcelain'], sourceRoot)).stdout.trim() === '');
     const result = { schemaVersion: 1, kind: 'scripted-local-HTTP-engineering-acceptance', paidModelCalls: 0, sourceSha, sourceTreeClean,

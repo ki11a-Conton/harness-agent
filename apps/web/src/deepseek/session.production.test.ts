@@ -6,32 +6,36 @@ import { createHarness } from "@ar/harness";
 import { ScriptedModelProvider } from "@ar/model";
 import type { ModelEvent, SessionId } from "@ar/contracts";
 import { createDeepseekComposition } from "./composition.js";
+import { allocateAvailableLeaseFixture } from "./test-support/lease-fixture.js";
 
 const cleanup: Array<() => Promise<void>> = [];
 afterEach(async () => { for (const action of cleanup.splice(0).reverse()) await action(); });
 
 it.each([0, 2000])("production composition admits a prompt with %i ms metadata IO while official event and follow streams remain open", async metadataDelayMs => {
-  const root = await realpath(await mkdtemp(join(tmpdir(), "dsh-production-prompt-")));
-  cleanup.push(() => rm(root, { recursive: true, force: true }));
-  const cwd = join(root, "project"), dataDir = join(root, "data"); await mkdir(cwd);
-  let releaseModel!: () => void;
-  let modelReleased = false;
-  const modelGate = new Promise<void>(resolve => { releaseModel = () => { modelReleased = true; resolve(); }; });
-  cleanup.push(async () => { releaseModel(); });
-  const provider = new ScriptedModelProvider([(async function* (): AsyncIterable<ModelEvent> {
-    // Admission and subscriber shutdown must not depend on the model ending.
-    await modelGate;
-    yield { type: "text_delta", text: "Actual production answer", timestamp: 0 };
-    yield { type: "completed", result: { finishReason: "stop", text: "Actual production answer" }, timestamp: 0 };
-  })()]);
-  const base = await createHarness({ cwd, dataDir, profile: "interactive", modelProvider: provider,
-    model: { providerId: provider.id, modelId: "scripted-model" } });
-  cleanup.push(() => base.close());
-  const stack = await createDeepseekComposition(base, dataDir); cleanup.push(() => stack.close());
-  const controller = new AbortController(); cleanup.push(async () => { controller.abort(); });
+  const { stack, controller, id, releaseModel, isModelReleased } = await allocateAvailableLeaseFixture(async () => {
+    const root = await realpath(await mkdtemp(join(tmpdir(), "dsh-production-prompt-")));
+    cleanup.push(() => rm(root, { recursive: true, force: true }));
+    const cwd = join(root, "project"), dataDir = join(root, "data"); await mkdir(cwd);
+    let releaseModel!: () => void;
+    let modelReleased = false;
+    const modelGate = new Promise<void>(resolve => { releaseModel = () => { modelReleased = true; resolve(); }; });
+    cleanup.push(async () => { releaseModel(); });
+    const provider = new ScriptedModelProvider([(async function* (): AsyncIterable<ModelEvent> {
+      // Admission and subscriber shutdown must not depend on the model ending.
+      await modelGate;
+      yield { type: "text_delta", text: "Actual production answer", timestamp: 0 };
+      yield { type: "completed", result: { finishReason: "stop", text: "Actual production answer" }, timestamp: 0 };
+    })()]);
+    const base = await createHarness({ cwd, dataDir, profile: "interactive", modelProvider: provider,
+      model: { providerId: provider.id, modelId: "scripted-model" } });
+    cleanup.push(() => base.close());
+    const stack = await createDeepseekComposition(base, dataDir); cleanup.push(() => stack.close());
+    const controller = new AbortController(); cleanup.push(async () => { controller.abort(); });
+    const signal = controller.signal;
+    const created = await stack.sessions.call("session/create", { request: {} }, signal) as { sessionId: SessionId };
+    return { stack, controller, id: created.sessionId, releaseModel, isModelReleased: () => modelReleased };
+  }, cleanup);
   const signal = controller.signal;
-  const created = await stack.sessions.call("session/create", { request: {} }, signal) as { sessionId: SessionId };
-  const id = created.sessionId;
   const events = stack.sessions.stream("$events", {}, signal)[Symbol.asyncIterator]();
   const follow = stack.sessions.stream("session/follow", { request: { address: { kind: "session", sessionId: id }, assistantStream: true } }, signal)[Symbol.asyncIterator]();
   expect((await events.next()).value).toMatchObject({ type: "ready" });
@@ -58,7 +62,7 @@ it.each([0, 2000])("production composition admits a prompt with %i ms metadata I
     // lock held across a yield or an admission that waits for model completion.
     const result = await admission;
     expect(result).toEqual({ accepted: true });
-    expect(modelReleased).toBe(false);
+    expect(isModelReleased()).toBe(false);
     expect(await stack.harness.inbox.listAll(id)).toHaveLength(1);
   } finally {
     controller.abort();

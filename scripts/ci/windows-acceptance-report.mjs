@@ -102,6 +102,7 @@ function main() {
     'Gen1: claim-directory cannot bypass the lock deadline or spin forever',
     'configured ledger timeout reaches the claim lock under read-eperm without replacing its owner',
     'configured ledger timeout reaches the claim lock under reclaim-guard without replacing its owner',
+    'production composition admits a prompt with 0 ms metadata IO while official event and follow streams remain open',
     'symbol index scan coverage is visible to the caller stops a huge directory at the entry budget, closes it, and avoids an unbounded fallback',
     'delivers skipped-source coverage to the next real model request');
   const host = { platform: process.platform, osType: type(), osRelease: release(), arch: arch(), nodeVersion: process.version,

@@ -52,7 +52,7 @@ jobs:
           pnpm typecheck
           if ($LASTEXITCODE -ne 0) { throw 'typecheck failed' }
       - name: Check the acceptance report parser
-        run: node --test scripts/ci/windows-acceptance-report.test.mjs scripts/research/managed-commands-20261025/observe-read-overlap.test.mjs
+        run: node --test scripts/ci/windows-acceptance-report.test.mjs scripts/research/managed-commands-20261025/observe-read-overlap.test.mjs scripts/research/coding-audit-20261007/web-startup-fixture.test.mjs
       - name: Bounded large-repository navigation (64 MiB V8 heap)
         run: |
           New-Item -ItemType Directory -Force .ci/windows-acceptance | Out-Null
