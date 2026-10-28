@@ -21,8 +21,8 @@ export function failureReceipt(root) {
   const marker = text.lastIndexOf("Failed Tests");
   const excerpt = (marker >= 0 ? text.slice(Math.max(0, marker - 150)) : text).slice(-64000);
   const hash = bytes => createHash("sha256").update(bytes).digest("hex");
-  return { schemaVersion: "formal-failure-forensics-v1", originalRunId: "37615393968",
-    originalSourceSha: "21fa7436b1abdcbc0dcd4f8a300f171b1a35f8e0", commands,
+  return { schemaVersion: "formal-failure-forensics-v1", originalRunId: "40647821978", originalJobId: "122680647869",
+    originalSourceSha: "7f44f7869054178f09b5ccc8505cc3f899fe579a", originalCommandsRerun: false, commands,
     commandReceipt: { bytes: raw.length, sha256: hash(raw) },
     failedPhase: failed.label, log: { file: `${failed.label}.log`, bytes: log.length, sha256: hash(log) },
     excerpt, excerptSha256: hash(Buffer.from(excerpt)), paidCalls: 0 };
