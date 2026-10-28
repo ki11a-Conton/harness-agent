@@ -105,7 +105,10 @@ it("shows the principal native managed process as well as its real verifier thro
       else yield* ScriptedModelProvider.text("Command finished.");
     } }),
   };
-  const harness = await createHarness({ cwd, dataDir: join(cwd, "state"), profile: "test", modelProvider: provider, model: { providerId: provider.id, modelId: "scripted" },
+  // Exercise real execution and browser projection independently of disk
+  // durability. This case does not cover concurrent durable checkpoint writes;
+  // the persistent session/history integration suites retain that backend.
+  const harness = await createHarness({ cwd, profile: "test", modelProvider: provider, model: { providerId: provider.id, modelId: "scripted" },
     featureFlags: { skills: false, delegation: false, mcp: false, memory: false }, managedCommands: { enabled: true, maxJobMs: 5000 }, limits: { maxDurationMs: 10000, maxToolCalls: 15 },
     task: { id: "managed-status", goal: "Run and verify command", completionPolicy: { requiresVerification: true }, verification: [{ kind: "command", command: process.execPath,
       args: ["-e", "if(require('node:fs').readFileSync('executed','utf8')!=='actual')process.exit(1)"] }] } });

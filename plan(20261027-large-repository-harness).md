@@ -70,3 +70,13 @@ main `7f44f786` 的原生 Windows、Web UI、安装验收均成功；常规 CI `
 实际 I/O 控制：同一 provider、子进程与原预算下，在真实 state-dir FileHandle.sync 前延迟 250 ms 后仍执行原 sync。旧持久 fixture 触发 time_limit，新隔离 fixture 无 state-dir sync、四次真实存活观察与完整验证通过；该控制不是原 Windows 时序逐步重放，也不是生产性能提升证明。独立复核确认本用例不再验证 quiet polling 与耐久检查点组合，其他真实持久化/journal 与恢复测试不变。
 
 本地验收：本文件 6 项、工具/关闭恢复/循环合同等相关 59 项均通过，类型检查通过。慢 I/O 控制原始记录 SHA-256 `77160545f87c5bd2866688f5fee8fc0597cd2a47255ba588262703ffeddb41ef`：旧 fixture 55 次延迟 state-sync 后真实 time_limit，隔离 fixture 0 次 state-sync、verified_complete、4 次存活观察且只启动一次。独立复核无阻塞；不改变生产默认配置。
+
+## 2026-10-28：实际 managed 投影用例的资源隔离
+
+`60195d33` main CI `40651107997` 的 Windows verify job `122691120177` 触发实际 managed 投影测试。此前增加的 outcome 断言与诊断现已明确：`RESOURCE_LIMIT / time_limit`，原 `maxDurationMs=10000` 在 12,469 ms 后被检查到超限。本次首先失败的是回合预算断言，尚无证据归因于已完成验证被投影漏报；不能把这个新证据反推为旧 2ef 原记录的确定原因。
+
+- **做什么**：把实际进程到浏览器投影的行为验证同磁盘耐久性速度分开，保留完整行为与预算约束。
+- **怎么做**：仅该正例使用既有内存会话/事件后台，不运行耐久检查点；保留真实 Node 写文件、真实命令验证器、managed owner/权限/沙箱、原 5 秒 job /10 秒 turn /15 calls /30 秒测试守卫，以及两条命令、exit/state/输出/verified_complete/sourceCursor 的全部断言和失败证据。生产默认、投影算法和其他真实持久化用例不改；此用例不再覆盖执行同时写耐久 checkpoint 的组合。
+- **怎么验收**：本文件及相关 Web 历史/投影回归、类型通过；同一实际 state-dir sync 延迟控制下旧 fixture 超时、新 fixture 在原预算完成，provider/子进程不变。旧 main 全部工作流结束后才推下一提交，保留原失败；再验同 SHA 的真实 Windows 与完整 CI，不放宽断言/预算或修改观察器。
+
+本地验收：本文件与相关实际命令状态/历史投影共 29 项通过，类型检查通过。相同真实 state-dir sync 延迟 250 ms 的控制下，旧 fixture 65 次同步后 time_limit、一条命令且 verification unrun；隔离后 0 次 state-sync、两条实际命令、verification passed、sourceCursor 等于最终事件。控制原始记录 SHA-256 `595646ae8f895d2b3f1598e4894b8aa7917e24a14b95d1de71212dbe33aafdd1`；不把控制当作原 Windows 时序重放。独立复核无阻塞。
