@@ -344,7 +344,12 @@ it("quiet long command polls advance real observation tokens without triggering 
     f = await create(
       true,
       "finish",
-      { managedCommands: { enabled: true, maxJobMs: 8000 } },
+      {
+        managedCommands: { enabled: true, maxJobMs: 8000 },
+        // This case checks live observation tokens and loop recovery, not
+        // disk durability. The other cases retain the real persistent journal.
+        dataDir: undefined,
+      },
       900,
       {
         ...controlled,
@@ -363,6 +368,7 @@ it("quiet long command polls advance real observation tokens without triggering 
     );
     const outcome = await f.run();
     expect(outcome.status, JSON.stringify(outcome)).toBe("completed");
+    expect(outcome.terminationReason, JSON.stringify(outcome)).toBe("verified_complete");
     expect(liveObservations.size).toBe(4);
     expect([...liveObservations.values()].every(Boolean)).toBe(true);
     expect(await readFile(join(f.cwd, "starts"), "utf8")).toBe("1");

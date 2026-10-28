@@ -58,3 +58,15 @@ main `a1a677fc` 原生 Windows workflow `40631072210` 的所有步骤通过，�
 - **做什么**：保证小收据兼容且较大收据可完整解码，极大收据明确索引归档而非截断或使正确 verdict 失败。
 - **怎么做**：在原本单条 verdict notice 内，自适应使用原 JSON 或 gzip+base64，控制 UTF-8 不超过 3,500 字节；超出压缩预算时给出有哈希/字节数的制品索引及有界状态摘要，完整数据继续写入原收据文件。不新增 notice，不改变必选名单、verdict、48 组或任何业务限额。
 - **怎么验收**：小 JSON 兼容、当前规模必选项无损往返、Unicode 大小、极大不可压摘要和 FAIL 保持测试；类型和相关用例；新 SHA 的原生 Windows notice 必须是完整合法 JSON 并可还原两项新增必选记录。保留 a1 原始截断记录，不重跑覆盖；独立分支验证，原 main CI 完成后再快进，不取消其运行。
+
+## 2026-10-28：静默轮询用例隔离无关持久化
+
+main `7f44f786` 的原生 Windows、Web UI、安装验收均成功；常规 CI `40647821978` 的 Windows real-formal job `122680647869` 在 quiet managed poll 用例失败。只读取证 `40649925631` 从原失败制品恢复 `test.log`（364,980 字节，SHA-256 `624e7cfba8fd9320fb5e459edada84cd05f80d3c1ca095ab1ccf0fd528af2aa0`），原 outcome 明确为 `RESOURCE_LIMIT / time_limit`：4 次工具调用、4 次迭代后超过原 10,000 ms 回合预算（10,901 ms）。没有证据指向重复调用恢复误判，原失败不重跑覆盖。
+
+- **做什么**：让检查静默轮询 token 及重复检测的用例不依赖无关的磁盘耐久性速度；保留独立持久化合同覆盖。
+- **怎么做**：仅该用例使用 composition root 已支持的内存会话/事件后台并省去耐久检查点（`dataDir: undefined`），不修改生产存储默认值。实际 Node 子进程、held HTTP 连接、权限与工具流程、8 秒 job /10 秒 turn /15 calls、四次真实存活观测、单次启动与 token 唯一性全部保持，并要求最终 verified_complete。同文件其他持久化与回收验证仍真实读写 journal。
+- **怎么验收**：原用例及相关 managed command/core 循环/取消回归、类型检查；以同一 state-dir 慢磁盘 shim 对旧持久 fixture 与隔离 fixture 做真实 I/O 控制，保留原限额和同一 provider，旧例应真实 time_limit，隔离后四次观测与验证通过。控制仅证明隔离无关 I/O，不外推生产性能，也不把先前缺 outcome 的其他历史失败认定同根因。新 SHA 通过原生 Windows 和完整正式 CI；旧 main 的四工作流完成后才能推送，避免取消原始记录。
+
+实际 I/O 控制：同一 provider、子进程与原预算下，在真实 state-dir FileHandle.sync 前延迟 250 ms 后仍执行原 sync。旧持久 fixture 触发 time_limit，新隔离 fixture 无 state-dir sync、四次真实存活观察与完整验证通过；该控制不是原 Windows 时序逐步重放，也不是生产性能提升证明。独立复核确认本用例不再验证 quiet polling 与耐久检查点组合，其他真实持久化/journal 与恢复测试不变。
+
+本地验收：本文件 6 项、工具/关闭恢复/循环合同等相关 59 项均通过，类型检查通过。慢 I/O 控制原始记录 SHA-256 `77160545f87c5bd2866688f5fee8fc0597cd2a47255ba588262703ffeddb41ef`：旧 fixture 55 次延迟 state-sync 后真实 time_limit，隔离 fixture 0 次 state-sync、verified_complete、4 次存活观察且只启动一次。独立复核无阻塞；不改变生产默认配置。
