@@ -28,6 +28,7 @@ import {
 import { redactSecrets } from "@ar/security";
 import { buildProviderDiagnosticBundle } from "./provider-diagnostics.js";
 import { resolveOpenAIChatCompatibility, type OpenAIChatCompatibility } from "./openai-chat-compatibility.js";
+import { SseEventDecoder } from "./sse-event-decoder.js";
 
 /** Optional OpenAI-compatible provider settings, passable via ProviderConfig. */
 export interface OpenAIProviderConfig {
@@ -574,8 +575,8 @@ async function* streamChatCompletion(
     return;
   }
 
-  const decoder = new TextDecoder();
-  let buffer = "";
+  const decoder = new SseEventDecoder();
+  let payloads: string[] = [];
   let streamEnded = false;
   let text = "";
   /** Accumulated thinking-mode reasoning content (deepseek reasoning_content). */
@@ -726,7 +727,7 @@ async function* streamChatCompletion(
     while (!finished && !aborted) {
       let events: ModelEvent[];
       let finalFrame: boolean;
-      if (streamEnded && buffer.length === 0) {
+      if (streamEnded && payloads.length === 0) {
         // EOF belongs to the same guarded event path as DONE and usage.
         // In particular, a caller can abort after a yielded tool delta.
         events = normalReason === undefined
@@ -734,7 +735,7 @@ async function* streamChatCompletion(
           : finishEvents(normalReason);
         finalFrame = true;
       } else {
-        while (buffer.indexOf("\n") < 0 && !streamEnded) {
+        while (payloads.length === 0 && !streamEnded) {
           const outcome = await Promise.race([reader.read(), abortSignal]);
           if (outcome === "abort") {
             aborted = true;
@@ -742,18 +743,14 @@ async function* streamChatCompletion(
           }
           if (outcome.done) {
             streamEnded = true;
-            buffer += decoder.decode();
+            payloads = decoder.finish();
             break;
           }
-          buffer += decoder.decode(outcome.value, { stream: true });
+          payloads = decoder.push(outcome.value);
         }
         if (aborted) break;
-        if (streamEnded && buffer.length === 0) continue;
-        const nl = buffer.indexOf("\n");
-        const line = nl >= 0 ? buffer.slice(0, nl).replace(/\r$/, "") : buffer;
-        buffer = nl >= 0 ? buffer.slice(nl + 1) : "";
-        if (!line.startsWith("data:")) continue;
-        const payload = line.slice("data:".length).trim();
+        if (streamEnded && payloads.length === 0) continue;
+        const payload = payloads.shift()!.trim();
         if (!payload) continue;
         const parsed = processData(payload);
         events = parsed.events;

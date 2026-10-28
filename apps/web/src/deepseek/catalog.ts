@@ -437,8 +437,16 @@ export function createCatalogService(host: CatalogHost) {
           }
         }
         if (request.baseURL === undefined) throw new RemoteFailure("llm/model-discovery-rejected", "An unknown provider requires an endpoint", { settingsNs: "llm-pi-ai" });
-        const url = `${endpoint(text(request.baseURL, "baseURL", 2000))}/models`;
-        const secret = request.apiKey === undefined || request.apiKey === "" ? undefined : text(request.apiKey, "apiKey", 64_000);
+        const baseURL = endpoint(text(request.baseURL, "baseURL", 2000));
+        const url = `${baseURL}/models`;
+        let secret = request.apiKey === undefined || request.apiKey === "" ? undefined : text(request.apiKey, "apiKey", 64_000);
+        // An existing provider's edit card leaves its saved password blank.
+        // Reuse that credential only for its exact configured endpoint: editing
+        // even the path or port must never send the old key to another service.
+        if (secret === undefined && request.provider !== undefined) {
+          const profile = (await resolvedModelProfiles(signal))[text(request.provider, "provider", 200)];
+          if (profile?.api === "openai-completions" && profile.baseURL !== undefined && endpoint(profile.baseURL) === baseURL) secret = profile.apiKey;
+        }
         if (secret !== undefined && /[\r\n\u0000]/u.test(secret)) bad("Credential must be a single-line value");
         if (!host.registerTool || !host.executeTool) throw new RemoteFailure("llm/model-discovery-rejected", "Controlled network discovery is unavailable", { settingsNs: "llm-pi-ai" });
         const ticket = randomUUID(); discoverySecrets.set(ticket, secret);

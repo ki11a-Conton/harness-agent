@@ -542,6 +542,7 @@ export class AgentRuntime {
   private readonly policyDriftReports = new Map<SessionId, { hash: string; promise: Promise<void> }>();
   private readonly modelSelectionLocks = new Map<SessionId, Promise<unknown>>();
   private readonly publishedModelSelections = new Map<SessionId, string>();
+  private readonly terminalReconciliations = new Map<SessionId, Promise<void>>();
 
   private async withModelSelectionLock<T>(id: SessionId, action: () => Promise<T>): Promise<T> {
     const previous = this.modelSelectionLocks.get(id) ?? Promise.resolve();
@@ -1029,6 +1030,8 @@ export class AgentRuntime {
     if (session.status !== "active") {
       throw new AgentError(errorInfo("INTERNAL_ERROR", `session ${sessionId} is ${session.status}`));
     }
+    // Finish a previously committed outcome before admitting a new prompt.
+    await this.reconcileTerminalTurns(sessionId);
     const input: UserMessage = { sessionId, text };
     const turn: Turn = {
       id: newTurnId(),
@@ -1048,6 +1051,59 @@ export class AgentRuntime {
     });
     await this.emit(sessionId, "turn.started", { turnId: turn.id, text }, turn.id);
     return turn;
+  }
+
+  /** Settle an actor reservation revoked before execution. This is a durable
+   * cancellation only: it never enters the model/tool loop or refunds budgets.
+   * A previously started turn must use its ordinary cancellation/recovery path. */
+  async cancelUnstartedTurn(sessionId: SessionId, turnId: TurnId): Promise<TurnOutcome> {
+    if (this.runningTurns.has(sessionId)) throw new AgentError(errorInfo("SESSION_BUSY", `session ${sessionId} already has an active turn`));
+    this.runningTurns.set(sessionId, turnId);
+    try {
+      const session = await this.store.getSession(sessionId), turn = await this.store.getTurn(turnId);
+      if (session === undefined || turn === undefined || turn.sessionId !== sessionId) {
+        throw new AgentError(errorInfo("INTERNAL_ERROR", `turn ${turnId} does not belong to session ${sessionId}`));
+      }
+      if (turn.status === "running" && (await this.events.list(sessionId)).some(event => event.turnId === turnId
+        && (event.type === "model.started" || event.type === "tool.requested"))) {
+        throw new AgentError(errorInfo("RESUME_FAILED", `turn ${turnId} has already started; refusing an unstarted cancellation`));
+      }
+      if (turn.status === "waiting_for_user" || turn.status === "waiting_for_approval") {
+        throw new AgentError(errorInfo("RESUME_FAILED", `turn ${turnId} is paused; use the ordinary cancellation path`));
+      }
+      const agent = await this.resolveAgent(session);
+      const state = new AgentState(sessionId, agent.id, this.now); state.beginTurn(turnId);
+      const outcome = await this.recoveryController.finishTurn({ sessionId, turnId, session, agent, signal: new AbortController().signal },
+        "cancelled", state, newWorkingState(turn.input.text), undefined, "cancelled", []);
+      await this.flushDurability(sessionId);
+      return outcome;
+    } finally {
+      if (this.runningTurns.get(sessionId) === turnId) this.runningTurns.delete(sessionId);
+    }
+  }
+
+  /** Cancel only a genuine recoverable user pause. Restore its actual ledger
+   * and progress without entering execution, model/verification limits, memory
+   * retrieval, reflection or the sampling loop. Spent budgets remain intact. */
+  async cancelPausedTurn(sessionId: SessionId, turnId: TurnId): Promise<TurnOutcome> {
+    if (this.runningTurns.has(sessionId)) throw new AgentError(errorInfo("SESSION_BUSY", `session ${sessionId} already has an active turn`));
+    this.runningTurns.set(sessionId, turnId);
+    try {
+      const turn = await this.store.getTurn(turnId);
+      if (turn === undefined || turn.sessionId !== sessionId || turn.status !== "waiting_for_user") {
+        await this.reconcileTerminalTurns(sessionId);
+        throw new AgentError(errorInfo("RESUME_FAILED", `turn ${turnId} is not a recoverable user pause`));
+      }
+      const signal = AbortSignal.abort();
+      const options = await this.restoreQuestionPause(sessionId, turnId, signal);
+      const { ctx, state, working, toolLedger } = await this.prepareTurn(sessionId, turnId, signal, options);
+      const outcome = await this.recoveryController.finishTurn(ctx, "cancelled", state, working, undefined, "cancelled", toolLedger);
+      this.pausedTurns.delete(turnId);
+      await this.flushDurability(sessionId);
+      return outcome;
+    } finally {
+      if (this.runningTurns.get(sessionId) === turnId) this.runningTurns.delete(sessionId);
+    }
   }
 
   /** Actor admission query; this grants no authority to execute or mutate. */
@@ -1084,8 +1140,9 @@ export class AgentRuntime {
     this.runningTurns.set(sessionId, turnId);
     try {
       const stored = await this.store.getTurn(turnId);
-      if (stored?.status === "completed" || stored?.status === "cancelled") throw new AgentError(errorInfo("INTERNAL_ERROR", `turn ${turnId} is terminal (${stored.status}); create a new turn instead of replaying it`));
       if (stored?.sessionId !== sessionId) throw new AgentError(errorInfo("INTERNAL_ERROR", `turn ${turnId} does not belong to session ${sessionId}`));
+      await this.reconcileTerminalTurns(sessionId);
+      if (stored.terminalOutcome !== undefined || stored.status === "completed" || stored.status === "cancelled") throw new AgentError(errorInfo("INTERNAL_ERROR", `turn ${turnId} is terminal (${stored.status}); create a new turn instead of replaying it`));
       const continuing = stored.status === "waiting_for_user";
       const restoration = continuing ? { options: await this.restoreQuestionPause(sessionId, turnId, signal), continuing: true }
         : await this.restoreInterruptedTurn(sessionId, turnId, opts);
@@ -1113,12 +1170,7 @@ export class AgentRuntime {
       // (`WHERE sequence = MAX_SAFE_INTEGER` never matches), so the guard
       // degraded to a bare WAL checkpoint and could never fail. A session with
       // no committed events has nothing to fence.
-      if (this.durabilityFence !== undefined) {
-        const lastCommitted = (await this.events.nextSequence(sessionId)) - 1;
-        if (lastCommitted >= 0) {
-          await this.durabilityFence.flushThrough(sessionId, lastCommitted);
-        }
-      }
+      await this.flushDurability(sessionId);
       return outcome;
     } finally {
       this.activeBudgetUsage.delete(sessionId);
@@ -1126,6 +1178,17 @@ export class AgentRuntime {
       if (this.runningTurns.get(sessionId) === turnId) {
         this.runningTurns.delete(sessionId);
       }
+    }
+  }
+
+  private async flushDurability(sessionId: SessionId): Promise<void> {
+    if (this.durabilityFence === undefined) return;
+    try {
+      const lastCommitted = (await this.events.nextSequence(sessionId)) - 1;
+      if (lastCommitted >= 0) await this.durabilityFence.flushThrough(sessionId, lastCommitted);
+    } catch (error) {
+      this.recoveryController.invalidateTerminalSession(sessionId);
+      throw error;
     }
   }
 
@@ -1242,7 +1305,7 @@ export class AgentRuntime {
     const turnBreach = continuing ? undefined : budget.onTurnStart();
     if (turnBreach !== undefined) {
       await this.emit(sessionId, "run.limit_reached", { ...turnBreach, used: turnBreach.used }, turnId);
-      return this.recoveryController.finishTurn(
+      return await this.recoveryController.finishTurn(
         ctx, "failed", state, working,
         errorInfo("RESOURCE_LIMIT", `maxTurns (${turnBreach.allowed}) reached`),
         "agent_limit",
@@ -1256,14 +1319,14 @@ export class AgentRuntime {
       const restoredBreach = budget.onModelUsage(0, 0, 0) ?? budget.onOutput(0);
       if (restoredBreach !== undefined) {
         await this.emit(sessionId, "run.limit_reached", { ...restoredBreach }, turnId);
-        return this.recoveryController.finishTurn(ctx, "failed", state, working,
+        return await this.recoveryController.finishTurn(ctx, "failed", state, working,
           errorInfo("RESOURCE_LIMIT", `${restoredBreach.limit} (${restoredBreach.allowed}) exceeded before recovery (${restoredBreach.used})`),
           "agent_limit", toolLedger);
       }
     }
     if (verificationFailures >= this.maxVerificationFailures) {
       await this.emit(sessionId, "run.limit_reached", { limit: "maxVerificationFailures", used: verificationFailures, allowed: this.maxVerificationFailures }, turnId);
-      return this.recoveryController.finishTurn(ctx, "failed", state, working,
+      return await this.recoveryController.finishTurn(ctx, "failed", state, working,
         errorInfo("VERIFICATION_FAILED", working.failures.at(-1) ?? "verification retry budget exhausted before recovery"),
         "verification_failed", toolLedger);
     }
@@ -1279,17 +1342,17 @@ export class AgentRuntime {
           ...(this.memoryRetrievalTimeoutMs !== undefined ? { timeoutMs: this.memoryRetrievalTimeoutMs } : {}),
         });
         if (signal.aborted || retrieved.status === "cancelled") {
-          return this.recoveryController.finishTurn(ctx, "cancelled", state, working, undefined, "cancelled", toolLedger);
+          return await this.recoveryController.finishTurn(ctx, "cancelled", state, working, undefined, "cancelled", toolLedger);
         }
         const durationBreach = budget.onDurationCheck();
         if (durationBreach !== undefined) {
           await this.emit(sessionId, "run.limit_reached", { ...durationBreach }, turnId);
-          return this.recoveryController.finishTurn(ctx, "failed", state, working,
+          return await this.recoveryController.finishTurn(ctx, "failed", state, working,
             errorInfo("RESOURCE_LIMIT", `maxDurationMs (${durationBreach.allowed}ms) exceeded after ${durationBreach.used}ms`),
             "time_limit", toolLedger);
         }
         if (retrieved.status === "rejected") {
-          return this.recoveryController.finishTurn(ctx, "failed", state, working,
+          return await this.recoveryController.finishTurn(ctx, "failed", state, working,
             errorInfo("INTERNAL_ERROR", "memory retrieval failed"), "provider_error", toolLedger);
         }
         if (retrieved.status === "busy" || retrieved.status === "timeout") {
@@ -1300,7 +1363,7 @@ export class AgentRuntime {
           if (this.onMemoryRetrieved !== undefined) {
             try { await this.onMemoryRetrieved({ sessionId, turnId, blocks: retrieved.value }); }
             catch {
-              return this.recoveryController.finishTurn(ctx, "failed", state, working,
+              return await this.recoveryController.finishTurn(ctx, "failed", state, working,
                 errorInfo("INTERNAL_ERROR", "memory feedback failed"), "provider_error", toolLedger);
             }
           }
@@ -1321,7 +1384,7 @@ export class AgentRuntime {
       let stepIndex = state.getIteration();
       for (let i = state.getIteration(); i < this.maxIterationsPerTurn; i++) {
         if (signal.aborted) {
-          return this.recoveryController.finishTurn(ctx, "cancelled", state, working, undefined, "cancelled", toolLedger);
+          return await this.recoveryController.finishTurn(ctx, "cancelled", state, working, undefined, "cancelled", toolLedger);
         }
 
         // P1-3 periodic checkpoint: every N model iterations at a safe
@@ -1337,7 +1400,7 @@ export class AgentRuntime {
         const durationBreach = budget.onDurationCheck();
         if (durationBreach !== undefined) {
           await this.emit(sessionId, "run.limit_reached", { ...durationBreach }, turnId);
-          return this.recoveryController.finishTurn(
+          return await this.recoveryController.finishTurn(
             ctx, "failed", state, working,
             errorInfo("RESOURCE_LIMIT", `maxDurationMs (${durationBreach.allowed}ms) exceeded after ${durationBreach.used}ms`),
             "time_limit",
@@ -1462,10 +1525,10 @@ export class AgentRuntime {
         );
 
         if (modelResult.status === "cancelled") {
-          return this.recoveryController.finishTurn(ctx, "cancelled", state, working, undefined, "cancelled", toolLedger);
+          return await this.recoveryController.finishTurn(ctx, "cancelled", state, working, undefined, "cancelled", toolLedger);
         }
         if (modelResult.status === "failed") {
-          return this.recoveryController.finishTurn(ctx, "failed", state, working, modelResult.error, "model_error", toolLedger);
+          return await this.recoveryController.finishTurn(ctx, "failed", state, working, modelResult.error, "model_error", toolLedger);
         }
         if (modelResult.status === "rebuild_context") {
           // P23-6: the model-visible world changed (reactive compaction) — the
@@ -1549,7 +1612,7 @@ export class AgentRuntime {
             const spawnBreach = budget.onSubagentSpawn();
             if (spawnBreach !== undefined) {
               await this.emit(sessionId, "run.limit_reached", { ...spawnBreach }, turnId);
-              return this.recoveryController.finishTurn(
+              return await this.recoveryController.finishTurn(
                 ctx, "failed", state, working,
                 errorInfo("RESOURCE_LIMIT", `maxSubagents (${spawnBreach.allowed}) reached`),
                 "agent_limit",
@@ -1574,7 +1637,7 @@ export class AgentRuntime {
         const toolAction = await this.handleToolResults(
           ctx, executed, working, state, toolLedger, priorBlocks, lastReportTokens, budget,
         );
-        if (toolBreach !== undefined) return this.recoveryController.finishTurn(
+        if (toolBreach !== undefined) return await this.recoveryController.finishTurn(
           ctx, signal.aborted ? "cancelled" : "failed", state, working,
           signal.aborted ? undefined : errorInfo("RESOURCE_LIMIT", `maxToolCalls (${toolBreach.allowed}) reached`),
           signal.aborted ? "cancelled" : "tool_limit", toolLedger,
@@ -1586,7 +1649,7 @@ export class AgentRuntime {
 
       const info = errorInfo("RESOURCE_LIMIT", `maxIterationsPerTurn (${this.maxIterationsPerTurn}) reached`);
       await this.emit(sessionId, "run.limit_reached", { limit: "maxIterationsPerTurn", used: this.maxIterationsPerTurn }, turnId);
-      return this.recoveryController.finishTurn(ctx, "failed", state, working, info, "agent_limit", toolLedger);
+      return await this.recoveryController.finishTurn(ctx, "failed", state, working, info, "agent_limit", toolLedger);
     } finally {
       await this.withModelSelectionLock(sessionId, async () => {
         const current = await this.store.getSession(sessionId);
@@ -2085,6 +2148,7 @@ export class AgentRuntime {
   async resumeTurn(sessionId: SessionId, signal: AbortSignal): Promise<ResumeResult> {
     const session = await this.store.getSession(sessionId);
     if (!session) throw new AgentError(errorInfo("INTERNAL_ERROR", `unknown session ${sessionId}`));
+    await this.reconcileTerminalTurns(sessionId);
     const agent = await this.resolveAgent(session);
     if (this.checkpointStore === undefined) {
       throw new AgentError(
@@ -2099,8 +2163,20 @@ export class AgentRuntime {
     }
 
     const turnId = checkpoint.turnId;
-    const { working, committedSideEffects, unresolvedTools, replayedEventCount } =
+    const { working, committedSideEffects, replayedToolLedger, unresolvedTools, replayedEventCount } =
       await this.recoveryController.reconstructResumeState(sessionId, turnId, checkpoint);
+    const original = turnId === undefined ? undefined : await this.store.getTurn(turnId);
+    if (original?.terminalOutcome !== undefined) {
+      // The previous run committed its result before losing its response.
+      // Return that result after read-only reconstruction; no new task, model
+      // call, verification, reconciliation decision or reflection is created.
+      const state = new AgentState(sessionId, agent.id, this.now); state.beginTurn(original.id);
+      state.seedProgress(checkpoint.iteration, (checkpoint.toolCallsExecuted ?? checkpoint.toolLedger.length) + replayedToolLedger.length);
+      const outcome = await this.recoveryController.finishTurn({ sessionId, turnId: original.id, session, agent, signal },
+        original.terminalOutcome.status, state, working);
+      return { sessionId, checkpointId: checkpoint.checkpointId, turnId: original.id, state: working,
+        committedSideEffects, unresolvedTools, replayedEventCount, outcome };
+    }
 
     // P2-40: each started-but-unconfirmed tool that must be reconciled is its
     // own reconciliation retry-kind event. Reconciliation is never auto-redone
@@ -2303,11 +2379,27 @@ export class AgentRuntime {
     return this.agents.get(agentId);
   }
 
+  /** Repair committed terminal events only. Session loading/queue hydration
+   * must settle this outbox before acknowledging a prompt or executing work. */
+  async reconcileTerminalTurns(sessionId: SessionId): Promise<void> {
+    const previous = this.terminalReconciliations.get(sessionId) ?? Promise.resolve();
+    // Each caller observes its own failure. A later repair must still run
+    // after that rejection, rather than inheriting a permanently failed queue.
+    const reconcile = async () => {
+      if (await this.recoveryController.reconcileTerminalTurns(sessionId)) await this.flushDurability(sessionId);
+    };
+    const current = previous.then(reconcile, reconcile);
+    this.terminalReconciliations.set(sessionId, current);
+    try { await current; }
+    finally { if (this.terminalReconciliations.get(sessionId) === current) this.terminalReconciliations.delete(sessionId); }
+  }
+
   /** Read the same persisted effective policy runTurn uses. A host branching
    * a session must not substitute the current registry's wider definition. */
   async getSessionAgent(sessionId: SessionId): Promise<AgentDefinition> {
     const session = await this.store.getSession(sessionId);
     if (session === undefined) throw new AgentError(errorInfo("INTERNAL_ERROR", `unknown session ${sessionId}`));
+    await this.reconcileTerminalTurns(sessionId);
     return this.resolveAgent(session);
   }
 

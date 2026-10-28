@@ -1,6 +1,8 @@
 import type { AgentId, EventId, SessionId, TurnId } from "./ids.js";
 import type { ModelRef } from "./model.js";
 import type { Message, UserMessage } from "./message.js";
+import type { AgentErrorInfo } from "./errors.js";
+import type { CompletionEvidence, FalseCompleteGrade, TerminationReason } from "./termination.js";
 
 export type SessionStatus = "active" | "completed" | "failed" | "cancelled";
 
@@ -27,6 +29,20 @@ export interface Session {
 
 export type TurnStatus = "running" | "waiting_for_user" | "waiting_for_approval" | "completed" | "failed" | "cancelled";
 
+/** First terminal commit and its event outbox share the same durable row.
+ * Legacy turns have no outbox: their missing evidence must never be invented. */
+export interface TerminalTurnOutcome {
+  version: 1;
+  eventId: EventId;
+  timestamp: number;
+  status: "completed" | "failed" | "cancelled";
+  statusDetail: "completed" | "failed_no_effect" | "failed_with_effects" | "cancelled_no_effect" | "cancelled_with_effects" | "blocked";
+  error?: AgentErrorInfo;
+  terminationReason?: TerminationReason;
+  grade?: FalseCompleteGrade;
+  completionEvidence?: CompletionEvidence;
+}
+
 export interface Turn {
   id: TurnId;
   sessionId: SessionId;
@@ -34,6 +50,7 @@ export interface Turn {
   status: TurnStatus;
   startedAt: number;
   completedAt?: number;
+  terminalOutcome?: TerminalTurnOutcome;
 }
 
 export interface SessionStore {

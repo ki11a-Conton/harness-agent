@@ -14,6 +14,8 @@
  * runtime cycle); this controller only holds the leaf recovery helpers.
  */
 
+import { createHash } from "node:crypto";
+import { isDeepStrictEqual } from "node:util";
 import {
   applyWorkingStateMutation,
   buildCheckpoint,
@@ -22,6 +24,8 @@ import {
   errorInfo,
   gradeCompletion,
   isAskReason,
+  isTerminationReason,
+  newEventId,
   newAskId,
   newCheckpointId,
 } from "@ar/contracts";
@@ -39,6 +43,7 @@ import type {
   SessionId,
   SessionStore,
   TerminationReason,
+  TerminalTurnOutcome,
   ToolCall,
   ToolCallId,
   ToolExecutionRecord,
@@ -81,14 +86,35 @@ export interface RecoveryControllerDeps {
   failAt?: (point: FaultPoint, ctx: FaultPointContext) => Promise<void>;
 }
 
+/** Runtime/actor ownership prevents cross-process writers. Share the local
+ * session lock across controllers using the same store, including restart tests. */
+const terminalLocks = new WeakMap<SessionStore, Map<SessionId, Promise<void>>>();
+// A local store may be shared by multiple runtime/controllers. Advance a
+// bounded generation before every new terminal commit so another controller's
+// warm session cache cannot hide a newly pending outbox. Eviction only causes
+// another safe read; monotonically increasing generations never alias.
+const terminalVersions = new WeakMap<SessionStore, { next: number; sessions: Map<SessionId, number> }>();
+function terminalVersion(store: SessionStore, sessionId: SessionId, advance = false): number {
+  let state = terminalVersions.get(store);
+  if (state === undefined) { state = { next: 0, sessions: new Map() }; terminalVersions.set(store, state); }
+  let version = state.sessions.get(sessionId);
+  if (advance || version === undefined) version = ++state.next;
+  state.sessions.delete(sessionId); state.sessions.set(sessionId, version);
+  if (state.sessions.size > 1024) state.sessions.delete(state.sessions.keys().next().value!);
+  return version;
+}
+
 export class RecoveryController {
+  private readonly publishedTerminals = new Map<TurnId, string>();
+  private readonly reconciledSessions = new Map<SessionId, number>();
+
   constructor(private readonly deps: RecoveryControllerDeps) {}
 
   /**
    * P15-4: exactly-once terminal transitions. A turn whose stored status is
-   * already terminal has already emitted its terminal record+event — repeated
-   * finishTurn calls (duplicate cancel, duplicate approval reply, retry after
-   * a crash that resumed a completed turn) must not re-emit.
+   * already terminal owns the first durable result. Its outbox may still
+   * need publication after a crash; repeated finishTurn calls reconcile that
+   * identity and never replace it with a later result or a second event.
    */
   private static isTerminal(status: TurnStatus): boolean {
     return status === "completed" || status === "failed" || status === "cancelled";
@@ -130,6 +156,112 @@ export class RecoveryController {
     return committedEffect ? "failed_with_effects" : "failed_no_effect";
   }
 
+  private async withTerminalLock<T>(sessionId: SessionId, action: () => Promise<T>): Promise<T> {
+    let locks = terminalLocks.get(this.deps.store);
+    if (locks === undefined) { locks = new Map(); terminalLocks.set(this.deps.store, locks); }
+    const previous = locks.get(sessionId);
+    let release!: () => void;
+    const current = new Promise<void>(resolve => { release = resolve; });
+    locks.set(sessionId, current);
+    await previous;
+    try { return await action(); }
+    finally { release(); if (locks.get(sessionId) === current) locks.delete(sessionId); }
+  }
+
+  /** Publish only the first durable terminal intent. A stable event identity
+   * repairs append-before-error as well as commit-before-error without replaying
+   * model/tool work. No intent on a legacy row means no evidence to reconstruct. */
+  private terminalSignature(turn: Turn): string {
+    return createHash("sha256").update(JSON.stringify([turn.sessionId, turn.status, turn.completedAt, turn.terminalOutcome])).digest("hex");
+  }
+
+  private rememberTerminal(turnId: TurnId, signature: string): void {
+    this.publishedTerminals.delete(turnId);
+    this.publishedTerminals.set(turnId, signature);
+    if (this.publishedTerminals.size > 1024) this.publishedTerminals.delete(this.publishedTerminals.keys().next().value!);
+  }
+
+  private async publishTerminal(turn: Turn, batch?: Map<string, AgentEvent>): Promise<void> {
+    const outcome = turn.terminalOutcome;
+    if (outcome === undefined) return;
+    const signature = this.terminalSignature(turn);
+    if (this.publishedTerminals.get(turn.id) === signature) return;
+    const details = outcome.status === "completed" ? ["completed"]
+      : outcome.status === "failed" ? ["failed_no_effect", "failed_with_effects", "blocked"]
+      : ["cancelled_no_effect", "cancelled_with_effects"];
+    if (outcome.version !== 1 || !RecoveryController.isTerminal(turn.status) || outcome.status !== turn.status
+      || typeof outcome.eventId !== "string" || !outcome.eventId || !Number.isFinite(outcome.timestamp) || outcome.timestamp < 0
+      || turn.completedAt !== outcome.timestamp || !details.includes(outcome.statusDetail)
+      || (outcome.terminationReason !== undefined && !isTerminationReason(outcome.terminationReason))
+      || (outcome.grade !== undefined && (outcome.terminationReason === undefined
+        || outcome.grade !== gradeCompletion(outcome.terminationReason, outcome.completionEvidence)))) {
+      throw new AgentError(errorInfo("INTERNAL_ERROR", "corrupt durable terminal outcome"));
+    }
+    const { version: _version, eventId, timestamp, ...result } = outcome;
+    const payload = { turnId: turn.id, ...result };
+    const type = outcome.status === "completed" ? "turn.completed" : outcome.status === "cancelled" ? "turn.cancelled" : "turn.failed";
+    const existing = batch === undefined
+      ? (await this.deps.events.list(turn.sessionId)).find(event => event.id === eventId) : batch.get(eventId);
+    if (existing !== undefined) {
+      if (existing.type !== type || existing.turnId !== turn.id || existing.timestamp !== timestamp
+        || !isDeepStrictEqual(existing.payload, payload)) {
+        throw new AgentError(errorInfo("INTERNAL_ERROR", "conflicting durable terminal outcome event"));
+      }
+      this.rememberTerminal(turn.id, signature);
+      return;
+    }
+    const appended = await this.deps.events.appendNew({ id: eventId, sessionId: turn.sessionId, turnId: turn.id, timestamp, type, payload });
+    batch?.set(eventId, appended);
+    this.rememberTerminal(turn.id, signature);
+  }
+
+  async reconcileTerminalTurn(sessionId: SessionId, turnId: TurnId): Promise<void> {
+    await this.withTerminalLock(sessionId, async () => {
+      const turn = await this.deps.store.getTurn(turnId);
+      if (turn === undefined || turn.sessionId !== sessionId) throw new AgentError(errorInfo("INTERNAL_ERROR", "terminal turn session mismatch"));
+      await this.publishTerminal(turn);
+    });
+  }
+
+  private rememberSession(sessionId: SessionId, version: number): void {
+    this.reconciledSessions.delete(sessionId); this.reconciledSessions.set(sessionId, version);
+    if (this.reconciledSessions.size > 1024) this.reconciledSessions.delete(this.reconciledSessions.keys().next().value!);
+  }
+
+  invalidateTerminalSession(sessionId: SessionId): void {
+    this.reconciledSessions.delete(sessionId);
+  }
+
+  private async withdrawCancelledAsks(turn: Turn, pending?: readonly AskUserRequest[]): Promise<void> {
+    if (turn.terminalOutcome?.status !== "cancelled" || this.deps.askUserStore === undefined) return;
+    for (const ask of pending ?? await this.deps.askUserStore.listPending(turn.sessionId)) {
+      if (ask.turnId === turn.id) await this.deps.askUserStore.markWithdrawn(ask.id);
+    }
+  }
+
+  async reconcileTerminalTurns(sessionId: SessionId): Promise<boolean> {
+    return this.withTerminalLock(sessionId, async () => {
+      const version = terminalVersion(this.deps.store, sessionId);
+      if (this.reconciledSessions.get(sessionId) === version) return false;
+      const recorded = (await this.deps.store.listTurns(sessionId)).filter(turn => turn.terminalOutcome !== undefined);
+      const pending = recorded.filter(turn => this.publishedTerminals.get(turn.id) !== this.terminalSignature(turn));
+      if (pending.length === 0) { this.rememberSession(sessionId, version); return recorded.length > 0; }
+      // One journal read per recovery batch, including long-lived sessions.
+      // The shared session lock keeps this snapshot current across controllers.
+      const events = new Map((await this.deps.events.list(sessionId)).map(event => [event.id as string, event]));
+      const asks = pending.some(turn => turn.terminalOutcome?.status === "cancelled")
+        ? await this.deps.askUserStore?.listPending(sessionId) ?? [] : [];
+      for (const turn of pending) {
+        if (turn.sessionId !== sessionId) throw new AgentError(errorInfo("INTERNAL_ERROR", "terminal turn session mismatch"));
+        await this.publishTerminal(turn, events);
+        try { await this.withdrawCancelledAsks(turn, asks); }
+        catch (error) { this.publishedTerminals.delete(turn.id); throw error; }
+      }
+      this.rememberSession(sessionId, version);
+      return true;
+    });
+  }
+
   async finishTurn(
     ctx: TurnContext,
     status: TurnOutcomeStatus,
@@ -138,69 +270,58 @@ export class RecoveryController {
     error?: ReturnType<typeof errorInfo>,
     terminationReason?: TerminationReason,
     ledger?: ToolExecutionRecord[],
-    /** P19-1: verification evidence (gate checks passed/total). When present,
-     *  the terminal grade is derived from it — `verified_complete` only when
-     *  every check passed, `verified_partial` when some did, and the honest
-     *  `unverified_complete` for a bare model stop with no gate run. */
     completionEvidence?: CompletionEvidence,
   ): Promise<TurnOutcome> {
-    const { sessionId, turnId } = ctx;
-    const turn = await this.deps.store.getTurn(turnId);
-    if (!turn) throw new AgentError(errorInfo("INTERNAL_ERROR", `unknown turn ${turnId}`));
-    // P19-1: grade the completion ONCE here, from the bounded reason + the
-    // gate's evidence. Every terminal event/outcome below carries the same
-    // grade — no consumer recomputes or guesses it.
-    const grade: FalseCompleteGrade | undefined =
-      terminationReason !== undefined ? gradeCompletion(terminationReason, completionEvidence) : undefined;
-    // P15-4: terminal lifecycle EXACTLY ONCE. A turn whose status is already
-    // terminal (finished earlier in this process, or restored from a crashed
-    // run via checkpoint/resume) must NOT produce a second terminal record or
-    // a second terminal event. Repeated cancel, repeated approval reply, or a
-    // retry-after-crash all converge here — the first terminal transition wins
-    // and every later call returns the same outcome without re-emission.
-    if (RecoveryController.isTerminal(turn.status)) {
-      const statusDetail = this.classifyStatusDetail(turn.status as TurnOutcomeStatus, ledger ?? []);
-      return {
-        status: turn.status as TurnOutcomeStatus,
-        statusDetail,
-        turn,
-        toolCalls: state.getToolCallsExecuted(),
-        iterations: state.getIteration(),
-        state: working,
-        ...(error !== undefined ? { error } : {}),
-        ...(terminationReason !== undefined ? { terminationReason } : {}),
-        ...(grade !== undefined ? { grade } : {}),
-      };
-    }
-    // P26-8: crash window #8 — the terminal record/event has NOT been
-    // written yet; the turn is still recoverable and re-runnable.
-    await this.deps.failAt?.("turn.completing", { sessionId, turnId });
-    const updated: Turn = { ...turn, status, completedAt: this.deps.now() };
-    await this.deps.store.updateTurn(updated);
-    // P2-38: derive the partial-failure classification from the durable tool
-    // ledger (the side-effect-safety source of truth), so failed_with_effects /
-    // cancelled_with_effects / blocked are observable, not lost.
-    const statusDetail = this.classifyStatusDetail(status, ledger ?? []);
-    await this.deps.emit(
-      sessionId,
-      status === "completed" ? "turn.completed" : status === "cancelled" ? "turn.cancelled" : "turn.failed",
-      { turnId, status, statusDetail, ...(error !== undefined ? { error } : {}), ...(terminationReason !== undefined ? { terminationReason } : {}), ...(grade !== undefined ? { grade } : {}), ...(completionEvidence !== undefined ? { completionEvidence } : {}) },
-      turnId,
-    );
-    // P26-8: crash window #9 — the terminal event is durable but the outcome
-    // has NOT been returned to the caller; a resume sees the terminal record.
-    await this.deps.failAt?.("turn.completed_acked", { sessionId, turnId });
-    return {
-      status,
-      statusDetail,
-      turn: updated,
-      toolCalls: state.getToolCallsExecuted(),
-      iterations: state.getIteration(),
-      state: working,
-      ...(error !== undefined ? { error } : {}),
-      ...(terminationReason !== undefined ? { terminationReason } : {}),
-      ...(grade !== undefined ? { grade } : {}),
-    };
+    return this.withTerminalLock(ctx.sessionId, async () => {
+      const { sessionId, turnId } = ctx;
+      const turn = await this.deps.store.getTurn(turnId);
+      if (!turn || turn.sessionId !== sessionId) throw new AgentError(errorInfo("INTERNAL_ERROR", `unknown turn ${turnId}`));
+      const grade = terminationReason !== undefined ? gradeCompletion(terminationReason, completionEvidence) : undefined;
+      if (RecoveryController.isTerminal(turn.status)) {
+        await this.publishTerminal(turn);
+        try { await this.withdrawCancelledAsks(turn); }
+        catch (error) { this.publishedTerminals.delete(turn.id); this.invalidateTerminalSession(sessionId); throw error; }
+        // The durable first intent wins. Only pre-outbox legacy turns retain
+        // the historical best-effort interpretation of the caller's metadata.
+        const recorded = turn.terminalOutcome;
+        const result = recorded ?? { status: turn.status as TurnOutcomeStatus,
+          statusDetail: this.classifyStatusDetail(turn.status as TurnOutcomeStatus, ledger ?? []),
+          ...(error !== undefined ? { error } : {}), ...(terminationReason !== undefined ? { terminationReason } : {}),
+          ...(grade !== undefined ? { grade } : {}) };
+        return { status: result.status, statusDetail: result.statusDetail, turn,
+          toolCalls: state.getToolCallsExecuted(), iterations: state.getIteration(), state: working,
+          ...(result.error !== undefined ? { error: result.error } : {}),
+          ...(result.terminationReason !== undefined ? { terminationReason: result.terminationReason } : {}),
+          ...(result.grade !== undefined ? { grade: result.grade } : {}) };
+      }
+      await this.deps.failAt?.("turn.completing", { sessionId, turnId });
+      const timestamp = this.deps.now();
+      const statusDetail = this.classifyStatusDetail(status, ledger ?? []);
+      const result = { status, statusDetail, ...(error !== undefined ? { error } : {}),
+        ...(terminationReason !== undefined ? { terminationReason } : {}), ...(grade !== undefined ? { grade } : {}),
+        ...(completionEvidence !== undefined ? { completionEvidence } : {}) };
+      // Normalize once to the JSON representation used by both durable stores.
+      // This also detaches caller-owned error/evidence objects from the intent.
+      const terminalOutcome: TerminalTurnOutcome | undefined = RecoveryController.isTerminal(status)
+        ? JSON.parse(JSON.stringify({ version: 1, eventId: newEventId(), timestamp, ...result })) as TerminalTurnOutcome : undefined;
+      const updated: Turn = { ...turn, status, completedAt: timestamp,
+        ...(terminalOutcome !== undefined ? { terminalOutcome } : {}) };
+      const priorVersion = terminalVersion(this.deps.store, sessionId);
+      const wasReconciled = this.reconciledSessions.get(sessionId) === priorVersion;
+      const version = terminalOutcome === undefined ? priorVersion : terminalVersion(this.deps.store, sessionId, true);
+      await this.deps.store.updateTurn(updated);
+      if (terminalOutcome !== undefined) {
+        await this.publishTerminal(updated);
+        try { await this.withdrawCancelledAsks(updated); }
+        catch (error) { this.publishedTerminals.delete(turnId); throw error; }
+        if (wasReconciled) this.rememberSession(sessionId, version);
+      }
+      else await this.deps.emit(sessionId, "turn.failed", { turnId, ...result }, turnId);
+      await this.deps.failAt?.("turn.completed_acked", { sessionId, turnId });
+      return { status, statusDetail, turn: updated, toolCalls: state.getToolCallsExecuted(), iterations: state.getIteration(), state: working,
+        ...(terminalOutcome?.error !== undefined ? { error: terminalOutcome.error } : error !== undefined ? { error } : {}),
+        ...(terminationReason !== undefined ? { terminationReason } : {}), ...(grade !== undefined ? { grade } : {}) };
+    });
   }
 
   async parkForUserInput(

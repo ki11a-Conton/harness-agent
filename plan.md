@@ -1,4 +1,6 @@
-当前任务：[v1.13 发布、工作区身份与 Codex harness](plan(20261025-release-workspace-codex).md)。
+当前任务：[2026-10-28 Bug 复审与修复](plan(20261028-bug-audit).md)；[任务合同](tasks/BUG-AUDIT-20261028.md)。模型目录鉴权、终态持久一致性与取消恢复、语法短读和 SSE 解帧，按确定性反例及实际验收推进。
+
+前序任务：[v1.13 发布、工作区身份与 Codex harness](plan(20261025-release-workspace-codex).md)。
 
 # 当前执行计划入口
 

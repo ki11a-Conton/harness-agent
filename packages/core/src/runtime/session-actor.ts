@@ -315,7 +315,7 @@ export interface LoadedSessionManager {
 
 export interface SessionActorDeps {
   persistent: PersistentSession;
-  runtime: Pick<AgentRuntime, "startTurn" | "runTurn"> & Partial<Pick<AgentRuntime, "releasePausedTurn" | "isSteeringOpen">>;
+  runtime: Pick<AgentRuntime, "startTurn" | "runTurn"> & Partial<Pick<AgentRuntime, "releasePausedTurn" | "isSteeringOpen" | "reconcileTerminalTurns" | "cancelUnstartedTurn" | "cancelPausedTurn">>;
   store: SessionStore;
   inbox?: InboxStore;
   askUserStore?: AskUserStore;
@@ -366,7 +366,7 @@ export interface FollowupDeferred {
 }
 
 export interface LoadedSessionManagerDeps {
-  runtime: Pick<AgentRuntime, "startTurn" | "runTurn"> & Partial<Pick<AgentRuntime, "releasePausedTurn" | "isSteeringOpen">>;
+  runtime: Pick<AgentRuntime, "startTurn" | "runTurn"> & Partial<Pick<AgentRuntime, "releasePausedTurn" | "isSteeringOpen" | "reconcileTerminalTurns" | "cancelUnstartedTurn" | "cancelPausedTurn">>;
   store: SessionStore;
   inbox?: InboxStore;
   askUserStore?: AskUserStore;
@@ -414,6 +414,7 @@ export class InboxSessionInputQueue implements SessionInputQueue {
   constructor(private readonly deps: { sessionId: SessionId; inbox?: InboxStore; store?: SessionStore; now?: () => number;
     /** Actor-owned admission binds a correction before durable IO begins. */
     steerTurnId?: () => TurnId | undefined;
+    reconcileTerminals?: () => Promise<void>;
   }) {}
 
   get sessionId(): SessionId {
@@ -596,6 +597,9 @@ export class InboxSessionInputQueue implements SessionInputQueue {
    * runtime owner.
    */
   private async hydrate(): Promise<void> {
+    // Do not consume a terminal prompt until its committed completion event
+    // has been published. Reconciliation never executes the bound turn.
+    await this.deps.reconcileTerminals?.();
     const inbox = this.deps.inbox;
     const store = this.deps.store;
     if (inbox === undefined) return;
@@ -799,6 +803,7 @@ export class DefaultSessionActor implements SessionActor {
       inbox: deps.inbox,
       store: deps.store,
       now: deps.now,
+      reconcileTerminals: () => deps.runtime.reconcileTerminalTurns?.(deps.persistent.id) ?? Promise.resolve(),
       steerTurnId: () => this.state.kind === "running" &&
         deps.runtime.isSteeringOpen?.(deps.persistent.id, this.state.turn.id) !== false
         ? this.state.turn.id : undefined,
@@ -1485,15 +1490,29 @@ export class DefaultSessionActor implements SessionActor {
       // and duplicate callers cannot revoke this persistence reservation.
       const requestId = nextRequestId(), controller = new AbortController();
       this.state = { kind: "starting", source: "existing_turn", requestId, controller, turnId };
+      let completed = false;
       const cancellation = (async (): Promise<CancelTurnResult> => {
+        // A prior cancellation may have committed its row before publication
+        // failed. Repair before the status check makes repeated UI cancel safe.
+        await this.deps.runtime.reconcileTerminalTurns?.(this.sessionId);
         const turn = await this.deps.store.getTurn(turnId);
-        if (!turn || turn.sessionId !== this.sessionId || turn.status !== "waiting_for_user") return { disposition: "not_running", turnId };
-        await this.deps.store.updateTurn({ ...turn, status: "cancelled" });
+        if (!turn || turn.sessionId !== this.sessionId || turn.status !== "waiting_for_user") {
+          if (turn?.sessionId === this.sessionId) await this.deps.runtime.releasePausedTurn?.(this.sessionId, turnId);
+          // Successful repair has settled the previous cancellation. Resume
+          // work admitted while the first attempt was still reserving the slot.
+          completed = true;
+          return { disposition: "not_running", turnId };
+        }
+        if (this.deps.runtime.cancelPausedTurn !== undefined) await this.deps.runtime.cancelPausedTurn(this.sessionId, turnId);
+        else await this.deps.store.updateTurn({ ...turn, status: "cancelled" });
         await this.deps.runtime.releasePausedTurn?.(this.sessionId, turnId);
         for (const ask of await this.deps.askUserStore?.listPending(this.sessionId) ?? []) {
           if (ask.turnId === turnId) await this.deps.askUserStore!.markWithdrawn(ask.id);
         }
-        await this.deps.emit?.emit(this.sessionId, "turn.cancelled", { status: "cancelled", waitingForUser: true, reason: "user" }, turnId);
+        if (this.deps.runtime.cancelPausedTurn === undefined) {
+          await this.deps.emit?.emit(this.sessionId, "turn.cancelled", { status: "cancelled", waitingForUser: true, reason: "user" }, turnId);
+        }
+        completed = true;
         return { disposition: "cancel_requested", turnId };
       })();
       this.cancellingWait = cancellation;
@@ -1501,7 +1520,9 @@ export class DefaultSessionActor implements SessionActor {
       finally {
         if (this.cancellingWait === cancellation) this.cancellingWait = undefined;
         if (this.state.kind === "starting" && this.state.requestId === requestId) this.state = this.closed ? { kind: "closing" } : { kind: "idle" };
-        if (!this.closed) this.requestFollowupWake();
+        // A failed cancellation leaves the pause/outbox unresolved; do not
+        // let an empty/background followup reservation race its retry.
+        if (!this.closed && completed) this.requestFollowupWake();
       }
     }
     return { disposition: "not_running", turnId };
@@ -1624,6 +1645,11 @@ export class DefaultSessionActor implements SessionActor {
    *  `cancellation_persistence_uncertain`, and the emit payload carries the
    *  same uncertainty so no observer claims a clean cancellation. */
   private async terminalizeRevokedTurn(turn: Turn): Promise<TurnOutcome> {
+    // A real runtime owns the same durable terminal outbox used by runTurn.
+    // Keep the legacy emit seam for narrow actor doubles/older hosts only.
+    if (this.deps.runtime.cancelUnstartedTurn !== undefined) {
+      return this.deps.runtime.cancelUnstartedTurn(this.sessionId, turn.id);
+    }
     const cancelledTurn: Turn = { ...turn, status: "cancelled" };
     let persistFailed = false;
     try {
@@ -2105,7 +2131,8 @@ export class DefaultSessionActor implements SessionActor {
         errorInfo("INTERNAL_ERROR", `unknown turn ${turnId} for session ${this.sessionId}`),
       );
     }
-    if (turn.status === "completed" || turn.status === "cancelled") throw new AgentError(errorInfo("INTERNAL_ERROR", `turn ${turnId} is terminal (${turn.status}); create a new turn instead of replaying it`));
+    await this.deps.runtime.reconcileTerminalTurns?.(this.sessionId);
+    if (turn.terminalOutcome !== undefined || turn.status === "completed" || turn.status === "cancelled") throw new AgentError(errorInfo("INTERNAL_ERROR", `turn ${turnId} is terminal (${turn.status}); create a new turn instead of replaying it`));
     return turn;
   }
 
@@ -2161,6 +2188,12 @@ export class DefaultLoadedSessionManager implements LoadedSessionManager {
       }
       if (session === undefined) {
         throw new AgentError(errorInfo("INTERNAL_ERROR", `unknown session ${id}`));
+      }
+      // Loading is also used without a pending inbox prompt. Repair before
+      // publishing the actor; an outbox failure keeps loading retryable.
+      await this.deps.runtime.reconcileTerminalTurns?.(id);
+      if (this.closed || (this.generations.get(id) ?? 0) !== entry.generation || entry.controller.signal.aborted) {
+        throw new AgentError(errorInfo("LOAD_CANCELLED", `session load ${id} was cancelled`));
       }
       const actor = new DefaultSessionActor({
         persistent: session,

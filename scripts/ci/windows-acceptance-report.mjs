@@ -137,7 +137,11 @@ function main() {
     'shows the principal native managed process as well as its real verifier through Harness -> browser projection',
     'P0-4: production context wiring through the real harness env_snapshot reports the live harness wiring (profile, workspace root, tool list)',
     'symbol index scan coverage is visible to the caller stops a huge directory at the entry budget, closes it, and avoids an unbounded fallback',
-    'delivers skipped-source coverage to the next real model request');
+    'delivers skipped-source coverage to the next real model request',
+    'indexes the tail of a short-read UTF-8 source and hashes the entire raw file',
+    'an explicit one-shot key overrides all configured sources without replacing the saved credential',
+    'OpenAI SSE event framing keeps EOF compatibility for a complete final JSON event without a blank line',
+    'durable terminal outcome serializes competing controller finishes and preserves the winning result');
   const host = { platform: process.platform, osType: type(), osRelease: release(), arch: arch(), nodeVersion: process.version,
     sourceSha: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), workflowSha: process.env.GITHUB_SHA ?? '',
     treeClean: execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' }).trim() === '',

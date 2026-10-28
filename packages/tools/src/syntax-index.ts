@@ -80,15 +80,28 @@ async function parseTags(content: string, language: string, signal?: AbortSignal
 }
 
 const samePath = (a: string, b: string) => process.platform === "win32" ? a.toLowerCase() === b.toLowerCase() : a === b;
-async function boundedRead(path: string, limit = MAX_BYTES, expected?: string): Promise<Buffer | undefined> {
+async function boundedRead(path: string, limit = MAX_BYTES, expected?: string, signal?: AbortSignal): Promise<Buffer | undefined> {
+  signal?.throwIfAborted();
   if (expected !== undefined && !samePath(await realpath(path), expected)) throw new Error("source path changed");
   const handle = await open(path, constants.O_RDONLY | (process.platform === "win32" ? 0 : constants.O_NONBLOCK | constants.O_NOFOLLOW));
   try {
+    signal?.throwIfAborted();
     const stats = await handle.stat(); if (!stats.isFile() || stats.size > limit) return undefined;
     const buffer = Buffer.alloc(limit + 1);
-    const { bytesRead } = await handle.read(buffer, 0, limit + 1, 0);
+    let bytesRead = 0;
+    // A regular-file read may legally return fewer bytes than requested.
+    // Only EOF establishes a complete source or ignore document; retain the
+    // extra byte so growth cannot turn the bound into a partial-success read.
+    while (bytesRead <= limit) {
+      signal?.throwIfAborted();
+      const chunk = await handle.read(buffer, bytesRead, buffer.length - bytesRead, bytesRead);
+      signal?.throwIfAborted();
+      if (chunk.bytesRead === 0) break;
+      bytesRead += chunk.bytesRead;
+    }
     if (bytesRead > limit) return undefined;
     const after = await handle.stat(), linked = await lstat(path);
+    signal?.throwIfAborted();
     if (linked.isSymbolicLink() || stats.ino !== linked.ino || stats.dev !== linked.dev
       || stats.size !== after.size || stats.mtimeMs !== after.mtimeMs || stats.ctimeMs !== after.ctimeMs
       || (expected !== undefined && !samePath(await realpath(path), expected))) throw new Error("source changed during read");
@@ -114,10 +127,10 @@ export async function buildSyntaxIndex(root: string, path = ".", signal?: AbortS
     try {
       const name = join(directory, ".gitignore"); const stat = await lstat(name);
       if (!stat.isFile() || stat.isSymbolicLink()) return false;
-      const bytes = await boundedRead(name, 64 * 1024, expectedPath(name));
+      const bytes = await boundedRead(name, 64 * 1024, expectedPath(name), signal);
       if (!bytes) return false;
       rules.push({ base: directory, matcher: ignore().add(bytes.toString("utf8")) }); return true;
-    } catch (error) { return (error as NodeJS.ErrnoException).code === "ENOENT"; }
+    } catch (error) { if (signal?.aborted) throw error; return (error as NodeJS.ErrnoException).code === "ENOENT"; }
   };
   const ignored = (name: string, directory: boolean) => {
     let excluded = false;
@@ -152,13 +165,13 @@ export async function buildSyntaxIndex(root: string, path = ".", signal?: AbortS
           if (result.files.length >= maxFiles || tagsTotal >= 100000 || performance.now() > deadline) { result.complete = false; break; }
           if (!entry.isSymbolicLink() && !skipped.has(entry.name)) await visit(join(name, entry.name), depth + 1);
         }
-      } catch { result.complete = false; }
+      } catch (error) { if (signal?.aborted) throw error; result.complete = false; }
       finally { rules.length = saved; }
       return;
     }
     const language = extensions[extname(name)]; if (!stat.isFile() || !language) return;
     try {
-      const bytes = await boundedRead(name, MAX_BYTES, expectedPath(name));
+      const bytes = await boundedRead(name, MAX_BYTES, expectedPath(name), signal);
       if (!bytes || bytes.includes(0)) { result.skippedFiles++; result.complete = false; return; }
       if (bytesTotal + bytes.length > 16 * 1024 * 1024) { result.skippedFiles++; result.complete = false; return; }
       bytesTotal += bytes.length;
@@ -170,6 +183,7 @@ export async function buildSyntaxIndex(root: string, path = ".", signal?: AbortS
     } catch (error) { if (signal?.aborted) throw error; result.skippedFiles++; result.complete = false; }
   };
   await visit(scope.path);
+  signal?.throwIfAborted();
   result.fingerprint = hash(JSON.stringify(result.files.map(file => [file.file, file.sha256])));
   return result;
 }
