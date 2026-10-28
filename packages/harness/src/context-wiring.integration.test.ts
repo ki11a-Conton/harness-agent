@@ -13,7 +13,12 @@ async function tempDir(): Promise<string> {
 }
 
 afterEach(async () => {
-  await Promise.all(tempDirs.map((d) => rm(d, { recursive: true, force: true })));
+  // Only our disposable fixture directories receive Windows' bounded unlink
+  // grace. A persistent lock still rejects teardown; business errors propagate.
+  await Promise.all(tempDirs.map((d) => rm(d, {
+    recursive: true, force: true,
+    maxRetries: process.platform === "win32" ? 8 : 0, retryDelay: 50,
+  })));
   tempDirs = [];
 });
 
@@ -102,7 +107,9 @@ describe("P0-4: production context wiring through the real harness", () => {
       const envSnapshot = harness.registry.get("env_snapshot");
       expect(envSnapshot).toBeDefined();
       const out = await envSnapshot!.execute(
-        {},
+        // This case checks injected wiring. Real runtime-version probes have
+        // their own tests; the snapshot's normal Git query is still awaited.
+        { probeLimit: 0 },
         { cwd, input: {}, turnId: "t", sessionId: "s" } as never,
       );
       expect(out.status).toBe("success");
