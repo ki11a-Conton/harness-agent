@@ -103,6 +103,8 @@ function main() {
     'configured ledger timeout reaches the claim lock under read-eperm without replacing its owner',
     'configured ledger timeout reaches the claim lock under reclaim-guard without replacing its owner',
     'production composition admits a prompt with 0 ms metadata IO while official event and follow streams remain open',
+    'shows the principal native managed process as well as its real verifier through Harness -> browser projection',
+    'P0-4: production context wiring through the real harness env_snapshot reports the live harness wiring (profile, workspace root, tool list)',
     'symbol index scan coverage is visible to the caller stops a huge directory at the entry budget, closes it, and avoids an unbounded fallback',
     'delivers skipped-source coverage to the next real model request');
   const host = { platform: process.platform, osType: type(), osRelease: release(), arch: arch(), nodeVersion: process.version,

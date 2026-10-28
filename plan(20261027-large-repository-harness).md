@@ -48,3 +48,5 @@
 - **怎么验收**：现有投影 9 项、context wiring 与 env_snapshot 相关回归通过；用受控脚本模型延迟触发原限额，要求测试确实失败、原错误与原始证据保留，恢复注入后原正例通过。类型检查和当前 SHA 的原生 Windows/常规 CI 复核；原失败不取消、不重跑覆盖、不扩大预算。未证实的原 managed timing 原因仍如实标记待复现，不把诊断改进声称为生产漏报已修复。
 
 本地验收：context wiring 与 env_snapshot 四文件 32 项、managed 投影 9 项均通过，类型检查通过。原限额负向验收使用临时独立测试文件，仅延迟脚本模型第二次响应 10,200 ms；测试按预期 exit 1，保存 `time_limit / RESOURCE_LIMIT`、5 条消息及 24 条事件，诊断文件具有 SHA-256 校验，原正例源码未改。不能把该控制实验当作历史 Windows 根因证明；后续以当前提交的远端验收结果为准。
+
+原生 Windows 专项工作流原先未包含这两个用例；将它们加入真实 runner 的回归列表及收据必选名称，漏执行亦须失败。该 runner 的 E4_09_DIAG_DIR 指向始终归档的 .ci/windows-acceptance/diagnostics，不依赖仅常规 CI 才有的诊断目录。新提交使用独立分支，保留正在运行的旧分支 CI。
