@@ -38,11 +38,14 @@ await writeFile(join(directory, 'job.log'), raw);
 const text = raw.toString('utf8').replace(/\u001b\[[0-9;]*m/g, '');
 const marker = text.lastIndexOf('Failed Tests');
 let excerpt = marker >= 0 ? text.slice(Math.max(0, marker - 250), marker + 16000) : text.slice(-16000);
+const lines = text.split('\n');
+const caseLines = lines.flatMap((line, index) => /coding-status-managed|principal native managed process/.test(line)
+  ? lines.slice(Math.max(0, index - 2), index + 9) : []).join('\n').slice(0, 8000);
 const receipt = { schemaVersion: 'original-windows-job-failure-v1', originalSourceSha: sourceSha,
   originalJobId: jobId, originalRunId: runId, originalAttempt: identity.run_attempt,
   originalConclusion: identity.conclusion, observedBy: process.env.GITHUB_SHA,
   rawLogBytes: raw.length, rawLogSha256: createHash('sha256').update(raw).digest('hex'),
-  excerpt, truncated: false, originalCommandsRerun: false, paidCalls: 0 };
+  excerpt, caseLines, truncated: false, originalCommandsRerun: false, paidCalls: 0 };
 let packets = annotationPackets([receipt]);
 while (packets.length > 9) {
   excerpt = excerpt.slice(0, Math.floor(excerpt.length * 0.75));

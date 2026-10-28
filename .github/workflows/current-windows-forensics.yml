@@ -19,10 +19,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - job: '122338942877'
-            run: '40546654496'
-          - job: '122338942703'
-            run: '40546654424'
+          - job: '122360655884'
+            run: '40552769979'
+            source: '2ef3e90be6a0acc8820572d950ca279035805060'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -31,7 +30,7 @@ jobs:
       - name: Read the original failed job without rerunning its commands
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: node scripts/ci/current-windows-forensics.mjs '${{ matrix.job }}' '${{ matrix.run }}' dd13f39fa812c0c00daf8b33f7aa6c15f271a364
+        run: node scripts/ci/current-windows-forensics.mjs '${{ matrix.job }}' '${{ matrix.run }}' '${{ matrix.source }}'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
