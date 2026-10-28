@@ -39,6 +39,37 @@ export function annotationPackets(files) {
   return Array.from({ length: total }, (_, index) => ({ encoding: 'gzip+base64', index, total, data: encoded.slice(index * 2500, (index + 1) * 2500) }));
 }
 
+const escapeAnnotation = text => text.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
+const fitsReceiptNotice = value => Buffer.byteLength(escapeAnnotation(JSON.stringify(value)), 'utf8') < 3500;
+
+/** Reserve exactly one notice for the verdict. The artifact bytes are the
+ * complete receipt.json already written by the caller, including caseRecords. */
+export function receiptPublication(receipt, artifactBytes) {
+  if (fitsReceiptNotice(receipt)) return { mode: 'json', value: receipt };
+  const compressed = { encoding: 'gzip+base64', data: gzipSync(Buffer.from(JSON.stringify(receipt))).toString('base64') };
+  if (fitsReceiptNotice(compressed)) return { mode: 'gzip', value: compressed };
+  const truncatedFields = [];
+  const text = (name, limit) => {
+    const value = receipt[name];
+    if (typeof value !== 'string') return undefined;
+    if (value.length <= limit) return value;
+    truncatedFields.push(name);
+    return value.slice(0, limit);
+  };
+  const count = name => typeof receipt[name] === 'number' && Number.isFinite(receipt[name]) ? receipt[name] : null;
+  const index = { schemaVersion: 'genuine-windows-acceptance-index-v1',
+    outcome: receipt.outcome, artifactPath: '.ci/windows-acceptance/receipt.json',
+    receiptSha256: createHash('sha256').update(artifactBytes).digest('hex'), receiptBytes: Buffer.byteLength(artifactBytes),
+    reason: 'PER_MESSAGE_ANNOTATION_BUDGET',
+    summary: { platform: text('platform', 32), osType: text('osType', 32), arch: text('arch', 16), nodeVersion: text('nodeVersion', 32),
+      sourceSha: text('sourceSha', 40), workflowSha: text('workflowSha', 40), treeClean: receipt.treeClean === true,
+      runId: text('runId', 32), runAttempt: text('runAttempt', 16),
+      files: count('files'), passed: count('passed'), failed: count('failed'), skipped: count('skipped'),
+      required: receipt.required.length, issues: receipt.issues.length },
+    truncatedFields };
+  return { mode: 'artifact', value: index };
+}
+
 export function caseRecordPublication(files, maxPackets = 9) {
   const packets = annotationPackets(files);
   // One of the ten notices is reserved for the verdict. Large suites keep
@@ -114,18 +145,19 @@ function main() {
     workflow: process.env.GITHUB_WORKFLOW_REF, job: process.env.GITHUB_JOB,
     rawReportSha256: createHash('sha256').update(raw).digest('hex'), rawReportBytes: raw.length };
   const { receipt, files } = receiptFromReport(JSON.parse(raw), host, required);
-  writeFileSync(output, JSON.stringify({ ...receipt, caseRecords: files }, null, 2) + '\n');
-  const escape = text => text.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
+  const artifactBytes = Buffer.from(JSON.stringify({ ...receipt, caseRecords: files }, null, 2) + '\n');
+  writeFileSync(output, artifactBytes);
   // Public checks preserve the verdict; case records use lossless annotations
   // when they fit, or an explicit artifact index bound to the full-record hash.
-  console.log(`::notice title=Windows acceptance receipt::${escape(JSON.stringify(receipt))}`);
+  const publicReceipt = receiptPublication(receipt, artifactBytes);
+  console.log(`::notice title=Windows acceptance receipt::${escapeAnnotation(JSON.stringify(publicReceipt.value))}`);
   const failures = failureAnnotations(files);
-  for (const [index, detail] of failures.entries()) console.log(`::error title=Windows regression failure ${index + 1}::${escape(JSON.stringify(detail))}`);
+  for (const [index, detail] of failures.entries()) console.log(`::error title=Windows regression failure ${index + 1}::${escapeAnnotation(JSON.stringify(detail))}`);
   // Reserve a verdict and, if needed, an artifact index as well as failure
   // summaries. Never push a lossless packet beyond the per-step budget.
   const publication = caseRecordPublication(files, failures.length ? 8 - failures.length : 9);
-  if (publication.mode === 'artifact') console.log(`::notice title=Windows case records artifact index::${escape(JSON.stringify(publication.index))}`);
-  for (const packet of publication.packets) console.log(`::notice title=Windows case records chunk ${packet.index + 1}/${packet.total}::${escape(JSON.stringify(packet))}`);
+  if (publication.mode === 'artifact') console.log(`::notice title=Windows case records artifact index::${escapeAnnotation(JSON.stringify(publication.index))}`);
+  for (const packet of publication.packets) console.log(`::notice title=Windows case records chunk ${packet.index + 1}/${packet.total}::${escapeAnnotation(JSON.stringify(packet))}`);
   if (receipt.outcome !== 'PASS') process.exitCode = 1;
 }
 

@@ -50,3 +50,11 @@
 本地验收：context wiring 与 env_snapshot 四文件 32 项、managed 投影 9 项均通过，类型检查通过。原限额负向验收使用临时独立测试文件，仅延迟脚本模型第二次响应 10,200 ms；测试按预期 exit 1，保存 `time_limit / RESOURCE_LIMIT`、5 条消息及 24 条事件，诊断文件具有 SHA-256 校验，原正例源码未改。不能把该控制实验当作历史 Windows 根因证明；后续以当前提交的远端验收结果为准。
 
 原生 Windows 专项工作流原先未包含这两个用例；将它们加入真实 runner 的回归列表及收据必选名称，漏执行亦须失败。该 runner 的 E4_09_DIAG_DIR 指向始终归档的 .ci/windows-acceptance/diagnostics，不依赖仅常规 CI 才有的诊断目录。新提交使用独立分支，保留正在运行的旧分支 CI。
+
+## 2026-10-28：公开收据的单条大小边界
+
+main `a1a677fc` 原生 Windows workflow `40631072210` 的所有步骤通过，但新增必选用例后复核发现，`Windows acceptance receipt` 的 JSON notice 超过 GitHub 单条约 4 KiB 上限，公开 API 在 4,096 字符截断，导致不能完整复算。收据文件和原判定仍完整，不能把 API 中的半截 JSON 当作可验收证据。
+
+- **做什么**：保证小收据兼容且较大收据可完整解码，极大收据明确索引归档而非截断或使正确 verdict 失败。
+- **怎么做**：在原本单条 verdict notice 内，自适应使用原 JSON 或 gzip+base64，控制 UTF-8 不超过 3,500 字节；超出压缩预算时给出有哈希/字节数的制品索引及有界状态摘要，完整数据继续写入原收据文件。不新增 notice，不改变必选名单、verdict、48 组或任何业务限额。
+- **怎么验收**：小 JSON 兼容、当前规模必选项无损往返、Unicode 大小、极大不可压摘要和 FAIL 保持测试；类型和相关用例；新 SHA 的原生 Windows notice 必须是完整合法 JSON 并可还原两项新增必选记录。保留 a1 原始截断记录，不重跑覆盖；独立分支验证，原 main CI 完成后再快进，不取消其运行。
