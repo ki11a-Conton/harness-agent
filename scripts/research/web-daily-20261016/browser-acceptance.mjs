@@ -10,6 +10,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 import { observeProductionRpc } from '../deepseek-browser-observe.mjs';
 import { createLatencyStream } from './tcp-latency.mjs';
+import { assertRestoredPreviewTabs } from './sidebar-preview-readiness.mjs';
 
 const { values } = parseArgs({ options: {
   output: { type: 'string' }, 'fixture-script': { type: 'string' }, 'portable-root': { type: 'string' },
@@ -467,8 +468,7 @@ const cases = {
     assert.equal(await page.getByRole('tab', { name: /README\.md/ }).count(), panes - 1);
     check(checks, 'Preview wrap/reload, fullscreen restore and available split controls remain reachable', { panes });
     await button(page, 'Collapse right sidebar').click(); await button(page, 'Open right sidebar').click();
-    assert.equal(await page.getByRole('tab', { name: /demo\.js/ }).count(), 1);
-    assert.equal(await page.getByRole('tab', { name: /README\.md/ }).count(), panes - 1);
+    await assertRestoredPreviewTabs(page, panes);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     check(checks, 'Closing/reopening the sidebar retains its preview panes without page-wide horizontal overflow');
   },

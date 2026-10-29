@@ -129,3 +129,23 @@ bb928b15 的 Windows 原生验收（772 通过、2 跳过，46 个必需用例�
 八类已复现问题及兼容修复完成。实现提交 10309f0a 的本地完整源码、CLI/Web、真实 Windows、双平台安装 UI 和四项 CI 均通过。本次提交仅补充计划/任务验收记录，生产代码和测试与已验证实现完全一致；以普通快进推送 main，不强推。推送后 main 的精确提交和自动 CI 结果另存工作区审查报告，不把旧源码的原始日志改标为新 SHA。
 
 原始失败、测试设施设置错误、02 未知中断、bb 本地诊断停止、ENOSPC 对照和旧 CI 的失败/超时均保留。旧 bb 综合 CI 最终为 cancelled：coverage 明确到原 30 分钟时限，单元和正式验收的原 gen1 用例报 300000ms 超时；这些结果不计通过。未调用付费模型、不提升默认策略、不发布 release。运行与模型质量的限制仍按前文记录。
+
+## main 安装 UI 跟进：侧栏预览的异步可见帧
+
+main 已普通快进到 c7c4d9aa，但其 Windows 安装 UI 工作流 40905667563 / job 123560148135 失败，不能计为通过。daily 的 files-and-panel-layout 在侧栏关闭/重开后立即读取 demo.js 页签数量，得到 0 而非 1；初始文件预览和分屏两项检查已通过，Ubuntu 同组通过。原始 job/annotation 保留，不重跑此失败 SHA。
+
+### 做什么、怎么做
+
+修正验收程序的同步条件。组件一直保留 DockLayout，开合经异步状态提交改变 aria-hidden；点击返回不保证下一可访问帧已出现。等待真实 demo 页签和双 pane 的 README 页签可见，再执行原 exact 1/1（单 pane 为 1/0）及页面溢出断言。两个等待并行，共用 page 原 6000ms 默认窗口，不新设时限、不使用 hidden:true/first、不轮询数量或重试整个场景。生产 UI、运行时、文件状态与请求均不改。
+
+### 怎么验收
+
+- 原 Windows 失败保留。未修改 driver 的当前构建在本地 Chromium 单场景通过；不把 Linux 通过或下述受控延迟说成原 Windows 故障重放。
+- 外部诊断仅给真实组件注入 200ms visibility 呈现延迟，不改 tab DOM/store/请求：即时 role 数量 0/0，但原节点仍 connected；动画结束后同一节点为 1/1。原即时断言因此失败，新等待通过。这证明快照竞态机制，不能证明原 Windows 现场的每一时序细节。
+- 新 6 项行为回归检查两个可见等待同时开始、任一未完成不得取数量、永久缺失仍失败、demo/README 重复仍失败、单 pane 仍要求 README 为 0。真实 Chromium 小 DOM 负控也验证迟到帧通过、永久 hidden 约 6002ms 按原 6000ms 拒绝、重复严格 locator 拒绝。
+- 不注入延迟的真实产品原场景在 desktop/mobile/narrow 三视口均通过，每个保留原 3 项检查；最终并行等待版本的受控延迟通过且过渡结束页签节点未丢失。Windows 命令纳入新增 6 项，原 46 必需项及预算不动。
+- 类型检查、相关 pinned UI Node 测试及新回归通过后，提交单独分支做安装版双平台与精确 SHA CI。已有 main CI 等到真实终态后才向 main 推送修正，避免自动取消；新分支可同时验收。最终 main 新 SHA 的所有门禁结束后再写报告。只变更验收基础设施和文档，不重复本地运行已经通过且生产代码未变的完整套件；完整门禁由新 SHA CI 原样执行。
+
+证据：/tmp/harness-audit-main-ui-failure-123560148135-c7c4d9aa.json、/tmp/harness-sidebar-{count-baseline,visibility-red,visibility-parallel-green,parallel-three-viewports,locator-controls,preview-helper-green}-20261029.log，以及 /dev/shm/harness-sidebar-visibility-{red,parallel-green}-20261029/controlled-presentation-receipt.json。尚未将本修正计为真实 Windows 安装通过。
+
+本地收尾：类型检查通过；新回归 6/6、固定 UI/发布 Node 测试 94/94 通过，日志 /tmp/harness-sidebar-preview-{typecheck,root-accepted,pinned-ui-accepted}-20261029.log。首次 Node 固定测试因稀疏 checkout 缺少两个已跟踪的历史 JSON fixture，保留 58 通过/1 模块加载失败的原日志；仅从当前 HEAD 恢复 6803 字节 fixture，核对 git blob 一致，未改变源码、断言或历史数据。原失败 /tmp/harness-sidebar-preview-pinned-ui-20261029.log 和恢复收据 /tmp/harness-sidebar-preview-fixture-materialization-20261029.json 保留。最终源码及上述证据独立复核无阻塞。
