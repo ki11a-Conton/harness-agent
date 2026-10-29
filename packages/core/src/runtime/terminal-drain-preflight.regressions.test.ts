@@ -130,3 +130,35 @@ it("failed durable hydration leaves the actor idle and retries its pending promp
     expect(h.model.calls).toHaveLength(1); expect(h.events.events.filter(event => event.type === "turn.completed")).toHaveLength(1);
   } finally { await h.actor.close(); }
 });
+
+it("an overridden native dequeuer can provide an external followup while its internal pending count is zero", async () => {
+  const h = await fixture(), id = newPromptId(), consumed = gate(); let provided = false;
+  const reserve = vi.spyOn(h.actor.inputQueue, "reservePendingFollowup").mockImplementation(async () => {
+    if (provided) return undefined;
+    provided = true;
+    await h.inbox.admit({ id, sessionId: h.session.id, text: "external dynamic followup", kind: "followup", status: "pending", admittedAt: 1 });
+    return { id, input: { sessionId: h.session.id, text: "external dynamic followup" } };
+  });
+  const bind = vi.spyOn(h.actor.inputQueue, "bindReservedFollowup").mockImplementation(async (reservedId, turnId) => {
+    expect(reservedId).toBe(id); await h.inbox.bindPromotion(id, turnId);
+  });
+  const complete = vi.spyOn(h.actor.inputQueue, "completeReservedFollowup").mockImplementation(async reservedId => {
+    expect(reservedId).toBe(id); await h.inbox.markConsumed(id); consumed.release();
+  });
+  const execute = h.runtime.runTurn.bind(h.runtime);
+  const run = vi.spyOn(h.runtime, "runTurn").mockImplementation(async (...args) => {
+    expect(h.rows[0]).toMatchObject({ status: "promoted", promotedTurnId: args[1] });
+    return execute(...args);
+  });
+  try {
+    expect(h.actor.inputQueue.pendingCount).toBe(0); expect(h.rows).toHaveLength(0);
+    await h.actor.drainFollowupsForTest();
+    expect(reserve).toHaveBeenCalled();
+    await consumed.promise;
+    expect(bind).toHaveBeenCalledTimes(1); expect(complete).toHaveBeenCalledTimes(1); expect(run).toHaveBeenCalledTimes(1);
+    const turns = await h.store.listTurns(h.session.id);
+    expect(turns).toHaveLength(1); expect(turns[0]).toMatchObject({ status: "completed", input: { text: "external dynamic followup" } });
+    expect(h.rows[0]).toMatchObject({ status: "consumed", promotedTurnId: turns[0]!.id });
+    expect(h.model.calls).toHaveLength(1); expect(h.orchestrator.calls).toHaveLength(0);
+  } finally { await h.actor.close(); }
+});

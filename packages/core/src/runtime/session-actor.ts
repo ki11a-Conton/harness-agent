@@ -1815,9 +1815,11 @@ export class DefaultSessionActor implements SessionActor {
     }
     // close may have revoked ownership during recovery/discovery IO.
     if (this.closed || this.state.kind !== "idle") return;
-    // Our durable queue can discover that there is no work without owning the
-    // execution slot. Keep custom queue reservation contracts unchanged.
-    if (queue === this.inputQueue && queue instanceof InboxSessionInputQueue) {
+    // The native dequeuer's pendingCount describes all available work after
+    // hydration. An override may own an external queue or readiness protocol,
+    // so preserve its reservation-before-dequeue contract even on this instance.
+    if (queue === this.inputQueue && queue instanceof InboxSessionInputQueue
+      && queue.reservePendingFollowup === InboxSessionInputQueue.prototype.reservePendingFollowup) {
       try { await queue.hydratePendingFollowups(); }
       catch (hydrateErr) {
         process.stderr.write(`[degraded] session ${this.sessionId} followup hydration failed: ${hydrateErr instanceof Error ? hydrateErr.message : String(hydrateErr)}\n`);

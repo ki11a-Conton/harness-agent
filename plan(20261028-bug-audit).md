@@ -100,3 +100,17 @@
 - Windows 原生命令增加原失败的 provider/longrun 和新 preflight 三文件，原 46 个必需用例及预算未变。两部分源代码、测试和 workflow 独立复核无阻塞；完整源码全量及新精确 SHA CI 仍待执行，不计为通过。
 
 日志：/tmp/harness-explicit-failed-resume-accepted-20261029.log、/tmp/harness-terminal-drain-preflight-{red,only-failure,before-hydration-catch,fixture-error,green}-20261029.log、/tmp/harness-bug-audit-resume-admission-{typecheck,boundary}-20261029.log。
+
+## 2026-10-29：自定义出队兼容与本地验收空间
+
+bb928b15 的 Windows 原生验收（772 通过、2 跳过，46 个必需用例）、安装版 UI 双平台及三条一代安装验收通过。综合 CI 尚在运行。本地全量的原 gen1-followup-wakeup 用例因自定义 reserve 被空队列优化跳过，门闩未打开；经核验的本地 worker 诊断确认前两项已分别达到原 300000ms 时限。保留原日志、只读诊断及停止收据后，仅停止这一个自有本地运行（exit143），不计为全量通过；没有取消或重跑远端 CI。
+
+### 做什么、怎么做、怎么验收
+
+- 修复自定义队列的任务遗漏：pendingCount 只表示内部缓冲，不能保证自定义 reserve 不会动态提供工作。空队列优化仅用于 actor 自有且 reservePendingFollowup 仍为原生实现的队列；覆写方法保留原同步预留再出队合同。新增真实动态任务反例，在内部 pendingCount 为 0 时通过自定义 reserve 实际 admit、bind、run、terminal、consume，恰好一次，不跳过工具和安全边界。基线直接断言 reserve 未调用而失败，不依赖长超时。
+- 原 gen1 八项唤醒/未来 outcome/FIFO/唯一 owner 断言与时限均不改；与原 longrun、actor、并发、终态及六项 preflight 共 7 文件 121 项通过。Windows 命令加入原 gen1 文件，原必需项与预算不动；独立复核、类型检查及生产 HTTP 后提交新分支，核对新精确 SHA 全量和四项 CI。
+- 本地 raw-bytes 两失败另由原测试独立控制确认 ENOSPC：/tmp 临时盘仅约 55–67 MiB 空闲，三个 16 MiB 源文件及副本需约 96 MiB。同一干净源码在 /tmp 为 2 失败/2 通过、明确 ENOSPC；在另一个空闲 4.9 GiB 可执行 tmpfs 的私有 TMPDIR 为 4/4 通过。生产和测试源码均不改，不删除旧证据；后续完整源码全量使用该空闲 TMPDIR。原全量部分失败及诊断停止仍保留，不能重标绿灯。
+
+日志与诊断：/tmp/harness-{gen1-wakeup-hang-red,external-dequeuer-red,gen1-wakeup-override-green}-20261029.log、/tmp/harness-bug-audit-full-{stall-worker,stall-stop}-bb928b15-20261029.json、/tmp/harness-bug-audit-raw-bytes-{low-space,shm}-control-bb928b15-20261029.log。
+
+本阶段独立复核无阻塞；typecheck 和生产 HTTP/恢复/策略/安全相关 5 文件 27 项通过，日志 /tmp/harness-bug-audit-queue-extension-{typecheck,boundary}-20261029.log。后续在新的干净提交上重新执行完整全量与精确 SHA CI，当前不计为通过。
