@@ -114,3 +114,18 @@ bb928b15 的 Windows 原生验收（772 通过、2 跳过，46 个必需用例�
 日志与诊断：/tmp/harness-{gen1-wakeup-hang-red,external-dequeuer-red,gen1-wakeup-override-green}-20261029.log、/tmp/harness-bug-audit-full-{stall-worker,stall-stop}-bb928b15-20261029.json、/tmp/harness-bug-audit-raw-bytes-{low-space,shm}-control-bb928b15-20261029.log。
 
 本阶段独立复核无阻塞；typecheck 和生产 HTTP/恢复/策略/安全相关 5 文件 27 项通过，日志 /tmp/harness-bug-audit-queue-extension-{typecheck,boundary}-20261029.log。后续在新的干净提交上重新执行完整全量与精确 SHA CI，当前不计为通过。
+
+## 干净实现 10309f0a 的完整验收
+
+- 完整源码 clone 上原样执行 pnpm test，使用空闲隔离 TMPDIR：674 文件通过、2 文件跳过；10498 项通过、16 项跳过，0 失败，exit0。Node 24.19.0；开始及结束 HEAD 均为 10309f0aefcb4348538afd04c4e1e632cceebe79，源码树均干净。原 gen1 八项、原 provider/longrun，以及新增六项 preflight 均在这一全量运行中通过。
+- 完整日志 /tmp/harness-bug-audit-full-complete-tree-10309f0a-shm-20261029.log 为 183752 字节，SHA-256 ce523d6d49d44d785b4631b59a6e603a397a6ca4d975d73a6c455bba4615b63d；同名前缀 .receipt.json 保存实际命令、源码前后身份、时刻及退出码。借用的完整 clone 已恢复原 feat/full-audit-20261026 / 66a9238c 并重新强制构建原源码，未覆盖原工作。
+- 干净 10309f0a 的实际 CLI/Web coding-v2 再验收通过：50 工程断言、8 提示词安装断言、19 次 loopback 请求，付费调用 0。脚本 provider 选择动作，不能据此声称真实模型质量增益或提升默认策略。
+- [真实 Windows 40874252074](https://github.com/ki11a-Conton/harness-agent/actions/runs/40874252074) 通过：76 文件，781 通过、0 失败、2 跳过，原 46 必需项各执行并通过一次；sourceSha=workflowSha=10309f0a 完整 SHA，treeClean=true，attempt1。rawReport SHA-256 67a0279ccb8536025048edcbfb9732ab989933d04cd6e774098699e3ac4c2cf7，caseRecords SHA-256 c571efe614eb4948723630278d0a919527ca540dd4b2a02721f20a8e5198c87d。
+- [安装版 UI 40874251941](https://github.com/ki11a-Conton/harness-agent/actions/runs/40874251941) 双平台通过；[一代安装 40874251927](https://github.com/ki11a-Conton/harness-agent/actions/runs/40874251927) 三条实际腿通过，既有 draft 导出条件跳过。
+- [综合 CI 40874251962](https://github.com/ki11a-Conton/harness-agent/actions/runs/40874251962) 最终通过：覆盖率、双平台正式离线验收、双平台闭环、冷启动、双平台单元/集成、Campaign 合同、十项标准 gate 及证据生成、同 SHA 双平台验收和 release attestation 均通过。四项工作流均为首次 attempt，通过后才推进 main。
+
+### 交付
+
+八类已复现问题及兼容修复完成。实现提交 10309f0a 的本地完整源码、CLI/Web、真实 Windows、双平台安装 UI 和四项 CI 均通过。本次提交仅补充计划/任务验收记录，生产代码和测试与已验证实现完全一致；以普通快进推送 main，不强推。推送后 main 的精确提交和自动 CI 结果另存工作区审查报告，不把旧源码的原始日志改标为新 SHA。
+
+原始失败、测试设施设置错误、02 未知中断、bb 本地诊断停止、ENOSPC 对照和旧 CI 的失败/超时均保留。旧 bb 综合 CI 最终为 cancelled：coverage 明确到原 30 分钟时限，单元和正式验收的原 gen1 用例报 300000ms 超时；这些结果不计通过。未调用付费模型、不提升默认策略、不发布 release。运行与模型质量的限制仍按前文记录。
