@@ -2403,6 +2403,17 @@ export class AgentRuntime {
     return this.resolveAgent(session);
   }
 
+  /** Read the validated effective policy for synchronous event observers.
+   * Terminal publication may await such an observer while owning its recovery
+   * lock, so this view must not trigger terminal reconciliation. Preserve the
+   * ordinary frozen-policy, drift and durable model-selection checks. Public
+   * session metadata/startup callers retain getSessionAgent's repair boundary. */
+  async getSessionAgentPolicy(sessionId: SessionId): Promise<AgentDefinition> {
+    const session = await this.store.getSession(sessionId);
+    if (session === undefined) throw new AgentError(errorInfo("INTERNAL_ERROR", `unknown session ${sessionId}`));
+    return this.resolveAgent(session);
+  }
+
   /** Switch only the authorized model reference. Model, immutable legacy
    * provenance and the event outbox share one atomic session-row commit; tools,
    * permissions, skills and all other frozen policy fields remain unchanged. */

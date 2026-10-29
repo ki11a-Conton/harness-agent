@@ -48,3 +48,29 @@
 - 错误响应体先完整读取后截断、畸形 SSE JSON 沿用 keepalive 忽略策略，仍需独立资源/协议反例与兼容设计；本轮没有宣称解决。
 - 没有新 outbox 的旧终态缺少首次原因/验证证据时不补造历史信息；人为伪造 waiting 状态且没有可恢复 pause/checkpoint，不生成虚假的 no-effect 取消。
 - 不涉及付费模型质量实验，也不发布 release。
+
+## 2026-10-29：安装版 UI 验收发现的观察器重入
+
+03c69cbf 审查分支的一代安装验收通过，但官方 UI 安装验收在 Windows、Linux 均失败：回合结束后 Stop generating 不消失，后续 rename/read/ask 连带超时。原始工作流 40729966216 与两个失败 job 122963877319、122963877423 已保留；native/CI 的若干测试阶段到达各自 20/30/45/60 分钟时限后 cancelled，不计为通过。未取消、重跑或延长任何门禁。main 仍为 06aeaf1f。
+
+已经用同一份 03c69cbf 原生 dist、本地零付费模型和真正 production composition/HTTP 复现：终态行及唯一终态事件已提交，但 actor outcome 不返回。持有 terminal session lock 的发布等待同步 deliverables observer；observer 经过受控 host-tools 查询 getSessionAgent，再次请求相同终态恢复锁，形成自等待。纯 Harness 可完成；仅在因果对照中省略策略读取的终态恢复（仍执行原 frozen policy resolver）则 composition 可完成。初始 append 前故障后的冷补投同样能复现，不能用“正在运行时跳过”掩盖。
+
+### 做什么、怎么做
+
+新增明确的 getSessionAgentPolicy 策略视图，复用原有 session 归属、冻结策略、模型选择和策略漂移检查，只不推进 terminal reconciliation。内部受控 host-tools 及 owner facade 使用该视图；公开 metadata/start/resume/cancel、actor load/hydrate 保留实际补投和 fence。同步观察器仍被等待；权限、沙箱、ToolOrchestrator、真实文件快照和变更 diff 不变。不引入全局跳过标志或 detached callback。
+
+### 怎么验收
+
+- 保存原 dist 的纯 Harness / 实际 composition / 策略因果对照与真实 HTTP 正常完成、冷补投死锁反例。
+- 新 core 回归覆盖 observer 同步策略查询、未知/坏/外来 snapshot 拒绝、受限父子权限、modelSelection 崩溃补投及 drift；确认策略视图不补 terminal，原 metadata 仍补投/fence。
+- 新 Web 回归使用实际 HTTP、受控真实文件写入、正常完成及 append 前/后失败恢复；验证唯一终态、actor outcome 返回、文件 diff、rename 与下一轮 prompt。隔离自锁子进程，测试失败不能拖死测试框架。
+- 用真实 Chromium 操作原来的 UI 场景与原有时限，验收桌面/手机/窄长视口；随后在新的干净实现提交上跑 typecheck、全量测试与实际 CLI/Web coding 验收，最后核对精确 SHA 的四项 CI。
+- 03c69cbf 本地全量在环境中断后只留启动日志，没有完成收据，不宣称通过；新源代码需要重新执行全量。
+
+### 重入修复阶段结果
+
+- 新策略 API 的 9 项基线全红，修后与原终态/配置/安全相关共 67 项通过。
+- 新生产 HTTP 三场景在原 dist 上 3/3 失败；修后三场景 3/3 通过，分别约 0.5 秒，包含真实审批写入、完整同步快照/diff、唯一终态、冷补投、重命名与下一轮任务。最初子进程 import bootstrap 和测试错误读取 payload.tool 的失败日志另留；修正为实际 schema payload.name 后才统计行为通过。
+- 原来的 Chromium 30 场景、3 视口全部通过，原有 15 秒/8 秒交互时限未改，实际宿主正常关闭，付费调用 0。这是当前构建工作区字节验收，不能冒充干净发布安装包；安装版仍需新 SHA CI。
+- typecheck、静态 fixture 语法、CRLF 兼容 whitespace 检查通过；core 与 Web 交叉只读复核通过。
+- 原始日志：/tmp/harness-terminal-observer-policy-{red,green}-20261029.log、/tmp/harness-ui-terminal-observer-{red,green,bootstrap-error,fixture-assertion-error}-20261029.log、/tmp/harness-ui-observer-browser-20261029/receipt.json。后续继续新干净提交全量及远端验收。

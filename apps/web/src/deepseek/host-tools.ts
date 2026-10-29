@@ -81,7 +81,9 @@ export function createHostTools(harness: Harness, cwd: string, dataDir?: string,
       const actualOwner = await ownerOf?.(owner) ?? harness;
       const physicalId = nativeSessionId?.(owner) ?? owner;
       if (!await actualOwner.store.getSession(physicalId)) throw new RemoteFailure("session/not-found", "Metadata owner does not exist");
-      const agent = await actualOwner.runtime.getSessionAgent(physicalId);
+      // Observers also authorize tools while a terminal event is publishing.
+      // Resolve frozen policy without reentering that event's recovery lock.
+      const agent = await actualOwner.runtime.getSessionAgentPolicy(physicalId);
       const context: ToolExecutionContext = { sessionId: physicalId, agentId: agent.id, cwd: root, signal,
         permissions: { defaultEffect: "deny", rules: [{ action: definition.risk === "readonly" ? "read" : "edit", resource: "file", effect: "allow", scope: "call", pattern: target }] },
         sandboxPolicy: { filesystem: { mode: "workspace-write", allowedPaths: [target] }, network: { mode: "deny" }, process: { allowedCommands: [] } } };
@@ -96,7 +98,7 @@ export function createHostTools(harness: Harness, cwd: string, dataDir?: string,
       const physicalId = nativeSessionId?.(owner) ?? owner;
       const session = await actualOwner.store.getSession(physicalId);
       if (!session) throw new RemoteFailure("session/not-found", "Tool session does not exist");
-      const agent = await actualOwner.runtime.getSessionAgent(physicalId);
+      const agent = await actualOwner.runtime.getSessionAgentPolicy(physicalId);
       const sandboxPolicy = actualOwner.config.sandboxPolicy ?? resolveProfile(actualOwner.profile).sandbox;
       let context: ToolExecutionContext = { sessionId: physicalId, agentId: agent.id, cwd: session.cwd, permissions: agent.permissions, sandboxPolicy, signal };
       if (sessionId === undefined && name === "web_workspace_read" && args.operation === "directoryList" && typeof args.path === "string" && isAbsolute(args.path)) {

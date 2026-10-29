@@ -668,6 +668,7 @@ export async function createOwnerManager(base: Harness, hooks: OwnerHooks): Prom
   const runtime = proxy(base.runtime, {
     getAgent: (id: AgentId) => all().map(owner => owner.runtime.getAgent(id)).find(agent => agent !== undefined),
     getSessionAgent: async (id: SessionId) => (await ownerOf(id)).runtime.getSessionAgent(nativeSessionId(id)),
+    getSessionAgentPolicy: async (id: SessionId) => (await ownerOf(id)).runtime.getSessionAgentPolicy(nativeSessionId(id)),
     createSession: async (options: Parameters<Harness["runtime"]["createSession"]>[0]) => {
       const owner = ownerFromAgent(options.agent.id); if (!samePath(options.cwd, owner.config.cwd)) throw new RemoteFailure("session/conflict", "Use the registered workspace factory to change cwd");
       if (options.parentId !== undefined && await ownerOf(options.parentId) !== owner) throw new RemoteFailure("session/conflict", "Parent session belongs to another workspace owner");
