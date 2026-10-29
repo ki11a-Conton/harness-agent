@@ -414,7 +414,6 @@ export class InboxSessionInputQueue implements SessionInputQueue {
   constructor(private readonly deps: { sessionId: SessionId; inbox?: InboxStore; store?: SessionStore; now?: () => number;
     /** Actor-owned admission binds a correction before durable IO begins. */
     steerTurnId?: () => TurnId | undefined;
-    reconcileTerminals?: () => Promise<void>;
   }) {}
 
   get sessionId(): SessionId {
@@ -423,6 +422,12 @@ export class InboxSessionInputQueue implements SessionInputQueue {
 
   get pendingCount(): number {
     return this.followups.length;
+  }
+
+  /** Discover durable pending prompts before the actor reserves execution.
+   * An empty queue has no turn to start and must not block foreground input. */
+  async hydratePendingFollowups(): Promise<void> {
+    await this.ensureHydrated();
   }
 
   async enqueueSteer(input: UserMessage): Promise<void> {
@@ -597,9 +602,6 @@ export class InboxSessionInputQueue implements SessionInputQueue {
    * runtime owner.
    */
   private async hydrate(): Promise<void> {
-    // Do not consume a terminal prompt until its committed completion event
-    // has been published. Reconciliation never executes the bound turn.
-    await this.deps.reconcileTerminals?.();
     const inbox = this.deps.inbox;
     const store = this.deps.store;
     if (inbox === undefined) return;
@@ -803,7 +805,6 @@ export class DefaultSessionActor implements SessionActor {
       inbox: deps.inbox,
       store: deps.store,
       now: deps.now,
-      reconcileTerminals: () => deps.runtime.reconcileTerminalTurns?.(deps.persistent.id) ?? Promise.resolve(),
       steerTurnId: () => this.state.kind === "running" &&
         deps.runtime.isSteeringOpen?.(deps.persistent.id, this.state.turn.id) !== false
         ? this.state.turn.id : undefined,
@@ -1768,6 +1769,18 @@ export class DefaultSessionActor implements SessionActor {
   }
 
   private async drainFollowupsInner(queue: SessionInputQueue): Promise<void> {
+    // Repair terminal publication before queue discovery/consumption, while
+    // leaving the actor slot free. An empty background hydration must not
+    // reserve "starting" throughout unrelated durable recovery work.
+    try { await this.deps.runtime.reconcileTerminalTurns?.(this.sessionId); }
+    catch (repairErr) {
+      process.stderr.write(`[degraded] session ${this.sessionId} terminal preflight failed: ${repairErr instanceof Error ? repairErr.message : String(repairErr)}\n`);
+      if (!this.closed) this.scheduleStoreRecheck();
+      return;
+    }
+    // A foreground start or close may have won while publication was pending.
+    // The later dequeue still owns its ordinary synchronous reservation.
+    if (this.closed || this.state.kind !== "idle") return;
     // P38.4-2/3 (INV-P38.4-003/004): discover same-T recoverable bound
     // nonterminal turns once per lifetime (never startTurn, no T2).
     if (!this._recoverableChecked) {
@@ -1802,6 +1815,17 @@ export class DefaultSessionActor implements SessionActor {
     }
     // close may have revoked ownership during recovery/discovery IO.
     if (this.closed || this.state.kind !== "idle") return;
+    // Our durable queue can discover that there is no work without owning the
+    // execution slot. Keep custom queue reservation contracts unchanged.
+    if (queue === this.inputQueue && queue instanceof InboxSessionInputQueue) {
+      try { await queue.hydratePendingFollowups(); }
+      catch (hydrateErr) {
+        process.stderr.write(`[degraded] session ${this.sessionId} followup hydration failed: ${hydrateErr instanceof Error ? hydrateErr.message : String(hydrateErr)}\n`);
+        if (!this.closed) this.scheduleStoreRecheck();
+        return;
+      }
+      if (this.closed || this.state.kind !== "idle" || queue.pendingCount === 0) return;
+    }
     // P38-1 (INV-P38-001): RESERVE the actor slot BEFORE the awaited dequeue.
     // A concurrent startTurn will see "starting" and be refused — no
     // reservation overwrite.

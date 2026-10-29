@@ -74,3 +74,29 @@
 - 原来的 Chromium 30 场景、3 视口全部通过，原有 15 秒/8 秒交互时限未改，实际宿主正常关闭，付费调用 0。这是当前构建工作区字节验收，不能冒充干净发布安装包；安装版仍需新 SHA CI。
 - typecheck、静态 fixture 语法、CRLF 兼容 whitespace 检查通过；core 与 Web 交叉只读复核通过。
 - 原始日志：/tmp/harness-terminal-observer-policy-{red,green}-20261029.log、/tmp/harness-ui-terminal-observer-{red,green,bootstrap-error,fixture-assertion-error}-20261029.log、/tmp/harness-ui-observer-browser-20261029/receipt.json。后续继续新干净提交全量及远端验收。
+
+## 2026-10-29：完整 CI 的两项恢复兼容回归
+
+02ce0629 的真实 Windows 验收（743 通过、2 跳过，46 个必需用例均执行）、双平台安装 UI 和三条一代安装验收均通过。但综合 CI 40815599118 未通过：原有 provider-termination 的显式失败恢复，以及 longrun-completion-steer 的终态后前台启动出现确定性回归；coverage 为 10487 通过、2 失败、17 跳过，不能作为通过证据。main 仍为 06aeaf1f。
+
+### 做什么、怎么做
+
+1. 显式恢复失败任务：完成/取消的现代 outbox 仍返回首次结果，不执行新模型或工具；用户显式恢复 failed 时沿原 checkpoint、工具对账及累计预算路径创建新 turn。保留旧 failed 行和唯一失败事件，不能重放被拒绝的工具意图。
+2. 后台队列误占会话：终态补投原先被加入 queue hydration，而后台 drain 在补投前已预留 starting，连空队列也可能阻止下一项前台任务。把补投移到后台 drain 预留 starting 之前；补投后重检 idle/closed，不覆盖等待期间已启动的前台任务。补投失败保持可观测降级和原有有界重查，修复成功前不消费或提升消息。
+
+### 怎么验收
+
+- 保留两项原有失败断言和红例；显式恢复额外检查两次模型采样、零工具执行、原 failed 行/事件不变、累计 turns/output 预算不退还，以及 completed/cancelled 不重跑。
+- 队列回归用受控补投门闩验证前台可启动、释放门闩不能覆盖运行中的前台 turn；补投失败后不消费，后续有界重查修复后才消费。原 longrun、actor/race、取消和持久恢复测试均须通过。
+- 独立审查、typecheck、实际生产 HTTP 终态观察器回归、干净完整源码的全量测试，以及新精确 SHA 的四项 CI。不调整原断言、时限和安全约束。
+- 02ce0629 的本地完整源码全量日志在环境恢复时没有最终汇总，进程已不存在，记为中断/未完成；不计为通过。最初稀疏工作区缺少已跟踪 docs fixture 的失败另保留，与产品缺陷分开记录。后续全量使用已有完整 clone，结束后恢复其原分支和构建。
+
+### 恢复兼容阶段结果
+
+- 显式恢复及相关 6 文件 76 项通过，原红例与测试 fixture 设置错误日志分别保留。
+- 仅移动终态补投的第一版仍为 109 通过、原 longrun 第 8 项失败；原断言保留。补投完成后，先保持 discover/same-T recovery 顺序，再对 actor 自有 InboxSessionInputQueue 预加载；确认有真实 pending 项才同步预留 starting 并出队。自定义队列保持原预留合同，所有 await 后重检 idle/closed。
+- 交叉审查补获预加载异常可能逃出旧 try 的问题；已单独接管为 degraded 和关闭保护下的有界重查。新增 5 项覆盖补投/加载门闩下前台启动、关闭、失败不消费，以及实际 scheduler callback 重试后只执行和消费一次。最终 actor/原 longrun/并发/终态共 6 文件 112 项通过。
+- typecheck 通过；原队列恢复、安全事件、前台预留、策略和生产 HTTP 5 文件 27 项通过，其中实际审批写入、正常/append 前/append 后终态恢复、diff、rename 和下一轮任务 3 场景均通过。
+- Windows 原生命令增加原失败的 provider/longrun 和新 preflight 三文件，原 46 个必需用例及预算未变。两部分源代码、测试和 workflow 独立复核无阻塞；完整源码全量及新精确 SHA CI 仍待执行，不计为通过。
+
+日志：/tmp/harness-explicit-failed-resume-accepted-20261029.log、/tmp/harness-terminal-drain-preflight-{red,only-failure,before-hydration-catch,fixture-error,green}-20261029.log、/tmp/harness-bug-audit-resume-admission-{typecheck,boundary}-20261029.log。

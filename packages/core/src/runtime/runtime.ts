@@ -2166,10 +2166,11 @@ export class AgentRuntime {
     const { working, committedSideEffects, replayedToolLedger, unresolvedTools, replayedEventCount } =
       await this.recoveryController.reconstructResumeState(sessionId, turnId, checkpoint);
     const original = turnId === undefined ? undefined : await this.store.getTurn(turnId);
-    if (original?.terminalOutcome !== undefined) {
-      // The previous run committed its result before losing its response.
-      // Return that result after read-only reconstruction; no new task, model
-      // call, verification, reconciliation decision or reflection is created.
+    if (original?.terminalOutcome !== undefined && (original.status === "completed" || original.status === "cancelled")) {
+      // Completed/cancelled runs may have lost only their response: return the
+      // committed result without new execution. An explicit resume of a failed
+      // task still follows the original checkpoint/budget recovery below,
+      // preserving its failed record while continuing in a fresh turn.
       const state = new AgentState(sessionId, agent.id, this.now); state.beginTurn(original.id);
       state.seedProgress(checkpoint.iteration, (checkpoint.toolCallsExecuted ?? checkpoint.toolLedger.length) + replayedToolLedger.length);
       const outcome = await this.recoveryController.finishTurn({ sessionId, turnId: original.id, session, agent, signal },

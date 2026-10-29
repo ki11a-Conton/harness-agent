@@ -174,15 +174,65 @@ describe("R1: incomplete native-provider output never reaches tools or successfu
         budget.onTurnStart(); return budget.snapshot();
       })() },
     }));
-    expect((await env.runtime.runTurn(session.id, turn.id, new AbortController().signal)).status).toBe("failed");
+    const failed = await env.runtime.runTurn(session.id, turn.id, new AbortController().signal);
+    expect(failed.status).toBe("failed");
+    expect(failed.terminationReason).toBe("model_error");
+    const firstTerminal = structuredClone(await env.store.getTurn(turn.id));
+    expect(firstTerminal?.terminalOutcome).toMatchObject({ status: "failed", terminationReason: "model_error" });
     expect(env.orchestrator.calls).toHaveLength(0);
     const resumed = await env.runtime.resumeTurn(session.id, new AbortController().signal);
     expect(resumed.outcome.status).toBe("completed");
+    expect(resumed.outcome.turn.id).not.toBe(turn.id);
+    expect(resumed.turnId).toBe(turn.id);
+    expect(await env.store.listTurns(session.id)).toHaveLength(2);
+    expect(await env.store.getTurn(turn.id)).toEqual(firstTerminal);
     expect(resumed.unresolvedTools).toEqual([]);
     expect(resumed.committedSideEffects).toEqual([]);
     expect(env.orchestrator.calls).toHaveLength(0);
     expect(env.fetch).toHaveBeenCalledTimes(2);
+    expect(env.verify).toHaveBeenCalledTimes(1);
+    // Explicit recovery creates a new turn without refunding the failed
+    // call's consumed output/turn budget or treating rejected intents as work.
+    const completed = await env.checkpoints.loadLatest();
+    expect(completed?.turnId).toBe(resumed.outcome.turn.id);
+    expect(completed?.budgetUsage?.run).toMatchObject({ usedTurns: 2, usedToolCalls: 0,
+      outputChars: "partial answer".length + "complete".length });
+    const journal = await env.events.list(session.id);
+    expect(journal.filter(event => event.turnId === turn.id && event.type === "turn.failed")).toHaveLength(1);
+    expect(journal.filter(event => event.turnId === turn.id && event.type === "turn.completed")).toHaveLength(0);
+    expect(journal.filter(event => event.type === "tool.requested")).toHaveLength(0);
     expect(() => assertToolProtocol(env.store.messages)).not.toThrow();
+  });
+
+  it.each(["completed", "cancelled"] as const)("returns the committed %s outcome on resume without creating another turn or sampling", async status => {
+    const env = setup([stop]);
+    const session = await env.runtime.createSession({ agent: env.agent, cwd: "/offline" });
+    const turn = await env.runtime.startTurn(session.id, "task");
+    await env.checkpoints.save(buildCheckpoint({
+      checkpointId: newCheckpointId(), schemaVersion: 1, sessionId: session.id, turnId: turn.id,
+      agentId: env.agent.id, createdAt: turn.startedAt, reason: "offline:before_model", phase: "thinking", iteration: 0,
+      state: newWorkingState("task"), toolLedger: [], childSessions: [],
+      lastEventSequence: (await env.events.list(session.id)).at(-1)!.sequence,
+      effectiveAgentConfigRef: "effectiveAgent", contextRefs: [],
+      budgetUsage: { maxTokens: 0, run: (() => {
+        const budget = new RunBudgetTracker(env.agent.limits, () => turn.startedAt);
+        budget.onTurnStart(); return budget.snapshot();
+      })() },
+    }));
+    const initial = await env.runtime.runTurn(session.id, turn.id,
+      status === "cancelled" ? AbortSignal.abort() : new AbortController().signal);
+    expect(initial.status).toBe(status);
+    const original = structuredClone(await env.store.getTurn(turn.id));
+    const calls = env.fetch.mock.calls.length, verifications = env.verify.mock.calls.length;
+    const resumed = await env.runtime.resumeTurn(session.id, new AbortController().signal);
+    expect(resumed.outcome).toMatchObject({ status, terminationReason: initial.terminationReason, grade: initial.grade,
+      turn: { id: turn.id } });
+    expect(await env.store.getTurn(turn.id)).toEqual(original);
+    expect(await env.store.listTurns(session.id)).toHaveLength(1);
+    expect(env.fetch).toHaveBeenCalledTimes(calls); expect(env.verify).toHaveBeenCalledTimes(verifications);
+    expect(env.orchestrator.calls).toHaveLength(0);
+    expect((await env.events.list(session.id)).filter(event => event.turnId === turn.id &&
+      ["turn.completed", "turn.cancelled", "turn.failed"].includes(event.type))).toHaveLength(1);
   });
 
   it("still executes a normally terminated tool batch exactly once per requested call", async () => {
