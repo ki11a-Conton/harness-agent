@@ -48,4 +48,10 @@
 
 同一外部延迟 setup：旧源码用例 1 失败/27 定向跳过并含 1 unhandled owner closed，新同步用例 1 通过/27 定向跳过且无 unhandled；PR15、压缩、审批 4 文件 49 项通过，根 typecheck 通过，独立复核无阻塞。原 PR15 文件也加入 native Windows 命令，保留原全部文件、必需断言与预算。使用另一主题分支避免取消原 SHA CI；后续精确新 SHA 的双平台 CI 仍待完成。产品代码相对 `27bc9bc3` 完全不变，不重复冒称本地全量是在后续验收提交上运行。
 
-验收结束前不宣称全部完成；本轮不发布 release。
+### 修正提交的实际 CI
+
+干净 `3d1609d4d158f8b415b70e783f36da80ce4ce739` 首 attempt 四项全部成功：[综合 CI 41025945153](https://github.com/ki11a-Conton/harness-agent/actions/runs/41025945153) 10 个 job 全 success；[真实 Windows 41025945188](https://github.com/ki11a-Conton/harness-agent/actions/runs/41025945188) 83 文件、864 通过/0 失败/2 跳过，原 46 必需项各一次 passed；[安装 UI 41025945298](https://github.com/ki11a-Conton/harness-agent/actions/runs/41025945298) archive、Windows、Ubuntu 全通过；[Gen1 41025945199](https://github.com/ki11a-Conton/harness-agent/actions/runs/41025945199) 三条执行腿通过、原条件 draft 导出跳过。Windows source=workflow=3d1609d4、tree clean、Node 22.23.4；rawReport 收据摘要 `b5b02ae3437df9a9789371383aecafad2363bc3ce250e91abba30c01df1cc659`，caseRecords `822bdc8b715834e3ab49b1a8cd28a01af8a3f98905847fb6bca778910e5a533f`。
+
+case records 超出 9 个 annotation 包预算，完整内容仍由 CI artifact 保留；本次云端仅取得 artifact 索引与收据，不能把其中 hash 冒称已下载完整文件复算。四项工作流、jobs、原失败及来源版本的原始 API 收据均保存。
+
+仅提交验收文档后普通快进 main，再监听 main 自身精确 SHA 的自动 CI；不重复本地全量、不转借主题分支结果为 main 结果、不发布 release、不改原失败记录。
