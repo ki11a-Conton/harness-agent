@@ -77,6 +77,8 @@ interface Job {
   pollToken: number;
   busy: boolean;
   explicitCancel: boolean;
+  /** A terminal record is not public until its journal write has completed. */
+  settled: boolean;
   supersedes?: string;
   supersededBy?: string;
   timer?: ReturnType<typeof setTimeout>;
@@ -189,6 +191,11 @@ export class ManagedCommands {
     if (!ctx) throw unavailable();
     return ctx;
   }
+  private state(job: Job): ManagedCommandState {
+    // The journal needs the proposed terminal record, but observers must keep
+    // the workspace barrier until that write succeeds or fails closed.
+    return job.settled ? job.record.state : "running";
+  }
   private lookup(id: string): Job {
     const identity = this.identity(),
       job = this.jobs.get(id);
@@ -222,7 +229,7 @@ export class ManagedCommands {
       [...domainJobs].some(
         (j) =>
           overlaps(j.record.workspace, workspace) &&
-          (j.record.state === "running" || j.record.state === "unknown"),
+          (this.state(j) === "running" || this.state(j) === "unknown"),
       )
     );
   }
@@ -363,7 +370,7 @@ export class ManagedCommands {
                 .filter((j) => j.record.owner === owner)
                 .map((j) => ({
                   jobId: j.record.id,
-                  state: j.record.state,
+                  state: this.state(j),
                   deadlineAt: j.record.deadlineAt,
                   pollToken: j.pollToken,
                   nextCursor: j.delivered,
@@ -390,7 +397,7 @@ export class ManagedCommands {
     if (this.closed || identity.authority.signal.aborted || call.signal.aborted)
       return denial("managed owner is closed or cancelled");
     const active = [...domainJobs].filter(
-      (j) => j.record.state === "running" || j.record.state === "unknown",
+      (j) => this.state(j) === "running" || this.state(j) === "unknown",
     );
     if (
       this.locked(identity.workspace) ||
@@ -410,7 +417,7 @@ export class ManagedCommands {
       }
       if (
         previous.signature !== signature ||
-        !["failed", "timed_out"].includes(previous.record.state) ||
+        !["failed", "timed_out"].includes(this.state(previous)) ||
         previous.supersededBy
       )
         return denial(
@@ -471,6 +478,7 @@ export class ManagedCommands {
       pollToken: 0,
       busy: false,
       explicitCancel: false,
+      settled: false,
       ...(previous ? { supersedes: previous.record.id } : {}),
     };
     // Reserve pending spawn synchronously, before journal/fs/sandbox awaits.
@@ -485,6 +493,7 @@ export class ManagedCommands {
         const remaining = deadlineAt - Date.now();
         if (remaining <= 0) {
           job.record.state = "timed_out";
+          await this.save();
           return;
         }
         const narrowed = {
@@ -524,9 +533,9 @@ export class ManagedCommands {
               : status === "cancelled"
                 ? "cancelled"
                 : "failed";
+        await this.save();
         if (job.record.state === "succeeded" && previous)
           previous.supersededBy = job.record.id;
-        await this.save();
       } catch (err) {
         job.record.state = "unknown";
         job.result = {
@@ -537,6 +546,7 @@ export class ManagedCommands {
           ),
         };
       } finally {
+        job.settled = true;
         clearTimeout(job.timer);
       }
     })();
@@ -561,7 +571,7 @@ export class ManagedCommands {
     }
   }
   private async wait(job: Job, ms: number): Promise<void> {
-    if (!ms || job.record.state !== "running") return;
+    if (!ms || this.state(job) !== "running") return;
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
       await Promise.race([
@@ -577,13 +587,13 @@ export class ManagedCommands {
   private snapshot(job: Job, cursor: number) {
     return {
       jobId: job.record.id,
-      state: job.record.state,
+      state: this.state(job),
       pollToken: job.pollToken,
       deadlineAt: job.record.deadlineAt,
-      exitCode: job.result?.output?.exitCode ?? null,
-      commandStatus: job.result?.status ?? null,
+      exitCode: job.settled ? job.result?.output?.exitCode ?? null : null,
+      commandStatus: job.settled ? job.result?.status ?? null : null,
       ...job.output.read(cursor),
-      ...(job.result?.error ? { error: job.result.error } : {}),
+      ...(job.settled && job.result?.error ? { error: job.result.error } : {}),
       ...(job.supersedes ? { supersedes: job.supersedes } : {}),
       ...(job.supersededBy ? { supersededBy: job.supersededBy } : {}),
     };
@@ -675,7 +685,8 @@ export class ManagedCommands {
       [...domainJobs].some(
         (j) =>
           overlaps(j.record.workspace, context.cwd) &&
-          (j.record.state === "running" ||
+          (!j.settled ||
+            j.record.state === "running" ||
             j.record.state === "unknown" ||
             (j.owner.sessionId === context.sessionId &&
               j.owner.turnId === context.turnId &&

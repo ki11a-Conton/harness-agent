@@ -114,15 +114,17 @@ export function withOpenAIRequestPolicy(provider: ModelProvider, policy: Readonl
 }
 /** Truncation limit for response-body summaries included in error events. */
 const BODY_SUMMARY_LIMIT = 200;
+/** Error diagnostics must not buffer an arbitrarily large provider response. */
+const ERROR_BODY_READ_LIMIT = 64 * 1024;
 
 interface ChatChunk {
   error?: { message?: unknown; code?: unknown; type?: unknown; status?: unknown };
   choices?: Array<{
     delta?: {
-      content?: string;
+      content?: string | null;
       /** deepseek-style thinking-mode field; must be passed back to the API
        *  on the next assistant message of the conversation. */
-      reasoning_content?: string;
+      reasoning_content?: string | null;
       tool_calls?: Array<{
         index?: number;
         id?: string;
@@ -255,14 +257,79 @@ function streamTerminationError(
 }
 
 async function summarizeBody(response: Response): Promise<string> {
+  let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
   try {
-    const text = await response.text();
+    reader = response.body?.getReader();
+    if (!reader) return "";
+    const decoder = new TextDecoder();
+    let text = "";
+    let bytes = 0;
+    while (bytes < ERROR_BODY_READ_LIMIT) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const prefix = value.subarray(0, ERROR_BODY_READ_LIMIT - bytes);
+      bytes += prefix.byteLength;
+      text += decoder.decode(prefix, { stream: true });
+    }
+    text += decoder.decode();
+    // A capped prefix may stop in the middle of a credential. Drop that final
+    // token before redaction rather than disclosing an unrecognizable fragment.
+    if (bytes === ERROR_BODY_READ_LIMIT) text = text.replace(/\S*$/u, "");
     return redactSecrets(text.replace(/\s+/g, " ").trim()).content.slice(0, BODY_SUMMARY_LIMIT);
   } catch {
     // Best-effort: a body-summary read that races/timeouts must not fail the
     // whole call; the real response body is not degraded by this summary.
     return "";
+  } finally {
+    if (reader) {
+      try { await reader.cancel(); } catch {
+        process.stderr.write("[degraded] openai.errorBody.cancel: response cleanup failed\n");
+      }
+      try { reader.releaseLock(); } catch {
+        process.stderr.write("[degraded] openai.errorBody.releaseLock: response cleanup failed\n");
+      }
+    }
   }
+}
+
+/** Validate only fields consumed as model output. Unknown provider metadata,
+ * role-only deltas, nullable text fields and usage-only footers remain valid.
+ * Errors report field paths, never the provider-controlled payload itself.
+ */
+function chunkOutputViolation(value: unknown): string | undefined {
+  const object = (input: unknown): input is Record<string, unknown> =>
+    input !== null && typeof input === "object" && !Array.isArray(input);
+  const stringOrAbsent = (input: unknown): boolean => input === undefined || input === null || typeof input === "string";
+  if (!object(value)) return "event must be a JSON object";
+  if (value.choices === undefined || value.choices === null) return undefined;
+  if (!Array.isArray(value.choices)) return "choices must be an array";
+  if (!value.choices.length) return undefined;
+  const choice: unknown = value.choices[0];
+  if (!object(choice)) return "choices[0] must be an object";
+  if (!stringOrAbsent(choice.finish_reason)) return "choices[0].finish_reason must be a string or null";
+  if (choice.delta === undefined || choice.delta === null) return undefined;
+  if (!object(choice.delta)) return "choices[0].delta must be an object or null";
+  const delta = choice.delta;
+  if (!stringOrAbsent(delta.content)) return "delta.content must be a string or null";
+  if (!stringOrAbsent(delta.reasoning_content)) return "delta.reasoning_content must be a string or null";
+  if (delta.tool_calls === undefined || delta.tool_calls === null) return undefined;
+  if (!Array.isArray(delta.tool_calls)) return "delta.tool_calls must be an array or null";
+  for (const call of delta.tool_calls) {
+    if (!object(call)) return "delta.tool_calls entries must be objects";
+    if (call.index !== undefined && (!Number.isSafeInteger(call.index) || (call.index as number) < 0)) return "tool call index must be a nonnegative safe integer";
+    if (!stringOrAbsent(call.id)) return "tool call id must be a string or null";
+    if (call.function === undefined || call.function === null) continue;
+    if (!object(call.function)) return "tool call function must be an object or null";
+    if (!stringOrAbsent(call.function.name)) return "tool call function.name must be a string or null";
+    if (!stringOrAbsent(call.function.arguments)) return "tool call function.arguments must be a string or null";
+  }
+  return undefined;
+}
+
+function streamPayloadError(detail: string): ReturnType<typeof errorInfo> {
+  return errorInfo("MODEL_ERROR", `Invalid OpenAI SSE chat-completion event: ${detail}`, {
+    retryable: false, safeToRetry: false, provider: { kind: "protocol" },
+  });
 }
 
 /**
@@ -595,13 +662,13 @@ async function* streamChatCompletion(
   });
   if (effectiveSignal.aborted) aborted = true;
 
-  const finishEvents = (reason: FinishReason, error?: ReturnType<typeof errorInfo>): ModelEvent[] => {
+  const finishEvents = (reason: FinishReason, error?: ReturnType<typeof errorInfo>, emitToolDeltas = true): ModelEvent[] => {
     const calls: ToolCall[] = [...toolCalls.values()].map((tc) => ({
       id: tc.id ? (tc.id as ToolCallId) : newToolCallId(),
       name: tc.name,
       args: parseArgs(tc.args),
     }));
-    const events: ModelEvent[] = calls.map((call) => ({
+    const events: ModelEvent[] = (emitToolDeltas ? calls : []).map((call) => ({
       type: "tool_call_delta",
       toolCall: call,
       timestamp: Date.now(),
@@ -633,14 +700,21 @@ async function* streamChatCompletion(
         finished: true,
       };
     }
-    let chunk: ChatChunk;
+    let parsed: unknown;
     try {
-      chunk = JSON.parse(payload) as ChatChunk;
+      parsed = JSON.parse(payload);
     } catch {
-      // Non-JSON SSE keepalive line — nothing to emit.
-      return { events: [], finished: false };
+      if (normalReason !== undefined) return { events: [], finished: false };
+      return { events: finishEvents("error", streamPayloadError("malformed JSON data"), false), finished: true };
     }
-    if (chunk === null || typeof chunk !== "object" || Array.isArray(chunk)) return { events: [], finished: false };
+    // Once completion has been certified, only usage is consumed. Preserve the
+    // existing immutable-boundary rule for any later output mutations.
+    if (normalReason === undefined) {
+      const violation = chunkOutputViolation(parsed);
+      if (violation !== undefined) return { events: finishEvents("error", streamPayloadError(violation), false), finished: true };
+    }
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) return { events: [], finished: false };
+    const chunk = parsed as ChatChunk;
     const events: ModelEvent[] = [];
     if (chunk.error && normalReason === undefined) {
       const status = Number(chunk.error.status ?? chunk.error.code);

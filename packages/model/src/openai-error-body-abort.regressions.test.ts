@@ -5,7 +5,8 @@ import type { ModelEvent } from "@ar/contracts";
 import { OpenAICompatibleProvider } from "./openai.js";
 
 // Real loopback HTTP only. The observer returns the original Response and its
-// original text() promise, giving cancellation a deterministic body-read gate.
+// original reader/read promise, giving cancellation a deterministic body-read
+// gate while the diagnostic collector consumes a bounded prefix.
 let server: Server | undefined;
 afterEach(async () => {
   vi.restoreAllMocks();
@@ -43,11 +44,16 @@ function nativeBodyGate() {
   const fetch = globalThis.fetch;
   vi.spyOn(globalThis, "fetch").mockImplementation(async (...args) => {
     const response = await fetch(...args);
-    const text = response.text.bind(response);
-    vi.spyOn(response, "text").mockImplementation(() => {
-      const pending = text();
-      started.resolve();
-      return pending;
+    const getReader = response.body!.getReader.bind(response.body!);
+    vi.spyOn(response.body!, "getReader").mockImplementation(() => {
+      const reader = getReader();
+      const read = reader.read.bind(reader);
+      vi.spyOn(reader, "read").mockImplementation(() => {
+        const pending = read();
+        started.resolve();
+        return pending;
+      });
+      return reader;
     });
     return response;
   });

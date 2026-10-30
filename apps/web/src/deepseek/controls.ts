@@ -28,6 +28,11 @@ export function createControlsService(host: ControlsHost) {
   const inflight = new Map<string, Set<AbortController>>();
   const pending = new Set<Promise<unknown>>();
   const activeGoals = new Set<string>();
+  // Identity visible at the manual build boundary, never a completion-time
+  // wall clock. A later human request must survive the current summary.
+  const consumedCompactions = new Map<string, string | undefined>();
+  const compactionIdentity = (state: SessionControls["compaction"]) => state?.pending
+    ? state.requestId ?? `legacy:${state.requestedAt}` : undefined;
   let timer: ReturnType<typeof setInterval> | undefined, driving: Promise<void> | undefined, closed = false;
   const serial = <T>(id: string, action: () => Promise<T>) => host.withSessionLock?.(id, action) ?? action();
   const read = async (id: string) => structuredClone((await store.read(id)).controls ?? defaultControls());
@@ -113,10 +118,17 @@ export function createControlsService(host: ControlsHost) {
     const build = owner.context.pipeline.build.bind(owner.context.pipeline);
     owner.context.pipeline.build = async options => {
       if (options.telemetrySessionId === undefined) return build(options);
-      const guidance = modeGuidance(await read(host.externalSessionId(options.telemetrySessionId)));
+      const id = host.externalSessionId(options.telemetrySessionId);
+      const state = await read(id), guidance = modeGuidance(state);
       // Enter the existing authoritative block BEFORE admission/compaction so
       // the same production budget accounts for every mode instruction.
-      return build(guidance ? { ...options, systemPrompt: [options.systemPrompt, guidance].filter(Boolean).join("\n\n") } : options);
+      const result = await build(guidance ? { ...options, systemPrompt: [options.systemPrompt, guidance].filter(Boolean).join("\n\n") } : options);
+      // The pipeline consumes its one-shot request at build entry. Snapshot
+      // the durable request before awaiting it; never acknowledge a request
+      // that arrived while discovery/compaction or the summary was running.
+      if (result.manualCompaction) consumedCompactions.set(id, compactionIdentity(state.compaction));
+      else consumedCompactions.delete(id);
+      return result;
     };
     const execute = owner.orchestrator.execute.bind(owner.orchestrator);
     const executeBound = owner.orchestrator.executeBound.bind(owner.orchestrator);
@@ -203,7 +215,7 @@ export function createControlsService(host: ControlsHost) {
     }
     if (name === "compact") {
       if (value) fail("context/invalid-command", "Use /compact without arguments");
-      await serial(id, () => write(id, data => { data.compaction = { ...data.compaction, pending: true, requestedAt: Date.now() }; }, abort));
+      await serial(id, () => write(id, data => { data.compaction = { ...data.compaction, pending: true, requestedAt: Date.now(), requestId: randomUUID() }; }, abort));
       (await host.resolveHarness(id)).context.pipeline.requestCompaction(host.nativeSessionId(id));
       return "Manual compression queued for the next model request; the full transcript is retained.";
     }
@@ -315,15 +327,22 @@ export function createControlsService(host: ControlsHost) {
         pending.add(action); void action.catch(error => reportBackgroundFailure("compaction-start", error)).finally(() => pending.delete(action)); return;
       }
       if (event.type === "context.compacted" && event.payload.phase === "completed") {
+        // Capture synchronously: the serial metadata write may run after a
+        // newer build has replaced this session's in-memory boundary.
+        const consumed = event.payload.manual === true ? consumedCompactions.get(event.sessionId) : undefined;
+        if (event.payload.manual === true) consumedCompactions.delete(event.sessionId);
         const action = serial(event.sessionId, async () => {
           const current = (await read(event.sessionId)).compaction;
-          await write(event.sessionId, data => { data.compaction = { pending: current?.pending === true && (event.payload.manual !== true || current.requestedAt > event.timestamp),
+          await write(event.sessionId, data => { data.compaction = {
+            ...(current?.requestId === undefined ? {} : { requestId: current.requestId }),
+            pending: current?.pending === true && (consumed === undefined || compactionIdentity(current) !== consumed),
             requestedAt: current?.requestedAt ?? event.timestamp, running: false, lastCompletedAt: event.timestamp,
             ...(event.payload.summarySource === "model" || event.payload.summarySource === "extractive" ? { lastSummarySource: event.payload.summarySource } : {}) }; });
         });
         pending.add(action); void action.catch(error => reportBackgroundFailure("compaction-projection", error)).finally(() => pending.delete(action)); return;
       }
       if (!["turn.completed", "turn.failed", "turn.cancelled"].includes(event.type)) return;
+      consumedCompactions.delete(event.sessionId);
       const action = serial(event.sessionId, async () => {
         const state = await read(event.sessionId);
         if (state.compaction?.running) await write(event.sessionId, data => { data.compaction!.running = false; });
@@ -348,6 +367,6 @@ export function createControlsService(host: ControlsHost) {
       timer = setInterval(() => { if (driving !== undefined || closed || activeGoals.size === 0) return; driving = drive().catch(error => reportBackgroundFailure("goal-drive", error)).finally(() => { driving = undefined; }); }, 1000); timer.unref();
     },
     async stopGoal(id: string) { await serial(id, async () => { if ((await read(id)).goal?.phase === "active") await write(id, data => { data.goal!.phase = "paused"; data.goal!.revision++; data.goal!.updatedAt = Date.now(); }); }); },
-    async close() { closed = true; activeGoals.clear(); if (timer !== undefined) clearInterval(timer); for (const id of inflight.keys()) revoke(id); await driving; await Promise.allSettled([...pending]); },
+    async close() { closed = true; activeGoals.clear(); consumedCompactions.clear(); if (timer !== undefined) clearInterval(timer); for (const id of inflight.keys()) revoke(id); await driving; await Promise.allSettled([...pending]); },
   };
 }

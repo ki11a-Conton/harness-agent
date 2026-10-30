@@ -304,14 +304,7 @@ export class ToolOrchestrator {
       // effect instead of tallying it afterwards.
       const deadlineAtMs = this.dispatchDeadlineAtMs?.() ?? null;
       if (deadlineAtMs !== null && this.now() >= deadlineAtMs) {
-        await this.emit("tool.failed", request, context, {
-          toolCallId: request.call.id,
-          tool: tool.name,
-          error: errorInfo("RESOURCE_LIMIT", `${CAMPAIGN_DEADLINE_EXCEEDED}: the campaign deadline passed before this tool started`),
-          durationMs: this.now() - started,
-        }).catch((err) => this.nonFatal?.report("orchestrator.emit:tool.failed", err));
-        return this.failToolLimit(request, context, CAMPAIGN_DEADLINE_EXCEEDED,
-          `the campaign deadline (${new Date(deadlineAtMs).toISOString()}) passed before this tool started; refusing to start it`, started);
+        return await this.failCampaignDeadline(request, context, started, deadlineAtMs);
       }
 
       let dispatchReservation: ToolDispatchReservation | undefined;
@@ -341,8 +334,18 @@ export class ToolOrchestrator {
       let bodyStarted = false;
       try {
         if (context.signal.aborted) return this.cancelledBeforeDispatch();
+        // Reserving the budget can wait on durable storage. An admission
+        // before the deadline cannot authorize execution after that wait.
+        if (deadlineAtMs !== null && this.now() >= deadlineAtMs) {
+          return await this.failCampaignDeadline(request, context, started, deadlineAtMs);
+        }
         await this.emit("tool.started", request, context, {});
         if (context.signal.aborted) return this.cancelledBeforeDispatch();
+        // Event publication is asynchronous too. Keep the final check next
+        // to the real body, with no await between an admitted check and it.
+        if (deadlineAtMs !== null && this.now() >= deadlineAtMs) {
+          return await this.failCampaignDeadline(request, context, started, deadlineAtMs);
+        }
         bodyStarted = true;
         let result: ToolResult;
         try {
@@ -401,6 +404,26 @@ export class ToolOrchestrator {
       status: "cancelled",
       error: errorInfo("USER_CANCELLED", "tool execution cancelled before dispatch"),
     };
+  }
+
+  private async failCampaignDeadline(
+    request: ToolCallRequest,
+    context: ToolExecutionContext,
+    started: number,
+    deadlineAtMs: number,
+  ): Promise<ToolResult> {
+    const result: ToolResult = {
+      status: "failed",
+      error: errorInfo("RESOURCE_LIMIT", `${CAMPAIGN_DEADLINE_EXCEEDED}: the campaign deadline (${new Date(deadlineAtMs).toISOString()}) passed before this tool started; refusing to start it`),
+      metadata: { reasonCode: CAMPAIGN_DEADLINE_EXCEEDED, preDispatch: true },
+    };
+    await this.emit("tool.failed", request, context, {
+      toolCallId: request.call.id,
+      tool: request.call.name,
+      error: result.error,
+      durationMs: this.now() - started,
+    }).catch((err) => this.nonFatal?.report("orchestrator.emit:tool.failed", err));
+    return result;
   }
 
   /** R3/F4 — a pre-dispatch refusal with a STABLE reason code in the message and
