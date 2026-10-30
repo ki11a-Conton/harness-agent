@@ -35,4 +35,17 @@
 - 受管理命令真实进程复现 terminal journal 未确认时 poll 已成功、真实写入已放行、Verification 已通过，随后写入拒绝才变 unknown。新增 5 项旧实现全失败；终态确认位覆盖 poll/jobs/容量/工作区锁/验证/替代，写入失败保持 unknown，另补 admission 耗尽截止时漏写 timed_out 的路径。修复相关 5 文件 40 项通过；最终 fixture 等真实 gate、沿用框架预算后 5 项再通过。
 - 四组实现均经独立只读复核，无阻塞；根目录 `pnpm typecheck` 通过。主审工具/安全/恢复/生产集成 89 文件为 3097 通过、12 跳过；native Windows 收据解析器 Node 16 项通过。5 个本轮边界测试文件加入既有 Windows 执行命令，所有原文件、46 必需项和预算保持。
 - 原始红绿与中间失败位于 `/dev/shm/harness-long-task-boundaries-20261030`；真实外部反例另保留 provider/context/managed 独立目录。所有当前结果是离线工程正确性，真实模型 coding 质量未评测；Windows 根退出后子孙继续运行只有代码线索，未改动或宣称修复。
-- 待完成：新干净提交的完整源码全量、真实 CLI/Web coding-v2 与精确 SHA CI；验收未结束前不宣称完成，不发布 release。
+- 干净实现 `27bc9bc3078f0473981bb5ee285ed88403664dc0` 的完整源码原 `pnpm test` 已实际退出 0：679 文件通过、2 文件跳过；10537 项通过、16 跳过、0 失败。Node 24.19.0，前后源码树干净，日志 185336 字节，SHA256 `71f19e5b7d17ce95838db7aa427e7e656e6f06f4661e5c8be1af07fdcd258df9`。借用完整 clone 已恢复原 `feat/full-audit-20261026` / `66a9238c` 并强制构建通过。
+- 同一干净实现实际 CLI/Web coding-v2 通过 50 项工程及 8 项提示安装断言、19 个真实 loopback HTTP 请求，付费调用 0，真实模型质量 NOT_PROVEN。
+- 分支 `27bc9bc3` 首次 [真实 Windows 41023301920](https://github.com/ki11a-Conton/harness-agent/actions/runs/41023301920) 实际 82 文件、836 通过/0 失败/2 跳过，原 46 必需项各一次通过，source=workflow=27bc、tree clean。rawReport SHA256 `db909b82b0daab81d503b678cb140fd4599d773dd6a8017ec97b3e40a55c411d`、caseRecords `f49777629027b711298ed2f8aa214f9e6dacc8848a0d70814a0a3a5324164f11`。[Gen1 41023301954](https://github.com/ki11a-Conton/harness-agent/actions/runs/41023301954) 三条执行腿通过、原 draft 导出跳过；[安装 UI 41023301930](https://github.com/ki11a-Conton/harness-agent/actions/runs/41023301930) 三个 job 全通过。
+- 原 [综合 CI 41023301918](https://github.com/ki11a-Conton/harness-agent/actions/runs/41023301918) 的 Windows job `123955451631` 失败，不能因其余门禁通过计为绿灯。API 原 annotation 为 PR15 降权测试等待审批 `0 != 1`，继而 owner closed；原日志下载 HTTP403 的 receipt 保留。原 SHA 原 CI 自然运行，不取消或重跑。
+
+### Windows 审批验收同步跟进（仅验收设施）
+
+源代码与实际 dist 两层外部受控 1250ms context 准备延迟证明：原默认 1000ms poll 把 owner/turn/context 准备误算作审批延迟，失败后未等待 running，导致 teardown owner closed。实际后续审批仍出现，真实降权取消、迟到 allow 拒绝及文件不存在均正确。该实验仅证明机制，不冒充原 Windows 故障重放。
+
+只修原 PR15 测试：提前准备 turn；观察原 resolver 调用真实 `approvalStore.create` 的同步边界，然后才开始原默认 1000ms poll；不先等待 pending、不合成审批或绕开原链，新增 request.id 一致检查。原 exact 1/0、降权、late allow 拒绝及文件 ENOENT 全部保持；finally 以实际 actor signal 取消并等待 running，再恢复 spy，保留正常错误。框架原 300000ms 总预算不变。
+
+同一外部延迟 setup：旧源码用例 1 失败/27 定向跳过并含 1 unhandled owner closed，新同步用例 1 通过/27 定向跳过且无 unhandled；PR15、压缩、审批 4 文件 49 项通过，根 typecheck 通过，独立复核无阻塞。原 PR15 文件也加入 native Windows 命令，保留原全部文件、必需断言与预算。使用另一主题分支避免取消原 SHA CI；后续精确新 SHA 的双平台 CI 仍待完成。产品代码相对 `27bc9bc3` 完全不变，不重复冒称本地全量是在后续验收提交上运行。
+
+验收结束前不宣称全部完成；本轮不发布 release。

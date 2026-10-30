@@ -2,7 +2,7 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
-import { afterEach, expect, it, onTestFailed } from 'vitest';
+import { afterEach, expect, it, onTestFailed, vi } from 'vitest';
 import { createHarness } from '@ar/harness';
 import { ScriptedModelProvider } from '@ar/model';
 import type { SessionId } from '@ar/contracts';
@@ -206,14 +206,34 @@ it('PR15 manual compression emits an actual context event and retains the full t
 
 it('PR15 downgrading permission cancels an already waiting write approval', async () => {
   const f = await fixture('interactive'); const owner = await f.composition.owners.ownerOf(f.sessionId);
-  const running = f.run();
-  await expect.poll(() => owner.approvalStore.listPending().length).toBe(1);
-  const original = owner.approvalStore.listPending()[0]!;
-  await f.command('/permission read-only');
-  await running;
-  expect(owner.approvalStore.listPending()).toHaveLength(0);
-  expect(() => owner.approvalStore.resolve(original.id, 'allow')).toThrow();
-  await expect(readFile(join(f.cwd, 'proof.txt'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+  const nativeId = f.composition.owners.nativeSessionId(f.sessionId), actor = await owner.sessions.load(nativeId);
+  const turn = await actor.createTurn({ sessionId: nativeId, text: 'Write a proof and describe the plan.' });
+  const create = owner.approvalStore.create.bind(owner.approvalStore);
+  let notify!: (request: Parameters<typeof create>[0]) => void;
+  const requested = new Promise<Parameters<typeof create>[0]>(resolve => { notify = resolve; });
+  // Synchronize with the real resolver's synchronous create boundary. Context
+  // preparation and durable turn setup are not the approval-store latency.
+  const observed = vi.spyOn(owner.approvalStore, 'create').mockImplementation(request => {
+    notify(request); return create(request);
+  });
+  const abort = new AbortController(), running = actor.runTurn(turn.id, abort.signal);
+  try {
+    const request = await Promise.race([requested, running.then(() => { throw new Error('Turn settled before requesting write approval'); })]);
+    // Keep the original 1s default poll and exact cardinality once the actual
+    // approval request has reached the store, without fabricating a pending row.
+    await expect.poll(() => owner.approvalStore.listPending().length).toBe(1);
+    const original = owner.approvalStore.listPending()[0]!;
+    expect(original.id).toBe(request.id);
+    await f.command('/permission read-only');
+    await running;
+    expect(owner.approvalStore.listPending()).toHaveLength(0);
+    expect(() => owner.approvalStore.resolve(original.id, 'allow')).toThrow();
+    await expect(readFile(join(f.cwd, 'proof.txt'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+  } finally {
+    // Settle before afterEach closes the owner even when a prior assertion fails.
+    abort.abort();
+    try { await running; } finally { observed.mockRestore(); }
+  }
 });
 
 it.each(['/plan on', '/permission read-only'])('PR15 an existing child cannot bypass the parent restriction %s', async mode => {
