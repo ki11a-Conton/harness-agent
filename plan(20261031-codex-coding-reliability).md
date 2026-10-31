@@ -50,3 +50,11 @@
 - Windows 验收 fixture 修正为 native work 与实际 read-completed barrier 同时完成才退出；baseline 明确预释放，candidate 只按本 session/turn/source 的真实成功 read 证据释放，repair 复用。原 2 秒 work、5000/15000ms 预算和 48/24/16 断言不变，缺 read 的真实进程仍原 5 秒超时且清理。47 项 Node 验收及独立 4 项通过；这是工程因果验收，不作相同负载性能或模型质量比较，尚需新精确 SHA 原生 CI。
 - 根最终类型检查通过；全部 context 及相关运行时/安全/恢复共 28 文件 465 项通过；原 observer 与新 barrier 的 47 项再次通过。扩大至整个 core/context 的早先稀疏目录运行有 1230 项通过但 4 文件缺少已跟踪的 docs/evidence 归档夹具，原 FAIL 原样保留；不跳过这些用例，后续在完整 clone 原 `pnpm test` 中验收。
 - 完成时补记确切修改、红绿结果、源码版本、未验收边界和交付状态。
+
+## 完整验收与 main 交付
+
+- 干净实现 `4b28f6437303e5f551f9760645eb2b3ba9ecbea5` 在完整 clone 原 `pnpm test` 实际 exit0：685 文件通过/2 跳过，10610 项通过/16 跳过，990.07 秒。原日志 185350 bytes、SHA256 `b88b5e6f3f85404054ea12e9ccb4b436f71fcbaba680904964ec84ace44fa0a8`，前后源码均同 SHA 且 clean。完整 clone 已恢复原 `66a9238c` 分支并 force build 通过。
+- 同干净 4b 实际 CLI/Web：50 项工程断言+8 项提示词安装断言、19 次 loopback HTTP，通过；真实 Provider 超限三场景9 POST通过；真实48臂工程验收 candidatePass24/overlap16/duplicate0/failures[]，原断言与预算保持。
+- 四项 topic CI 均首 attempt success：综合 `41177912841` 十 job、原生 Windows `41177912840`、安装 UI `41177912769` 三 job、Gen1 `41177912779` 三实际执行腿及原条件 draft 导出跳过。Windows 实际90文件、930通过/0失败/12平台跳过，原46必需项各一次通过。root 于13:42 UTC重新通过原生 REST回执独立核对。
+- Windows 原始 report/case hash 为 CI 回执值；本地未下载原文件，不冒称独立复算其原 bytes。所有 c1 CI 失败、原本地失联全量、稀疏目录缺夹具失败、补丁中间失败均保留，不覆盖为成功。
+- 本次只补记三份 Markdown，生产与测试/CI代码保持 4b 不变，做静态树证明后普通快进 main。main 精确 SHA 的新四项自动 CI 另行核对，最终外部审查报告记录真实结果，不能把 4b 本地全量冒称后续文档提交的重跑。未发布 release、未调用付费模型、未提升默认 Agent 策略。
