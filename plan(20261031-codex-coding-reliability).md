@@ -39,4 +39,14 @@
 - 事件队列修复范围是单次调用的 live output。原终态 sink 永久挂起的整体存储故障未在本轮改写；已发起的异步持久化不宣称被取消。
 - 文件写入保持 in-place/硬链接行为与旧不可逆阶段语义；不是跨外部进程 atomic CAS，也不是磁盘故障下的原子事务。
 - 本地 scripted HTTP/CLI/Web 验收证明工程执行链路，不证明付费真实模型 coding 质量或等同 Codex。
+
+## 精确提交 CI 复核与后续修正
+
+- 实现 `c1a7a74d2ff6c69d72c41f7b281fc2cc00342775` 已推至工作分支，尚未更新 main。Gen1 安装、双平台安装 UI 通过；综合 CI 与原生 Windows 失败，原始 run/job/annotation 回执完整保留，不能将局部 GREEN 当作整体验收通过。
+- 综合双平台及 formal 暴露遗漏的旧 `reactive-checkpoint.regressions.test.ts`：两个真实保留契约失败。已有小 checkpoint 不应被无摘要的 extractive 新 checkpoint 替换；原 handoff 身份、原字节、用户修正和完整工具批次需要保留。修复方向为小有效 handoff 的确定性缩减及本 turn 投影水位，避免下一工具轮恢复刚移出的原始 progress；旧断言/预算不改。
+- 原生 Windows paired 48 arms 的 candidatePass=24，但实际 candidateOverlap=15，原断言要求16。失败 arm 的真实 read 比首命令 exit 晚256ms；observer 正确拒绝，不用模型意图或扩大时间窗口重标成功。确认验收固定2秒时窗是否存在竞态后，仅以真实 read 完成 barrier 改善工程因果探针，原执行预算/16重叠断言及清理保持；不能将有条件 barrier 说成相同工作负载性能或模型质量对比。
+- 原本地完整源码 `pnpm test` 进程已不存在，日志无终态 summary、无退出码，精确终止原因未知，记录为 `INCOMPLETE_NO_EXIT_RECEIPT`，不算 PASS 或 FAIL。原日志/收据保留，借用完整 clone 已恢复原 `66a9238c` 分支并强制构建通过；修正后以新 prefix、干净精确提交另行运行全量。
+- 后续 C1 修正保留小有效 handoff 的原 id/内容，以 turn-local 水位防止后续两轮工具恢复旧 progress；新 durable checkpoint 可接管，人工压缩继续走原持久化流程。独立复核发现仅检查摘要输出额度仍不足，28/72 等消息的 framing 会耗尽请求输入；已按实际保护后摘要请求是否可构造判断，单次构造复用，不扩大预算。原 3 项与新 15 项共 18 通过，独立原 11 组 framing 反例全部通过。72 条的后续真实第二次超限按原重试上限停止，同时保留用户、handoff 和两次工具证据。
+- Windows 验收 fixture 修正为 native work 与实际 read-completed barrier 同时完成才退出；baseline 明确预释放，candidate 只按本 session/turn/source 的真实成功 read 证据释放，repair 复用。原 2 秒 work、5000/15000ms 预算和 48/24/16 断言不变，缺 read 的真实进程仍原 5 秒超时且清理。47 项 Node 验收及独立 4 项通过；这是工程因果验收，不作相同负载性能或模型质量比较，尚需新精确 SHA 原生 CI。
+- 根最终类型检查通过；全部 context 及相关运行时/安全/恢复共 28 文件 465 项通过；原 observer 与新 barrier 的 47 项再次通过。扩大至整个 core/context 的早先稀疏目录运行有 1230 项通过但 4 文件缺少已跟踪的 docs/evidence 归档夹具，原 FAIL 原样保留；不跳过这些用例，后续在完整 clone 原 `pnpm test` 中验收。
 - 完成时补记确切修改、红绿结果、源码版本、未验收边界和交付状态。

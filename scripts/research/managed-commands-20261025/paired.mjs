@@ -14,6 +14,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import assert from "node:assert/strict";
 import { observeReadOverlap } from "./observe-read-overlap.mjs";
+import { CHECK_BARRIER_URL_FILE, CHECK_FIXTURE_SOURCE, createCheckReadBarrier } from "./check-read-barrier.mjs";
 const workflowMessage = (value) => String(value).replaceAll("%", "%25").replaceAll("\r", "%0D").replaceAll("\n", "%0A");
 // Observe uncaught failures without changing Node's default failing exit.
 process.on("uncaughtExceptionMonitor", error => {
@@ -89,6 +90,8 @@ const registration = {
   },
   paidModelCalls: 0,
   overlapMetric: { version: 2, source: "correlated successful read_file evidence within known native start/exit interval; model-request time is not an action; unknown exit is not positive proof" },
+  scope: "causal engineering protocol probe; baseline/candidate gate coordination differs, so durations are not an identical-workload performance comparison or model-quality evidence",
+  checkFixture: { nativeWorkMs: 2000, completion: "native work AND read barrier", baselineGate: "pre-released before synchronous exec", candidateGate: "release only after correlated successful source-file read; remains released for repair attempt", fallbackRelease: false },
   networkPreflight: {
     loopback: "allow",
     external: "deny",
@@ -110,7 +113,7 @@ for (const kind of registration.kinds)
       const cwd = await realpath(
         await mkdtemp(join(tmpdir(), "managed-pair-")),
       );
-      let h;
+      let h, checkBarrier, ownerIdentity;
       const timeline = [],
         requests = [];
       let stage = "start",
@@ -125,7 +128,7 @@ for (const kind of registration.kinds)
       );
       await writeFile(
         join(cwd, "check.cjs"),
-        "const fs=require('node:fs');fs.appendFileSync('starts.jsonl',JSON.stringify({pid:process.pid,at:Date.now()})+'\\n');console.log('STARTED');setTimeout(()=>{const ok=require('./source.cjs')===1;fs.appendFileSync('exits.jsonl',JSON.stringify({code:ok?0:1,at:Date.now()})+'\\n');console.log(ok?'CHECK_OK':'CHECK_FAILED');process.exitCode=ok?0:1},2000);\n",
+        CHECK_FIXTURE_SOURCE,
       );
       await writeFile(
         join(cwd, "server.cjs"),
@@ -214,6 +217,9 @@ for (const kind of registration.kinds)
               });
               return;
             }
+            if (kind !== "http-service" && arm === "candidate" && stage === "observe" && !checkBarrier.isReleased()) {
+              checkBarrier.releaseAfterSuccessfulRead(await h.events.list(ownerIdentity.sessionId), ownerIdentity);
+            }
             if (kind === "http-service" && stage === "observe") {
               let port = Number(last.trim());
               if (!port && arm === "candidate") {
@@ -295,6 +301,10 @@ for (const kind of registration.kinds)
         userInterventions: 0,
       };
       try {
+        if (kind !== "http-service") {
+          checkBarrier = await createCheckReadBarrier({ sourcePath: join(cwd, "source.cjs"), preReleased: arm === "baseline" });
+          await writeFile(join(cwd, CHECK_BARRIER_URL_FILE), checkBarrier.url);
+        }
         h = await createHarness({
           cwd,
           profile: "test",
@@ -377,6 +387,7 @@ for (const kind of registration.kinds)
           cwd,
         });
         const turn = await h.runtime.startTurn(session.id, kind);
+        ownerIdentity = { sessionId: session.id, turnId: turn.id };
         const outcome = await h.runtime.runTurn(
           session.id,
           turn.id,
@@ -443,6 +454,10 @@ for (const kind of registration.kinds)
           await h.close().catch((err) => {
             report.cleanupError = String(err);
           });
+        if (checkBarrier) {
+          await checkBarrier.close().catch(err => { report.cleanupError ??= String(err); });
+          report.checkBarrier = checkBarrier.snapshot();
+        }
         report.cleanupAlive = (report.starts ?? [])
           .filter((s) => {
             try {
@@ -521,6 +536,7 @@ if (summary.arms !== 48 || summary.failures.length !== 0 || summary.candidatePas
       cleanupAlive: r.cleanupAlive, overlapObserved: r.overlapObserved,
       starts: r.starts, exits: r.exits, readSource: r.readSource,
       readObservations: r.readObservations, commandIntervals: r.commandIntervals, modelObserveAt: r.modelObserveAt,
+      checkBarrier: r.checkBarrier,
       readEvents: r.events?.filter(e => e.type === "tool.completed" && e.payload?.tool === "read_file" && e.payload?.status !== undefined).map(e => ({ timestamp: e.timestamp, sequence: e.sequence, sessionId: e.sessionId, turnId: e.turnId, payload: e.payload })),
       observations: r.timeline?.filter(e => e.stage === "observe").map(e => ({ at: e.at, stage: e.stage })),
     })),

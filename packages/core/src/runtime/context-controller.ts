@@ -74,7 +74,7 @@ function incompleteHistoryView(history: Message[]): Message[] {
 /** Q-1: result of buildContext — either proceed with updated context state
  *  or finish the turn on overflow. */
 export type ContextUpdate =
-  | { action: "proceed"; history: Message[]; system: string; lastReportTokens: number | undefined; digestAppended: boolean; overflowAttempt: number; selectedSkills?: import("@ar/contracts").SkillSnapshot["selected"]; instructionSources?: readonly import("@ar/contracts").InstructionSource[] }
+  | { action: "proceed"; history: Message[]; system: string; lastReportTokens: number | undefined; digestAppended: boolean; overflowAttempt: number; selectedSkills?: import("@ar/contracts").SkillSnapshot["selected"]; instructionSources?: readonly import("@ar/contracts").InstructionSource[]; reactiveHistoryThroughMessageId?: Message["id"] }
   | { action: "finish"; outcome: TurnOutcome };
 
 /** Q-1: everything ContextController needs from the runtime. All fields are
@@ -179,6 +179,7 @@ export class ContextController {
     let activeUsers = activeUserMessages(history, turnId);
     let compaction: { manual: boolean; reactive?: boolean; beforeTokens: number; afterTokens: number; strategy?: string; summarySource?: string; fallbackReason?: string } | undefined;
     let historyTrimmed = false;
+    let reactiveHistoryThroughMessageId: Message["id"] | undefined;
     let system = agent.systemPrompt;
     // P32-1/P32-3: step-witness values — the selected skill manifest-of
     // record and the instruction sources (system + AGENTS.md) assembled from
@@ -391,29 +392,67 @@ export class ContextController {
             // another model summary before every small tool round.
             const usefulAutomatic = beforeTokens > Math.floor(headroom * 0.85)
               && (beforeTokens > headroom || freshHistoricalTokens >= Math.max(256, Math.floor(headroom * 0.1)));
-            if (historical.length > 0 && (built.manualCompaction || usefulAutomatic || reactiveCompactionRequested)) {
-              // Upstream has disproved the local estimate. Bound both the
-              // auxiliary request and the replacement view relative to the
-              // rejected history, rather than increasing a known-bad payload.
-              const activeTokens = pipeline.estimateMessageTokens(activeUsers);
-              // A reduction ratio must not reject a large human task that
-              // can fit once old investigation is removed. Reserve a bounded
-              // handoff above the exact user anchors, still below the failed
-              // view and never above the configured headroom.
-              const protectedTarget = activeTokens + Math.min(512, Math.floor((beforeTokens - activeTokens) * 0.5));
-              const targetHeadroom = reactiveCompactionRequested
-                ? Math.min(headroom, Math.max(Math.floor(beforeTokens * 0.6), protectedTarget)) : headroom;
-              const maxSummaryTokens = Math.max(0, Math.min(2048, Math.floor(targetHeadroom * 0.35),
-                reactiveCompactionRequested ? targetHeadroom - activeTokens - 32 : Infinity));
-              const protect = (text: string) => {
-                const safe = protectToolOutputText(text, { redact: this.deps.outputRedactor, detect: this.deps.injectionDetector });
-                return safe.injection.hasInjection ? undefined : safe.content;
-              };
-              const requestBudget = Math.floor(reactiveCompactionRequested
-                ? Math.min(this.deps.context.budget.maxTokens * 0.7, beforeTokens * 0.5)
-                : this.deps.context.budget.maxTokens * 0.7);
-              const request = historySummaryRequest(history, requestBudget,
-                text => pipeline.estimateTextTokens(text), protect);
+            const activeTokens = pipeline.estimateMessageTokens(activeUsers);
+            const protectedTarget = activeTokens + Math.min(512, Math.floor((beforeTokens - activeTokens) * 0.5));
+            const targetHeadroom = reactiveCompactionRequested
+              ? Math.min(headroom, Math.max(Math.floor(beforeTokens * 0.6), protectedTarget)) : headroom;
+            const maxSummaryTokens = Math.max(0, Math.min(2048, Math.floor(targetHeadroom * 0.35),
+              reactiveCompactionRequested ? targetHeadroom - activeTokens - 32 : Infinity));
+            const needsCompaction = historical.length > 0 && (built.manualCompaction || usefulAutomatic || reactiveCompactionRequested);
+            const protect = (text: string) => {
+              const safe = protectToolOutputText(text, { redact: this.deps.outputRedactor, detect: this.deps.injectionDetector });
+              return safe.injection.hasInjection ? undefined : safe.content;
+            };
+            const requestBudget = Math.floor(reactiveCompactionRequested
+              ? Math.min(this.deps.context.budget.maxTokens * 0.7, beforeTokens * 0.5)
+              : this.deps.context.budget.maxTokens * 0.7);
+            // The prompt and per-row framing can exhaust the input budget
+            // even when the output allowance looks sufficient. Construct the
+            // protected request once and test whether it can actually run.
+            const request = needsCompaction ? historySummaryRequest(history, requestBudget,
+              text => pipeline.estimateTextTokens(text), protect) : undefined;
+            const existingHandoff = history[0]?.contextCheckpoint !== undefined ? history[0] : undefined;
+            if (reactiveCompactionRequested && !built.manualCompaction && existingHandoff !== undefined
+              && (maxSummaryTokens < 128 || request === undefined)) {
+              // A small valid handoff already contains the compressed facts.
+              // Keep its exact identity/bytes instead of replacing it with a
+              // generic fallback when another model summary cannot be priced.
+              const fixed = [existingHandoff, ...activeUsers];
+              const rawBudget = Math.max(0, targetHeadroom - pipeline.estimateMessageTokens(fixed));
+              let start = history.length, tokens = 0;
+              while (start > 0) {
+                const message = history[start - 1]!;
+                const cost = activeIds.has(message.id) || message.id === existingHandoff.id ? 0 : pipeline.estimateMessageTokens([message]);
+                if (tokens + cost > rawBudget) break;
+                tokens += cost; start--;
+              }
+              const view = [existingHandoff, ...retainMessageHistoryTail(history, start, activeUsers)
+                .filter(message => message.id !== existingHandoff.id)];
+              const latestCall = history.findLast(message => message.role === "assistant" && message.toolCalls?.length);
+              const retained = new Set(view.map(message => message.id));
+              const afterTokens = pipeline.estimateMessageTokens(view);
+              if ((latestCall === undefined || retained.has(latestCall.id)) && afterTokens < beforeTokens && afterTokens <= targetHeadroom) {
+                // Derive the cutoff from durable order, never from the
+                // checkpoint-first model view. This is only a per-turn view
+                // boundary: it neither covers nor rewrites durable history.
+                const inputIds = new Set(history.map(message => message.id));
+                const durable = await this.deps.store.listMessages(sessionId);
+                const through = durable.filter(message => inputIds.has(message.id) && !retained.has(message.id)
+                  && message.contextCheckpoint === undefined).at(-1);
+                if (through !== undefined) {
+                  reactiveHistoryThroughMessageId = through.id;
+                  history = view; historyTrimmed = true;
+                  this.deps.compactCounter.value++;
+                  compaction = { manual: false, reactive: true, beforeTokens, afterTokens,
+                    strategy: "codex-v1", summarySource: "existing-checkpoint" };
+                  await this.deps.failAt("context.compacted", { sessionId, turnId });
+                  await this.deps.checkpoint(ctx, working, state, toolLedger, "context:reactive-checkpoint-tail");
+                }
+              }
+            }
+            if (!historyTrimmed && needsCompaction) {
+              // The target preserves human authority and leaves bounded
+              // handoff space even when upstream disproved our estimate.
               const coveredInputIds = new Set(history.map(message => message.id));
               await this.deps.emit(sessionId, "context.compacted", { phase: "started", strategy: "codex-v1",
                 manual: built.manualCompaction === true, ...(reactiveCompactionRequested ? { reactive: true } : {}), beforeTokens }, turnId);
@@ -643,6 +682,7 @@ export class ContextController {
       selectedSkills: skillSnapshotEntries,
       // P32-3: system + project instruction sources of THIS context build.
       instructionSources,
+      ...(reactiveHistoryThroughMessageId === undefined ? {} : { reactiveHistoryThroughMessageId }),
     };
   }
 

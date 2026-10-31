@@ -86,7 +86,7 @@ import type {
 } from "@ar/contracts";
 import type { ContextPipeline, InstructionDiscoveryOptions } from "@ar/context";
 import type { ToolSelector } from "../tools/tool-selector.js";
-import { estimateMessageTokens, hashPolicyConfig } from "@ar/context";
+import { checkpointView, estimateMessageTokens, hashPolicyConfig } from "@ar/context";
 import { applyWorkingStateMutation, type WorkingStateMutation } from "@ar/contracts";
 import { buildStateDigest } from "./turn-helpers.js";
 import { AgentError } from "../errors.js";
@@ -1283,6 +1283,7 @@ export class AgentRuntime {
     // The retry guard lasts for the whole turn; the actual history rewrite
     // is requested only for the next preparation after confirmed overflow.
     let reactiveCompactionPending = false;
+    let reactiveHistoryThroughMessageId: Message["id"] | undefined;
     let digestAppended = false;
     let lastReportTokens: number | undefined;
     // P0-10/R6: preparation consumes the same execution duration as the
@@ -1433,6 +1434,19 @@ export class AgentRuntime {
         // Q-1: steering prompt injection extracted to injectSteeringPrompts.
         history = await this.contextController.injectSteeringPrompts(ctx, history);
 
+        if (reactiveHistoryThroughMessageId !== undefined) {
+          // The small-handoff path keeps the transcript untouched. Reapply
+          // its per-turn prefix boundary so later tool rounds cannot revive
+          // records removed from the overflowing view. New checkpoints and
+          // newly appended tools still enter through the normal durable view.
+          const through = history.findIndex(message => message.id === reactiveHistoryThroughMessageId);
+          if (through < 0) return await this.recoveryController.finishTurn(ctx, "failed", state, working,
+            errorInfo("RESOURCE_LIMIT", "Reactive context boundary is missing from the transcript."), "context_limit", toolLedger);
+          const users = activeUserMessages(history, turnId);
+          const retained = new Set([...history.slice(through + 1), ...users].map(message => message.id));
+          history = checkpointView(history, users).filter(message => message.contextCheckpoint !== undefined || retained.has(message.id));
+        }
+
         if (reactiveCompacted && !this.context?.pipeline.historyCompaction && history.length > 12) {
           // Reactive compact (plan.md Phase 4/5): after a context-length model
           // error the runtime retries with a REDUCED history — the state
@@ -1502,6 +1516,7 @@ export class AgentRuntime {
         );
         if (ctxUpdate.action === "finish") return ctxUpdate.outcome;
         reactiveCompactionPending = false;
+        reactiveHistoryThroughMessageId = ctxUpdate.reactiveHistoryThroughMessageId ?? reactiveHistoryThroughMessageId;
         let system = ctxUpdate.system;
         history = ctxUpdate.history;
         lastReportTokens = ctxUpdate.lastReportTokens;
