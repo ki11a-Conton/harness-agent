@@ -25,6 +25,7 @@ import {
 } from "@ar/security";
 import type { ToolRegistry } from "./registry.js";
 import { utf8Prefix } from "./process/utf8-output.js";
+import { BoundedToolOutput } from "./bounded-tool-output.js";
 
 export interface OrchestratorDeps {
   registry: ToolRegistry;
@@ -611,39 +612,47 @@ export class ToolOrchestrator {
       return tool.execute(args as never, context);
     }
     const ac = new AbortController();
-    const link = () => ac.abort();
+    const output = new BoundedToolOutput(
+      (event) => {
+        const type = event.stream === "progress" ? "tool.progress" : "tool.output";
+        return this.emit(type, request, context, { ...event });
+      },
+      (err) => this.nonFatal?.report("orchestrator.output", err),
+    );
+    const link = () => { output.close(); ac.abort(); };
     context.signal.addEventListener("abort", link, { once: true });
 
     let timer: ReturnType<typeof setTimeout> | undefined;
     const timeout = new Promise<ToolResult>((resolve) => {
       timer = setTimeout(() => {
+        output.close();
         ac.abort();
         resolve({ status: "timeout", error: errorInfo("PROCESS_TIMEOUT", `tool ${tool.name} exceeded ${timeoutMs}ms`) });
       }, timeoutMs);
     });
 
     try {
-      const exec = tool.execute(args as never, {
-        ...context,
-        signal: ac.signal,
-        onOutput: (event) => {
-          // P18-5: stdout/stderr go to the event trail as tool.output; a
-          // "progress" chunk becomes tool.progress — a progress signal is
-          // NEVER a terminal result and never settles the call. A failed
-          // event write is non-fatal for execution but MUST stay observable
-          // (P14-6) — never a bare silent catch.
-          const type = event.stream === "progress" ? "tool.progress" : "tool.output";
-          void this.emit(type, request, context, { ...event }).catch((err) =>
-            this.nonFatal?.report(`orchestrator.emit:${type}`, err),
-          );
-        },
-      });
+      const exec = (async () => {
+        try {
+          return await tool.execute(args as never, {
+            ...context,
+            signal: ac.signal,
+            onOutput: (event) => output.push(event),
+          });
+        } finally {
+          // Accepted progress is confirmed before a normal terminal event.
+          // This drain shares the ORIGINAL tool timeout race and abort link;
+          // a stalled sink cannot extend that budget or retain unbounded text.
+          await output.finish();
+        }
+      })();
       // Prevent unhandled rejections when timeout/cancel wins the race. The
       // race itself settles the outcome; a late rejection is the loser's
       // signal — reported (P14-6), never silently swallowed.
       exec.catch((err) => this.nonFatal?.report("orchestrator.execute:late", err));
       return await Promise.race([exec, timeout]);
     } finally {
+      output.close();
       if (timer !== undefined) clearTimeout(timer);
       context.signal.removeEventListener("abort", link);
     }

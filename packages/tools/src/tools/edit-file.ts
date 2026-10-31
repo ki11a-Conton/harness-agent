@@ -3,7 +3,7 @@ import type { ToolDefinition, ToolExecutionContext, ToolResult } from "@ar/contr
 import { errorInfo } from "@ar/contracts";
 import { applyBatchReplace, applyLineRange, applyReplace, lineDiff, MAX_BATCH_EDITS, type TextEdit } from "../edit.js";
 import {
-  assertFileVersion, checkFileVersion, decodeEditableUtf8, fileSha256,
+  assertFileVersion, checkFileVersion, decodeEditableUtf8, fileSha256, readRegularFileBytes, writeRegularFileUtf8,
   FileOperationCancelled, FileVersionConflict, throwIfFileCancelled, withFileLock,
 } from "../file-coordination.js";
 
@@ -86,7 +86,6 @@ export const editFileTool: ToolDefinition<EditFileInput, EditFileOutput> = {
   },
   async execute(input: EditFileInput, context: ToolExecutionContext): Promise<ToolResult<EditFileOutput>> {
     try {
-      const { readFile, writeFile } = await import("node:fs/promises");
       const { resolve } = await import("node:path");
       const target = resolve(context.cwd, input.path);
 
@@ -130,7 +129,7 @@ export const editFileTool: ToolDefinition<EditFileInput, EditFileOutput> = {
       }
 
       return await withFileLock(target, context.signal, async (): Promise<ToolResult<EditFileOutput>> => {
-        const bytes = await readFile(target).catch((err: NodeJS.ErrnoException) => {
+        const bytes = await readRegularFileBytes(target, context.signal).catch((err: NodeJS.ErrnoException) => {
           if (input.expectedSha256 !== undefined && ["ENOENT", "ENOTDIR", "EISDIR"].includes(err.code ?? "")) {
             throw new FileVersionConflict(target);
           }
@@ -166,9 +165,9 @@ export const editFileTool: ToolDefinition<EditFileInput, EditFileOutput> = {
 
         // Best-effort pre-write check catches external changes observed here;
         // this is not an atomic CAS against arbitrary external writers.
-        await checkFileVersion(target, input.expectedSha256 ?? fileSha256(bytes));
+        await checkFileVersion(target, input.expectedSha256 ?? fileSha256(bytes), context.signal);
         throwIfFileCancelled(context.signal);
-        await writeFile(target, res.content, "utf8");
+        await writeRegularFileUtf8(target, res.content, { signal: context.signal });
         const output: EditFileOutput = {
           path: target,
           diff: lineDiff(before, res.content),

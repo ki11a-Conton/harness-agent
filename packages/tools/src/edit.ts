@@ -52,15 +52,30 @@ function allMatchesIndexes(content: string, old: string): number[] {
 
 /** Match CRLF and LF in one view while retaining original offsets.
  * No other Unicode or punctuation normalization is performed. */
-function lfView(content: string): { text: string; offsets: number[] } {
-  const offsets = [0];
-  const parts: string[] = [];
-  for (let i = 0; i < content.length; i++) {
-    if (content[i] === "\r" && content[i + 1] === "\n") { parts.push("\n"); i++; }
-    else parts.push(content[i]!);
-    offsets.push(i + 1);
-  }
-  return { text: parts.join(""), offsets };
+function lfView(content: string): { text: string; originalOffset: (index: number) => number } {
+  let next = content.indexOf("\r\n");
+  // Most source files already use LF. Do not allocate two per-character
+  // arrays to edit a small anchor in a large file.
+  if (next < 0) return { text: content, originalOffset: index => index };
+  const boundaries: number[] = [];
+  do {
+    // A normalized boundary AFTER this LF includes the removed CR. The
+    // boundary before it still points at the original CR, as in the old map.
+    boundaries.push(next - boundaries.length + 1);
+    next = content.indexOf("\r\n", next + 2);
+  } while (next >= 0);
+  return {
+    text: content.replace(/\r\n/g, "\n"),
+    originalOffset(index) {
+      let low = 0, high = boundaries.length;
+      while (low < high) {
+        const middle = low + Math.floor((high - low) / 2);
+        if (boundaries[middle]! <= index) low = middle + 1;
+        else high = middle;
+      }
+      return index + low;
+    },
+  };
 }
 
 /** Prefer the touched line's terminator, then the preceding line, then LF. */
@@ -116,8 +131,8 @@ export function applyReplace(
   let cursor = 0;
   const parts = [bom];
   for (const index of selected) {
-    const start = view.offsets[index]!;
-    const end = view.offsets[index + anchor.length]!;
+    const start = view.originalOffset(index);
+    const end = view.originalOffset(index + anchor.length);
     const replacement = includesBom && newText.startsWith(bom) ? newText.slice(bom.length) : newText;
     parts.push(body.slice(cursor, start), replacementEol(replacement, localEol(body, start)));
     cursor = end;
@@ -155,7 +170,7 @@ export function applyBatchReplace(content: string, edits: readonly TextEdit[]): 
     if (first < 0 || (includesBom && first !== 0)) return fail(`edits[${editIndex}] anchor not found in the original snapshot`);
     // Count overlapping candidates too: "aa" in "aaa" is ambiguous.
     if (!includesBom && view.text.indexOf(anchor, first + 1) >= 0) return fail(`edits[${editIndex}] anchor is ambiguous; use a unique anchor`);
-    const start = view.offsets[first]!, end = view.offsets[first + anchor.length]!;
+    const start = view.originalOffset(first), end = view.originalOffset(first + anchor.length);
     const text = includesBom && edit.newText.startsWith(bom) ? edit.newText.slice(bom.length) : edit.newText;
     planned.push({ start, end, text: replacementEol(text, localEol(body, start)), editIndex });
   }

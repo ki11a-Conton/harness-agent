@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { promises as fs, statSync } from "node:fs";
+import { constants, promises as fs, statSync } from "node:fs";
 import { canonicalizePath } from "@ar/security";
 
 /** Cooperation between file tools and transactions in this process only.
@@ -125,9 +125,57 @@ export function assertFileVersion(bytes: Uint8Array, expectedSha256: string | un
   }
 }
 
-export async function checkFileVersion(path: string, expectedSha256: string): Promise<void> {
+/** Open first, then inspect the owned object. A path stat cannot protect a
+ * later open from replacement with a FIFO. Keep authorized symlink behavior,
+ * but never wait for a named-pipe writer or retain a cancelled reader. */
+export async function readRegularFileBytes(path: string, signal?: AbortSignal): Promise<Buffer> {
+  throwIfFileCancelled(signal);
+  const file = await fs.open(path, constants.O_RDONLY | (process.platform === "win32" ? 0 : constants.O_NONBLOCK));
+  try {
+    throwIfFileCancelled(signal);
+    const stat = await file.stat();
+    throwIfFileCancelled(signal);
+    if (!stat.isFile()) throw Object.assign(new Error("file operation requires a regular file"), { code: stat.isDirectory() ? "EISDIR" : "EINVAL" });
+    const bytes = await file.readFile(signal ? { signal } : undefined);
+    throwIfFileCancelled(signal);
+    return bytes;
+  } catch (error) {
+    if (signal?.aborted) throw new FileOperationCancelled();
+    throw error;
+  } finally { await file.close(); }
+}
+
+/** Preserve in-place/hard-link and authorized symlink semantics, but inspect
+ * the actual writable object before truncating or writing. In particular,
+ * O_TRUNC must not run as part of opening an unchecked path. */
+export async function writeRegularFileUtf8(path: string, content: string, options: { append?: boolean; signal?: AbortSignal } = {}): Promise<void> {
+  const { signal, append } = options;
+  throwIfFileCancelled(signal);
+  const flags = constants.O_WRONLY | constants.O_CREAT | (append ? constants.O_APPEND : 0)
+    | (process.platform === "win32" ? 0 : constants.O_NONBLOCK);
+  const file = await fs.open(path, flags);
+  let admitted = false;
+  try {
+    throwIfFileCancelled(signal);
+    const stat = await file.stat();
+    throwIfFileCancelled(signal);
+    if (!stat.isFile()) throw new Error("file operation requires a regular file");
+    // Preserve the original write tool's irreversible phase: cancellation
+    // before admission prevents mutation. Once truncation/write is admitted,
+    // finish the complete write instead of leaving an empty/partial file at
+    // an added cancellation point. This remains an in-place write, not CAS.
+    admitted = true;
+    if (!append) await file.truncate(0);
+    await file.writeFile(content, "utf8");
+  } catch (error) {
+    if (!admitted && signal?.aborted) throw new FileOperationCancelled();
+    throw error;
+  } finally { await file.close(); }
+}
+
+export async function checkFileVersion(path: string, expectedSha256: string, signal?: AbortSignal): Promise<void> {
   let bytes: Buffer;
-  try { bytes = await fs.readFile(path); }
+  try { bytes = await readRegularFileBytes(path, signal); }
   catch (err) {
     const code = (err as NodeJS.ErrnoException).code;
     if (code === "ENOENT" || code === "ENOTDIR" || code === "EISDIR") throw new FileVersionConflict(path);

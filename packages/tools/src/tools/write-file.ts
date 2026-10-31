@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { ToolDefinition, ToolExecutionContext, ToolResult } from "@ar/contracts";
 import { errorInfo, isNodeErrorCode } from "@ar/contracts";
 import { assessWriteSafety } from "../write-safety.js";
-import { checkFileVersion, FileOperationCancelled, FileVersionConflict, throwIfFileCancelled, withFileLock } from "../file-coordination.js";
+import { checkFileVersion, FileOperationCancelled, FileVersionConflict, throwIfFileCancelled, withFileLock, writeRegularFileUtf8 } from "../file-coordination.js";
 
 export interface WriteFileInput {
   path: string;
@@ -50,12 +50,12 @@ export const writeFileTool: ToolDefinition<WriteFileInput, WriteFileOutput> = {
   },
   async execute(input: WriteFileInput, context: ToolExecutionContext): Promise<ToolResult<WriteFileOutput>> {
     try {
-      const { stat, writeFile, appendFile, mkdir } = await import("node:fs/promises");
+      const { stat, mkdir } = await import("node:fs/promises");
       const { dirname, resolve } = await import("node:path");
       const target = resolve(context.cwd, input.path);
       const bytes = Buffer.byteLength(input.content, "utf8");
       return await withFileLock(target, context.signal, async (): Promise<ToolResult<WriteFileOutput>> => {
-        if (input.expectedSha256 !== undefined) await checkFileVersion(target, input.expectedSha256);
+        if (input.expectedSha256 !== undefined) await checkFileVersion(target, input.expectedSha256, context.signal);
         throwIfFileCancelled(context.signal);
 
         // P2-27: measure the pre-write shape so the guard can rate the write.
@@ -92,13 +92,9 @@ export const writeFileTool: ToolDefinition<WriteFileInput, WriteFileOutput> = {
 
         throwIfFileCancelled(context.signal);
         await mkdir(dirname(target), { recursive: true });
-        if (input.expectedSha256 !== undefined) await checkFileVersion(target, input.expectedSha256);
+        if (input.expectedSha256 !== undefined) await checkFileVersion(target, input.expectedSha256, context.signal);
         throwIfFileCancelled(context.signal);
-        if (input.append) {
-          await appendFile(target, input.content, "utf8");
-        } else {
-          await writeFile(target, input.content, "utf8");
-        }
+        await writeRegularFileUtf8(target, input.content, { append: input.append, signal: context.signal });
         const output: WriteFileOutput = { path: target, bytes };
         if (safety.level === "caution") {
           output.safetyWarning = `write-safety: ${safety.reason}; recommend a checkpoint before overwriting untracked content`;

@@ -13,12 +13,12 @@ import { applyLineRange, applyReplace } from "./edit.js";
 import { WorkspaceChangeTransaction } from "./transaction.js";
 import { fileLockEntryCount, withFileLock, withFileLocks } from "./file-coordination.js";
 
-// The leaf tools dynamically import node:fs/promises. Forward reads through
-// the same promises object the barrier spies on, rather than assuming Node's
-// separate named-export binding changes when fs.promises.readFile is spied on.
+// The leaf tools now read through owned descriptors. Forward opens through
+// the same promises object the barrier spies on, retaining the original real
+// snapshot rendezvous without reopening an unchecked path.
 vi.mock("node:fs/promises", async (importOriginal) => {
   const original = await importOriginal<typeof import("node:fs/promises")>();
-  return { ...original, readFile: (...args: Parameters<typeof fs.readFile>) => fs.readFile(...args) };
+  return { ...original, open: (...args: Parameters<typeof fs.open>) => fs.open(...args) };
 });
 
 let ws = "";
@@ -44,17 +44,24 @@ function harness(signal = new AbortController().signal, permission: "allow" | "d
 /** A real read snapshot is held so an overlapping second participant can
  * enter on the old implementation. A lock makes it wait until the first
  * write finishes instead. The rendezvous releases after both reads or 60ms. */
+function observeOwnedReads(afterRead: (path: string) => Promise<void>): void {
+  const open = fs.open.bind(fs);
+  vi.spyOn(fs, "open").mockImplementation(async (...args) => {
+    const file = await open(...args), read = file.readFile.bind(file);
+    vi.spyOn(file, "readFile").mockImplementation((async (...options: Parameters<typeof file.readFile>) => {
+      const bytes = await read(...options); await afterRead(String(args[0])); return bytes;
+    }) as typeof file.readFile);
+    return file;
+  });
+}
 function holdReads(target: string | string[]) {
-  const read = fs.readFile.bind(fs);
   let readers = 0;
   let release!: () => void;
   const barrier = new Promise<void>((resolve) => { release = resolve; });
   const deadline = setTimeout(release, 60);
-  vi.spyOn(fs, "readFile").mockImplementation((async (...args: Parameters<typeof fs.readFile>) => {
-    const snapshot = await read(...args);
-    if ((Array.isArray(target) ? target : [target]).includes(String(args[0]))) { readers += 1; if (readers === 2) release(); await barrier; }
-    return snapshot;
-  }) as typeof fs.readFile);
+  observeOwnedReads(async path => {
+    if ((Array.isArray(target) ? target : [target]).includes(path)) { readers += 1; if (readers === 2) release(); await barrier; }
+  });
   return { done() { clearTimeout(deadline); release(); } };
 }
 
@@ -126,11 +133,9 @@ describe("R4 cooperative file edits", () => {
     const barrier = new Promise<void>((resolve) => { release = resolve; });
     const deadline = setTimeout(release, 60);
     let readers = 0;
-    vi.spyOn(fs, "readFile").mockImplementation((async (...args: Parameters<typeof fs.readFile>) => {
-      const value = await read(...args);
-      if (String(args[0]).endsWith("file.txt")) { readers += 1; if (readers === 2) release(); await barrier; }
-      return value;
-    }) as typeof fs.readFile);
+    observeOwnedReads(async path => {
+      if (path.endsWith("file.txt")) { readers += 1; if (readers === 2) release(); await barrier; }
+    });
     try {
       const results = await Promise.all([
         harness().invoke("edit_file", { path: "real/file.txt", oldText: "A=0", newText: "A=1" }),
@@ -202,11 +207,7 @@ describe("R4 cooperative file edits", () => {
     let release!: () => void;
     const reading = new Promise<void>((resolve) => { entered = resolve; });
     const wait = new Promise<void>((resolve) => { release = resolve; });
-    vi.spyOn(fs, "readFile").mockImplementation((async (...args: Parameters<typeof fs.readFile>) => {
-      const snapshot = await read(...args);
-      if (String(args[0]) === target) { entered(); await wait; }
-      return snapshot;
-    }) as typeof fs.readFile);
+    observeOwnedReads(async path => { if (path === target) { entered(); await wait; } });
     const edit = harness().invoke("edit_file", { path: "txn.txt", oldText: "A=0", newText: "A=1" });
     await reading;
     let committed = false;
@@ -408,11 +409,7 @@ describe("R4 cancellation, version and policy boundaries", () => {
     await fs.writeFile(target, "old");
     const read = fs.readFile.bind(fs);
     let first = true;
-    vi.spyOn(fs, "readFile").mockImplementation((async (...args: Parameters<typeof fs.readFile>) => {
-      const bytes = await read(...args);
-      if (String(args[0]) === target && first) { first = false; await fs.writeFile(target, "external"); }
-      return bytes;
-    }) as typeof fs.readFile);
+    observeOwnedReads(async path => { if (path === target && first) { first = false; await fs.writeFile(target, "external"); } });
     const result = await harness().invoke("edit_file", { path: "external.txt", oldText: "old", newText: "agent" });
     expect(result.status).toBe("failed");
     expect(result.error).toMatchObject({ retryable: false, safeToRetry: false });

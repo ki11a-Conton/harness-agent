@@ -1,8 +1,9 @@
+import { promises as nativeFs } from "node:fs";
 import { mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { newAgentId, newSessionId, newToolCallId, newTurnId, type ToolExecutionContext } from "@ar/contracts";
 import { applyBatchReplace, MAX_BATCH_EDITS, type TextEdit } from "./edit.js";
 import { editFileTool, type EditFileInput } from "./tools/edit-file.js";
@@ -10,15 +11,21 @@ import { ToolRegistry } from "./registry.js";
 import { ToolOrchestrator } from "./orchestrator.js";
 
 const writes = vi.hoisted(() => ({ path: "", count: 0 }));
-vi.mock("node:fs/promises", async original => {
-  const fs = await original<typeof import("node:fs/promises")>();
-  return { ...fs, writeFile: async (...args: Parameters<typeof fs.writeFile>) => {
-    if (String(args[0]) === writes.path) writes.count++;
-    return fs.writeFile(...args);
-  } };
+beforeEach(() => {
+  const open = nativeFs.open.bind(nativeFs);
+  vi.spyOn(nativeFs, "open").mockImplementation(async (...args) => {
+    const handle = await open(...args);
+    const write = handle.writeFile.bind(handle);
+    vi.spyOn(handle, "writeFile").mockImplementation(async (...options: Parameters<typeof handle.writeFile>) => {
+      if (String(args[0]) === writes.path) writes.count++;
+      return write(...options);
+    });
+    return handle;
+  });
 });
 const roots: string[] = [];
 afterEach(async () => {
+  vi.restoreAllMocks();
   writes.path = ""; writes.count = 0;
   for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true, maxRetries: process.platform === "win32" ? 8 : 0, retryDelay: 50 });
 });

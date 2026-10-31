@@ -86,7 +86,7 @@ import type {
 } from "@ar/contracts";
 import type { ContextPipeline, InstructionDiscoveryOptions } from "@ar/context";
 import type { ToolSelector } from "../tools/tool-selector.js";
-import { checkpointView, estimateMessageTokens, hashPolicyConfig } from "@ar/context";
+import { estimateMessageTokens, hashPolicyConfig } from "@ar/context";
 import { applyWorkingStateMutation, type WorkingStateMutation } from "@ar/contracts";
 import { buildStateDigest } from "./turn-helpers.js";
 import { AgentError } from "../errors.js";
@@ -1280,6 +1280,9 @@ export class AgentRuntime {
     let overflowAttempt = 0;
     let verificationFailures = opts.verificationRetriesSeed ?? 0;
     let reactiveCompacted = false;
+    // The retry guard lasts for the whole turn; the actual history rewrite
+    // is requested only for the next preparation after confirmed overflow.
+    let reactiveCompactionPending = false;
     let digestAppended = false;
     let lastReportTokens: number | undefined;
     // P0-10/R6: preparation consumes the same execution duration as the
@@ -1430,7 +1433,7 @@ export class AgentRuntime {
         // Q-1: steering prompt injection extracted to injectSteeringPrompts.
         history = await this.contextController.injectSteeringPrompts(ctx, history);
 
-        if (reactiveCompacted && history.length > 12) {
+        if (reactiveCompacted && !this.context?.pipeline.historyCompaction && history.length > 12) {
           // Reactive compact (plan.md Phase 4/5): after a context-length model
           // error the runtime retries with a REDUCED history — the state
           // digest message (appended below) plus the most recent messages.
@@ -1439,11 +1442,8 @@ export class AgentRuntime {
           // message away while its `tool` results remain; an orphan tool result
           // is rejected by a strict upstream, so the view is repaired.
           const activeUsers = activeUserMessages(history, turnId);
-          // Apply durable coverage BEFORE taking a suffix. Otherwise a saved
-          // handoff older than twelve raw records disappears before the
-          // ContextController can find it. Keep that handoff alongside the
-          // bounded protocol-valid tail and current user corrections.
-          if (this.context?.pipeline.historyCompaction) history = checkpointView(history, activeUsers);
+          // Preserve the legacy suffix behavior when durable history
+          // compaction is not enabled, including an optional leading handoff.
           const handoff = history[0]?.contextCheckpoint !== undefined ? history[0] : undefined;
           const tail = retainMessageHistoryTail(history, Math.max(0, history.length - 12), activeUsers);
           history = handoff !== undefined && !tail.some(message => message.id === handoff.id)
@@ -1456,7 +1456,7 @@ export class AgentRuntime {
         // (via the returned ContextUpdate object).
         const ctxUpdate = await this.contextController.buildContext(
           ctx, ctx.agent, turn, working, priorBlocks, state, toolLedger,
-          history, ctx.agent.systemPrompt, lastReportTokens, digestAppended, overflowAttempt, reactiveCompacted,
+          history, ctx.agent.systemPrompt, lastReportTokens, digestAppended, overflowAttempt, reactiveCompactionPending,
           async (request, maxTokens) => {
             const before = budget.onDurationCheck();
             if (before) return { limit: before };
@@ -1501,6 +1501,7 @@ export class AgentRuntime {
           },
         );
         if (ctxUpdate.action === "finish") return ctxUpdate.outcome;
+        reactiveCompactionPending = false;
         let system = ctxUpdate.system;
         history = ctxUpdate.history;
         lastReportTokens = ctxUpdate.lastReportTokens;
@@ -1540,6 +1541,13 @@ export class AgentRuntime {
             this.activeBudgetUsage.get(sessionId)?.(),
           );
           reactiveCompacted = true;
+          if (this.context?.pipeline.historyCompaction) {
+            // A count-based suffix can retain every oversized record. Ask
+            // the existing durable compactor to shrink the failed view even
+            // when our estimate is below the automatic local threshold.
+            reactiveCompactionPending = true;
+            continue;
+          }
           await this.emit(sessionId, "context.compacted", {
             compressed: 1,
             reason: "reactive compact (context-length model error)",
