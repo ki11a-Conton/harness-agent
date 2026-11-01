@@ -466,6 +466,10 @@ export class ContextController {
               // inbox boundary. The handoff did NOT summarize these new inputs.
               history = incompleteHistoryView(await this.injectSteeringPrompts(ctx, history));
               activeUsers = activeUserMessages(history, turnId);
+              // Admitting a steer reloads the durable transcript. Reapply its
+              // checkpoint boundary before repricing or selecting a raw tail;
+              // covered records must not reappear in the next model request.
+              history = checkpointView(history, activeUsers);
               activeIds.clear(); for (const message of activeUsers) activeIds.add(message.id);
               beforeTokens = pipeline.estimateMessageTokens(history);
               const safeSummary = summary.text ? protect(summary.text) : undefined;
@@ -474,13 +478,29 @@ export class ContextController {
                 Math.min(512, Math.max(0, maxSummaryTokens - (reactiveCompactionRequested ? 128 : 0))),
                 messages => pipeline.estimateMessageTokens(messages), protect) : undefined;
               const text = modelText ?? carryover?.content ?? "Previous context exceeded the available budget. Consult the original transcript for full details. No model-generated handoff is available; continue the current user task without assuming earlier checks passed.";
+              // A failed/unaffordable new summary cannot erase facts already
+              // compressed into a durable handoff. Copy its protected rendered
+              // data, avoiding another wrapper and pricing its actual size.
+              // This is still a NEW durable extractive checkpoint for manual
+              // requests, not the non-durable reactive tail fast path above.
+              const preservingHandoff = modelText === undefined && existingHandoff !== undefined;
+              const preservedContent = preservingHandoff ? protect(existingHandoff.content) : undefined;
+              if (preservingHandoff && preservedContent === undefined) {
+                await this.deps.emit(sessionId, "run.limit_reached", { limit: "maxTokens", used: beforeTokens,
+                  allowed: targetHeadroom, reason: "unsafe-history-checkpoint" }, turnId);
+                return { action: "finish", outcome: await this.deps.finishTurn(ctx, "failed", state, working,
+                  errorInfo("RESOURCE_LIMIT", "Context compaction cannot safely preserve the existing historical checkpoint."), "context_limit", toolLedger) };
+              }
+              const checkpointContent = preservedContent ?? renderHistoryCheckpoint(text);
+              const handoffTokens = preservedContent !== undefined
+                ? pipeline.estimateMessageTokens([{ ...existingHandoff!, content: preservedContent }]) : maxSummaryTokens + 32;
               const durable = incompleteHistoryView(await this.deps.store.listMessages(sessionId));
               // Keep the recent protocol-valid tail as raw evidence. A model
               // must still see the latest completed tool batch, rather than
               // accidentally reissuing it immediately after compaction.
               const rawBudget = Math.max(0, Math.min(Math.floor(targetHeadroom * 0.4),
                 Math.floor(beforeTokens * (built.manualCompaction ? 0.25 : 0.4)),
-                targetHeadroom - pipeline.estimateMessageTokens(activeUsers) - maxSummaryTokens - 32));
+                targetHeadroom - pipeline.estimateMessageTokens(activeUsers) - handoffTokens));
               let tailStart = history.length, rawTokens = 0;
               while (tailStart > 0) {
                 const message = history[tailStart - 1]!;
@@ -499,10 +519,13 @@ export class ContextController {
                 .filter(message => message.contextCheckpoint === undefined).at(-1);
               if (through) {
                 const checkpoint: Message = { id: newMessageId(), sessionId, turnId, role: "assistant",
-                  content: renderHistoryCheckpoint(text), contextCheckpoint: { version: 1, throughMessageId: through.id,
+                  content: checkpointContent, contextCheckpoint: { version: 1, throughMessageId: through.id,
                     source: modelText ? "model" : "extractive" }, createdAt: this.deps.now() };
                 const view = checkpointView([...durable, checkpoint], activeUsers);
-                if (pipeline.estimateMessageTokens(view) < beforeTokens && pipeline.estimateMessageTokens(view) <= targetHeadroom) {
+                const latestCall = preservingHandoff ? history.findLast(message => message.role === "assistant" && message.toolCalls?.length) : undefined;
+                const preservesLatestCall = latestCall === undefined || view.some(message => message.id === latestCall.id);
+                const afterTokens = pipeline.estimateMessageTokens(view);
+                if (preservesLatestCall && afterTokens < beforeTokens && afterTokens <= targetHeadroom) {
                   // Persist BEFORE publishing success or advancing the model.
                   await this.deps.store.appendMessage(checkpoint);
                   this.deps.compactCounter.value++;
@@ -514,11 +537,12 @@ export class ContextController {
                     ...(modelText ? {} : { fallbackReason: summary.reason ?? "invalid-summary" }) };
                   await this.deps.failAt("context.compacted", { sessionId, turnId });
                   await this.deps.checkpoint(ctx, working, state, toolLedger, "context:history-checkpoint");
-                } else if (beforeTokens > headroom) {
-                  // Even the fallback cannot fit protected human input.
-                  await this.deps.emit(sessionId, "run.limit_reached", { limit: "maxTokens", used: beforeTokens, allowed: headroom }, turnId);
+                } else if (beforeTokens > headroom || (preservingHandoff && (!preservesLatestCall || afterTokens > targetHeadroom))) {
+                  // Do not acknowledge a manual request by discarding prior
+                  // facts or the latest complete tool batch to make it fit.
+                  await this.deps.emit(sessionId, "run.limit_reached", { limit: "maxTokens", used: beforeTokens, allowed: targetHeadroom }, turnId);
                   return { action: "finish", outcome: await this.deps.finishTurn(ctx, "failed", state, working,
-                    errorInfo("RESOURCE_LIMIT", "Context cannot fit after bounded compaction; shorten the active user input."), "context_limit", toolLedger) };
+                    errorInfo("RESOURCE_LIMIT", "Context cannot fit after bounded compaction while preserving historical facts and active input."), "context_limit", toolLedger) };
                 }
               }
             }

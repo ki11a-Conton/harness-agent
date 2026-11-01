@@ -246,6 +246,10 @@ export function buildResumePrompt(
 ): string {
   const list = (items: readonly string[], empty: string): string =>
     items.length > 0 ? items.map((item) => `- ${item}`).join("\n") : empty;
+  // Legacy checkpoints/callers may pass non-success records here. Preserve
+  // their audit trail without presenting uncertain effects as applied work.
+  const applied = committedSideEffects.filter((record) => record.status === "success");
+  const unconfirmed = committedSideEffects.filter((record) => record.status !== "success");
 
   const lines: string[] = [
     "[Session resumed after an interruption — durable checkpoint recovered]",
@@ -278,11 +282,15 @@ export function buildResumePrompt(
   }
   lines.push(
     "## Committed side effects (already applied — do NOT redo)",
-    committedSideEffects.length > 0
-      ? committedSideEffects
-          .map((e) => `- ${e.tool}${e.status === "failed" ? " [failed]" : ""}`)
+    applied.length > 0
+      ? applied
+          .map((e) => `- ${e.tool}`)
           .join("\n")
       : "- (none)",
+    ...(unconfirmed.length > 0 ? [
+      "## Non-successful tool attempts (not confirmed applied — reconcile possible partial effects before retrying)",
+      ...unconfirmed.map((e) => `- ${e.tool} [${e.status}]`),
+    ] : []),
     "## Unresolved tool executions (started; outcome unknown — reconcile per the verdict, never blindly re-execute)",
     unresolvedTools.length > 0
       ? unresolvedTools

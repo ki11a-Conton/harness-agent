@@ -517,7 +517,6 @@ export class RecoveryController {
 
     // Which tools produced a persisted result message after the checkpoint?
     const completedIds = new Set<string>();
-    const failedIds = new Set<string>();
     if (turnId !== undefined) {
       const messages = await this.deps.store.listMessagesByTurn(sessionId, turnId);
       for (const message of messages) {
@@ -526,19 +525,12 @@ export class RecoveryController {
         }
       }
     }
-    for (const event of events) {
-      if (event.type === "tool.failed") {
-        const key = typeof event.payload.toolCallId === "string" ? event.payload.toolCallId : event.id;
-        failedIds.add(key);
-      }
-    }
-
     // Reconstruct requested calls from the post-checkpoint event log.
     const requested = new Map<
       string,
       { id: string; name: string; args: Record<string, unknown>; started: number }
     >();
-    const terminalIds = new Set<string>();
+    const outcomes = new Map<string, { status: ToolExecutionRecord["status"]; completed: number }>();
     for (const event of events) {
       if (event.type === "tool.requested") {
         const id = typeof event.payload.toolCallId === "string" ? event.payload.toolCallId : event.id;
@@ -550,7 +542,22 @@ export class RecoveryController {
         });
       } else if (event.type === "tool.completed" || event.type === "tool.failed") {
         const key = typeof event.payload.toolCallId === "string" ? event.payload.toolCallId : event.id;
-        terminalIds.add(key);
+        // The orchestrator may persist a returned denied/failed/cancelled
+        // result before Core emits its terminal event or stores a message.
+        // Fold in sequence order: a successful safe retry must supersede an
+        // earlier failure of the same call. Never infer status from output.
+        let status: ToolExecutionRecord["status"];
+        if (event.type === "tool.failed") {
+          const error = event.payload.error as { code?: unknown } | undefined;
+          status = error?.code === "PROCESS_TIMEOUT" || error?.code === "TOOL_TIMEOUT" ? "timeout" : "failed";
+        } else if (event.payload.status === undefined) {
+          status = "success"; // legacy Core success events omit status
+        } else {
+          const value = event.payload.status;
+          status = value === "success" || value === "failed" || value === "denied" || value === "cancelled" || value === "timeout"
+            ? value : "interrupted";
+        }
+        outcomes.set(key, { status, completed: event.timestamp });
       }
     }
 
@@ -560,8 +567,11 @@ export class RecoveryController {
     for (const info of requested.values()) {
       const semantics = this.deps.semanticsOf(info.name);
       const sideEffect = semantics.sideEffectScope !== "none";
-      const done = completedIds.has(info.id) || terminalIds.has(info.id);
-      if (!done) {
+      const outcome = outcomes.get(info.id);
+      const status = outcome?.status ?? (completedIds.has(info.id) ? "success" : undefined);
+      if (status === undefined || status === "interrupted" || (sideEffect && status !== "success" && status !== "denied")) {
+        // A failed/cancelled write or process can have partial effects. Keep
+        // the existing reconciliation barrier without claiming completion.
         unresolvedTools.push({
           toolCallId: info.id as ToolCallId,
           tool: info.name,
@@ -572,30 +582,27 @@ export class RecoveryController {
           // classify safe-retry vs needs-verification vs never-auto.
           sideEffectScope: semantics.sideEffectScope,
         });
-        continue;
       }
-      // The result exists in the store: fold it back into the working state
-      // so resume does not re-lose already-applied work. side-effect tools
-      // that were not reported failed are committed — never blindly replayed.
-      const failed = failedIds.has(info.id);
+      if (status === undefined) continue;
       const fakeCall = { id: info.id as ToolCallId, name: info.name, args: info.args };
-      if (fakeCall.name === "update_plan" && !failed && Array.isArray(fakeCall.args.mutations)) {
+      if (fakeCall.name === "update_plan" && status === "success" && Array.isArray(fakeCall.args.mutations)) {
         for (const mutation of fakeCall.args.mutations as WorkingStateMutation[]) applyWorkingStateMutation(working, mutation);
       } else {
-        updateWorkingState(fakeCall, { status: failed ? "failed" : "success", output: "" },
-          working, this.deps.semanticsOf(fakeCall.name));
+        if (status === "interrupted" || status === "cancelled") working.failures.push(`${fakeCall.name}: ${status}`);
+        if (status !== "interrupted") updateWorkingState(fakeCall, { status, output: "" },
+          working, semantics);
       }
       const record: ToolExecutionRecord = {
-          toolCallId: info.id as ToolCallId,
-          tool: info.name,
-          argsHash: computeArgsHash(info.args),
-          started: info.started,
-          completed: info.started,
-          status: failed ? "failed" : "success",
-          sideEffect,
-        };
+        toolCallId: info.id as ToolCallId,
+        tool: info.name,
+        argsHash: computeArgsHash(info.args),
+        started: info.started,
+        completed: outcome?.completed ?? info.started,
+        status,
+        sideEffect,
+      };
       replayedToolLedger.push(record);
-      if (sideEffect) committedSideEffects.push(record);
+      if (sideEffect && status === "success") committedSideEffects.push(record);
     }
     for (const event of events) {
       if (event.type === "verification.failed" && typeof event.payload.error === "string") {

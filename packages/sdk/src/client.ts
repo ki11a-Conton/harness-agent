@@ -3,8 +3,8 @@
  *
  * The SDK is the surface a host (CLI/web) uses to drive an Agent Harness App
  * Server. It is STREAM-FIRST: the primary API is `runStreamed`, and the
- * convenience `run()` is a REDUCER over that stream (P30-3 — the same single
- * implementation, no parallel code path).
+ * convenience `run()` shares its lifecycle and incremental reducer without
+ * allocating an unconsumed public stream queue.
  *
  * P36-4 (INV-P36-003/004): `RunEventHub` replaces the single-consumer
  * EventChannel with a broadcast hub that feeds an internal reducer AND a
@@ -239,7 +239,7 @@ function isTerminal(event: TurnEvent): boolean {
 }
 
 class RunEventHub {
-  readonly events: PushChannel;
+  readonly events?: PushChannel;
   private readonly state: RunResult = { items: [], status: "completed" };
   private readonly _done: Promise<RunResult>;
   private resolveDone!: (r: RunResult) => void;
@@ -255,9 +255,13 @@ class RunEventHub {
     threadId: string,
     turnId: string,
     signal?: AbortSignal,
+    streamEvents = true,
   ) {
-    // P38-8: bounded buffer — overflow is a channel FAILURE + failed done.
-    this.events = new PushChannel(4096, () => {
+    // Only runStreamed exposes a public queue. A reducer-only run must not
+    // accumulate deltas in a queue it can never consume. Its reducer still
+    // receives every event through the same subscription and terminal path.
+    // P38-8: the public buffer remains bounded and fails on overflow.
+    this.events = streamEvents ? new PushChannel(4096, () => {
       this.settleOnce(
         {
           status: "failed",
@@ -270,7 +274,7 @@ class RunEventHub {
         },
         new OverflowError("event stream buffer overflow"),
       );
-    });
+    }) : undefined;
 
     this._done = new Promise<RunResult>((resolve) => {
       this.resolveDone = resolve;
@@ -280,7 +284,7 @@ class RunEventHub {
     // emit a run event.
     this.unsubscribeTurn = transport.subscribe("turn", (event) => {
       if (event.threadId !== threadId || event.turnId !== turnId) return;
-      this.events.push(event);
+      this.events?.push(event);
       accumulateEvent(this.state, event);
       if (isTerminal(event)) {
         this.settleOnce({ ...this.state });
@@ -310,9 +314,17 @@ class RunEventHub {
     if (signal !== undefined) {
       this.abortSignal = signal;
       const onAbort = () => {
-        // Always notify the server (even if the event stream already
-        // terminated) — the local abort is authoritative.
-        void transport.invoke("turn/interrupt", { threadId, turnId, reason: "aborted" });
+        // Local cancellation must settle even if the server never acknowledges
+        // it. Observe both protocol errors and transport failures (including a
+        // synchronous throw), without exposing gateway payloads or credentials.
+        const notificationFailed = () => {
+          console.warn("[harness-sdk] interrupt notification failed; server stop is not confirmed");
+        };
+        void Promise.resolve()
+          .then(() => transport.invoke("turn/interrupt", { threadId, turnId, reason: "aborted" }))
+          .then(response => {
+            if (response.error !== undefined) notificationFailed();
+          }, notificationFailed);
         this.settleOnce({
           status: "interrupted",
           items: [...this.state.items],
@@ -381,9 +393,9 @@ class RunEventHub {
       this.abortSignal.removeEventListener("abort", this.abortListener);
     }
     if (channelError !== undefined) {
-      this.events.fail(channelError);
+      this.events?.fail(channelError);
     } else {
-      this.events.end();
+      this.events?.end();
     }
     this.resolveDone(result);
   }
@@ -421,6 +433,17 @@ export class Thread {
     prompt: string,
     opts: { signal?: AbortSignal; idempotencyKey?: string } = {},
   ): Promise<RunStream> {
+    const { hub, turnId } = await this.startRun(prompt, opts, true);
+    // startRun(true) always allocates the public queue before subscribing.
+    return { events: hub.events!, done: hub.done.then(r => ({ ...r, turnId })) };
+  }
+
+  /** Shared start/subscribe/invoke/settle lifecycle for both public APIs. */
+  private async startRun(
+    prompt: string,
+    opts: { signal?: AbortSignal; idempotencyKey?: string },
+    streamEvents: boolean,
+  ): Promise<{ hub: RunEventHub; turnId: string }> {
     const params = {
       threadId: this.threadId,
       prompt,
@@ -438,7 +461,7 @@ export class Thread {
     // P38-6 (INV-P38-007/008): subscribe FIRST (hub constructor), then start
     // turn/run, attach it to the hub, and RETURN immediately — the stream is
     // live while turn/run is still pending.
-    const hub = new RunEventHub(this.transport, this.threadId, turnId, opts.signal);
+    const hub = new RunEventHub(this.transport, this.threadId, turnId, opts.signal, streamEvents);
     // P38.1-5 (INV-P38.1-006): a signal aborted BEFORE runStreamed must not
     // invoke turn/run at all. The hub constructor already handles pre-abort
     // (it fires the abort path → turn/interrupt + done=interrupted).
@@ -451,20 +474,19 @@ export class Thread {
       );
     }
 
-    const done = hub.done.then((r) => ({ ...r, turnId }));
-    return { events: hub.events, done };
+    return { hub, turnId };
   }
 
   /**
-   * P30-2/3 — convenience: `run()` is a REDUCER over `runStreamed()`. No
-   * separate implementation.
+   * P30-2/3 — convenience: share the streaming lifecycle and reducer, without
+   * retaining a public event queue when only the reduced result is requested.
    */
   async run(
     prompt: string,
     opts: { signal?: AbortSignal; idempotencyKey?: string } = {},
   ): Promise<RunResult> {
-    const { done } = await this.runStreamed(prompt, opts);
-    return done;
+    const { hub, turnId } = await this.startRun(prompt, opts, false);
+    return hub.done.then(r => ({ ...r, turnId }));
   }
 
   /** Read a past range of the thread (replay/resume, P29-8). */
@@ -480,10 +502,13 @@ export class Thread {
 
   /** Interrupt the current turn (P30-4 server-side). */
   async interrupt(turnId?: string): Promise<void> {
-    await this.transport.invoke("turn/interrupt", {
+    const response = await this.transport.invoke("turn/interrupt", {
       threadId: this.threadId,
       ...(turnId !== undefined ? { turnId } : {}),
     });
+    if (response.error !== undefined) {
+      throw new SdkError(response.error.message, response.error);
+    }
   }
 }
 

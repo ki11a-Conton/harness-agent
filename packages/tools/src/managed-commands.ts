@@ -86,8 +86,32 @@ interface Job {
 // One native process may compose multiple Web project/model Harness owners.
 // Share capacity and workspace barriers across them, never their handle access.
 const domainJobs = new Set<Job>();
-const domainRecovered = new Set<ManagedCommandRecord>();
+const domainRecovered = new Map<string, ManagedCommandRecord>();
 const domainMutations = new Map<string, number>();
+function recordIdentity(record: ManagedCommandRecord): string {
+  return stableFingerprint([record.workspace, record.owner, record.id]);
+}
+/** A journal may mirror a live job or be reopened by several managers. Reserve
+ * once per logical command, while retaining independent live handles and every
+ * unknown workspace barrier. A recovery mirror always keeps its slot active. */
+function domainReservations(recovered: Iterable<ManagedCommandRecord> = []) {
+  const reservations = new Map<string, { owner: string; active: boolean }>();
+  const reserve = (record: ManagedCommandRecord, active: boolean) => {
+    const key = recordIdentity(record);
+    reservations.set(key, {
+      owner: record.owner,
+      active: active || reservations.get(key)?.active === true,
+    });
+  };
+  for (const record of domainRecovered.values()) reserve(record, true);
+  for (const job of domainJobs)
+    reserve(
+      job.record,
+      !job.settled || ["running", "unknown"].includes(job.record.state),
+    );
+  for (const record of recovered) reserve(record, true);
+  return reservations;
+}
 function overlaps(a: string, b: string): boolean {
   const within = (root: string, path: string) => {
     const rel = relative(root, path);
@@ -156,13 +180,15 @@ export class ManagedCommands {
       throw new RangeError("invalid managed output cap");
     // No PID reattachment or replay. Old live/failure records remain a workspace
     // barrier until the operator independently reconciles the interrupted host.
-    this.recovered = (options.recovered ?? []).map((r) => ({
-      ...r,
-      state: "unknown",
-    }));
-    if (this.recovered.length + domainJobs.size + domainRecovered.size > 128)
+    this.recovered = [...new Map((options.recovered ?? []).map((r) => [
+      recordIdentity(r), { ...r, state: "unknown" as const },
+    ])).values()];
+    // Check the union before publishing anything: a rejected constructor must
+    // not leave partial reservations in another manager's process-wide domain.
+    if (domainReservations(this.recovered).size > 128)
       throw new RangeError("managed recovery journal exceeds its bound");
-    for (const record of this.recovered) domainRecovered.add(record);
+    for (const record of this.recovered)
+      domainRecovered.set(recordIdentity(record), record);
   }
   async inContext<T>(
     context: ToolExecutionContext,
@@ -225,7 +251,7 @@ export class ManagedCommands {
         [...domainMutations.keys()].some((root) =>
           overlaps(root, workspace),
         )) ||
-      [...domainRecovered].some((j) => overlaps(j.workspace, workspace)) ||
+      [...domainRecovered.values()].some((j) => overlaps(j.workspace, workspace)) ||
       [...domainJobs].some(
         (j) =>
           overlaps(j.record.workspace, workspace) &&
@@ -396,14 +422,13 @@ export class ManagedCommands {
     const identity = this.identity();
     if (this.closed || identity.authority.signal.aborted || call.signal.aborted)
       return denial("managed owner is closed or cancelled");
-    const active = [...domainJobs].filter(
-      (j) => this.state(j) === "running" || this.state(j) === "unknown",
-    );
+    const reservations = domainReservations();
+    const active = [...reservations.values()].filter((r) => r.active);
     if (
       this.locked(identity.workspace) ||
-      active.length + domainRecovered.size >= 16 ||
-      active.filter((j) => j.record.owner === identity.key).length >= 4 ||
-      domainJobs.size + domainRecovered.size >= 128
+      active.length >= 16 ||
+      active.filter((r) => r.owner === identity.key).length >= 4 ||
+      reservations.size >= 128
     )
       return denial("managed workspace/capacity limit reached");
     const { yieldMs, supersedes, ...execInput } = args;
@@ -681,7 +706,7 @@ export class ManagedCommands {
   }
   private blocked(context: VerificationContext): boolean {
     return (
-      [...domainRecovered].some((j) => overlaps(j.workspace, context.cwd)) ||
+      [...domainRecovered.values()].some((j) => overlaps(j.workspace, context.cwd)) ||
       [...domainJobs].some(
         (j) =>
           overlaps(j.record.workspace, context.cwd) &&
