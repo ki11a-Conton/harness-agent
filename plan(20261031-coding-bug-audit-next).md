@@ -23,7 +23,7 @@
 - N4 已真实 RED：服务端正常完成、4300个分帧文本及真实读取，SDK `run()` 报 STREAM_BUFFER_OVERFLOW；100事件对照完成。事件计数不冒充文件 I/O 次数。
 - N5 已真实 RED：10400B 文件的1B破坏性 overwrite 实际被 WRITE_SAFETY_DENIED 拒绝，磁盘字节未改；在真实 tool.effect_committed 故障窗口，重放却记录 success 和 modified source.ts。
 - N6 已真实 RED：本地 abort 的 interrupt Promise 拒绝产生 unhandledRejection；显式 interrupt 收到协议 forbidden 却 resolve。
-- 原始证据全部在 `/dev/shm/harness-bug-audit-next-20261031/`，修复前失败、设置错误及中间未通过结果原样保留。后续补记红绿、类型/安全/集成、完整源码干净提交全量与精确 CI。
+- 初次原始证据保存在 `/dev/shm/harness-bug-audit-next-20261031/`；该临时目录于2026-11-05环境重建时丢失，不能再作为现存验收证据。重新复现、CI失败记录及完整验收见下文，旧CI不重标通过。
 
 ## 完成标准
 
@@ -48,3 +48,17 @@
 | N7：普通自动压缩误用手动/overflow 批次保护 | 修正 N1 最小补丁对普通连续读取的回归 | 仅手动和 upstream overflow 恢复额外保护最新完整工具批次；普通自动压缩保留 prior handoff、用户与协议配对，同时允许按原语义折叠大读取结果 | 保留原1200-token预算及全部原断言，补强最终 completed 断言；原场景 clean `fde148a2` RED→新源码 GREEN；原N1/N2和18项reactive回归仍通过；加入Windows专测，全量和新SHA的CI重新验收 |
 
 - 新环境首轮依赖安装因 node-gyp 默认缓存所在根分区 ENOSPC 失败，保留日志；后续将工具链、缓存、临时目录放入 `/dev/shm`，锁定 pnpm 11.21.0，不改仓库锁文件、不降低测试门槛。
+
+## 实现提交验收（2026-11-05）
+
+- 最终实现 `96d3986dd742bf5df91d3ceae4d9251bed15ca54`，完整checkout含13536个tracked文件，没有缺失或skip-worktree项。原根命令 `pnpm test` exit0：691文件通过/2跳过、10661项通过/16跳过；before/after同SHA且clean，耗时714.26秒。日志182345B，SHA256 `d4df5a530450fdaa6b8555b93d6b2d6c5040aa1da704c28f71d7060333110964`。根forcebuild通过。
+- 原生产基线逐字节匹配1fb42159，只加入六个候选回归文件：51项有36失败/15通过；clean实现同51项全通过。N7既有集成场景clean fde148a2 RED（1失败/5通过），保留原1200预算及38处expect，补强completed后通过。相关167项、安全2155项通过，均有新原始日志。
+- 真实write_file经ToolOrchestrator执行，在Runtime故障窗口重建：denied/failed/cancelled三种基线错误记success，修复后状态准确、原10400B文件未变、没有committed误报；failed/cancelled保留待核验屏障。
+- clean同SHA CLI/Web：50基础+8policy断言、19个本地HTTP请求通过。48个managed实际arms满足原判据：baselinePass=16、candidatePass=24、candidateOverlap=16、duplicateStarts=0、failures=[]；这些是通过数/重叠数，不是baseline/candidate arms数量，亦不证明同负载性能或模型质量。
+- 同实现四项workflow全部首attempt通过；真实Windows97文件/987通过/0失败/12跳过，原46项required均恰好一次通过。CI-reported原始报告/用例哈希保存；未下载原始artifact的哈希没有冒充本地重算。
+- [genuine Windows acceptance](https://github.com/ki11a-Conton/harness-agent/actions/runs/42064555681)：首 attempt 成功。
+- [official DeepSeek UI installed acceptance](https://github.com/ki11a-Conton/harness-agent/actions/runs/42064555782)：首 attempt 成功。
+- [first-generation installed acceptance](https://github.com/ki11a-Conton/harness-agent/actions/runs/42064555983)：首 attempt 成功。
+- [ci](https://github.com/ki11a-Conton/harness-agent/actions/runs/42064555664)：首 attempt 成功。
+- 新证据在 `/dev/shm/harness-bug-audit-next-20261105/`，包含环境丢失说明、新基线RED、初始fde148a2失败CI及设置失败。持久化交付报告和ZIP放入 `/workspace`，最终主线SHA及其CI结果由该报告补记；此文档归档仅改Markdown，不重跑本地全量冒充新源码。
+- 七个原始缺陷及初次修复的一项回归已关闭；保持工具权限、沙箱、Verification、16/128容量和4096流缓冲限制，不改变默认策略。没有付费模型调用，没有发布release；真实模型coding任务成功率与Codex能力对等仍为NOT_PROVEN。
