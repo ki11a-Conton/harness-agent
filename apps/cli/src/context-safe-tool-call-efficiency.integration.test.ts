@@ -208,8 +208,9 @@ describe("N6/N4 — context-safe tool-call efficiency on the REAL harness tool l
   });
 
   it("2. a small budget really compacts, the guidance survives, and the re-read is a real new tool call through the orchestrator AND the permission engine", async () => {
-    const { harness, requests, events } = await runLoop(await fixture(), { maxTokens: 1_200 });
+    const { harness, requests, events, outcome } = await runLoop(await fixture(), { maxTokens: 1_200 });
     try {
+      expect(outcome).toMatchObject({ status: "completed" });
       expect(codingRequests(requests).length).toBeGreaterThanOrEqual(3);
 
       // The runtime really compacted under pressure …

@@ -522,7 +522,12 @@ export class ContextController {
                   content: checkpointContent, contextCheckpoint: { version: 1, throughMessageId: through.id,
                     source: modelText ? "model" : "extractive" }, createdAt: this.deps.now() };
                 const view = checkpointView([...durable, checkpoint], activeUsers);
-                const latestCall = preservingHandoff ? history.findLast(message => message.role === "assistant" && message.toolCalls?.length) : undefined;
+                // Ordinary automatic compaction can fold a completed tool
+                // batch into history, including a large read that must be
+                // re-read later. Manual/overflow recovery must additionally
+                // retain the latest batch rather than silently discarding it.
+                const latestCall = preservingHandoff && (built.manualCompaction || reactiveCompactionRequested)
+                  ? history.findLast(message => message.role === "assistant" && message.toolCalls?.length) : undefined;
                 const preservesLatestCall = latestCall === undefined || view.some(message => message.id === latestCall.id);
                 const afterTokens = pipeline.estimateMessageTokens(view);
                 if (preservesLatestCall && afterTokens < beforeTokens && afterTokens <= targetHeadroom) {
