@@ -165,6 +165,7 @@ export class JSONLInboxStore implements InboxStore {
   private readonly file: string;
   private readonly maxPending: number;
   private loaded = false;
+  private loading: Promise<void> | undefined;
   private prompts: AdmittedPrompt[] = [];
 
   constructor(opts: JSONLInboxStoreOptions) {
@@ -183,8 +184,7 @@ export class JSONLInboxStore implements InboxStore {
           `inbox full: ${pending.length} queued prompts exceed maxPending ${this.maxPending}`,
         );
       }
-      this.prompts.push(prompt);
-      await this.persist();
+      await this.commit([...this.prompts, { ...prompt }]);
     });
   }
 
@@ -250,10 +250,11 @@ export class JSONLInboxStore implements InboxStore {
     // P2-35: serialized so concurrent promote/consume cannot lose mutations.
     return withLock(this.lockKey(), async () => {
       await this.load();
-      const prompt = this.prompts.find((p) => p.id === id);
+      const next = this.prompts.map(prompt => ({ ...prompt }));
+      const prompt = next.find((p) => p.id === id);
       if (prompt === undefined) throw new SessionStoreError("UNKNOWN_PROMPT", `unknown prompt ${id}`);
       mutate(prompt);
-      await this.persist();
+      await this.commit(next);
     });
   }
 
@@ -263,32 +264,59 @@ export class JSONLInboxStore implements InboxStore {
 
   private async load(): Promise<void> {
     if (this.loaded) return;
-    this.loaded = true;
-    this.prompts = [];
+    // Follow the ask-user store's complete-snapshot, single-flight boundary.
+    // A read failure leaves the next call retryable instead of publishing [].
+    if (this.loading === undefined) this.loading = this.loadSnapshot();
+    const loading = this.loading;
+    try {
+      await loading;
+    } finally {
+      if (this.loading === loading) this.loading = undefined;
+    }
+  }
+
+  private async loadSnapshot(): Promise<void> {
+    const prompts: AdmittedPrompt[] = [];
     let raw: string;
     try {
       raw = await readFile(this.file, "utf8");
     } catch (err) {
       // P14-6: first-run ENOENT is expected — other read failures propagate.
       if (!isNodeErrorCode(err, "ENOENT")) throw err;
+      this.prompts = prompts;
+      this.loaded = true;
       return;
     }
     for (const line of raw.split("\n")) {
       if (line.trim() === "") continue;
       try {
         const record = JSON.parse(line) as PromptRecord;
-        if (record.schemaVersion === INBOX_SCHEMA_VERSION) this.prompts.push(record.prompt);
+        if (record.schemaVersion === INBOX_SCHEMA_VERSION) prompts.push(record.prompt);
       } catch (err) {
         // P14-6: corrupt line — skipped (documented policy) but reported, never
         // silent.
         process.stderr.write(`[degraded] inbox.corrupt-line: ${err instanceof Error ? err.message : String(err)}\n`);
       }
     }
+    this.prompts = prompts;
+    this.loaded = true;
   }
 
-  private async persist(): Promise<void> {
+  private async commit(prompts: AdmittedPrompt[]): Promise<void> {
+    try {
+      await this.persist(prompts);
+    } catch (error) {
+      // A failed/uncertain write must be re-read before the next operation.
+      // Never let an uncommitted cache mutation enter a later successful save.
+      this.loaded = false;
+      throw error;
+    }
+    this.prompts = prompts;
+  }
+
+  private async persist(prompts: readonly AdmittedPrompt[]): Promise<void> {
     // P2-35: durable atomic write (temp + fsync + rename) via shared primitive.
-    const body = this.prompts
+    const body = prompts
       .map((prompt) => JSON.stringify({ schemaVersion: INBOX_SCHEMA_VERSION, prompt } satisfies PromptRecord))
       .join("\n");
     await atomicWriteFile(this.file, `${body}\n`);

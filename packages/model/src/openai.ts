@@ -344,7 +344,7 @@ export function nextBackoffDelayMs(
   retryAfterMs: number | undefined,
   rng: () => number = Math.random,
 ): number {
-  const exponential = baseMs * 2 ** attempt;
+  const exponential = baseMs === 0 ? 0 : baseMs * 2 ** attempt;
   const jittered = exponential * (0.75 + 0.5 * rng());
   return Math.max(jittered, retryAfterMs ?? 0);
 }
@@ -366,6 +366,32 @@ export function parseRetryAfter(header: string | null, now: number = Date.now())
   return undefined;
 }
 
+/** Node timers overflow above 2^31-1ms into a 1ms wait. Preserve the full
+ * configured duration with monotonic, cancellable chunks, never an earlier
+ * retry or timeout. Infinite server waits remain interruptible by the caller. */
+function longTimeout(callback: () => void, delayMs: number, unref = false): () => void {
+  const started = performance.now();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let stopped = false;
+  const arm = () => {
+    const remaining = delayMs - (performance.now() - started);
+    timer = setTimeout(() => {
+      if (stopped) return;
+      if (delayMs - (performance.now() - started) > 0) arm();
+      else {
+        stopped = true;
+        callback();
+      }
+    }, Math.min(2_147_483_647, Math.max(0, remaining)));
+    if (unref) timer.unref();
+  };
+  arm();
+  return () => {
+    stopped = true;
+    clearTimeout(timer);
+  };
+}
+
 /** Retry waits share the whole-call signal. Every settlement releases the
  *  wait's timer and listener; an already-aborted signal never waits. */
 async function backoff(
@@ -378,12 +404,12 @@ async function backoff(
   if (signal.aborted) return;
   const delay = nextBackoffDelayMs(baseMs, attempt, retryAfterMs, rng);
   await new Promise<void>((resolve) => {
-    let timer: ReturnType<typeof setTimeout> | undefined;
+    let cancelTimer: (() => void) | undefined;
     let settled = false;
     const finish = () => {
       if (settled) return;
       settled = true;
-      if (timer !== undefined) clearTimeout(timer);
+      cancelTimer?.();
       signal.removeEventListener("abort", finish);
       resolve();
     };
@@ -392,7 +418,7 @@ async function backoff(
       finish();
       return;
     }
-    timer = setTimeout(finish, delay);
+    cancelTimer = longTimeout(finish, delay);
   });
 }
 
@@ -431,7 +457,13 @@ async function* streamChatCompletion(
   // Phase 7 deadline: the effective signal combines the caller's abort with a
   // request-level timeout. A timeout is NEVER a cancellation — the caller's
   // abort is the only path to "cancelled".
-  const timeoutSignal = opts.requestTimeoutMs > 0 ? AbortSignal.timeout(opts.requestTimeoutMs) : undefined;
+  const timeoutController = opts.requestTimeoutMs > 0 ? new AbortController() : undefined;
+  const cancelTimeout = timeoutController === undefined ? undefined : longTimeout(
+    () => timeoutController.abort(new DOMException("The operation was aborted due to timeout", "TimeoutError")),
+    opts.requestTimeoutMs, true,
+  );
+  try {
+  const timeoutSignal = timeoutController?.signal;
   const effectiveSignal = timeoutSignal !== undefined ? AbortSignal.any([signal, timeoutSignal]) : signal;
   const timedOut = (): boolean => timeoutSignal !== undefined && timeoutSignal.aborted && !signal.aborted;
   const timeoutMessage = `OpenAI chat completion timed out after ${opts.requestTimeoutMs}ms`;
@@ -663,7 +695,7 @@ async function* streamChatCompletion(
   if (effectiveSignal.aborted) aborted = true;
 
   const finishEvents = (reason: FinishReason, error?: ReturnType<typeof errorInfo>, emitToolDeltas = true): ModelEvent[] => {
-    const calls: ToolCall[] = [...toolCalls.values()].map((tc) => ({
+    const calls: ToolCall[] = [...toolCalls.entries()].sort(([left], [right]) => left - right).map(([, tc]) => ({
       id: tc.id ? (tc.id as ToolCallId) : newToolCallId(),
       name: tc.name,
       args: parseArgs(tc.args),
@@ -889,6 +921,9 @@ async function* streamChatCompletion(
   if (streamError !== undefined) {
     yield { type: "error", error: streamError, timestamp: Date.now() };
     return;
+  }
+  } finally {
+    cancelTimeout?.();
   }
 }
 

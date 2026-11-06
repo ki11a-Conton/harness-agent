@@ -486,6 +486,9 @@ export class InboxSessionInputQueue implements SessionInputQueue {
   async reservePendingFollowup(): Promise<{ id: string; input: UserMessage } | undefined> {
     if (this.reserved !== undefined) return undefined;
     await this.ensureHydrated();
+    // Hydration yields even when warm. A concurrent caller may already own
+    // the sole reservation by the time this continuation resumes.
+    if (this.reserved !== undefined) return undefined;
     const next = this.followups.shift();
     if (next === undefined) return undefined;
     this.reserved = next;
