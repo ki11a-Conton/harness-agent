@@ -18,7 +18,7 @@
  * Both SandboxManager and the capability guard call this module — one
  * canonicalisation semantic for every filesystem decision.
  */
-import { realpathSync } from "node:fs";
+import { readlinkSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { isPathWithin, lexicalNormalize, normaliseSeparators } from "@ar/contracts";
 
@@ -69,7 +69,7 @@ export interface CanonicalizeOptions {
 export function canonicalizePath(
   target: string,
   opts: CanonicalizeOptions,
-  fs?: { realpath: (p: string) => string },
+  fs?: { realpath: (p: string) => string; readlink?: (p: string) => string },
 ): string {
   if (typeof target !== "string" || target.length === 0) {
     throw new Error(`cannot canonicalize empty path`);
@@ -83,6 +83,16 @@ export function canonicalizePath(
   const normalized = normaliseSeparators(absolute);
 
   const rp = fs?.realpath ?? realpathSync;
+  // A realpath-only test adapter must remain isolated from the host FS.
+  const readlink = fs === undefined ? readlinkSync : fs.readlink;
+  return resolveCanonical(normalized, rp, readlink, 0);
+}
+
+function resolveCanonical(
+  normalized: string, rp: (p: string) => string,
+  readlink: ((p: string) => string) | undefined, links: number,
+): string {
+  if (links > 40) throw new CanonicalizationFailed("symlink_loop", normalized, "too many symbolic links");
   try {
     // Full realpath: existing path (also resolves symlinks and lets the OS
     // resolve `.`/`..` against real directory inodes).
@@ -91,7 +101,7 @@ export function canonicalizePath(
     const nodeErr = err as NodeJS.ErrnoException;
     // P36-6: only ENOENT/ENOTDIR are eligible for the ancestor fallback.
     if (nodeErr.code === "ENOENT" || nodeErr.code === "ENOTDIR") {
-      return canonicalAncestorAndTail(normalized, rp);
+      return canonicalAncestorAndTail(normalized, rp, readlink, links);
     }
     // All other errors fail closed.
     throw classifyCanonicalError(nodeErr, normalized);
@@ -116,7 +126,10 @@ function classifyCanonicalError(err: NodeJS.ErrnoException, path: string): Canon
 /** Realpath the deepest existing ancestor of `p` (which is absolute and
  *  separator-normalised), then append the remaining non-existing segments and
  *  lexically resolve any `.`/`..` in them against the canonical ancestor. */
-function canonicalAncestorAndTail(p: string, rp: (p: string) => string = realpathSync): string {
+function canonicalAncestorAndTail(
+  p: string, rp: (p: string) => string,
+  readlink: ((p: string) => string) | undefined, links: number,
+): string {
   // Walk up: find the deepest ancestor that exists on disk.
   let current = p;
   const walked: string[] = [];
@@ -151,6 +164,26 @@ function canonicalAncestorAndTail(p: string, rp: (p: string) => string = realpat
       // must fail closed.
       if (nodeErr.code !== "ENOENT" && nodeErr.code !== "ENOTDIR") {
         throw classifyCanonicalError(nodeErr, p);
+      }
+      // A missing realpath may still name a symlink to a not-yet-created
+      // target. Treating that link as a plain lexical tail authorizes writes
+      // to its parent while the OS actually follows it outside the workspace.
+      if (readlink !== undefined) {
+        let target: string | undefined;
+        try { target = readlink(current); }
+        catch (error) {
+          const code = (error as NodeJS.ErrnoException).code;
+          if (code !== "EINVAL" && code !== "ENOENT" && code !== "ENOTDIR") throw classifyCanonicalError(error as NodeJS.ErrnoException, current);
+        }
+        if (target !== undefined) {
+          // Resolve the link's actual parent first. Node's non-native
+          // realpath normalizes .. lexically; using the alias parent would
+          // interpret a relative target against the wrong directory.
+          const tail = [...walked].reverse().join("/");
+          const base = isAbsolute(target) ? target : `${resolveCanonical(dirname(current), rp, readlink, links + 1)}/${target}`;
+          const resolved = `${base}${tail ? `/${tail}` : ""}`;
+          return resolveCanonical(normaliseSeparators(resolved), rp, readlink, links + 1);
+        }
       }
       const parent = dirname(current);
       if (parent === current) {

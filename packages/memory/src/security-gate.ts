@@ -45,11 +45,15 @@ export function checkUnsafeMemoryEntry(
 }
 
 function visibleMemoryContents(entry: Pick<MemoryEntry, "content" | "structured">): string[] {
-  return entry.structured === undefined ? [entry.content] : [
+  const structured = entry.structured;
+  if (structured === null || typeof structured !== "object") return [entry.content];
+  // Review/scanning also sees malformed legacy rows. Do not dereference null
+  // or coerce arbitrary objects; scan each surviving visible text field even
+  // when another field is corrupt. Retrieval rejects malformed lessons.
+  const text = (value: unknown): string => typeof value === "string" ? value : "";
+  return [
     entry.content,
-    // String conversion matches the model renderer's interpolation for
-    // legacy JSONL values; the SQLite metadata decoder checks field shapes.
-    `When: ${entry.structured.when}\nDo: ${entry.structured.do}\nAvoid: ${entry.structured.avoid ?? ""}`,
+    `When: ${text(structured.when)}\nDo: ${text(structured.do)}\nAvoid: ${text(structured.avoid)}`,
   ];
 }
 

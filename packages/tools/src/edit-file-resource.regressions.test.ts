@@ -51,7 +51,9 @@ it("uses and closes owned regular descriptors for both the snapshot and pre-writ
   expect(result.status).toBe("success"); expect(await fs.readFile(target, "utf8")).toBe("new");
   expect(opened).toHaveBeenCalledTimes(3);
   for (const call of opened.mock.calls.slice(0, 2)) expect(call[1]).toBe(constants.O_RDONLY | (process.platform === "win32" ? 0 : constants.O_NONBLOCK));
-  expect(opened.mock.calls[2]![1]).toBe(constants.O_WRONLY | constants.O_CREAT | (process.platform === "win32" ? 0 : constants.O_NONBLOCK));
+  // An existing-file writer must not create a replacement implicitly; new
+  // files use a separate exclusive creation/admission path.
+  expect(opened.mock.calls[2]![1]).toBe(constants.O_WRONLY | (process.platform === "win32" ? 0 : constants.O_NONBLOCK));
   for (const handle of handles) { expect(handle.close).toHaveBeenCalledTimes(1); expect(handle.fd).toBe(-1); }
   expect(fileLockEntryCount()).toBe(0);
 });

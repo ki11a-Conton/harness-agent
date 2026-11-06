@@ -85,7 +85,7 @@ export interface RankedMemoryItem {
 
 export interface SuppressedMemory {
   memory: MemoryEntry;
-  reason: "unsafe" | "conflict" | "duplicate" | "inactive" | "session-mismatch";
+  reason: "unsafe" | "conflict" | "duplicate" | "inactive" | "session-mismatch" | "invalid";
 }
 
 export interface RetrieveOptions {
@@ -174,6 +174,25 @@ export function computeMemoryScore(
   return { lexical, recency, usefulness, confidence, successEvidence, scopeMatch, total };
 }
 
+/** Persisted JSONL and third-party stores may contain syntactically valid
+ * JSON with invalid field shapes. Reject its use without rewriting/deleting
+ * the reviewable record, or letting NaN pass the minimum-score comparison. */
+function hasValidRetrievalMetadata(entry: MemoryEntry): boolean {
+  const finite = (value: unknown): boolean => typeof value === "number" && Number.isFinite(value);
+  const record = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === "object" && !Array.isArray(value);
+  if (![entry.importance, entry.confidence, entry.stability, entry.updatedAt].every(finite)) return false;
+  const usefulness = entry.usefulness;
+  if (usefulness !== undefined && (!record(usefulness)
+    || !["score", "retrievedCount", "injectedCount", "usedCount", "taskSuccessCount", "verificationPassedCount"].every(key => finite(usefulness[key])))) return false;
+  if (entry.structured !== undefined) {
+    const lesson = entry.structured;
+    if (!record(lesson) || !["when", "do", "avoid", "rootCause", "outcome"].every(key => typeof lesson[key] === "string")
+      || (lesson.failedStrategy !== undefined && typeof lesson.failedStrategy !== "string")
+      || !Array.isArray(lesson.evidenceRefs) || !lesson.evidenceRefs.every(ref => typeof ref === "string")) return false;
+  }
+  return true;
+}
+
 /**
  * Retrieve memories for a query: scope filter → FTS/BM25 → metadata scoring
  * → dedup/conflict filter → Top-K. Never returns deleted or unsafe memory.
@@ -212,6 +231,10 @@ export async function retrieveMemories(
     }
     if (!isRetrievable(memory)) {
       suppressed.push({ memory, reason: "inactive" });
+      continue;
+    }
+    if (!hasValidRetrievalMetadata(memory)) {
+      suppressed.push({ memory, reason: "invalid" });
       continue;
     }
     const unsafe = checkUnsafeMemoryEntry(memory, "retrieval");

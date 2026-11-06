@@ -92,7 +92,7 @@ export function evaluateLifecycle(
   entry: MemoryEntry,
   opts: LifecycleOptions = {},
 ): LifecycleResult {
-  if (entry.state !== undefined && entry.state.kind !== "active") return {};
+  if (!isRetrievable(entry)) return {};
   const now = opts.now ?? Date.now();
   const failureThreshold = opts.failureThreshold ?? DEFAULT_FAILURE_THRESHOLD;
   const failures = entry.evidence?.failureCount ?? 0;
@@ -115,5 +115,5 @@ export function evaluateLifecycle(
 
 /** True when the memory is still worth retrieving (not retired). */
 export function isRetrievable(entry: MemoryEntry): boolean {
-  return entry.state === undefined || entry.state.kind === "active";
+  return entry.state === undefined || (entry.state !== null && typeof entry.state === "object" && entry.state.kind === "active");
 }

@@ -424,6 +424,9 @@ importers:
       '@ar/security':
         specifier: workspace:*
         version: link:../security
+      '@ar/store-integrity':
+        specifier: workspace:*
+        version: link:../store-integrity
 
   packages/store:
     dependencies:

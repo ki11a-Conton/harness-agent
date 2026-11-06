@@ -151,17 +151,36 @@ export async function readRegularFileBytes(path: string, signal?: AbortSignal): 
 export async function writeRegularFileUtf8(path: string, content: string, options: { append?: boolean; signal?: AbortSignal } = {}): Promise<void> {
   const { signal, append } = options;
   throwIfFileCancelled(signal);
-  const flags = constants.O_WRONLY | constants.O_CREAT | (append ? constants.O_APPEND : 0)
+  const flags = constants.O_WRONLY | (append ? constants.O_APPEND : 0)
     | (process.platform === "win32" ? 0 : constants.O_NONBLOCK);
-  const file = await fs.open(path, flags);
+  let file: Awaited<ReturnType<typeof fs.open>>;
   let admitted = false;
+  try { file = await fs.open(path, flags); }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    throwIfFileCancelled(signal);
+    // Exclusive creation identifies the irreversible mutation. In contrast,
+    // an O_CREAT open cannot tell whether it just created an empty file or
+    // opened an existing one that a cancellation must leave untouched.
+    const target = canonicalizePath(path, { cwd: process.cwd() });
+    try {
+      file = await fs.open(target, flags | constants.O_CREAT | constants.O_EXCL);
+      admitted = true;
+    } catch (createError) {
+      if ((createError as NodeJS.ErrnoException).code !== "EEXIST") throw createError;
+      throwIfFileCancelled(signal);
+      // Another writer created the path. Open without creating/truncating;
+      // inspect it as an existing object and retain its cancellation rules.
+      file = await fs.open(path, flags);
+    }
+  }
   try {
-    throwIfFileCancelled(signal);
+    if (!admitted) throwIfFileCancelled(signal);
     const stat = await file.stat();
-    throwIfFileCancelled(signal);
+    if (!admitted) throwIfFileCancelled(signal);
     if (!stat.isFile()) throw new Error("file operation requires a regular file");
     // Preserve the original write tool's irreversible phase: cancellation
-    // before admission prevents mutation. Once truncation/write is admitted,
+    // before admission prevents mutation. Once create/truncate is admitted,
     // finish the complete write instead of leaving an empty/partial file at
     // an added cancellation point. This remains an in-place write, not CAS.
     admitted = true;

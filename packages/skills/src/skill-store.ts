@@ -1,5 +1,6 @@
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { readFile } from "node:fs/promises";
+import { join, resolve } from "node:path";
+import { atomicWriteFile, withLock } from "@ar/store-integrity";
 import type { Skill, SkillId } from "@ar/contracts";
 import { AgentError, errorInfo } from "@ar/contracts";
 import { detectPromptInjection, detectSecrets } from "@ar/security";
@@ -49,7 +50,8 @@ function isNodeError(err: unknown, code: string): boolean {
  *   versions) untouched.
  * - Mutations are atomic: the whole file is rewritten via a temp file +
  *   rename, so a crash never leaves a half-written line (same discipline as
- *   JsonlMemoryStore). Single-writer assumption.
+ *   JsonlMemoryStore). A per-path lock serializes in-process mutations;
+ *   independent processes still require a single writer.
  * - A corrupt line is skipped on read (best-effort recovery); it never fails
  *   the store wholesale.
  */
@@ -58,7 +60,7 @@ export class JsonlSkillStore implements SkillStoreLike {
   private readonly onSecurityDenied?: JsonlSkillStoreOptions["onSecurityDenied"];
 
   constructor(opts: JsonlSkillStoreOptions) {
-    this.dataDir = opts.dataDir;
+    this.dataDir = resolve(opts.dataDir);
     this.onSecurityDenied = opts.onSecurityDenied;
   }
 
@@ -121,16 +123,13 @@ export class JsonlSkillStore implements SkillStoreLike {
     return skills;
   }
 
-  /** Atomic rewrite of the whole file: temp file + rename in the same dir. */
+  /** Durable rewrite through the shared unique-temp + fsync + atomic rename helper. */
   private async rewrite(skills: Skill[]): Promise<void> {
-    await mkdir(this.dataDir, { recursive: true });
     const target = this.filePath();
-    const tmp = `${target}.tmp`;
     const body = skills.map((skill) => JSON.stringify(skill)).join("\n");
     const content = skills.length === 0 ? "" : `${body}\n`;
     try {
-      await writeFile(tmp, content, "utf8");
-      await rename(tmp, target);
+      await atomicWriteFile(target, content);
     } catch (cause) {
       throw new AgentError(
         errorInfo("INTERNAL_ERROR", `skill store write failed: ${target}`, {
@@ -147,11 +146,13 @@ export class JsonlSkillStore implements SkillStoreLike {
       this.onSecurityDenied?.(reason.event);
       throw new AgentError(errorInfo(skillDenialCode(reason.event.detection), `skill save blocked: ${reason.message}`));
     }
-    const all = await this.readAll();
-    const index = all.findIndex((s) => s.id === skill.id);
-    if (index >= 0) all[index] = skill;
-    else all.push(skill);
-    await this.rewrite(all);
+    await withLock(`skills:jsonl:${this.dataDir}`, async () => {
+      const all = await this.readAll();
+      const index = all.findIndex((s) => s.id === skill.id);
+      if (index >= 0) all[index] = skill;
+      else all.push(skill);
+      await this.rewrite(all);
+    });
   }
 
   /** Replaces an existing record; unknown id fails explicitly. */
@@ -161,15 +162,17 @@ export class JsonlSkillStore implements SkillStoreLike {
       this.onSecurityDenied?.(reason.event);
       throw new AgentError(errorInfo(skillDenialCode(reason.event.detection), `skill update blocked: ${reason.message}`));
     }
-    const all = await this.readAll();
-    const index = all.findIndex((s) => s.id === skill.id);
-    if (index < 0) {
-      throw new AgentError(
-        errorInfo("INTERNAL_ERROR", `cannot update unknown skill ${skill.id}`),
-      );
-    }
-    all[index] = skill;
-    await this.rewrite(all);
+    await withLock(`skills:jsonl:${this.dataDir}`, async () => {
+      const all = await this.readAll();
+      const index = all.findIndex((s) => s.id === skill.id);
+      if (index < 0) {
+        throw new AgentError(
+          errorInfo("INTERNAL_ERROR", `cannot update unknown skill ${skill.id}`),
+        );
+      }
+      all[index] = skill;
+      await this.rewrite(all);
+    });
   }
 
   /** Every record (any status), newest appended last. */
