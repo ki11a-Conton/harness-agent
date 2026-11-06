@@ -58,6 +58,7 @@ import type {
 import { AgentError } from "../errors.js";
 import { AgentState } from "../state/agent-state.js";
 import { updateWorkingState } from "./turn-helpers.js";
+import { replayedToolRequests } from "./tool-replay-requests.js";
 import type {
   FaultPoint,
   FaultPointContext,
@@ -516,30 +517,37 @@ export class RecoveryController {
     const replayedEventCount = events.length;
 
     // Which tools produced a persisted result message after the checkpoint?
-    const completedIds = new Set<string>();
+    const completedIds = new Map<string, { count: number; createdAt: number }>();
     if (turnId !== undefined) {
       const messages = await this.deps.store.listMessagesByTurn(sessionId, turnId);
       for (const message of messages) {
         if (message.role === "tool" && message.toolCallId !== undefined) {
-          completedIds.add(message.toolCallId);
+          completedIds.set(message.toolCallId, {
+            count: (completedIds.get(message.toolCallId)?.count ?? 0) + 1,
+            createdAt: message.createdAt,
+          });
         }
       }
     }
     // Reconstruct requested calls from the post-checkpoint event log.
-    const requested = new Map<
-      string,
-      { id: string; name: string; args: Record<string, unknown>; started: number }
-    >();
-    const outcomes = new Map<string, { status: ToolExecutionRecord["status"]; completed: number }>();
+    type Requested = { id: string; name: string; args: Record<string, unknown>; started: number;
+      outcome?: { status: ToolExecutionRecord["status"]; completed: number } };
+    const requested: Requested[] = [];
+    const active = new Map<string, Requested>();
+    const occurrences = new Map<string, number>();
+    const admitted = new Set(replayedToolRequests(events));
     for (const event of events) {
       if (event.type === "tool.requested") {
+        if (!admitted.has(event)) continue;
         const id = typeof event.payload.toolCallId === "string" ? event.payload.toolCallId : event.id;
-        requested.set(id, {
+        const occurrence: Requested = {
           id,
           name: typeof event.payload.name === "string" ? event.payload.name : "unknown",
           args: (event.payload.args as Record<string, unknown> | undefined) ?? {},
           started: event.timestamp,
-        });
+        };
+        requested.push(occurrence); active.set(id, occurrence);
+        occurrences.set(id, (occurrences.get(id) ?? 0) + 1);
       } else if (event.type === "tool.completed" || event.type === "tool.failed") {
         const key = typeof event.payload.toolCallId === "string" ? event.payload.toolCallId : event.id;
         // The orchestrator may persist a returned denied/failed/cancelled
@@ -557,18 +565,28 @@ export class RecoveryController {
           status = value === "success" || value === "failed" || value === "denied" || value === "cancelled" || value === "timeout"
             ? value : "interrupted";
         }
-        outcomes.set(key, { status, completed: event.timestamp });
+        // A model may reuse its call id in another protocol-valid iteration.
+        // Retries before the next request update this occurrence only; a new
+        // request must never inherit or overwrite a previous execution.
+        const occurrence = active.get(key);
+        if (occurrence) occurrence.outcome = { status, completed: event.timestamp };
       }
     }
 
     const committedSideEffects: ToolExecutionRecord[] = [];
     const replayedToolLedger: ToolExecutionRecord[] = [];
     const unresolvedTools: UnresolvedToolExecution[] = [];
-    for (const info of requested.values()) {
+    for (const info of requested) {
       const semantics = this.deps.semanticsOf(info.name);
       const sideEffect = semantics.sideEffectScope !== "none";
-      const outcome = outcomes.get(info.id);
-      const status = outcome?.status ?? (completedIds.has(info.id) ? "success" : undefined);
+      const outcome = info.outcome;
+      const legacy = completedIds.get(info.id);
+      // Message-only legacy evidence has no execution/step identity. Accept
+      // the unambiguous single-call case, otherwise preserve reconciliation
+      // rather than using an earlier result to certify a new side effect.
+      const legacyCompleted = occurrences.get(info.id) === 1 && legacy?.count === 1
+        && legacy.createdAt >= info.started && !checkpoint.toolLedger.some(row => row.toolCallId === info.id);
+      const status = outcome?.status ?? (legacyCompleted ? "success" : undefined);
       if (status === undefined || status === "interrupted" || (sideEffect && status !== "success" && status !== "denied")) {
         // A failed/cancelled write or process can have partial effects. Keep
         // the existing reconciliation barrier without claiming completion.

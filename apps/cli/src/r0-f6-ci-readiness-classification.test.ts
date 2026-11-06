@@ -42,7 +42,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { delimiter, dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -59,6 +59,27 @@ afterAll(() => {
       /* temp cleanup only */
     }
   }
+});
+
+/** These fixtures classify artifacts; the independent CI gates run elsewhere. */
+function classificationGateEnvironment(dir: string): NodeJS.ProcessEnv {
+  const shimDir = join(dir, "bin");
+  mkdirSync(shimDir);
+  writeFileSync(join(shimDir, "pnpm.cmd"), "@echo off\r\nexit /b 0\r\n", "utf8");
+  writeFileSync(join(shimDir, "pnpm"), "#!/bin/sh\nexit 0\n", { encoding: "utf8", mode: 0o755 });
+  return { ...process.env, PATH: `${shimDir}${delimiter}${process.env["PATH"] ?? ""}` };
+}
+
+it("readiness classification fixture selects its no-op pnpm on the actual host", () => {
+  const dir = mkdtempSync(join(tmpdir(), "r0-f6-shim-"));
+  CREATED.push(dir);
+  const windows = process.platform === "win32";
+  const result = spawnSync(windows ? "cmd.exe" : "pnpm", windows ? ["/d", "/s", "/c", "pnpm --version"] : ["--version"], {
+    env: classificationGateEnvironment(dir), encoding: "utf8", timeout: 5000,
+  });
+  expect(result.error).toBeUndefined();
+  expect(result.status).toBe(0);
+  expect(result.stdout).toBe("");
 });
 
 interface LevelEvidence {
@@ -131,10 +152,7 @@ function runScript(e2e: Record<string, unknown> | null, opts: RunOptions = {}): 
 
   // Neutralise the three nested gate subprocesses: this suite's subject is the
   // classification, never the gates.
-  const shimDir = join(dir, "bin");
-  mkdirSync(shimDir);
-  writeFileSync(join(shimDir, "pnpm.cmd"), "@echo off\r\nexit /b 0\r\n", "utf8");
-  writeFileSync(join(shimDir, "pnpm"), "#!/bin/sh\nexit 0\n", "utf8");
+  const gateEnv = classificationGateEnvironment(dir);
 
   const args = [SCRIPT, "--e2e", e2ePath, "--out", outPath, "--os-label", opts.osLabel ?? "windows-local", ...(opts.extraArgs ?? [])];
   let nodeArgs = args;
@@ -151,7 +169,7 @@ function runScript(e2e: Record<string, unknown> | null, opts: RunOptions = {}): 
     // WATCHDOG: the readiness script shells out to three nested gates. A wedged
     // child must be killed instead of hanging CI, so this suite always terminates.
     timeout: 120_000,
-    env: { ...process.env, PATH: `${shimDir};${process.env["PATH"] ?? ""}` },
+    env: gateEnv,
   });
   if (result.error) {
     throw new Error(`ci-readiness child did not complete (watchdog 120000ms): ${result.error.message}\nstderr: ${result.stderr ?? ""}`);
@@ -179,14 +197,11 @@ function runScriptRaw(e2e: Record<string, unknown>, opts: RunOptions = {}): { ex
   CREATED.push(dir);
   const e2ePath = join(dir, "e2e.json");
   writeFileSync(e2ePath, JSON.stringify(e2e), "utf8");
-  const shimDir = join(dir, "bin");
-  mkdirSync(shimDir);
-  writeFileSync(join(shimDir, "pnpm.cmd"), "@echo off\r\nexit /b 0\r\n", "utf8");
-  writeFileSync(join(shimDir, "pnpm"), "#!/bin/sh\nexit 0\n", "utf8");
+  const gateEnv = classificationGateEnvironment(dir);
   const result = spawnSync(
     process.execPath,
     [SCRIPT, "--e2e", e2ePath, "--out", join(dir, "readiness.json"), "--os-label", opts.osLabel ?? "windows-local", ...(opts.extraArgs ?? [])],
-    { cwd: REPO_ROOT, encoding: "utf8", timeout: 120_000, env: { ...process.env, PATH: `${shimDir};${process.env["PATH"] ?? ""}` } },
+    { cwd: REPO_ROOT, encoding: "utf8", timeout: 120_000, env: gateEnv },
   );
   return { exitCode: result.status, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
 }

@@ -245,8 +245,10 @@ class RunEventHub {
   private resolveDone!: (r: RunResult) => void;
   private settled = false;
   // P38-7: run-scoped cleanup handles.
-  private readonly unsubscribeTurn: () => void;
-  private readonly unsubscribeClose: () => void;
+  // Subscription APIs can synchronously replay a terminal or report an
+  // already-closed connection before returning their cleanup function.
+  private readonly unsubscribeTurn: () => void = () => {};
+  private readonly unsubscribeClose: () => void = () => {};
   private readonly abortSignal?: AbortSignal;
   private readonly abortListener?: () => void;
 
@@ -291,6 +293,8 @@ class RunEventHub {
       }
     });
 
+    if (this.settled) { this.unsubscribeTurn(); return; }
+
     // P38-4/P38-7 (Bug B): transport close lifecycle — if the transport
     // closes before a terminal turn event, the run terminally FAILS.
     const onClose = () => {
@@ -308,6 +312,7 @@ class RunEventHub {
       );
     };
     this.unsubscribeClose = transport.onClose?.(onClose) ?? (() => {});
+    if (this.settled) { this.unsubscribeClose(); return; }
 
     // P38-7: abort support — maps to server interrupt, but the abort listener
     // is tracked for cleanup in settleOnce.
@@ -404,6 +409,8 @@ class RunEventHub {
     return this._done;
   }
 
+  get isSettled(): boolean { return this.settled; }
+
   close(): void {
     this.settleOnce({ status: "completed", items: [...this.state.items] });
   }
@@ -465,12 +472,10 @@ export class Thread {
     // P38.1-5 (INV-P38.1-006): a signal aborted BEFORE runStreamed must not
     // invoke turn/run at all. The hub constructor already handles pre-abort
     // (it fires the abort path → turn/interrupt + done=interrupted).
-    if (opts.signal?.aborted !== true) {
+    if (!hub.isSettled && opts.signal?.aborted !== true) {
       hub.attachRunInvocation(
-        this.transport.invoke("turn/run", {
-          threadId: this.threadId,
-          turnId,
-        }),
+        Promise.resolve().then(() => hub.isSettled ? { result: undefined } :
+          this.transport.invoke("turn/run", { threadId: this.threadId, turnId })),
       );
     }
 

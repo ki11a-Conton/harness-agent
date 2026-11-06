@@ -46,6 +46,8 @@ export class MemoryHarnessTransport implements HarnessTransport {
   private readonly subscribers = new Set<(e: TurnEvent) => void>();
   private readonly closeHandlers = new Set<() => void>();
   private init?: InitializeServer;
+  private closed = false;
+  private readonly pending = new Set<() => void>();
 
   constructor(
     handler: (method: string, params: Record<string, unknown>) => Promise<TransportInvoke<unknown>>,
@@ -54,16 +56,38 @@ export class MemoryHarnessTransport implements HarnessTransport {
   }
 
   async invoke(method: string, params: Record<string, unknown>): Promise<TransportInvoke<unknown>> {
-    return this.handler(method, params);
+    const closedResult = (): TransportInvoke<unknown> => ({ error: {
+      code: "TRANSPORT_CLOSED", message: "transport closed", retryable: false,
+    } });
+    if (this.closed) return closedResult();
+    return new Promise<TransportInvoke<unknown>>((resolve, reject) => {
+      let settled = false;
+      const settle = (action: () => void) => {
+        if (settled) return;
+        settled = true; this.pending.delete(onClose); action();
+      };
+      const onClose = () => settle(() => resolve(closedResult()));
+      this.pending.add(onClose);
+      // Keep observing the handler after a disconnect: its late failure must
+      // not become an unhandled rejection or settle an already-closed call.
+      try {
+        void Promise.resolve(this.handler(method, params)).then(
+          result => settle(() => resolve(result)),
+          error => settle(() => reject(error)),
+        );
+      } catch (error) { settle(() => reject(error)); }
+    });
   }
 
   subscribe(_topicId: "turn", onEvent: (event: TurnEvent) => void): () => void {
+    if (this.closed) return () => {};
     this.subscribers.add(onEvent);
     return () => this.subscribers.delete(onEvent);
   }
 
   /** Test/embedding helper: push a server-initiated event to subscribers. */
   emit(event: TurnEvent): void {
+    if (this.closed) return;
     for (const s of this.subscribers) s(event);
   }
 
@@ -78,6 +102,7 @@ export class MemoryHarnessTransport implements HarnessTransport {
   }
 
   async initializeResult(): Promise<InitializeServer> {
+    if (this.closed) throw new Error("transport closed");
     if (this.init !== undefined) return this.init;
     const res = await this.invoke("initialize", {
       clientInfo: { name: "harness-sdk", version: "0.1.0" },
@@ -89,12 +114,22 @@ export class MemoryHarnessTransport implements HarnessTransport {
 
   /** P37-4: register a close handler. */
   onClose(handler: () => void): () => void {
+    if (this.closed) { handler(); return () => {}; }
     this.closeHandlers.add(handler);
     return () => this.closeHandlers.delete(handler);
   }
 
   async close(): Promise<void> {
-    for (const h of this.closeHandlers) h();
+    if (this.closed) return;
+    this.closed = true;
+    const pending = [...this.pending], handlers = [...this.closeHandlers];
+    this.pending.clear(); this.closeHandlers.clear();
     this.subscribers.clear();
+    for (const settle of pending) settle();
+    const errors: unknown[] = [];
+    for (const handler of handlers) {
+      try { handler(); } catch (error) { errors.push(error); }
+    }
+    if (errors.length) throw new AggregateError(errors, "transport close observers failed");
   }
 }

@@ -99,7 +99,7 @@ export class DesktopClient {
     let settled = false;
     let outcome: unknown;
     let runError: unknown;
-    runPromise.then(
+    const runSettled = runPromise.then(
       (value) => {
         settled = true;
         outcome = value;
@@ -112,7 +112,7 @@ export class DesktopClient {
     let after = 0;
     while (!settled) {
       const winner = await Promise.race([
-        runPromise.then(() => "run" as const),
+        runSettled.then(() => "run" as const),
         delay(this.#pollDelayMs),
       ]);
       if (winner === "run") break;

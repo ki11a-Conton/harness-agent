@@ -86,16 +86,23 @@ export class StdioTransport {
    *  through its own peer back to us). */
   pair(server: StdioTransport): void {
     if (this.role !== "client") throw new Error("pair(): client role only");
-    this.peer = server;
-    server.peer = this;
+    this.bindPeer(server, "server");
   }
 
   /** Server-side pairing point: wires BOTH directions (client requests
    *  flow in, server replies flow back via the same pipe). */
   connect(client: StdioTransport): void {
     if (this.role !== "server") throw new Error("connect(): server role only");
-    this.peer = client;
-    client.peer = this;
+    this.bindPeer(client, "client");
+  }
+
+  private bindPeer(peer: StdioTransport, role: StdioRole): void {
+    if (this.closed || peer.closed) throw new TransportClosedError();
+    if (peer.role !== role) throw new Error(`peer must have ${role} role`);
+    if ((this.peer !== undefined && this.peer !== peer) || (peer.peer !== undefined && peer.peer !== this)) {
+      throw new Error("transport is already paired");
+    }
+    this.peer = peer; peer.peer = this;
   }
 
   /** Client side: send a method request; resolves with result, rejects with
@@ -104,11 +111,17 @@ export class StdioTransport {
     if (this.role !== "client") throw new Error("request(): client role only");
     // EXT-001: a request issued after close must fail fast, never hang.
     if (this.closed) return Promise.reject(new TransportClosedError());
+    if (this.peer === undefined) return Promise.reject(new TransportClosedError("transport not connected"));
     const seq = this.nextSeq;
     this.nextSeq += 1;
     return new Promise((resolve, reject) => {
       this.pending.set(seq, { resolve, reject });
-      this.writeFrame({ id: seq, method, ...(params !== undefined ? { params } : {}) });
+      try {
+        this.writeFrame({ id: seq, method, ...(params !== undefined ? { params } : {}) });
+      } catch (error) {
+        // Encoding and local framing can fail before the peer sees a request.
+        this.pending.delete(seq); reject(error);
+      }
     });
   }
 
@@ -126,6 +139,7 @@ export class StdioTransport {
 
   /** Feed one raw line from the pipe (both roles parse it). */
   readLine(line: string): void {
+    if (this.closed) return;
     let frame: WireFrame;
     try {
       if (Buffer.byteLength(line, "utf8") > MAX_FRAME_BYTES) {
@@ -136,21 +150,24 @@ export class StdioTransport {
       process.stderr.write(`[stdio-transport] dropped malformed frame\n`);
       return;
     }
-    if (typeof frame.id !== "number") return;
+    if (frame === null || typeof frame !== "object" || Array.isArray(frame)
+      || !Number.isSafeInteger(frame.id) || frame.id < 0) return;
 
     if (this.role === "server") {
       if (frame.method === "__notify") return; // client-driven pushes unsupported server-side
-      if (typeof frame.method !== "string") return;
+      if (typeof frame.method !== "string" || Object.hasOwn(frame, "result") || Object.hasOwn(frame, "error")) {
+        this.writeError(frame.id, new AgentError(errorInfo("INTERNAL_ERROR", "invalid RPC request frame")));
+        return;
+      }
       const surface = this.serverSurface;
       if (surface === undefined) {
         this.writeFrame({ id: frame.id, error: { code: "INTERNAL_ERROR", message: "no rpc server attached" } });
         return;
       }
-      Promise.resolve(surface.invoke(frame.method, frame.params, undefined))
+      void Promise.resolve().then(() => this.closed ? undefined : surface.invoke(frame.method!, frame.params, undefined))
         .then((result) => this.writeFrame({ id: frame.id, result: result === undefined ? null : result }))
         .catch((err) => {
-          const body = err instanceof AgentError ? err.info : rpcErrorBody(err);
-          this.writeFrame({ id: frame.id, error: { code: body.code, message: body.message } });
+          this.writeError(frame.id, err);
         });
       return;
     }
@@ -164,8 +181,13 @@ export class StdioTransport {
     const call = this.pending.get(frame.id);
     if (call === undefined) return;
     this.pending.delete(frame.id);
-    if (frame.error !== undefined) {
-      call.reject(new AgentError(errorInfo(frame.error.code as never, frame.error.message)));
+    const hasResult = Object.hasOwn(frame, "result"), hasError = Object.hasOwn(frame, "error");
+    const validError = frame.error !== null && typeof frame.error === "object" && !Array.isArray(frame.error)
+      && typeof frame.error.code === "string" && frame.error.code.length > 0 && typeof frame.error.message === "string";
+    if (frame.method !== undefined || hasResult === hasError || (hasError && !validError)) {
+      call.reject(new AgentError(errorInfo("INTERNAL_ERROR", "invalid RPC response frame")));
+    } else if (hasError) {
+      call.reject(new AgentError(errorInfo(frame.error!.code as never, frame.error!.message)));
     } else {
       call.resolve(frame.result);
     }
@@ -189,18 +211,36 @@ export class StdioTransport {
     this.pending.clear();
     // Detach BOTH directions before settling, so nothing can be written onto a
     // closed pipe while the rejections are delivered.
-    this.detachPeer();
+    const peer = this.detachPeer();
     for (const call of inFlight) call.reject(new TransportClosedError());
+    // Closing either endpoint terminally closes this pipe and its waiters.
+    await peer?.close();
   }
 
-  private detachPeer(): void {
+  private detachPeer(): StdioTransport | undefined {
     const peer = this.peer;
     this.peer = undefined;
-    if (peer !== undefined && peer.peer === this) peer.peer = undefined;
+    if (peer !== undefined && peer.peer === this) { peer.peer = undefined; return peer; }
+    return undefined;
+  }
+
+  private writeError(id: number, error: unknown): void {
+    let body: { code: string; message: string };
+    try { body = rpcErrorBody(error); }
+    catch { body = { code: "INTERNAL_ERROR", message: "RPC error could not be rendered" }; }
+    // Reporting the error must also fit the original cap, including UTF-8.
+    this.writeFrame({ id, error: {
+      code: typeof body.code === "string" ? body.code.slice(0, 128) : "INTERNAL_ERROR",
+      message: String(body.message).slice(0, 8192),
+    } });
   }
 
   private writeFrame(frame: WireFrame): void {
     if (this.closed) return;
-    this.peer?.readLine(JSON.stringify(frame));
+    const line = JSON.stringify(frame);
+    if (Buffer.byteLength(line, "utf8") > MAX_FRAME_BYTES) {
+      throw new AgentError(errorInfo("RESOURCE_LIMIT", `stdio frame exceeds ${MAX_FRAME_BYTES} bytes`));
+    }
+    this.peer?.readLine(line);
   }
 }

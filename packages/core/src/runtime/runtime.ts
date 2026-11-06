@@ -125,6 +125,7 @@ import type {
 import { ToolCallController } from "./tool-call-controller.js";
 import { RunBudgetTracker } from "./run-budget.js";
 import { ReadOnlyPrefetch } from "./read-only-prefetch.js";
+import { replayedToolRequests } from "./tool-replay-requests.js";
 
 /** P1-6: deterministic hash of a policy value (session fingerprinting). */
 function stableHashOf(value: unknown): string {
@@ -138,10 +139,12 @@ function replayCheckpointBudget(checkpoint: CheckpointData, budget: RunBudget, e
   if (checkpoint.turnId === undefined) return structuredClone(budget);
   const replay = events.filter(event => event.sequence > checkpoint.lastEventSequence &&
     event.turnId === checkpoint.turnId);
-  const requested = new Map(replay.filter(event => event.type === "tool.requested")
-    .filter(event => typeof event.payload.toolCallId === "string").map(event => [event.payload.toolCallId as string, event]));
+  // Model call ids can repeat across steps; duplicate admission records and
+  // internal safe retries must still consume only one logical tool call.
+  const requested = replayedToolRequests(replay)
+    .filter(event => typeof event.payload.toolCallId === "string");
   const restored = structuredClone(budget);
-  restored.usedToolCalls += [...requested.values()].filter(event => event.payload.name !== "update_plan").length;
+  restored.usedToolCalls += requested.filter(event => event.payload.name !== "update_plan").length;
   for (const event of replay.filter(event => event.type === "model.completed")) {
     const usage = event.payload.usage as import("@ar/contracts").UsageSnapshot | undefined;
     restored.estimatedCostUsd += usage?.estimatedCostUsd ?? 0;
