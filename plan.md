@@ -1,3 +1,5 @@
+当前任务：[2026-11-06 下一轮全面审查](plan(20261106-next-comprehensive-audit).md)；[任务合同](tasks/NEXT-COMPREHENSIVE-AUDIT-20261106.md)。基线3e4f6e73，上一轮已完成；新增问题先复现再修复，保持原预算和安全边界。
+
 当前任务：[2026-11-06 全面审查恢复与交付](plan(20261106-comprehensive-audit-recovery).md)；[任务合同](tasks/COMPREHENSIVE-AUDIT-20261106.md)。六组运行缺陷及分类装置修复已重新取得确定性RED/GREEN、干净源码全量10708通过/16跳过，CLI/Web和42场景/120浏览器检查通过；精确main CI在推送后复核。11月5日临时证据丢失，当前使用11月6日新原始证据。
 
 当前任务：[2026-10-31 下一轮 Coding Bug 审查与修复](plan(20261031-coding-bug-audit-next).md)；[任务合同](tasks/BUG-AUDIT-NEXT-20261031.md)。先复现压缩、命令恢复、SDK 长任务与工具终态重放缺陷，再最小修复、独立审查和完整验收。 实现与验收已完成：clean `96d3986d` 全量10661通过/16跳过，四项实现CI首attempt通过，真实Windows987通过/0失败/12跳过；环境重建丢失说明、重新红绿及主线交付资格见计划和独立报告。
