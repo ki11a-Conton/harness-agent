@@ -1,0 +1,86 @@
+{
+  "sourceSha": "988c0b7cc1dd157f92fd3ec0c9baf690a8efa2f8",
+  "sourceStatus": "",
+  "wireArrivalIndexes": [
+    1,
+    0
+  ],
+  "toolOrder": [
+    "write_file",
+    "edit_file"
+  ],
+  "actualFile": "export const result = 2;\n",
+  "outcome": {
+    "status": "completed"
+  },
+  "verification": [
+    {
+      "id": "event_e2d9127e-3623-46f4-8457-5f578b0f7b8b",
+      "sessionId": "session_6088773b-96ff-472e-91e7-dcbfde4a603f",
+      "sequence": 29,
+      "timestamp": 1793970795362,
+      "type": "verification.step_started",
+      "payload": {
+        "ref": "verification.step:command:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "kind": "command",
+        "description": "command"
+      },
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_b66aa3ed-5850-4a13-b1c5-799b6036d407",
+      "sessionId": "session_6088773b-96ff-472e-91e7-dcbfde4a603f",
+      "sequence": 34,
+      "timestamp": 1793970795406,
+      "type": "verification.step_completed",
+      "payload": {
+        "ref": "verification.step:command:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "kind": "command",
+        "description": "command",
+        "passed": true,
+        "detail": "exit code 0 in 41ms"
+      },
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_07095194-dcd7-4690-bae1-c08d3af18f91",
+      "sessionId": "session_6088773b-96ff-472e-91e7-dcbfde4a603f",
+      "turnId": "turn_96b85029-60d2-4aa0-a97a-ab3d15724064",
+      "timestamp": 1793970795407,
+      "type": "verification.completed",
+      "payload": {
+        "passed": true,
+        "durationMs": 45
+      },
+      "sequence": 35
+    }
+  ],
+  "codingRequests": 2,
+  "retryRequests": 1,
+  "retryElapsedMs": 138,
+  "retryTerminal": [
+    {
+      "type": "error",
+      "error": {
+        "code": "MODEL_ERROR",
+        "message": "OpenAI chat completion timed out after 100ms",
+        "retryable": true,
+        "safeToRetry": true,
+        "cause": {},
+        "provider": {
+          "kind": "timeout"
+        }
+      },
+      "timestamp": 1793970795511
+    }
+  ],
+  "checks": {
+    "orderedActualTools": true,
+    "correctActualFile": true,
+    "completed": true,
+    "longRetryHonored": true,
+    "deadlineReported": true
+  },
+  "paidModelCalls": 0,
+  "quality": "Scripted loopback protocol/coding harness proof, not model quality"
+}

@@ -1,0 +1,42 @@
+[
+  {
+    "path": "packages/model/src/openai-stream-order.regressions.test.ts",
+    "sha256": "620ecde96284fe8a7b9b882e5d6ebaa9d931c166b980ee3aa5207e5dd7816385",
+    "baselineAndCandidateTestIdentical": true
+  },
+  {
+    "path": "packages/model/src/openai-long-delay.regressions.test.ts",
+    "sha256": "b6818ac79e433cb3f402224d46c4f37c6b72ad934873a71cbf014d4a8c348015",
+    "baselineAndCandidateTestIdentical": true
+  },
+  {
+    "path": "packages/session/src/inbox-atomicity.regressions.test.ts",
+    "sha256": "1329e95f6d8d1a08dd84db6ea52f75798a576f8a5469a4dc101e19d5f24fb8a9",
+    "baselineAndCandidateTestIdentical": true
+  },
+  {
+    "path": "packages/core/src/runtime/followup-reservation.regressions.test.ts",
+    "sha256": "dd9f84a1b524498aab92a25a9cbbc4de863520e226c09e7f1bb77818114bfa6d",
+    "baselineAndCandidateTestIdentical": true
+  },
+  {
+    "path": "packages/harness/src/stream-tool-order.integration.test.ts",
+    "sha256": "86feebe7f3e1a617ecf20965e3c1bfaaa4bc6ffac7d925c18eeff7768f23139d",
+    "baselineAndCandidateTestIdentical": true
+  },
+  {
+    "path": "packages/model/src/openai.ts",
+    "baselineProductionMatchesMain": true,
+    "baselineSha256": "71e9a27fcf6044ec61026a227780a92a7d2413c910fee353ba318e9fd29d61cf"
+  },
+  {
+    "path": "packages/session/src/inbox.ts",
+    "baselineProductionMatchesMain": true,
+    "baselineSha256": "e9691beca331d142fc208abaedf21b83184d5da2b70b660778a04a83dc8d8457"
+  },
+  {
+    "path": "packages/core/src/runtime/session-actor.ts",
+    "baselineProductionMatchesMain": true,
+    "baselineSha256": "113ee858417c660722d722e87af718e0f8ddc182c989087a6260d36b387fba12"
+  }
+]

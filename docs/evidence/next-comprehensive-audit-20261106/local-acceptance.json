@@ -1,0 +1,1480 @@
+{
+  "status": "LOCAL_PASS_CI_PENDING",
+  "sourceSha": "988c0b7cc1dd157f92fd3ec0c9baf690a8efa2f8",
+  "baseline": "3e4f6e734667abb2f77c5023ac128785502799f5",
+  "recordedAt": "2026-11-06T13:22:56.717571+00:00",
+  "formalRed": {
+    "failed": 25,
+    "passedControls": 2,
+    "total": 27,
+    "sameFinalTests": true
+  },
+  "fullSuite": {
+    "passed": 10735,
+    "skipped": 16,
+    "filesPassed": 701,
+    "filesSkipped": 2
+  },
+  "receipts": {
+    "frozen-source-build": {
+      "startedAt": "2026-11-06T13:12:40.544995+00:00",
+      "sourceBefore": {
+        "sha": "988c0b7cc1dd157f92fd3ec0c9baf690a8efa2f8",
+        "branch": "fix/next-comprehensive-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "exec",
+        "tsc",
+        "-b",
+        "--force"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-next-comprehensive-audit-20261106/root/frozen-source-build.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T13:12:46.964682+00:00",
+      "durationSeconds": 6.392903481999383,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "988c0b7cc1dd157f92fd3ec0c9baf690a8efa2f8",
+        "branch": "fix/next-comprehensive-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "logBytes": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "pnpm-test": {
+      "startedAt": "2026-11-06T13:13:15.084581+00:00",
+      "sourceBefore": {
+        "sha": "988c0b7cc1dd157f92fd3ec0c9baf690a8efa2f8",
+        "branch": "fix/next-comprehensive-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "test"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-next-comprehensive-audit-20261106/root/pnpm-test.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T13:21:54.107178+00:00",
+      "durationSeconds": 518.9886098019997,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "988c0b7cc1dd157f92fd3ec0c9baf690a8efa2f8",
+        "branch": "fix/next-comprehensive-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "logBytes": 182613,
+      "logSha256": "c4419254d93819777bec9a99560c51c525efc12079065b61c0f8617d27fe33b7"
+    },
+    "protocol-order-retry-green": {
+      "startedAt": "2026-11-06T13:13:15.089888+00:00",
+      "sourceBefore": {
+        "sha": "988c0b7cc1dd157f92fd3ec0c9baf690a8efa2f8",
+        "branch": "fix/next-comprehensive-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "command": [
+        "node",
+        "/dev/shm/harness-next-comprehensive-audit-20261106/repros/protocol-order-retry.mjs",
+        "/tmp/harness-agent-next-audit-20261106",
+        "/dev/shm/harness-next-comprehensive-audit-20261106/repros/protocol-order-retry-green.json"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-next-comprehensive-audit-20261106/root/protocol-order-retry-green.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T13:13:15.565248+00:00",
+      "durationSeconds": 0.43692255900168675,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "988c0b7cc1dd157f92fd3ec0c9baf690a8efa2f8",
+        "branch": "fix/next-comprehensive-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "logBytes": 1903,
+      "logSha256": "b57d9be42060d103c649255b9af6a9a2b5e209321d33b75af8cb5d841b89f01e"
+    },
+    "inbox-atomicity-green": {
+      "startedAt": "2026-11-06T13:13:15.625810+00:00",
+      "sourceBefore": {
+        "sha": "988c0b7cc1dd157f92fd3ec0c9baf690a8efa2f8",
+        "branch": "fix/next-comprehensive-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "command": [
+        "node",
+        "/dev/shm/harness-next-comprehensive-audit-20261106/repros/inbox-atomicity.mjs",
+        "/tmp/harness-agent-next-audit-20261106",
+        "/dev/shm/harness-next-comprehensive-audit-20261106/repros/inbox-atomicity-green.json"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-next-comprehensive-audit-20261106/root/inbox-atomicity-green.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T13:13:15.749956+00:00",
+      "durationSeconds": 0.09326412100017478,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "988c0b7cc1dd157f92fd3ec0c9baf690a8efa2f8",
+        "branch": "fix/next-comprehensive-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "logBytes": 3595,
+      "logSha256": "d8ec95333b942d5ad8a6d2db3b0438c6bbf8102a58f6cb792710fb9974461cd0"
+    },
+    "coding-cli-web": {
+      "startedAt": "2026-11-06T13:14:35.184393+00:00",
+      "sourceBefore": {
+        "sha": "988c0b7cc1dd157f92fd3ec0c9baf690a8efa2f8",
+        "branch": "fix/next-comprehensive-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "command": [
+        "node",
+        "scripts/research/coding-prompts-20261008/acceptance.mjs",
+        "/dev/shm/harness-next-comprehensive-audit-20261106/acceptance/coding-cli-web",
+        "coding-v2"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-next-comprehensive-audit-20261106/root/coding-cli-web.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T13:14:44.197595+00:00",
+      "durationSeconds": 8.984849784999824,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "988c0b7cc1dd157f92fd3ec0c9baf690a8efa2f8",
+        "branch": "fix/next-comprehensive-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "logBytes": 1457,
+      "logSha256": "1fa2877e90b6b16d9af9fa150407198cd72607384643b20f60db64041f5628e9"
+    },
+    "managed-paired": {
+      "startedAt": "2026-11-06T13:14:35.179911+00:00",
+      "sourceBefore": {
+        "sha": "988c0b7cc1dd157f92fd3ec0c9baf690a8efa2f8",
+        "branch": "fix/next-comprehensive-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "command": [
+        "node",
+        "scripts/research/managed-commands-20261025/paired.mjs",
+        "/dev/shm/harness-next-comprehensive-audit-20261106/acceptance/managed-paired"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-next-comprehensive-audit-20261106/root/managed-paired.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T13:17:02.498920+00:00",
+      "durationSeconds": 147.2894157490009,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "988c0b7cc1dd157f92fd3ec0c9baf690a8efa2f8",
+        "branch": "fix/next-comprehensive-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "logBytes": 4224,
+      "logSha256": "f572baff59787c239ed96ba4fb34c003a605d0686f052c8fe870555f0073e59c"
+    },
+    "browser-daily": {
+      "startedAt": "2026-11-06T13:15:21.508233+00:00",
+      "sourceBefore": {
+        "sha": "988c0b7cc1dd157f92fd3ec0c9baf690a8efa2f8",
+        "branch": "fix/next-comprehensive-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "command": [
+        "node",
+        "scripts/research/web-daily-20261016/browser-acceptance.mjs",
+        "--output",
+        "/dev/shm/harness-next-comprehensive-audit-20261106/acceptance/browser-daily",
+        "--playwright-module",
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
+        "--viewports",
+        "desktop,mobile,narrow"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-next-comprehensive-audit-20261106/root/browser-daily.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T13:19:24.260374+00:00",
+      "durationSeconds": 242.71834613100145,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "988c0b7cc1dd157f92fd3ec0c9baf690a8efa2f8",
+        "branch": "fix/next-comprehensive-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "logBytes": 3476,
+      "logSha256": "b24dedcb06eea819d576c69e3a8973f4547c0f9f277191791413f3030fa94bdb"
+    }
+  },
+  "trialReceiptsPreserved": {
+    "formal-red": {
+      "startedAt": "2026-11-06T13:01:15.221106+00:00",
+      "sourceBefore": {
+        "sha": "43905ca6e7d9895704d565e6be9a8776dcd91a0e",
+        "branch": "fix/next-comprehensive-audit-20261106",
+        "status": "?? packages/core/src/runtime/followup-reservation.regressions.test.ts\n?? packages/harness/src/stream-tool-order.integration.test.ts\n?? packages/model/src/openai-long-delay.regressions.test.ts\n?? packages/model/src/openai-stream-order.regressions.test.ts\n?? packages/session/src/inbox-atomicity.regressions.test.ts",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "packages/model/src/openai-stream-order.regressions.test.ts",
+        "packages/model/src/openai-long-delay.regressions.test.ts",
+        "packages/session/src/inbox-atomicity.regressions.test.ts",
+        "packages/core/src/runtime/followup-reservation.regressions.test.ts",
+        "packages/harness/src/stream-tool-order.integration.test.ts"
+      ],
+      "node": "v24.19.0",
+      "status": "FAIL",
+      "log": "/dev/shm/harness-next-comprehensive-audit-20261106/root/formal-red.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T13:01:18.488999+00:00",
+      "durationSeconds": 3.227542736000032,
+      "exitCode": 1,
+      "sourceAfter": {
+        "sha": "43905ca6e7d9895704d565e6be9a8776dcd91a0e",
+        "branch": "fix/next-comprehensive-audit-20261106",
+        "status": "?? packages/core/src/runtime/followup-reservation.regressions.test.ts\n?? packages/harness/src/stream-tool-order.integration.test.ts\n?? packages/model/src/openai-long-delay.regressions.test.ts\n?? packages/model/src/openai-stream-order.regressions.test.ts\n?? packages/session/src/inbox-atomicity.regressions.test.ts",
+        "sparse": ""
+      },
+      "logBytes": 24798,
+      "logSha256": "e51d20ccda63bb46314fdf1f38e9d3d78523cfc64d527e405e9539a3b156af64"
+    },
+    "corrected-formal-red": {
+      "startedAt": "2026-11-06T13:10:13.130590+00:00",
+      "sourceBefore": {
+        "sha": "3e4f6e734667abb2f77c5023ac128785502799f5",
+        "branch": "",
+        "status": "?? packages/core/src/runtime/followup-reservation.regressions.test.ts\n?? packages/harness/src/stream-tool-order.integration.test.ts\n?? packages/model/src/openai-long-delay.regressions.test.ts\n?? packages/model/src/openai-stream-order.regressions.test.ts\n?? packages/session/src/inbox-atomicity.regressions.test.ts",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "packages/model/src/openai-stream-order.regressions.test.ts",
+        "packages/model/src/openai-long-delay.regressions.test.ts",
+        "packages/session/src/inbox-atomicity.regressions.test.ts",
+        "packages/core/src/runtime/followup-reservation.regressions.test.ts",
+        "packages/harness/src/stream-tool-order.integration.test.ts"
+      ],
+      "node": "v24.19.0",
+      "status": "FAIL",
+      "log": "/dev/shm/harness-next-comprehensive-audit-20261106/root/corrected-formal-red.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T13:10:15.948556+00:00",
+      "durationSeconds": 2.7941676979990007,
+      "exitCode": 1,
+      "sourceAfter": {
+        "sha": "3e4f6e734667abb2f77c5023ac128785502799f5",
+        "branch": "",
+        "status": "?? packages/core/src/runtime/followup-reservation.regressions.test.ts\n?? packages/harness/src/stream-tool-order.integration.test.ts\n?? packages/model/src/openai-long-delay.regressions.test.ts\n?? packages/model/src/openai-stream-order.regressions.test.ts\n?? packages/session/src/inbox-atomicity.regressions.test.ts",
+        "sparse": ""
+      },
+      "logBytes": 24800,
+      "logSha256": "0f9524ad830bd3fe217d3646541c4b2bdc226c7d52578eaef45778ba5f157f26"
+    },
+    "candidate-build": {
+      "startedAt": "2026-11-06T13:08:51.499821+00:00",
+      "sourceBefore": {
+        "sha": "43905ca6e7d9895704d565e6be9a8776dcd91a0e",
+        "branch": "fix/next-comprehensive-audit-20261106",
+        "status": "A  packages/core/src/runtime/followup-reservation.regressions.test.ts\nM  packages/core/src/runtime/session-actor.ts\nA  packages/harness/src/stream-tool-order.integration.test.ts\nA  packages/model/src/openai-long-delay.regressions.test.ts\nA  packages/model/src/openai-stream-order.regressions.test.ts\nM  packages/model/src/openai.ts\nA  packages/session/src/inbox-atomicity.regressions.test.ts\nM  packages/session/src/inbox.ts",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "exec",
+        "tsc",
+        "-b",
+        "--force"
+      ],
+      "node": "v24.19.0",
+      "status": "FAIL",
+      "log": "/dev/shm/harness-next-comprehensive-audit-20261106/root/candidate-build.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T13:08:58.679392+00:00",
+      "durationSeconds": 7.149324392999915,
+      "exitCode": 1,
+      "sourceAfter": {
+        "sha": "43905ca6e7d9895704d565e6be9a8776dcd91a0e",
+        "branch": "fix/next-comprehensive-audit-20261106",
+        "status": "A  packages/core/src/runtime/followup-reservation.regressions.test.ts\nM  packages/core/src/runtime/session-actor.ts\nA  packages/harness/src/stream-tool-order.integration.test.ts\nA  packages/model/src/openai-long-delay.regressions.test.ts\nA  packages/model/src/openai-stream-order.regressions.test.ts\nM  packages/model/src/openai.ts\nA  packages/session/src/inbox-atomicity.regressions.test.ts\nM  packages/session/src/inbox.ts",
+        "sparse": ""
+      },
+      "logBytes": 196,
+      "logSha256": "d57b3f61b3700055e6ff713856934ba27103ab509eb63dab53c20b32ad589f09"
+    },
+    "candidate-build-v2": {
+      "startedAt": "2026-11-06T13:09:48.724405+00:00",
+      "sourceBefore": {
+        "sha": "43905ca6e7d9895704d565e6be9a8776dcd91a0e",
+        "branch": "fix/next-comprehensive-audit-20261106",
+        "status": "A  packages/core/src/runtime/followup-reservation.regressions.test.ts\nM  packages/core/src/runtime/session-actor.ts\nA  packages/harness/src/stream-tool-order.integration.test.ts\nA  packages/model/src/openai-long-delay.regressions.test.ts\nA  packages/model/src/openai-stream-order.regressions.test.ts\nM  packages/model/src/openai.ts\nA  packages/session/src/inbox-atomicity.regressions.test.ts\nM  packages/session/src/inbox.ts",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "exec",
+        "tsc",
+        "-b",
+        "--force"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-next-comprehensive-audit-20261106/root/candidate-build-v2.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T13:09:55.170514+00:00",
+      "durationSeconds": 6.418320790000507,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "43905ca6e7d9895704d565e6be9a8776dcd91a0e",
+        "branch": "fix/next-comprehensive-audit-20261106",
+        "status": "A  packages/core/src/runtime/followup-reservation.regressions.test.ts\nM  packages/core/src/runtime/session-actor.ts\nA  packages/harness/src/stream-tool-order.integration.test.ts\nA  packages/model/src/openai-long-delay.regressions.test.ts\nA  packages/model/src/openai-stream-order.regressions.test.ts\nM  packages/model/src/openai.ts\nA  packages/session/src/inbox-atomicity.regressions.test.ts\nM  packages/session/src/inbox.ts",
+        "sparse": ""
+      },
+      "logBytes": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "formal-green": {
+      "startedAt": "2026-11-06T13:09:55.219607+00:00",
+      "sourceBefore": {
+        "sha": "43905ca6e7d9895704d565e6be9a8776dcd91a0e",
+        "branch": "fix/next-comprehensive-audit-20261106",
+        "status": "A  packages/core/src/runtime/followup-reservation.regressions.test.ts\nM  packages/core/src/runtime/session-actor.ts\nA  packages/harness/src/stream-tool-order.integration.test.ts\nA  packages/model/src/openai-long-delay.regressions.test.ts\nA  packages/model/src/openai-stream-order.regressions.test.ts\nM  packages/model/src/openai.ts\nA  packages/session/src/inbox-atomicity.regressions.test.ts\nM  packages/session/src/inbox.ts",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "packages/model/src/openai-stream-order.regressions.test.ts",
+        "packages/model/src/openai-long-delay.regressions.test.ts",
+        "packages/session/src/inbox-atomicity.regressions.test.ts",
+        "packages/core/src/runtime/followup-reservation.regressions.test.ts",
+        "packages/harness/src/stream-tool-order.integration.test.ts"
+      ],
+      "node": "v24.19.0",
+      "status": "FAIL",
+      "log": "/dev/shm/harness-next-comprehensive-audit-20261106/root/formal-green.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T13:09:58.337881+00:00",
+      "durationSeconds": 3.0914347380003164,
+      "exitCode": 1,
+      "sourceAfter": {
+        "sha": "43905ca6e7d9895704d565e6be9a8776dcd91a0e",
+        "branch": "fix/next-comprehensive-audit-20261106",
+        "status": "A  packages/core/src/runtime/followup-reservation.regressions.test.ts\nM  packages/core/src/runtime/session-actor.ts\nA  packages/harness/src/stream-tool-order.integration.test.ts\nA  packages/model/src/openai-long-delay.regressions.test.ts\nA  packages/model/src/openai-stream-order.regressions.test.ts\nM  packages/model/src/openai.ts\nA  packages/session/src/inbox-atomicity.regressions.test.ts\nM  packages/session/src/inbox.ts",
+        "sparse": ""
+      },
+      "logBytes": 4012,
+      "logSha256": "a6ca31b521b6fc5b5818ee24b2c2d5235ff576763ec16197b7e8766bd6858583"
+    },
+    "formal-green-real-http": {
+      "startedAt": "2026-11-06T13:11:07.925680+00:00",
+      "sourceBefore": {
+        "sha": "43905ca6e7d9895704d565e6be9a8776dcd91a0e",
+        "branch": "fix/next-comprehensive-audit-20261106",
+        "status": "A  packages/core/src/runtime/followup-reservation.regressions.test.ts\nM  packages/core/src/runtime/session-actor.ts\nA  packages/harness/src/stream-tool-order.integration.test.ts\nAM packages/model/src/openai-long-delay.regressions.test.ts\nA  packages/model/src/openai-stream-order.regressions.test.ts\nM  packages/model/src/openai.ts\nA  packages/session/src/inbox-atomicity.regressions.test.ts\nM  packages/session/src/inbox.ts",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "packages/model/src/openai-stream-order.regressions.test.ts",
+        "packages/model/src/openai-long-delay.regressions.test.ts",
+        "packages/session/src/inbox-atomicity.regressions.test.ts",
+        "packages/core/src/runtime/followup-reservation.regressions.test.ts",
+        "packages/harness/src/stream-tool-order.integration.test.ts",
+        "packages/model/src/openai.test.ts"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-next-comprehensive-audit-20261106/root/formal-green-real-http.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T13:11:12.369316+00:00",
+      "durationSeconds": 4.414943495999978,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "43905ca6e7d9895704d565e6be9a8776dcd91a0e",
+        "branch": "fix/next-comprehensive-audit-20261106",
+        "status": "A  packages/core/src/runtime/followup-reservation.regressions.test.ts\nM  packages/core/src/runtime/session-actor.ts\nA  packages/harness/src/stream-tool-order.integration.test.ts\nAM packages/model/src/openai-long-delay.regressions.test.ts\nA  packages/model/src/openai-stream-order.regressions.test.ts\nM  packages/model/src/openai.ts\nA  packages/session/src/inbox-atomicity.regressions.test.ts\nM  packages/session/src/inbox.ts",
+        "sparse": ""
+      },
+      "logBytes": 888,
+      "logSha256": "f6a61fcba8bb41e763246698bf5a2428ba72fbff759f78deac903988f4866542"
+    }
+  },
+  "actualCoding": {
+    "schemaVersion": 1,
+    "kind": "coding-prompt-engineering-acceptance",
+    "sourceSha": "988c0b7cc1dd157f92fd3ec0c9baf690a8efa2f8",
+    "sourceTreeClean": true,
+    "platform": "linux",
+    "node": "v24.19.0",
+    "policy": "coding-v2",
+    "prompts": {
+      "primary": {
+        "sha256": "7e31f8e1d80a223aad729fca71e913bf0f6547507cedccee3bf3045258a22fe4",
+        "bytes": 5090,
+        "estimatedTokens": 1273
+      },
+      "readonlyWorker": {
+        "sha256": "ae7d7dac2abe92e26d13ad388e4c65966fa3d081235699d4e3c8ea6878782016",
+        "bytes": 2591,
+        "estimatedTokens": 648
+      },
+      "writeWorker": {
+        "sha256": "c9e7b6e3ee52f97469cf68bdd43e8326fcb4716bdac73eb67989b8f4069d76cb",
+        "bytes": 4963,
+        "estimatedTokens": 1241
+      }
+    },
+    "assertions": [
+      "real CLI and Web requests were both captured",
+      "every actual HTTP request carries the exact selected compiled primary policy",
+      "selected policy fits fallback system reserve without raising the budget",
+      "documented native capabilities exist in the actual request schemas",
+      "new requests carry the versioned challenger rather than legacy prompt",
+      "readonly policy does not advertise mutating/exec/plan capabilities",
+      "cli rejects invalid policy before provider or listener startup",
+      "web rejects invalid policy before provider or listener startup"
+    ],
+    "inheritedCodingAssertions": 50,
+    "requests": 19,
+    "status": "PASS",
+    "paidModelCalls": 0,
+    "realModelQuality": "NOT_PROVEN",
+    "limitation": "A scripted local HTTP provider chooses the actions. Passing proves policy installation and runtime/tool invariants; it cannot prove policy obedience or a real-model quality gain."
+  },
+  "managed": {
+    "source": "988c0b7cc1dd157f92fd3ec0c9baf690a8efa2f8",
+    "scriptSha256": "e5a43149e54ef543384e8d217d6894a0f2a2de01cd3ee90b8b0ef3ac17032128",
+    "kinds": [
+      "overlap-check",
+      "failure-repair",
+      "http-service"
+    ],
+    "pairsPerKind": 8,
+    "order": "AB BA alternating within each kind",
+    "budget": {
+      "turnMs": 15000,
+      "toolCalls": 30,
+      "iterations": 30,
+      "processMs": 5000,
+      "retainedBytes": 65536
+    },
+    "paidModelCalls": 0,
+    "overlapMetric": {
+      "version": 2,
+      "source": "correlated successful read_file evidence within known native start/exit interval; model-request time is not an action; unknown exit is not positive proof"
+    },
+    "scope": "causal engineering protocol probe; baseline/candidate gate coordination differs, so durations are not an identical-workload performance comparison or model-quality evidence",
+    "checkFixture": {
+      "nativeWorkMs": 2000,
+      "completion": "native work AND read barrier",
+      "baselineGate": "pre-released before synchronous exec",
+      "candidateGate": "release only after correlated successful source-file read; remains released for repair attempt",
+      "fallbackRelease": false
+    },
+    "networkPreflight": {
+      "loopback": "allow",
+      "external": "deny",
+      "pattern": "http://127.0.0.1:*/**"
+    },
+    "arms": 48,
+    "baselinePass": 16,
+    "candidatePass": 24,
+    "candidateOverlap": 16,
+    "duplicateStarts": 0,
+    "failures": [],
+    "modelQuality": "NOT_PROVEN"
+  },
+  "browser": {
+    "status": "PASS",
+    "sourceShaFromCleanRunner": "988c0b7cc1dd157f92fd3ec0c9baf690a8efa2f8",
+    "fixture": {
+      "launchId": "2726ec40-4ffc-40d3-94f9-c6eaa2a1f230",
+      "compiledDigest": "bbd6459055a3edb7fe59dbb799c49217fc0ee568722f70c411e143b178205f7c"
+    },
+    "fixtureSourceShaDirectlyReported": false,
+    "launch": {
+      "launchId": "2726ec40-4ffc-40d3-94f9-c6eaa2a1f230",
+      "compiledDigest": "bbd6459055a3edb7fe59dbb799c49217fc0ee568722f70c411e143b178205f7c",
+      "providerOrigin": "http://127.0.0.1:43291/v1",
+      "cwd": "/dev/shm/harness-next-comprehensive-audit-20261106/acceptance/browser-daily/fixture/project",
+      "source": "/tmp/harness-agent-next-audit-20261106",
+      "managedCommands": false,
+      "shutdownControl": "test-only IPC invokes the actual production SIGTERM handler; not native OS signal delivery",
+      "model": "web-loopback-fixture",
+      "paidModelCalls": 0,
+      "pid": 66200,
+      "parentPid": 66139,
+      "fixtureOwnerPreflight": {
+        "preparedSessionId": "session_0dbcd282-694e-445f-938a-b08a9a04962d",
+        "rejected": [],
+        "scope": "Fresh fixture owner allocated before browser checks; no task input or model request; product lease policy unchanged"
+      }
+    },
+    "driverSha256": "a9160a0ad841d1a48c2661e3a9dc1b0fabc6299e68b9147d786d3b79564da200",
+    "engine": {
+      "node": "v24.19.0",
+      "chromium": "151.0.7922.173",
+      "viewportScope": "Desktop Chromium responsive sizes; no physical mobile or Windows claim"
+    },
+    "scope": "Named daily production UI interactions only; not a claim that every visible control is implemented or verified",
+    "scenarios": 42,
+    "checks": 120,
+    "errors": 0,
+    "rawResultSha256": "91da49bb8d799a0f34ff3ec4cfe94e1c143647bd234bfe897f2b9f97ad46ebd9",
+    "rawScenarioBodiesAndScreenshotsIncluded": false,
+    "results": [
+      {
+        "name": "navigation-draft-ownership",
+        "viewport": "desktop",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "A paste immediately after New Session belongs to the new task under real network latency",
+            "status": "PASS"
+          },
+          {
+            "label": "Returning to the previous task preserves its independent composer draft",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "f98e4af45a9f7f8d6af82b6e4148437738e373a78c4bdecf2cb6f2529dc2881e",
+        "screenshotSha256": "42ca539c8abd3a9d8ab1e4689cbaf8da2016775cd94346cb7c34e4939543966a"
+      },
+      {
+        "name": "coding-draft-ownership",
+        "viewport": "desktop",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "Empty native coding draft cannot submit",
+            "status": "PASS"
+          },
+          {
+            "label": "A/B native coding drafts remain separate through selection",
+            "status": "PASS"
+          },
+          {
+            "label": "Closing native settings retains the selected coding session draft",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "12da434fc8fd2fc59b210fdfd31031fc3eaa56decc6c6e44633d49ffb5281434",
+        "screenshotSha256": "f340fcdf03be2b0002b03f677f6086619ba2ed21ba67e45f46f41adae3e928ce"
+      },
+      {
+        "name": "feedback-roundtrip",
+        "viewport": "desktop",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "A real positive rating submission updates its assistant control",
+            "status": "PASS"
+          },
+          {
+            "label": "Clicking the recorded rating retracts it",
+            "status": "PASS"
+          },
+          {
+            "label": "A persisted negative rating is restored on the actual lazy hover after reload",
+            "status": "PASS"
+          },
+          {
+            "label": "Message put/delete and session remark exist in actual controlled durable metadata",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "c53ca79182235b7853c4d0429df1c00a42c405a4e651fc6923955131e7eefc01",
+        "screenshotSha256": "866eaa3c735f54b79148ad6aae80673e5d522c454c8c8b8ba23c7c410c3441a6"
+      },
+      {
+        "name": "coding-modal-keyboard",
+        "viewport": "desktop",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "An assigned New Session shortcut cannot navigate behind the open native settings dialog",
+            "status": "PASS"
+          },
+          {
+            "label": "Escape closes the native dialog and the global shortcut works again",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "12077d7de610ee024ae060b19196dc445da6525ce94e559a392a4be2534b2885",
+        "screenshotSha256": "95ab12aeacacf9a0a791929b9796781b8810b567366751b8cc50340670c1c583"
+      },
+      {
+        "name": "coding-diff-ownership",
+        "viewport": "desktop",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "A real delayed native diff request stays bound to its announced owner while the other conversation has no leaked change card",
+            "status": "PASS"
+          },
+          {
+            "label": "Selecting the original owner opens its actual captured diff in the native review tab",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "7410b5d0534b385bc5e8b5726bfaeb4d99805fe8b9bec6ccc341523182552596",
+        "screenshotSha256": "e45955552afc032ecf9e3d3532eeb6d6855f7c905a538ff8d75f0cbb43486ee7"
+      },
+      {
+        "name": "session-reference-menu",
+        "viewport": "desktop",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "The actual @ menu discovers a renamed authorized session and inserts its real reference chip",
+            "status": "PASS"
+          },
+          {
+            "label": "Submitting the real reference chip supplies an actual bounded read-only source snapshot to the real HTTP provider",
+            "status": "PASS"
+          },
+          {
+            "label": "Conversation, reload and later reference candidates show readable user text without internal snapshot markers",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "5ddc531f5e713db9ace563c76427b2983a560b3492c79faec83b84836e68f045",
+        "screenshotSha256": "fa45d01354211e9b1f002c95a555d0dcba0de19a3ff89fe5d896682111e1098b"
+      },
+      {
+        "name": "presentation-controls",
+        "viewport": "desktop",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "User, code block and assistant copy buttons put their distinct actual contents on the clipboard",
+            "status": "PASS"
+          },
+          {
+            "label": "Actual per-turn usage popover displays the executed provider and token totals",
+            "status": "PASS"
+          },
+          {
+            "label": "Trajectory and Chat tabs retain the actual read tool and conversation",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "508685438b0327ef6378beea0e118e9c4675c0a9964c9ac06d23ffb23f5dbd2f",
+        "screenshotSha256": "03acb6082b53d642581b98cde327b62f3b250d05103a105e4a286fe6c9db52e1"
+      },
+      {
+        "name": "input-queue-stop",
+        "viewport": "desktop",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "Shift+Enter inserts a real newline without submitting a task",
+            "status": "PASS"
+          },
+          {
+            "label": "Immediate repeated Enter admits one actual running task",
+            "status": "PASS"
+          },
+          {
+            "label": "Queue submits once; double Escape reaches real cancellation and retains unsent input",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "1ad3aa977e594853fc43b72de8dd60e09e5ce364db0b3fa9ee10eb5a677e273f",
+        "screenshotSha256": "3c21103650b329726e7bef3afabd4d5e788e32f4fe108f6c21d0eec157a3439e"
+      },
+      {
+        "name": "attachment-add-remove-submit",
+        "viewport": "desktop",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "Removing a selected file restores an empty unsent composer",
+            "status": "PASS"
+          },
+          {
+            "label": "Reattaching and submitting supplies actual authorized UTF-8 file contents to the production model request",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "646cb1fb60d8ecff0c244c3985a2897ede29247f9f86728889177ba5c90a97e7",
+        "screenshotSha256": "447e3d042396565bd52d018162fa091b98c3934c6f20497fd71001d97b8cc64b"
+      },
+      {
+        "name": "files-and-panel-layout",
+        "viewport": "desktop",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "A real file tree double-click opens a separate actual content preview tab",
+            "status": "PASS"
+          },
+          {
+            "label": "Preview wrap/reload, fullscreen restore and available split controls remain reachable",
+            "status": "PASS",
+            "detail": {
+              "panes": 2
+            }
+          },
+          {
+            "label": "Closing/reopening the sidebar retains its preview panes without page-wide horizontal overflow",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "12b2d509afa190a399e5767b90213b0878633d3effe0ce4e90d4b61fd9a8a7a3",
+        "screenshotSha256": "e4f3116680751e691f661712f1b51841872039ce316e2596513d8eb2c56bac65"
+      },
+      {
+        "name": "shortcuts-persist-conflict-reset",
+        "viewport": "desktop",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "An edited shortcut persists through real reload and actually creates one new session",
+            "status": "PASS"
+          },
+          {
+            "label": "An actual conflicting shortcut is rejected with its existing command name",
+            "status": "PASS"
+          },
+          {
+            "label": "Confirmed restore removes the custom command binding without a hidden navigation",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "c7ea14dd752afd5ea6f770cb0d3670d8ca488430f22a48f8b4d2858277b2bd1f",
+        "screenshotSha256": "5a38bfe48e83681ead60c5f6ab3365f00f832b49858c385db0e1dbfad3a97124"
+      },
+      {
+        "name": "settings-font-and-locale",
+        "viewport": "desktop",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "Font increase/decrease updates the actual conversation layout variable",
+            "status": "PASS"
+          },
+          {
+            "label": "The actual language setting localizes native coding controls and keeps them inside the viewport",
+            "status": "PASS"
+          },
+          {
+            "label": "Returning to English updates native coding components and survives an actual reload",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "9fd1880d1e6eeb75c2e6dccb084618b3109a39d7ef0947fe56d2a4d6712b192e",
+        "screenshotSha256": "b7a4e70e9dbe0d1caf0c75d3760408f2d2b17167615c83541620163c0fccf0d3"
+      },
+      {
+        "name": "capabilities-and-task-filters",
+        "viewport": "desktop",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "A Web host without a native configuration opener does not advertise that unavailable action",
+            "status": "PASS"
+          },
+          {
+            "label": "Removed plugin, preset, version and floating coding surfaces have no remaining user-facing entry",
+            "status": "PASS"
+          },
+          {
+            "label": "Permission labels wait for actual saved state during a real TCP pause and remain correct after reload",
+            "status": "PASS"
+          },
+          {
+            "label": "The real automation catalog responds to its three list filters without inventing an installed plugin",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "334740623c697b9d75d4886e8d55a748c3869c9a0923b0171ee95980470e0e5b",
+        "screenshotSha256": "09268898878fd4f1c3083c9fae54827943af36ea2cc7350c04d1d26e77be7605"
+      },
+      {
+        "name": "sidebar-pin-search-filters",
+        "viewport": "desktop",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "Pinning a real selected session survives reload and exposes its inverse action",
+            "status": "PASS"
+          },
+          {
+            "label": "The actual session search finds the matching named session",
+            "status": "PASS"
+          },
+          {
+            "label": "Archive filtering hides/restores active sessions and Unpin reaches its real owner",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "379cb3c4ea9f8fb55bc372afaebb079abe8053c50682c6f835e5907be501ce55",
+        "screenshotSha256": "cf026e528fbf9f6a3bca8c8bb81235606b90423f26858dab6caf6de6c571cd6b"
+      },
+      {
+        "name": "navigation-draft-ownership",
+        "viewport": "mobile",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "A paste immediately after New Session belongs to the new task under real network latency",
+            "status": "PASS"
+          },
+          {
+            "label": "Returning to the previous task preserves its independent composer draft",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "322221a3bf37f48a52fdffd4f3197d001dd64441c4679a872a63a3c4faeb92d8",
+        "screenshotSha256": "47473c6660107ffd989db4fab79de4ec0dc6d24326aef1021cef4c44a4d997d7"
+      },
+      {
+        "name": "coding-draft-ownership",
+        "viewport": "mobile",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "Empty native coding draft cannot submit",
+            "status": "PASS"
+          },
+          {
+            "label": "A/B native coding drafts remain separate through selection",
+            "status": "PASS"
+          },
+          {
+            "label": "Closing native settings retains the selected coding session draft",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "fa5b1cabadcc1b71601d8544e590be87c3aa745d61902518f9cdda8044589d96",
+        "screenshotSha256": "72d17301440bf1d4bd6699f7d737871a9beaafabed24f0e356e9e15814f8155a"
+      },
+      {
+        "name": "feedback-roundtrip",
+        "viewport": "mobile",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "A real positive rating submission updates its assistant control",
+            "status": "PASS"
+          },
+          {
+            "label": "Clicking the recorded rating retracts it",
+            "status": "PASS"
+          },
+          {
+            "label": "A persisted negative rating is restored on the actual lazy hover after reload",
+            "status": "PASS"
+          },
+          {
+            "label": "Message put/delete and session remark exist in actual controlled durable metadata",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "0e2ccc1fc236b3ce88889404a6ffe6f5cd1b119e931c4a0dfc4b7abd6f5e9bda",
+        "screenshotSha256": "9b5b436aea3494f9627e85e985e4afff58e2743eae5205200813a0104372f0f8"
+      },
+      {
+        "name": "coding-modal-keyboard",
+        "viewport": "mobile",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "An assigned New Session shortcut cannot navigate behind the open native settings dialog",
+            "status": "PASS"
+          },
+          {
+            "label": "Escape closes the native dialog and the global shortcut works again",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "486a43199979477e9211d0fbca17d857e9a93c846aafb957b5d2076c6892efa6",
+        "screenshotSha256": "0d19995e2a70bc61cf9704cd2a1682cb48854046662519633ecef07fd1215d28"
+      },
+      {
+        "name": "coding-diff-ownership",
+        "viewport": "mobile",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "A real delayed native diff request stays bound to its announced owner while the other conversation has no leaked change card",
+            "status": "PASS"
+          },
+          {
+            "label": "Selecting the original owner opens its actual captured diff in the native review tab",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "740fd093368d6cd0eca72278d74da16950c4dc7a32afa3f276cefcf009012063",
+        "screenshotSha256": "8fc7864043711250d0db9f64cecbf1863192a7cb856398ddd4db164f6de76099"
+      },
+      {
+        "name": "session-reference-menu",
+        "viewport": "mobile",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "The actual @ menu discovers a renamed authorized session and inserts its real reference chip",
+            "status": "PASS"
+          },
+          {
+            "label": "Submitting the real reference chip supplies an actual bounded read-only source snapshot to the real HTTP provider",
+            "status": "PASS"
+          },
+          {
+            "label": "Conversation, reload and later reference candidates show readable user text without internal snapshot markers",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "b935feaec3fc8fe10a4176c9a4b6a61efa43054fc6f9561316794ba95bc8f639",
+        "screenshotSha256": "b2c50d4219dff69b54f605d7299e0e7b722e241ffaf634b67963073f8963c0b8"
+      },
+      {
+        "name": "presentation-controls",
+        "viewport": "mobile",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "User, code block and assistant copy buttons put their distinct actual contents on the clipboard",
+            "status": "PASS"
+          },
+          {
+            "label": "Actual per-turn usage popover displays the executed provider and token totals",
+            "status": "PASS"
+          },
+          {
+            "label": "Trajectory and Chat tabs retain the actual read tool and conversation",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "d428b6c05a18fb87db885aa58a796260e66d85b06483107b149879535644c96e",
+        "screenshotSha256": "7523f09f4a078940eebebcc945d1f7c08823b3b8e54653af497a94e22c0a236f"
+      },
+      {
+        "name": "input-queue-stop",
+        "viewport": "mobile",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "Shift+Enter inserts a real newline without submitting a task",
+            "status": "PASS"
+          },
+          {
+            "label": "Immediate repeated Enter admits one actual running task",
+            "status": "PASS"
+          },
+          {
+            "label": "Queue submits once; double Escape reaches real cancellation and retains unsent input",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "c8cf337a4d303d30971a90878459d131880b18e8f63e1e6d281e0e8f5e70f51a",
+        "screenshotSha256": "c60a68e1259bfff650659c0a9b5caca9cd2eadf74f75e9033a9e8f103106b631"
+      },
+      {
+        "name": "attachment-add-remove-submit",
+        "viewport": "mobile",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "Removing a selected file restores an empty unsent composer",
+            "status": "PASS"
+          },
+          {
+            "label": "Reattaching and submitting supplies actual authorized UTF-8 file contents to the production model request",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "50ab49ac090f07e96745b71c7f4d62e28fbe470cba65404614144721c2f9acf4",
+        "screenshotSha256": "742e6a722f8eabea08e17df9685197ca94f336c5b5ab1b1a47a4223fcc6e8de5"
+      },
+      {
+        "name": "files-and-panel-layout",
+        "viewport": "mobile",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "A real file tree double-click opens a separate actual content preview tab",
+            "status": "PASS"
+          },
+          {
+            "label": "Preview wrap/reload, fullscreen restore and available split controls remain reachable",
+            "status": "PASS",
+            "detail": {
+              "panes": 1
+            }
+          },
+          {
+            "label": "Closing/reopening the sidebar retains its preview panes without page-wide horizontal overflow",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "8fa95bb59cef89b10b134aaed240320ba52e1e89df8e6dc45f5ad689f657fc03",
+        "screenshotSha256": "378f0d7f3d07080f395bd740f9a22f869e402c4d084ded6f4fbc5448e2b0f9ca"
+      },
+      {
+        "name": "shortcuts-persist-conflict-reset",
+        "viewport": "mobile",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "An edited shortcut persists through real reload and actually creates one new session",
+            "status": "PASS"
+          },
+          {
+            "label": "An actual conflicting shortcut is rejected with its existing command name",
+            "status": "PASS"
+          },
+          {
+            "label": "Confirmed restore removes the custom command binding without a hidden navigation",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "e493a5db318d717d5a1f5dbd75a580bbaff1eab980eb45064a94ca92a6755a72",
+        "screenshotSha256": "a3d98fcae09ea2077616a44eb62e687f8709702214fbad999b57dbd11764207e"
+      },
+      {
+        "name": "settings-font-and-locale",
+        "viewport": "mobile",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "Font increase/decrease updates the actual conversation layout variable",
+            "status": "PASS"
+          },
+          {
+            "label": "The actual language setting localizes native coding controls and keeps them inside the viewport",
+            "status": "PASS"
+          },
+          {
+            "label": "Returning to English updates native coding components and survives an actual reload",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "21e21481bddd5676c12850193856071bbfa237a023be7100e0661da7cb1f076c",
+        "screenshotSha256": "9f42fc0208cce40b56da3a72bd196b4d454faeab4ee0b794da6f10902c436da5"
+      },
+      {
+        "name": "capabilities-and-task-filters",
+        "viewport": "mobile",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "A Web host without a native configuration opener does not advertise that unavailable action",
+            "status": "PASS"
+          },
+          {
+            "label": "Removed plugin, preset, version and floating coding surfaces have no remaining user-facing entry",
+            "status": "PASS"
+          },
+          {
+            "label": "Permission labels wait for actual saved state during a real TCP pause and remain correct after reload",
+            "status": "PASS"
+          },
+          {
+            "label": "The real automation catalog responds to its three list filters without inventing an installed plugin",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "d96eaa3cafef54fce88894fcd0cdbaf21eec620a23d8b6c2aa3f1335084ef43b",
+        "screenshotSha256": "bd2b2380c68d04b4b169bf0a3adfc7ff1190204423c3c77c01730529e4783d39"
+      },
+      {
+        "name": "sidebar-pin-search-filters",
+        "viewport": "mobile",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "Pinning a real selected session survives reload and exposes its inverse action",
+            "status": "PASS"
+          },
+          {
+            "label": "The actual session search finds the matching named session",
+            "status": "PASS"
+          },
+          {
+            "label": "Archive filtering hides/restores active sessions and Unpin reaches its real owner",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "a25790cd1bdd638442a30fbbbb665bef5982407db3683e58436ade68f1b8187f",
+        "screenshotSha256": "02543f1aad9e70575b03da8792ec0851b28c6dfee11c175669068b6a45adbb18"
+      },
+      {
+        "name": "navigation-draft-ownership",
+        "viewport": "narrow",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "A paste immediately after New Session belongs to the new task under real network latency",
+            "status": "PASS"
+          },
+          {
+            "label": "Returning to the previous task preserves its independent composer draft",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "96fee3b977d66bb63b4f4c70b3d8a0169e036195a874f274552ac45a9bdae034",
+        "screenshotSha256": "d3bbb4836fd2881be85204238530e524e39e961c14aebb4d5eaaed2680930531"
+      },
+      {
+        "name": "coding-draft-ownership",
+        "viewport": "narrow",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "Empty native coding draft cannot submit",
+            "status": "PASS"
+          },
+          {
+            "label": "A/B native coding drafts remain separate through selection",
+            "status": "PASS"
+          },
+          {
+            "label": "Closing native settings retains the selected coding session draft",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "006077817cbb43cd0a8cdc728f4e93a67918fbc13d9ac915688ba17fd2638ffc",
+        "screenshotSha256": "9c5f31a58c207dfe252351fdf21dc1c4c4ee20e72c7be9acd6ebec7610e6e230"
+      },
+      {
+        "name": "feedback-roundtrip",
+        "viewport": "narrow",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "A real positive rating submission updates its assistant control",
+            "status": "PASS"
+          },
+          {
+            "label": "Clicking the recorded rating retracts it",
+            "status": "PASS"
+          },
+          {
+            "label": "A persisted negative rating is restored on the actual lazy hover after reload",
+            "status": "PASS"
+          },
+          {
+            "label": "Message put/delete and session remark exist in actual controlled durable metadata",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "6fbaeb9108bd03d4b158d44c5d4c4910f05c71c817fb00d068af614ca8e50d34",
+        "screenshotSha256": "b04738b2ada709ce30b7a3e0b4e7c319e2009f9e354f8d6d5b9d0500c1f7c00f"
+      },
+      {
+        "name": "coding-modal-keyboard",
+        "viewport": "narrow",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "An assigned New Session shortcut cannot navigate behind the open native settings dialog",
+            "status": "PASS"
+          },
+          {
+            "label": "Escape closes the native dialog and the global shortcut works again",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "cc49176158a28b685be36a05c02f8b10d00e9c5991ac5a5b66274dfaa120dc6c",
+        "screenshotSha256": "8ec12593b6d666169664c952ef512f6dc69c151071bf88651c62288b339a3078"
+      },
+      {
+        "name": "coding-diff-ownership",
+        "viewport": "narrow",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "A real delayed native diff request stays bound to its announced owner while the other conversation has no leaked change card",
+            "status": "PASS"
+          },
+          {
+            "label": "Selecting the original owner opens its actual captured diff in the native review tab",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "1ef854768b58ae1552ac6a68fdd9d4c1aeb0b57ee4b44e4e8d80326f3107ed58",
+        "screenshotSha256": "768170cf82ca7a18311b98359c4f16fae90b5a47aad31ab689156abd19a3c72a"
+      },
+      {
+        "name": "session-reference-menu",
+        "viewport": "narrow",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "The actual @ menu discovers a renamed authorized session and inserts its real reference chip",
+            "status": "PASS"
+          },
+          {
+            "label": "Submitting the real reference chip supplies an actual bounded read-only source snapshot to the real HTTP provider",
+            "status": "PASS"
+          },
+          {
+            "label": "Conversation, reload and later reference candidates show readable user text without internal snapshot markers",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "2cb5131d7f9be9d9cd3793d8a7638a179b799511ea833f4678cb19fa82a53b39",
+        "screenshotSha256": "97af6c4dd5ba10295814ec1b06284feadbf4024f5f5dbf13ddef4270f4a3d1f6"
+      },
+      {
+        "name": "presentation-controls",
+        "viewport": "narrow",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "User, code block and assistant copy buttons put their distinct actual contents on the clipboard",
+            "status": "PASS"
+          },
+          {
+            "label": "Actual per-turn usage popover displays the executed provider and token totals",
+            "status": "PASS"
+          },
+          {
+            "label": "Trajectory and Chat tabs retain the actual read tool and conversation",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "e13c12767dfb1e760f8f191b6380dda2e136f27a21aec66c497e2b6738e6a90f",
+        "screenshotSha256": "e915937686192203d8466ba54848a5f8cce40a353665ed28401c2f8a31c5436d"
+      },
+      {
+        "name": "input-queue-stop",
+        "viewport": "narrow",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "Shift+Enter inserts a real newline without submitting a task",
+            "status": "PASS"
+          },
+          {
+            "label": "Immediate repeated Enter admits one actual running task",
+            "status": "PASS"
+          },
+          {
+            "label": "Queue submits once; double Escape reaches real cancellation and retains unsent input",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "63e057edf8e7db4f5865a0a6a0336c16d639c34a06579bebbc5292eff15947ee",
+        "screenshotSha256": "14f99b165930feefb92656ff4368e7783b9ef1612531ff4ab0add0f9ab713f96"
+      },
+      {
+        "name": "attachment-add-remove-submit",
+        "viewport": "narrow",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "Removing a selected file restores an empty unsent composer",
+            "status": "PASS"
+          },
+          {
+            "label": "Reattaching and submitting supplies actual authorized UTF-8 file contents to the production model request",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "62f5e857fa488f8792abe0b379c1929a4cfab09fa01df233e545be0ac526759a",
+        "screenshotSha256": "628c5d57a605961dcf11b746b238b04ddf6e74da38fbc54e4218b2014ea52f8c"
+      },
+      {
+        "name": "files-and-panel-layout",
+        "viewport": "narrow",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "A real file tree double-click opens a separate actual content preview tab",
+            "status": "PASS"
+          },
+          {
+            "label": "Preview wrap/reload, fullscreen restore and available split controls remain reachable",
+            "status": "PASS",
+            "detail": {
+              "panes": 1
+            }
+          },
+          {
+            "label": "Closing/reopening the sidebar retains its preview panes without page-wide horizontal overflow",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "f82b11f4997240ccee839b6c92affebee9ae157e7239159f273b2ce4b2192939",
+        "screenshotSha256": "ba510172903a2342f91757b49e20957bc2f73855881a2a90a600863833beb280"
+      },
+      {
+        "name": "shortcuts-persist-conflict-reset",
+        "viewport": "narrow",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "An edited shortcut persists through real reload and actually creates one new session",
+            "status": "PASS"
+          },
+          {
+            "label": "An actual conflicting shortcut is rejected with its existing command name",
+            "status": "PASS"
+          },
+          {
+            "label": "Confirmed restore removes the custom command binding without a hidden navigation",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "35ddf316dc9edd5a2a1cafa2dbbaca3a063c0727020f0c5fa97655ddf90a0d27",
+        "screenshotSha256": "9f7757a3134dee13104501770d5ac56e037495e9f96672b00086ac9356d3110c"
+      },
+      {
+        "name": "settings-font-and-locale",
+        "viewport": "narrow",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "Font increase/decrease updates the actual conversation layout variable",
+            "status": "PASS"
+          },
+          {
+            "label": "The actual language setting localizes native coding controls and keeps them inside the viewport",
+            "status": "PASS"
+          },
+          {
+            "label": "Returning to English updates native coding components and survives an actual reload",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "9b34aa5ab01156abc7749f1e55c1ab486f14fbc5c0e0b2ac3a70b7f82963f298",
+        "screenshotSha256": "7cf56b91e66e871ba10a8b1e6560f7d4159565774d49134fb5d4a1f42d217ce2"
+      },
+      {
+        "name": "capabilities-and-task-filters",
+        "viewport": "narrow",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "A Web host without a native configuration opener does not advertise that unavailable action",
+            "status": "PASS"
+          },
+          {
+            "label": "Removed plugin, preset, version and floating coding surfaces have no remaining user-facing entry",
+            "status": "PASS"
+          },
+          {
+            "label": "Permission labels wait for actual saved state during a real TCP pause and remain correct after reload",
+            "status": "PASS"
+          },
+          {
+            "label": "The real automation catalog responds to its three list filters without inventing an installed plugin",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "7114472057f2bdba4f64a0a1839c59d61f4b10ad8d5f9309aa445dfdc97106ad",
+        "screenshotSha256": "be9795e66e32daa2123b50217b66cb20f7e38395bb753aa89e19eb91de840600"
+      },
+      {
+        "name": "sidebar-pin-search-filters",
+        "viewport": "narrow",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "Pinning a real selected session survives reload and exposes its inverse action",
+            "status": "PASS"
+          },
+          {
+            "label": "The actual session search finds the matching named session",
+            "status": "PASS"
+          },
+          {
+            "label": "Archive filtering hides/restores active sessions and Unpin reaches its real owner",
+            "status": "PASS"
+          }
+        ],
+        "errors": [],
+        "scenarioRawSha256": "be28f34e89ed7f76d921aebef944994c808c5e92d42f6f0b8183df869ac47060",
+        "screenshotSha256": "4c426c1f05482ba814c9716b65b0808dfe427a9e5b450169a83f6adf392fe2bb"
+      }
+    ]
+  },
+  "paidModelCalls": 0,
+  "realModelQuality": "NOT_PROVEN",
+  "artifactQualification": {
+    "completeRawBrowserBodiesAndScreenshotsIncluded": false,
+    "fullBrowserCompiledManifestIncluded": false,
+    "browserCompiledFilesLocallyRehashed": 1050,
+    "nativeWindows": "PENDING exact final SHA; no simulated pass"
+  }
+}

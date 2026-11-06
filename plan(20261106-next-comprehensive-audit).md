@@ -29,3 +29,7 @@ Windows仅在原102文件末尾追加5文件，原46必选断言及报告解析�
 ## 完成标准
 
 先保留最终同一测试版本的RED/GREEN及原始日志；干净源码构建、完整pnpm test、相关安全回归、真实CLI/Web、48臂托管命令协议与桌面/两种窄视口浏览器。普通提交和推送main后复核精确SHA全部四组CI；记录实际Windows而非模拟。模型全部为本地脚本服务，模型真实任务质量NOT_PROVEN；不发release，不声称扫清所有潜在问题。
+
+## 本地验收完成
+
+干净源码 `988c0b7cc1dd157f92fd3ec0c9baf690a8efa2f8`：强制构建通过，完整pnpm test 10735通过/16跳过（701文件通过/2跳过）；原27项同版本RED 25失败/2通过。实际CLI/Web58断言、19HTTP，托管48臂、浏览器42场景/120检查通过。原始日志及限定说明见 [本轮归档](docs/evidence/next-comprehensive-audit-20261106/README.md)。最终main推送后复核精确SHA四组CI，当前不预填通过。

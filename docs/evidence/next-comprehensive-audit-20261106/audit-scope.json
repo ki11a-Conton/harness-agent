@@ -1,0 +1,74 @@
+{
+  "source": "988c0b7cc1dd157f92fd3ec0c9baf690a8efa2f8",
+  "observedAt": "2026-11-06T13:16:04.831859+00:00",
+  "scope": [
+    {
+      "area": "模型协议",
+      "inspected": [
+        "packages/model/src/openai.ts",
+        "packages/model/src/sse-event-decoder.ts"
+      ],
+      "confirmed": [
+        "N1",
+        "N2"
+      ],
+      "qualification": "实际HTTP乱序工具调用/重试及同版本新增回归；超大SSE行只列候选，不宣称已修复。"
+    },
+    {
+      "area": "长任务恢复和输入",
+      "inspected": [
+        "packages/core/src/runtime/session-actor.ts",
+        "packages/core/src/runtime/recovery-controller.ts",
+        "packages/session/src/inbox.ts",
+        "packages/session/src/ask-user-store.ts"
+      ],
+      "confirmed": [
+        "N3",
+        "N4"
+      ],
+      "qualification": "实际JSONL读写/故障和预留并发；不认领其他store跨实例缓存。"
+    },
+    {
+      "area": "上下文和记忆",
+      "inspected": [
+        "packages/core/src/runtime/history-carryover.ts",
+        "packages/core/src/runtime/history-carryover.test.ts",
+        "packages/context/src/compaction.ts",
+        "packages/harness/src/context-wiring.integration.test.ts"
+      ],
+      "confirmed": [],
+      "qualification": "复核保护源、摘要身份、上下文接线。摘要只取早期前缀可能影响质量，尚无完整长任务质量复现，不以策略猜测改Runtime。"
+    },
+    {
+      "area": "工具进程和工作区",
+      "inspected": [
+        "packages/tools/src/managed-commands.ts",
+        "packages/harness/src/context-wiring.integration.test.ts"
+      ],
+      "confirmed": [],
+      "qualification": "复核journal完成、workspace barrier、owner取消/close、verification，不重认领上轮修复；真实48臂协议结果单列。"
+    },
+    {
+      "area": "Web组件和模型路由",
+      "inspected": [
+        "apps/web/src/deepseek/transport.ts",
+        "apps/web/src/deepseek/session.ts",
+        "apps/web/src/deepseek/catalog.ts"
+      ],
+      "confirmed": [],
+      "qualification": "复核断连/取消、RPC和冻结模型owner；浏览器和全部CI结果待实际回执。不声称穷尽所有控件或实体设备。"
+    },
+    {
+      "area": "验收和发布边界",
+      "inspected": [
+        "AGENTS.md",
+        ".github/workflows/windows-acceptance.yml",
+        "scripts/ci/windows-acceptance-report.mjs",
+        "vitest.config.ts"
+      ],
+      "confirmed": [],
+      "qualification": "native测试只追加；必选46解析器未变；本轮不发布release、不调用付费模型。"
+    }
+  ],
+  "limitations": "Code review plus scoped executable checks, not a proof of absence of all bugs."
+}

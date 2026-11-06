@@ -1,4 +1,4 @@
-当前任务：[2026-11-06 下一轮全面审查](plan(20261106-next-comprehensive-audit).md)；[任务合同](tasks/NEXT-COMPREHENSIVE-AUDIT-20261106.md)。基线3e4f6e73，上一轮已完成；新增问题先复现再修复，保持原预算和安全边界。
+当前任务：[2026-11-06 下一轮全面审查](plan(20261106-next-comprehensive-audit).md)；[任务合同](tasks/NEXT-COMPREHENSIVE-AUDIT-20261106.md)。基线3e4f6e73，本轮4组新增问题修复；干净源码988c0b7c全量10735通过/16跳过、真实CLI/Web及42场景/120检查通过；精确main CI推送后复核。原失败和限定见本轮归档。
 
 当前任务：[2026-11-06 全面审查恢复与交付](plan(20261106-comprehensive-audit-recovery).md)；[任务合同](tasks/COMPREHENSIVE-AUDIT-20261106.md)。六组运行缺陷及分类装置修复已重新取得确定性RED/GREEN、干净源码全量10708通过/16跳过，CLI/Web和42场景/120浏览器检查通过；精确main CI在推送后复核。11月5日临时证据丢失，当前使用11月6日新原始证据。
 

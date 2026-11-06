@@ -1,0 +1,175 @@
+{
+  "sourceSha": "43905ca6e7d9895704d565e6be9a8776dcd91a0e",
+  "sourceStatus": "",
+  "cases": [
+    {
+      "name": "initial read cannot race a writer into overwriting existing tasks",
+      "durable": [
+        {
+          "id": "prompt_973766b1-482c-429b-a362-631fd500bb4d",
+          "sessionId": "session_f313d611-1336-4720-b03b-bd61d8eaa466",
+          "text": "newly admitted task",
+          "kind": "followup",
+          "status": "pending",
+          "admittedAt": 1793969360409
+        }
+      ],
+      "pass": false
+    },
+    {
+      "name": "read failure cannot permanently latch an empty cache",
+      "error": {
+        "name": "Error",
+        "code": "EISDIR"
+      },
+      "durable": [
+        {
+          "id": "prompt_72ab6d8e-4458-49c4-abd6-b853bfed00d7",
+          "sessionId": "session_2f245b97-fd26-49ef-93b3-23a20dbbfb7f",
+          "text": "task after read recovered",
+          "kind": "followup",
+          "status": "pending",
+          "admittedAt": 1793969360410
+        }
+      ],
+      "pass": false
+    },
+    {
+      "name": "failed write cannot publish an uncommitted task through a later successful write",
+      "error": {
+        "name": "Error",
+        "code": "EISDIR"
+      },
+      "durable": [
+        {
+          "id": "prompt_fca5e7e5-3826-421c-83f5-153d528ff8a6",
+          "sessionId": "session_ebaca06a-4b23-4f19-8a33-7ae4569a2cba",
+          "text": "original pending task",
+          "kind": "followup",
+          "status": "pending",
+          "admittedAt": 1793969360411
+        },
+        {
+          "id": "prompt_7f14551c-76e1-482d-998d-6b073847a97e",
+          "sessionId": "session_ebaca06a-4b23-4f19-8a33-7ae4569a2cba",
+          "text": "MUST_NOT_APPEAR_AFTER_FAILED_ADMISSION",
+          "kind": "followup",
+          "status": "pending",
+          "admittedAt": 1793969360411
+        },
+        {
+          "id": "prompt_a0f79a6b-6328-4ee6-9a85-de89b8311621",
+          "sessionId": "session_ebaca06a-4b23-4f19-8a33-7ae4569a2cba",
+          "text": "successful later task",
+          "kind": "followup",
+          "status": "pending",
+          "admittedAt": 1793969360412
+        }
+      ],
+      "pass": false
+    },
+    {
+      "name": "failed durable bind cannot authorize consuming an unpromoted prompt",
+      "error": {
+        "name": "Error",
+        "code": "EISDIR"
+      },
+      "durable": [
+        {
+          "id": "prompt_5a26788a-9172-43f2-862f-9bdcaebcbd51",
+          "sessionId": "session_5b5f5611-653d-4ad1-925c-bbd98175180c",
+          "text": "original pending task",
+          "kind": "followup",
+          "status": "consumed",
+          "admittedAt": 1793969360412,
+          "promotedAt": 1793969360413,
+          "promotedTurnId": "turn_ea7ae315-7ed0-4f1c-bd2a-c931d89ebfe7",
+          "consumedAt": 1793969360413
+        }
+      ],
+      "pass": false
+    },
+    {
+      "name": "concurrent reservations are single flight (warm=false)",
+      "reservations": [
+        {
+          "id": "fup-1",
+          "input": {
+            "sessionId": "session_974491c5-4278-4f9b-b8cd-fd05ae3d252e",
+            "text": "first"
+          }
+        },
+        {
+          "id": "fup-2",
+          "input": {
+            "sessionId": "session_974491c5-4278-4f9b-b8cd-fd05ae3d252e",
+            "text": "second"
+          }
+        }
+      ],
+      "pending": 0,
+      "durable": [
+        {
+          "id": "prompt_dd6a968c-efc1-44bf-a4ed-9a34a08fae46",
+          "sessionId": "session_974491c5-4278-4f9b-b8cd-fd05ae3d252e",
+          "text": "first",
+          "kind": "followup",
+          "status": "pending",
+          "admittedAt": 1793969360415
+        },
+        {
+          "id": "prompt_294837f3-4531-42cd-8aeb-3e21f180e8fb",
+          "sessionId": "session_974491c5-4278-4f9b-b8cd-fd05ae3d252e",
+          "text": "second",
+          "kind": "followup",
+          "status": "pending",
+          "admittedAt": 1793969360415
+        }
+      ],
+      "pass": false
+    },
+    {
+      "name": "concurrent reservations are single flight (warm=true)",
+      "reservations": [
+        {
+          "id": "fup-1",
+          "input": {
+            "sessionId": "session_e2d9f1d5-0cee-4b11-82fa-1bf63abbe9d0",
+            "text": "first"
+          }
+        },
+        {
+          "id": "fup-2",
+          "input": {
+            "sessionId": "session_e2d9f1d5-0cee-4b11-82fa-1bf63abbe9d0",
+            "text": "second"
+          }
+        }
+      ],
+      "pending": 0,
+      "durable": [
+        {
+          "id": "prompt_9263c3ab-e6fe-46ea-a068-22fbd8acd088",
+          "sessionId": "session_e2d9f1d5-0cee-4b11-82fa-1bf63abbe9d0",
+          "text": "first",
+          "kind": "followup",
+          "status": "pending",
+          "admittedAt": 1793969360416
+        },
+        {
+          "id": "prompt_59d45cda-dfa3-4b9d-a257-6fdb5cf8e556",
+          "sessionId": "session_e2d9f1d5-0cee-4b11-82fa-1bf63abbe9d0",
+          "text": "second",
+          "kind": "followup",
+          "status": "pending",
+          "admittedAt": 1793969360417
+        }
+      ],
+      "pass": false
+    }
+  ],
+  "passed": 0,
+  "failed": 6,
+  "actualFilesystem": true,
+  "paidModelCalls": 0
+}

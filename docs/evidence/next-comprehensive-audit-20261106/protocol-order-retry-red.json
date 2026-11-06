@@ -1,0 +1,181 @@
+{
+  "sourceSha": "43905ca6e7d9895704d565e6be9a8776dcd91a0e",
+  "sourceStatus": "",
+  "wireArrivalIndexes": [
+    1,
+    0
+  ],
+  "toolOrder": [
+    "edit_file",
+    "write_file"
+  ],
+  "actualFile": "export const result = 1;\n",
+  "outcome": {
+    "status": "failed",
+    "error": {
+      "code": "VERIFICATION_FAILED",
+      "message": "command: /opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node: exited with code 1",
+      "retryable": false,
+      "safeToRetry": false
+    }
+  },
+  "verification": [
+    {
+      "id": "event_906ad241-f40b-4370-b6df-d370f1d8297f",
+      "sessionId": "session_fde3d55f-a8e3-40e6-9acb-e364a6eecc72",
+      "sequence": 29,
+      "timestamp": 1793969074971,
+      "type": "verification.step_started",
+      "payload": {
+        "ref": "verification.step:command:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "kind": "command",
+        "description": "command"
+      },
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_9d1d6ed9-e58d-4bd9-92e9-9dc8b9880290",
+      "sessionId": "session_fde3d55f-a8e3-40e6-9acb-e364a6eecc72",
+      "sequence": 35,
+      "timestamp": 1793969075001,
+      "type": "verification.step_completed",
+      "payload": {
+        "ref": "verification.step:command:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "kind": "command",
+        "description": "command",
+        "passed": false,
+        "detail": "exit code 1 in 26ms"
+      },
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_5df35729-73cb-46f0-aa17-480bea637c40",
+      "sessionId": "session_fde3d55f-a8e3-40e6-9acb-e364a6eecc72",
+      "turnId": "turn_d6c2cf66-c9d2-4523-a81d-417e8d320e39",
+      "timestamp": 1793969075001,
+      "type": "verification.failed",
+      "payload": {
+        "error": "command: /opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node: exited with code 1",
+        "attempt": 1,
+        "maxAttempts": 3,
+        "durationMs": 31
+      },
+      "sequence": 36
+    },
+    {
+      "id": "event_fb959a20-5b0f-4895-adfc-349405ee13f3",
+      "sessionId": "session_fde3d55f-a8e3-40e6-9acb-e364a6eecc72",
+      "sequence": 45,
+      "timestamp": 1793969075006,
+      "type": "verification.step_started",
+      "payload": {
+        "ref": "verification.step:command:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "kind": "command",
+        "description": "command"
+      },
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_2774a26f-3e4c-4f6f-ba9d-61dbd9305ce5",
+      "sessionId": "session_fde3d55f-a8e3-40e6-9acb-e364a6eecc72",
+      "sequence": 51,
+      "timestamp": 1793969075030,
+      "type": "verification.step_completed",
+      "payload": {
+        "ref": "verification.step:command:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "kind": "command",
+        "description": "command",
+        "passed": false,
+        "detail": "exit code 1 in 22ms"
+      },
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_13f98888-08e8-46ac-bd88-36a89f9cc3d0",
+      "sessionId": "session_fde3d55f-a8e3-40e6-9acb-e364a6eecc72",
+      "turnId": "turn_d6c2cf66-c9d2-4523-a81d-417e8d320e39",
+      "timestamp": 1793969075030,
+      "type": "verification.failed",
+      "payload": {
+        "error": "command: /opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node: exited with code 1",
+        "attempt": 2,
+        "maxAttempts": 3,
+        "durationMs": 24
+      },
+      "sequence": 52
+    },
+    {
+      "id": "event_705c9267-f91e-44a8-83b2-42180897c4b1",
+      "sessionId": "session_fde3d55f-a8e3-40e6-9acb-e364a6eecc72",
+      "sequence": 61,
+      "timestamp": 1793969075035,
+      "type": "verification.step_started",
+      "payload": {
+        "ref": "verification.step:command:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "kind": "command",
+        "description": "command"
+      },
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_f5e83aeb-71b0-4348-9730-0c5ffece0ae6",
+      "sessionId": "session_fde3d55f-a8e3-40e6-9acb-e364a6eecc72",
+      "sequence": 67,
+      "timestamp": 1793969075057,
+      "type": "verification.step_completed",
+      "payload": {
+        "ref": "verification.step:command:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "kind": "command",
+        "description": "command",
+        "passed": false,
+        "detail": "exit code 1 in 22ms"
+      },
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_01d7b708-b586-4857-8536-b8a89208d570",
+      "sessionId": "session_fde3d55f-a8e3-40e6-9acb-e364a6eecc72",
+      "turnId": "turn_d6c2cf66-c9d2-4523-a81d-417e8d320e39",
+      "timestamp": 1793969075057,
+      "type": "verification.failed",
+      "payload": {
+        "error": "command: /opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node: exited with code 1",
+        "attempt": 3,
+        "maxAttempts": 3,
+        "durationMs": 22
+      },
+      "sequence": 68
+    }
+  ],
+  "codingRequests": 4,
+  "retryRequests": 2,
+  "retryElapsedMs": 32,
+  "retryTerminal": [
+    {
+      "type": "error",
+      "error": {
+        "code": "MODEL_ERROR",
+        "message": "OpenAI chat completion failed: HTTP 429: controlled rate limit",
+        "retryable": false,
+        "safeToRetry": false,
+        "evidence": "{\"schema\":\"ar.provider-diagnostics.v1\",\"reason\":\"http_status\",\"status\":429,\"endpointDigest\":\"533c847474c7aaa2\",\"modelDigest\":\"b7b771a82088e3e6\",\"request\":{\"messageCount\":0,\"roles\":[],\"toolCallCount\":0,\"toolResultCount\":0,\"toolNames\":[],\"contentBytes\":0,\"toolArgumentBytes\":0,\"toolOutputBytes\":0,\"advertisedToolNames\":[],\"advertisedToolCount\":0},\"toolCallIdCorrelation\":[],\"unansweredToolCallIds\":[],\"orphanToolResultIndexes\":[],\"correlationTruncated\":false,\"redacted\":true,\"contentRetained\":false}",
+        "cause": 429,
+        "provider": {
+          "kind": "rate_limit",
+          "status": 429,
+          "retryAfterMs": 2147484000
+        }
+      },
+      "timestamp": 1793969075065
+    }
+  ],
+  "checks": {
+    "orderedActualTools": false,
+    "correctActualFile": false,
+    "completed": false,
+    "longRetryHonored": false,
+    "deadlineReported": false
+  },
+  "paidModelCalls": 0,
+  "quality": "Scripted loopback protocol/coding harness proof, not model quality"
+}
