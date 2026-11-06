@@ -1,0 +1,49 @@
+{
+  "sourceSha": "6d5b3c5fb68118ebfa07ebe21a9da07fd04f2671",
+  "baselineSha": "a8596ed09a7186ad8118c264ff5c9edab99579b3",
+  "status": "PASS",
+  "sourceTreeClean": true,
+  "sparse": false,
+  "trackedFiles": 13590,
+  "changedFiles": {
+    ".github/workflows/windows-acceptance.yml": "307fe3a88294dd29778974f790cba7f05fff04282e175714d8f77e2004ccd6b8",
+    "packages/harness/src/invalid-memory-production.regressions.test.ts": "6a95973b648dba07842d8de20d1c563c3cc23812414cc4ef5c40f0fe6b4a3361",
+    "packages/memory/src/invalid-memory.regressions.test.ts": "4887e847b39195d12e1163b5356042d94e0b2e6a7d0f305279ba96ce273da0cc",
+    "packages/memory/src/lifecycle.ts": "25446c1231b13c00c8f07bfa4440dbf9dc8dd852f3f84eac2b75e27f033f3658",
+    "packages/memory/src/retrieval.ts": "117e5d06e3de0dcbc8f9f7e3322d4fc320d57a0a3aa963a26623642597ecf595",
+    "packages/memory/src/security-gate.ts": "c78d232728bf3bde27788b88975e1d604db3a377b6271971d3a379d5ba84e46b",
+    "packages/security/src/canonical-path.ts": "ee0737c5e05c80b1a69e74873a7ea4eccc1bf7d99e7406519a61a31ad94eda93",
+    "packages/security/src/dangling-path.regressions.test.ts": "5658868df3b9ce6d2e97bf8e6107ab56b97230dbf7856e8206c2768a9ef815ed",
+    "packages/security/src/sandbox.ts": "cba868399f052c450762837490913556c8444643d48d5c2cd67c37595892524b",
+    "packages/skills/package.json": "a5826127ecf7e2323e1d13cee47e118dfe4481ee3658fc5f43647c23528687a9",
+    "packages/skills/src/skill-store-concurrency.regressions.test.ts": "8f66fa44af5fc417b7cdf97f6a1b8c53c15cdefc0324973b30368ede4fe9c6a5",
+    "packages/skills/src/skill-store.ts": "b99c8cc9c3516ef8eb45151eebcf81edacf989dc3d2647fecb74a13a3d1b77bc",
+    "packages/skills/tsconfig.json": "8318725ea2727a84c0ae100caac7a81e87320ce967dadb247c783b6de7cc97fe",
+    "packages/tools/src/edit-file-resource.regressions.test.ts": "cd9490a4bd9ae1cca5b06cc30f29429e08a1d3af5843a245e94b614ab8c6802d",
+    "packages/tools/src/file-coordination.ts": "43de994565ea3e5551d70e1574cafd37b3ce48b1af83116f3ca519a7f94e829b",
+    "packages/tools/src/file-create-integrity.regressions.test.ts": "0ff5a3a6c2ddc1fc1e95493a7b96ba031cb1763380e0730dd3c08905721a2a91",
+    "plan(20261106-coding-integrity-audit).md": "3f897e955ad5c72e972656f20bc40b4b16c83ab45fb6f35597c32640d2e944e1",
+    "plan.md": "76d8e6827a077bbb3cceab3dc3c7c67c403148aaeb53c73dbf33f08da4394e62",
+    "pnpm-lock.yaml": "de1ab34d573b892c27999be73da47c3192b715ef58903aa5cc923a964c0545bb",
+    "tasks/CODING-INTEGRITY-AUDIT-20261106.md": "614a3a98fded304b54306739587106bf06c95c8101c6c5dd274c023d28bdd080"
+  },
+  "sameRedGreenTestHashes": true,
+  "native": {
+    "oldFiles": 107,
+    "newFiles": 112,
+    "appended": [
+      "packages/memory/src/invalid-memory.regressions.test.ts",
+      "packages/skills/src/skill-store-concurrency.regressions.test.ts",
+      "packages/tools/src/file-create-integrity.regressions.test.ts",
+      "packages/security/src/dangling-path.regressions.test.ts",
+      "packages/harness/src/invalid-memory-production.regressions.test.ts"
+    ],
+    "requiredCheckerUnchanged": true,
+    "priorRequired": 46,
+    "newPosixOnlyCasesSkippedOnWindows": 15
+  },
+  "testExclusionsUnchanged": true,
+  "externalDependencyVersionsUnchanged": true,
+  "paidModelCalls": 0,
+  "realModelQuality": "NOT_PROVEN"
+}

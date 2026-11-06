@@ -1,0 +1,37 @@
+{
+  "startedAt": "2026-11-06T16:44:24.534011+00:00",
+  "sourceBefore": {
+    "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+    "branch": "fix/coding-integrity-audit-20261106",
+    "status": "M packages/memory/src/lifecycle.ts\n M packages/memory/src/retrieval.ts\n M packages/memory/src/security-gate.ts\n M packages/security/src/canonical-path.ts\n M packages/security/src/dangling-path.regressions.test.ts\n M packages/skills/src/skill-store.ts\n M packages/tools/src/file-coordination.ts\n M packages/tools/src/file-create-integrity.regressions.test.ts\n M plan(20261106-coding-integrity-audit).md",
+    "sparse": ""
+  },
+  "command": [
+    "pnpm",
+    "exec",
+    "vitest",
+    "run",
+    "packages/memory/src/invalid-memory.regressions.test.ts",
+    "packages/skills/src/skill-store-concurrency.regressions.test.ts",
+    "packages/tools/src/file-create-integrity.regressions.test.ts",
+    "packages/security/src/dangling-path.regressions.test.ts",
+    "packages/harness/src/invalid-memory-production.regressions.test.ts",
+    "--reporter=json",
+    "--outputFile=/dev/shm/harness-coding-integrity-audit-20261106/repros/delivery-baseline-red.vitest.json"
+  ],
+  "node": "v24.19.0",
+  "status": "FAIL",
+  "log": "/dev/shm/harness-coding-integrity-audit-20261106/repros/delivery-baseline-red.log",
+  "paidModelCalls": 0,
+  "finishedAt": "2026-11-06T16:44:27.292670+00:00",
+  "durationSeconds": 2.730908220000856,
+  "exitCode": 1,
+  "sourceAfter": {
+    "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+    "branch": "fix/coding-integrity-audit-20261106",
+    "status": "M packages/memory/src/lifecycle.ts\n M packages/memory/src/retrieval.ts\n M packages/memory/src/security-gate.ts\n M packages/security/src/canonical-path.ts\n M packages/security/src/dangling-path.regressions.test.ts\n M packages/skills/src/skill-store.ts\n M packages/tools/src/file-coordination.ts\n M packages/tools/src/file-create-integrity.regressions.test.ts\n M plan(20261106-coding-integrity-audit).md",
+    "sparse": ""
+  },
+  "logBytes": 333,
+  "logSha256": "d26126df90aa82857492ec19347369835181e5c86603656530a1748df96cc910"
+}

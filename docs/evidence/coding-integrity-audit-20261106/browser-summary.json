@@ -1,0 +1,853 @@
+{
+  "status": "PASS",
+  "complete": true,
+  "pending": [],
+  "paidModelCalls": 0,
+  "fixture": {
+    "launchId": "66b60d4d-f24d-45b5-8ead-09fbed60400f",
+    "compiledDigest": "7a05717e715276d5fd5d00b968483c5f56a3d8738f0162cfa75d709ba55399dd"
+  },
+  "driverSha256": "a9160a0ad841d1a48c2661e3a9dc1b0fabc6299e68b9147d786d3b79564da200",
+  "engine": {
+    "node": "v24.19.0",
+    "chromium": "151.0.7922.173",
+    "viewportScope": "Desktop Chromium responsive sizes; no physical mobile or Windows claim"
+  },
+  "scope": "Named daily production UI interactions only; not a claim that every visible control is implemented or verified",
+  "sourceShaFromCleanRunner": "6d5b3c5fb68118ebfa07ebe21a9da07fd04f2671",
+  "sourceRootFromActualLaunch": "/tmp/harness-agent-coding-integrity-20261106",
+  "scenarios": 42,
+  "checks": 120,
+  "errors": 0,
+  "results": [
+    {
+      "name": "navigation-draft-ownership",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "A paste immediately after New Session belongs to the new task under real network latency",
+          "status": "PASS"
+        },
+        {
+          "label": "Returning to the previous task preserves its independent composer draft",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "coding-draft-ownership",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "Empty native coding draft cannot submit",
+          "status": "PASS"
+        },
+        {
+          "label": "A/B native coding drafts remain separate through selection",
+          "status": "PASS"
+        },
+        {
+          "label": "Closing native settings retains the selected coding session draft",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "feedback-roundtrip",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "A real positive rating submission updates its assistant control",
+          "status": "PASS"
+        },
+        {
+          "label": "Clicking the recorded rating retracts it",
+          "status": "PASS"
+        },
+        {
+          "label": "A persisted negative rating is restored on the actual lazy hover after reload",
+          "status": "PASS"
+        },
+        {
+          "label": "Message put/delete and session remark exist in actual controlled durable metadata",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "coding-modal-keyboard",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "An assigned New Session shortcut cannot navigate behind the open native settings dialog",
+          "status": "PASS"
+        },
+        {
+          "label": "Escape closes the native dialog and the global shortcut works again",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "coding-diff-ownership",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "A real delayed native diff request stays bound to its announced owner while the other conversation has no leaked change card",
+          "status": "PASS"
+        },
+        {
+          "label": "Selecting the original owner opens its actual captured diff in the native review tab",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "session-reference-menu",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "The actual @ menu discovers a renamed authorized session and inserts its real reference chip",
+          "status": "PASS"
+        },
+        {
+          "label": "Submitting the real reference chip supplies an actual bounded read-only source snapshot to the real HTTP provider",
+          "status": "PASS"
+        },
+        {
+          "label": "Conversation, reload and later reference candidates show readable user text without internal snapshot markers",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "presentation-controls",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "User, code block and assistant copy buttons put their distinct actual contents on the clipboard",
+          "status": "PASS"
+        },
+        {
+          "label": "Actual per-turn usage popover displays the executed provider and token totals",
+          "status": "PASS"
+        },
+        {
+          "label": "Trajectory and Chat tabs retain the actual read tool and conversation",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "input-queue-stop",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "Shift+Enter inserts a real newline without submitting a task",
+          "status": "PASS"
+        },
+        {
+          "label": "Immediate repeated Enter admits one actual running task",
+          "status": "PASS"
+        },
+        {
+          "label": "Queue submits once; double Escape reaches real cancellation and retains unsent input",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "attachment-add-remove-submit",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "Removing a selected file restores an empty unsent composer",
+          "status": "PASS"
+        },
+        {
+          "label": "Reattaching and submitting supplies actual authorized UTF-8 file contents to the production model request",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "files-and-panel-layout",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "A real file tree double-click opens a separate actual content preview tab",
+          "status": "PASS"
+        },
+        {
+          "label": "Preview wrap/reload, fullscreen restore and available split controls remain reachable",
+          "status": "PASS",
+          "detail": {
+            "panes": 2
+          }
+        },
+        {
+          "label": "Closing/reopening the sidebar retains its preview panes without page-wide horizontal overflow",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "shortcuts-persist-conflict-reset",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "An edited shortcut persists through real reload and actually creates one new session",
+          "status": "PASS"
+        },
+        {
+          "label": "An actual conflicting shortcut is rejected with its existing command name",
+          "status": "PASS"
+        },
+        {
+          "label": "Confirmed restore removes the custom command binding without a hidden navigation",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "settings-font-and-locale",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "Font increase/decrease updates the actual conversation layout variable",
+          "status": "PASS"
+        },
+        {
+          "label": "The actual language setting localizes native coding controls and keeps them inside the viewport",
+          "status": "PASS"
+        },
+        {
+          "label": "Returning to English updates native coding components and survives an actual reload",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "capabilities-and-task-filters",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "A Web host without a native configuration opener does not advertise that unavailable action",
+          "status": "PASS"
+        },
+        {
+          "label": "Removed plugin, preset, version and floating coding surfaces have no remaining user-facing entry",
+          "status": "PASS"
+        },
+        {
+          "label": "Permission labels wait for actual saved state during a real TCP pause and remain correct after reload",
+          "status": "PASS"
+        },
+        {
+          "label": "The real automation catalog responds to its three list filters without inventing an installed plugin",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "sidebar-pin-search-filters",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "Pinning a real selected session survives reload and exposes its inverse action",
+          "status": "PASS"
+        },
+        {
+          "label": "The actual session search finds the matching named session",
+          "status": "PASS"
+        },
+        {
+          "label": "Archive filtering hides/restores active sessions and Unpin reaches its real owner",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "navigation-draft-ownership",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "A paste immediately after New Session belongs to the new task under real network latency",
+          "status": "PASS"
+        },
+        {
+          "label": "Returning to the previous task preserves its independent composer draft",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "coding-draft-ownership",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "Empty native coding draft cannot submit",
+          "status": "PASS"
+        },
+        {
+          "label": "A/B native coding drafts remain separate through selection",
+          "status": "PASS"
+        },
+        {
+          "label": "Closing native settings retains the selected coding session draft",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "feedback-roundtrip",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "A real positive rating submission updates its assistant control",
+          "status": "PASS"
+        },
+        {
+          "label": "Clicking the recorded rating retracts it",
+          "status": "PASS"
+        },
+        {
+          "label": "A persisted negative rating is restored on the actual lazy hover after reload",
+          "status": "PASS"
+        },
+        {
+          "label": "Message put/delete and session remark exist in actual controlled durable metadata",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "coding-modal-keyboard",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "An assigned New Session shortcut cannot navigate behind the open native settings dialog",
+          "status": "PASS"
+        },
+        {
+          "label": "Escape closes the native dialog and the global shortcut works again",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "coding-diff-ownership",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "A real delayed native diff request stays bound to its announced owner while the other conversation has no leaked change card",
+          "status": "PASS"
+        },
+        {
+          "label": "Selecting the original owner opens its actual captured diff in the native review tab",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "session-reference-menu",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "The actual @ menu discovers a renamed authorized session and inserts its real reference chip",
+          "status": "PASS"
+        },
+        {
+          "label": "Submitting the real reference chip supplies an actual bounded read-only source snapshot to the real HTTP provider",
+          "status": "PASS"
+        },
+        {
+          "label": "Conversation, reload and later reference candidates show readable user text without internal snapshot markers",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "presentation-controls",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "User, code block and assistant copy buttons put their distinct actual contents on the clipboard",
+          "status": "PASS"
+        },
+        {
+          "label": "Actual per-turn usage popover displays the executed provider and token totals",
+          "status": "PASS"
+        },
+        {
+          "label": "Trajectory and Chat tabs retain the actual read tool and conversation",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "input-queue-stop",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "Shift+Enter inserts a real newline without submitting a task",
+          "status": "PASS"
+        },
+        {
+          "label": "Immediate repeated Enter admits one actual running task",
+          "status": "PASS"
+        },
+        {
+          "label": "Queue submits once; double Escape reaches real cancellation and retains unsent input",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "attachment-add-remove-submit",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "Removing a selected file restores an empty unsent composer",
+          "status": "PASS"
+        },
+        {
+          "label": "Reattaching and submitting supplies actual authorized UTF-8 file contents to the production model request",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "files-and-panel-layout",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "A real file tree double-click opens a separate actual content preview tab",
+          "status": "PASS"
+        },
+        {
+          "label": "Preview wrap/reload, fullscreen restore and available split controls remain reachable",
+          "status": "PASS",
+          "detail": {
+            "panes": 1
+          }
+        },
+        {
+          "label": "Closing/reopening the sidebar retains its preview panes without page-wide horizontal overflow",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "shortcuts-persist-conflict-reset",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "An edited shortcut persists through real reload and actually creates one new session",
+          "status": "PASS"
+        },
+        {
+          "label": "An actual conflicting shortcut is rejected with its existing command name",
+          "status": "PASS"
+        },
+        {
+          "label": "Confirmed restore removes the custom command binding without a hidden navigation",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "settings-font-and-locale",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "Font increase/decrease updates the actual conversation layout variable",
+          "status": "PASS"
+        },
+        {
+          "label": "The actual language setting localizes native coding controls and keeps them inside the viewport",
+          "status": "PASS"
+        },
+        {
+          "label": "Returning to English updates native coding components and survives an actual reload",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "capabilities-and-task-filters",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "A Web host without a native configuration opener does not advertise that unavailable action",
+          "status": "PASS"
+        },
+        {
+          "label": "Removed plugin, preset, version and floating coding surfaces have no remaining user-facing entry",
+          "status": "PASS"
+        },
+        {
+          "label": "Permission labels wait for actual saved state during a real TCP pause and remain correct after reload",
+          "status": "PASS"
+        },
+        {
+          "label": "The real automation catalog responds to its three list filters without inventing an installed plugin",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "sidebar-pin-search-filters",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "Pinning a real selected session survives reload and exposes its inverse action",
+          "status": "PASS"
+        },
+        {
+          "label": "The actual session search finds the matching named session",
+          "status": "PASS"
+        },
+        {
+          "label": "Archive filtering hides/restores active sessions and Unpin reaches its real owner",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "navigation-draft-ownership",
+      "viewport": "narrow",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "A paste immediately after New Session belongs to the new task under real network latency",
+          "status": "PASS"
+        },
+        {
+          "label": "Returning to the previous task preserves its independent composer draft",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "coding-draft-ownership",
+      "viewport": "narrow",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "Empty native coding draft cannot submit",
+          "status": "PASS"
+        },
+        {
+          "label": "A/B native coding drafts remain separate through selection",
+          "status": "PASS"
+        },
+        {
+          "label": "Closing native settings retains the selected coding session draft",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "feedback-roundtrip",
+      "viewport": "narrow",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "A real positive rating submission updates its assistant control",
+          "status": "PASS"
+        },
+        {
+          "label": "Clicking the recorded rating retracts it",
+          "status": "PASS"
+        },
+        {
+          "label": "A persisted negative rating is restored on the actual lazy hover after reload",
+          "status": "PASS"
+        },
+        {
+          "label": "Message put/delete and session remark exist in actual controlled durable metadata",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "coding-modal-keyboard",
+      "viewport": "narrow",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "An assigned New Session shortcut cannot navigate behind the open native settings dialog",
+          "status": "PASS"
+        },
+        {
+          "label": "Escape closes the native dialog and the global shortcut works again",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "coding-diff-ownership",
+      "viewport": "narrow",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "A real delayed native diff request stays bound to its announced owner while the other conversation has no leaked change card",
+          "status": "PASS"
+        },
+        {
+          "label": "Selecting the original owner opens its actual captured diff in the native review tab",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "session-reference-menu",
+      "viewport": "narrow",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "The actual @ menu discovers a renamed authorized session and inserts its real reference chip",
+          "status": "PASS"
+        },
+        {
+          "label": "Submitting the real reference chip supplies an actual bounded read-only source snapshot to the real HTTP provider",
+          "status": "PASS"
+        },
+        {
+          "label": "Conversation, reload and later reference candidates show readable user text without internal snapshot markers",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "presentation-controls",
+      "viewport": "narrow",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "User, code block and assistant copy buttons put their distinct actual contents on the clipboard",
+          "status": "PASS"
+        },
+        {
+          "label": "Actual per-turn usage popover displays the executed provider and token totals",
+          "status": "PASS"
+        },
+        {
+          "label": "Trajectory and Chat tabs retain the actual read tool and conversation",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "input-queue-stop",
+      "viewport": "narrow",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "Shift+Enter inserts a real newline without submitting a task",
+          "status": "PASS"
+        },
+        {
+          "label": "Immediate repeated Enter admits one actual running task",
+          "status": "PASS"
+        },
+        {
+          "label": "Queue submits once; double Escape reaches real cancellation and retains unsent input",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "attachment-add-remove-submit",
+      "viewport": "narrow",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "Removing a selected file restores an empty unsent composer",
+          "status": "PASS"
+        },
+        {
+          "label": "Reattaching and submitting supplies actual authorized UTF-8 file contents to the production model request",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "files-and-panel-layout",
+      "viewport": "narrow",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "A real file tree double-click opens a separate actual content preview tab",
+          "status": "PASS"
+        },
+        {
+          "label": "Preview wrap/reload, fullscreen restore and available split controls remain reachable",
+          "status": "PASS",
+          "detail": {
+            "panes": 1
+          }
+        },
+        {
+          "label": "Closing/reopening the sidebar retains its preview panes without page-wide horizontal overflow",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "shortcuts-persist-conflict-reset",
+      "viewport": "narrow",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "An edited shortcut persists through real reload and actually creates one new session",
+          "status": "PASS"
+        },
+        {
+          "label": "An actual conflicting shortcut is rejected with its existing command name",
+          "status": "PASS"
+        },
+        {
+          "label": "Confirmed restore removes the custom command binding without a hidden navigation",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "settings-font-and-locale",
+      "viewport": "narrow",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "Font increase/decrease updates the actual conversation layout variable",
+          "status": "PASS"
+        },
+        {
+          "label": "The actual language setting localizes native coding controls and keeps them inside the viewport",
+          "status": "PASS"
+        },
+        {
+          "label": "Returning to English updates native coding components and survives an actual reload",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "capabilities-and-task-filters",
+      "viewport": "narrow",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "A Web host without a native configuration opener does not advertise that unavailable action",
+          "status": "PASS"
+        },
+        {
+          "label": "Removed plugin, preset, version and floating coding surfaces have no remaining user-facing entry",
+          "status": "PASS"
+        },
+        {
+          "label": "Permission labels wait for actual saved state during a real TCP pause and remain correct after reload",
+          "status": "PASS"
+        },
+        {
+          "label": "The real automation catalog responds to its three list filters without inventing an installed plugin",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "sidebar-pin-search-filters",
+      "viewport": "narrow",
+      "status": "PASS",
+      "checks": [
+        {
+          "label": "Pinning a real selected session survives reload and exposes its inverse action",
+          "status": "PASS"
+        },
+        {
+          "label": "The actual session search finds the matching named session",
+          "status": "PASS"
+        },
+        {
+          "label": "Archive filtering hides/restores active sessions and Unpin reaches its real owner",
+          "status": "PASS"
+        }
+      ],
+      "errors": []
+    }
+  ],
+  "rawResultSha256": "aa3530ac4ea91f07b596770b14bf2bb0b07ae417c79b97fd7a86bf816ba500cb",
+  "compiledFilesRehashed": 1055,
+  "compiledManifestSha256": "93747c28845bcf4a6dc5165b4d9f34cde6ee8251bd9928b1bd7405af0d84f679",
+  "compiledDigestRecomputed": true
+}

@@ -1,0 +1,29 @@
+{
+  "baselineSha": "a8596ed09a7186ad8118c264ff5c9edab99579b3",
+  "method": "swap only owned production files to exact git baseline; tests and all assertions unchanged; finally restore candidate bytes",
+  "baselineProduction": {
+    "packages/memory/src/lifecycle.ts": "785201bfbfab78fad4cfe8b5781973e00f5149a5fd2c62559b81890642193fa6",
+    "packages/memory/src/retrieval.ts": "fb1a15b6eab12ee44d0d4e89fce49f6d84b4568c52c85eed32dd2a7f6d77c3c4",
+    "packages/memory/src/security-gate.ts": "35dd1c100d6200a862ac50c3b2f1c0fff1d9feb8b7921e31c8805aed319a5efa",
+    "packages/security/src/canonical-path.ts": "d1dcc1d6afb941d88ada4c2608d1f26439545aaa7b54008dc38e71bc9e9a57f7",
+    "packages/security/src/sandbox.ts": "76a312520e76e3a84eee6dd59cb07ac261fbbc438e41b05c40bd506ddaa0e08d",
+    "packages/skills/src/skill-store.ts": "80eb0076152f2cf46830c8c4e151046220ab34d61d50d036e73d7fb69bda1625",
+    "packages/tools/src/file-coordination.ts": "8c8a2fbf0f701a4090f4541b1e0196760523de4f577ed0dd24a0e83df38f2861"
+  },
+  "candidateProduction": {
+    "packages/memory/src/lifecycle.ts": "25446c1231b13c00c8f07bfa4440dbf9dc8dd852f3f84eac2b75e27f033f3658",
+    "packages/memory/src/retrieval.ts": "117e5d06e3de0dcbc8f9f7e3322d4fc320d57a0a3aa963a26623642597ecf595",
+    "packages/memory/src/security-gate.ts": "c78d232728bf3bde27788b88975e1d604db3a377b6271971d3a379d5ba84e46b",
+    "packages/security/src/canonical-path.ts": "ee0737c5e05c80b1a69e74873a7ea4eccc1bf7d99e7406519a61a31ad94eda93",
+    "packages/security/src/sandbox.ts": "cba868399f052c450762837490913556c8444643d48d5c2cd67c37595892524b",
+    "packages/skills/src/skill-store.ts": "b99c8cc9c3516ef8eb45151eebcf81edacf989dc3d2647fecb74a13a3d1b77bc",
+    "packages/tools/src/file-coordination.ts": "43de994565ea3e5551d70e1574cafd37b3ce48b1af83116f3ca519a7f94e829b"
+  },
+  "tests": {
+    "packages/memory/src/invalid-memory.regressions.test.ts": "4887e847b39195d12e1163b5356042d94e0b2e6a7d0f305279ba96ce273da0cc",
+    "packages/skills/src/skill-store-concurrency.regressions.test.ts": "8f66fa44af5fc417b7cdf97f6a1b8c53c15cdefc0324973b30368ede4fe9c6a5",
+    "packages/tools/src/file-create-integrity.regressions.test.ts": "0ff5a3a6c2ddc1fc1e95493a7b96ba031cb1763380e0730dd3c08905721a2a91",
+    "packages/security/src/dangling-path.regressions.test.ts": "5658868df3b9ce6d2e97bf8e6107ab56b97230dbf7856e8206c2768a9ef815ed",
+    "packages/harness/src/invalid-memory-production.regressions.test.ts": "6a95973b648dba07842d8de20d1c563c3cc23812414cc4ef5c40f0fe6b4a3361"
+  }
+}

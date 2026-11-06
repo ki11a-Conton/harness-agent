@@ -1,0 +1,2447 @@
+{
+  "status": "LOCAL_PASS_CI_PENDING",
+  "sourceSha": "6d5b3c5fb68118ebfa07ebe21a9da07fd04f2671",
+  "baselineSha": "a8596ed09a7186ad8118c264ff5c9edab99579b3",
+  "recordedAt": "2026-11-06T16:55:12.129106+00:00",
+  "formalRed": {
+    "failed": 41,
+    "passedControls": 9,
+    "total": 50,
+    "sameFinalTests": true,
+    "method": "Exact original production files substituted in the owned worktree for Vitest; all seven changed production files hashed and restored byte-for-byte. No claim that the documentation HEAD itself was the original main."
+  },
+  "fullSuite": {
+    "passed": 10785,
+    "skipped": 16,
+    "filesPassed": 706,
+    "filesSkipped": 2
+  },
+  "focusedPassed": 2767,
+  "receipts": {
+    "final-install": {
+      "startedAt": "2026-11-06T16:45:58.884008+00:00",
+      "sourceBefore": {
+        "sha": "6d5b3c5fb68118ebfa07ebe21a9da07fd04f2671",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "install",
+        "--frozen-lockfile",
+        "--store-dir",
+        "/dev/shm/harness-comprehensive-audit-20261106/pnpm-store"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/acceptance/final-install.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:45:59.177291+00:00",
+      "durationSeconds": 0.2700240800004394,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "6d5b3c5fb68118ebfa07ebe21a9da07fd04f2671",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "logBytes": 86,
+      "logSha256": "65313e3d3c3bbb69fa19fcf7a27611a4675c683155b04dd1e12ac7fe5ace5b65"
+    },
+    "final-build": {
+      "startedAt": "2026-11-06T16:45:59.221315+00:00",
+      "sourceBefore": {
+        "sha": "6d5b3c5fb68118ebfa07ebe21a9da07fd04f2671",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "exec",
+        "tsc",
+        "-b",
+        "--force"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/acceptance/final-build.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:46:05.774124+00:00",
+      "durationSeconds": 6.527358302999346,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "6d5b3c5fb68118ebfa07ebe21a9da07fd04f2671",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "logBytes": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "final-full-tests": {
+      "startedAt": "2026-11-06T16:46:05.820322+00:00",
+      "sourceBefore": {
+        "sha": "6d5b3c5fb68118ebfa07ebe21a9da07fd04f2671",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "test"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/acceptance/final-full-tests.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:54:24.137597+00:00",
+      "durationSeconds": 498.29208474799816,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "6d5b3c5fb68118ebfa07ebe21a9da07fd04f2671",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "logBytes": 183294,
+      "logSha256": "106b4030a74f8108e7c6557caaea7af78e9b68e312842d4ffb9de5530ac90410"
+    },
+    "final-cli-web": {
+      "startedAt": "2026-11-06T16:46:25.121565+00:00",
+      "sourceBefore": {
+        "sha": "6d5b3c5fb68118ebfa07ebe21a9da07fd04f2671",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "command": [
+        "node",
+        "scripts/research/coding-prompts-20261008/acceptance.mjs",
+        "/dev/shm/harness-coding-integrity-audit-20261106/acceptance/final-coding-prompts",
+        "coding-v2"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/acceptance/final-cli-web.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:46:38.216966+00:00",
+      "durationSeconds": 13.059143309001229,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "6d5b3c5fb68118ebfa07ebe21a9da07fd04f2671",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "logBytes": 1457,
+      "logSha256": "7d2314067783398da803a91355afa865d7328cc30deddeadb85f6d0044446396"
+    },
+    "final-managed": {
+      "startedAt": "2026-11-06T16:46:25.136970+00:00",
+      "sourceBefore": {
+        "sha": "6d5b3c5fb68118ebfa07ebe21a9da07fd04f2671",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "command": [
+        "node",
+        "scripts/research/managed-commands-20261025/paired.mjs",
+        "/dev/shm/harness-coding-integrity-audit-20261106/acceptance/final-managed-paired"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/acceptance/final-managed.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:48:55.409201+00:00",
+      "durationSeconds": 150.21553004199814,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "6d5b3c5fb68118ebfa07ebe21a9da07fd04f2671",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "logBytes": 4224,
+      "logSha256": "9a562cfcffbe39e90b6077382016f05fd7c63458d8381338f2775e370267b8d8"
+    },
+    "final-browser": {
+      "startedAt": "2026-11-06T16:46:25.112456+00:00",
+      "sourceBefore": {
+        "sha": "6d5b3c5fb68118ebfa07ebe21a9da07fd04f2671",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "command": [
+        "node",
+        "scripts/research/web-daily-20261016/browser-acceptance.mjs",
+        "--output",
+        "/dev/shm/harness-coding-integrity-audit-20261106/acceptance/final-web-browser",
+        "--playwright-module",
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
+        "--viewports",
+        "desktop,mobile,narrow"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/acceptance/final-browser.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:50:22.569390+00:00",
+      "durationSeconds": 237.40965770200273,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "6d5b3c5fb68118ebfa07ebe21a9da07fd04f2671",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "logBytes": 3476,
+      "logSha256": "b24dedcb06eea819d576c69e3a8973f4547c0f9f277191791413f3030fa94bdb"
+    }
+  },
+  "trialReceiptsPreserved": {
+    "root/delivery-build.receipt.json": {
+      "startedAt": "2026-11-06T16:44:56.045192+00:00",
+      "sourceBefore": {
+        "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/security/src/canonical-path.ts\n M packages/security/src/dangling-path.regressions.test.ts\n M packages/security/src/sandbox.ts\n M packages/tools/src/file-create-integrity.regressions.test.ts\n M plan(20261106-coding-integrity-audit).md",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "exec",
+        "tsc",
+        "-b",
+        "--force"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/root/delivery-build.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:45:05.257973+00:00",
+      "durationSeconds": 9.17047283100328,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/security/src/canonical-path.ts\n M packages/security/src/dangling-path.regressions.test.ts\n M packages/security/src/sandbox.ts\n M packages/tools/src/file-create-integrity.regressions.test.ts\n M plan(20261106-coding-integrity-audit).md",
+        "sparse": ""
+      },
+      "logBytes": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "root/final-candidate-build.receipt.json": {
+      "startedAt": "2026-11-06T16:40:24.191574+00:00",
+      "sourceBefore": {
+        "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/security/src/canonical-path.ts\n M packages/security/src/dangling-path.regressions.test.ts\n M packages/tools/src/file-create-integrity.regressions.test.ts\n M plan(20261106-coding-integrity-audit).md",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "exec",
+        "tsc",
+        "-b",
+        "--force"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/root/final-candidate-build.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:40:32.275268+00:00",
+      "durationSeconds": 8.052457085999777,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/security/src/canonical-path.ts\n M packages/security/src/dangling-path.regressions.test.ts\n M packages/tools/src/file-create-integrity.regressions.test.ts\n M plan(20261106-coding-integrity-audit).md",
+        "sparse": ""
+      },
+      "logBytes": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "root/native-build.receipt.json": {
+      "startedAt": "2026-11-06T16:38:55.615222+00:00",
+      "sourceBefore": {
+        "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/security/src/canonical-path.ts\n M packages/security/src/dangling-path.regressions.test.ts\n M packages/tools/src/file-create-integrity.regressions.test.ts",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "exec",
+        "tsc",
+        "-b",
+        "--force"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/root/native-build.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:39:04.467087+00:00",
+      "durationSeconds": 8.816001085997414,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/security/src/canonical-path.ts\n M packages/security/src/dangling-path.regressions.test.ts\n M packages/tools/src/file-create-integrity.regressions.test.ts",
+        "sparse": ""
+      },
+      "logBytes": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "root/candidate-build.receipt.json": {
+      "startedAt": "2026-11-06T16:28:16.326175+00:00",
+      "sourceBefore": {
+        "sha": "d0149f35b39b213bac47a2ee5654e1a25390695c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M .github/workflows/windows-acceptance.yml\n M packages/memory/src/lifecycle.ts\n M packages/memory/src/retrieval.ts\n M packages/memory/src/security-gate.ts\n M packages/security/src/canonical-path.ts\n M packages/skills/package.json\n M packages/skills/src/skill-store.ts\n M packages/skills/tsconfig.json\n M packages/tools/src/file-coordination.ts\n M pnpm-lock.yaml\n?? packages/harness/src/invalid-memory-production.regressions.test.ts\n?? packages/memory/src/invalid-memory.regressions.test.ts\n?? packages/security/src/dangling-path.regressions.test.ts\n?? packages/skills/src/skill-store-concurrency.regressions.test.ts\n?? packages/tools/src/file-create-integrity.regressions.test.ts",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "exec",
+        "tsc",
+        "-b",
+        "--force"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/root/candidate-build.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:28:25.546937+00:00",
+      "durationSeconds": 9.193244370002503,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "d0149f35b39b213bac47a2ee5654e1a25390695c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M .github/workflows/windows-acceptance.yml\n M packages/memory/src/lifecycle.ts\n M packages/memory/src/retrieval.ts\n M packages/memory/src/security-gate.ts\n M packages/security/src/canonical-path.ts\n M packages/skills/package.json\n M packages/skills/src/skill-store.ts\n M packages/skills/tsconfig.json\n M packages/tools/src/file-coordination.ts\n M pnpm-lock.yaml\n?? packages/harness/src/invalid-memory-production.regressions.test.ts\n?? packages/memory/src/invalid-memory.regressions.test.ts\n?? packages/security/src/dangling-path.regressions.test.ts\n?? packages/skills/src/skill-store-concurrency.regressions.test.ts\n?? packages/tools/src/file-create-integrity.regressions.test.ts",
+        "sparse": ""
+      },
+      "logBytes": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "root/third-typecheck.receipt.json": {
+      "startedAt": "2026-11-06T16:25:59.843488+00:00",
+      "sourceBefore": {
+        "sha": "d0149f35b39b213bac47a2ee5654e1a25390695c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M .github/workflows/windows-acceptance.yml\n M packages/memory/src/lifecycle.ts\n M packages/memory/src/retrieval.ts\n M packages/memory/src/security-gate.ts\n M packages/security/src/canonical-path.ts\n M packages/skills/package.json\n M packages/skills/src/skill-store.ts\n M packages/skills/tsconfig.json\n M packages/tools/src/file-coordination.ts\n M pnpm-lock.yaml\n?? packages/harness/src/invalid-memory-production.regressions.test.ts\n?? packages/memory/src/invalid-memory.regressions.test.ts\n?? packages/security/src/dangling-path.regressions.test.ts\n?? packages/skills/src/skill-store-concurrency.regressions.test.ts\n?? packages/tools/src/file-create-integrity.regressions.test.ts",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "typecheck"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/root/third-typecheck.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:26:01.458780+00:00",
+      "durationSeconds": 1.5730905919990619,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "d0149f35b39b213bac47a2ee5654e1a25390695c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M .github/workflows/windows-acceptance.yml\n M packages/memory/src/lifecycle.ts\n M packages/memory/src/retrieval.ts\n M packages/memory/src/security-gate.ts\n M packages/security/src/canonical-path.ts\n M packages/skills/package.json\n M packages/skills/src/skill-store.ts\n M packages/skills/tsconfig.json\n M packages/tools/src/file-coordination.ts\n M pnpm-lock.yaml\n?? packages/harness/src/invalid-memory-production.regressions.test.ts\n?? packages/memory/src/invalid-memory.regressions.test.ts\n?? packages/security/src/dangling-path.regressions.test.ts\n?? packages/skills/src/skill-store-concurrency.regressions.test.ts\n?? packages/tools/src/file-create-integrity.regressions.test.ts",
+        "sparse": ""
+      },
+      "logBytes": 9,
+      "logSha256": "faeaa94bcf7012d86f91ca647580449f56a263fb7eaf572c54789764f60a9b8f"
+    },
+    "root/second-typecheck.receipt.json": {
+      "startedAt": "2026-11-06T16:24:36.446389+00:00",
+      "sourceBefore": {
+        "sha": "d0149f35b39b213bac47a2ee5654e1a25390695c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/memory/src/lifecycle.ts\n M packages/memory/src/retrieval.ts\n M packages/memory/src/security-gate.ts\n M packages/security/src/canonical-path.ts\n M packages/skills/package.json\n M packages/skills/src/skill-store.ts\n M packages/skills/tsconfig.json\n M packages/tools/src/file-coordination.ts\n M pnpm-lock.yaml\n?? packages/harness/src/invalid-memory-production.regressions.test.ts\n?? packages/memory/src/invalid-memory.regressions.test.ts\n?? packages/security/src/dangling-path.regressions.test.ts\n?? packages/skills/src/skill-store-concurrency.regressions.test.ts\n?? packages/tools/src/file-create-integrity.regressions.test.ts",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "typecheck"
+      ],
+      "node": "v24.19.0",
+      "status": "FAIL",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/root/second-typecheck.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:24:38.881201+00:00",
+      "durationSeconds": 2.4070718319999287,
+      "exitCode": 1,
+      "sourceAfter": {
+        "sha": "d0149f35b39b213bac47a2ee5654e1a25390695c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/memory/src/lifecycle.ts\n M packages/memory/src/retrieval.ts\n M packages/memory/src/security-gate.ts\n M packages/security/src/canonical-path.ts\n M packages/skills/package.json\n M packages/skills/src/skill-store.ts\n M packages/skills/tsconfig.json\n M packages/tools/src/file-coordination.ts\n M pnpm-lock.yaml\n?? packages/harness/src/invalid-memory-production.regressions.test.ts\n?? packages/memory/src/invalid-memory.regressions.test.ts\n?? packages/security/src/dangling-path.regressions.test.ts\n?? packages/skills/src/skill-store-concurrency.regressions.test.ts\n?? packages/tools/src/file-create-integrity.regressions.test.ts",
+        "sparse": ""
+      },
+      "logBytes": 180,
+      "logSha256": "42196e456ccd982dea0a79be5d74447810adbb79ac5728228c0526480090cec2"
+    },
+    "root/first-typecheck.receipt.json": {
+      "startedAt": "2026-11-06T16:22:58.073676+00:00",
+      "sourceBefore": {
+        "sha": "d0149f35b39b213bac47a2ee5654e1a25390695c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/memory/src/lifecycle.ts\n M packages/memory/src/retrieval.ts\n M packages/memory/src/security-gate.ts\n M packages/security/src/canonical-path.ts\n M packages/skills/package.json\n M packages/skills/src/skill-store.ts\n M packages/skills/tsconfig.json\n M packages/tools/src/file-coordination.ts\n M pnpm-lock.yaml\n?? packages/memory/src/invalid-memory.regressions.test.ts\n?? packages/skills/src/skill-store-concurrency.regressions.test.ts\n?? packages/tools/src/file-create-integrity.regressions.test.ts",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "typecheck"
+      ],
+      "node": "v24.19.0",
+      "status": "FAIL",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/root/first-typecheck.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:23:03.720874+00:00",
+      "durationSeconds": 5.607294817000366,
+      "exitCode": 1,
+      "sourceAfter": {
+        "sha": "d0149f35b39b213bac47a2ee5654e1a25390695c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/memory/src/lifecycle.ts\n M packages/memory/src/retrieval.ts\n M packages/memory/src/security-gate.ts\n M packages/security/src/canonical-path.ts\n M packages/skills/package.json\n M packages/skills/src/skill-store.ts\n M packages/skills/tsconfig.json\n M packages/tools/src/file-coordination.ts\n M pnpm-lock.yaml\n?? packages/memory/src/invalid-memory.regressions.test.ts\n?? packages/skills/src/skill-store-concurrency.regressions.test.ts\n?? packages/tools/src/file-create-integrity.regressions.test.ts",
+        "sparse": ""
+      },
+      "logBytes": 326,
+      "logSha256": "ee91ed1cc0e01e9498f002f0a7d6abba31772e1a2e6f403e464ae2eb70aaae8f"
+    },
+    "root/baseline-build.receipt.json": {
+      "startedAt": "2026-11-06T16:11:02.888780+00:00",
+      "sourceBefore": {
+        "sha": "a8596ed09a7186ad8118c264ff5c9edab99579b3",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "exec",
+        "tsc",
+        "-b",
+        "--force"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/root/baseline-build.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:11:10.979336+00:00",
+      "durationSeconds": 8.065305420997902,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "a8596ed09a7186ad8118c264ff5c9edab99579b3",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "logBytes": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "root/frozen-install.receipt.json": {
+      "startedAt": "2026-11-06T16:11:01.834358+00:00",
+      "sourceBefore": {
+        "sha": "a8596ed09a7186ad8118c264ff5c9edab99579b3",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "install",
+        "--frozen-lockfile",
+        "--store-dir",
+        "/dev/shm/harness-comprehensive-audit-20261106/pnpm-store"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/root/frozen-install.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:11:02.841289+00:00",
+      "durationSeconds": 0.9541806409979472,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "a8596ed09a7186ad8118c264ff5c9edab99579b3",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "logBytes": 1363,
+      "logSha256": "5629120d2388303979a375a27e187d0f78122a02e91e1a91a6de1f7f36e278ee"
+    },
+    "repros/delivery-focused.receipt.json": {
+      "startedAt": "2026-11-06T16:44:56.041128+00:00",
+      "sourceBefore": {
+        "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/security/src/canonical-path.ts\n M packages/security/src/dangling-path.regressions.test.ts\n M packages/security/src/sandbox.ts\n M packages/tools/src/file-create-integrity.regressions.test.ts\n M plan(20261106-coding-integrity-audit).md",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "packages/memory/src",
+        "packages/skills/src",
+        "packages/security/src",
+        "packages/tools/src/file-create-integrity.regressions.test.ts",
+        "packages/tools/src/write-file-resource.regressions.test.ts",
+        "packages/tools/src/read-file-resource.regressions.test.ts",
+        "packages/tools/src/edit-file-resource.regressions.test.ts",
+        "packages/tools/src/r4-file-regressions.test.ts",
+        "packages/harness/src/invalid-memory-production.regressions.test.ts",
+        "packages/harness/src/memory-prefetch-production.regressions.test.ts",
+        "packages/harness/src/memory-search-tools.integration.test.ts",
+        "--reporter=json",
+        "--outputFile=/dev/shm/harness-coding-integrity-audit-20261106/repros/delivery-focused.vitest.json"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/repros/delivery-focused.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:45:14.650504+00:00",
+      "durationSeconds": 18.56866180400175,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/security/src/canonical-path.ts\n M packages/security/src/dangling-path.regressions.test.ts\n M packages/security/src/sandbox.ts\n M packages/tools/src/file-create-integrity.regressions.test.ts\n M plan(20261106-coding-integrity-audit).md",
+        "sparse": ""
+      },
+      "logBytes": 2034,
+      "logSha256": "b17bd4c58f14d11ce034f657000e304472aa61d301a79429f36cc9b44d2d7c65"
+    },
+    "repros/delivery-baseline-red.receipt.json": {
+      "startedAt": "2026-11-06T16:44:24.534011+00:00",
+      "sourceBefore": {
+        "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/memory/src/lifecycle.ts\n M packages/memory/src/retrieval.ts\n M packages/memory/src/security-gate.ts\n M packages/security/src/canonical-path.ts\n M packages/security/src/dangling-path.regressions.test.ts\n M packages/skills/src/skill-store.ts\n M packages/tools/src/file-coordination.ts\n M packages/tools/src/file-create-integrity.regressions.test.ts\n M plan(20261106-coding-integrity-audit).md",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "packages/memory/src/invalid-memory.regressions.test.ts",
+        "packages/skills/src/skill-store-concurrency.regressions.test.ts",
+        "packages/tools/src/file-create-integrity.regressions.test.ts",
+        "packages/security/src/dangling-path.regressions.test.ts",
+        "packages/harness/src/invalid-memory-production.regressions.test.ts",
+        "--reporter=json",
+        "--outputFile=/dev/shm/harness-coding-integrity-audit-20261106/repros/delivery-baseline-red.vitest.json"
+      ],
+      "node": "v24.19.0",
+      "status": "FAIL",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/repros/delivery-baseline-red.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:44:27.292670+00:00",
+      "durationSeconds": 2.730908220000856,
+      "exitCode": 1,
+      "sourceAfter": {
+        "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/memory/src/lifecycle.ts\n M packages/memory/src/retrieval.ts\n M packages/memory/src/security-gate.ts\n M packages/security/src/canonical-path.ts\n M packages/security/src/dangling-path.regressions.test.ts\n M packages/skills/src/skill-store.ts\n M packages/tools/src/file-coordination.ts\n M packages/tools/src/file-create-integrity.regressions.test.ts\n M plan(20261106-coding-integrity-audit).md",
+        "sparse": ""
+      },
+      "logBytes": 333,
+      "logSha256": "d26126df90aa82857492ec19347369835181e5c86603656530a1748df96cc910"
+    },
+    "repros/native-backslash-red.receipt.json": {
+      "startedAt": "2026-11-06T16:44:08.498893+00:00",
+      "sourceBefore": {
+        "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/security/src/canonical-path.ts\n M packages/security/src/dangling-path.regressions.test.ts\n M packages/security/src/sandbox.ts\n M packages/tools/src/file-create-integrity.regressions.test.ts\n M plan(20261106-coding-integrity-audit).md",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "packages/tools/src/file-create-integrity.regressions.test.ts",
+        "--testNamePattern=fabricates|dangling backslash",
+        "--reporter=json",
+        "--outputFile=/dev/shm/harness-coding-integrity-audit-20261106/repros/native-backslash-red.vitest.json"
+      ],
+      "node": "v24.19.0",
+      "status": "FAIL",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/repros/native-backslash-red.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:44:09.379429+00:00",
+      "durationSeconds": 0.8503420659981202,
+      "exitCode": 1,
+      "sourceAfter": {
+        "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/security/src/canonical-path.ts\n M packages/security/src/dangling-path.regressions.test.ts\n M packages/security/src/sandbox.ts\n M packages/tools/src/file-create-integrity.regressions.test.ts\n M plan(20261106-coding-integrity-audit).md",
+        "sparse": ""
+      },
+      "logBytes": 112,
+      "logSha256": "2169852e9f3f32a3d0e4f71b34dda765939a20330a5a4a1a71f5cac0c4623700"
+    },
+    "repros/alias-backslash-red.receipt.json": {
+      "startedAt": "2026-11-06T16:43:03.777951+00:00",
+      "sourceBefore": {
+        "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/security/src/canonical-path.ts\n M packages/security/src/dangling-path.regressions.test.ts\n M packages/security/src/sandbox.ts\n M packages/tools/src/file-create-integrity.regressions.test.ts\n M plan(20261106-coding-integrity-audit).md",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "packages/tools/src/file-create-integrity.regressions.test.ts",
+        "--testNamePattern=native target contains",
+        "--reporter=json",
+        "--outputFile=/dev/shm/harness-coding-integrity-audit-20261106/repros/alias-backslash-red.vitest.json"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/repros/alias-backslash-red.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:43:04.668746+00:00",
+      "durationSeconds": 0.8573875260008208,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/security/src/canonical-path.ts\n M packages/security/src/dangling-path.regressions.test.ts\n M packages/security/src/sandbox.ts\n M packages/tools/src/file-create-integrity.regressions.test.ts\n M plan(20261106-coding-integrity-audit).md",
+        "sparse": ""
+      },
+      "logBytes": 111,
+      "logSha256": "393a8bfb1a131a8064ded11144288a95c927d838d83e5bd83ba4493609317986"
+    },
+    "repros/audit-baseline-red.receipt.json": {
+      "startedAt": "2026-11-06T16:41:59.494576+00:00",
+      "sourceBefore": {
+        "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/memory/src/lifecycle.ts\n M packages/memory/src/retrieval.ts\n M packages/memory/src/security-gate.ts\n M packages/security/src/canonical-path.ts\n M packages/security/src/dangling-path.regressions.test.ts\n M packages/skills/src/skill-store.ts\n M packages/tools/src/file-coordination.ts\n M packages/tools/src/file-create-integrity.regressions.test.ts\n M plan(20261106-coding-integrity-audit).md",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "packages/memory/src/invalid-memory.regressions.test.ts",
+        "packages/skills/src/skill-store-concurrency.regressions.test.ts",
+        "packages/tools/src/file-create-integrity.regressions.test.ts",
+        "packages/security/src/dangling-path.regressions.test.ts",
+        "packages/harness/src/invalid-memory-production.regressions.test.ts",
+        "--reporter=json",
+        "--outputFile=/dev/shm/harness-coding-integrity-audit-20261106/repros/audit-baseline-red.vitest.json"
+      ],
+      "node": "v24.19.0",
+      "status": "FAIL",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/repros/audit-baseline-red.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:42:02.226801+00:00",
+      "durationSeconds": 2.701960506001342,
+      "exitCode": 1,
+      "sourceAfter": {
+        "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/memory/src/lifecycle.ts\n M packages/memory/src/retrieval.ts\n M packages/memory/src/security-gate.ts\n M packages/security/src/canonical-path.ts\n M packages/security/src/dangling-path.regressions.test.ts\n M packages/skills/src/skill-store.ts\n M packages/tools/src/file-coordination.ts\n M packages/tools/src/file-create-integrity.regressions.test.ts\n M plan(20261106-coding-integrity-audit).md",
+        "sparse": ""
+      },
+      "logBytes": 330,
+      "logSha256": "cb23631be06ec7651d0035ad4ec94abab38e34e66d9046d594d11ab8a1872409"
+    },
+    "repros/backslash-red.receipt.json": {
+      "startedAt": "2026-11-06T16:41:42.887039+00:00",
+      "sourceBefore": {
+        "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/security/src/canonical-path.ts\n M packages/security/src/dangling-path.regressions.test.ts\n M packages/tools/src/file-create-integrity.regressions.test.ts\n M plan(20261106-coding-integrity-audit).md",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "packages/tools/src/file-create-integrity.regressions.test.ts",
+        "--testNamePattern=backslash filename",
+        "--reporter=json",
+        "--outputFile=/dev/shm/harness-coding-integrity-audit-20261106/repros/backslash-red.vitest.json"
+      ],
+      "node": "v24.19.0",
+      "status": "FAIL",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/repros/backslash-red.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:41:43.782014+00:00",
+      "durationSeconds": 0.8677792719972786,
+      "exitCode": 1,
+      "sourceAfter": {
+        "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/security/src/canonical-path.ts\n M packages/security/src/dangling-path.regressions.test.ts\n M packages/tools/src/file-create-integrity.regressions.test.ts\n M plan(20261106-coding-integrity-audit).md",
+        "sparse": ""
+      },
+      "logBytes": 105,
+      "logSha256": "78f3e333cd261c83baa0c6c240eb174c8b4245b9a1122c7a379efe75b8778e9b"
+    },
+    "repros/final-focused-2.receipt.json": {
+      "startedAt": "2026-11-06T16:40:24.195511+00:00",
+      "sourceBefore": {
+        "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/security/src/canonical-path.ts\n M packages/security/src/dangling-path.regressions.test.ts\n M packages/tools/src/file-create-integrity.regressions.test.ts\n M plan(20261106-coding-integrity-audit).md",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "packages/memory/src",
+        "packages/skills/src",
+        "packages/security/src",
+        "packages/tools/src/file-create-integrity.regressions.test.ts",
+        "packages/tools/src/write-file-resource.regressions.test.ts",
+        "packages/tools/src/read-file-resource.regressions.test.ts",
+        "packages/tools/src/edit-file-resource.regressions.test.ts",
+        "packages/tools/src/r4-file-regressions.test.ts",
+        "packages/harness/src/invalid-memory-production.regressions.test.ts",
+        "packages/harness/src/memory-prefetch-production.regressions.test.ts",
+        "packages/harness/src/memory-search-tools.integration.test.ts",
+        "--reporter=json",
+        "--outputFile=/dev/shm/harness-coding-integrity-audit-20261106/repros/final-focused-2.vitest.json"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/repros/final-focused-2.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:40:40.931688+00:00",
+      "durationSeconds": 16.708879282999987,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/security/src/canonical-path.ts\n M packages/security/src/dangling-path.regressions.test.ts\n M packages/tools/src/file-create-integrity.regressions.test.ts\n M plan(20261106-coding-integrity-audit).md",
+        "sparse": ""
+      },
+      "logBytes": 2033,
+      "logSha256": "cb6f7302c36a3cfe402aa0e372e546b59f74ed9aecb6c3fb5c26fafdd7a393f9"
+    },
+    "repros/final-focused.receipt.json": {
+      "startedAt": "2026-11-06T16:38:55.613120+00:00",
+      "sourceBefore": {
+        "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/security/src/canonical-path.ts\n M packages/security/src/dangling-path.regressions.test.ts\n M packages/tools/src/file-create-integrity.regressions.test.ts",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "packages/memory/src",
+        "packages/skills/src",
+        "packages/security/src",
+        "packages/tools/src/file-create-integrity.regressions.test.ts",
+        "packages/tools/src/write-file-resource.regressions.test.ts",
+        "packages/tools/src/read-file-resource.regressions.test.ts",
+        "packages/tools/src/edit-file-resource.regressions.test.ts",
+        "packages/tools/src/r4-file-regressions.test.ts",
+        "packages/harness/src/invalid-memory-production.regressions.test.ts",
+        "packages/harness/src/memory-prefetch-production.regressions.test.ts",
+        "packages/harness/src/memory-search-tools.integration.test.ts",
+        "--reporter=json",
+        "--outputFile=/dev/shm/harness-coding-integrity-audit-20261106/repros/final-focused.vitest.json"
+      ],
+      "node": "v24.19.0",
+      "status": "FAIL",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/repros/final-focused.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:39:12.834575+00:00",
+      "durationSeconds": 17.182814077998046,
+      "exitCode": 1,
+      "sourceAfter": {
+        "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/security/src/canonical-path.ts\n M packages/security/src/dangling-path.regressions.test.ts\n M packages/tools/src/file-create-integrity.regressions.test.ts",
+        "sparse": ""
+      },
+      "logBytes": 2031,
+      "logSha256": "4468aeafd939bdb8ab19a1598141a6d39317c6a288b0c0a4fa25a9f31b13c9c9"
+    },
+    "repros/complete-baseline-red.receipt.json": {
+      "startedAt": "2026-11-06T16:38:22.892152+00:00",
+      "sourceBefore": {
+        "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/memory/src/lifecycle.ts\n M packages/memory/src/retrieval.ts\n M packages/memory/src/security-gate.ts\n M packages/security/src/canonical-path.ts\n M packages/security/src/dangling-path.regressions.test.ts\n M packages/skills/src/skill-store.ts\n M packages/tools/src/file-coordination.ts\n M packages/tools/src/file-create-integrity.regressions.test.ts",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "packages/memory/src/invalid-memory.regressions.test.ts",
+        "packages/skills/src/skill-store-concurrency.regressions.test.ts",
+        "packages/tools/src/file-create-integrity.regressions.test.ts",
+        "packages/security/src/dangling-path.regressions.test.ts",
+        "packages/harness/src/invalid-memory-production.regressions.test.ts",
+        "--reporter=json",
+        "--outputFile=/dev/shm/harness-coding-integrity-audit-20261106/repros/complete-baseline-red.vitest.json"
+      ],
+      "node": "v24.19.0",
+      "status": "FAIL",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/repros/complete-baseline-red.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:38:25.730760+00:00",
+      "durationSeconds": 2.8140035340002214,
+      "exitCode": 1,
+      "sourceAfter": {
+        "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/memory/src/lifecycle.ts\n M packages/memory/src/retrieval.ts\n M packages/memory/src/security-gate.ts\n M packages/security/src/canonical-path.ts\n M packages/security/src/dangling-path.regressions.test.ts\n M packages/skills/src/skill-store.ts\n M packages/tools/src/file-coordination.ts\n M packages/tools/src/file-create-integrity.regressions.test.ts",
+        "sparse": ""
+      },
+      "logBytes": 333,
+      "logSha256": "34a9a9509bbe2e84bf004dab192731b9c31a61610ab115e68cc65adc097289ee"
+    },
+    "repros/native-variant-red.receipt.json": {
+      "startedAt": "2026-11-06T16:37:58.720380+00:00",
+      "sourceBefore": {
+        "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/security/src/dangling-path.regressions.test.ts\n M packages/tools/src/file-create-integrity.regressions.test.ts",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "packages/security/src/dangling-path.regressions.test.ts",
+        "packages/tools/src/file-create-integrity.regressions.test.ts",
+        "--reporter=json",
+        "--outputFile=/dev/shm/harness-coding-integrity-audit-20261106/repros/native-variant-red.vitest.json"
+      ],
+      "node": "v24.19.0",
+      "status": "FAIL",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/repros/native-variant-red.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:37:59.793169+00:00",
+      "durationSeconds": 1.0408798300013586,
+      "exitCode": 1,
+      "sourceAfter": {
+        "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/security/src/dangling-path.regressions.test.ts\n M packages/tools/src/file-create-integrity.regressions.test.ts",
+        "sparse": ""
+      },
+      "logBytes": 110,
+      "logSha256": "8fbcb38895fb86ea0d79e005e9194ef4ba933d73e01591ec315056a295540f2d"
+    },
+    "repros/candidate-focused-2.receipt.json": {
+      "startedAt": "2026-11-06T16:29:55.219856+00:00",
+      "sourceBefore": {
+        "sha": "d0149f35b39b213bac47a2ee5654e1a25390695c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M .github/workflows/windows-acceptance.yml\n M packages/memory/src/lifecycle.ts\n M packages/memory/src/retrieval.ts\n M packages/memory/src/security-gate.ts\n M packages/security/src/canonical-path.ts\n M packages/skills/package.json\n M packages/skills/src/skill-store.ts\n M packages/skills/tsconfig.json\n M packages/tools/src/edit-file-resource.regressions.test.ts\n M packages/tools/src/file-coordination.ts\n M pnpm-lock.yaml\n?? packages/harness/src/invalid-memory-production.regressions.test.ts\n?? packages/memory/src/invalid-memory.regressions.test.ts\n?? packages/security/src/dangling-path.regressions.test.ts\n?? packages/skills/src/skill-store-concurrency.regressions.test.ts\n?? packages/tools/src/file-create-integrity.regressions.test.ts",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "packages/memory/src",
+        "packages/skills/src",
+        "packages/security/src",
+        "packages/tools/src/file-create-integrity.regressions.test.ts",
+        "packages/tools/src/write-file-resource.regressions.test.ts",
+        "packages/tools/src/read-file-resource.regressions.test.ts",
+        "packages/tools/src/edit-file-resource.regressions.test.ts",
+        "packages/tools/src/r4-file-regressions.test.ts",
+        "packages/harness/src/invalid-memory-production.regressions.test.ts",
+        "packages/harness/src/memory-prefetch-production.regressions.test.ts",
+        "packages/harness/src/memory-search-tools.integration.test.ts",
+        "--reporter=json",
+        "--outputFile=/dev/shm/harness-coding-integrity-audit-20261106/repros/candidate-focused-2.vitest.json"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/repros/candidate-focused-2.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:30:07.654555+00:00",
+      "durationSeconds": 12.398863710001024,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "d0149f35b39b213bac47a2ee5654e1a25390695c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M .github/workflows/windows-acceptance.yml\n M packages/memory/src/lifecycle.ts\n M packages/memory/src/retrieval.ts\n M packages/memory/src/security-gate.ts\n M packages/security/src/canonical-path.ts\n M packages/skills/package.json\n M packages/skills/src/skill-store.ts\n M packages/skills/tsconfig.json\n M packages/tools/src/edit-file-resource.regressions.test.ts\n M packages/tools/src/file-coordination.ts\n M plan(20261106-coding-integrity-audit).md\n M pnpm-lock.yaml\n?? packages/harness/src/invalid-memory-production.regressions.test.ts\n?? packages/memory/src/invalid-memory.regressions.test.ts\n?? packages/security/src/dangling-path.regressions.test.ts\n?? packages/skills/src/skill-store-concurrency.regressions.test.ts\n?? packages/tools/src/file-create-integrity.regressions.test.ts",
+        "sparse": ""
+      },
+      "logBytes": 2037,
+      "logSha256": "3e44a33db4bbe6c3f927afceda55f53483c508f2df415e5aec29594e02d553f3"
+    },
+    "repros/candidate-focused.receipt.json": {
+      "startedAt": "2026-11-06T16:28:16.329299+00:00",
+      "sourceBefore": {
+        "sha": "d0149f35b39b213bac47a2ee5654e1a25390695c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M .github/workflows/windows-acceptance.yml\n M packages/memory/src/lifecycle.ts\n M packages/memory/src/retrieval.ts\n M packages/memory/src/security-gate.ts\n M packages/security/src/canonical-path.ts\n M packages/skills/package.json\n M packages/skills/src/skill-store.ts\n M packages/skills/tsconfig.json\n M packages/tools/src/file-coordination.ts\n M pnpm-lock.yaml\n?? packages/harness/src/invalid-memory-production.regressions.test.ts\n?? packages/memory/src/invalid-memory.regressions.test.ts\n?? packages/security/src/dangling-path.regressions.test.ts\n?? packages/skills/src/skill-store-concurrency.regressions.test.ts\n?? packages/tools/src/file-create-integrity.regressions.test.ts",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "packages/memory/src",
+        "packages/skills/src",
+        "packages/security/src",
+        "packages/tools/src/file-create-integrity.regressions.test.ts",
+        "packages/tools/src/write-file-resource.regressions.test.ts",
+        "packages/tools/src/read-file-resource.regressions.test.ts",
+        "packages/tools/src/edit-file-resource.regressions.test.ts",
+        "packages/tools/src/r4-file-regressions.test.ts",
+        "packages/harness/src/invalid-memory-production.regressions.test.ts",
+        "packages/harness/src/memory-prefetch-production.regressions.test.ts",
+        "packages/harness/src/memory-search-tools.integration.test.ts",
+        "--reporter=json",
+        "--outputFile=/dev/shm/harness-coding-integrity-audit-20261106/repros/candidate-focused.vitest.json"
+      ],
+      "node": "v24.19.0",
+      "status": "FAIL",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/repros/candidate-focused.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:28:35.659620+00:00",
+      "durationSeconds": 19.301958504998765,
+      "exitCode": 1,
+      "sourceAfter": {
+        "sha": "d0149f35b39b213bac47a2ee5654e1a25390695c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M .github/workflows/windows-acceptance.yml\n M packages/memory/src/lifecycle.ts\n M packages/memory/src/retrieval.ts\n M packages/memory/src/security-gate.ts\n M packages/security/src/canonical-path.ts\n M packages/skills/package.json\n M packages/skills/src/skill-store.ts\n M packages/skills/tsconfig.json\n M packages/tools/src/file-coordination.ts\n M pnpm-lock.yaml\n?? packages/harness/src/invalid-memory-production.regressions.test.ts\n?? packages/memory/src/invalid-memory.regressions.test.ts\n?? packages/security/src/dangling-path.regressions.test.ts\n?? packages/skills/src/skill-store-concurrency.regressions.test.ts\n?? packages/tools/src/file-create-integrity.regressions.test.ts",
+        "sparse": ""
+      },
+      "logBytes": 2035,
+      "logSha256": "a824db4c746825480986abc90a4cd9ed35d9ca7f4f4dc46244d71ef307ef3839"
+    },
+    "repros/final-baseline-red.receipt.json": {
+      "startedAt": "2026-11-06T16:27:47.477560+00:00",
+      "sourceBefore": {
+        "sha": "d0149f35b39b213bac47a2ee5654e1a25390695c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M .github/workflows/windows-acceptance.yml\n M packages/skills/package.json\n M packages/skills/tsconfig.json\n M pnpm-lock.yaml\n?? packages/harness/src/invalid-memory-production.regressions.test.ts\n?? packages/memory/src/invalid-memory.regressions.test.ts\n?? packages/security/src/dangling-path.regressions.test.ts\n?? packages/skills/src/skill-store-concurrency.regressions.test.ts\n?? packages/tools/src/file-create-integrity.regressions.test.ts",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "packages/memory/src/invalid-memory.regressions.test.ts",
+        "packages/skills/src/skill-store-concurrency.regressions.test.ts",
+        "packages/tools/src/file-create-integrity.regressions.test.ts",
+        "packages/security/src/dangling-path.regressions.test.ts",
+        "packages/harness/src/invalid-memory-production.regressions.test.ts",
+        "--reporter=json",
+        "--outputFile=/dev/shm/harness-coding-integrity-audit-20261106/repros/final-baseline-red.vitest.json"
+      ],
+      "node": "v24.19.0",
+      "status": "FAIL",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/repros/final-baseline-red.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:27:50.220619+00:00",
+      "durationSeconds": 2.7109964019982726,
+      "exitCode": 1,
+      "sourceAfter": {
+        "sha": "d0149f35b39b213bac47a2ee5654e1a25390695c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M .github/workflows/windows-acceptance.yml\n M packages/skills/package.json\n M packages/skills/tsconfig.json\n M pnpm-lock.yaml\n?? packages/harness/src/invalid-memory-production.regressions.test.ts\n?? packages/memory/src/invalid-memory.regressions.test.ts\n?? packages/security/src/dangling-path.regressions.test.ts\n?? packages/skills/src/skill-store-concurrency.regressions.test.ts\n?? packages/tools/src/file-create-integrity.regressions.test.ts",
+        "sparse": ""
+      },
+      "logBytes": 330,
+      "logSha256": "9db26c7b2b7ee2b1f7f019b4a4172aa654da6f08ccb6fc36d8255d5d82959310"
+    },
+    "repros/integration-green-2.receipt.json": {
+      "startedAt": "2026-11-06T16:25:59.838131+00:00",
+      "sourceBefore": {
+        "sha": "d0149f35b39b213bac47a2ee5654e1a25390695c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M .github/workflows/windows-acceptance.yml\n M packages/memory/src/lifecycle.ts\n M packages/memory/src/retrieval.ts\n M packages/memory/src/security-gate.ts\n M packages/security/src/canonical-path.ts\n M packages/skills/package.json\n M packages/skills/src/skill-store.ts\n M packages/skills/tsconfig.json\n M packages/tools/src/file-coordination.ts\n M pnpm-lock.yaml\n?? packages/harness/src/invalid-memory-production.regressions.test.ts\n?? packages/memory/src/invalid-memory.regressions.test.ts\n?? packages/security/src/dangling-path.regressions.test.ts\n?? packages/skills/src/skill-store-concurrency.regressions.test.ts\n?? packages/tools/src/file-create-integrity.regressions.test.ts",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "packages/memory/src/invalid-memory.regressions.test.ts",
+        "packages/skills/src/skill-store-concurrency.regressions.test.ts",
+        "packages/tools/src/file-create-integrity.regressions.test.ts",
+        "packages/security/src/dangling-path.regressions.test.ts",
+        "packages/harness/src/invalid-memory-production.regressions.test.ts",
+        "--reporter=json",
+        "--outputFile=/dev/shm/harness-coding-integrity-audit-20261106/repros/integration-green-2.vitest.json"
+      ],
+      "node": "v24.19.0",
+      "status": "FAIL",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/repros/integration-green-2.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:26:03.301167+00:00",
+      "durationSeconds": 3.4312348429994017,
+      "exitCode": 1,
+      "sourceAfter": {
+        "sha": "d0149f35b39b213bac47a2ee5654e1a25390695c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M .github/workflows/windows-acceptance.yml\n M packages/memory/src/lifecycle.ts\n M packages/memory/src/retrieval.ts\n M packages/memory/src/security-gate.ts\n M packages/security/src/canonical-path.ts\n M packages/skills/package.json\n M packages/skills/src/skill-store.ts\n M packages/skills/tsconfig.json\n M packages/tools/src/file-coordination.ts\n M pnpm-lock.yaml\n?? packages/harness/src/invalid-memory-production.regressions.test.ts\n?? packages/memory/src/invalid-memory.regressions.test.ts\n?? packages/security/src/dangling-path.regressions.test.ts\n?? packages/skills/src/skill-store-concurrency.regressions.test.ts\n?? packages/tools/src/file-create-integrity.regressions.test.ts",
+        "sparse": ""
+      },
+      "logBytes": 331,
+      "logSha256": "71044d3abae6b434b04bdf19aa5962339fa8a8c415319a66c9ede36f9930e1fe"
+    },
+    "repros/integration-green.receipt.json": {
+      "startedAt": "2026-11-06T16:25:11.645638+00:00",
+      "sourceBefore": {
+        "sha": "d0149f35b39b213bac47a2ee5654e1a25390695c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/memory/src/lifecycle.ts\n M packages/memory/src/retrieval.ts\n M packages/memory/src/security-gate.ts\n M packages/security/src/canonical-path.ts\n M packages/skills/package.json\n M packages/skills/src/skill-store.ts\n M packages/skills/tsconfig.json\n M packages/tools/src/file-coordination.ts\n M pnpm-lock.yaml\n?? packages/harness/src/invalid-memory-production.regressions.test.ts\n?? packages/memory/src/invalid-memory.regressions.test.ts\n?? packages/security/src/dangling-path.regressions.test.ts\n?? packages/skills/src/skill-store-concurrency.regressions.test.ts\n?? packages/tools/src/file-create-integrity.regressions.test.ts",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "packages/memory/src/invalid-memory.regressions.test.ts",
+        "packages/skills/src/skill-store-concurrency.regressions.test.ts",
+        "packages/tools/src/file-create-integrity.regressions.test.ts",
+        "packages/security/src/dangling-path.regressions.test.ts",
+        "packages/harness/src/invalid-memory-production.regressions.test.ts",
+        "--reporter=json",
+        "--outputFile=/dev/shm/harness-coding-integrity-audit-20261106/repros/integration-green.vitest.json"
+      ],
+      "node": "v24.19.0",
+      "status": "FAIL",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/repros/integration-green.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:25:14.683818+00:00",
+      "durationSeconds": 3.0111713019978197,
+      "exitCode": 1,
+      "sourceAfter": {
+        "sha": "d0149f35b39b213bac47a2ee5654e1a25390695c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/memory/src/lifecycle.ts\n M packages/memory/src/retrieval.ts\n M packages/memory/src/security-gate.ts\n M packages/security/src/canonical-path.ts\n M packages/skills/package.json\n M packages/skills/src/skill-store.ts\n M packages/skills/tsconfig.json\n M packages/tools/src/file-coordination.ts\n M pnpm-lock.yaml\n?? packages/harness/src/invalid-memory-production.regressions.test.ts\n?? packages/memory/src/invalid-memory.regressions.test.ts\n?? packages/security/src/dangling-path.regressions.test.ts\n?? packages/skills/src/skill-store-concurrency.regressions.test.ts\n?? packages/tools/src/file-create-integrity.regressions.test.ts",
+        "sparse": ""
+      },
+      "logBytes": 329,
+      "logSha256": "596fd5b0da5aea56bd7d052222a68c1889428fbd243276d7a71cb7e0f5f82af9"
+    },
+    "repros/first-green.receipt.json": {
+      "startedAt": "2026-11-06T16:22:59.648436+00:00",
+      "sourceBefore": {
+        "sha": "d0149f35b39b213bac47a2ee5654e1a25390695c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/memory/src/lifecycle.ts\n M packages/memory/src/retrieval.ts\n M packages/memory/src/security-gate.ts\n M packages/security/src/canonical-path.ts\n M packages/skills/package.json\n M packages/skills/src/skill-store.ts\n M packages/skills/tsconfig.json\n M packages/tools/src/file-coordination.ts\n M pnpm-lock.yaml\n?? packages/memory/src/invalid-memory.regressions.test.ts\n?? packages/skills/src/skill-store-concurrency.regressions.test.ts\n?? packages/tools/src/file-create-integrity.regressions.test.ts",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "packages/memory/src/invalid-memory.regressions.test.ts",
+        "packages/skills/src/skill-store-concurrency.regressions.test.ts",
+        "packages/tools/src/file-create-integrity.regressions.test.ts",
+        "packages/security/src/canonical-path.test.ts",
+        "packages/tools/src/write-file-resource.regressions.test.ts",
+        "--reporter=json",
+        "--outputFile=/dev/shm/harness-coding-integrity-audit-20261106/repros/first-green.vitest.json"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/repros/first-green.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:23:03.353071+00:00",
+      "durationSeconds": 3.6124022920012067,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "d0149f35b39b213bac47a2ee5654e1a25390695c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/memory/src/lifecycle.ts\n M packages/memory/src/retrieval.ts\n M packages/memory/src/security-gate.ts\n M packages/security/src/canonical-path.ts\n M packages/skills/package.json\n M packages/skills/src/skill-store.ts\n M packages/skills/tsconfig.json\n M packages/tools/src/file-coordination.ts\n M pnpm-lock.yaml\n?? packages/memory/src/invalid-memory.regressions.test.ts\n?? packages/skills/src/skill-store-concurrency.regressions.test.ts\n?? packages/tools/src/file-create-integrity.regressions.test.ts",
+        "sparse": ""
+      },
+      "logBytes": 103,
+      "logSha256": "323a11cb754868e214769728c053a3dbef07a23651cda91a61143eea63058076"
+    },
+    "repros/baseline-red.receipt.json": {
+      "startedAt": "2026-11-06T16:20:18.853418+00:00",
+      "sourceBefore": {
+        "sha": "a8596ed09a7186ad8118c264ff5c9edab99579b3",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "?? packages/memory/src/invalid-memory.regressions.test.ts\n?? packages/skills/src/skill-store-concurrency.regressions.test.ts\n?? packages/tools/src/file-create-integrity.regressions.test.ts\n?? plan(20261106-coding-integrity-audit).md\n?? tasks/CODING-INTEGRITY-AUDIT-20261106.md",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "packages/memory/src/invalid-memory.regressions.test.ts",
+        "packages/skills/src/skill-store-concurrency.regressions.test.ts",
+        "packages/tools/src/file-create-integrity.regressions.test.ts",
+        "--reporter=json",
+        "--outputFile=/dev/shm/harness-coding-integrity-audit-20261106/repros/baseline-red.vitest.json"
+      ],
+      "node": "v24.19.0",
+      "status": "FAIL",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/repros/baseline-red.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:20:20.066750+00:00",
+      "durationSeconds": 1.1803546840019408,
+      "exitCode": 1,
+      "sourceAfter": {
+        "sha": "a8596ed09a7186ad8118c264ff5c9edab99579b3",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "?? packages/memory/src/invalid-memory.regressions.test.ts\n?? packages/skills/src/skill-store-concurrency.regressions.test.ts\n?? packages/tools/src/file-create-integrity.regressions.test.ts\n?? plan(20261106-coding-integrity-audit).md\n?? tasks/CODING-INTEGRITY-AUDIT-20261106.md",
+        "sparse": ""
+      },
+      "logBytes": 104,
+      "logSha256": "3e3c95e4790f25e1d3f73691ad77ddbc17204a616a348d7df45e3ab23851a50e"
+    },
+    "acceptance/final-managed.receipt.json": {
+      "startedAt": "2026-11-06T16:46:25.136970+00:00",
+      "sourceBefore": {
+        "sha": "6d5b3c5fb68118ebfa07ebe21a9da07fd04f2671",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "command": [
+        "node",
+        "scripts/research/managed-commands-20261025/paired.mjs",
+        "/dev/shm/harness-coding-integrity-audit-20261106/acceptance/final-managed-paired"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/acceptance/final-managed.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:48:55.409201+00:00",
+      "durationSeconds": 150.21553004199814,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "6d5b3c5fb68118ebfa07ebe21a9da07fd04f2671",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "logBytes": 4224,
+      "logSha256": "9a562cfcffbe39e90b6077382016f05fd7c63458d8381338f2775e370267b8d8"
+    },
+    "acceptance/final-browser.receipt.json": {
+      "startedAt": "2026-11-06T16:46:25.112456+00:00",
+      "sourceBefore": {
+        "sha": "6d5b3c5fb68118ebfa07ebe21a9da07fd04f2671",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "command": [
+        "node",
+        "scripts/research/web-daily-20261016/browser-acceptance.mjs",
+        "--output",
+        "/dev/shm/harness-coding-integrity-audit-20261106/acceptance/final-web-browser",
+        "--playwright-module",
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
+        "--viewports",
+        "desktop,mobile,narrow"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/acceptance/final-browser.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:50:22.569390+00:00",
+      "durationSeconds": 237.40965770200273,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "6d5b3c5fb68118ebfa07ebe21a9da07fd04f2671",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "logBytes": 3476,
+      "logSha256": "b24dedcb06eea819d576c69e3a8973f4547c0f9f277191791413f3030fa94bdb"
+    },
+    "acceptance/final-cli-web.receipt.json": {
+      "startedAt": "2026-11-06T16:46:25.121565+00:00",
+      "sourceBefore": {
+        "sha": "6d5b3c5fb68118ebfa07ebe21a9da07fd04f2671",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "command": [
+        "node",
+        "scripts/research/coding-prompts-20261008/acceptance.mjs",
+        "/dev/shm/harness-coding-integrity-audit-20261106/acceptance/final-coding-prompts",
+        "coding-v2"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/acceptance/final-cli-web.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:46:38.216966+00:00",
+      "durationSeconds": 13.059143309001229,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "6d5b3c5fb68118ebfa07ebe21a9da07fd04f2671",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "logBytes": 1457,
+      "logSha256": "7d2314067783398da803a91355afa865d7328cc30deddeadb85f6d0044446396"
+    },
+    "acceptance/final-full-tests.receipt.json": {
+      "startedAt": "2026-11-06T16:46:05.820322+00:00",
+      "sourceBefore": {
+        "sha": "6d5b3c5fb68118ebfa07ebe21a9da07fd04f2671",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "test"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/acceptance/final-full-tests.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:54:24.137597+00:00",
+      "durationSeconds": 498.29208474799816,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "6d5b3c5fb68118ebfa07ebe21a9da07fd04f2671",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "logBytes": 183294,
+      "logSha256": "106b4030a74f8108e7c6557caaea7af78e9b68e312842d4ffb9de5530ac90410"
+    },
+    "acceptance/final-build.receipt.json": {
+      "startedAt": "2026-11-06T16:45:59.221315+00:00",
+      "sourceBefore": {
+        "sha": "6d5b3c5fb68118ebfa07ebe21a9da07fd04f2671",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "exec",
+        "tsc",
+        "-b",
+        "--force"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/acceptance/final-build.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:46:05.774124+00:00",
+      "durationSeconds": 6.527358302999346,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "6d5b3c5fb68118ebfa07ebe21a9da07fd04f2671",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "logBytes": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "acceptance/final-install.receipt.json": {
+      "startedAt": "2026-11-06T16:45:58.884008+00:00",
+      "sourceBefore": {
+        "sha": "6d5b3c5fb68118ebfa07ebe21a9da07fd04f2671",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "install",
+        "--frozen-lockfile",
+        "--store-dir",
+        "/dev/shm/harness-comprehensive-audit-20261106/pnpm-store"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/acceptance/final-install.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:45:59.177291+00:00",
+      "durationSeconds": 0.2700240800004394,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "6d5b3c5fb68118ebfa07ebe21a9da07fd04f2671",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "logBytes": 86,
+      "logSha256": "65313e3d3c3bbb69fa19fcf7a27611a4675c683155b04dd1e12ac7fe5ace5b65"
+    },
+    "acceptance/browser.receipt.json": {
+      "startedAt": "2026-11-06T16:31:36.444892+00:00",
+      "sourceBefore": {
+        "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "command": [
+        "node",
+        "scripts/research/web-daily-20261016/browser-acceptance.mjs",
+        "--output",
+        "/dev/shm/harness-coding-integrity-audit-20261106/acceptance/web-browser",
+        "--playwright-module",
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
+        "--viewports",
+        "desktop,mobile,narrow"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/acceptance/browser.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:35:20.640202+00:00",
+      "durationSeconds": 224.1208436779998,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "logBytes": 3476,
+      "logSha256": "b24dedcb06eea819d576c69e3a8973f4547c0f9f277191791413f3030fa94bdb"
+    },
+    "acceptance/cli-web.receipt.json": {
+      "startedAt": "2026-11-06T16:31:36.458213+00:00",
+      "sourceBefore": {
+        "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "command": [
+        "node",
+        "scripts/research/coding-prompts-20261008/acceptance.mjs",
+        "/dev/shm/harness-coding-integrity-audit-20261106/acceptance/coding-prompts",
+        "coding-v2"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/acceptance/cli-web.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:31:50.236255+00:00",
+      "durationSeconds": 13.722573603998171,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "logBytes": 1457,
+      "logSha256": "c0a053f5dc07b9246f06748fc7da3d311f70a431d91fc393777d508be0436641"
+    },
+    "acceptance/managed.receipt.json": {
+      "startedAt": "2026-11-06T16:31:36.463983+00:00",
+      "sourceBefore": {
+        "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "command": [
+        "node",
+        "scripts/research/managed-commands-20261025/paired.mjs",
+        "/dev/shm/harness-coding-integrity-audit-20261106/acceptance/managed-paired"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/acceptance/managed.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:34:05.834157+00:00",
+      "durationSeconds": 149.32337669700064,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "logBytes": 4224,
+      "logSha256": "83c05161b42623f8ff90a679622d1b33b3d2e417550b57b858e4c0dc229189c1"
+    },
+    "acceptance/full-tests.receipt.json": {
+      "startedAt": "2026-11-06T16:31:07.200505+00:00",
+      "sourceBefore": {
+        "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "test"
+      ],
+      "node": "v24.19.0",
+      "status": "FAIL",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/acceptance/full-tests.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:34:20.541489+00:00",
+      "durationSeconds": 193.31284165599936,
+      "exitCode": -15,
+      "sourceAfter": {
+        "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "logBytes": 70343,
+      "logSha256": "ae76139b015a68fb2204415ccfbc08c9e3437d5b52d659793af438ca131d2f00"
+    },
+    "acceptance/clean-build.receipt.json": {
+      "startedAt": "2026-11-06T16:31:00.576649+00:00",
+      "sourceBefore": {
+        "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "exec",
+        "tsc",
+        "-b",
+        "--force"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/acceptance/clean-build.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:31:07.150895+00:00",
+      "durationSeconds": 6.549015878998034,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "logBytes": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "acceptance/clean-install.receipt.json": {
+      "startedAt": "2026-11-06T16:31:00.226996+00:00",
+      "sourceBefore": {
+        "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "install",
+        "--frozen-lockfile",
+        "--store-dir",
+        "/dev/shm/harness-comprehensive-audit-20261106/pnpm-store"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-coding-integrity-audit-20261106/acceptance/clean-install.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T16:31:00.531846+00:00",
+      "durationSeconds": 0.27910118799991324,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "logBytes": 86,
+      "logSha256": "88549927b1ba06abffbea2a4b989c71c06a3f62553f23f4f31ba21ed7a35f07c"
+    }
+  },
+  "actualCoding": {
+    "schemaVersion": 1,
+    "kind": "coding-prompt-engineering-acceptance",
+    "sourceSha": "6d5b3c5fb68118ebfa07ebe21a9da07fd04f2671",
+    "sourceTreeClean": true,
+    "platform": "linux",
+    "node": "v24.19.0",
+    "policy": "coding-v2",
+    "prompts": {
+      "primary": {
+        "sha256": "7e31f8e1d80a223aad729fca71e913bf0f6547507cedccee3bf3045258a22fe4",
+        "bytes": 5090,
+        "estimatedTokens": 1273
+      },
+      "readonlyWorker": {
+        "sha256": "ae7d7dac2abe92e26d13ad388e4c65966fa3d081235699d4e3c8ea6878782016",
+        "bytes": 2591,
+        "estimatedTokens": 648
+      },
+      "writeWorker": {
+        "sha256": "c9e7b6e3ee52f97469cf68bdd43e8326fcb4716bdac73eb67989b8f4069d76cb",
+        "bytes": 4963,
+        "estimatedTokens": 1241
+      }
+    },
+    "assertions": [
+      "real CLI and Web requests were both captured",
+      "every actual HTTP request carries the exact selected compiled primary policy",
+      "selected policy fits fallback system reserve without raising the budget",
+      "documented native capabilities exist in the actual request schemas",
+      "new requests carry the versioned challenger rather than legacy prompt",
+      "readonly policy does not advertise mutating/exec/plan capabilities",
+      "cli rejects invalid policy before provider or listener startup",
+      "web rejects invalid policy before provider or listener startup"
+    ],
+    "inheritedCodingAssertions": 50,
+    "requests": 19,
+    "status": "PASS",
+    "paidModelCalls": 0,
+    "realModelQuality": "NOT_PROVEN",
+    "limitation": "A scripted local HTTP provider chooses the actions. Passing proves policy installation and runtime/tool invariants; it cannot prove policy obedience or a real-model quality gain."
+  },
+  "managed": {
+    "source": "6d5b3c5fb68118ebfa07ebe21a9da07fd04f2671",
+    "scriptSha256": "e5a43149e54ef543384e8d217d6894a0f2a2de01cd3ee90b8b0ef3ac17032128",
+    "kinds": [
+      "overlap-check",
+      "failure-repair",
+      "http-service"
+    ],
+    "pairsPerKind": 8,
+    "order": "AB BA alternating within each kind",
+    "budget": {
+      "turnMs": 15000,
+      "toolCalls": 30,
+      "iterations": 30,
+      "processMs": 5000,
+      "retainedBytes": 65536
+    },
+    "paidModelCalls": 0,
+    "overlapMetric": {
+      "version": 2,
+      "source": "correlated successful read_file evidence within known native start/exit interval; model-request time is not an action; unknown exit is not positive proof"
+    },
+    "scope": "causal engineering protocol probe; baseline/candidate gate coordination differs, so durations are not an identical-workload performance comparison or model-quality evidence",
+    "checkFixture": {
+      "nativeWorkMs": 2000,
+      "completion": "native work AND read barrier",
+      "baselineGate": "pre-released before synchronous exec",
+      "candidateGate": "release only after correlated successful source-file read; remains released for repair attempt",
+      "fallbackRelease": false
+    },
+    "networkPreflight": {
+      "loopback": "allow",
+      "external": "deny",
+      "pattern": "http://127.0.0.1:*/**"
+    },
+    "arms": 48,
+    "baselinePass": 16,
+    "candidatePass": 24,
+    "candidateOverlap": 16,
+    "duplicateStarts": 0,
+    "failures": [],
+    "modelQuality": "NOT_PROVEN"
+  },
+  "browser": {
+    "status": "PASS",
+    "complete": true,
+    "pending": [],
+    "paidModelCalls": 0,
+    "fixture": {
+      "launchId": "66b60d4d-f24d-45b5-8ead-09fbed60400f",
+      "compiledDigest": "7a05717e715276d5fd5d00b968483c5f56a3d8738f0162cfa75d709ba55399dd"
+    },
+    "driverSha256": "a9160a0ad841d1a48c2661e3a9dc1b0fabc6299e68b9147d786d3b79564da200",
+    "engine": {
+      "node": "v24.19.0",
+      "chromium": "151.0.7922.173",
+      "viewportScope": "Desktop Chromium responsive sizes; no physical mobile or Windows claim"
+    },
+    "scope": "Named daily production UI interactions only; not a claim that every visible control is implemented or verified",
+    "sourceShaFromCleanRunner": "6d5b3c5fb68118ebfa07ebe21a9da07fd04f2671",
+    "sourceRootFromActualLaunch": "/tmp/harness-agent-coding-integrity-20261106",
+    "scenarios": 42,
+    "checks": 120,
+    "errors": 0,
+    "results": [
+      {
+        "name": "navigation-draft-ownership",
+        "viewport": "desktop",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "A paste immediately after New Session belongs to the new task under real network latency",
+            "status": "PASS"
+          },
+          {
+            "label": "Returning to the previous task preserves its independent composer draft",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "coding-draft-ownership",
+        "viewport": "desktop",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "Empty native coding draft cannot submit",
+            "status": "PASS"
+          },
+          {
+            "label": "A/B native coding drafts remain separate through selection",
+            "status": "PASS"
+          },
+          {
+            "label": "Closing native settings retains the selected coding session draft",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "feedback-roundtrip",
+        "viewport": "desktop",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "A real positive rating submission updates its assistant control",
+            "status": "PASS"
+          },
+          {
+            "label": "Clicking the recorded rating retracts it",
+            "status": "PASS"
+          },
+          {
+            "label": "A persisted negative rating is restored on the actual lazy hover after reload",
+            "status": "PASS"
+          },
+          {
+            "label": "Message put/delete and session remark exist in actual controlled durable metadata",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "coding-modal-keyboard",
+        "viewport": "desktop",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "An assigned New Session shortcut cannot navigate behind the open native settings dialog",
+            "status": "PASS"
+          },
+          {
+            "label": "Escape closes the native dialog and the global shortcut works again",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "coding-diff-ownership",
+        "viewport": "desktop",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "A real delayed native diff request stays bound to its announced owner while the other conversation has no leaked change card",
+            "status": "PASS"
+          },
+          {
+            "label": "Selecting the original owner opens its actual captured diff in the native review tab",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "session-reference-menu",
+        "viewport": "desktop",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "The actual @ menu discovers a renamed authorized session and inserts its real reference chip",
+            "status": "PASS"
+          },
+          {
+            "label": "Submitting the real reference chip supplies an actual bounded read-only source snapshot to the real HTTP provider",
+            "status": "PASS"
+          },
+          {
+            "label": "Conversation, reload and later reference candidates show readable user text without internal snapshot markers",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "presentation-controls",
+        "viewport": "desktop",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "User, code block and assistant copy buttons put their distinct actual contents on the clipboard",
+            "status": "PASS"
+          },
+          {
+            "label": "Actual per-turn usage popover displays the executed provider and token totals",
+            "status": "PASS"
+          },
+          {
+            "label": "Trajectory and Chat tabs retain the actual read tool and conversation",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "input-queue-stop",
+        "viewport": "desktop",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "Shift+Enter inserts a real newline without submitting a task",
+            "status": "PASS"
+          },
+          {
+            "label": "Immediate repeated Enter admits one actual running task",
+            "status": "PASS"
+          },
+          {
+            "label": "Queue submits once; double Escape reaches real cancellation and retains unsent input",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "attachment-add-remove-submit",
+        "viewport": "desktop",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "Removing a selected file restores an empty unsent composer",
+            "status": "PASS"
+          },
+          {
+            "label": "Reattaching and submitting supplies actual authorized UTF-8 file contents to the production model request",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "files-and-panel-layout",
+        "viewport": "desktop",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "A real file tree double-click opens a separate actual content preview tab",
+            "status": "PASS"
+          },
+          {
+            "label": "Preview wrap/reload, fullscreen restore and available split controls remain reachable",
+            "status": "PASS",
+            "detail": {
+              "panes": 2
+            }
+          },
+          {
+            "label": "Closing/reopening the sidebar retains its preview panes without page-wide horizontal overflow",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "shortcuts-persist-conflict-reset",
+        "viewport": "desktop",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "An edited shortcut persists through real reload and actually creates one new session",
+            "status": "PASS"
+          },
+          {
+            "label": "An actual conflicting shortcut is rejected with its existing command name",
+            "status": "PASS"
+          },
+          {
+            "label": "Confirmed restore removes the custom command binding without a hidden navigation",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "settings-font-and-locale",
+        "viewport": "desktop",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "Font increase/decrease updates the actual conversation layout variable",
+            "status": "PASS"
+          },
+          {
+            "label": "The actual language setting localizes native coding controls and keeps them inside the viewport",
+            "status": "PASS"
+          },
+          {
+            "label": "Returning to English updates native coding components and survives an actual reload",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "capabilities-and-task-filters",
+        "viewport": "desktop",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "A Web host without a native configuration opener does not advertise that unavailable action",
+            "status": "PASS"
+          },
+          {
+            "label": "Removed plugin, preset, version and floating coding surfaces have no remaining user-facing entry",
+            "status": "PASS"
+          },
+          {
+            "label": "Permission labels wait for actual saved state during a real TCP pause and remain correct after reload",
+            "status": "PASS"
+          },
+          {
+            "label": "The real automation catalog responds to its three list filters without inventing an installed plugin",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "sidebar-pin-search-filters",
+        "viewport": "desktop",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "Pinning a real selected session survives reload and exposes its inverse action",
+            "status": "PASS"
+          },
+          {
+            "label": "The actual session search finds the matching named session",
+            "status": "PASS"
+          },
+          {
+            "label": "Archive filtering hides/restores active sessions and Unpin reaches its real owner",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "navigation-draft-ownership",
+        "viewport": "mobile",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "A paste immediately after New Session belongs to the new task under real network latency",
+            "status": "PASS"
+          },
+          {
+            "label": "Returning to the previous task preserves its independent composer draft",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "coding-draft-ownership",
+        "viewport": "mobile",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "Empty native coding draft cannot submit",
+            "status": "PASS"
+          },
+          {
+            "label": "A/B native coding drafts remain separate through selection",
+            "status": "PASS"
+          },
+          {
+            "label": "Closing native settings retains the selected coding session draft",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "feedback-roundtrip",
+        "viewport": "mobile",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "A real positive rating submission updates its assistant control",
+            "status": "PASS"
+          },
+          {
+            "label": "Clicking the recorded rating retracts it",
+            "status": "PASS"
+          },
+          {
+            "label": "A persisted negative rating is restored on the actual lazy hover after reload",
+            "status": "PASS"
+          },
+          {
+            "label": "Message put/delete and session remark exist in actual controlled durable metadata",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "coding-modal-keyboard",
+        "viewport": "mobile",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "An assigned New Session shortcut cannot navigate behind the open native settings dialog",
+            "status": "PASS"
+          },
+          {
+            "label": "Escape closes the native dialog and the global shortcut works again",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "coding-diff-ownership",
+        "viewport": "mobile",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "A real delayed native diff request stays bound to its announced owner while the other conversation has no leaked change card",
+            "status": "PASS"
+          },
+          {
+            "label": "Selecting the original owner opens its actual captured diff in the native review tab",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "session-reference-menu",
+        "viewport": "mobile",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "The actual @ menu discovers a renamed authorized session and inserts its real reference chip",
+            "status": "PASS"
+          },
+          {
+            "label": "Submitting the real reference chip supplies an actual bounded read-only source snapshot to the real HTTP provider",
+            "status": "PASS"
+          },
+          {
+            "label": "Conversation, reload and later reference candidates show readable user text without internal snapshot markers",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "presentation-controls",
+        "viewport": "mobile",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "User, code block and assistant copy buttons put their distinct actual contents on the clipboard",
+            "status": "PASS"
+          },
+          {
+            "label": "Actual per-turn usage popover displays the executed provider and token totals",
+            "status": "PASS"
+          },
+          {
+            "label": "Trajectory and Chat tabs retain the actual read tool and conversation",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "input-queue-stop",
+        "viewport": "mobile",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "Shift+Enter inserts a real newline without submitting a task",
+            "status": "PASS"
+          },
+          {
+            "label": "Immediate repeated Enter admits one actual running task",
+            "status": "PASS"
+          },
+          {
+            "label": "Queue submits once; double Escape reaches real cancellation and retains unsent input",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "attachment-add-remove-submit",
+        "viewport": "mobile",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "Removing a selected file restores an empty unsent composer",
+            "status": "PASS"
+          },
+          {
+            "label": "Reattaching and submitting supplies actual authorized UTF-8 file contents to the production model request",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "files-and-panel-layout",
+        "viewport": "mobile",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "A real file tree double-click opens a separate actual content preview tab",
+            "status": "PASS"
+          },
+          {
+            "label": "Preview wrap/reload, fullscreen restore and available split controls remain reachable",
+            "status": "PASS",
+            "detail": {
+              "panes": 1
+            }
+          },
+          {
+            "label": "Closing/reopening the sidebar retains its preview panes without page-wide horizontal overflow",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "shortcuts-persist-conflict-reset",
+        "viewport": "mobile",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "An edited shortcut persists through real reload and actually creates one new session",
+            "status": "PASS"
+          },
+          {
+            "label": "An actual conflicting shortcut is rejected with its existing command name",
+            "status": "PASS"
+          },
+          {
+            "label": "Confirmed restore removes the custom command binding without a hidden navigation",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "settings-font-and-locale",
+        "viewport": "mobile",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "Font increase/decrease updates the actual conversation layout variable",
+            "status": "PASS"
+          },
+          {
+            "label": "The actual language setting localizes native coding controls and keeps them inside the viewport",
+            "status": "PASS"
+          },
+          {
+            "label": "Returning to English updates native coding components and survives an actual reload",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "capabilities-and-task-filters",
+        "viewport": "mobile",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "A Web host without a native configuration opener does not advertise that unavailable action",
+            "status": "PASS"
+          },
+          {
+            "label": "Removed plugin, preset, version and floating coding surfaces have no remaining user-facing entry",
+            "status": "PASS"
+          },
+          {
+            "label": "Permission labels wait for actual saved state during a real TCP pause and remain correct after reload",
+            "status": "PASS"
+          },
+          {
+            "label": "The real automation catalog responds to its three list filters without inventing an installed plugin",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "sidebar-pin-search-filters",
+        "viewport": "mobile",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "Pinning a real selected session survives reload and exposes its inverse action",
+            "status": "PASS"
+          },
+          {
+            "label": "The actual session search finds the matching named session",
+            "status": "PASS"
+          },
+          {
+            "label": "Archive filtering hides/restores active sessions and Unpin reaches its real owner",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "navigation-draft-ownership",
+        "viewport": "narrow",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "A paste immediately after New Session belongs to the new task under real network latency",
+            "status": "PASS"
+          },
+          {
+            "label": "Returning to the previous task preserves its independent composer draft",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "coding-draft-ownership",
+        "viewport": "narrow",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "Empty native coding draft cannot submit",
+            "status": "PASS"
+          },
+          {
+            "label": "A/B native coding drafts remain separate through selection",
+            "status": "PASS"
+          },
+          {
+            "label": "Closing native settings retains the selected coding session draft",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "feedback-roundtrip",
+        "viewport": "narrow",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "A real positive rating submission updates its assistant control",
+            "status": "PASS"
+          },
+          {
+            "label": "Clicking the recorded rating retracts it",
+            "status": "PASS"
+          },
+          {
+            "label": "A persisted negative rating is restored on the actual lazy hover after reload",
+            "status": "PASS"
+          },
+          {
+            "label": "Message put/delete and session remark exist in actual controlled durable metadata",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "coding-modal-keyboard",
+        "viewport": "narrow",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "An assigned New Session shortcut cannot navigate behind the open native settings dialog",
+            "status": "PASS"
+          },
+          {
+            "label": "Escape closes the native dialog and the global shortcut works again",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "coding-diff-ownership",
+        "viewport": "narrow",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "A real delayed native diff request stays bound to its announced owner while the other conversation has no leaked change card",
+            "status": "PASS"
+          },
+          {
+            "label": "Selecting the original owner opens its actual captured diff in the native review tab",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "session-reference-menu",
+        "viewport": "narrow",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "The actual @ menu discovers a renamed authorized session and inserts its real reference chip",
+            "status": "PASS"
+          },
+          {
+            "label": "Submitting the real reference chip supplies an actual bounded read-only source snapshot to the real HTTP provider",
+            "status": "PASS"
+          },
+          {
+            "label": "Conversation, reload and later reference candidates show readable user text without internal snapshot markers",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "presentation-controls",
+        "viewport": "narrow",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "User, code block and assistant copy buttons put their distinct actual contents on the clipboard",
+            "status": "PASS"
+          },
+          {
+            "label": "Actual per-turn usage popover displays the executed provider and token totals",
+            "status": "PASS"
+          },
+          {
+            "label": "Trajectory and Chat tabs retain the actual read tool and conversation",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "input-queue-stop",
+        "viewport": "narrow",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "Shift+Enter inserts a real newline without submitting a task",
+            "status": "PASS"
+          },
+          {
+            "label": "Immediate repeated Enter admits one actual running task",
+            "status": "PASS"
+          },
+          {
+            "label": "Queue submits once; double Escape reaches real cancellation and retains unsent input",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "attachment-add-remove-submit",
+        "viewport": "narrow",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "Removing a selected file restores an empty unsent composer",
+            "status": "PASS"
+          },
+          {
+            "label": "Reattaching and submitting supplies actual authorized UTF-8 file contents to the production model request",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "files-and-panel-layout",
+        "viewport": "narrow",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "A real file tree double-click opens a separate actual content preview tab",
+            "status": "PASS"
+          },
+          {
+            "label": "Preview wrap/reload, fullscreen restore and available split controls remain reachable",
+            "status": "PASS",
+            "detail": {
+              "panes": 1
+            }
+          },
+          {
+            "label": "Closing/reopening the sidebar retains its preview panes without page-wide horizontal overflow",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "shortcuts-persist-conflict-reset",
+        "viewport": "narrow",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "An edited shortcut persists through real reload and actually creates one new session",
+            "status": "PASS"
+          },
+          {
+            "label": "An actual conflicting shortcut is rejected with its existing command name",
+            "status": "PASS"
+          },
+          {
+            "label": "Confirmed restore removes the custom command binding without a hidden navigation",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "settings-font-and-locale",
+        "viewport": "narrow",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "Font increase/decrease updates the actual conversation layout variable",
+            "status": "PASS"
+          },
+          {
+            "label": "The actual language setting localizes native coding controls and keeps them inside the viewport",
+            "status": "PASS"
+          },
+          {
+            "label": "Returning to English updates native coding components and survives an actual reload",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "capabilities-and-task-filters",
+        "viewport": "narrow",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "A Web host without a native configuration opener does not advertise that unavailable action",
+            "status": "PASS"
+          },
+          {
+            "label": "Removed plugin, preset, version and floating coding surfaces have no remaining user-facing entry",
+            "status": "PASS"
+          },
+          {
+            "label": "Permission labels wait for actual saved state during a real TCP pause and remain correct after reload",
+            "status": "PASS"
+          },
+          {
+            "label": "The real automation catalog responds to its three list filters without inventing an installed plugin",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "name": "sidebar-pin-search-filters",
+        "viewport": "narrow",
+        "status": "PASS",
+        "checks": [
+          {
+            "label": "Pinning a real selected session survives reload and exposes its inverse action",
+            "status": "PASS"
+          },
+          {
+            "label": "The actual session search finds the matching named session",
+            "status": "PASS"
+          },
+          {
+            "label": "Archive filtering hides/restores active sessions and Unpin reaches its real owner",
+            "status": "PASS"
+          }
+        ],
+        "errors": []
+      }
+    ],
+    "rawResultSha256": "aa3530ac4ea91f07b596770b14bf2bb0b07ae417c79b97fd7a86bf816ba500cb",
+    "compiledFilesRehashed": 1055,
+    "compiledManifestSha256": "93747c28845bcf4a6dc5165b4d9f34cde6ee8251bd9928b1bd7405af0d84f679",
+    "compiledDigestRecomputed": true
+  },
+  "paidModelCalls": 0,
+  "realModelQuality": "NOT_PROVEN",
+  "artifactQualification": {
+    "fullRawBrowserBodiesScreenshotsIncluded": false,
+    "fullCompiledManifestIncluded": false,
+    "nativeWindows": "PENDING exact main SHA; not simulated",
+    "localSupersededRun": {
+      "status": "SUPERSEDED",
+      "sourceSha": "255da6af4e20c10faecedcc192a8c0485687c98c",
+      "reason": "New confirmed absolute symlink + parent-alias + dot-dot path defect found during source review; stop local suite before changing source, then validate new clean SHA.",
+      "localOnly": true,
+      "ciCancelled": false,
+      "runner": 94415,
+      "children": [
+        116809,
+        94655,
+        94635,
+        94623
+      ]
+    }
+  }
+}
