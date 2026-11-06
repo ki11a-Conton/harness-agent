@@ -1,0 +1,38 @@
+{
+  "startedAt": "2026-11-06T09:27:24.467935+00:00",
+  "sourceBefore": {
+    "sha": "f1c88be9d8c8364a442139a4b0cd21603ef9bee9",
+    "branch": "fix/comprehensive-audit-20261106",
+    "status": "M  apps/cli/src/r0-f6-ci-readiness-classification.test.ts\nA  packages/core/src/runtime/reused-tool-call-recovery.regressions.test.ts\nA  packages/gateway/src/desktop-error-drain.regressions.test.ts\nA  packages/gateway/src/stdio-lifecycle.regressions.test.ts\nA  packages/sdk/src/memory-close.regressions.test.ts\nA  packages/sdk/src/synchronous-boundaries.regressions.test.ts",
+    "sparse": ""
+  },
+  "command": [
+    "pnpm",
+    "exec",
+    "vitest",
+    "run",
+    "packages/sdk/src/synchronous-boundaries.regressions.test.ts",
+    "packages/sdk/src/memory-close.regressions.test.ts",
+    "packages/gateway/src/desktop-error-drain.regressions.test.ts",
+    "packages/gateway/src/stdio-lifecycle.regressions.test.ts",
+    "packages/core/src/runtime/reused-tool-call-recovery.regressions.test.ts",
+    "apps/cli/src/r0-f6-ci-readiness-classification.test.ts",
+    "--testNamePattern",
+    "distinct executions|stdio lifecycle|SDK synchronous|memory SDK|desktop run|readiness classification fixture"
+  ],
+  "node": "v24.19.0",
+  "status": "FAIL",
+  "log": "/dev/shm/harness-comprehensive-audit-20261106/root/formal-red.log",
+  "paidModelCalls": 0,
+  "finishedAt": "2026-11-06T09:27:32.419666+00:00",
+  "durationSeconds": 7.924510989000055,
+  "exitCode": 1,
+  "sourceAfter": {
+    "sha": "f1c88be9d8c8364a442139a4b0cd21603ef9bee9",
+    "branch": "fix/comprehensive-audit-20261106",
+    "status": "M  apps/cli/src/r0-f6-ci-readiness-classification.test.ts\nA  packages/core/src/runtime/reused-tool-call-recovery.regressions.test.ts\nA  packages/gateway/src/desktop-error-drain.regressions.test.ts\nA  packages/gateway/src/stdio-lifecycle.regressions.test.ts\nA  packages/sdk/src/memory-close.regressions.test.ts\nA  packages/sdk/src/synchronous-boundaries.regressions.test.ts",
+    "sparse": ""
+  },
+  "logBytes": 37723,
+  "logSha256": "48f599c2c20ffb645bfbf4386afa6ea664b53b54c66233a298ceca5abed2e170"
+}

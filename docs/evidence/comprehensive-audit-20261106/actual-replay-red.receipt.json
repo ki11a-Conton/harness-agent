@@ -1,0 +1,30 @@
+{
+  "startedAt": "2026-11-06T09:31:57.600779+00:00",
+  "sourceBefore": {
+    "sha": "f1c88be9d8c8364a442139a4b0cd21603ef9bee9",
+    "branch": "fix/comprehensive-audit-20261106",
+    "status": "M  .github/workflows/windows-acceptance.yml\nM  apps/cli/src/r0-f6-ci-readiness-classification.test.ts\nM  packages/core/src/runtime/recovery-controller.ts\nA  packages/core/src/runtime/reused-tool-call-recovery.regressions.test.ts\nM  packages/core/src/runtime/runtime.ts\nA  packages/core/src/runtime/tool-replay-requests.ts\nM  packages/gateway/src/desktop-client.ts\nA  packages/gateway/src/desktop-error-drain.regressions.test.ts\nA  packages/gateway/src/stdio-lifecycle.regressions.test.ts\nM  packages/gateway/src/stdio-transport.ts\nM  packages/sdk/src/client.ts\nA  packages/sdk/src/memory-close.regressions.test.ts\nA  packages/sdk/src/synchronous-boundaries.regressions.test.ts\nM  packages/sdk/src/transport.ts",
+    "sparse": ""
+  },
+  "command": [
+    "node",
+    "/dev/shm/harness-comprehensive-audit-20261106/repros/reused-tool-actual.mjs",
+    "/tmp/harness-agent-comprehensive-20261106",
+    "/dev/shm/harness-comprehensive-audit-20261106/repros/actual-replay-red.json"
+  ],
+  "node": "v24.19.0",
+  "status": "FAIL",
+  "log": "/dev/shm/harness-comprehensive-audit-20261106/root/actual-replay-red.log",
+  "paidModelCalls": 0,
+  "finishedAt": "2026-11-06T09:31:57.800209+00:00",
+  "durationSeconds": 0.1650308229999382,
+  "exitCode": 1,
+  "sourceAfter": {
+    "sha": "f1c88be9d8c8364a442139a4b0cd21603ef9bee9",
+    "branch": "fix/comprehensive-audit-20261106",
+    "status": "M  .github/workflows/windows-acceptance.yml\nM  apps/cli/src/r0-f6-ci-readiness-classification.test.ts\nM  packages/core/src/runtime/recovery-controller.ts\nA  packages/core/src/runtime/reused-tool-call-recovery.regressions.test.ts\nM  packages/core/src/runtime/runtime.ts\nA  packages/core/src/runtime/tool-replay-requests.ts\nM  packages/gateway/src/desktop-client.ts\nA  packages/gateway/src/desktop-error-drain.regressions.test.ts\nA  packages/gateway/src/stdio-lifecycle.regressions.test.ts\nM  packages/gateway/src/stdio-transport.ts\nM  packages/sdk/src/client.ts\nA  packages/sdk/src/memory-close.regressions.test.ts\nA  packages/sdk/src/synchronous-boundaries.regressions.test.ts\nM  packages/sdk/src/transport.ts",
+    "sparse": ""
+  },
+  "logBytes": 6696,
+  "logSha256": "34b342c9a2f6a332740818529c89d9fbd421b10e91829be37d77414c30025f16"
+}

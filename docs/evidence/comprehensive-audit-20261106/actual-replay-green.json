@@ -1,0 +1,210 @@
+{
+  "sourceBefore": {
+    "sha": "ad6a3fb58f9e02814e272c2d298d25f2d5585bde",
+    "status": ""
+  },
+  "sourceAfter": {
+    "sha": "ad6a3fb58f9e02814e272c2d298d25f2d5585bde",
+    "status": ""
+  },
+  "compiled": {
+    "packages/core/dist/runtime/runtime.js": "acf642520eaa795f605d4454d9406cb0bc7929a899bfefbcdf44e55245dd9cc4",
+    "packages/core/dist/runtime/recovery-controller.js": "4d1b25b10118752eb5f32e87e87132724c3818b6e9ba320cd5e6aa4cec367472",
+    "packages/tools/dist/orchestrator.js": "c0f062ad3720da1511fabb99463d72144c5a355011107c26684ad4da0761b7d0",
+    "packages/tools/dist/tools/write-file.js": "5a6f01b768d8982f78878f2db466ad4e6623484a68f17b53806beeda723c2c7d"
+  },
+  "qualification": "RED uses dist built from byte-qualified main before production edits; GREEN is rebuilt from the recorded candidate. Source and compiled hashes are kept separately.",
+  "checks": {
+    "bothActualWrites": true,
+    "bothRecovered": true,
+    "noThirdWrite": true
+  },
+  "killed": {
+    "name": "RuntimeKilledError",
+    "point": "tool.effect_committed",
+    "message": "simulated process kill at tool.effect_committed"
+  },
+  "actualFiles": [
+    "export const value = 0;\n",
+    "export const value = 1;\n"
+  ],
+  "thirdExists": false,
+  "resumedStatus": "failed",
+  "resumedError": {
+    "code": "RESOURCE_LIMIT",
+    "message": "maxToolCalls (2) reached",
+    "retryable": false,
+    "safeToRetry": false
+  },
+  "effects": 2,
+  "requested": [
+    {
+      "id": "event_9446123d-9d3e-4e64-8a7a-8fdf11b1d48c",
+      "sessionId": "session_13b39094-f048-4b67-beee-2faae7d26ac5",
+      "turnId": "turn_c02fb120-3c33-4b5d-aec6-979e14be296b",
+      "spanId": "toolcall_reused_valid_id",
+      "parentSpanId": "modelcall_05a7c294-fb58-4d2b-b202-b5c50fafd044",
+      "timestamp": 1793957805129,
+      "type": "tool.requested",
+      "payload": {
+        "toolCallId": "toolcall_reused_valid_id",
+        "name": "write_file",
+        "args": {
+          "path": "a.ts",
+          "content": "export const value = 0;\n"
+        },
+        "stepId": "turn_c02fb120-3c33-4b5d-aec6-979e14be296b:0"
+      },
+      "sequence": 6
+    },
+    {
+      "id": "event_a8340b9e-2a55-4bbd-a925-f85d87df4c35",
+      "sessionId": "session_13b39094-f048-4b67-beee-2faae7d26ac5",
+      "turnId": "turn_c02fb120-3c33-4b5d-aec6-979e14be296b",
+      "spanId": "toolcall_reused_valid_id",
+      "parentSpanId": "modelcall_074039cd-439b-47cb-be6e-73e31d9412fd",
+      "timestamp": 1793957805134,
+      "type": "tool.requested",
+      "payload": {
+        "toolCallId": "toolcall_reused_valid_id",
+        "name": "write_file",
+        "args": {
+          "path": "b.ts",
+          "content": "export const value = 1;\n"
+        },
+        "stepId": "turn_c02fb120-3c33-4b5d-aec6-979e14be296b:1"
+      },
+      "sequence": 15
+    }
+  ],
+  "terminalEvents": [
+    {
+      "id": "event_c097744a-48e0-4b04-923b-8594ac7cd1fe",
+      "sessionId": "session_13b39094-f048-4b67-beee-2faae7d26ac5",
+      "type": "tool.completed",
+      "payload": {
+        "toolCallId": "toolcall_reused_valid_id",
+        "tool": "write_file",
+        "status": "success",
+        "durationMs": 4,
+        "evidence": [
+          {
+            "type": "file",
+            "description": "wrote 24 bytes",
+            "source": "/dev/shm/harness-comprehensive-audit-20261106/tmp/reused-replay-now99p/a.ts",
+            "timestamp": 1793957805132
+          }
+        ],
+        "outputPreview": "{\"path\":\"/dev/shm/harness-comprehensive-audit-20261106/tmp/reused-replay-now99p/a.ts\",\"bytes\":24}"
+      },
+      "timestamp": 1793957805133,
+      "turnId": "turn_c02fb120-3c33-4b5d-aec6-979e14be296b",
+      "sequence": 10
+    },
+    {
+      "id": "event_5800a7fa-0222-425b-8693-0f659ed7883b",
+      "sessionId": "session_13b39094-f048-4b67-beee-2faae7d26ac5",
+      "turnId": "turn_c02fb120-3c33-4b5d-aec6-979e14be296b",
+      "spanId": "toolcall_reused_valid_id",
+      "parentSpanId": "modelcall_05a7c294-fb58-4d2b-b202-b5c50fafd044",
+      "timestamp": 1793957805133,
+      "type": "tool.completed",
+      "payload": {
+        "toolCallId": "toolcall_reused_valid_id",
+        "tool": "write_file",
+        "durationMs": 4
+      },
+      "sequence": 11
+    },
+    {
+      "id": "event_34f25cc7-5320-4f63-8c77-381fa8c13135",
+      "sessionId": "session_13b39094-f048-4b67-beee-2faae7d26ac5",
+      "type": "tool.completed",
+      "payload": {
+        "toolCallId": "toolcall_reused_valid_id",
+        "tool": "write_file",
+        "status": "success",
+        "durationMs": 1,
+        "evidence": [
+          {
+            "type": "file",
+            "description": "wrote 24 bytes",
+            "source": "/dev/shm/harness-comprehensive-audit-20261106/tmp/reused-replay-now99p/b.ts",
+            "timestamp": 1793957805135
+          }
+        ],
+        "outputPreview": "{\"path\":\"/dev/shm/harness-comprehensive-audit-20261106/tmp/reused-replay-now99p/b.ts\",\"bytes\":24}"
+      },
+      "timestamp": 1793957805135,
+      "turnId": "turn_c02fb120-3c33-4b5d-aec6-979e14be296b",
+      "sequence": 19
+    }
+  ],
+  "working": {
+    "goal": "Modify both source files",
+    "constraints": [],
+    "plan": [],
+    "decisions": [],
+    "completed": [
+      "modified a.ts",
+      "modified b.ts"
+    ],
+    "pending": [],
+    "filesChanged": [
+      "a.ts",
+      "b.ts"
+    ],
+    "commandsRun": [],
+    "testsRun": [],
+    "failures": [],
+    "importantFacts": [],
+    "openQuestions": [],
+    "toolRefs": [],
+    "artifactRefs": [],
+    "memoryRefs": [],
+    "childAgentRefs": []
+  },
+  "committedSideEffects": [
+    {
+      "toolCallId": "toolcall_reused_valid_id",
+      "tool": "write_file",
+      "argsHash": "c0495272bd4c41b73b262af7ec0a9326c540046f4863ddaa13b563d62d3ec7ad",
+      "started": 1793957805129,
+      "completed": 1793957805133,
+      "status": "success",
+      "sideEffect": true
+    },
+    {
+      "toolCallId": "toolcall_reused_valid_id",
+      "tool": "write_file",
+      "argsHash": "e26aa34b47187c32c2ded00f53fb1080a79811daa778c9a7e87c5d055af07928",
+      "started": 1793957805134,
+      "completed": 1793957805135,
+      "status": "success",
+      "sideEffect": true
+    }
+  ],
+  "replayedToolLedger": [
+    {
+      "toolCallId": "toolcall_reused_valid_id",
+      "tool": "write_file",
+      "argsHash": "c0495272bd4c41b73b262af7ec0a9326c540046f4863ddaa13b563d62d3ec7ad",
+      "started": 1793957805129,
+      "completed": 1793957805133,
+      "status": "success",
+      "sideEffect": true
+    },
+    {
+      "toolCallId": "toolcall_reused_valid_id",
+      "tool": "write_file",
+      "argsHash": "e26aa34b47187c32c2ded00f53fb1080a79811daa778c9a7e87c5d055af07928",
+      "started": 1793957805134,
+      "completed": 1793957805135,
+      "status": "success",
+      "sideEffect": true
+    }
+  ],
+  "unresolvedTools": [],
+  "replayedEventCount": 17,
+  "paidModelCalls": 0
+}

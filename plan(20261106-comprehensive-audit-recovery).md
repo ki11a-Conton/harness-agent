@@ -23,3 +23,9 @@
 六个原生产文件与main逐字节相同的基线上，47项新增回归重新取得36失败/11通过；原42项分类用例此次仅因筛选未运行。真实Runtime/ToolOrchestrator/write_file崩溃探针实际写入a.ts/b.ts，原恢复丢一项记录，重启后在maxToolCalls=2下实际写出c.ts。RED使用修改前已构建的dist，源码资格、构建回执及dist哈希分别保存。
 
 恢复修复后强制类型构建通过；SDK、Gateway、Runtime、安全及完整分类用例120文件/3419项通过。保留原预算、断言、独立CI门禁；本轮不重新引入历史首版修复的重复admission问题。当前冻结修复提交，继续实际磁盘GREEN、原完整pnpm test、CLI/Web、本地HTTP模型及实际浏览器验收。11月5日10708通过是历史结果，不代替11月6日重新验收。
+
+## 本地验收归档
+
+11月6日干净源码ad6a3fb58f9e02814e272c2d298d25f2d5585bde重新全量pnpm test：10708通过/16按原条件跳过，696文件通过/2文件跳过，495.60秒，源码前后不变。真实磁盘GREEN同时恢复两个文件、第三文件不存在，返回原maxToolCalls=2的RESOURCE_LIMIT。正式Web浏览器42场景/120检查/0错误，CLI/Web50工程断言+8接线检查/19HTTP请求通过；托管命令48实际执行臂候选24/24、基线16/24、重叠16、重复启动0、failures空。
+
+原始日志xz、失败回执、源码资格、实际磁盘RED/GREEN与验收摘要见[本地证据](docs/evidence/comprehensive-audit-20261106/README.md)。Windows工作流原97文件全部保留，只追加5个回归文件；原46个必需用例解析规则未改。当前仅新增归档文档，生产源码不再修改。最终main的四组CI及真实Windows回执在推送后按精确SHA复核，归档时不预填PASS。付费模型质量仍NOT_PROVEN，不保证穷尽所有潜在bug。

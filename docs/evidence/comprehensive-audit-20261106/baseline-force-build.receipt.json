@@ -1,0 +1,31 @@
+{
+  "startedAt": "2026-11-06T09:26:58.415393+00:00",
+  "sourceBefore": {
+    "sha": "f1c88be9d8c8364a442139a4b0cd21603ef9bee9",
+    "branch": "fix/comprehensive-audit-20261106",
+    "status": "M apps/cli/src/r0-f6-ci-readiness-classification.test.ts\n?? packages/core/src/runtime/reused-tool-call-recovery.regressions.test.ts\n?? packages/gateway/src/desktop-error-drain.regressions.test.ts\n?? packages/gateway/src/stdio-lifecycle.regressions.test.ts\n?? packages/sdk/src/memory-close.regressions.test.ts\n?? packages/sdk/src/synchronous-boundaries.regressions.test.ts",
+    "sparse": ""
+  },
+  "command": [
+    "pnpm",
+    "exec",
+    "tsc",
+    "-b",
+    "--force"
+  ],
+  "node": "v24.19.0",
+  "status": "PASS",
+  "log": "/dev/shm/harness-comprehensive-audit-20261106/root/baseline-force-build.log",
+  "paidModelCalls": 0,
+  "finishedAt": "2026-11-06T09:27:04.972554+00:00",
+  "durationSeconds": 6.513911764999989,
+  "exitCode": 0,
+  "sourceAfter": {
+    "sha": "f1c88be9d8c8364a442139a4b0cd21603ef9bee9",
+    "branch": "fix/comprehensive-audit-20261106",
+    "status": "M apps/cli/src/r0-f6-ci-readiness-classification.test.ts\n?? packages/core/src/runtime/reused-tool-call-recovery.regressions.test.ts\n?? packages/gateway/src/desktop-error-drain.regressions.test.ts\n?? packages/gateway/src/stdio-lifecycle.regressions.test.ts\n?? packages/sdk/src/memory-close.regressions.test.ts\n?? packages/sdk/src/synchronous-boundaries.regressions.test.ts",
+    "sparse": ""
+  },
+  "logBytes": 0,
+  "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

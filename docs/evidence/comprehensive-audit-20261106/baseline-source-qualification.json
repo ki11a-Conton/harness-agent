@@ -1,0 +1,13 @@
+{
+  "baseline": "62e99fd698ade64e0aa91bf6dbceedf5b543fb09",
+  "productionEqualsBaseline": true,
+  "files": {
+    "packages/core/src/runtime/recovery-controller.ts": "f7cc480504d8422826b513ea6b5ea68d2c85e3006a0d84ad658f228c6cce94d0",
+    "packages/core/src/runtime/runtime.ts": "b690e140f3e690dd9ec84d8fe1f196b1e314b76f00a6ff642078091157acce5b",
+    "packages/gateway/src/desktop-client.ts": "f5818fccb10fd19b374152cb597a601676e60f696ae9b4c87ae139808edfc754",
+    "packages/gateway/src/stdio-transport.ts": "42aee2f8d16606d2280f1da18808379ad3c532e332f4a4afcd29b2418a45ba62",
+    "packages/sdk/src/client.ts": "21e58c49f0c34b948da7741a3e22f31885b17cc2f8dbf7375b34e99bfbcb629a",
+    "packages/sdk/src/transport.ts": "d4463d671427858bab89296fa07c6fc8ceba26095d10c81d1374e5b373c6e25f"
+  },
+  "qualification": "Production sources match main byte-for-byte; regression tests are staged, including an equivalent extraction of the broken classification fixture for its new host sanity test. This is not a clean whole-worktree claim."
+}

@@ -1,0 +1,266 @@
+{
+  "status": "PASS",
+  "sourceSha": "ad6a3fb58f9e02814e272c2d298d25f2d5585bde",
+  "historicalNov5RawEvidenceLost": true,
+  "onlyNewNov6EvidenceQualifies": true,
+  "receipts": {
+    "candidate-force-build": {
+      "startedAt": "2026-11-06T09:32:09.371674+00:00",
+      "sourceBefore": {
+        "sha": "f1c88be9d8c8364a442139a4b0cd21603ef9bee9",
+        "branch": "fix/comprehensive-audit-20261106",
+        "status": "M  .github/workflows/windows-acceptance.yml\nM  apps/cli/src/r0-f6-ci-readiness-classification.test.ts\nM  packages/core/src/runtime/recovery-controller.ts\nA  packages/core/src/runtime/reused-tool-call-recovery.regressions.test.ts\nM  packages/core/src/runtime/runtime.ts\nA  packages/core/src/runtime/tool-replay-requests.ts\nM  packages/gateway/src/desktop-client.ts\nA  packages/gateway/src/desktop-error-drain.regressions.test.ts\nA  packages/gateway/src/stdio-lifecycle.regressions.test.ts\nM  packages/gateway/src/stdio-transport.ts\nM  packages/sdk/src/client.ts\nA  packages/sdk/src/memory-close.regressions.test.ts\nA  packages/sdk/src/synchronous-boundaries.regressions.test.ts\nM  packages/sdk/src/transport.ts",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "exec",
+        "tsc",
+        "-b",
+        "--force"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-comprehensive-audit-20261106/root/candidate-force-build.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T09:32:16.741545+00:00",
+      "durationSeconds": 7.344187183000031,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "f1c88be9d8c8364a442139a4b0cd21603ef9bee9",
+        "branch": "fix/comprehensive-audit-20261106",
+        "status": "M  .github/workflows/windows-acceptance.yml\nM  apps/cli/src/r0-f6-ci-readiness-classification.test.ts\nM  packages/core/src/runtime/recovery-controller.ts\nA  packages/core/src/runtime/reused-tool-call-recovery.regressions.test.ts\nM  packages/core/src/runtime/runtime.ts\nA  packages/core/src/runtime/tool-replay-requests.ts\nM  packages/gateway/src/desktop-client.ts\nA  packages/gateway/src/desktop-error-drain.regressions.test.ts\nA  packages/gateway/src/stdio-lifecycle.regressions.test.ts\nM  packages/gateway/src/stdio-transport.ts\nM  packages/sdk/src/client.ts\nA  packages/sdk/src/memory-close.regressions.test.ts\nA  packages/sdk/src/synchronous-boundaries.regressions.test.ts\nM  packages/sdk/src/transport.ts",
+        "sparse": ""
+      },
+      "logBytes": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "boundary-recovery-security-green": {
+      "startedAt": "2026-11-06T09:33:36.130019+00:00",
+      "sourceBefore": {
+        "sha": "f1c88be9d8c8364a442139a4b0cd21603ef9bee9",
+        "branch": "fix/comprehensive-audit-20261106",
+        "status": "M  .github/workflows/windows-acceptance.yml\nM  apps/cli/src/r0-f6-ci-readiness-classification.test.ts\nM  packages/core/src/runtime/recovery-controller.ts\nA  packages/core/src/runtime/reused-tool-call-recovery.regressions.test.ts\nM  packages/core/src/runtime/runtime.ts\nA  packages/core/src/runtime/tool-replay-requests.ts\nM  packages/gateway/src/desktop-client.ts\nA  packages/gateway/src/desktop-error-drain.regressions.test.ts\nA  packages/gateway/src/stdio-lifecycle.regressions.test.ts\nM  packages/gateway/src/stdio-transport.ts\nM  packages/sdk/src/client.ts\nA  packages/sdk/src/memory-close.regressions.test.ts\nA  packages/sdk/src/synchronous-boundaries.regressions.test.ts\nM  packages/sdk/src/transport.ts",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "packages/sdk",
+        "packages/gateway",
+        "packages/core/src/runtime",
+        "packages/security",
+        "packages/harness/src/security-regression-matrix.test.ts",
+        "apps/cli/src/r0-f6-ci-readiness-classification.test.ts"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-comprehensive-audit-20261106/root/boundary-recovery-security-green.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T09:34:06.567785+00:00",
+      "durationSeconds": 30.411946425999986,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "f1c88be9d8c8364a442139a4b0cd21603ef9bee9",
+        "branch": "fix/comprehensive-audit-20261106",
+        "status": "M  .github/workflows/windows-acceptance.yml\nM  apps/cli/src/r0-f6-ci-readiness-classification.test.ts\nM  packages/core/src/runtime/recovery-controller.ts\nA  packages/core/src/runtime/reused-tool-call-recovery.regressions.test.ts\nM  packages/core/src/runtime/runtime.ts\nA  packages/core/src/runtime/tool-replay-requests.ts\nM  packages/gateway/src/desktop-client.ts\nA  packages/gateway/src/desktop-error-drain.regressions.test.ts\nA  packages/gateway/src/stdio-lifecycle.regressions.test.ts\nM  packages/gateway/src/stdio-transport.ts\nM  packages/sdk/src/client.ts\nA  packages/sdk/src/memory-close.regressions.test.ts\nA  packages/sdk/src/synchronous-boundaries.regressions.test.ts\nM  packages/sdk/src/transport.ts",
+        "sparse": ""
+      },
+      "logBytes": 31165,
+      "logSha256": "a69c3c1cc6b8796928d0cf7e3ceed6922570dd42f769d46f6429b2d0d93ac1f0"
+    },
+    "actual-replay-green": {
+      "startedAt": "2026-11-06T09:36:44.945496+00:00",
+      "sourceBefore": {
+        "sha": "ad6a3fb58f9e02814e272c2d298d25f2d5585bde",
+        "branch": "fix/comprehensive-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "command": [
+        "node",
+        "/dev/shm/harness-comprehensive-audit-20261106/repros/reused-tool-actual.mjs",
+        "/tmp/harness-agent-comprehensive-20261106",
+        "/dev/shm/harness-comprehensive-audit-20261106/repros/actual-replay-green.json"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-comprehensive-audit-20261106/root/actual-replay-green.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T09:36:45.179426+00:00",
+      "durationSeconds": 0.20340725000005477,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "ad6a3fb58f9e02814e272c2d298d25f2d5585bde",
+        "branch": "fix/comprehensive-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "logBytes": 5331,
+      "logSha256": "142f47c55d8f5e716881b43c8a3c6a81f129d603336015cab0335f83a1f95797"
+    },
+    "full-pnpm-test": {
+      "startedAt": "2026-11-06T09:36:43.379693+00:00",
+      "sourceBefore": {
+        "sha": "ad6a3fb58f9e02814e272c2d298d25f2d5585bde",
+        "branch": "fix/comprehensive-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "test"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-comprehensive-audit-20261106/root/full-pnpm-test.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T09:44:59.016270+00:00",
+      "durationSeconds": 495.60409506899987,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "ad6a3fb58f9e02814e272c2d298d25f2d5585bde",
+        "branch": "fix/comprehensive-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "logBytes": 181667,
+      "logSha256": "c4a9557b624a6bf51a1b692bd5a1b743674e22d0a50692fdc85216a90d222ae8"
+    },
+    "official-browser": {
+      "startedAt": "2026-11-06T09:37:32.354049+00:00",
+      "sourceBefore": {
+        "sha": "ad6a3fb58f9e02814e272c2d298d25f2d5585bde",
+        "branch": "fix/comprehensive-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "command": [
+        "node",
+        "scripts/research/web-daily-20261016/browser-acceptance.mjs",
+        "--output",
+        "/dev/shm/harness-comprehensive-audit-20261106/official-browser",
+        "--playwright-module",
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
+        "--viewports",
+        "desktop,mobile,narrow"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-comprehensive-audit-20261106/root/official-browser.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T09:41:28.934751+00:00",
+      "durationSeconds": 236.55304937699998,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "ad6a3fb58f9e02814e272c2d298d25f2d5585bde",
+        "branch": "fix/comprehensive-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "logBytes": 3476,
+      "logSha256": "b24dedcb06eea819d576c69e3a8973f4547c0f9f277191791413f3030fa94bdb"
+    },
+    "cli-web-coding": {
+      "startedAt": "2026-11-06T09:37:32.347255+00:00",
+      "sourceBefore": {
+        "sha": "ad6a3fb58f9e02814e272c2d298d25f2d5585bde",
+        "branch": "fix/comprehensive-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "command": [
+        "node",
+        "scripts/research/coding-prompts-20261008/acceptance.mjs",
+        "/dev/shm/harness-comprehensive-audit-20261106/acceptance/coding-prompts",
+        "coding-v2"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-comprehensive-audit-20261106/root/cli-web-coding.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T09:37:42.952135+00:00",
+      "durationSeconds": 10.577043295000067,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "ad6a3fb58f9e02814e272c2d298d25f2d5585bde",
+        "branch": "fix/comprehensive-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "logBytes": 1457,
+      "logSha256": "cb774d879fb164ef150db07cec512ea399806cdb58ba1aa350e489321efd2324"
+    },
+    "managed-paired": {
+      "startedAt": "2026-11-06T09:39:16.262992+00:00",
+      "sourceBefore": {
+        "sha": "ad6a3fb58f9e02814e272c2d298d25f2d5585bde",
+        "branch": "fix/comprehensive-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "command": [
+        "node",
+        "scripts/research/managed-commands-20261025/paired.mjs",
+        "/dev/shm/harness-comprehensive-audit-20261106/acceptance/managed-paired"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-comprehensive-audit-20261106/root/managed-paired.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-06T09:41:43.779766+00:00",
+      "durationSeconds": 147.47182702400005,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "ad6a3fb58f9e02814e272c2d298d25f2d5585bde",
+        "branch": "fix/comprehensive-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "logBytes": 4224,
+      "logSha256": "97547a0de981a796ab455d256ac82e7198760aa3914b28848fb73f5a5350677b"
+    }
+  },
+  "full": {
+    "passed": 10708,
+    "skipped": 16,
+    "filesPassed": 696,
+    "filesSkipped": 2,
+    "rawLogSha256": "c4a9557b624a6bf51a1b692bd5a1b743674e22d0a50692fdc85216a90d222ae8"
+  },
+  "browser": {
+    "scenarios": 42,
+    "checks": 120,
+    "errors": 0,
+    "responsiveSizesOnly": true
+  },
+  "coding": {
+    "assertions": 50,
+    "promptWiringAssertions": 8,
+    "httpRequests": 19
+  },
+  "managed": {
+    "arms": 48,
+    "baselinePass": 16,
+    "candidatePass": 24,
+    "candidateOverlap": 16,
+    "duplicateStarts": 0,
+    "failures": [],
+    "scope": "causal engineering protocol probe; baseline/candidate gate coordination differs, so durations are not an identical-workload performance comparison or model-quality evidence"
+  },
+  "actualReplayChecks": {
+    "bothActualWrites": true,
+    "bothRecovered": true,
+    "noThirdWrite": true
+  },
+  "formalRed": {
+    "failed": 36,
+    "passedControls": 11,
+    "originalClassificationsFiltered": 42
+  },
+  "paidModelCalls": 0,
+  "realModelQuality": "NOT_PROVEN",
+  "nativeWindows": "Await exact final-main CI; not simulated by local Linux tests"
+}

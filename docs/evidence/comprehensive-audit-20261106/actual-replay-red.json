@@ -1,0 +1,190 @@
+{
+  "sourceBefore": {
+    "sha": "f1c88be9d8c8364a442139a4b0cd21603ef9bee9",
+    "status": "M  .github/workflows/windows-acceptance.yml\nM  apps/cli/src/r0-f6-ci-readiness-classification.test.ts\nM  packages/core/src/runtime/recovery-controller.ts\nA  packages/core/src/runtime/reused-tool-call-recovery.regressions.test.ts\nM  packages/core/src/runtime/runtime.ts\nA  packages/core/src/runtime/tool-replay-requests.ts\nM  packages/gateway/src/desktop-client.ts\nA  packages/gateway/src/desktop-error-drain.regressions.test.ts\nA  packages/gateway/src/stdio-lifecycle.regressions.test.ts\nM  packages/gateway/src/stdio-transport.ts\nM  packages/sdk/src/client.ts\nA  packages/sdk/src/memory-close.regressions.test.ts\nA  packages/sdk/src/synchronous-boundaries.regressions.test.ts\nM  packages/sdk/src/transport.ts"
+  },
+  "sourceAfter": {
+    "sha": "f1c88be9d8c8364a442139a4b0cd21603ef9bee9",
+    "status": "M  .github/workflows/windows-acceptance.yml\nM  apps/cli/src/r0-f6-ci-readiness-classification.test.ts\nM  packages/core/src/runtime/recovery-controller.ts\nA  packages/core/src/runtime/reused-tool-call-recovery.regressions.test.ts\nM  packages/core/src/runtime/runtime.ts\nA  packages/core/src/runtime/tool-replay-requests.ts\nM  packages/gateway/src/desktop-client.ts\nA  packages/gateway/src/desktop-error-drain.regressions.test.ts\nA  packages/gateway/src/stdio-lifecycle.regressions.test.ts\nM  packages/gateway/src/stdio-transport.ts\nM  packages/sdk/src/client.ts\nA  packages/sdk/src/memory-close.regressions.test.ts\nA  packages/sdk/src/synchronous-boundaries.regressions.test.ts\nM  packages/sdk/src/transport.ts"
+  },
+  "compiled": {
+    "packages/core/dist/runtime/runtime.js": "43028e64366ddc9e3eee295b5480c568ef07c02f45fa96a4d54579ddefadf799",
+    "packages/core/dist/runtime/recovery-controller.js": "307fcd8f41deaed895041edd47bfb5a66f8b5710b41ade6b47384e590aac1520",
+    "packages/tools/dist/orchestrator.js": "c0f062ad3720da1511fabb99463d72144c5a355011107c26684ad4da0761b7d0",
+    "packages/tools/dist/tools/write-file.js": "5a6f01b768d8982f78878f2db466ad4e6623484a68f17b53806beeda723c2c7d"
+  },
+  "qualification": "RED uses dist built from byte-qualified main before production edits; GREEN is rebuilt from the recorded candidate. Source and compiled hashes are kept separately.",
+  "checks": {
+    "bothActualWrites": true,
+    "bothRecovered": false,
+    "noThirdWrite": false
+  },
+  "killed": {
+    "name": "RuntimeKilledError",
+    "point": "tool.effect_committed",
+    "message": "simulated process kill at tool.effect_committed"
+  },
+  "actualFiles": [
+    "export const value = 0;\n",
+    "export const value = 1;\n"
+  ],
+  "thirdExists": true,
+  "resumedStatus": "failed",
+  "resumedError": {
+    "code": "MODEL_ERROR",
+    "message": "model ended without completion",
+    "retryable": true,
+    "safeToRetry": true
+  },
+  "effects": 2,
+  "requested": [
+    {
+      "id": "event_65b28e84-f91c-435f-9819-04406b4f7c87",
+      "sessionId": "session_0f7e126e-9847-42a5-8cae-dc86f3356d01",
+      "turnId": "turn_8f23d98f-32e7-4748-87f6-dca5681252dc",
+      "spanId": "toolcall_reused_valid_id",
+      "parentSpanId": "modelcall_ac59cc1b-4d23-4f1c-b93c-abf1499306dd",
+      "timestamp": 1793957517759,
+      "type": "tool.requested",
+      "payload": {
+        "toolCallId": "toolcall_reused_valid_id",
+        "name": "write_file",
+        "args": {
+          "path": "a.ts",
+          "content": "export const value = 0;\n"
+        },
+        "stepId": "turn_8f23d98f-32e7-4748-87f6-dca5681252dc:0"
+      },
+      "sequence": 6
+    },
+    {
+      "id": "event_b99021f5-22d8-48ca-8d77-0584d1f67d09",
+      "sessionId": "session_0f7e126e-9847-42a5-8cae-dc86f3356d01",
+      "turnId": "turn_8f23d98f-32e7-4748-87f6-dca5681252dc",
+      "spanId": "toolcall_reused_valid_id",
+      "parentSpanId": "modelcall_b6c0cf4b-ad03-4883-91cb-c670e98047d6",
+      "timestamp": 1793957517764,
+      "type": "tool.requested",
+      "payload": {
+        "toolCallId": "toolcall_reused_valid_id",
+        "name": "write_file",
+        "args": {
+          "path": "b.ts",
+          "content": "export const value = 1;\n"
+        },
+        "stepId": "turn_8f23d98f-32e7-4748-87f6-dca5681252dc:1"
+      },
+      "sequence": 15
+    }
+  ],
+  "terminalEvents": [
+    {
+      "id": "event_e74e2322-2997-4432-958f-17c4739c1a43",
+      "sessionId": "session_0f7e126e-9847-42a5-8cae-dc86f3356d01",
+      "type": "tool.completed",
+      "payload": {
+        "toolCallId": "toolcall_reused_valid_id",
+        "tool": "write_file",
+        "status": "success",
+        "durationMs": 4,
+        "evidence": [
+          {
+            "type": "file",
+            "description": "wrote 24 bytes",
+            "source": "/dev/shm/harness-comprehensive-audit-20261106/tmp/reused-replay-0j7JXF/a.ts",
+            "timestamp": 1793957517762
+          }
+        ],
+        "outputPreview": "{\"path\":\"/dev/shm/harness-comprehensive-audit-20261106/tmp/reused-replay-0j7JXF/a.ts\",\"bytes\":24}"
+      },
+      "timestamp": 1793957517763,
+      "turnId": "turn_8f23d98f-32e7-4748-87f6-dca5681252dc",
+      "sequence": 10
+    },
+    {
+      "id": "event_04a9abdf-b115-4211-b32e-edeaa0f64c41",
+      "sessionId": "session_0f7e126e-9847-42a5-8cae-dc86f3356d01",
+      "turnId": "turn_8f23d98f-32e7-4748-87f6-dca5681252dc",
+      "spanId": "toolcall_reused_valid_id",
+      "parentSpanId": "modelcall_ac59cc1b-4d23-4f1c-b93c-abf1499306dd",
+      "timestamp": 1793957517763,
+      "type": "tool.completed",
+      "payload": {
+        "toolCallId": "toolcall_reused_valid_id",
+        "tool": "write_file",
+        "durationMs": 4
+      },
+      "sequence": 11
+    },
+    {
+      "id": "event_9a1816a0-6fbc-462f-a4ce-c1b8d2e77e4c",
+      "sessionId": "session_0f7e126e-9847-42a5-8cae-dc86f3356d01",
+      "type": "tool.completed",
+      "payload": {
+        "toolCallId": "toolcall_reused_valid_id",
+        "tool": "write_file",
+        "status": "success",
+        "durationMs": 1,
+        "evidence": [
+          {
+            "type": "file",
+            "description": "wrote 24 bytes",
+            "source": "/dev/shm/harness-comprehensive-audit-20261106/tmp/reused-replay-0j7JXF/b.ts",
+            "timestamp": 1793957517765
+          }
+        ],
+        "outputPreview": "{\"path\":\"/dev/shm/harness-comprehensive-audit-20261106/tmp/reused-replay-0j7JXF/b.ts\",\"bytes\":24}"
+      },
+      "timestamp": 1793957517765,
+      "turnId": "turn_8f23d98f-32e7-4748-87f6-dca5681252dc",
+      "sequence": 19
+    }
+  ],
+  "working": {
+    "goal": "Modify both source files",
+    "constraints": [],
+    "plan": [],
+    "decisions": [],
+    "completed": [
+      "modified b.ts"
+    ],
+    "pending": [],
+    "filesChanged": [
+      "b.ts"
+    ],
+    "commandsRun": [],
+    "testsRun": [],
+    "failures": [],
+    "importantFacts": [],
+    "openQuestions": [],
+    "toolRefs": [],
+    "artifactRefs": [],
+    "memoryRefs": [],
+    "childAgentRefs": []
+  },
+  "committedSideEffects": [
+    {
+      "toolCallId": "toolcall_reused_valid_id",
+      "tool": "write_file",
+      "argsHash": "e26aa34b47187c32c2ded00f53fb1080a79811daa778c9a7e87c5d055af07928",
+      "started": 1793957517764,
+      "completed": 1793957517765,
+      "status": "success",
+      "sideEffect": true
+    }
+  ],
+  "replayedToolLedger": [
+    {
+      "toolCallId": "toolcall_reused_valid_id",
+      "tool": "write_file",
+      "argsHash": "e26aa34b47187c32c2ded00f53fb1080a79811daa778c9a7e87c5d055af07928",
+      "started": 1793957517764,
+      "completed": 1793957517765,
+      "status": "success",
+      "sideEffect": true
+    }
+  ],
+  "unresolvedTools": [],
+  "replayedEventCount": 17,
+  "paidModelCalls": 0
+}
