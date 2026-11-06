@@ -1,3 +1,5 @@
+当前任务：[2026-11-06 全面审查恢复与交付](plan(20261106-comprehensive-audit-recovery).md)；[任务合同](tasks/COMPREHENSIVE-AUDIT-20261106.md)。恢复六组确定性缺陷及分类装置修复，重新复现并验收；11月5日临时证据丢失，历史结果不冒充当前证据。
+
 当前任务：[2026-10-31 下一轮 Coding Bug 审查与修复](plan(20261031-coding-bug-audit-next).md)；[任务合同](tasks/BUG-AUDIT-NEXT-20261031.md)。先复现压缩、命令恢复、SDK 长任务与工具终态重放缺陷，再最小修复、独立审查和完整验收。 实现与验收已完成：clean `96d3986d` 全量10661通过/16跳过，四项实现CI首attempt通过，真实Windows987通过/0失败/12跳过；环境重建丢失说明、重新红绿及主线交付资格见计划和独立报告。
 
 前序任务：[2026-10-31 Codex 对照：Coding 任务可靠性优化](plan(20261031-codex-coding-reliability).md)；[任务合同](tasks/CODEX-CODING-RELIABILITY-20261031.md)。干净实现 4b28f643 完整源码全量 10610 通过/16 跳过，最终 main 1fb42159 四项 CI 全部首 attempt 通过，原生 Windows 930 通过/0 失败/12 跳过；原失败与验收资格见原计划及独立审查报告。
