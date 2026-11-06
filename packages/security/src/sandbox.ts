@@ -177,6 +177,10 @@ export class SandboxManager {
     // behave differently across platforms; neither is a normal workspace path.
     // eslint-disable-next-line no-control-regex
     if (/[\u0000-\u001f]/.test(target)) return null;
+    // On POSIX a backslash is a filename byte, but shared portable path
+    // containment interprets it as a separator. Do not authorize one path
+    // while the file tool opens a different one (including existing files).
+    if (process.platform !== "win32" && target.includes("\\")) return null;
     // On Windows, `C:\…` is a valid absolute path. On POSIX, it's a relative
     // path that could be used to smuggle an absolute Windows path past the
     // sandbox. Only reject Windows drive paths when the target is NOT already

@@ -8,8 +8,8 @@
  *   1. control-char / NUL rejection
  *   2. relative → absolute resolution against the working directory
  *   3. separator normalisation
- *   4. realpath of the FULL path when it exists (resolves symlinks/junctions
- *      and lets the OS apply `.`/`..` semantics against real directory inodes)
+ *   4. native realpath of the FULL path when it exists (resolves links and
+ *      applies OS traversal semantics inside their targets)
  *   5. for non-existent paths: realpath of the deepest existing ancestor +
  *      the remaining segments, then lexical `.`/`..` resolution of the tail
  *      against the canonical ancestor (so a not-yet-existing write target can
@@ -63,8 +63,9 @@ export interface CanonicalizeOptions {
  * silently bypassed.
  *
  * P38-13 (INV-P38-016): the optional `fs` parameter allows injecting a fake
- * realpath for deterministic taxonomy tests. When omitted, `realpathSync`
- * from node:fs is used.
+ * realpath for deterministic taxonomy tests. When omitted, `realpathSync.native`
+ * from node:fs is used. Caller paths are normalized like the file tools;
+ * link targets are subsequently interpreted by the filesystem.
  */
 export function canonicalizePath(
   target: string,
@@ -79,13 +80,24 @@ export function canonicalizePath(
     throw new Error(`cannot canonicalize path with control characters`);
   }
 
-  const absolute = isAbsolute(target) ? target : resolve(opts.cwd, target);
+  // File tools resolve their input before opening it. Preserve that lexical
+  // boundary, then use native traversal for actual filesystem link targets.
+  const absolute = resolve(opts.cwd, normaliseSeparators(target));
   const normalized = normaliseSeparators(absolute);
 
-  const rp = fs?.realpath ?? realpathSync;
+  const rp = fs?.realpath ?? realpathSync.native;
   // A realpath-only test adapter must remain isolated from the host FS.
   const readlink = fs === undefined ? readlinkSync : fs.readlink;
   return resolveCanonical(normalized, rp, readlink, 0);
+}
+
+function portableFilesystemPath(path: string): string {
+  // A literal POSIX backslash must not fabricate separators or '..' inside
+  // an already-canonical path, including paths obtained through symlinks.
+  if (process.platform !== "win32" && path.includes("\\")) {
+    throw new CanonicalizationFailed("invalid", path, "backslash filename is not a portable filesystem path");
+  }
+  return normaliseSeparators(path);
 }
 
 function resolveCanonical(
@@ -96,8 +108,9 @@ function resolveCanonical(
   try {
     // Full realpath: existing path (also resolves symlinks and lets the OS
     // resolve `.`/`..` against real directory inodes).
-    return normaliseSeparators(rp(normalized));
+    return portableFilesystemPath(rp(normalized));
   } catch (err) {
+    if (err instanceof CanonicalizationFailed) throw err;
     const nodeErr = err as NodeJS.ErrnoException;
     // P36-6: only ENOENT/ENOTDIR are eligible for the ancestor fallback.
     if (nodeErr.code === "ENOENT" || nodeErr.code === "ENOTDIR") {
@@ -139,7 +152,11 @@ function canonicalAncestorAndTail(
       // `rp` adapter, never silently fall back to `realpathSync`. Otherwise a
       // fake adapter can't witness the ancestor realpath calls and fake adapter
       // errors are bypassed by real filesystem I/O.
-      const ancestor = normaliseSeparators(rp(current));
+      const ancestor = portableFilesystemPath(rp(current));
+      // Native traversal cannot cross a missing component and then '..'.
+      // Such a link target is unresolved, not a request to create a sibling
+      // reached by dropping the missing component lexically.
+      if (walked.includes("..")) throw new CanonicalizationFailed("invalid", p, "unresolved parent traversal");
       // `current` is the canonicalised deepest existing ancestor; the segments
       // between it and the original path (reversed order in `walked`) are the
       // non-existing tail.
@@ -158,6 +175,7 @@ function canonicalAncestorAndTail(
       // canonical ancestor (which may itself be a symlink-resolved path).
       return lexicalNormalize(`${base}/${tail}`);
     } catch (err) {
+      if (err instanceof CanonicalizationFailed) throw err;
       const nodeErr = err as NodeJS.ErrnoException;
       // P36-6: only missing-path errors let us keep walking up.  Any other
       // error (EACCES/EPERM/ELOOP/EIO/…) is an ambiguous canonicalization and
@@ -176,9 +194,8 @@ function canonicalAncestorAndTail(
           if (code !== "EINVAL" && code !== "ENOENT" && code !== "ENOTDIR") throw classifyCanonicalError(error as NodeJS.ErrnoException, current);
         }
         if (target !== undefined) {
-          // Resolve the link's actual parent first. Node's non-native
-          // realpath normalizes .. lexically; using the alias parent would
-          // interpret a relative target against the wrong directory.
+          target = portableFilesystemPath(target);
+          // Resolve relative targets against the link's actual parent.
           const tail = [...walked].reverse().join("/");
           const base = isAbsolute(target) ? target : `${resolveCanonical(dirname(current), rp, readlink, links + 1)}/${target}`;
           const resolved = `${base}${tail ? `/${tail}` : ""}`;

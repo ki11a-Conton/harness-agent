@@ -30,3 +30,12 @@ it("bounds symbolic-link expansion even if the resolver keeps returning missing 
   })).toThrowError(expect.objectContaining({ code: "symlink_loop" }));
   expect(expansions).toBeLessThanOrEqual(41);
 });
+it.skipIf(process.platform === "win32")("uses native parent traversal inside an absolute dangling link target", async () => {
+  const outside = join(root, "outside"), sub = join(outside, "sub"), alias = join(root, "parent"), leaf = join(root, "leaf"); await fs.mkdir(sub, { recursive: true });
+  await fs.symlink(sub, alias, "dir"); await fs.symlink(alias + "/../new.ts", leaf, "file");
+  expect(canonicalizePath(leaf, { cwd: root })).toBe(portable(realpathSync(outside)) + "/new.ts");
+});
+it.skipIf(process.platform === "win32")("refuses an unresolved parent traversal inside a symlink instead of inventing a target", async () => {
+  const alias = join(root, "alias"); await fs.symlink("missing/../new.ts", alias, "file");
+  expect(() => canonicalizePath(alias, { cwd: root })).toThrowError(expect.objectContaining({ code: "invalid" }));
+});
