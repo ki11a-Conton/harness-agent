@@ -7,7 +7,7 @@
  *   - non-existent path → realpath(deepest existing ancestor) + lexically
  *     resolved tail (a not-yet-existing write target can never escape via `..`)
  */
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -17,6 +17,9 @@ let base: string;
 let ws: string;
 let outside: string;
 const cwd = process.cwd();
+// Windows tmpdir may use an 8.3 alias (RUNNER~1). Keep that spelling as
+// input, but compare output with the native filesystem's canonical spelling.
+const nativePath = (path: string) => realpathSync.native(path).replace(/\\/g, "/");
 
 beforeAll(() => {
   base = mkdtempSync(join(tmpdir(), "ar-canon-"));
@@ -36,7 +39,7 @@ describe("canonicalizePath — existing paths", () => {
   it("returns the realpath of an existing file (symlink-free)", () => {
     const p = canonicalizePath(join(ws, "sub", "file.txt"), { cwd });
     expect(p.endsWith("sub/file.txt")).toBe(true);
-    expect(p.startsWith(ws.replace(/\\/g, "/"))).toBe(true);
+    expect(p).toBe(nativePath(join(ws, "sub", "file.txt")));
   });
 
   it("resolves a symlink to its real target (no textual illusion)", () => {
@@ -48,7 +51,7 @@ describe("canonicalizePath — existing paths", () => {
     }
     const p = canonicalizePath(link, { cwd });
     expect(p.endsWith("outside/secret.txt")).toBe(true);
-    expect(p.startsWith(outside.replace(/\\/g, "/"))).toBe(true);
+    expect(p).toBe(nativePath(join(outside, "secret.txt")));
   });
 });
 
@@ -56,16 +59,15 @@ describe("canonicalizePath — non-existent paths (write scenario)", () => {
   it("resolves the deepest existing ancestor and keeps the tail", () => {
     const p = canonicalizePath(join(ws, "newdir", "deep", "file.txt"), { cwd });
     expect(p.endsWith("ws/newdir/deep/file.txt")).toBe(true);
-    expect(p.startsWith(ws.replace(/\\/g, "/"))).toBe(true);
+    expect(p).toBe(`${nativePath(ws)}/newdir/deep/file.txt`);
   });
 
   it("a .. in the tail cannot climb above the deepest existing ancestor", () => {
     // base/ws/newdir/../../outside/secret.txt → the tail `newdir/../../outside`
     // climbs out of ws → resolves to base/outside/secret.txt (outside ws).
     const baseSlash = base.replace(/\\/g, "/");
-    const outsideSlash = outside.replace(/\\/g, "/");
     const p = canonicalizePath(`${baseSlash}/ws/newdir/../../outside/secret.txt`, { cwd });
-    expect(p.startsWith(outsideSlash)).toBe(true);
+    expect(p).toBe(nativePath(join(outside, "secret.txt")));
   });
 
   it("a . in the tail is a no-op", () => {

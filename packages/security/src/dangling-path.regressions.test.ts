@@ -11,12 +11,12 @@ it.each(["file", "dir"] as const)("resolves an absent %s target before appending
   const target = join(root, "new-target"), alias = join(root, "alias");
   await fs.symlink(target, alias, kind === "dir" && process.platform === "win32" ? "junction" : kind);
   const tail = kind === "dir" ? "/nested/code.ts" : "";
-  expect(canonicalizePath(alias + tail, { cwd: root })).toBe(portable(realpathSync(root)) + "/new-target" + tail);
+  expect(canonicalizePath(alias + tail, { cwd: root })).toBe(portable(realpathSync.native(root)) + "/new-target" + tail);
 });
 it("keeps filesystem meaning of a relative link through an existing parent alias", async () => {
   const outside = join(root, "outside"), sub = join(outside, "sub"), alias = join(root, "parent"); await fs.mkdir(sub, { recursive: true });
   await fs.symlink(sub, alias, process.platform === "win32" ? "junction" : "dir"); await fs.symlink("../new.ts", join(sub, "leaf"), "file");
-  expect(canonicalizePath(join(alias, "leaf"), { cwd: root })).toBe(portable(realpathSync(outside)) + "/new.ts");
+  expect(canonicalizePath(join(alias, "leaf"), { cwd: root })).toBe(portable(realpathSync.native(outside)) + "/new.ts");
 });
 it.each([['EACCES', 'permission'], ['EPERM', 'permission'], ['EIO', 'io'], ['ELOOP', 'symlink_loop']] as const)("fails closed when readlink reports %s", (code, expected) => {
   const missing = () => { throw Object.assign(new Error("missing"), { code: "ENOENT" }); };
@@ -33,7 +33,7 @@ it("bounds symbolic-link expansion even if the resolver keeps returning missing 
 it.skipIf(process.platform === "win32")("uses native parent traversal inside an absolute dangling link target", async () => {
   const outside = join(root, "outside"), sub = join(outside, "sub"), alias = join(root, "parent"), leaf = join(root, "leaf"); await fs.mkdir(sub, { recursive: true });
   await fs.symlink(sub, alias, "dir"); await fs.symlink(alias + "/../new.ts", leaf, "file");
-  expect(canonicalizePath(leaf, { cwd: root })).toBe(portable(realpathSync(outside)) + "/new.ts");
+  expect(canonicalizePath(leaf, { cwd: root })).toBe(portable(realpathSync.native(outside)) + "/new.ts");
 });
 it.skipIf(process.platform === "win32")("refuses an unresolved parent traversal inside a symlink instead of inventing a target", async () => {
   const alias = join(root, "alias"); await fs.symlink("missing/../new.ts", alias, "file");

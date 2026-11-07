@@ -20,10 +20,14 @@ const playwright = await import(pathToFileURL(resolve(values['playwright-module'
 const browser = await playwright.chromium.launch({ executablePath: values.chromium, headless: true, args: ['--no-sandbox'] });
 const context = await browser.newContext({ locale: 'en-US', viewport: { width: 1440, height: 900 } });
 const page = await context.newPage(); page.setDefaultTimeout(10000);
-const errors = [], checks = [], permissionFrames = [], rpc = observeProductionRpc(page, origin);
+const errors = [], checks = [], permissionFrames = [], compactionFrames = [], rpc = observeProductionRpc(page, origin);
 page.on('websocket', socket => socket.on('framereceived', event => {
   let frame; try { frame = JSON.parse(String(event.payload)); } catch { return; }
   const value = frame.type === 'frame' ? frame.value : undefined;
+  if (value?.type === 'projection' && value.key === 'harnessCompaction') {
+    compactionFrames.push({ at: Date.now(), sessionId: value.sessionId, seq: value.seq, value: value.value });
+    if (compactionFrames.length > 80) compactionFrames.shift();
+  }
   if (value?.type !== 'projection' || value.key !== 'permissions') return;
   permissionFrames.push({ at: Date.now(), sessionId: value.sessionId, seq: value.seq, currentValue: value.value?.currentValue });
   if (permissionFrames.length > 80) permissionFrames.shift();
@@ -146,8 +150,12 @@ const cases = [
   ['manual-compaction-real-completion', async () => {
     assert.equal(await button('Compress context').count(), 0, 'Manual compaction must live in the native plus menu');
     await button('Add files or run commands').click();
+    const firstSaved = rpc.waitForResult('commands/execute');
     await page.getByRole('option').filter({ hasText: 'Compact older conversation history' }).click();
+    const firstReceipt = await firstSaved; if (firstReceipt.error) throw firstReceipt.error; assert.equal(firstReceipt.result.ok, true);
     await page.getByText('Will compress next request', { exact: true }).waitFor();
+    const first = (await read('session/projections', { request: { sessionId: id } })).values.harnessCompaction;
+    assert.equal(first.pending, true); assert.equal(typeof first.requestId, 'string');
     await page.setViewportSize({ width: 320, height: 1100 });
     await button('Add files or run commands').press('Enter');
     const compactOption = page.getByRole('option').filter({ hasText: 'Compact older conversation history' });
@@ -156,13 +164,21 @@ const cases = [
     for (let index = 0; index < 20 && await compactOption.getAttribute('aria-selected') !== 'true'; index++) await editor.press('ArrowDown');
     assert.equal(await compactOption.getAttribute('aria-selected'), 'true', 'Native Compact must be reachable with the keyboard');
     await page.screenshot({ path: join(output, 'narrow-compact-plus-keyboard.png'), fullPage: true });
+    const secondSaved = rpc.waitForResult('commands/execute');
     await editor.press('Enter');
     await compactOption.waitFor({ state: 'hidden' });
+    // Menu closure is optimistic; it does not acknowledge the durable command.
+    // Sending while the second save is in flight may legitimately retain it
+    // as a new request during the first summary. Verify sequential actions here.
+    const secondReceipt = await secondSaved; if (secondReceipt.error) throw secondReceipt.error; assert.equal(secondReceipt.result.ok, true);
+    const second = (await read('session/projections', { request: { sessionId: id } })).values.harnessCompaction;
+    assert.equal(second.pending, true); assert.equal(typeof second.requestId, 'string'); assert.notEqual(second.requestId, first.requestId);
     await page.setViewportSize({ width: 1440, height: 900 });
     await prompt('Continue after explicit PR15 context compression.');
     await page.getByText('Context prepared', { exact: true }).waitFor();
     const state = await read('session/projections', { request: { sessionId: id } });
     assert.equal(state.values.harnessCompaction.pending, false); assert(state.values.harnessCompaction.lastCompletedAt > 0);
+    assert.equal(state.values.harnessCompaction.requestId, second.requestId);
     assert.equal(state.values.harnessCompaction.lastSummarySource, 'model');
     const summary = (await requests()).filter(request => request.purpose === 'compaction').at(-1);
     assert(summary && (!summary.tools || summary.tools.length === 0) && summary.maxTokens <= 2048);
@@ -287,7 +303,8 @@ try {
         plan: state.values.harnessPlan === undefined ? undefined : { status: state.values.harnessPlan.status, revision: state.values.harnessPlan.revision },
         selectedRows: await page.locator('[data-row-key^="session:"][aria-selected="true"]').evaluateAll(rows => rows.map(row => row.getAttribute('data-row-key'))),
         pendingCommands: rpc.calls.filter(call => call.endpoint === 'commands/execute' && call.state === 'sent').length,
-        asOfSeq: state.asOfSeq, turnBoundary: state.values.turnBoundary,
+        asOfSeq: state.asOfSeq, turnBoundary: state.values.turnBoundary, compaction: state.values.harnessCompaction,
+        compactionFrames: compactionFrames.filter(frame => frame.sessionId === id).slice(-10),
         goal: state.values.harnessGoal === null ? null : { phase: state.values.harnessGoal?.phase, roundsStarted: state.values.harnessGoal?.roundsStarted },
         permissionButtons: await page.getByRole('button', { name: /^Access mode, current:/ }).evaluateAll(buttons => buttons.map(button => ({ label: button.getAttribute('aria-label'), busy: button.getAttribute('aria-busy'), disabled: button.disabled }))),
         permissionFrames: permissionFrames.filter(frame => frame.sessionId === id).slice(-10),

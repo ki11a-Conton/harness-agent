@@ -22,3 +22,5 @@
 边界：POSIX 字面反斜杠文件名被路径安全校验拒绝，Windows 分隔符保持。进程间技能写入仍需单写者；文件锁及路径预检不是针对其他进程恶意替换的原子 CAS 或 OS 沙箱。没有付费模型质量结论、没有发布 release、不能保证穷尽全部潜在 bug。
 
 复验：pnpm install --frozen-lockfile；pnpm exec tsc -b --force；pnpm test。五个新增文件及原生追加清单见 frozen-source-manifest.json；最终 RED/GREEN 测试 hash 见 delivery-test-manifest.json；完整日志与结构化报告以 xz 保存。
+
+2026-11-07 更新：`1d45647a` 首轮四项 CI 中，第一代安装包通过，主 CI / 原生 Windows / 安装后 Web UI 失败。原始汇总、Windows 回执和失败注释保存为 `initial-main-ci-failure.json.xz`（SHA-256 `235070b604da328458b7d1fa2072263544f244878fe587c20c7f833213007e2e`）；不得把上述本地结果解释为该提交 CI 已通过。后续修正 Windows 路径预期与浏览器压缩命令的确认顺序，待新提交验收。
