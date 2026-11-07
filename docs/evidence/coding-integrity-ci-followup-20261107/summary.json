@@ -1,0 +1,384 @@
+{
+  "status": "LOCAL_PASS_CI_PENDING",
+  "verifiedSourceSha": "401e9e52fd8c7e172ef582cf46760e0e33129a3b",
+  "generatedAt": "2026-11-07T03:38:45.147231+00:00",
+  "originalMain": "1d45647aedca2447e2f05761ec0737a116e40484",
+  "originalMainCi": "FAIL",
+  "fullTestLogSha256": "2414344e4ae6e9739d3b99a7a87c0c467410b37f6551fa13586d8ad14f8bd56b",
+  "packetSha256": "b225549e176542394924eacec8b3b81e9e8a4c867963a1b0c6fcaa57501a3c15",
+  "receipts": {
+    "installed-cli.receipt.json": {
+      "startedAt": "2026-11-07T03:31:56.211467+00:00",
+      "sourceBefore": {
+        "sha": "401e9e52fd8c7e172ef582cf46760e0e33129a3b",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "command": [
+        "node",
+        "scripts/release/portable-smoke.mjs",
+        "--archive",
+        "/dev/shm/harness-coding-integrity-ci-followup-20261107/assets/harness-agent-1.13.0-portable.tar.gz",
+        "--out",
+        "/dev/shm/harness-coding-integrity-ci-followup-20261107/cli-installed",
+        "--version",
+        "1.13.0",
+        "--source-sha",
+        "401e9e52fd8c7e172ef582cf46760e0e33129a3b"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-coding-integrity-ci-followup-20261107/installed-cli.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-07T03:32:25.214289+00:00",
+      "durationSeconds": 28.9559575960011,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "401e9e52fd8c7e172ef582cf46760e0e33129a3b",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "logBytes": 647,
+      "logSha256": "db5a0e052210257ac98ce9a396bfed8fb64b7b775f1b13eedf933c311711c77d"
+    },
+    "command-order-proof.receipt.json": {
+      "startedAt": "2026-11-07T03:31:22.908474+00:00",
+      "sourceBefore": {
+        "sha": "401e9e52fd8c7e172ef582cf46760e0e33129a3b",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "command": [
+        "node",
+        "/dev/shm/harness-coding-integrity-ci-followup-20261107/command-order-proof.mjs"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-coding-integrity-ci-followup-20261107/command-order-proof.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-07T03:31:23.597793+00:00",
+      "durationSeconds": 0.6412016300018877,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "401e9e52fd8c7e172ef582cf46760e0e33129a3b",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "logBytes": 998,
+      "logSha256": "53e0e89ce9a001ee04e09ec03976964e393cee55fbf1ccd0f6a61865e05a102c"
+    },
+    "installed-ui.receipt.json": {
+      "startedAt": "2026-11-07T03:29:09.427043+00:00",
+      "sourceBefore": {
+        "sha": "401e9e52fd8c7e172ef582cf46760e0e33129a3b",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "command": [
+        "node",
+        "scripts/release/deepseek-installed.mjs",
+        "--archive",
+        "/dev/shm/harness-coding-integrity-ci-followup-20261107/assets/harness-agent-1.13.0-portable.tar.gz",
+        "--out",
+        "/dev/shm/harness-coding-integrity-ci-followup-20261107/installed",
+        "--version",
+        "1.13.0",
+        "--source-sha",
+        "401e9e52fd8c7e172ef582cf46760e0e33129a3b",
+        "--playwright-module",
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
+        "--chromium",
+        "/usr/bin/chromium"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-coding-integrity-ci-followup-20261107/installed-ui.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-07T03:37:33.804632+00:00",
+      "durationSeconds": 504.3462889680013,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "401e9e52fd8c7e172ef582cf46760e0e33129a3b",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "logBytes": 1504,
+      "logSha256": "83e776206d2e67322cb4e812b5a647a3eaddefbd3055e6e1ff832114efe3d1be"
+    },
+    "portable-build-full-sha.receipt.json": {
+      "startedAt": "2026-11-07T03:28:38.849671+00:00",
+      "sourceBefore": {
+        "sha": "401e9e52fd8c7e172ef582cf46760e0e33129a3b",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "command": [
+        "node",
+        "scripts/release/portable.mjs",
+        "build",
+        "--out",
+        "/dev/shm/harness-coding-integrity-ci-followup-20261107/assets",
+        "--version",
+        "1.13.0",
+        "--source-sha",
+        "401e9e52fd8c7e172ef582cf46760e0e33129a3b",
+        "--offline",
+        "--store-dir",
+        "/dev/shm/harness-comprehensive-audit-20261106/pnpm-store",
+        "--node-headers-dir",
+        "/dev/shm/harness-comprehensive-audit-20261106/node-gyp/24.19.0"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-coding-integrity-ci-followup-20261107/portable-build-full-sha.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-07T03:28:57.716028+00:00",
+      "durationSeconds": 18.840396289000637,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "401e9e52fd8c7e172ef582cf46760e0e33129a3b",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "logBytes": 216,
+      "logSha256": "c379e7c5c47309c292cd60565d12ab37a8f798ba63ab50c588816fdc13271ba0"
+    },
+    "full-tests.receipt.json": {
+      "startedAt": "2026-11-07T03:28:28.705383+00:00",
+      "sourceBefore": {
+        "sha": "401e9e52fd8c7e172ef582cf46760e0e33129a3b",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "test"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-coding-integrity-ci-followup-20261107/full-tests.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-07T03:38:14.267741+00:00",
+      "durationSeconds": 585.5256276509972,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "401e9e52fd8c7e172ef582cf46760e0e33129a3b",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "logBytes": 186364,
+      "logSha256": "2414344e4ae6e9739d3b99a7a87c0c467410b37f6551fa13586d8ad14f8bd56b"
+    },
+    "portable-build.receipt.json": {
+      "startedAt": "2026-11-07T03:28:28.702877+00:00",
+      "sourceBefore": {
+        "sha": "401e9e52fd8c7e172ef582cf46760e0e33129a3b",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "command": [
+        "node",
+        "scripts/release/portable.mjs",
+        "build",
+        "--out",
+        "/dev/shm/harness-coding-integrity-ci-followup-20261107/assets",
+        "--version",
+        "1.13.0",
+        "--source-sha",
+        "401e9e52",
+        "--offline",
+        "--store-dir",
+        "/dev/shm/harness-comprehensive-audit-20261106/pnpm-store",
+        "--node-headers-dir",
+        "/dev/shm/harness-comprehensive-audit-20261106/node-gyp/24.19.0"
+      ],
+      "node": "v24.19.0",
+      "status": "FAIL",
+      "log": "/dev/shm/harness-coding-integrity-ci-followup-20261107/portable-build.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-07T03:28:28.785879+00:00",
+      "durationSeconds": 0.04826694500661688,
+      "exitCode": 1,
+      "sourceAfter": {
+        "sha": "401e9e52fd8c7e172ef582cf46760e0e33129a3b",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "",
+        "sparse": ""
+      },
+      "logBytes": 44,
+      "logSha256": "e8bfb37311feab5a3605897f02c49792218111bd5e3d5df107676e2d2060d2d3"
+    },
+    "typecheck.receipt.json": {
+      "startedAt": "2026-11-07T03:27:28.855219+00:00",
+      "sourceBefore": {
+        "sha": "1d45647aedca2447e2f05761ec0737a116e40484",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/security/src/canonical-path.test.ts\n M packages/security/src/dangling-path.regressions.test.ts\n M plan(20261106-coding-integrity-audit).md\n M scripts/research/pr15-browser.mjs",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "typecheck"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-coding-integrity-ci-followup-20261107/typecheck.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-07T03:27:29.344772+00:00",
+      "durationSeconds": 0.4626563170022564,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "1d45647aedca2447e2f05761ec0737a116e40484",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/security/src/canonical-path.test.ts\n M packages/security/src/dangling-path.regressions.test.ts\n M plan(20261106-coding-integrity-audit).md\n M scripts/research/pr15-browser.mjs",
+        "sparse": ""
+      },
+      "logBytes": 9,
+      "logSha256": "faeaa94bcf7012d86f91ca647580449f56a263fb7eaf572c54789764f60a9b8f"
+    },
+    "focused.receipt.json": {
+      "startedAt": "2026-11-07T03:26:35.413169+00:00",
+      "sourceBefore": {
+        "sha": "1d45647aedca2447e2f05761ec0737a116e40484",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/security/src/canonical-path.test.ts\n M packages/security/src/dangling-path.regressions.test.ts\n M plan(20261106-coding-integrity-audit).md",
+        "sparse": ""
+      },
+      "command": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "packages/security",
+        "packages/tools/src/file-create-integrity.regressions.test.ts",
+        "apps/web/src/deepseek/compaction-request-identity.integration.test.ts",
+        "apps/web/src/deepseek/pr15-controls.integration.test.ts"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-coding-integrity-ci-followup-20261107/focused.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-07T03:27:03.901220+00:00",
+      "durationSeconds": 28.447199542002636,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "1d45647aedca2447e2f05761ec0737a116e40484",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/security/src/canonical-path.test.ts\n M packages/security/src/dangling-path.regressions.test.ts\n M plan(20261106-coding-integrity-audit).md",
+        "sparse": ""
+      },
+      "logBytes": 9021,
+      "logSha256": "ca6ac35793bc054b27c670c26f1c775bac3eb698f9f681bfe5f0948e8f20a31d"
+    },
+    "pr15-baseline.receipt.json": {
+      "startedAt": "2026-11-07T03:26:33.777311+00:00",
+      "sourceBefore": {
+        "sha": "1d45647aedca2447e2f05761ec0737a116e40484",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/security/src/canonical-path.test.ts\n M packages/security/src/dangling-path.regressions.test.ts\n M plan(20261106-coding-integrity-audit).md",
+        "sparse": ""
+      },
+      "command": [
+        "node",
+        "scripts/research/pr15-browser.mjs",
+        "--url",
+        "http://127.0.0.1:41493",
+        "--output",
+        "/dev/shm/harness-coding-integrity-ci-followup-20261107/pr15-baseline-browser",
+        "--fixture-evidence",
+        "/dev/shm/harness-coding-integrity-ci-followup-20261107/pr15-baseline-fixture/evidence",
+        "--playwright-module",
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
+        "--chromium",
+        "/usr/bin/chromium"
+      ],
+      "node": "v24.19.0",
+      "status": "PASS",
+      "log": "/dev/shm/harness-coding-integrity-ci-followup-20261107/pr15-baseline.log",
+      "paidModelCalls": 0,
+      "finishedAt": "2026-11-07T03:27:04.604618+00:00",
+      "durationSeconds": 30.7921413619988,
+      "exitCode": 0,
+      "sourceAfter": {
+        "sha": "1d45647aedca2447e2f05761ec0737a116e40484",
+        "branch": "fix/coding-integrity-audit-20261106",
+        "status": "M packages/security/src/canonical-path.test.ts\n M packages/security/src/dangling-path.regressions.test.ts\n M plan(20261106-coding-integrity-audit).md",
+        "sparse": ""
+      },
+      "logBytes": 613,
+      "logSha256": "f0161f866d0ea78f10b94cb18de934dd7c51cb7922f1f8fc806e8b2775629b4c"
+    }
+  },
+  "ui": {
+    "schemaVersion": 1,
+    "status": "PASS",
+    "kind": "harness-official-ui-installed",
+    "version": "1.13.0",
+    "sourceSha": "401e9e52fd8c7e172ef582cf46760e0e33129a3b",
+    "sourceTree": "0248f2790ab6506ea4cad71b7e2344f2a8b4ded5",
+    "archiveSha256": "c0d9a60b34163ec39987e5b530df88ca2d1c9d8486a27f169199167d26efd766",
+    "platform": "linux",
+    "architecture": "x64",
+    "node": "v24.19.0",
+    "files": 3171,
+    "workspaceLinks": 0,
+    "installedApplication": true,
+    "cases": 30,
+    "assertions": 75,
+    "paidModelCalls": 0,
+    "pr15Controls": 10,
+    "workspaceKeyboardScenarios": 3,
+    "workspaceKeyboardAssertions": 45,
+    "workspaceKeyboardAssetSha256": "f8e4aa7b1197d4f4d4f8ef39e1ddb048cc2db70f0facce5ebcd3b01b077c0f0a",
+    "modelReasoningChecks": 22,
+    "modelReasoningAssetSha256": "46e202cbcd8e30051c5e965ad6ae2a95d7bdbb2f57388c72bb089adf7faa0993",
+    "managedCommandChecks": 10,
+    "composerModeChecks": 24,
+    "composerAssetSha256": "1215d0d5c5be7e141d4f24b73d49787b01569fcb16b6aa5ea12f1acb5139cc5a",
+    "commandsAssetSha256": "edcab697279c74a38fd9d0cb8b1658abb983aee24154e890b8509749d912c52c",
+    "connectionScenarios": 2,
+    "connectionAssertions": 10,
+    "dailyScenarios": 42,
+    "dailyAssertions": 120,
+    "realModelQuality": "NOT_PROVEN",
+    "fullDefaultUiParity": "NOT_PROVEN",
+    "scope": "Named ordinary coding UI controls on this verified archive, workspace keyboard, native Goal/Plan plus menu and typed commands, model spec/reasoning editor with real HTTP wire checks and responsive light/dark en/zh views, plus PR15 permissions, plans, goals and context controls. PTY/Cordis/queue-edit capabilities and real model quality are not claimed."
+  },
+  "cli": {
+    "schemaVersion": 1,
+    "kind": "harness-agent-portable-cleanroom",
+    "status": "PASS",
+    "version": "1.13.0",
+    "sourceSha": "401e9e52fd8c7e172ef582cf46760e0e33129a3b",
+    "sourceTree": "0248f2790ab6506ea4cad71b7e2344f2a8b4ded5",
+    "archiveSha256": "c0d9a60b34163ec39987e5b530df88ca2d1c9d8486a27f169199167d26efd766",
+    "platform": "linux",
+    "node": "v24.19.0",
+    "files": 3171,
+    "cleanroomOutsideRepository": true,
+    "workspaceLinks": 0,
+    "doctorErrors": 0,
+    "codingAssertions": 50,
+    "requests": 19,
+    "actualSelectedPromptSha256": "12233460b23efefc95a2f32812badbcacaf08f16a9de1a8acf9ba3acb5152f1e",
+    "tamperRejected": true,
+    "tamperedStartupRejected": true,
+    "paidModelCalls": 0,
+    "realModelQuality": "NOT_PROVEN"
+  },
+  "paidModelCalls": 0,
+  "realModelQuality": "NOT_PROVEN",
+  "originalWindowsUiTraceDownloaded": false,
+  "networkFailure": "GitHub artifact/log API returns 302; proxy CONNECT to redirect target rejects with 403. No network bypass attempted."
+}
