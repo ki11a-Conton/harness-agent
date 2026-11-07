@@ -1,4 +1,5 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -22,8 +23,10 @@ beforeAll(() => {
   writeFileSync(join(ws, "src/a.ts"), "export const a = 1;\n");
 });
 
-afterAll(() => {
-  rmSync(ws, { recursive: true, force: true });
+afterAll(async () => {
+  // Windows can briefly retain a directory handle after read-only probes.
+  // Await bounded cleanup; persistent locks still fail the suite.
+  await rm(ws, { recursive: true, force: true, maxRetries: process.platform === "win32" ? 8 : 0, retryDelay: 50 });
 });
 
 describe("P0-5 production tool profile (single source)", () => {
