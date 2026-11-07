@@ -8,7 +8,7 @@
  *     resolved tail (a not-yet-existing write target can never escape via `..`)
  */
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { canonicalizePath, CanonicalizationFailed } from "./canonical-path.js";
@@ -20,6 +20,9 @@ const cwd = process.cwd();
 // Windows tmpdir may use an 8.3 alias (RUNNER~1). Keep that spelling as
 // input, but compare output with the native filesystem's canonical spelling.
 const nativePath = (path: string) => realpathSync.native(path).replace(/\\/g, "/");
+// The injected adapter also receives native absolute paths. On Windows a
+// rooted path such as /some/path inherits cwd's drive before filesystem I/O.
+const absolutePath = (path: string) => resolve(cwd, path).replace(/\\/g, "/");
 
 beforeAll(() => {
   base = mkdtempSync(join(tmpdir(), "ar-canon-"));
@@ -203,7 +206,7 @@ describe("P36-6 — canonicalization error taxonomy (INV-P36-006)", () => {
     } catch (err) {
       if (err instanceof CanonicalizationFailed) {
         expect(err.code).toBe(expectedCode);
-        expect(err.path).toBe("/some/path");
+        expect(err.path).toBe(absolutePath("/some/path"));
       } else {
         throw err;
       }
@@ -264,7 +267,7 @@ describe("P36-6 — canonicalization error taxonomy (INV-P36-006)", () => {
       // Full path is missing (ENOENT); the ancestor walker then probes
       // dirname(current) each level. Make one ancestor probe throw.
       const target = "/p38a/no/such/deep/path";
-      const rules = new Map<string, string>([["/p38a/no/such", ancestorCode]]);
+      const rules = new Map<string, string>([[absolutePath("/p38a/no/such"), ancestorCode]]);
       const { adapter } = tracingRealpath(rules);
       try {
         canonicalizePath(target, { cwd }, { realpath: adapter });
@@ -272,6 +275,7 @@ describe("P36-6 — canonicalization error taxonomy (INV-P36-006)", () => {
       } catch (err) {
         if (err instanceof CanonicalizationFailed) {
           expect(err.code).toBe(expectedCode);
+          expect(err.path).toBe(absolutePath(target));
         } else {
           throw err;
         }
@@ -302,6 +306,6 @@ describe("P36-6 — canonicalization error taxonomy (INV-P36-006)", () => {
       "/s0/s1",
       "/s0",
       "/",
-    ]);
+    ].map(absolutePath));
   });
 });

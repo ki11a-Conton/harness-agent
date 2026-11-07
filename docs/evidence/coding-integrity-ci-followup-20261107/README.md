@@ -7,3 +7,5 @@
 - 确定性调度对照使用实际 composition、命令日志、元数据和 runtime，仅在命令日志/摘要的完成边界设置门闩。不等待回执时保留较晚请求；等待回执时正确消费。这个对照证明时序风险，不冒充无法下载的原 Windows trace。
 
 本地完整 pnpm test、冻结源码安装包构建、安装后实际 UI/CLI、2,208 个相关单元/集成/安全检查通过，明细见 summary.json 和 local-evidence.json.xz。原短 SHA 构建命令被完整 SHA 门禁拒绝的记录也保留，改用正确参数后通过；未改构建规则。付费模型调用 0，真实模型质量未证明；本地 Linux 不能代替真实 Windows CI。
+
+后续远端结果：`b7497a71` 的三项专项 CI 通过，但主 CI 的 Windows 全量仍失败；原始汇总/注释及 1,095 项 Windows 回执见 `main-ci-result.json.xz`（SHA-256 `27d39386d8c9b148d2af7f2c4c779f5e74ee1b9bd4dae152d900e5d990e88712`）。继续修正同一文件中的平台路径测试夹具，不能把本地通过或专项通过写成全 CI 通过。
