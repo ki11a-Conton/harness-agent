@@ -1,3 +1,5 @@
+当前任务：[2026-11-08 Coding 状态与恢复审查](plan(20261108-coding-state-audit).md)；[任务合同](tasks/CODING-STATE-AUDIT-20261108.md)。基线 main 5f55f1bd，先复现新缺陷，再修复和完整验收。
+
 当前任务：[2026-11-06 Coding 数据与文件边界审查](plan(20261106-coding-integrity-audit).md)；[任务合同](tasks/CODING-INTEGRITY-AUDIT-20261106.md)。基线 a8596ed0，四类已复现问题修复；干净实现 6d5b3c5f 全量10785通过/16跳过、真实CLI/Web及42场景/120浏览器检查通过；最终main精确SHA CI推送后复核。
 
 当前任务：[2026-11-06 下一轮全面审查](plan(20261106-next-comprehensive-audit).md)；[任务合同](tasks/NEXT-COMPREHENSIVE-AUDIT-20261106.md)。基线3e4f6e73，本轮4组新增问题修复；干净源码988c0b7c全量10735通过/16跳过、真实CLI/Web及42场景/120检查通过；精确main CI推送后复核。原失败和限定见本轮归档。
