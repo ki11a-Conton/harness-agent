@@ -6,7 +6,7 @@
 // (same pattern as the ask-user/inbox/memory stores).
 
 import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { atomicWriteFile, withLock } from "@ar/store-integrity";
 import type { LearningCandidate } from "@ar/learning";
 
@@ -22,6 +22,11 @@ interface CandidateRecord {
 const CANDIDATE_SCHEMA_VERSION = 1;
 export const CANDIDATES_FILE_NAME = "learning-candidates.jsonl";
 
+// The same process may own several harnesses over one data directory. Invalidate
+// their loaded snapshots only after a successful durable write. Cross-process
+// writes retain store-integrity's single-writer requirement.
+const committedRevisions = new Map<string, symbol>();
+
 /** Minimal surface the reflection runner / CLI promoter need. */
 export interface LearningCandidateStore {
   list(): Promise<LearningCandidate[]>;
@@ -35,10 +40,11 @@ export class JsonlCandidateStore implements LearningCandidateStore {
   private readonly file: string;
   private loaded = false;
   private loading: Promise<void> | undefined;
+  private revision: symbol | undefined;
   private candidates = new Map<string, LearningCandidate>();
 
   constructor(opts: JsonlCandidateStoreOptions) {
-    this.file = join(opts.dataDir, CANDIDATES_FILE_NAME);
+    this.file = join(resolve(opts.dataDir), CANDIDATES_FILE_NAME);
   }
 
   async list(): Promise<LearningCandidate[]> {
@@ -59,7 +65,7 @@ export class JsonlCandidateStore implements LearningCandidateStore {
       // Publish only durable state; readers keep the previous snapshot while
       // persistence is pending or when it fails.
       await this.persist(next);
-      this.candidates = next;
+      this.publish(next);
     });
   }
 
@@ -70,7 +76,7 @@ export class JsonlCandidateStore implements LearningCandidateStore {
       const next = new Map(this.candidates);
       next.set(candidate.id, candidate);
       await this.persist(next);
-      this.candidates = next;
+      this.publish(next);
     });
   }
 
@@ -80,12 +86,12 @@ export class JsonlCandidateStore implements LearningCandidateStore {
       const next = new Map(this.candidates);
       next.delete(id);
       await this.persist(next);
-      this.candidates = next;
+      this.publish(next);
     });
   }
 
   private async load(): Promise<void> {
-    if (this.loaded) return;
+    if (this.loaded && this.revision === committedRevisions.get(this.file)) return;
     // Initial readers share one snapshot. A failed read stays retryable and
     // must not publish an empty cache that a later write could persist.
     if (!this.loading) this.loading = this.loadSnapshot();
@@ -95,9 +101,12 @@ export class JsonlCandidateStore implements LearningCandidateStore {
     } finally {
       if (this.loading === loading) this.loading = undefined;
     }
+    // A peer can commit while an initial reader is awaiting the old snapshot.
+    if (this.revision !== committedRevisions.get(this.file)) await this.load();
   }
 
   private async loadSnapshot(): Promise<void> {
+    const revision = committedRevisions.get(this.file);
     let content: string;
     try {
       content = await readFile(this.file, "utf8");
@@ -105,6 +114,8 @@ export class JsonlCandidateStore implements LearningCandidateStore {
       // P14-6: only the expected "first run / no file yet" ENOENT is silent —
       // any other read error is a real failure and propagates.
       if (isNodeError(err, "ENOENT")) {
+        this.candidates = new Map();
+        this.revision = revision;
         this.loaded = true;
         return;
       }
@@ -125,7 +136,14 @@ export class JsonlCandidateStore implements LearningCandidateStore {
       }
     }
     this.candidates = next;
+    this.revision = revision;
     this.loaded = true;
+  }
+
+  private publish(next: Map<string, LearningCandidate>): void {
+    this.candidates = next;
+    this.revision = Symbol();
+    committedRevisions.set(this.file, this.revision);
   }
 
   private async persist(candidates: ReadonlyMap<string, LearningCandidate>): Promise<void> {

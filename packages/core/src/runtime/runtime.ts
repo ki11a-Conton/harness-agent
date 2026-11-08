@@ -1614,7 +1614,11 @@ export class AgentRuntime {
             // (tool output is metered separately by toolOutputBudget). A breach
             // stops the turn before more tokens are generated.
             if (modelResult.assistantText !== undefined) {
-              const outputBreach = budget.onOutput(modelResult.assistantText.length);
+              // A provider may supply the answer only in its completed result.
+              // Count that canonical text without double-counting a repeated
+              // stream, or refunding an already-visible longer prefix.
+              const outputChars = Math.max(modelResult.assistantText.length, modelResult.final?.text?.length ?? 0);
+              const outputBreach = budget.onOutput(outputChars);
               if (outputBreach !== undefined) {
                 await this.emit(sessionId, "run.limit_reached", { ...outputBreach }, turnId);
                 return { error: errorInfo("RESOURCE_LIMIT", `maxOutputChars (${outputBreach.allowed}) exceeded after ${outputBreach.used}`), terminationReason: "agent_limit" };

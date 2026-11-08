@@ -69,22 +69,37 @@ async function ignoreButReport(promise: Promise<unknown>, context: string): Prom
   }
 }
 
-function validateRecord(record: unknown, file: string): RecoveryRecord {
-  if (typeof record !== "object" || record === null) {
+function validateRecord(record: unknown, file: string, taskId: string): RecoveryRecord {
+  if (typeof record !== "object" || record === null || Array.isArray(record)) {
     throw new RecoveryStoreError("CORRUPT_RECORD", `${file}: record is not an object`);
   }
   const r = record as Record<string, unknown>;
   if (typeof r.taskId !== "string" || typeof r.state !== "string" || !RECOVERY_STATES.has(r.state as RecoveryRecord["state"])) {
     throw new RecoveryStoreError("UNSUPPORTED_SCHEMA", `${file}: unknown recovery record schema (taskId/state)`);
   }
-  if (typeof r.attempt !== "number" || typeof r.maxRecoveryAttempts !== "number" || typeof r.nextAttemptAt !== "number") {
+  if (r.taskId !== taskId) {
+    throw new RecoveryStoreError("CORRUPT_RECORD", `${file}: recovery record taskId differs from its storage identity`);
+  }
+  if (!Number.isSafeInteger(r.attempt) || Number(r.attempt) < 0
+    || !Number.isSafeInteger(r.maxRecoveryAttempts) || Number(r.maxRecoveryAttempts) < 0 || !Number.isFinite(r.nextAttemptAt)) {
     throw new RecoveryStoreError("UNSUPPORTED_SCHEMA", `${file}: recovery record numeric fields missing/invalid`);
   }
-  if (typeof r.promptId !== "string") {
-    throw new RecoveryStoreError("UNSUPPORTED_SCHEMA", `${file}: recovery record promptId missing`);
+  if (typeof r.promptId !== "string" || typeof r.lineageId !== "string" || typeof r.policyVersion !== "string") {
+    throw new RecoveryStoreError("UNSUPPORTED_SCHEMA", `${file}: recovery record promptId/lineageId/policyVersion missing`);
   }
-  if (r.version !== undefined && typeof r.version !== "number") {
-    throw new RecoveryStoreError("UNSUPPORTED_SCHEMA", `${file}: recovery record version must be a number`);
+  if (r.version !== undefined && (!Number.isSafeInteger(r.version) || Number(r.version) < 1)) {
+    throw new RecoveryStoreError("UNSUPPORTED_SCHEMA", `${file}: recovery record version must be a positive safe integer`);
+  }
+  if ((r.lastError !== null && typeof r.lastError !== "string")
+    || (r.needsReconcile !== undefined && typeof r.needsReconcile !== "boolean")) {
+    throw new RecoveryStoreError("UNSUPPORTED_SCHEMA", `${file}: recovery error/reconciliation fields invalid`);
+  }
+  if (r.lease !== undefined) {
+    const lease = r.lease as Record<string, unknown> | null;
+    if (lease === null || typeof lease !== "object" || Array.isArray(lease)
+      || typeof lease.owner !== "string" || lease.owner.length === 0 || !Number.isFinite(lease.expiresAt)) {
+      throw new RecoveryStoreError("UNSUPPORTED_SCHEMA", `${file}: recovery lease owner/expiry invalid`);
+    }
   }
   return record as RecoveryRecord;
 }
@@ -131,7 +146,7 @@ export class DurableRecoveryStore implements RecoveryStore {
     return (await this.corruptMarkers(taskId)).length > 0;
   }
 
-  private async readEnvelope(taskId: string): Promise<RecoveryEnvelope | undefined> {
+  private async readEnvelope(taskId: string, writerLocked = false): Promise<RecoveryEnvelope | undefined> {
     const file = this.file(taskId);
     let raw: string;
     try {
@@ -156,6 +171,13 @@ export class DurableRecoveryStore implements RecoveryStore {
     try {
       parsed = JSON.parse(raw);
     } catch {
+      // Quarantine is a write. Re-read under the writer fence so an old
+      // corrupt snapshot cannot move a replacement committed by maintenance.
+      if (!writerLocked) {
+        const release = await this.acquireFileLock(`${file}.lock`);
+        try { return await this.readEnvelope(taskId, true); }
+        finally { await release(); }
+      }
       // Corrupt: quarantine (move aside) so it is never silently treated as
       // absent (which would reset attempts). Report, do not zero.
       const quarantined = `${file}.corrupt-${this.now()}`;
@@ -166,7 +188,7 @@ export class DurableRecoveryStore implements RecoveryStore {
       throw new RecoveryStoreError("UNSUPPORTED_SCHEMA", `${file}: unsupported recovery envelope schemaVersion`);
     }
     const env = parsed as RecoveryEnvelope;
-    validateRecord(env.record, file);
+    validateRecord(env.record, file, taskId);
     return env;
   }
 
@@ -180,13 +202,14 @@ export class DurableRecoveryStore implements RecoveryStore {
 
   async putRecord(record: RecoveryRecord): Promise<RecoveryRecord> {
     assertSafeId(record.taskId);
+    validateRecord(record, this.file(record.taskId), record.taskId);
     return withLock(`recovery:${record.taskId}`, async () => {
       const file = this.file(record.taskId);
       const lockFile = `${file}.lock`;
       await mkdir(this.root, { recursive: true });
       const release = await this.acquireFileLock(lockFile);
       try {
-        const current = await this.readEnvelope(record.taskId);
+        const current = await this.readEnvelope(record.taskId, true);
         const currentVersion = current?.record.version ?? 0;
         // E4-R06 (F14): a corrupt marker is NOT bypassed by a fresh write — the
         // actor cannot silently reset a damaged record to attempt=0. Clearing
@@ -205,9 +228,13 @@ export class DurableRecoveryStore implements RecoveryStore {
         }
         const next: RecoveryRecord = { ...record, version: currentVersion + 1 };
         const env: RecoveryEnvelope = { schemaVersion: DURABLE_RECOVERY_SCHEMA_VERSION, record: next };
-        await atomicWriteFile(file, JSON.stringify(env, null, 2));
+        const encoded = JSON.stringify(env, null, 2);
+        // Validate the actual serialized snapshot before replacing acknowledged
+        // bytes, including version overflow and JSON's nonfinite-number loss.
+        validateRecord((JSON.parse(encoded) as RecoveryEnvelope).record, file, record.taskId);
+        await atomicWriteFile(file, encoded);
         // Verify-by-read: only a record that reads back valid is acknowledged.
-        const verified = await this.readEnvelope(record.taskId);
+        const verified = await this.readEnvelope(record.taskId, true);
         if (verified?.record.version !== next.version || verified?.record.state !== next.state) {
           throw new RecoveryStoreError("CORRUPT_RECORD", `recovery ${record.taskId} did not validate on read-back`);
         }
@@ -221,20 +248,23 @@ export class DurableRecoveryStore implements RecoveryStore {
   async deleteRecord(taskId: TurnId): Promise<void> {
     assertSafeId(taskId);
     return withLock(`recovery:${taskId}`, async () => {
+      await mkdir(this.root, { recursive: true });
+      const release = await this.acquireFileLock(`${this.file(taskId)}.lock`);
       try {
-        await unlink(this.file(taskId));
-      } catch (err) {
-        if (!isNodeError(err, "ENOENT")) throw new RecoveryStoreError("IO_ERROR", `delete failed for ${taskId}: ${String(err)}`);
-      }
-      // E4-R06 (F14): delete IS the explicit maintenance action that clears the
-      // persistent corrupt markers; everything else refuses to remove them.
-      for (const marker of await this.corruptMarkers(taskId)) {
         try {
-          await unlink(marker);
+          await unlink(this.file(taskId));
         } catch (err) {
-          if (!isNodeError(err, "ENOENT")) degraded(`delete marker ${marker}`, err);
+          if (!isNodeError(err, "ENOENT")) throw new RecoveryStoreError("IO_ERROR", `delete failed for ${taskId}: ${String(err)}`);
         }
-      }
+        // Explicit maintenance uses the same writer fence as CAS updates.
+        for (const marker of await this.corruptMarkers(taskId)) {
+          try {
+            await unlink(marker);
+          } catch (err) {
+            if (!isNodeError(err, "ENOENT")) degraded(`delete marker ${marker}`, err);
+          }
+        }
+      } finally { await release(); }
     });
   }
 
@@ -309,15 +339,15 @@ export class DurableRecoveryStore implements RecoveryStore {
         let steal = false;
         try {
           const s = await stat(lockFile);
-          const text = await readFile(lockFile, "utf8").catch(() => "");
+          const text = await readFile(lockFile, "utf8");
           const ownerPid = Number.parseInt(text.trim().split(" ")[0] ?? "", 10);
           const ownerAlive = Number.isInteger(ownerPid) && ownerPid > 0 && processExists(ownerPid);
           if (this.now() - s.mtimeMs >= LOCK_STALE_MS && !ownerAlive) steal = true;
         } catch (statErr) {
-          // Cannot stat/read the lock (vanished or unreadable): report and treat
-          // as stealable so a flaky FS does not deadlock, but never silently.
-          degraded("stat-lock (treating as stale)", statErr);
-          steal = true;
+          // A vanished lock can be retried. An unreadable owner is not proof
+          // of a dead owner; never unlink a live writer's fence on uncertainty.
+          if (isNodeError(statErr, "ENOENT")) continue;
+          throw new RecoveryStoreError("IO_ERROR", `recovery lock owner could not be inspected: ${String(statErr)}`);
         }
         if (steal) {
           await ignoreButReport(unlink(lockFile), "remove-stale-lock");

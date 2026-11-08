@@ -229,7 +229,9 @@ export function createControlsService(host: ControlsHost) {
       } else {
         const state = await read(id);
         if (value.startsWith("approve")) {
-          const revision = Number(value.split(/\s+/u)[1]);
+          const approval = /^approve\s+([0-9]+)$/u.exec(value);
+          if (approval === null || !Number.isSafeInteger(Number(approval[1]))) fail("plan/invalid", "Use /plan approve <decimal revision> with no extra arguments");
+          const revision = Number(approval![1]);
           const retry = state.plan.status === "approved" && state.plan.requestId !== undefined && revision + 1 === state.plan.revision;
           if ((!retry && state.plan.status !== "review") || !state.plan.content || (!retry && revision !== state.plan.revision)) fail("plan/conflict", "Review the current plan before approving its revision");
           approved = state.plan.content;

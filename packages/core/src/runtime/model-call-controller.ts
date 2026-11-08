@@ -279,6 +279,7 @@ export class ModelCallController {
       }
     }
     const toolCalls = repairedCalls;
+    const reasoningContent = final.reasoningContent ?? reasoningText;
     await this.deps.store.appendMessage({
       id: newMessageId(),
       sessionId,
@@ -290,7 +291,7 @@ export class ModelCallController {
       model: agent.model,
       content: final.text ?? assistantText,
       ...(toolCalls.length > 0 ? { toolCalls } : {}),
-      ...(reasoningText.length > 0 ? { reasoningContent: reasoningText } : {}),
+      ...(reasoningContent.length > 0 ? { reasoningContent } : {}),
       createdAt: this.deps.now(),
     });
     await this.deps.emit(sessionId, "model.completed", {
