@@ -45,4 +45,20 @@ describe("candidate state shared by live harness owners", () => {
     await Promise.all(Array.from({ length: 16 }, (_, i) => (i % 2 ? a : b).add(candidate(`item-${i}`))));
     expect((await reopen().list()).map(row => row.id).sort()).toEqual(Array.from({ length: 16 }, (_, i) => `item-${i}`).sort());
   });
+  it("refreshes an initial read when another owner commits before that read returns", async () => {
+    const { b, reopen } = await fixture(), reader = reopen();
+    const snapshot = reader as unknown as { loadSnapshot(): Promise<void> };
+    const load = snapshot.loadSnapshot.bind(reader);
+    let entered!: () => void, release!: () => void;
+    const observed = new Promise<void>(done => { entered = done; });
+    const gate = new Promise<void>(done => { release = done; });
+    // Pause after a real filesystem snapshot; the peer writes through its
+    // unchanged public API before the initial read can publish its result.
+    snapshot.loadSnapshot = async () => { await load(); entered(); await gate; };
+    const pending = reader.list();
+    try { await observed; await b.add(candidate("committed-during-read")); }
+    finally { release(); }
+    expect(await pending).toEqual([candidate("committed-during-read")]);
+    expect(await reader.get("committed-during-read")).toEqual(candidate("committed-during-read"));
+  });
 });
