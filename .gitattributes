@@ -215,3 +215,5 @@ scripts/research/web-model-reasoning-component.mjs text eol=lf
 # Retained multilingual search sources have recorded original byte hashes.
 third_party/deepseek-text-search/** -text -whitespace
 scripts/research/web-text-search-runtime.mjs text eol=lf
+# Preserve the npm MIT notice CRLF bytes without reporting CR as whitespace.
+apps/web/public/deepseek/licenses/harness-text-search/FUZZYSORT-LICENSE whitespace=cr-at-eol
