@@ -4,7 +4,6 @@ import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 function run(source) {
   const directory = mkdtempSync(join(tmpdir(), 'native-preflight-report-'));
@@ -14,7 +13,7 @@ function run(source) {
     const env = { ...process.env };
     delete env.NODE_TEST_CONTEXT;
     const child = spawnSync(process.execPath, ['--test', '--test-reporter=spec',
-      '--test-reporter=' + fileURLToPath(new URL('./test-failure-annotations.mjs', import.meta.url)),
+      '--test-reporter=' + new URL('./test-failure-annotations.mjs', import.meta.url).href,
       '--test-reporter-destination=stdout', '--test-reporter-destination=stdout', fixture], { encoding: 'utf8', env, maxBuffer: 8 * 1024 * 1024 });
     assert.equal(child.error, undefined);
     const lines = child.stdout.split(/\r?\n/);

@@ -1,0 +1,65 @@
+{
+  "sourceSha": "9c021501ed09e1be056e45f873cc0ec1f80c1480",
+  "status": "FAIL native preflight: 67 original passed, 2 new reporter self-checks failed",
+  "rootCause": "Child reporter option used a drive-letter absolute path; Windows Node22 requires a file URL for its ESM loader. Corrected to new URL(...).href.",
+  "snapshotScope": "Other workflows were still running at this early failed-native snapshot, not asserted complete. Ordinary follow-up source push; no manual workflow cancellation or rerun.",
+  "archive": {
+    "sha256": "e616e733216799c3dbe174d066121696c21802d51853c788d7dc304abb58cb42",
+    "bytes": 10364,
+    "file": "reporter-url-fix.json.xz"
+  },
+  "members": [
+    {
+      "file": "ci/annotations.json",
+      "sha256": "939581b9c78d9709bd5a2782bcd1a1ee47718ba1cc572e312045254afea269a3"
+    },
+    {
+      "file": "ci/latest.json",
+      "sha256": "7ab85e2060c8bd0d8a2a0c8e2431a3774693e59fc9ed74d7f9c3160f0eccb6e1"
+    },
+    {
+      "file": "ci/poll-000.json",
+      "sha256": "cdebccda1ed3062f5378f14f77a79914a50f60336e190d5ad64e4432085c20a5"
+    },
+    {
+      "file": "ci/poll-001.json",
+      "sha256": "4e5a8ecc7b58dafa42d40ba9b559ec549e63ce91697953c298b528f003d03cd1"
+    },
+    {
+      "file": "ci/poll-002.json",
+      "sha256": "7ab85e2060c8bd0d8a2a0c8e2431a3774693e59fc9ed74d7f9c3160f0eccb6e1"
+    },
+    {
+      "file": "ci/push.json",
+      "sha256": "6f6b9ddf9af1ffbc3f242da97c9bb823250a74d0921625deab01579a0f5263d4"
+    },
+    {
+      "file": "ci/result.json",
+      "sha256": "c2a67a15256f98fa089c5fd5103ef8ddbf0cdd05cc13dea14c4ed624cbf8bc87"
+    },
+    {
+      "file": "ci/windows-artifacts.json",
+      "sha256": "f7417e1fb877d3f5934f143cc38ad9e2905476e8f5ac6776507d09441efcd6f6"
+    },
+    {
+      "file": "ci/windows-receipt.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "file": "commands/ci-reporter-url-node22.log",
+      "sha256": "2ea4cfba663b32754b01fdb201e50760cd3d1c181f39f6b0f3f0fb576cd448b0"
+    },
+    {
+      "file": "commands/ci-reporter-url-node22.receipt.json",
+      "sha256": "5b455e29864c178ca0f3bd5005018f4622f6371229d3db811729d7ade0cf6b78"
+    },
+    {
+      "file": "commands/ci-reporter-url-node24.log",
+      "sha256": "f026615cb7bf51f03f72eb57a55a4b2754adb91d0db478f97c9b563f42e01a84"
+    },
+    {
+      "file": "commands/ci-reporter-url-node24.receipt.json",
+      "sha256": "4549cf4a0e95b74f068d42155ce7f7e281bb6de830e5a494f5741ff9f3ada2f1"
+    }
+  ]
+}
