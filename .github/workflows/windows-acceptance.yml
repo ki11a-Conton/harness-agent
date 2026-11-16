@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/windows-acceptance.yml'
       - 'scripts/ci/windows-acceptance-report*'
+      - 'scripts/ci/test-failure-annotations*'
       - 'packages/**'
       - 'apps/**'
       - 'scripts/research/source-audit-20261007/**'

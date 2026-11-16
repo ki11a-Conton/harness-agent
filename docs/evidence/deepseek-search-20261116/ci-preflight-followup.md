@@ -17,3 +17,5 @@
 原 main 四项CI已完整结束：两类安装验收成功；主CI的Windows默认关闭模式回归和Windows专项前置组失败，双平台汇总随主测试失败。回执与诊断补丁干净源码Node22/24通过记录归档于 `ci-followup.json.xz`，未取消或手动重跑工作流。最终main的四项CI将在普通推送后重新核对。
 
 诊断提交9c02150在真实Windows得到明确错误：原67项通过，新增2项子进程报告器自检失败，原因是把D盘绝对路径传给ESM加载器（ERR_UNSUPPORTED_ESM_URL_SCHEME），该新增问题由本轮引入。改为file URL的href，不改变断言或期望退出码；Node22/24的真实子进程通过/失败场景均通过。原失败、67/2计数与当时其他流水线仍运行的快照见reporter-url-fix.json.xz。按正常源码修复再次推送，未手动重跑或取消workflow。此明确新增路径问题与首轮未取得详情的两处Windows失败分别记录。
+
+4c02c8f只有主CI触发：新报告器脚本未进入Windows push.paths。补充其精确glob；同时发现新的搜索浏览器/生成器/派生适配器与第三方源码未进入Web安装验收触发条件，且portable源码快照使用third_party但第一代安装验收缺少该输入触发，分别补齐。9个具体路径由旧配置均不匹配变为新配置匹配，3个YAML解析通过；见trigger-path-check.json。按普通源码提交触发最终同一SHA验收，不把无运行的检查当作通过。
