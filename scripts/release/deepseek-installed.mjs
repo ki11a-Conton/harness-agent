@@ -116,7 +116,7 @@ try {
   const controls = JSON.parse(await readFile(join(output, 'pr15/result.json'), 'utf8'));
   assert.equal(controls.status, 'PASS'); assert.equal(controls.checks.length, 10); assert.deepEqual(controls.pending, []); assert.equal(controls.paidModelCalls, 0);
   const composerAssets = manifest.files.filter(file => file.path.endsWith('/deepseek/harness-brand/plugins/dsh-client-ui-conversation/client.js'));
-  const commandAssets = manifest.files.filter(file => file.path.endsWith('/deepseek/plugins/dsh-client-ui-commands/client.js'));
+  const commandAssets = manifest.files.filter(file => file.path.endsWith('/deepseek/harness-brand/plugins/dsh-client-ui-commands/client.js'));
   assert.equal(composerAssets.length, 1); assert.equal(commandAssets.length, 1);
   const composerSha = composerAssets[0].sha256, commandsSha = commandAssets[0].sha256;
   const modeRunner = spawn(process.execPath, [join(source, 'scripts/research/composer-mode-browser.mjs'), '--url', origin,
@@ -191,12 +191,6 @@ try {
     'narrow-zh-dark-off', 'narrow-zh-dark-on', 'narrow-zh-dark-cancel-keeps-profile', 'actual-assets-and-browser-errors']) {
     assert(modelChecks.has(name), 'Missing installed model editor check: ' + name);
   }
-  await verifyPortable(root, { version: values.version, sourceSha: values['source-sha'] });
-  host.send({ type: 'fixture-stop' });
-  const exit = await timeout(hostExit, 15_000, 'Installed host failed to close');
-  assert.equal(exit.code, 0, stderr);
-  const launch = JSON.parse(await readFile(join(fixture, 'evidence/launch.json'), 'utf8'));
-  assert.equal(launch.installed, true); assert.equal(launch.sourceSha, manifest.sourceSha);
   const searchAssets = Object.fromEntries(['commands', 'model-selection', 'workspace'].map(stem => {
     const matches = manifest.files.filter(file => file.path.endsWith(`/deepseek/harness-brand/plugins/dsh-client-ui-${stem}/client.js`));
     assert.equal(matches.length, 1, 'Installed search asset must be unambiguous: ' + stem);
@@ -226,6 +220,12 @@ try {
     'model-empty-result-escape-keeps-selection', 'keyboard-selected-model-real-http', 'fullwidth-command-real-plan-receipt',
     'workspace-search-登录 修复', 'workspace-search-修 登', 'narrow-zh-dark-chinese-model-search', 'desktop-en-light-chinese-model-search',
     'actual-reviewed-assets-and-no-browser-errors']) assert(searchChecks.has(name), 'Missing installed search check: ' + name);
+  await verifyPortable(root, { version: values.version, sourceSha: values['source-sha'] });
+  host.send({ type: 'fixture-stop' });
+  const exit = await timeout(hostExit, 15_000, 'Installed host failed to close');
+  assert.equal(exit.code, 0, stderr);
+  const launch = JSON.parse(await readFile(join(fixture, 'evidence/launch.json'), 'utf8'));
+  assert.equal(launch.installed, true); assert.equal(launch.sourceSha, manifest.sourceSha);
   const managedRunner = spawn(process.execPath, [join(source, 'scripts/release/managed-installed.mjs'),
     '--archive', archive, '--out', join(output, 'managed-commands'), '--version', values.version, '--source-sha', values['source-sha'],
     '--playwright-module', resolve(values['playwright-module']), '--chromium', chromium],

@@ -29,7 +29,7 @@ page.on('console', message => { if (message.type() === 'error') errors.push(mess
 page.on('response', response => {
   const resource = canonicalPluginResource(response.url(), origin);
   const kind = ['/deepseek/harness-brand/plugins/dsh-client-ui-conversation/client.js', '/deepseek/plugins/dsh-client-ui-conversation/client.js'].includes(resource) ? 'composer'
-    : resource === '/deepseek/plugins/dsh-client-ui-commands/client.js' ? 'commands' : undefined;
+    : ['/deepseek/harness-brand/plugins/dsh-client-ui-commands/client.js', '/deepseek/plugins/dsh-client-ui-commands/client.js'].includes(resource) ? 'commands' : undefined;
   if (kind) assetReads.push(response.body().then(bytes => assets.push({ kind, url: response.url(), bytes: bytes.length,
     sha256: createHash('sha256').update(bytes).digest('hex') })));
 });

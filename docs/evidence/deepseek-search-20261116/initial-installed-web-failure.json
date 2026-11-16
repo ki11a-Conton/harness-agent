@@ -1,0 +1,265 @@
+{
+  "sourceSha": "b2053d8c0765fc03ed70a969ff2452b38eafe1d6",
+  "status": "FAIL",
+  "failure": "composer-mode: commands archive bytes differ",
+  "diagnosis": "Installed gate selected original commands bundle hash while actual UI loaded the new reviewed search derivative. New search phase was also incorrectly placed after fixture shutdown; moved before verification/shutdown. Actual first 23 composer interactions passed; the resource identity check correctly remained red.",
+  "archive": {
+    "file": "initial-installed-web-failure.json.xz",
+    "sha256": "d75c9166403a182fb73b35ffe6bedd3dfec304c48acdbd636f1499bfe74e1bab",
+    "bytes": 92288
+  },
+  "members": [
+    {
+      "file": "commands/installed-web.log",
+      "sha256": "6c9e50c5d2515f940a4be55fd3e0981dafda56853c9e456cd6dd6e5f1fe063af"
+    },
+    {
+      "file": "commands/installed-web.receipt.json",
+      "sha256": "c442305a4d82b48eb9b1e7ff4cb5babeafd12e20c787c1efc139ad6928846bbe"
+    },
+    {
+      "file": "installed-web/browser.log",
+      "sha256": "0404348f600700f017917b5dee31c88eb65e3892fcbf9af14231f39b47644a53"
+    },
+    {
+      "file": "installed-web/browser/desktop-ask-reload-answer.json",
+      "sha256": "5f4f17234f09ac891acc3ca5fb1ccb3ae911953b79f8eb97a410c5baf239b4a0"
+    },
+    {
+      "file": "installed-web/browser/desktop-markdown-stream-reload.json",
+      "sha256": "698cf444767b10ec3b390b854b6cb935aa9858768f16eafd6ffb4497445f186a"
+    },
+    {
+      "file": "installed-web/browser/desktop-models-editor.json",
+      "sha256": "3301fc371369a47821a214fd7fd14d5a901632f4d134333dbedeb154143fd12b"
+    },
+    {
+      "file": "installed-web/browser/desktop-read-tool.json",
+      "sha256": "0ae14ca8ebf0f1dbd45436bde09f7931e9552531a6996f5678d2cfd70b64ad61"
+    },
+    {
+      "file": "installed-web/browser/desktop-session-lifecycle.json",
+      "sha256": "f4bdbdd3455992978f8d2cbb3d9188ecf476d75cfdd491a6b20ae730dd1dadf8"
+    },
+    {
+      "file": "installed-web/browser/desktop-settings-general.json",
+      "sha256": "58e563687efefc53752251f604640f50d7241944ba3537cf7334e4c9051bd136"
+    },
+    {
+      "file": "installed-web/browser/desktop-workspace-directory-picker.json",
+      "sha256": "7f857d24e815b7a653279f51eb19c4da3c0cdd3d4367e56d4c62c8c4b4888ed9"
+    },
+    {
+      "file": "installed-web/browser/desktop-workspace-files.json",
+      "sha256": "af7f0c8db10847dc50f88a9609010d08649198c863cfdb42763701bd365fe9d1"
+    },
+    {
+      "file": "installed-web/browser/desktop-write-approval.json",
+      "sha256": "dc01fdd0606630bbcbadb948b1712ed5f6125d85bf1cf6208d1d498477bd0dd3"
+    },
+    {
+      "file": "installed-web/browser/desktop-write-rejection.json",
+      "sha256": "2c64cea4552b8674f18d1f076aa5cfc139b31e665a77569e9f85f67f47b6ce32"
+    },
+    {
+      "file": "installed-web/browser/mobile-ask-reload-answer.json",
+      "sha256": "adca7babf632c0c5ac9673b9800da559dff9085a261f800728dc4ed3f6b3a5c8"
+    },
+    {
+      "file": "installed-web/browser/mobile-markdown-stream-reload.json",
+      "sha256": "3fb56d16df6a5d08077cfd7075f0f1cb994d71cfa2fc657c88e0c8d3a43969e3"
+    },
+    {
+      "file": "installed-web/browser/mobile-models-editor.json",
+      "sha256": "d846ab94b9387424e46bc653d42b4defb58804ce87cc2009814a5ff53a37c975"
+    },
+    {
+      "file": "installed-web/browser/mobile-read-tool.json",
+      "sha256": "fb3008c24e99ddad47f3a958acf943d15c961be9b92d39751beacddbb1cfb768"
+    },
+    {
+      "file": "installed-web/browser/mobile-session-lifecycle.json",
+      "sha256": "d647eac85b5430a2212d97a47ada88c06ab65a1998be6927baa0cdb94b9a29e0"
+    },
+    {
+      "file": "installed-web/browser/mobile-settings-general.json",
+      "sha256": "cc1d619acb57dab220cb405ee1e2bd19b14302688074a16522e6b4dcbb4f2652"
+    },
+    {
+      "file": "installed-web/browser/mobile-workspace-directory-picker.json",
+      "sha256": "45629ec1d1d96ab4e30068ec609289f5c899a126bd45a51b5bb5f45a7d49f968"
+    },
+    {
+      "file": "installed-web/browser/mobile-workspace-files.json",
+      "sha256": "3dbc195c9cf7931a0014823b6d7b2c033284511512c11dfd6e4368b75595e985"
+    },
+    {
+      "file": "installed-web/browser/mobile-write-approval.json",
+      "sha256": "7f40c5775a0184526fefb65d6ad7454593e7cd1bfa640d7fc8e9c50595730992"
+    },
+    {
+      "file": "installed-web/browser/mobile-write-rejection.json",
+      "sha256": "bf23c004d15a200a05990fc2455eb0e51a9617fa9bd106d852417ffc8f8af678"
+    },
+    {
+      "file": "installed-web/browser/narrow-tall-ask-reload-answer.json",
+      "sha256": "d8fb904097d2576c89abdc7d4812ed99a3efb7f17034b240858ea463adb4de8d"
+    },
+    {
+      "file": "installed-web/browser/narrow-tall-markdown-stream-reload.json",
+      "sha256": "a081eb4b0e8cfc717eed5ae3e847cb38109b8f7fe1972f5ca2dd2dadab54403f"
+    },
+    {
+      "file": "installed-web/browser/narrow-tall-models-editor.json",
+      "sha256": "9e5580717a9d823278138fa5f1742e861687cde10b905f4939b5e95d1c319d10"
+    },
+    {
+      "file": "installed-web/browser/narrow-tall-read-tool.json",
+      "sha256": "1938e1145321098a6e9df1f27b339c946ff4cc163dfa6ba64f9721000380fae8"
+    },
+    {
+      "file": "installed-web/browser/narrow-tall-session-lifecycle.json",
+      "sha256": "b87d166e166a9b19514e7276bdbdd382210d0305f47553983e5893586a9d99ef"
+    },
+    {
+      "file": "installed-web/browser/narrow-tall-settings-general.json",
+      "sha256": "470125395b6c0b32f42f33e783b124c967da0f3f97dfe54373ccb9a4ade041a8"
+    },
+    {
+      "file": "installed-web/browser/narrow-tall-workspace-directory-picker.json",
+      "sha256": "5388ced363e4af73ea8e6b84289cb9cb7fa708a413b71f2b021a44f894144ea7"
+    },
+    {
+      "file": "installed-web/browser/narrow-tall-workspace-files.json",
+      "sha256": "1e45bdc88f11b6321204f2aedf0849c3489c5ea5be264f39fe999769acdb8f60"
+    },
+    {
+      "file": "installed-web/browser/narrow-tall-write-approval.json",
+      "sha256": "a525dbddd3edca1c4ea2468a4d383ab78688a900eedec164d3840dcc662f5ac7"
+    },
+    {
+      "file": "installed-web/browser/narrow-tall-write-rejection.json",
+      "sha256": "71aa7a6b69b012db7a649a50645ba8f5985d59f5f6c37ef4f7366db6dd6473a2"
+    },
+    {
+      "file": "installed-web/browser/result.json",
+      "sha256": "b5b7132af0db7a595de6b5911cef70954cf07c4e45f585473d6443f6f1b94f22"
+    },
+    {
+      "file": "installed-web/composer-mode.log",
+      "sha256": "92ecbcbaf8423ee43d4563acd361bbcf32c72b914d91261b50f576359bd1b264"
+    },
+    {
+      "file": "installed-web/composer-mode/desktop-en-light-goal-editor.json",
+      "sha256": "928da240f3828cfad46702579b77727566a4afbece8159f7b30c5a38b8204cf0"
+    },
+    {
+      "file": "installed-web/composer-mode/desktop-en-light-plan-editor.json",
+      "sha256": "cf50c915c8c796d66ed931e6287421677fa2e40c1093543ea8f13ffd916c992d"
+    },
+    {
+      "file": "installed-web/composer-mode/desktop-zh-light-goal-editor.json",
+      "sha256": "284b4100d730c512d76791fca98bddcce7121e5873af78fd290153aa686f30ed"
+    },
+    {
+      "file": "installed-web/composer-mode/desktop-zh-light-plan-editor.json",
+      "sha256": "b7550c09532a3bad30c9c684eb6f7ad0630e255fd24c961331552ec2ff49c68b"
+    },
+    {
+      "file": "installed-web/composer-mode/failure-editor.json",
+      "sha256": "67ca69a9a90b551a8884065af17ead7d879d84d5d4bccfe7bd90f31ee3cb0e13"
+    },
+    {
+      "file": "installed-web/composer-mode/failure-text.txt",
+      "sha256": "15ffbd07e3093599e91d6b4e405807aff3913ce5d19d765ed0cacdaa5d325a83"
+    },
+    {
+      "file": "installed-web/composer-mode/mobile-en-dark-goal-editor.json",
+      "sha256": "6db8df009ce70aeb1996b6b8ef6758fea9a6fc3d5aa5f91a241955f708bec5e3"
+    },
+    {
+      "file": "installed-web/composer-mode/mobile-en-dark-plan-editor.json",
+      "sha256": "94f0137d0dcab773b2ca787548380170c8406f811b9ed8fc9b0aa86804993a22"
+    },
+    {
+      "file": "installed-web/composer-mode/narrow-zh-dark-goal-editor.json",
+      "sha256": "62a52e2b7297b7474de4abade085ac20f1091a0b4ce668b7c6a7b9158b8ff472"
+    },
+    {
+      "file": "installed-web/composer-mode/narrow-zh-dark-plan-editor.json",
+      "sha256": "b031efbc9d233e503daaa2686de30c5cb5395ac91650837dcbd31b5d49b8faa6"
+    },
+    {
+      "file": "installed-web/composer-mode/new-session-default-editor.json",
+      "sha256": "4215336c5426886da7dec7e30570c8cc5ea75f16e96520ed91409a8856f3b079"
+    },
+    {
+      "file": "installed-web/composer-mode/result.json",
+      "sha256": "5a52fe5f64b481e986e9792eff4b796a1560dac47f361cce0ec2bc1453d82ce5"
+    },
+    {
+      "file": "installed-web/fixture/compiled-e7bd2e0b-f342-4555-8ccd-799407736a01.json",
+      "sha256": "30645bc1d0d8df1da33bbf044bfff099b8831f91298f519d7a38048918f1c413"
+    },
+    {
+      "file": "installed-web/fixture/fixture-root.json",
+      "sha256": "c9f33b1ef1afb913350776de123a872e9646d6c0ef807275b614039e2d38f1d7"
+    },
+    {
+      "file": "installed-web/fixture/host-exit-history.jsonl",
+      "sha256": "b9990716ef827b9f4c3f2bbc6687e3924f7f154381e541d80e1eb22b218e0d07"
+    },
+    {
+      "file": "installed-web/fixture/host-exit.json",
+      "sha256": "b9990716ef827b9f4c3f2bbc6687e3924f7f154381e541d80e1eb22b218e0d07"
+    },
+    {
+      "file": "installed-web/fixture/launch-history.jsonl",
+      "sha256": "d1e860fff3d7453c58f3537d65de6bafeff879d4e9a313fb982ad9d766661a19"
+    },
+    {
+      "file": "installed-web/fixture/launch.json",
+      "sha256": "ca8c4876d24700a9bc6d9f412490016228934cecc2a3bdc74cbd0f7117385f9d"
+    },
+    {
+      "file": "installed-web/fixture/requests.jsonl",
+      "sha256": "57ae9163b3735e59d49b7dc1af961b86f33b90707412512ef359cef710267ee5"
+    },
+    {
+      "file": "installed-web/host-stderr.log",
+      "sha256": "47bd3997640a5fdca2782334ba0d26a851a7a41b5e56253149e51724f32f1c33"
+    },
+    {
+      "file": "installed-web/host-stdout.log",
+      "sha256": "5ee5305ee4d72cca85c72b96ce197aff3fe7dace6329f8e0bb45dd10d7e0de3d"
+    },
+    {
+      "file": "installed-web/pr15.log",
+      "sha256": "f0161f866d0ea78f10b94cb18de934dd7c51cb7922f1f8fc806e8b2775629b4c"
+    },
+    {
+      "file": "installed-web/pr15/result.json",
+      "sha256": "d86a1769f606e280f4c11bbe9ce4cfb3212452f479f0d118c1c57dec886f6f54"
+    },
+    {
+      "file": "installed-web/workspace-keyboard.log",
+      "sha256": "42e5dc2c23cca4786894b810c714ce73171b4ade6f90e0d764efeefba0655cdb"
+    },
+    {
+      "file": "installed-web/workspace-keyboard/desktop/result.json",
+      "sha256": "9521b40169303690627f9d4920224a2cb176b4c81edcf17f75d3c84578ad229a"
+    },
+    {
+      "file": "installed-web/workspace-keyboard/mobile/result.json",
+      "sha256": "7cccc69e1cb7032131765fb599347534193add6a13f3ae1ae3f6a515a3278324"
+    },
+    {
+      "file": "installed-web/workspace-keyboard/narrow-tall/result.json",
+      "sha256": "f69e7d31feb99a9399638a479d595db274218af28852963e5dcf3e5adceb18a2"
+    },
+    {
+      "file": "installed-web/workspace-keyboard/result.json",
+      "sha256": "05fe35fb54a7767958ec5fb68cd9ddf6db4b5b20bce8f963e14a148d177ef47c"
+    }
+  ]
+}
