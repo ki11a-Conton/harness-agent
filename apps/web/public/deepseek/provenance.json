@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "defaultClientCount": 66,
-  "publishedArtifactPolicy": "Original browser JS/CSS/fonts/images remain byte-identical to pinned npm artifacts. 19 explicitly marked Harness Agent UI derivatives, including preview removal, workspace navigation/composer guards, and actual loopback connectivity with monotonic status timing, and two independent SVG assets are deterministically verified separately under harness-brand/. HTML, PWA, boot, carrier and notices are reviewed adaptations; original HTML/PWA inputs and copyrights remain preserved.",
+  "publishedArtifactPolicy": "Original browser JS/CSS/fonts/images remain byte-identical to pinned npm artifacts. 20 explicitly marked Harness Agent UI derivatives, including preview removal, workspace navigation/composer guards, and actual loopback connectivity with monotonic status timing, and two independent SVG assets are deterministically verified separately under harness-brand/. HTML, PWA, boot, carrier and notices are reviewed adaptations; original HTML/PWA inputs and copyrights remain preserved.",
   "sourceRelationship": "npm gitHead is absent; the separately frozen Git source reference does not establish release/source equivalence.",
   "rootIndexSha256": "40352d617778c0dfc734925ba2aeea2178ca24ca81ba2069599e238e3b94721d",
   "releaseArtifacts": [
@@ -3658,13 +3658,13 @@
     },
     {
       "path": "boot-manifest.js",
-      "bytes": 35964,
-      "sha256": "9af846652af19dd4341589951cfe7e6a19bf01966ff3594e6b563aae99f41013"
+      "bytes": 35985,
+      "sha256": "e2da832284d40246aed822ff0ba99fb0a51c24129c8899c9a032f0ad3e0c1b61"
     },
     {
       "path": "boot-manifest.json",
-      "bytes": 46024,
-      "sha256": "753a8c71ee423e8276a18ad6e7da73547f59565348d6a3716f6dcf8da158513c"
+      "bytes": 46053,
+      "sha256": "e2bee89195b5f044f080716fbc1c371e8175536564edd58c6182f2a7ae09a4a1"
     },
     {
       "path": "favicon-dark.svg",
@@ -3712,6 +3712,11 @@
       "sha256": "7319efa773bf19eab23acc6e8c5e0d3ef73dfe35f839668066b7fe94c579d2e4"
     },
     {
+      "path": "harness-brand/plugins/dsh-client-ui-commands/client.js",
+      "bytes": 139862,
+      "sha256": "c41a1022329e01263702de6905404f0bfb7f0f6310473df30b17698e4316e974"
+    },
+    {
       "path": "harness-brand/plugins/dsh-client-ui-conversation/client.js",
       "bytes": 882342,
       "sha256": "1215d0d5c5be7e141d4f24b73d49787b01569fcb16b6aa5ea12f1acb5139cc5a"
@@ -3728,8 +3733,8 @@
     },
     {
       "path": "harness-brand/plugins/dsh-client-ui-model-selection/client.js",
-      "bytes": 78653,
-      "sha256": "e81c378bbcb8a5134feb1722725f75d35db237bedd3352409395846ade688e12"
+      "bytes": 138341,
+      "sha256": "f381fe061d5f40a34fb4a670034a3ac78c6dfb226641a21b87d33c24313d77cc"
     },
     {
       "path": "harness-brand/plugins/dsh-client-ui-permission-presets/client.js",
@@ -3778,8 +3783,8 @@
     },
     {
       "path": "harness-brand/plugins/dsh-client-ui-workspace/client.js",
-      "bytes": 224448,
-      "sha256": "f8e4aa7b1197d4f4d4f8ef39e1ddb048cc2db70f0facce5ebcd3b01b077c0f0a"
+      "bytes": 284396,
+      "sha256": "3cb655ec2ca363325c2d0a90a24d0d59afce034828341b68c9b3e78ff76d7e02"
     },
     {
       "path": "harness-brand/welcome.svg",
@@ -4550,6 +4555,21 @@
       "path": "licenses/harness-brand-adaptations.md",
       "bytes": 2487,
       "sha256": "ff137fffce5eaba45c3279790e366b302b2fda5234f2f9f9fa6d24d8cb611a39"
+    },
+    {
+      "path": "licenses/harness-text-search/FUZZYSORT-LICENSE",
+      "bytes": 1093,
+      "sha256": "626c3f57d6c312eb777f144bf8e255ece53a9bd081daf75fb12584584f75791c"
+    },
+    {
+      "path": "licenses/harness-text-search/LICENSE",
+      "bytes": 1065,
+      "sha256": "ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be"
+    },
+    {
+      "path": "licenses/harness-text-search/PROVENANCE.json",
+      "bytes": 912,
+      "sha256": "1cc21ea67310473600b7351b64911de360eaa8d76d0b85f17692f810ea0237eb"
     },
     {
       "path": "licenses/icons/CC-BY-3.0.txt",

@@ -211,3 +211,7 @@ docs/evidence/release-v111-capture-wait-20261018/** -text -whitespace
 # Prevent core.autocrlf from altering source/license hashes or --check output.
 third_party/deepseek-model-reasoning/** -text
 scripts/research/web-model-reasoning-component.mjs text eol=lf
+
+# Retained multilingual search sources have recorded original byte hashes.
+third_party/deepseek-text-search/** -text -whitespace
+scripts/research/web-text-search-runtime.mjs text eol=lf

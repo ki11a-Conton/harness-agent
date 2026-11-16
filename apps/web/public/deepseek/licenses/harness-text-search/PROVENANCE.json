@@ -1,0 +1,14 @@
+{
+  "upstream": "https://github.com/deepseek-ai/deepseek-harness",
+  "sourceSha": "39163dd30f703a79079e2d2446545cff3c453738",
+  "sourcePath": "packages/util/text-search/src/index.ts",
+  "sourceSha256": "bad1375ced3e83aeb27e0417877409b88487e35d2fd2bef885696ccdc19a2c67",
+  "dependency": {
+    "version": "4.0.2",
+    "resolved": "https://registry.npmjs.org/fuzzysort/-/fuzzysort-4.0.2.tgz",
+    "integrity": "sha512-3c7yD6rK1EXIsqpcu1ZVzXJugODWNMzvUij6yTiziaAHrpNS8kzFOI9mJLE8pmG4K9JOaVgzQRgklfOEk8f4Tg==",
+    "license": "MIT"
+  },
+  "dependencySourceSha256": "4c3cf1deb405f8b0c7fb804cf214dd50589221c9faace57fcc83d7068947d35b",
+  "adoption": "index.ts and fuzzysort.js retained unchanged. Development generator erases types/imports and wraps the two ES modules into an isolated browser factory. Actual client adapters are maintained separately. MIT notices are also shipped with the installed browser assets."
+}

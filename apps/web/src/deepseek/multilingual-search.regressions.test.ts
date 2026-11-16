@@ -74,3 +74,32 @@ describe("actual workspace local search retains visibility and host content merg
     expect((await search("API", { list: [{ ...rows[0]!, title: "New task" }] })).items).toEqual([]);
   });
 });
+
+
+describe("actual model menu indices follow current catalog and ranking", () => {
+  async function models(groups: unknown[], query: string) {
+    const source = await readFile(new URL("../../public/deepseek/harness-brand/plugins/dsh-client-ui-model-selection/client.js", import.meta.url), "utf8");
+    const injected = source.indexOf("const harnessTextSearch = (");
+    const endInjected = source.indexOf("\n\t\t// End Harness multilingual search.", injected);
+    const start = source.indexOf("const groupIndexes = (0, react.useMemo)");
+    const end = source.indexOf("const visibleModels =", start);
+    expect(injected).toBeGreaterThan(0); expect(start).toBeGreaterThan(injected); expect(end).toBeGreaterThan(start);
+    return vm.runInNewContext(source.slice(injected, endInjected) + "\n" + source.slice(start, end) + "\nfilteredGroups", {
+      groups, query, showSearch: true, react: { useMemo: (build: () => unknown) => build() },
+    });
+  }
+  it("matches both actual model IDs and display names without changing provider order", async () => {
+    const groups = [{ id: "first", models: [{ id: "m1", name: "Alpha Coder" }] }, { id: "second", models: [{ id: "alpha-m2", name: "Local Model" }] }];
+    expect((await models(groups, "ａｌｐｈａ")).map((g: { id: string }) => g.id)).toEqual(["first", "second"]);
+    expect((await models(groups, "Coder Alpha"))[0].models.map((m: { id: string }) => m.id)).toEqual(["m1"]);
+  });
+  it("descriptions require contiguous term matches and do not create noisy fuzzy hits", async () => {
+    const groups = [{ id: "first", models: [{ id: "plain", name: "Plain", description: "invoice testing" }] }];
+    expect(await models(groups, "ivc")).toEqual([]);
+    expect((await models(groups, "testing invoice"))[0].models[0].id).toBe("plain");
+  });
+  it("a replacement catalog removes the old model name", async () => {
+    expect((await models([{ id: "p", models: [{ id: "m1", name: "Old Model" }] }], "Old"))).toHaveLength(1);
+    expect(await models([{ id: "p", models: [{ id: "m1", name: "New Model" }] }], "Old")).toEqual([]);
+  });
+});
