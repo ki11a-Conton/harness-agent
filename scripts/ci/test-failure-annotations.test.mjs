@@ -17,7 +17,10 @@ function run(source) {
       '--test-reporter=' + fileURLToPath(new URL('./test-failure-annotations.mjs', import.meta.url)),
       '--test-reporter-destination=stdout', '--test-reporter-destination=stdout', fixture], { encoding: 'utf8', env, maxBuffer: 8 * 1024 * 1024 });
     assert.equal(child.error, undefined);
-    return { ...child, annotations: child.stdout.split(/\r?\n/).filter(line => line.startsWith('::error title=Native preflight failure ')) };
+    const lines = child.stdout.split(/\r?\n/);
+    return { ...child, annotations: lines.filter(line => line.startsWith('::error title=Native preflight failure ')),
+      summaries: lines.filter(line => line.startsWith('::notice title=Native preflight result::'))
+        .map(line => JSON.parse(line.split('::').slice(2).join('::'))) };
   } finally { rmSync(directory, { recursive: true, force: true, maxRetries: process.platform === 'win32' ? 8 : 0, retryDelay: 50 }); }
 }
 
@@ -25,6 +28,8 @@ test('a passing native command keeps its zero exit status and has no failure ann
   const result = run("test('actual passing assertion',()=>assert.equal(1,1));");
   assert.equal(result.status, 0, result.stderr); assert.deepEqual(result.annotations, []);
   assert.match(result.stdout, /actual passing assertion/);
+  assert.equal(result.summaries.length, 1); assert.equal(result.summaries[0].counts.passed, 1);
+  assert.equal(result.summaries[0].counts.failed, 0); assert.equal(result.summaries[0].platform, process.platform);
 });
 test('real assertion failures stay red and retain their actionable cause within annotation budgets', () => {
   const message = '中文真实断言🙂%0A::error::\n'.repeat(1000);
@@ -38,4 +43,5 @@ test('real assertion failures stay red and retain their actionable cause within 
     assert.match(detail.failure, /中文真实断言/); assert.equal(detail.truncated, true);
   }
   assert.match(result.stdout, /actual broken assertion 8/);
+  assert.equal(result.summaries.length, 1); assert.equal(result.summaries[0].counts.failed, 9);
 });

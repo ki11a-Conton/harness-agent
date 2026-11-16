@@ -6,6 +6,13 @@ export default async function* failureAnnotations(events) {
   let published = 0;
   const escape = text => text.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
   for await (const event of events) {
+    if (event.type === 'test:summary' && event.data.file === undefined) {
+      yield `::notice title=Native preflight result::${escape(JSON.stringify({
+        sourceSha: process.env.GITHUB_SHA ?? null, platform: process.platform, nodeVersion: process.version,
+        counts: event.data.counts, success: event.data.success,
+      }))}\n`;
+      continue;
+    }
     if (event.type !== 'test:fail' || published >= 6) continue;
     const error = event.data.details?.error;
     if (error?.failureType === 'subtestsFailed') continue;
