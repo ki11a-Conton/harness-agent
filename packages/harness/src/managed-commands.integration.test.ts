@@ -204,7 +204,18 @@ it("default-off leaves the old tool list, prompt and blocking execution unchange
     expect(f.h.managedCommands).toBeUndefined();
     expect(f.h.registry.has("exec_start")).toBe(false);
     expect(f.h.agents[0]!.systemPrompt).not.toContain("Managed commands:");
-    expect((await f.run()).status).toBe("completed");
+    const result = await f.run();
+    if (result.status !== "completed") {
+      // This fixed local fixture has no user prompts or credentials. Keep only
+      // outcome metadata so CI can diagnose a native failure without raw logs.
+      throw new Error("MANAGED_DEFAULT_OFF_ERROR_JSON=" + JSON.stringify({
+        status: result.status, statusDetail: result.statusDetail, grade: result.grade,
+        terminationReason: result.terminationReason, toolCalls: result.toolCalls, iterations: result.iterations,
+        code: result.error?.code, message: result.error?.message.replace(/[\u0000-\u001f]+/gu, " ").slice(0, 500),
+        elapsedMs: Date.now() - f.turn.startedAt,
+      }));
+    }
+    expect(result.status).toBe("completed");
     expect(await readFile(join(f.cwd, "starts"), "utf8")).toBe("1");
   } finally {
     await f.close();

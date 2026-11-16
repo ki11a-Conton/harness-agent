@@ -54,6 +54,15 @@ describe("N3 public CI diagnostics (real Node process)", () => {
     expect(result.annotations.slice(1).every((line) => line.length - "::error::".length <= 240)).toBe(true);
   });
 
+  it("preserves the allowlisted default-off outcome without promoting ordinary quoted markers", async () => {
+    const marker = `Error: MANAGED_DEFAULT_OFF_ERROR_JSON=${JSON.stringify({ code: "FIXTURE_NATIVE_FAILURE", message: "bounded actual outcome ".repeat(20), terminationReason: "error" })}`;
+    const result = await runDiagnostic(`${"[degraded] Error: expected fixture refusal\n".repeat(20)}${marker}\n FAIL managed default-off`);
+    expect(result.child.status).toBe(0);
+    expect(result.annotations[0]).toContain(marker);
+    const quoted = await runDiagnostic(`AssertionError: merely quoted MANAGED_DEFAULT_OFF_ERROR_JSON=${"ordinary ".repeat(100)}`);
+    expect(quoted.annotations[0]!.length - "::error::".length).toBe(240);
+  });
+
   it("publishes named failures and assertion traces before historical expected-error lines", async () => {
     const noise = Array.from({ length: 20 }, (_, index) => `[degraded] ${index}: Error: expected fixture failure`);
     const result = await runDiagnostic([...noise, " FAIL  path-scoped.test.ts > denied target", "AssertionError: expected 'error' to be 'completed'", " Tests  1 failed (1)"].join("\n"));

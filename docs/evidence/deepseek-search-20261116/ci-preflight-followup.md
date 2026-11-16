@@ -11,3 +11,5 @@
 干净诊断提交 `7433bfedcfd2ca2f695a50217b1288ec601b3d79` 在 Node24.19 和 Node22.23.5 上各69项通过。Windows前置组将连续执行3次，每次失败立即退出，3次全部通过才继续；不重跑workflow attempt，不改变原测试时间预算。
 
 报告器仅发布全局 test:summary，避免 Node22 的每文件摘要重复占用检查消息预算。实际通过与失败子进程验证全局摘要各只发1条，且分别记录1项通过和9项失败；完整Node22前置组69项通过。摘要包含源码SHA、平台、Node版本、完整counts和原success。
+
+同一轮主CI的Windows全量测试也失败，公开回执定位到 `managed-commands.integration.test.ts > default-off leaves the old tool list, prompt and blocking execution unchanged`：status为failed而非completed。为该固定离线夹具增加仅在失败时输出的有界outcome元数据，并纳入现有CI诊断脚本明确允许的前缀。未扩大超时或放宽成功条件；原始运行缺少outcome详情，不能据此宣称已独立归因。Linux主任务、Windows/Linux formal offline、闭环及两类安装验收均成功，汇总门禁仍正确为失败。

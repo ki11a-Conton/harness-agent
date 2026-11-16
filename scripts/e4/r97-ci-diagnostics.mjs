@@ -34,13 +34,13 @@ import { join } from "node:path";
 const MAX_SUMMARY_LINES = 120;
 const MAX_ANNOTATIONS = 8;
 const MAX_LINE_CHARS = 240;
-// S2 emits this one allowlisted, field-redacted diagnostic from its test fixture.
+// S2 and default-off emit these allowlisted, bounded outcome diagnostics from fixed test fixtures.
 // Its reason must survive the ordinary short annotation limit to diagnose a
 // Windows-only failure when authenticated log/artifact downloads are unavailable.
-const MAX_S2_DIAGNOSTIC_CHARS = 2000;
+const MAX_RUNTIME_DIAGNOSTIC_CHARS = 2000;
 
-function isS2RuntimeDiagnostic(line) {
-  return /^(?:Error:\s*)?S2_RUNTIME_ERROR_JSON=\{/.test(line.trimStart());
+function isRuntimeDiagnostic(line) {
+  return /^(?:Error:\s*)?(?:S2_RUNTIME_ERROR_JSON|MANAGED_DEFAULT_OFF_ERROR_JSON)=\{/.test(line.trimStart());
 }
 
 function isFailureHeadline(line) {
@@ -48,7 +48,7 @@ function isFailureHeadline(line) {
 }
 
 function prioritizeFailures(lines) {
-  const priority = (line) => isS2RuntimeDiagnostic(line) ? 0 : /FAIL |AssertionError/.test(line) || isFailureHeadline(line) ? 1 : 2;
+  const priority = (line) => isRuntimeDiagnostic(line) ? 0 : /FAIL |AssertionError/.test(line) || isFailureHeadline(line) ? 1 : 2;
   return [...lines].sort((a, b) => priority(a) - priority(b));
 }
 
@@ -71,7 +71,7 @@ function interestingLines(text) {
     .split(/\r?\n/)
     .map((l) => l.replace(/\u001b\[[0-9;]*m/g, "").trimEnd())
     .filter((l) =>
-      isS2RuntimeDiagnostic(l) || isFailureHeadline(l) || /FAIL |AssertionError|Failed Tests|Test Files|Tests +\d|Error:|expected |^\s*×|✕/.test(l),
+      isRuntimeDiagnostic(l) || isFailureHeadline(l) || /FAIL |AssertionError|Failed Tests|Test Files|Tests +\d|Error:|expected |^\s*×|✕/.test(l),
     );
 }
 
@@ -109,7 +109,7 @@ async function main(argv) {
       // The vitest summary itself names every failed test; the surrounding log is
       // kept only as the fallback when the summary is absent.
       const failed = prioritizeFailures(interestingLines(text).filter((l) =>
-        isS2RuntimeDiagnostic(l) || isFailureHeadline(l) || /FAIL |AssertionError|expected |Error:/.test(l)));
+        isRuntimeDiagnostic(l) || isFailureHeadline(l) || /FAIL |AssertionError|expected |Error:/.test(l)));
       const counts = interestingLines(text).filter((l) => /Test Files|Tests +\d|Failed Tests/.test(l));
       blocks.push(...counts, ...failed);
       annotations.push(...failed);
@@ -160,7 +160,7 @@ async function main(argv) {
   }
 
   for (const line of prioritizeFailures(annotations).slice(0, MAX_ANNOTATIONS)) {
-    const maxChars = isS2RuntimeDiagnostic(line) ? MAX_S2_DIAGNOSTIC_CHARS : MAX_LINE_CHARS;
+    const maxChars = isRuntimeDiagnostic(line) ? MAX_RUNTIME_DIAGNOSTIC_CHARS : MAX_LINE_CHARS;
     process.stdout.write(`::error::${escapeCommand(`[${label}] ${line}`, maxChars)}\n`);
   }
   return 0;
