@@ -1,0 +1,163 @@
+{
+  "kind": "deepseek-search-local-acceptance",
+  "sourceSha": "c59dae31b4217a17e584d914746d6e6c1336542d",
+  "sourceCleanBeforeAndAfter": true,
+  "verifiedAt": "2026-11-16T09:42:00.500368+00:00",
+  "typecheck": "PASS",
+  "fullSuite": {
+    "passed": 10844,
+    "skipped": 17,
+    "failed": 0,
+    "total": 10861
+  },
+  "installedCoding": {
+    "schemaVersion": 1,
+    "kind": "harness-agent-portable-cleanroom",
+    "status": "PASS",
+    "version": "1.13.0-audit.search.20261116",
+    "sourceSha": "c59dae31b4217a17e584d914746d6e6c1336542d",
+    "sourceTree": "68dc982785d9d80e0c6e0da86339bfad8fa0be9d",
+    "archiveSha256": "0bebacdcaac053edccbc5f666c2064d9e1251e38be5f193e316e3531615567fc",
+    "platform": "linux",
+    "node": "v24.19.0",
+    "files": 3180,
+    "cleanroomOutsideRepository": true,
+    "workspaceLinks": 0,
+    "doctorErrors": 0,
+    "codingAssertions": 50,
+    "requests": 19,
+    "actualSelectedPromptSha256": "12233460b23efefc95a2f32812badbcacaf08f16a9de1a8acf9ba3acb5152f1e",
+    "tamperRejected": true,
+    "tamperedStartupRejected": true,
+    "paidModelCalls": 0,
+    "realModelQuality": "NOT_PROVEN"
+  },
+  "installedWeb": {
+    "schemaVersion": 1,
+    "status": "PASS",
+    "kind": "harness-official-ui-installed",
+    "version": "1.13.0-audit.search.20261116",
+    "sourceSha": "c59dae31b4217a17e584d914746d6e6c1336542d",
+    "sourceTree": "68dc982785d9d80e0c6e0da86339bfad8fa0be9d",
+    "archiveSha256": "0bebacdcaac053edccbc5f666c2064d9e1251e38be5f193e316e3531615567fc",
+    "platform": "linux",
+    "architecture": "x64",
+    "node": "v24.19.0",
+    "files": 3180,
+    "workspaceLinks": 0,
+    "installedApplication": true,
+    "cases": 30,
+    "assertions": 75,
+    "paidModelCalls": 0,
+    "pr15Controls": 10,
+    "workspaceKeyboardScenarios": 3,
+    "workspaceKeyboardAssertions": 45,
+    "workspaceKeyboardAssetSha256": "3cb655ec2ca363325c2d0a90a24d0d59afce034828341b68c9b3e78ff76d7e02",
+    "multilingualSearchChecks": 12,
+    "multilingualSearchAssetSha256": {
+      "commands": "c41a1022329e01263702de6905404f0bfb7f0f6310473df30b17698e4316e974",
+      "model-selection": "f381fe061d5f40a34fb4a670034a3ac78c6dfb226641a21b87d33c24313d77cc",
+      "workspace": "3cb655ec2ca363325c2d0a90a24d0d59afce034828341b68c9b3e78ff76d7e02"
+    },
+    "modelReasoningChecks": 22,
+    "modelReasoningAssetSha256": "46e202cbcd8e30051c5e965ad6ae2a95d7bdbb2f57388c72bb089adf7faa0993",
+    "managedCommandChecks": 10,
+    "composerModeChecks": 24,
+    "composerAssetSha256": "1215d0d5c5be7e141d4f24b73d49787b01569fcb16b6aa5ea12f1acb5139cc5a",
+    "commandsAssetSha256": "c41a1022329e01263702de6905404f0bfb7f0f6310473df30b17698e4316e974",
+    "connectionScenarios": 2,
+    "connectionAssertions": 10,
+    "dailyScenarios": 42,
+    "dailyAssertions": 120,
+    "realModelQuality": "NOT_PROVEN",
+    "fullDefaultUiParity": "NOT_PROVEN",
+    "scope": "Named ordinary coding UI controls on this verified archive, workspace keyboard, native Goal/Plan plus menu and typed commands, model spec/reasoning editor with real HTTP wire checks and responsive light/dark en/zh views, plus PR15 permissions, plans, goals and context controls. PTY/Cordis/queue-edit capabilities and real model quality are not claimed."
+  },
+  "multilingualSearch": {
+    "status": "PASS",
+    "complete": true,
+    "checks": [
+      {
+        "name": "real-ui-catalog-committed",
+        "status": "PASS"
+      },
+      {
+        "name": "catalog-update-invalidates-old-candidates",
+        "status": "PASS"
+      },
+      {
+        "name": "model-search-ａｌｐｈａ",
+        "status": "PASS"
+      },
+      {
+        "name": "model-search-Coder Alpha",
+        "status": "PASS"
+      },
+      {
+        "name": "model-empty-result-escape-keeps-selection",
+        "status": "PASS"
+      },
+      {
+        "name": "keyboard-selected-model-real-http",
+        "status": "PASS"
+      },
+      {
+        "name": "fullwidth-command-real-plan-receipt",
+        "status": "PASS"
+      },
+      {
+        "name": "workspace-search-登录 修复",
+        "status": "PASS"
+      },
+      {
+        "name": "workspace-search-修 登",
+        "status": "PASS"
+      },
+      {
+        "name": "narrow-zh-dark-chinese-model-search",
+        "status": "PASS"
+      },
+      {
+        "name": "desktop-en-light-chinese-model-search",
+        "status": "PASS"
+      },
+      {
+        "name": "actual-reviewed-assets-and-no-browser-errors",
+        "status": "PASS"
+      }
+    ],
+    "assets": [
+      {
+        "stem": "workspace",
+        "sha256": "3cb655ec2ca363325c2d0a90a24d0d59afce034828341b68c9b3e78ff76d7e02"
+      },
+      {
+        "stem": "commands",
+        "sha256": "c41a1022329e01263702de6905404f0bfb7f0f6310473df30b17698e4316e974"
+      },
+      {
+        "stem": "model-selection",
+        "sha256": "f381fe061d5f40a34fb4a670034a3ac78c6dfb226641a21b87d33c24313d77cc"
+      }
+    ],
+    "expectedAssets": {
+      "commands": "c41a1022329e01263702de6905404f0bfb7f0f6310473df30b17698e4316e974",
+      "model-selection": "f381fe061d5f40a34fb4a670034a3ac78c6dfb226641a21b87d33c24313d77cc",
+      "workspace": "3cb655ec2ca363325c2d0a90a24d0d59afce034828341b68c9b3e78ff76d7e02"
+    },
+    "errors": [],
+    "externalRequests": [],
+    "platform": "linux",
+    "paidModelCalls": 0,
+    "fixtureInstalled": true,
+    "fixtureSourceSha": "c59dae31b4217a17e584d914746d6e6c1336542d"
+  },
+  "archive": {
+    "file": "local-evidence.json.xz",
+    "sha256": "72b3d5c153580aeffeabbf4a239eed2ee02395fa644bfe92cea9b2b759ff5138",
+    "bytes": 850564,
+    "members": 776
+  },
+  "buildCacheNote": "Initial offline attempt lacked pnpm supply-chain metadata. A normal pinned build populated its cache; the independently repeated final offline build passed without changing the source/lockfile.",
+  "finalMainCi": "PENDING; completion recorded after the ordinary push without changing the tested implementation"
+}
