@@ -1,0 +1,161 @@
+{
+  "testedDiagnosticSha": "70d52c8fca7e304045e5897709fd9b8c8e70176a",
+  "initialMainSha": "d980f8c95a6ca90eb05c3b16bf1a52aea7378c97",
+  "initialCiConclusions": {
+    "genuine Windows acceptance": "failure",
+    "first-generation installed acceptance": "success",
+    "official DeepSeek UI installed acceptance": "success",
+    "ci": "failure"
+  },
+  "initialNativeRootCause": "NOT_IDENTIFIED; logs download403, original command passed locally, no speculative timeout/assertion changes",
+  "cleanNode22Preflight": 69,
+  "mainWindowsFailingCase": "managed-commands.integration default-off: failed instead of completed; original outcome detail unavailable",
+  "cleanNode24Reporter": 2,
+  "archive": {
+    "file": "ci-followup.json.xz",
+    "bytes": 25924,
+    "sha256": "138dcb18002f26124d3da48b64a487dfa84efa5e21c4d6dc6522a249ac063acb"
+  },
+  "members": [
+    {
+      "file": "commands/ci-default-off-clean.log",
+      "sha256": "15a654be1353df96a45b77a20972d92cf0913eda37ab9f505991b226862a8559"
+    },
+    {
+      "file": "commands/ci-default-off-clean.receipt.json",
+      "sha256": "31914bc921d48b457b797f5534e5286bef87b5c7fe68b07bec9efa90c9decf75"
+    },
+    {
+      "file": "commands/ci-default-off-diagnostics.log",
+      "sha256": "c2b42b4bbe7f144af0c526efb6482d1206a0c0daa7d77576d95fe622e92ea722"
+    },
+    {
+      "file": "commands/ci-default-off-diagnostics.receipt.json",
+      "sha256": "850cfa1b26d7789e932c643f6645ed20e649393c77bd7d272db96d2124d80228"
+    },
+    {
+      "file": "commands/ci-diagnostics-typecheck.log",
+      "sha256": "faeaa94bcf7012d86f91ca647580449f56a263fb7eaf572c54789764f60a9b8f"
+    },
+    {
+      "file": "commands/ci-diagnostics-typecheck.receipt.json",
+      "sha256": "f76b55a6b8f0e84ea93dd859b7eb7f947c7ba02889cb1c0909c261811f20363b"
+    },
+    {
+      "file": "commands/ci-parser-clean.log",
+      "sha256": "59d14e8cac7824ff1e59693547e127fc4d5a6c478ce51df1ca5a2969c4a6ee2d"
+    },
+    {
+      "file": "commands/ci-parser-clean.receipt.json",
+      "sha256": "665cbca4c3faa5e5018441cadb2f0f7e1d33ed46f1b5bfd6872006c917a54f15"
+    },
+    {
+      "file": "commands/ci-parser-node22.log",
+      "sha256": "8a15f7382c31eb1fe62ec9f635fc074997d46b3be45663fe44231a0dafdc6f5d"
+    },
+    {
+      "file": "commands/ci-parser-node22.receipt.json",
+      "sha256": "8cecf89ea5a571c74d47270291adfe3f36130a0a45970a819a37e79f29a6b427"
+    },
+    {
+      "file": "commands/ci-summary-clean.log",
+      "sha256": "4bc2a4fe49f7632a07a34c81ccf83a5cf9f33d28441bf36ca515be06be39663b"
+    },
+    {
+      "file": "commands/ci-summary-clean.receipt.json",
+      "sha256": "9dfe7a932a74f678bce47ac89e141a5cc38c318773d5d3469ad8517b86288878"
+    },
+    {
+      "file": "commands/ci-summary-node22-final.log",
+      "sha256": "36d41738ac60c4510c1e8aa1294cee08b05deda8136502fb802f5725d573f1da"
+    },
+    {
+      "file": "commands/ci-summary-node22-final.receipt.json",
+      "sha256": "c7d8312754d15cf1607692f492b3619b7e5951617cf4380e96df934c2db1a8bd"
+    },
+    {
+      "file": "commands/ci-summary-node22.log",
+      "sha256": "6a0fd16143de10834ccbd3936fc14c05ef841eba7c729a90cb664ea75414f962"
+    },
+    {
+      "file": "commands/ci-summary-node22.receipt.json",
+      "sha256": "ee891d1ea2611bad6032c08a0ff500a5537a28d8f62802725741d7b95f62ee6e"
+    },
+    {
+      "file": "commands/ci-summary-node24.log",
+      "sha256": "0ef8fd9356f0511ffb2bca5c985413a4d05e14f02e2e70867d4fae2d8a64e3de"
+    },
+    {
+      "file": "commands/ci-summary-node24.receipt.json",
+      "sha256": "9beda702acac11855fbb1d77381e309c5a97cbb936e5aa51fd08cb5c03c962fe"
+    },
+    {
+      "file": "initial-ci/annotations.json",
+      "sha256": "d541cd35ed063aa5ad69a44f06809da3d92e9b92621f8cf52f8a5f59fb20ef55"
+    },
+    {
+      "file": "initial-ci/latest.json",
+      "sha256": "63ca5951f89f2705f14e3b8e44e4b814752bef186b8ba50c6377bb35ca3f5f92"
+    },
+    {
+      "file": "initial-ci/native-check.json",
+      "sha256": "96ab48f94ebad2c10981439fafe9c70407ba8762d00da6951acf664f41f4c88a"
+    },
+    {
+      "file": "initial-ci/poll-000.json",
+      "sha256": "5bbe7fb846fdf4463df0bc1eb574d133550675c1d989ec6d5aff0bb483d9ecf3"
+    },
+    {
+      "file": "initial-ci/poll-001.json",
+      "sha256": "c2f0043727b82d628016b4d2c8f9ac94fd84b4b2c34c3dc5a61dac0fc5a0dce3"
+    },
+    {
+      "file": "initial-ci/poll-002.json",
+      "sha256": "1998e66eba62f79541a9a37ae773d7b6b7c6a5eee2dc1b7aff31f3f34caad897"
+    },
+    {
+      "file": "initial-ci/poll-007.json",
+      "sha256": "5c80bc3e4e6db7454d6b3d3ad76ccb65550881621a16e3b90a5bda290aa0ae3d"
+    },
+    {
+      "file": "initial-ci/poll-010.json",
+      "sha256": "aef4c150e8a26a6a4cc918eb2b6f5378976a88d8deaa193c2172ab47d78931d0"
+    },
+    {
+      "file": "initial-ci/poll-011.json",
+      "sha256": "d9694e3df18accbc4f4a6d5f9182f245e891498154597a83cd55bb43898356af"
+    },
+    {
+      "file": "initial-ci/poll-016.json",
+      "sha256": "95b1904b51c9577c1ab5bc7db60ec7790e9f4dd09e4877f9a89864e452206e99"
+    },
+    {
+      "file": "initial-ci/poll-017.json",
+      "sha256": "63ca5951f89f2705f14e3b8e44e4b814752bef186b8ba50c6377bb35ca3f5f92"
+    },
+    {
+      "file": "initial-ci/push.json",
+      "sha256": "8fddf9201fa635ba29eb1c522fe0986767864eaf54ee7f4438c8a6560aec24c6"
+    },
+    {
+      "file": "initial-ci/result.json",
+      "sha256": "3e9a6f44c04cba0252ba680a3f254ea9bc7f1b8cc6e74ef2ff37cded634a2b5d"
+    },
+    {
+      "file": "initial-ci/windows-artifacts.json",
+      "sha256": "f7417e1fb877d3f5934f143cc38ad9e2905476e8f5ac6776507d09441efcd6f6"
+    },
+    {
+      "file": "initial-ci/windows-receipt.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "file": "node22-download.json",
+      "sha256": "c9047fab45904c340f31a94ef1d2b0055c2dc09655e35c51714bf88e6347b660"
+    },
+    {
+      "file": "node22-shasums.txt",
+      "sha256": "658770bd465343e4bf441d22e89e7d944244b37041695f3f2a85b53d1a84b53f"
+    }
+  ]
+}

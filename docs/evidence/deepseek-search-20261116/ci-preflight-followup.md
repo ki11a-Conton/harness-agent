@@ -13,3 +13,5 @@
 报告器仅发布全局 test:summary，避免 Node22 的每文件摘要重复占用检查消息预算。实际通过与失败子进程验证全局摘要各只发1条，且分别记录1项通过和9项失败；完整Node22前置组69项通过。摘要包含源码SHA、平台、Node版本、完整counts和原success。
 
 同一轮主CI的Windows全量测试也失败，公开回执定位到 `managed-commands.integration.test.ts > default-off leaves the old tool list, prompt and blocking execution unchanged`：status为failed而非completed。为该固定离线夹具增加仅在失败时输出的有界outcome元数据，并纳入现有CI诊断脚本明确允许的前缀。未扩大超时或放宽成功条件；原始运行缺少outcome详情，不能据此宣称已独立归因。Linux主任务、Windows/Linux formal offline、闭环及两类安装验收均成功，汇总门禁仍正确为失败。
+
+原 main 四项CI已完整结束：两类安装验收成功；主CI的Windows默认关闭模式回归和Windows专项前置组失败，双平台汇总随主测试失败。回执与诊断补丁干净源码Node22/24通过记录归档于 `ci-followup.json.xz`，未取消或手动重跑工作流。最终main的四项CI将在普通推送后重新核对。
