@@ -7,3 +7,5 @@
 开发试跑发现子进程需去掉继承的 NODE_TEST_CONTEXT，避免 Node 把独立测试当作递归；另用实际cause优先输出，保证长消息截断前保留断言类型。两次开发失败和最终完整69项通过均归档于 `preflight-development.json.xz`，哈希见同名JSON。这两个开发问题与原Windows失败分别记录。
 
 此补丁只增强前置诊断；原Windows失败根因仍以后续真实运行的回执为准，不将增加诊断本身宣称为修复了未知故障。最终main仍需重新检查四项CI。
+
+干净诊断提交 `7433bfedcfd2ca2f695a50217b1288ec601b3d79` 在 Node24.19 和 Node22.23.5 上各69项通过。Windows前置组将连续执行3次，每次失败立即退出，3次全部通过才继续；不重跑workflow attempt，不改变原测试时间预算。
