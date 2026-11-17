@@ -284,7 +284,17 @@ const cases = {
     await ownedComposer(owner).fill('ONLY_B_DRAFT'); owner = await selectSession(page, aId, a);
     assert.equal(await ownedComposer(owner).innerText(), 'ONLY_A_DRAFT'); check(checks, 'A/B native coding drafts remain separate through selection');
     await sidebar(page); await button(page, 'Settings').click(); await button(page, 'Close').click(); await collapseMobile(page);
-    owner = await selectedSessionOwner(page, aId);
+    if (page.viewportSize().width < 700) {
+      // Let the actual drawer finish collapsing: its virtualized rows may
+      // detach while the visible conversation still correctly owns its draft.
+      await button(page, 'Open sidebar').waitFor();
+      await page.waitForFunction(() => !document.getAnimations().some(a => a.playState === 'running' && a.effect?.getComputedTiming().endTime !== Infinity));
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    }
+    // Check native selection with navigation open, then inspect the same owned
+    // conversation after closing it again. Opening navigation does not select
+    // a session; a wrong selection or leaked draft still fails these checks.
+    await sidebar(page); owner = await selectedSessionOwner(page, aId); await collapseMobile(page);
     assert.equal(await ownedComposer(owner).innerText(), 'ONLY_A_DRAFT');
     check(checks, 'Closing native settings retains the selected coding session draft');
   },

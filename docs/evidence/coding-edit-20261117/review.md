@@ -31,3 +31,7 @@ CI修复仅将pnpm的命令shim改为直接Node启动Vitest bin。123个文件�
 第二个main8bff2e03在Windows48arm托管协议失败一个HTTP候选。独立只读诊断e5f5cf77从原artifact恢复失败arm：服务4507ms退出，http_probe真实tool.started为4561ms，原生产owner截止4948ms。由原始事件确认是夹具4500ms自行退出抢先于既有5000ms命令预算，而非API权限或本轮编辑工具。
 
 把HTTP服务改为真实health响应完成后关闭；未请求的baseline由原5000ms命令owner终止。保留真实read/probe、持久化后端、权限、沙箱及所有24候选成功/16读重叠/0重复启动/0遗留进程要求；不提高15s turn、5s process/managed、1s HTTP预算，不改Core Runtime。基线服务结束方式发生变化，注册记录明确更新，不将耗时用于同工作量性能结论。新增原source普通请求对照及4.5s之后请求、原5s owner终止控制；有效红态1通过/2失败，绿态3通过。首次测试夹具误用不存在的timedOut字段已纠正，原失败保留。
+
+干净2b4b46a3：HTTP三个生命周期控制均通过，真实48arm配对通过（24候选成功、16读重叠、0重复启动、0失败/遗留）。额外Windows浏览器失败8bff2e03/run44013426309/job133805916550发生在mobile coding-draft-ownership关闭设置、收起侧栏后。已在同一实际安装版LinuxChromium等待真实有限动画/布局完成后复现：selected=[]、正确会话owner仍在，旧检查超时；问题是验收要求已卸载的虚拟导航行继续存在。
+
+保留原选中行、唯一会话owner、唯一composer和A/B私有草稿隔离断言，把选中行检查放在实际打开的导航中，再收起导航检查原会话草稿。未修改产品UI或延长6000ms等待。开发态三个视口/9断言通过，实际安装版3180文件哈希再次验证。后续干净完整42场景成绩另记。原UI失败后CLI安装阶段未执行，产生空artifact的衍生错误，不作为新的CLI产品缺陷。
