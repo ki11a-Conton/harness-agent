@@ -289,3 +289,14 @@ it("the real PTY provider either proves confined input/resize/process cleanup or
   controller.abort(); await feed.return?.();
   await expect(s.terminal.call("terminal/create", { agentId: s.session.id, request: { id: "actual-pty", cols: 80, rows: 24 } }, s.signal)).rejects.toMatchObject({ code: "terminal/unavailable" });
 });
+
+
+it("the real Web file service routes bounded pages through the orchestrator and preserves credential denial", async () => {
+  const s = await setup();
+  await writeFile(join(s.cwd, "many-lines.txt"), "first\n" + "\n".repeat(100_000) + "last\n");
+  const base = { workspaceFileScopeId: s.session.id, path: "many-lines.txt" };
+  expect(await s.files.call("workspaceFiles/read", { ...base, range: { offset: 2, limit: 3 } }, s.signal)).toMatchObject({ text: "\n\n", lines: 3, eof: false });
+  expect(await s.files.call("workspaceFiles/read", { ...base, range: { offset: 100_002, limit: 3 } }, s.signal)).toMatchObject({ text: "last", lines: 1, eof: true });
+  await writeFile(join(s.cwd, "many-lines.txt"), "visible\n" + "ghp_" + "a".repeat(36));
+  await expect(s.files.call("workspaceFiles/read", { ...base, range: { offset: 1, limit: 1 } }, s.signal)).rejects.toMatchObject({ code: "gateway/forbidden" });
+});

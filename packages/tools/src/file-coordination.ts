@@ -145,12 +145,21 @@ export async function readRegularFileBytes(path: string, signal?: AbortSignal): 
   } finally { await file.close(); }
 }
 
+/** Reject JS strings that UTF-8 encoding would silently replace with U+FFFD. */
+export class InvalidUtf8Content extends Error {
+  constructor() { super("text contains an unpaired Unicode surrogate; use complete characters; no writes made"); this.name = "InvalidUtf8Content"; }
+}
+export function assertWritableUtf8(content: string): void {
+  if (/[\uD800-\uDFFF]/u.test(content)) throw new InvalidUtf8Content();
+}
+
 /** Preserve in-place/hard-link and authorized symlink semantics, but inspect
  * the actual writable object before truncating or writing. In particular,
  * O_TRUNC must not run as part of opening an unchecked path. */
-export async function writeRegularFileUtf8(path: string, content: string, options: { append?: boolean; signal?: AbortSignal } = {}): Promise<void> {
+export async function writeRegularFileUtf8(path: string, content: string, options: { append?: boolean; signal?: AbortSignal; checkExisting?: (stat: { size: number }) => void } = {}): Promise<void> {
   const { signal, append } = options;
   throwIfFileCancelled(signal);
+  assertWritableUtf8(content);
   const flags = constants.O_WRONLY | (append ? constants.O_APPEND : 0)
     | (process.platform === "win32" ? 0 : constants.O_NONBLOCK);
   let file: Awaited<ReturnType<typeof fs.open>>;
@@ -179,6 +188,8 @@ export async function writeRegularFileUtf8(path: string, content: string, option
     const stat = await file.stat();
     if (!admitted) throwIfFileCancelled(signal);
     if (!stat.isFile()) throw new Error("file operation requires a regular file");
+    // Inspect safety on the actual owned object, before irreversible truncation.
+    if (!admitted) options.checkExisting?.(stat);
     // Preserve the original write tool's irreversible phase: cancellation
     // before admission prevents mutation. Once create/truncate is admitted,
     // finish the complete write instead of leaving an empty/partial file at

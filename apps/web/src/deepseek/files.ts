@@ -88,6 +88,25 @@ function failure(error: unknown, signal: AbortSignal): ToolResult {
   const code = error instanceof WorkspaceRemoteError ? error.code : "gateway/internal";
   return { status: "failed", error: { code: "PROCESS_ERROR", message: error instanceof Error ? error.message : String(error), retryable: false, safeToRetry: false }, metadata: { remoteCode: code, details: error instanceof WorkspaceRemoteError ? error.details : {} } };
 }
+/** Scan only the requested page; never allocate one array entry per file line.
+ * The empty final split element is omitted exactly as in the original UI API. */
+function previewPage(text: string, offset: number, limit: number): { text: string; lines: number; eof: boolean } {
+  if (text === "") return { text: "", lines: 0, eof: true };
+  const end = text.endsWith("\n") ? text.length - 1 : text.length;
+  const lineEnd = (start: number) => { const next = text.indexOf("\n", start); return next < 0 ? end : Math.min(end, next); };
+  let cursor = 0, line = 1, bytes = 0;
+  while (line < offset && cursor <= end) { cursor = lineEnd(cursor) + 1; line++; }
+  const page: string[] = [];
+  while (cursor <= end && page.length < limit) {
+    const next = lineEnd(cursor), value = text.slice(cursor, next);
+    bytes += Buffer.byteLength(value) + (page.length ? 1 : 0);
+    if (bytes > MAX_BYTES) throw new WorkspaceRemoteError("workspace-file/too-large", "Text page exceeds cap", { limit: MAX_BYTES });
+    page.push(value); cursor = next + 1;
+  }
+  // A single returned slice must not retain the full decoded snapshot backing.
+  const content = page.length === 1 ? Buffer.from(page[0]!, "utf8").toString("utf8") : page.join("\n");
+  return { text: content, lines: page.length, eof: cursor > end };
+}
 const readSchema = z.object({ path: z.string(), operation: z.enum(["stat", "read", "readBytes", "list", "tree", "directoryList", "watch"]), offset: z.number().int().nonnegative().optional(), limit: z.number().int().positive().optional(), length: z.number().int().positive().optional(), nameOnly: z.boolean().optional() }).strict();
 export const workspaceReadTool: ToolDefinition<z.infer<typeof readSchema>, unknown> = {
   name: "web_workspace_read", description: "Read bounded workspace files and directories for the local web console.", inputSchema: readSchema, risk: "readonly",
@@ -149,9 +168,17 @@ export const workspaceReadTool: ToolDefinition<z.infer<typeof readSchema>, unkno
         while (received <= MAX_FILE_BYTES) {
           context.signal.throwIfAborted();
           const chunk = Buffer.alloc(Math.min(64 * 1024, MAX_FILE_BYTES + 1 - received));
-          const next = await handle.read(chunk, 0, chunk.length, received);
-          if (next.bytesRead === 0) break;
-          received += next.bytesRead; chunks.push(chunk.subarray(0, next.bytesRead));
+          let filled = 0;
+          while (filled < chunk.length) {
+            context.signal.throwIfAborted();
+            const next = await handle.read(chunk, filled, chunk.length - filled, received + filled);
+            context.signal.throwIfAborted();
+            if (next.bytesRead === 0) break;
+            filled += next.bytesRead;
+          }
+          if (filled === 0) break;
+          received += filled; chunks.push(chunk.subarray(0, filled));
+          if (filled < chunk.length) break;
         }
         if (received > MAX_FILE_BYTES) throw new WorkspaceRemoteError("workspace-file/too-large", "File exceeds the bounded preview scan", { path: input.path, limit: MAX_FILE_BYTES });
         const snapshot = Buffer.concat(chunks, received), observed = await handle.stat();
@@ -167,11 +194,7 @@ export const workspaceReadTool: ToolDefinition<z.infer<typeof readSchema>, unkno
         const offset = integer(input.offset ?? 1,"offset",1), limit = integer(input.limit ?? MAX_LINES,"limit",1,MAX_LINES);
         const decoded = new TextDecoder("utf-8", { fatal: true }).decode(snapshot);
         if (decoded.includes("\0")) throw new WorkspaceRemoteError("workspace-file/not-text", "File is not UTF-8 text", {path:input.path});
-        const lines = decoded === "" ? [] : decoded.split("\n");
-        if (decoded.endsWith("\n")) lines.pop();
-        const page = lines.slice(offset - 1, offset - 1 + limit), content = page.join("\n");
-        if (Buffer.byteLength(content) > MAX_BYTES) throw new WorkspaceRemoteError("workspace-file/too-large", "Text page exceeds cap", {path:input.path,limit:MAX_BYTES});
-        return {status:"success",output:{...base,offset,text:content,lines:page.length,eof:offset - 1 + page.length >= lines.length}};
+        return { status: "success", output: { ...base, offset, ...previewPage(decoded, offset, limit) } };
       } finally { await handle.close(); }
     } catch (error) {
       if (error instanceof TypeError && error.message.includes("encoded data")) return failure(new WorkspaceRemoteError("workspace-file/not-text","File is not UTF-8 text"),context.signal);
@@ -188,7 +211,9 @@ export const workspaceMkdirTool: ToolDefinition<z.infer<typeof mkdirSchema>, str
     try {
       if (input.name.trim()==="" || input.name==="." || input.name===".." || /[\\/\x00-\x1f]/.test(input.name)) throw new WorkspaceRemoteError("gateway/bad-request","Name must be a single path segment");
       const {absolute} = await confinedPath(input.path,context); context.signal.throwIfAborted();
-      const target=resolve(absolute,input.name); await mkdir(target); context.signal.throwIfAborted();
+      const target=resolve(absolute,input.name); await mkdir(target);
+      // Creation is irreversible admission. A late cancellation must not turn
+      // a committed directory into an invented cancelled/no-result operation.
       return {status:"success",output:target};
     } catch(error) {
       if ((error as NodeJS.ErrnoException).code === "EEXIST") return failure(new WorkspaceRemoteError("directory-picker/exists","A directory or file already exists at this name",{path:resolve(context.cwd,input.path,input.name)}),context.signal) as ToolResult<string>;

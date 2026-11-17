@@ -1,8 +1,10 @@
 import { z } from "zod";
 import type { ToolDefinition, ToolExecutionContext, ToolResult } from "@ar/contracts";
-import { errorInfo, isNodeErrorCode } from "@ar/contracts";
+import { errorInfo } from "@ar/contracts";
 import { assessWriteSafety } from "../write-safety.js";
-import { checkFileVersion, FileOperationCancelled, FileVersionConflict, throwIfFileCancelled, withFileLock, writeRegularFileUtf8 } from "../file-coordination.js";
+import { assertWritableUtf8, InvalidUtf8Content, checkFileVersion, FileOperationCancelled, FileVersionConflict, throwIfFileCancelled, withFileLock, writeRegularFileUtf8 } from "../file-coordination.js";
+
+class UnsafeWrite extends Error {}
 
 export interface WriteFileInput {
   path: string;
@@ -29,7 +31,7 @@ export interface WriteFileOutput {
  */
 export const writeFileTool: ToolDefinition<WriteFileInput, WriteFileOutput> = {
   name: "write_file",
-  description: "Write or append UTF-8 content. Supply expectedSha256 from versioned read_file to reject stale content; on conflict, reread and recalculate.",
+  description: "Write or append valid UTF-8 text. Unpaired Unicode surrogates fail without writing. Destructive overwrite safety is checked on the actual opened file. Supply expectedSha256 from versioned read_file to reject stale content; on conflict, reread and recalculate.",
   inputSchema: z.object({
     path: z.string().min(1),
     content: z.string(),
@@ -39,7 +41,7 @@ export const writeFileTool: ToolDefinition<WriteFileInput, WriteFileOutput> = {
   risk: "side_effect",
   metadata: {
     name: "write_file",
-    version: "1.0.0",
+    version: "1.1.0",
     sideEffect: true,
     network: false,
     filesystem: true,
@@ -50,7 +52,9 @@ export const writeFileTool: ToolDefinition<WriteFileInput, WriteFileOutput> = {
   },
   async execute(input: WriteFileInput, context: ToolExecutionContext): Promise<ToolResult<WriteFileOutput>> {
     try {
-      const { stat, mkdir } = await import("node:fs/promises");
+      throwIfFileCancelled(context.signal);
+      assertWritableUtf8(input.content);
+      const { mkdir } = await import("node:fs/promises");
       const { dirname, resolve } = await import("node:path");
       const target = resolve(context.cwd, input.path);
       const bytes = Buffer.byteLength(input.content, "utf8");
@@ -58,43 +62,22 @@ export const writeFileTool: ToolDefinition<WriteFileInput, WriteFileOutput> = {
         if (input.expectedSha256 !== undefined) await checkFileVersion(target, input.expectedSha256, context.signal);
         throwIfFileCancelled(context.signal);
 
-        // P2-27: measure the pre-write shape so the guard can rate the write.
-        let exists = false;
-        let originalBytes = 0;
-        try {
-          const st = await stat(target);
-          exists = st.isFile();
-          originalBytes = st.size;
-        } catch (err) {
-          // P14-6: ENOENT → brand-new file (the guard rates it "create");
-          // any other stat failure is reported, never silent.
-          if (!isNodeErrorCode(err, "ENOENT")) {
-            process.stderr.write(`[degraded] write-file.stat: ${err instanceof Error ? err.message : String(err)}\n`);
-          }
-        }
-        const safety = assessWriteSafety({
-          exists,
-          originalBytes,
-          newBytes: bytes,
-          append: input.append ?? false,
-          // P2-26 checkpoints are not yet wired into this tool; a destructive
-          // overwrite without one is exactly what the guard must catch.
-          untracked: false,
-          hasCheckpoint: false,
-        });
-
-        if (safety.level === "danger") {
-          return {
-            status: "denied",
-            error: errorInfo("WRITE_SAFETY_DENIED", `write blocked by write-safety guard (${safety.reason})`),
-          };
-        }
+        // A missing file is safe to create; existing-file facts must come
+        // from its owned descriptor, not a fallible/racing path stat.
+        let safety = assessWriteSafety({ exists: false, originalBytes: 0, newBytes: bytes,
+          append: input.append ?? false, untracked: false, hasCheckpoint: false });
 
         throwIfFileCancelled(context.signal);
         await mkdir(dirname(target), { recursive: true });
         if (input.expectedSha256 !== undefined) await checkFileVersion(target, input.expectedSha256, context.signal);
         throwIfFileCancelled(context.signal);
-        await writeRegularFileUtf8(target, input.content, { append: input.append, signal: context.signal });
+        await writeRegularFileUtf8(target, input.content, { append: input.append, signal: context.signal,
+          checkExisting: stat => {
+            safety = assessWriteSafety({ exists: true, originalBytes: stat.size, newBytes: bytes,
+              append: input.append ?? false, untracked: false, hasCheckpoint: false });
+            if (safety.level === "danger") throw new UnsafeWrite(`write blocked by write-safety guard (${safety.reason})`);
+          },
+        });
         const output: WriteFileOutput = { path: target, bytes };
         if (safety.level === "caution") {
           output.safetyWarning = `write-safety: ${safety.reason}; recommend a checkpoint before overwriting untracked content`;
@@ -107,6 +90,8 @@ export const writeFileTool: ToolDefinition<WriteFileInput, WriteFileOutput> = {
         };
       });
     } catch (err) {
+      if (err instanceof InvalidUtf8Content) return { status: "failed", error: errorInfo("TOOL_SCHEMA_ERROR", err.message, { retryable: false, safeToRetry: false }) };
+      if (err instanceof UnsafeWrite) return { status: "denied", error: errorInfo("WRITE_SAFETY_DENIED", err.message) };
       if (err instanceof FileOperationCancelled) return { status: "cancelled" };
       if (err instanceof FileVersionConflict) return { status: "failed", error: errorInfo("PROCESS_ERROR", err.message, { retryable: false, safeToRetry: false }) };
       return {

@@ -5,8 +5,8 @@ export interface Closeable {
   close(): Promise<void> | void;
 }
 
-/** Collects closeables in registration order; first failure stops the drain
- *  and is surfaced to the caller (never silently swallowed). */
+/** Collects closeables in registration order; all resources are drained in reverse order; the first rejection
+ *  is surfaced to the caller (never silently swallowed). */
 export class Lifecycle {
   private readonly items: Closeable[] = [];
 
@@ -16,22 +16,23 @@ export class Lifecycle {
 
   async close(): Promise<void> {
     let firstError: unknown;
+    let failed = false;
     for (const item of [...this.items].reverse()) {
       try {
         await item.close();
       } catch (err) {
-        firstError ??= err;
+        if (!failed) { failed = true; firstError = err; }
       }
     }
-    if (firstError !== undefined) throw firstError;
+    if (failed) throw firstError;
   }
 }
 
 /** Adapter that closes a MemoryStore (SQLite holds an open handle). */
 export class MemoryStoreCloser implements Closeable {
   constructor(private readonly store: MemoryStore) {}
-  close(): void {
-    const closable = this.store as { close?: () => void };
-    closable.close?.();
+  close(): Promise<void> | void {
+    const closable = this.store as { close?: () => Promise<void> | void };
+    return closable.close?.();
   }
 }

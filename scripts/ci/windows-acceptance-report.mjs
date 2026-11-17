@@ -154,6 +154,16 @@ function main() {
     'a coding turn recovers from no-op feedback and chains actual edit versions with one read',
     'bounds long preview lines explicitly without splitting emoji',
     "unpaired Unicode is refused before writing: 'split existing emoji'");
+  required.push(
+    'write safety survives a failed path stat without destroying the actual large file',
+    'write safety checks a large file created between writable open and exclusive creation',
+    'invalid text cannot create parent directories or a file',
+    'Web preview of sixteen million short lines keeps observed heap allocation below 64MiB',
+    'short native preview reads retain one bounded buffer rather than one allocation per fragment',
+    'a directory created before cancellation is reported as committed instead of cancelled',
+    'memory resource closure waits for the asynchronous store before closing its dependencies',
+    'a coding turn repairs invalid write content and verifies actual bytes without rereading',
+    'the real Web file service routes bounded pages through the orchestrator and preserves credential denial');
   const host = { platform: process.platform, osType: type(), osRelease: release(), arch: arch(), nodeVersion: process.version,
     sourceSha: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), workflowSha: process.env.GITHUB_SHA ?? '',
     treeClean: execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' }).trim() === '',

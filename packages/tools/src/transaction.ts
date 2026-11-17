@@ -35,7 +35,7 @@
 import { constants, promises as fs } from "node:fs";
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { randomBytes } from "node:crypto";
-import { withFileLocks } from "./file-coordination.js";
+import { assertWritableUtf8, withFileLocks } from "./file-coordination.js";
 import { canonicalizePath } from "@ar/security";
 
 /** Immutable before/after state of a single file path. */
@@ -202,6 +202,10 @@ export class WorkspaceChangeTransaction {
     this.assertOpen();
     return withFileLocks(plans.map((plan) => this.resolveInside(plan.path)), undefined, async () => {
       this.assertOpen();
+      // Reject an unencodable batch before staging any entry or committing bytes.
+      if (this.encoding === "utf8" || this.encoding === "utf-8") {
+        for (const plan of plans) if (plan.content !== undefined) assertWritableUtf8(plan.content);
+      }
       const staged: StagedChange[] = [];
       for (const plan of plans) {
         const abs = this.resolveInside(plan.path);
@@ -304,6 +308,7 @@ export class WorkspaceChangeTransaction {
 
   /** Write content atomically: temp file in the same dir, then rename. */
   private async writeAtomic(p: string, content: string, mode?: number): Promise<void> {
+    if (this.encoding === "utf8" || this.encoding === "utf-8") assertWritableUtf8(content);
     const target = await this.checkedPath(p);
     const dir = dirname(target);
     await fs.mkdir(dir, { recursive: true });
