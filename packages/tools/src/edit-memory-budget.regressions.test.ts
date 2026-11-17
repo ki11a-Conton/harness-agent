@@ -26,3 +26,24 @@ it("edits an 8MiB ordinary source file in an isolated 128MiB Node heap", async (
     expect(await fs.readFile(target, "utf8")).toBe(original.replace("MARKER=1", "MARKER=2"));
   } finally { await fs.rm(root, { recursive: true, force: true }); }
 });
+
+it("edits eight million short lines and returns a bounded receipt inside a 64MiB Node heap", async () => {
+  const root = await fs.mkdtemp(join(tmpdir(), "ar-edit-short-lines-"));
+  const target = join(root, "generated.txt"); const original = "MARKER=1;\n" + "\n".repeat(8_000_000);
+  try {
+    await fs.writeFile(target, original);
+    const program = `
+      import {editFileTool} from ${JSON.stringify(new URL("../dist/tools/edit-file.js", import.meta.url).href)};
+      import {createHash} from 'node:crypto';import {readFile} from 'node:fs/promises';
+      const result=await editFileTool.execute({path:process.argv[1],oldText:'MARKER=1',newText:'MARKER=2'},
+        {cwd:process.argv[2],signal:new AbortController().signal});
+      if(result.status!=='success')throw new Error(JSON.stringify(result));
+      const actual=createHash('sha256').update(await readFile(process.argv[1])).digest('hex');
+      if(result.output.sha256!==actual)throw new Error('receipt version differs from actual bytes');
+      console.log(JSON.stringify({status:result.status,diff:result.output.diff,replacements:result.output.replacements,sha256:actual}));
+    `;
+    const child = await execute(process.execPath, ["--max-old-space-size=64", "--input-type=module", "-e", program, target, root], { timeout: 20000, maxBuffer: 64 * 1024 });
+    expect(JSON.parse(child.stdout)).toMatchObject({ status: "success", replacements: 1, diff: ["- MARKER=1;", "+ MARKER=2;"] });
+    expect(child.stderr).toBe(""); expect(await fs.readFile(target, "utf8")).toBe(original.replace("MARKER=1", "MARKER=2"));
+  } finally { await fs.rm(root, { recursive: true, force: true, maxRetries: process.platform === "win32" ? 8 : 0, retryDelay: 50 }); }
+});
