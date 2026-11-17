@@ -1,0 +1,27 @@
+name: coding edit original Windows diagnostics
+on:
+  push:
+    branches: ['diagnose/coding-edit-windows-20261117']
+    paths: ['.github/workflows/coding-edit-original-windows.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  read-original-failure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Read original job without rerunning its commands
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/ci/current-windows-forensics.mjs 133796548444 44010636601 0aecc9429a60b2fc4cee860b7dc5080c529ca46f
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coding-edit-original-windows-133796548444
+          path: .ci/original-windows/
+          if-no-files-found: error
