@@ -122,6 +122,9 @@ jobs:
       - name: Coding tool schemas and real CLI and Web execution
         run: node scripts/research/coding-tools-20261019/acceptance.mjs .ci/coding-v2/tools
 
+      - name: Real CLI and Web guarded edit receipts
+        run: node scripts/research/coding-edit-20261117/acceptance.mjs .ci/coding-v2/edit-receipts
+
       - name: Upload coding-v2 evidence
         if: always()
         uses: actions/upload-artifact@v4

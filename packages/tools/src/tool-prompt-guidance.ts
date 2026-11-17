@@ -3,7 +3,7 @@
 const nativeGuidance: Record<string, string[]> = {
   read_file: ["Inspect relevant ranges; request versioned=true before editing and retain the returned sha256. Retrieve truncated ranges before relying on them."],
   write_file: ["Create or replace deliberately; preserve unrelated content and use expectedSha256 when changing an existing file."],
-  edit_file: ["Anchor focused changes in current content and pass expectedSha256. Use edits:[{oldText,newText},...] for multiple disjoint edits in one file from the SAME versioned read; all anchors match the original snapshot. Merge overlapping edits; keep anchors small but unique. On stale or ambiguous anchors, reread and recalculate."],
+  edit_file: ["Anchor focused changes in current content and pass expectedSha256. Use edits:[{oldText,newText},...] for multiple disjoint edits in one file from the SAME versioned read; all anchors match the original snapshot. Merge overlapping edits; keep anchors small but unique. A successful edit returns sha256 for its written version: use it for the next guarded edit when the relevant content is known. On stale or ambiguous anchors, reread and recalculate. Identical final content is a no-op failure, not progress. The diff is a bounded preview; inspect omitted content before relying on it."],
   search_files: ["Find candidate paths with a narrow pattern before reading contents."],
   grep_search: ["Search specific symbols, usages and diagnostics; narrow broad results and observe truncation."],
   repo_tree: ["Use a bounded directory view to orient in an unfamiliar repository."],

@@ -1,0 +1,17 @@
+# Coding 编辑回执源码对照
+
+基线main 5b82292；上游固定SHA和9个文件哈希见sources.json（源码选择不是对三仓库的穷尽审计）。
+
+- pi 的edit.ts在写入之前完成generateEditDiff，并在编辑原语中拒绝相同最终内容；保留未触及换行。直接借鉴这两个边界，保留我们已有文件版本、权限与沙箱。
+- Codex的file_update.rs先形成original/new内容和替换计划，再由执行层写入；code_mode/output.rs将已受预算控制的内容与测量头分开。借鉴准备与执行分离、有界模型反馈；本轮未移植apply_patch或code-mode执行器。
+- DeepSeek核心ToolsService贡献/清理和运行时上下文具有明确责任。我们的现有PluginRegistry仍非生产装配入口；完整可信插件/LSP/摘要缓存继续是独立切片，本轮不以编辑修复声称其已完成。
+
+本轮新行边界扫描和SHA回执适配为本项目实现，不复制上游整个构建体系。原pi编辑来源MIT保留在third_party/coding-tools/pi-LICENSE；既有Codex提示词许可保持。工具仍经ToolOrchestrator，不改Core Runtime或默认prompt。
+
+干净基线已在真实构建工具复现：8000010字节/800万空行、64MiB堆，文件已写MARKER=2后diff耗尽内存，退出SIGABRT；400万空行同堆正常。普通no-op返回成功、1replacement和文件证据。35项回归基线19失败/16通过；首次修复35全部通过。与原模块2433600个小文档/行数上限组合逐项一致，长行显式截断另验收；相关10文件141项通过。
+
+CLI/Web工程夹具首次把Chat Completions上的成功JSON误认成带[success]前缀，已按实际wire形状修正并保留失败。后续四个实际调用场景通过，包括旧版本拒绝、外部内容保留和verified_complete。开发成绩有dirty标识，最终干净源码及安装版成绩单独归档。往返对照仅衡量顺序guarded编辑取得版本的额外读取，不推断真实模型成功率或缓存费用。
+
+进一步复核在原main真实工具发现：单独surrogate会返回成功而UTF8磁盘已静默变成U+FFFD。新增4项回归先得到4失败/21通过，再在工具写前拒绝不可无损编码的内容；完整中文、emoji、显式U+FFFD仍通过，41项相关验收全部通过。
+
+实际基线与候选的顺序版本编辑对照：CLI、Web均由2次read_file降为1次，HTTP请求减少1次，最终内容SHA相同。候选另通过两个外部写入场景：旧SHA拒绝后重读修复，用户追加内容保留，独立检查通过。源码及dirty信息在development-followup归档，不把开发构建当成最终干净成绩。

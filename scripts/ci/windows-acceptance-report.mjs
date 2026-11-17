@@ -142,6 +142,13 @@ function main() {
     'an explicit one-shot key overrides all configured sources without replacing the saved credential',
     'OpenAI SSE event framing keeps EOF compatibility for a complete final JSON event without a blank line',
     'durable terminal outcome serializes competing controller finishes and preserves the winning result');
+  required.push(
+    'edits eight million short lines and returns a bounded receipt inside a 64MiB Node heap',
+    'a diff preparation failure leaves the real file untouched',
+    'the returned version does not authorize overwriting a later external change',
+    'a coding turn recovers from no-op feedback and chains actual edit versions with one read',
+    'bounds long preview lines explicitly without splitting emoji',
+    'unpaired Unicode is refused before writing: split existing emoji');
   const host = { platform: process.platform, osType: type(), osRelease: release(), arch: arch(), nodeVersion: process.version,
     sourceSha: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), workflowSha: process.env.GITHUB_SHA ?? '',
     treeClean: execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' }).trim() === '',

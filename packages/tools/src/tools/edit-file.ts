@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { createHash } from "node:crypto";
 import type { ToolDefinition, ToolExecutionContext, ToolResult } from "@ar/contracts";
 import { errorInfo } from "@ar/contracts";
 import { applyBatchReplace, applyLineRange, applyReplace, lineDiff, MAX_BATCH_EDITS, type TextEdit } from "../edit.js";
@@ -37,8 +38,11 @@ export interface EditFileOutput {
   replacements?: number;
   /** Line-range mode: number of lines replaced. */
   replacedLines?: number;
-  /** Recorded before/after diff (P2-28). */
+  /** Bounded before/after preview; truncation is explicit. */
   diff: string[];
+  /** Version of the exact UTF-8 bytes written by this successful edit.
+   * A later edit must still validate it against the current file. */
+  sha256: string;
 }
 
 const fileSchema = z.object({
@@ -70,12 +74,12 @@ const fileSchema = z.object({
 export const editFileTool: ToolDefinition<EditFileInput, EditFileOutput> = {
   name: "edit_file",
   description:
-    "Edit a UTF-8 file by anchor, line range, or edits:[{oldText,newText},...]. Batch mode requires expectedSha256 from versioned read_file; matches every unique, nonoverlapping anchor against the SAME original snapshot, validates all before a single write, and cannot mix legacy selection/range fields. Keep oldText small but unique; merge overlapping edits. On stale/missing/ambiguous anchors reread and recalculate. Existing first/occurrence/all and strict range APIs remain available. Returns a diff.",
+    "Edit a UTF-8 file by anchor, line range, or edits:[{oldText,newText},...]. Batch mode requires expectedSha256 from versioned read_file or the last successful edit; matches every unique, nonoverlapping anchor against the SAME original snapshot, validates all before a single write, and cannot mix legacy selection/range fields. Keep oldText small but unique; merge overlapping edits. On stale/missing/ambiguous anchors reread and recalculate. Identical final content fails without writing. Existing first/occurrence/all and strict range APIs remain available. Returns a bounded diff preview and sha256 of the written version; a later edit still checks that version.",
   inputSchema: fileSchema,
   risk: "side_effect",
   metadata: {
     name: "edit_file",
-    version: "2.1.0",
+    version: "2.2.0",
     sideEffect: true,
     network: false,
     filesystem: true,
@@ -163,16 +167,35 @@ export const editFileTool: ToolDefinition<EditFileInput, EditFileOutput> = {
           };
         }
 
+        if (res.content === before) {
+          return { status: "failed", error: errorInfo("PROCESS_ERROR",
+            "edit_file: no changes made; the replacement produced identical content. Inspect the current file and provide a different edit; no writes made.",
+            { retryable: false, safeToRetry: false }) };
+        }
+
+        // JSON/JS strings can contain an unpaired UTF-16 surrogate. Node's
+        // UTF-8 writer would silently replace it with U+FFFD, making the diff
+        // describe different text from the committed bytes. Valid pairs stay.
+        if (/[\uD800-\uDFFF]/u.test(res.content)) {
+          return { status: "failed", error: errorInfo("TOOL_SCHEMA_ERROR",
+            "edit_file: replacement would produce invalid Unicode (unpaired surrogate); no writes made. Use complete Unicode characters and reread the affected text.",
+            { retryable: false, safeToRetry: false }) };
+        }
+
+        // Prepare fallible/allocating receipt work before committing bytes.
+        // pi follows the same boundary: a diff failure must not follow a write.
+        const output: EditFileOutput = {
+          path: target,
+          diff: lineDiff(before, res.content),
+          sha256: createHash("sha256").update(res.content, "utf8").digest("hex"),
+          ...(isRange ? { replacedLines: res.count } : { replacements: res.count }),
+        };
+
         // Best-effort pre-write check catches external changes observed here;
         // this is not an atomic CAS against arbitrary external writers.
         await checkFileVersion(target, input.expectedSha256 ?? fileSha256(bytes), context.signal);
         throwIfFileCancelled(context.signal);
         await writeRegularFileUtf8(target, res.content, { signal: context.signal });
-        const output: EditFileOutput = {
-          path: target,
-          diff: lineDiff(before, res.content),
-          ...(isRange ? { replacedLines: res.count } : { replacements: res.count }),
-        };
         return {
           status: "success",
           output,

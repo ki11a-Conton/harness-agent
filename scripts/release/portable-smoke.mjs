@@ -9,6 +9,7 @@ import { pathToFileURL } from 'node:url';
 import { digest, verifyPortable } from './portable-lib.mjs';
 import { run, verifyArchive } from './portable.mjs';
 import { runCodingAcceptance } from '../research/coding-audit-20261007/acceptance.mjs';
+import { runEditReceiptAcceptance } from './edit-receipts-fixture.mjs';
 
 const { values } = parseArgs({ options: { archive: { type: 'string' }, out: { type: 'string' }, version: { type: 'string' }, 'source-sha': { type: 'string' } } });
 if (!values.archive || !values.out || !values.version || !/^[a-f0-9]{40}$/.test(values['source-sha'] ?? '')) throw new Error('usage: portable-smoke.mjs --archive FILE --out EVIDENCE_DIR --version V --source-sha SHA');
@@ -48,6 +49,10 @@ try {
   const { createCodingPromptPolicy } = await import(pathToFileURL(join(root, 'node_modules/@ar/harness/dist/index.js')).href);
   const primary = createCodingPromptPolicy().primary;
   assert.ok(requests.every(request => request.body.messages.some(message => message.role === 'system' && message.content.includes(primary))), 'installed CLI and Web use the exact coding-v1 primary prompt');
+  const edits = await runEditReceiptAcceptance(join(output, 'edit-receipts'), {
+    cli: launcher, web: join(root, 'node_modules/@ar/web/dist/main.js'), sourceSha: manifest.sourceSha, installed: true,
+  });
+  assert.equal(edits.status, 'PASS'); assert.equal(edits.scenarios, 4); assert.equal(edits.paidModelCalls, 0);
   const target = join(root, 'node_modules/@ar/web/public/index.html');
   const original = await readFile(target); await writeFile(target, Buffer.concat([original, Buffer.from('\ntampered\n')]));
   let tamperRejected = false;
@@ -62,6 +67,7 @@ try {
     sourceSha: manifest.sourceSha, sourceTree: manifest.sourceTree, archiveSha256: sha256, platform: process.platform, node: process.version,
     files: manifest.files.length, cleanroomOutsideRepository: true, workspaceLinks: 0, doctorErrors: 0,
     codingAssertions: coding.assertions.length, requests: coding.requests, actualSelectedPromptSha256: digest(Buffer.from(primary)),
+    editReceiptScenarios: edits.scenarios,
     tamperRejected, tamperedStartupRejected: true, paidModelCalls: 0, realModelQuality: 'NOT_PROVEN' };
   await writeFile(join(output, 'result.json'), JSON.stringify(receipt, null, 2) + '\n');
   console.log(JSON.stringify(receipt));

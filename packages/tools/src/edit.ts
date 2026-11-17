@@ -247,38 +247,54 @@ export function applyLineRange(
 }
 
 /**
- * Lightweight before/after line diff (for evidence / observability). Common
- * prefix/suffix are trimmed; only the changed region is emitted, capped to
- * `maxLines` per side.
+ * Bounded before/after preview. Scan line boundaries without retaining an
+ * array for every line: short/empty-line generated files can have millions
+ * of lines in a few MiB. Preserve the existing prefix/suffix and EOF semantics.
+ * Emit at most maxLines per side; long lines retain bounded, detached head/tail
+ * text with an explicit truncation marker. This is a preview, not verification.
  */
 export function lineDiff(before: string, after: string, maxLines = 6): string[] {
-  const b = before.split("\n");
-  const a = after.split("\n");
-  let i = 0;
-  while (i < b.length && i < a.length && b[i] === a[i]) i++;
-  let js = 0;
-  while (js < b.length - i && js < a.length - i && b[b.length - 1 - js] === a[a.length - 1 - js]) js++;
-  const removed = b.slice(i, b.length - js);
-  const added = a.slice(i, a.length - js);
-  if (removed.length === 0 && added.length === 0) return ["(no change)"];
+  if (before === after) return ["(no change)"];
+  const lineEnd = (text: string, start: number) => {
+    const end = text.indexOf("\n", start);
+    return end < 0 ? text.length : end;
+  };
+  let beforeStart = 0, afterStart = 0;
+  while (beforeStart <= before.length && afterStart <= after.length) {
+    const b = lineEnd(before, beforeStart), a = lineEnd(after, afterStart);
+    if (b - beforeStart !== a - afterStart || before.slice(beforeStart, b) !== after.slice(afterStart, a)) break;
+    beforeStart = b + 1; afterStart = a + 1;
+  }
+  let beforeEnd = before.length, afterEnd = after.length;
+  while (beforeEnd >= beforeStart && afterEnd >= afterStart) {
+    // lastIndexOf(..., -1) clamps to zero, so an empty first line needs
+    // an explicit boundary rather than accidentally including its LF.
+    const b = beforeEnd === 0 ? 0 : before.lastIndexOf("\n", beforeEnd - 1) + 1;
+    const a = afterEnd === 0 ? 0 : after.lastIndexOf("\n", afterEnd - 1) + 1;
+    if (beforeEnd - b !== afterEnd - a || before.slice(b, beforeEnd) !== after.slice(a, afterEnd)) break;
+    beforeEnd = b - 1; afterEnd = a - 1;
+  }
   const out: string[] = [];
-  let n = 0;
-  for (const l of removed) {
-    if (n >= maxLines) {
-      out.push(`…${removed.length} line(s) removed`);
-      break;
+  const preview = (line: string) => {
+    // Joining bounded code points detaches substrings from a potentially huge
+    // original backing string. Do not split a surrogate pair at either edge.
+    const copy = (text: string) => Array.from(text).join("");
+    if (line.length <= 1024) return copy(line);
+    const head = line.slice(0, 512).replace(/[\uD800-\uDBFF]$/, "");
+    const tail = line.slice(-512).replace(/^[\uDC00-\uDFFF]/, "");
+    return copy(head) + " … [truncated] … " + copy(tail);
+  };
+  const append = (text: string, start: number, end: number, prefix: string, action: string) => {
+    let count = 0, omitted = false;
+    for (let cursor = start; cursor <= end;) {
+      const next = lineEnd(text, cursor);
+      if (count >= maxLines) omitted = true;
+      else out.push(prefix + preview(text.slice(cursor, Math.min(next, end))));
+      count++; cursor = Math.min(next, end) + 1;
     }
-    out.push(`- ${l}`);
-    n++;
-  }
-  n = 0;
-  for (const l of added) {
-    if (n >= maxLines) {
-      out.push(`…${added.length} line(s) added`);
-      break;
-    }
-    out.push(`+ ${l}`);
-    n++;
-  }
+    if (omitted) out.push(`…${count} line(s) ${action}`);
+  };
+  append(before, beforeStart, beforeEnd, "- ", "removed");
+  append(after, afterStart, afterEnd, "+ ", "added");
   return out;
 }

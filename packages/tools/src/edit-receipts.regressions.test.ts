@@ -64,6 +64,8 @@ it.each<{ name: string; body: string; input: Omit<EditFileInput, "path"> }>([
 
 it.each<Omit<EditFileInput, "path">>([
   { oldText: "alpha", newText: "ALPHA" },
+  { oldText: "alpha", newText: "汉字😀" },
+  { oldText: "alpha", newText: "�" },
   { oldText: "repeat", newText: "changed", occurrence: 2 },
   { oldText: "repeat", newText: "changed", replaceAll: true },
   { lineStart: 1, lineEnd: 1, replacement: "ALPHA", profile: "strict" },
@@ -74,6 +76,18 @@ it.each<Omit<EditFileInput, "path">>([
   expect(result.status).toBe("success"); expect(f.writes()).toBe(1);
   expect(result.output).toMatchObject({ sha256: digest(bytes) }); expect(digest(bytes)).not.toBe(digest(body));
   expect(bytes.subarray(0, 3)).toEqual(Buffer.from([0xef, 0xbb, 0xbf]));
+});
+
+it.each<{ name: string; input: Omit<EditFileInput, "path"> }>([
+  { name: "high surrogate", input: { oldText: "alpha", newText: "\ud800" } },
+  { name: "low surrogate", input: { oldText: "alpha", newText: "\udc00" } },
+  { name: "split existing emoji", input: { oldText: "\ud83d", newText: "x" } },
+  { name: "range", input: { lineStart: 1, lineEnd: 1, replacement: "\ud800" } },
+])("unpaired Unicode is refused before writing: $name", async ({ input }) => {
+  const body = "alpha🙂\n"; const f = await fixture(body); const result = await f.edit(input);
+  expect(result.status).toBe("failed"); expect(result.error?.message).toMatch(/unicode|surrogate/i);
+  expect(result.output).toBeUndefined(); expect(result.evidence).toBeUndefined();
+  expect(f.writes()).toBe(0); expect(await fs.readFile(f.path)).toEqual(Buffer.from(body));
 });
 
 it("a diff preparation failure leaves the real file untouched", async () => {
