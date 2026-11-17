@@ -499,6 +499,7 @@ const summary = {
   candidatePass: all.filter(
     (r) => r.arm === "candidate" && r.independentExit === 0,
   ).length,
+  candidateVerified: all.filter(r => r.arm === "candidate" && r.independentExit === 0 && r.outcome?.status === "completed" && r.outcome?.grade === "verified_complete").length,
   candidateOverlap: all.filter(
     (r) =>
       r.arm === "candidate" && r.kind !== "http-service" && r.overlapObserved,
@@ -510,7 +511,7 @@ const summary = {
         r.error ||
         r.cleanupError ||
         r.cleanupAlive.length ||
-        (r.arm === "candidate" && r.independentExit !== 0),
+        (r.arm === "candidate" && (r.independentExit !== 0 || r.outcome?.status !== "completed" || r.outcome?.grade !== "verified_complete")),
     )
     .map((r) => r.id),
   paidModelCalls: 0,
@@ -524,11 +525,11 @@ await writeFile(
 // Keep exact failed-arm diagnostics in the job annotation as well as the raw
 // artifact. A generic process exit is insufficient when artifact downloads are
 // unavailable. The original acceptance assertions below remain authoritative.
-if (summary.arms !== 48 || summary.failures.length !== 0 || summary.candidatePass !== 24
+if (summary.arms !== 48 || summary.failures.length !== 0 || summary.candidatePass !== 24 || summary.candidateVerified !== 24
   || summary.candidatePass < summary.baselinePass || summary.duplicateStarts !== 0 || summary.candidateOverlap !== 16) {
   const diagnostic = {
     source, arms: summary.arms, baselinePass: summary.baselinePass,
-    candidatePass: summary.candidatePass, candidateOverlap: summary.candidateOverlap,
+    candidatePass: summary.candidatePass, candidateVerified: summary.candidateVerified, candidateOverlap: summary.candidateOverlap,
     duplicateStarts: summary.duplicateStarts, failures: summary.failures,
     observations: all.filter(r => summary.failures.includes(r.id) || (r.duplicateStarts ?? 0) > 0
       || (r.arm === "candidate" && r.kind !== "http-service" && !r.overlapObserved)).map(r => ({
@@ -550,6 +551,17 @@ if (summary.arms !== 48 || summary.failures.length !== 0 || summary.candidatePas
 assert.equal(summary.arms, 48);
 assert.equal(summary.failures.length, 0);
 assert.equal(summary.candidatePass, 24);
+assert.equal(summary.candidateVerified, 24);
 assert(summary.candidatePass >= summary.baselinePass);
 assert.equal(summary.duplicateStarts, 0);
 assert.equal(summary.candidateOverlap, 16);
+// Bind the successful gate to its actual counts even when raw artifacts cannot
+// be downloaded. This is a summary, not a substitute for individual arm files.
+console.log(`::notice title=Managed paired acceptance receipt::${workflowMessage(JSON.stringify({
+  source, platform: process.platform, nodeVersion: process.version, arms: summary.arms,
+  baselinePass: summary.baselinePass, candidatePass: summary.candidatePass,
+  candidateVerified: summary.candidateVerified, candidateOverlap: summary.candidateOverlap,
+  duplicateStarts: summary.duplicateStarts, failures: summary.failures, budget: summary.budget,
+  summarySha256: createHash('sha256').update(await readFile(join(out, 'summary.json'))).digest('hex'),
+  paidModelCalls: 0, modelQuality: 'NOT_PROVEN',
+}))}`);
