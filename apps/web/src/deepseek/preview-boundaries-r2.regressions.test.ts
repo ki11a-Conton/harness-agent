@@ -11,11 +11,11 @@ let root:string;
 beforeEach(async()=>{root=await fs.realpath(await fs.mkdtemp(join(tmpdir(),'web-preview-r2-')))});
 afterEach(async()=>{vi.restoreAllMocks();await fs.rm(root,{recursive:true,force:true,maxRetries:8,retryDelay:50})});
 const ctx=(signal=new AbortController().signal)=>({cwd:root,signal} as ToolExecutionContext);
-it('Web preview of sixteen million short lines fits a 64MiB heap',async()=>{
+it('Web preview of sixteen million short lines keeps observed heap allocation below 64MiB',async()=>{
  const path=join(root,'many.txt');await fs.writeFile(path,'first\n'+'\n'.repeat(16_000_000));
- const program=`import {workspaceReadTool} from ${JSON.stringify(new URL('../../dist/deepseek/files.js',import.meta.url).href)};const r=await workspaceReadTool.execute({path:process.argv[1],operation:'read',offset:2,limit:3},{cwd:process.argv[2],signal:new AbortController().signal});if(r.status!=='success')throw new Error(JSON.stringify(r));console.log(JSON.stringify(r.output));`;
+ const program=`import {workspaceReadTool} from ${JSON.stringify(new URL('../../dist/deepseek/files.js',import.meta.url).href)};let peak=0;const length=Buffer.byteLength;Buffer.byteLength=(...args)=>{peak=Math.max(peak,process.memoryUsage().heapUsed);return length(...args)};const r=await workspaceReadTool.execute({path:process.argv[1],operation:'read',offset:2,limit:3},{cwd:process.argv[2],signal:new AbortController().signal});if(r.status!=='success')throw new Error(JSON.stringify(r));console.log(JSON.stringify({output:r.output,peak}));`;
  const child=await promisify(execFile)(process.execPath,['--max-old-space-size=64','--input-type=module','-e',program,path,root],{timeout:20000,maxBuffer:65536});
- expect(JSON.parse(child.stdout)).toMatchObject({offset:2,text:'\n\n',lines:3,eof:false});
+ const observed=JSON.parse(child.stdout);expect(observed.output).toMatchObject({offset:2,text:'\n\n',lines:3,eof:false});expect(observed.peak).toBeLessThanOrEqual(64*1024*1024);
 });
 it('short native preview reads retain one bounded buffer rather than one allocation per fragment',async()=>{
  const path=join(root,'short.txt'),body='normal line\n'.repeat(30);await fs.writeFile(path,body);const open=fs.open.bind(fs);
