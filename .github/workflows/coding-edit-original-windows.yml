@@ -18,10 +18,20 @@ jobs:
       - name: Read original job without rerunning its commands
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: node scripts/ci/current-windows-forensics.mjs 133796548444 44010636601 0aecc9429a60b2fc4cee860b7dc5080c529ca46f
+        run: node scripts/ci/current-windows-forensics.mjs 133805563066 44013426377 8bff2e03c743b0adc1e06bbb3b0c51f54b38b0da
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: '44013426377'
+          name: native-windows-8bff2e03c743b0adc1e06bbb3b0c51f54b38b0da-44013426377-attempt-1
+          path: .ci/paired-original
+      - name: Read original failed HTTP arm without rerunning it
+        run: node scripts/ci/read-managed-paired-original.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: coding-edit-original-windows-133796548444
-          path: .ci/original-windows/
+          name: coding-edit-original-windows-133805563066
+          path: |
+            .ci/original-windows/
+            .ci/paired-original-diagnostic/
           if-no-files-found: error
