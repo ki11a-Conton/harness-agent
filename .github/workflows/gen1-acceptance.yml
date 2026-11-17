@@ -5,6 +5,8 @@ on:
   push:
     paths:
       - '.github/workflows/gen1-acceptance.yml'
+      # Bind installed acceptance to changes in the native Windows gate.
+      - '.github/workflows/windows-acceptance.yml'
       - 'packages/**'
       - 'apps/**'
       - 'scripts/release/**'

@@ -1,0 +1,96 @@
+{
+  "schema": 1,
+  "status": "ORIGINAL_FAILURE_RECOVERED_REPAIR_PENDING_NATIVE_CI",
+  "originalMainSha": "0aecc9429a60b2fc4cee860b7dc5080c529ca46f",
+  "originalRunId": 44010636601,
+  "originalJobId": 133796548444,
+  "diagnosticSha": "58cd1493236b4ec5a0f62c85ba26a652c9a7037e",
+  "diagnosticRunId": 44011877179,
+  "cause": "pnpm command shim reports The command line is too long before Vitest starts; report ENOENT is downstream",
+  "scope": "Original job read only; bounded excerpt recovered, full original raw log not downloaded locally; no original commands rerun",
+  "remainingOriginalMainCi": "main ci still pending at snapshot; first-generation and official UI installed acceptance PASS, native FAIL",
+  "repair": "Direct Node runs the same Vitest bin with the same123 file and reporter arguments; no test or budget removed",
+  "archive": {
+    "file": "windows-startup-failure.json.xz",
+    "bytes": 53256,
+    "sha256": "1afb7c020c1b587b60cdb5e97922fb02acadaca70c25e76e7fe1b1a7d0a7d674"
+  },
+  "members": [
+    {
+      "file": "evidence/ci-0aecc9429a60/diagnostic-native-annotations-public.json",
+      "sha256": "fad5c0820691eb27dc1bd53c6f4f27b4604b39602599c3d249ddbbb2df9f5c21"
+    },
+    {
+      "file": "evidence/ci-0aecc9429a60/diagnostic-native-job.log.download.json",
+      "sha256": "97f1edfd378116912fcc3c8408fc21babe4cc86eb5a321f982929e4129c37903"
+    },
+    {
+      "file": "evidence/ci-0aecc9429a60/diagnostic-native-artifact.zip.download.json",
+      "sha256": "97f1edfd378116912fcc3c8408fc21babe4cc86eb5a321f982929e4129c37903"
+    },
+    {
+      "file": "evidence/ci-0aecc9429a60/latest.json",
+      "sha256": "3c7f87bf785f8795aba850035394b1cbbc95a3ced89c0dc9ffe8198806aad3fc"
+    },
+    {
+      "file": "evidence/repaired-native-launcher-list.log",
+      "sha256": "9bd529fd86b035e3c68aa8389d528effc22073a2402396ad2e366e6014554edc"
+    },
+    {
+      "file": "evidence/repaired-native-launcher-list.receipt.json",
+      "sha256": "528dfc6d7482c17989b5a65cee0506311c7fe6bbf19492bc7ee3670fa08b85f7"
+    },
+    {
+      "file": "evidence/repaired-native-inventory.json",
+      "sha256": "caf8d812f036d4fb3e783bda505c3deb2c6f31d5592a540ceda44df8ddc3a52a"
+    },
+    {
+      "file": "native-launcher-inventory.json",
+      "sha256": "8cc7eb66f1a8ae3df759244953aedf735201ad905685430e3ed845555d935077"
+    },
+    {
+      "file": "check-native-launcher.py",
+      "sha256": "7ec7d5128e2bea71c635d7557cb0fb44ed1e7d4cfb3455a42dabc38463f40376"
+    },
+    {
+      "file": "forensics/.github/workflows/coding-edit-original-windows.yml",
+      "sha256": "d7fd5d8509fc09a941aced2f9fd5723ee7639022500bf53582d286317c169dd2"
+    },
+    {
+      "file": "diagnostics/annotations.json",
+      "sha256": "eaacbfa1e1330789bc3bb8056aa5c3d14b6509be7064145f427c745397bd7918"
+    },
+    {
+      "file": "diagnostics/latest.json",
+      "sha256": "52ef4968235096e5e3f749a37930ac9f285e686c6e8867aefe28d0980266c309"
+    },
+    {
+      "file": "diagnostics/poll-000.json",
+      "sha256": "fe1ab0e3b50d6d31444a486fea0b7775125f45f6777cfad884ba44aaf84d176e"
+    },
+    {
+      "file": "diagnostics/poll-001.json",
+      "sha256": "52ef4968235096e5e3f749a37930ac9f285e686c6e8867aefe28d0980266c309"
+    },
+    {
+      "file": "diagnostics/push.json",
+      "sha256": "c591f50046a2c51262270b368e9feda383186e0d4ffbbbc24be741e9f03f6369"
+    },
+    {
+      "file": "diagnostics/recovered-original-excerpt.log",
+      "sha256": "67d166afae18af891c3dc590706f10656b584184f6c72f564dc1712389674d80"
+    },
+    {
+      "file": "diagnostics/recovered-original-receipt.json",
+      "sha256": "b5619086b30e08fa91d146568d9056fed716bf46561ecb2a24e146add2bafe7b"
+    },
+    {
+      "file": "diagnostics/result.json",
+      "sha256": "e51978702a62d2fe8721ee9a378518c4255483bac61b5875dd72e649b7cb2e33"
+    },
+    {
+      "file": "diagnostics/windows-receipt.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    }
+  ]
+}
