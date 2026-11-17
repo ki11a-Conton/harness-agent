@@ -125,6 +125,9 @@ jobs:
       - name: Real CLI and Web guarded edit receipts
         run: node scripts/research/coding-edit-20261117/acceptance.mjs .ci/coding-v2/edit-receipts
 
+      - name: Managed HTTP service fixture lifecycle
+        run: node --test scripts/research/managed-commands-20261025/http-service-fixture.test.mjs
+
       - name: Upload coding-v2 evidence
         if: always()
         uses: actions/upload-artifact@v4

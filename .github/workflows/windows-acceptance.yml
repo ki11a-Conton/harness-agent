@@ -74,6 +74,9 @@ jobs:
         run: node scripts/research/coding-tools-20261019/acceptance.mjs .ci/windows-acceptance/coding-tools
       - name: Real CLI and Web guarded edit receipts
         run: node scripts/research/coding-edit-20261117/acceptance.mjs .ci/windows-acceptance/edit-receipts
+      - name: Managed HTTP service fixture lifecycle
+        run: node --test scripts/research/managed-commands-20261025/http-service-fixture.test.mjs
+
       - name: Managed command paired engineering protocol (48 actual arms, no paid calls)
         run: node scripts/research/managed-commands-20261025/paired.mjs .ci/windows-acceptance/managed-paired
       - name: Execute native process and production boundary regressions

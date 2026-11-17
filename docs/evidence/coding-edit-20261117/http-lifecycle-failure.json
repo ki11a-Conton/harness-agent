@@ -1,0 +1,98 @@
+{
+  "schema": 1,
+  "status": "ROOT_CAUSE_RECOVERED_LOCAL_FIX_GREEN_NATIVE_PENDING",
+  "originalMainSha": "8bff2e03c743b0adc1e06bbb3b0c51f54b38b0da",
+  "originalRunId": 44013426377,
+  "originalJobId": 133805563066,
+  "diagnosticSha": "e5f5cf77fd2613c0c3b3ea654e54e8843ad5cc50",
+  "diagnosticRunId": 44014822310,
+  "redSourceCommit": "e2d4494b0693779d7cdcbb1da67ed749c02e0568",
+  "proof": {
+    "nativeStart": 1794887966918,
+    "serviceExitAfterMs": 4507,
+    "httpToolStartAfterMs": 4561,
+    "originalManagerDeadlineAfterMs": 4948
+  },
+  "testFixtureCorrection": "First red attempt incorrectly checked nonexistent timedOut field; corrected to actual ExecOutcome.status before valid red-v2. Both retained; valid red1pass2fail, green3pass.",
+  "budgets": "unchanged turn15000ms, process5000ms, managedJob5000ms, HTTP1000ms; no test, assertion or arm removed",
+  "scope": "Fixture internal4500ms premature expiry removed. Baseline now ends at original owner deadline, candidate closes after actual health response. Durations not an identical-workload performance comparison. No Runtime or storage-backend change.",
+  "archive": {
+    "file": "http-lifecycle-failure.json.xz",
+    "bytes": 24100,
+    "sha256": "d43bde267955ce5609b202d1221c50c169664037c50f0635e4a60d9f5e1b40ad"
+  },
+  "members": [
+    {
+      "file": "evidence/ci-8bff2e03c743/diagnostic-native-annotations-public.json",
+      "sha256": "a1c29f5058a9e75140c4f3615baa0790c83d17ae36a0378b7cd5f1c1de299aa3"
+    },
+    {
+      "file": "evidence/ci-8bff2e03c743/diagnostic-native-artifacts-public.json",
+      "sha256": "8aef95f781c425873454aeebb20accbeb521e3c4218d12231aa55b836c749656"
+    },
+    {
+      "file": "evidence/http-lifecycle-red.log",
+      "sha256": "15141b1e5b3710b8e01c6e98359290d19d1549b14a8401a61c21bf4ad9c5e1b3"
+    },
+    {
+      "file": "evidence/http-lifecycle-red.receipt.json",
+      "sha256": "1ab2bcd80867355ea13c7277d8d4a249f7d43694246f540891531a0425643c27"
+    },
+    {
+      "file": "evidence/http-lifecycle-red-v2.log",
+      "sha256": "1683b4a8eb22f33747c90aaeba57ff1c7606ecbc27b925aa67ec4e8e8bc6ba44"
+    },
+    {
+      "file": "evidence/http-lifecycle-red-v2.receipt.json",
+      "sha256": "ee71bdd0c42d6d00345fa33db57cd582d3852bb612087abeafe4dd97939c35f7"
+    },
+    {
+      "file": "evidence/http-lifecycle-green.log",
+      "sha256": "10e29e27b1673cd05d390b880ee5f2512617ee1c46a9d0267330e0220b08f604"
+    },
+    {
+      "file": "evidence/http-lifecycle-green.receipt.json",
+      "sha256": "2b36ac61e9544bf87415869e30025732daba8589373ac7fa701ff5977e8621e5"
+    },
+    {
+      "file": "diagnostics/annotations.json",
+      "sha256": "5da09430dcb0cfd996109eec4e7f1ad5984817d8d1194e5c2e0272ad7176c89f"
+    },
+    {
+      "file": "diagnostics/latest.json",
+      "sha256": "dbdf437907c35920a19283d23c5f73fb3659c65d1c7f6923f04e52fffa2f934a"
+    },
+    {
+      "file": "diagnostics/original-http-arm.json",
+      "sha256": "8ee5b7c7d1f1979f716160e5e084f429e3a918794c1ea8416e4def1c318dfff9"
+    },
+    {
+      "file": "diagnostics/poll-000.json",
+      "sha256": "29c01ae60be1ebd726a27a9872fc42f573096a6e07226dde6f2d5b78952504f2"
+    },
+    {
+      "file": "diagnostics/poll-001.json",
+      "sha256": "dbdf437907c35920a19283d23c5f73fb3659c65d1c7f6923f04e52fffa2f934a"
+    },
+    {
+      "file": "diagnostics/push.json",
+      "sha256": "352ea7153ee983519a3d663ce8f58f70e77168ed8d7155368ad93642bf2864c9"
+    },
+    {
+      "file": "diagnostics/result.json",
+      "sha256": "537e1ad6db4bea7b28712b379c29ef09ea0b6ac328dfb400ebed1118fac1427e"
+    },
+    {
+      "file": "diagnostics/windows-receipt.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "file": "forensics/scripts/ci/read-managed-paired-original.mjs",
+      "sha256": "0533726266aa5925eff66d4b5bde14863165e2e3843927d82e589b58c61a3a2f"
+    },
+    {
+      "file": "forensics/.github/workflows/coding-edit-original-windows.yml",
+      "sha256": "275fbc42e826c256adf77189e9c736e47477eb1bd673a63f058d89c2b9eceaea"
+    }
+  ]
+}

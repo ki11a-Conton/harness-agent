@@ -14,6 +14,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import assert from "node:assert/strict";
 import { observeReadOverlap } from "./observe-read-overlap.mjs";
+import { HTTP_SERVICE_FIXTURE_SOURCE } from "./http-service-fixture.mjs";
 import { CHECK_BARRIER_URL_FILE, CHECK_FIXTURE_SOURCE, createCheckReadBarrier } from "./check-read-barrier.mjs";
 const workflowMessage = (value) => String(value).replaceAll("%", "%25").replaceAll("\r", "%0D").replaceAll("\n", "%0A");
 // Observe uncaught failures without changing Node's default failing exit.
@@ -91,6 +92,7 @@ const registration = {
   paidModelCalls: 0,
   overlapMetric: { version: 2, source: "correlated successful read_file evidence within known native start/exit interval; model-request time is not an action; unknown exit is not positive proof" },
   scope: "causal engineering protocol probe; baseline/candidate gate coordination differs, so durations are not an identical-workload performance comparison or model-quality evidence",
+  httpFixture: { completion: "health response OR existing production owner deadline", independentExpiryMs: null, processBudgetMs: 5000, baseline: "synchronous exec reaches owner deadline before probe", candidate: "probe closes the live service before owner deadline" },
   checkFixture: { nativeWorkMs: 2000, completion: "native work AND read barrier", baselineGate: "pre-released before synchronous exec", candidateGate: "release only after correlated successful source-file read; remains released for repair attempt", fallbackRelease: false },
   networkPreflight: {
     loopback: "allow",
@@ -132,7 +134,7 @@ for (const kind of registration.kinds)
       );
       await writeFile(
         join(cwd, "server.cjs"),
-        "const fs=require('node:fs'),http=require('node:http');fs.appendFileSync('starts.jsonl',JSON.stringify({pid:process.pid,at:Date.now()})+'\\n');const server=http.createServer((req,res)=>{fs.writeFileSync('api-observed.json',JSON.stringify({url:req.url,at:Date.now()}));res.end('ACTUAL_API_OK')});server.listen(0,'127.0.0.1',()=>{fs.writeFileSync('port.txt',String(server.address().port));console.log('LISTENING '+server.address().port)});process.on('exit',()=>fs.appendFileSync('exits.jsonl',JSON.stringify({code:process.exitCode??0,at:Date.now()})+'\\n'));setTimeout(()=>server.close(),4500);\n",
+        HTTP_SERVICE_FIXTURE_SOURCE,
       );
       const independent = {
         command: process.execPath,
