@@ -1,3 +1,7 @@
+## 2026-11-17 coding 编辑可靠性
+
+按 [plan(20261117-coding-edit-receipts).md](plan(20261117-coding-edit-receipts).md) 修复已复现的无效编辑假成功、写后diff内存失败，并提供有界回执与可串联的文件版本。先记录失败再实现，完整和安装验收后普通推送并复核最终SHA。
+
 # 当前任务：2026-11-16 多语言搜索
 
 [做什么、怎么做及验收](plan(20261116-deepseek-search).md) · [任务合同](tasks/DEEPSEEK-SEARCH-20261116.md)
