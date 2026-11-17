@@ -7,6 +7,7 @@ on:
       - '.github/workflows/deepseek-ui-installed.yml'
       # Bind installed acceptance to changes in the native Windows gate.
       - '.github/workflows/windows-acceptance.yml'
+      - 'scripts/ci/windows-acceptance-report*.mjs'
       - 'packages/**'
       - 'apps/**'
       - 'scripts/release/**'
