@@ -171,6 +171,8 @@ test('an incompressible FAIL verdict indexes the actual complete artifact withou
   assert.equal(publication.value.summary.required, names.length);
   assert.equal(publication.value.summary.issues, result.receipt.issues.length);
   assert.equal(publication.value.summary.failed, 1);
+  assert.deepEqual(publication.value.issuesPreview, result.receipt.issues.slice(0, 3));
+  assert.equal(publication.value.omittedIssues, result.receipt.issues.length - publication.value.issuesPreview.length);
   assert(noticeBytes(publication.value) < 3500);
   assert.equal(JSON.stringify(result), original);
   assert.equal(JSON.parse(artifact).caseRecords[0].assertions[17].failureMessages[0], 'actual original failure');

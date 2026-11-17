@@ -95,6 +95,13 @@ async function collapseMobile(page) {
     }
   }
 }
+// Use only after navigation has finished, not in the immediate-paste race.
+async function settledCollapsedSidebar(page) {
+  if (page.viewportSize().width >= 700) return;
+  await button(page, /^(Open sidebar|打开侧边栏)$/).waitFor();
+  await page.waitForFunction(() => !document.getAnimations().some(a => a.playState === 'running' && a.effect?.getComputedTiming().endTime !== Infinity));
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+}
 async function boot(page) {
   await page.goto(origin, { waitUntil: 'domcontentloaded' });
   await composer(page).waitFor({ timeout: 15000 }); await sidebar(page);
@@ -193,7 +200,7 @@ async function selectSession(page, id, title) {
   // can hit one of those controls on narrow layouts, which does not navigate.
   await page.locator('[data-row-key="session:' + id + '"]').getByText(title, { exact: true }).click();
   const owner = await selectedSessionOwner(page, id);
-  await collapseMobile(page); await finished(owner); return owner;
+  await collapseMobile(page); await settledCollapsedSidebar(page); await finished(owner); return owner;
 }
 async function selectedSessionOwner(page, id) {
   // Identical fixture replies can still belong to the previous view. Confirm
@@ -275,7 +282,7 @@ const cases = {
     assert.equal(await composer(page).innerText(), 'PRIVATE_EXISTING_TASK_DRAFT');
     check(checks, 'Returning to the previous task preserves its independent composer draft');
   },
-  'coding-draft-ownership': async (page, context, checks) => {
+  'coding-draft-ownership': async (page, context, checks) => latency(context, page, async () => {
     const a = 'Composer A ' + Date.now(), b = 'Composer B ' + Date.now();
     const aId = await send(page, a); await finished(page); await newSession(page); const bId = await send(page, b); await finished(page);
     let owner = await selectSession(page, aId, a); await ownedComposer(owner).fill('ONLY_A_DRAFT'); owner = await selectSession(page, bId, b);
@@ -284,20 +291,14 @@ const cases = {
     await ownedComposer(owner).fill('ONLY_B_DRAFT'); owner = await selectSession(page, aId, a);
     assert.equal(await ownedComposer(owner).innerText(), 'ONLY_A_DRAFT'); check(checks, 'A/B native coding drafts remain separate through selection');
     await sidebar(page); await button(page, 'Settings').click(); await button(page, 'Close').click(); await collapseMobile(page);
-    if (page.viewportSize().width < 700) {
-      // Let the actual drawer finish collapsing: its virtualized rows may
-      // detach while the visible conversation still correctly owns its draft.
-      await button(page, 'Open sidebar').waitFor();
-      await page.waitForFunction(() => !document.getAnimations().some(a => a.playState === 'running' && a.effect?.getComputedTiming().endTime !== Infinity));
-      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-    }
+    await settledCollapsedSidebar(page);
     // Check native selection with navigation open, then inspect the same owned
     // conversation after closing it again. Opening navigation does not select
     // a session; a wrong selection or leaked draft still fails these checks.
-    await sidebar(page); owner = await selectedSessionOwner(page, aId); await collapseMobile(page);
+    await sidebar(page); owner = await selectedSessionOwner(page, aId); await collapseMobile(page); await settledCollapsedSidebar(page);
     assert.equal(await ownedComposer(owner).innerText(), 'ONLY_A_DRAFT');
     check(checks, 'Closing native settings retains the selected coding session draft');
-  },
+  }),
   'feedback-roundtrip': async (page, context, checks) => {
     await send(page, 'Feedback target ' + Date.now()); await finished(page);
     const id = observations.get(page).results.filter(r => r.endpoint === 'session/create' && r.ok).at(-1)?.value?.sessionId; assert(id);

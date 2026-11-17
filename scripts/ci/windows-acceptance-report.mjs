@@ -66,7 +66,12 @@ export function receiptPublication(receipt, artifactBytes) {
       runId: text('runId', 32), runAttempt: text('runAttempt', 16),
       files: count('files'), passed: count('passed'), failed: count('failed'), skipped: count('skipped'),
       required: receipt.required.length, issues: receipt.issues.length },
-    truncatedFields };
+    truncatedFields,
+    issuesPreview: receipt.issues.slice(0, 3).map(issue => Array.from(issue).slice(0, 256).join('')),
+    omittedIssues: Math.max(0, receipt.issues.length - 3) };
+  while (!fitsReceiptNotice(index) && index.issuesPreview.length) {
+    index.issuesPreview.pop(); index.omittedIssues = receipt.issues.length - index.issuesPreview.length;
+  }
   return { mode: 'artifact', value: index };
 }
 
@@ -148,7 +153,7 @@ function main() {
     'the returned version does not authorize overwriting a later external change',
     'a coding turn recovers from no-op feedback and chains actual edit versions with one read',
     'bounds long preview lines explicitly without splitting emoji',
-    'unpaired Unicode is refused before writing: split existing emoji');
+    "unpaired Unicode is refused before writing: 'split existing emoji'");
   const host = { platform: process.platform, osType: type(), osRelease: release(), arch: arch(), nodeVersion: process.version,
     sourceSha: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), workflowSha: process.env.GITHUB_SHA ?? '',
     treeClean: execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' }).trim() === '',
