@@ -1,0 +1,50 @@
+{
+  "baseline": "20297ccb4da5b5255850d78e5ad9ca28c83ff903",
+  "baselineWindowProbe": {
+    "expectedFailure": true,
+    "nativeBytes": 9000037,
+    "requestedMax": 65536
+  },
+  "descriptorReadPair": {
+    "baselineBytes": 9000037,
+    "windowBytes": 65536,
+    "versionedBytes": 9000037,
+    "sameWindow": true
+  },
+  "rankPairs": [
+    {
+      "n": 500,
+      "dangling": 475,
+      "baseline": "20297ccb4da5b5255850d78e5ad9ca28c83ff903",
+      "maxAbsoluteError": 3.122502256758253e-17,
+      "baselineMs": 9.510874999999999,
+      "candidateMs": 0.2707409999999868,
+      "baselineDanglingFanout": 2850000,
+      "candidatePriorRedistributions": 6000,
+      "note": "Ranking only on generated graphs. These are not repository scan times."
+    },
+    {
+      "n": 5000,
+      "dangling": 4750,
+      "baseline": "20297ccb4da5b5255850d78e5ad9ca28c83ff903",
+      "maxAbsoluteError": 3.664603343001005e-17,
+      "baselineMs": 257.485287,
+      "candidateMs": 3.19972400000006,
+      "baselineDanglingFanout": 285000000,
+      "candidatePriorRedistributions": 60000,
+      "note": "Ranking only on generated graphs. These are not repository scan times."
+    }
+  ],
+  "pairedActualHTTP": {
+    "modes": [
+      "default",
+      "window"
+    ],
+    "callsPerArm": 4,
+    "httpRequestsPerArm": 5,
+    "outcome": "verified_complete",
+    "verifiedFinalBytesEqual": true,
+    "paidModelCalls": 0
+  },
+  "targetedPassing": 103
+}

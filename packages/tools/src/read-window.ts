@@ -13,10 +13,9 @@ import type { FileHandle } from "node:fs/promises";
 export const DEFAULT_READ_LINES = 2000;
 export const DEFAULT_READ_BYTES = 50 * 1024;
 
-export interface ReadWindow {
+export interface ReadPage {
   startLine: number;
   endLine: number;
-  totalLines: number;
   truncated: boolean;
   truncatedBy?: "lines" | "bytes";
   nextOffset?: number;
@@ -25,12 +24,22 @@ export interface ReadWindow {
   content: string;
 }
 
-function windowResult(selected: string[], offset: number, totalLines: number, exceeded: boolean, maxBytes: number): ReadWindow {
+export interface ReadWindow extends ReadPage {
+  totalLines: number;
+}
+
+export type ScannedReadWindow =
+  | (ReadWindow & { bytes: number; sha256?: string; scanComplete?: never })
+  | (ReadWindow & { bytes: number; scanComplete: true; scannedBytes: number })
+  | (ReadPage & { scanComplete: false; scannedBytes: number });
+
+function windowResult(selected: string[], offset: number, totalLines: number | undefined, exceeded: boolean, maxBytes: number): ReadPage {
   const next = offset + selected.length;
-  const truncated = next <= totalLines;
+  const truncated = totalLines === undefined || next <= totalLines;
   const firstLineExceedsLimit = exceeded && selected.length === 0;
   return {
-    startLine: offset, endLine: selected.length ? next - 1 : offset - 1, totalLines,
+    startLine: offset, endLine: selected.length ? next - 1 : offset - 1,
+    ...(totalLines === undefined ? {} : { totalLines }),
     truncated,
     ...(truncated ? { truncatedBy: exceeded ? "bytes" as const : "lines" as const } : {}),
     ...(truncated && !firstLineExceedsLimit ? { nextOffset: next } : {}),
@@ -54,25 +63,29 @@ export function readWindow(content: string, offset = 1, limit = DEFAULT_READ_LIN
     if (bytes + cost > maxBytes) { exceeded = true; break; }
     selected.push(line); bytes += cost;
   }
-  return windowResult(selected, offset, lines.length, exceeded, maxBytes);
+  return { ...windowResult(selected, offset, lines.length, exceeded, maxBytes), totalLines: lines.length };
 }
 
-/** Scan an owned descriptor with bounded memory. The complete file is scanned
- * for line counts and (when requested) its raw-byte SHA, but only the selected
- * complete lines are retained. Even a multi-gigabyte unterminated line cannot
- * grow the retained buffer. Descriptor lifetime belongs to read_file's lock. */
+/** Scan an owned descriptor with bounded memory. By default count all lines
+ * and optionally hash the whole file. Window mode only scans until it has the
+ * page and evidence of continuation, or sees EOF. The caller owns the handle. */
 export async function readWindowFromHandle(handle: FileHandle, options: {
-  offset?: number; limit?: number; maxBytes?: number; versioned?: boolean; signal: AbortSignal;
-}): Promise<ReadWindow & { bytes: number; sha256?: string }> {
+  offset?: number; limit?: number; maxBytes?: number; versioned?: boolean; scan?: "window"; signal: AbortSignal;
+}): Promise<ScannedReadWindow> {
   const offset = options.offset ?? 1;
   const limit = options.limit ?? DEFAULT_READ_LINES;
   const maxBytes = options.maxBytes ?? DEFAULT_READ_BYTES;
+  const earlyStop = options.scan === "window";
   const digest = options.versioned ? createHash("sha256") : undefined;
   const buffer = Buffer.allocUnsafe(64 * 1024);
   const selected: string[] = [];
   let currentLine = 1, totalBytes = 0, outputBytes = 0, lineBytes = 0;
   let parts: Buffer[] = [];
   let exceeded = false, endedWithNewline = false;
+  const unfinishedPage = (): ScannedReadWindow => ({
+    scanComplete: false, scannedBytes: totalBytes,
+    ...windowResult(selected, offset, undefined, exceeded, maxBytes),
+  });
 
   const capture = (part: Buffer): void => {
     lineBytes += part.length;
@@ -101,16 +114,23 @@ export async function readWindowFromHandle(handle: FileHandle, options: {
     totalBytes += bytesRead; digest?.update(chunk);
     let position = 0;
     while (position < chunk.length) {
+      // Any byte after a completed page proves another line exists, even
+      // when it is blank or the page ended exactly at a native read boundary.
+      if (earlyStop && selected.length === limit) return unfinishedPage();
       const newline = chunk.indexOf(10, position);
       const end = newline < 0 ? chunk.length : newline;
       capture(chunk.subarray(position, end));
+      if (earlyStop && exceeded) return unfinishedPage();
       if (newline < 0) { endedWithNewline = false; break; }
-      completeLine(); endedWithNewline = true; position = newline + 1;
+      completeLine();
+      if (earlyStop && exceeded) return unfinishedPage();
+      endedWithNewline = true; position = newline + 1;
     }
   }
   const totalLines = totalBytes === 0 ? 0 : currentLine - (endedWithNewline ? 1 : 0);
   if (totalBytes > 0 && !endedWithNewline) completeLine();
   if (offset > Math.max(1, totalLines)) throw new Error(`offset ${offset} is beyond end of file (${totalLines} lines)`);
-  return { bytes: totalBytes, ...(digest ? { sha256: digest.digest("hex") } : {}),
-    ...windowResult(selected, offset, totalLines, exceeded, maxBytes) };
+  const page = windowResult(selected, offset, totalLines, exceeded, maxBytes);
+  if (earlyStop) return { scanComplete: true, scannedBytes: totalBytes, bytes: totalBytes, ...page, totalLines };
+  return { bytes: totalBytes, ...(digest ? { sha256: digest.digest("hex") } : {}), ...page, totalLines };
 }

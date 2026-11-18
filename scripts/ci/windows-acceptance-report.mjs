@@ -164,6 +164,11 @@ function main() {
     'memory resource closure waits for the asynchronous store before closing its dependencies',
     'a coding turn repairs invalid write content and verifies actual bytes without rereading',
     'the real Web file service routes bounded pages through the orchestrator and preserves credential denial');
+  required.push(
+    'reads one native block for a four-line window and preserves full-file reads when requested',
+    'rejects window plus versioned mode before opening and keeps permission denial authoritative',
+    'preserves personalized repository ranking on weighted graphs with unlinked files',
+    'real HTTP coding turn uses window orientation before the same verified edit');
   const host = { platform: process.platform, osType: type(), osRelease: release(), arch: arch(), nodeVersion: process.version,
     sourceSha: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), workflowSha: process.env.GITHUB_SHA ?? '',
     treeClean: execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' }).trim() === '',

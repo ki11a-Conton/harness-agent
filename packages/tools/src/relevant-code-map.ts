@@ -10,6 +10,31 @@ export interface RelevantCodeMap {
   edges: { from: string; to: string; weight: number }[];
 }
 
+/** Personalized PageRank over sparse adjacency maps. Nodes without outgoing
+ * references redistribute their combined mass using the same query prior. */
+export function rankRelevantFiles(seed: readonly number[], links: readonly ReadonlyMap<number, number>[]): number[] {
+  const sum = seed.reduce((total, value) => total + value, 0) || 1;
+  const prior = seed.map(value => value / sum);
+  const damping = 0.85;
+  const transitions = links.map(targets => {
+    const weights = [...targets].map(([target, count]) => ({ target, weight: Math.sqrt(count) }));
+    const total = weights.reduce((sum, edge) => sum + edge.weight, 0);
+    return weights.map(({ target, weight }) => ({ target, share: damping * weight / total }));
+  });
+  const dangling = transitions.flatMap((edges, i) => edges.length === 0 ? [i] : []);
+  let rank = [...prior];
+  for (let iteration = 0; iteration < 12; iteration++) {
+    const danglingMass = dangling.reduce((mass, i) => mass + rank[i]!, 0);
+    const priorWeight = 0.15 + damping * danglingMass;
+    const next = prior.map(value => priorWeight * value);
+    transitions.forEach((edges, source) => {
+      for (const { target, share } of edges) next[target]! += rank[source]! * share;
+    });
+    rank = next;
+  }
+  return rank.map((value, i) => value + prior[i]!);
+}
+
 /** Aider-inspired design, independently implemented: syntax tags, a candidate
  * reference graph and query-personalized ranking under an explicit budget. */
 export async function buildRelevantCodeMap(input: { root: string; query: string; path?: string; maxTokens?: number; signal?: AbortSignal }): Promise<RelevantCodeMap> {
@@ -38,19 +63,8 @@ export async function buildRelevantCodeMap(input: { root: string; query: string;
       }
     }
   }
-  const sum = seed.reduce((a, b) => a + b, 0) || 1;
-  const personalization = seed.map(value => value / sum);
-  let rank = [...personalization];
-  for (let iteration = 0; iteration < 12; iteration++) {
-    const next = personalization.map(value => .15 * value);
-    for (let i = 0; i < rank.length; i++) {
-      const weights = [...links[i]!.values()].reduce((total, n) => total + Math.sqrt(n), 0);
-      if (!weights) for (let j = 0; j < next.length; j++) next[j]! += .85 * rank[i]! * personalization[j]!;
-      else for (const [target, weight] of links[i]!) next[target]! += .85 * rank[i]! * Math.sqrt(weight) / weights;
-    }
-    rank = next;
-  }
-  const ordered = index.files.map((file, i) => ({ file, i, score: rank[i]! + personalization[i]! }))
+  const scores = rankRelevantFiles(seed, links);
+  const ordered = index.files.map((file, i) => ({ file, score: scores[i]! }))
     .sort((a, b) => b.score - a.score || a.file.file.localeCompare(b.file.file, "en"));
   const output: RelevantCodeMap = { query: input.query, ...(input.path === undefined ? {} : { scope: input.path }), indexer: index.indexer, semantic: false, fingerprint: index.fingerprint,
     filesIndexed: index.files.length, complete: index.complete && edgeCount < 20000, truncated: ordered.length > 12, files: [], edges: [] };
