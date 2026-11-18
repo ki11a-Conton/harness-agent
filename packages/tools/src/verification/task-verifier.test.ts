@@ -67,6 +67,16 @@ describe("TaskVerifier (VS-001)", () => {
     expect(bad.passed).toBe(false);
   });
 
+  it.skipIf(process.platform === "win32")("keeps case-distinct POSIX paths separate in change evidence", async () => {
+    const result = await new TaskVerifier().verify(task([
+      { kind: "artifact", path: "out.txt", mustChange: true },
+      { kind: "diff", expectedPaths: ["out.txt"] },
+      { kind: "diff", mustNotChange: ["out.txt"] },
+    ]), context({ changedPaths: ["OUT.txt"] }));
+    expect(result.checks.map(check => check.passed)).toEqual([false, false, true]);
+    expect(result.checks[0]?.evidence?.description).toContain("unchanged");
+  });
+
   it("requirement checks fail closed until a reviewer is wired", async () => {
     const v = new TaskVerifier({ executor: new ProcessExecutor() });
     const r = await v.verify(task([{ kind: "requirement", statement: "must be fast" }]), context());
@@ -133,6 +143,15 @@ describe("TaskVerifier (VS-001)", () => {
     const check = r.checks[0]!;
     expect(check.evidence?.description).toContain("deploy.conf");
     expect(check.evidence?.description).toContain("destructive");
+  });
+
+  it("requires a baseline to verify all original files survived", async () => {
+    const verifier = new TaskVerifier();
+    const spec = task([{ kind: "diff", forbidDeletions: true }]);
+    const missing = await verifier.verify(spec, context());
+    expect(missing.passed).toBe(false);
+    expect(missing.checks[0]?.error?.message).toContain("baseline");
+    expect((await verifier.verify(spec, context({ baselineFiles: [] }))).passed).toBe(true);
   });
 
   it("P1-16 diff: unexpected file deletion fails when a baseline file vanishes", async () => {

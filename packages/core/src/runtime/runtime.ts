@@ -920,7 +920,7 @@ export class AgentRuntime {
         }
         return outcome;
       },
-      runVerificationGate: (ctx) => this.verificationController.runVerificationGate(ctx),
+      runVerificationGate: (ctx, filesChanged) => this.verificationController.runVerificationGate(ctx, filesChanged),
       hasPendingSteering: (ctx) => this.hasPendingSteering(ctx),
       closeSteeringForCompletion: async (ctx) => {
         // Close synchronously, before durable reads can yield to an admission.

@@ -555,7 +555,6 @@ describe("LOOP-001 full agent loop (integration)", () => {
           goal: "answer only",
           completionPolicy: { requiresNoSideEffects: true },
         },
-        changedPaths: () => ["x.txt"],
         maxVerificationFailures: 1,
       },
     );

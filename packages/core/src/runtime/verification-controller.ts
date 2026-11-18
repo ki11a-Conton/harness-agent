@@ -46,12 +46,13 @@ export class VerificationController {
 
   async runVerificationGate(
     ctx: TurnContext,
+    filesChanged: readonly string[],
   ): Promise<VerificationGateResult | undefined> {
     const { session, turnId } = ctx;
     // P1-15: completion policy runs before the verifier — objective task
     // requirements gate completion even when no verifier is configured.
     const policy = this.deps.task?.completionPolicy;
-    const changed = [...(this.deps.changedPathsProvider?.() ?? [])];
+    const changed = [...(this.deps.changedPathsProvider?.() ?? filesChanged)];
     if (policy?.requiresNoSideEffects === true && changed.length > 0) {
       const sample = changed.slice(0, 5).join(", ");
       return {

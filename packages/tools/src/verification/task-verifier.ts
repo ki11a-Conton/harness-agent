@@ -136,9 +136,11 @@ export class TaskVerifier implements Verifier {
     if (forbiddenHits.length > 0) {
       reasons.push(`forbidden paths changed (generated junk / format explosion): ${[...new Set(forbiddenHits)].join(", ")}`);
     }
-    if (spec.forbidDeletions === true || Array.isArray(spec.forbidDeletions)) {
-      const baseline = context.baselineFiles ?? [];
-      const guarded = Array.isArray(spec.forbidDeletions) ? spec.forbidDeletions : baseline;
+    const guarded = spec.forbidDeletions === true ? context.baselineFiles : spec.forbidDeletions;
+    if (spec.forbidDeletions === true && guarded === undefined) {
+      reasons.push("cannot verify deletions without a baseline file inventory");
+    }
+    if (Array.isArray(guarded)) {
       const deleted = guarded.filter((p) => {
         try {
           realpathSync(rel(p));
@@ -272,7 +274,7 @@ export class TaskVerifier implements Verifier {
       passed: ok,
       evidence: {
         type: "file",
-        description: ok ? `found ${abs}` : `missing ${abs}`,
+        description: exists ? (ok ? `found ${abs}` : `unchanged ${abs}`) : `missing ${abs}`,
         source: abs,
         timestamp: Date.now(),
       },
@@ -306,5 +308,5 @@ function changedPathsContain(changedPaths: string[], abs: string, cwd: string): 
 }
 
 function normalize(p: string): string {
-  return p.split(sep).join("/").toLowerCase();
+  return process.platform === "win32" ? p.toLowerCase() : p;
 }

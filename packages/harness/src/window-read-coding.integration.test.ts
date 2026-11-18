@@ -93,8 +93,8 @@ it.each(["default", "window"] as const)("real HTTP coding turn uses %s orientati
       featureFlags: { skills: false, memory: false, mcp: false, learning: false, delegation: false },
       sandboxPolicy: { filesystem: { mode: "workspace-write", allowedPaths: [cwd] }, network: { mode: "deny" }, process: { timeoutMs: 10000 } },
       maxIterationsPerTurn: 8, limits: { maxToolCalls: 10, maxDurationMs: 30000 },
-      task: { id: "window-read-coding", goal: "Update and verify exported count", completionPolicy: { requiresVerification: true },
-        verification: [{ kind: "command", command: process.execPath, args: ["check.cjs"] }] },
+      task: { id: "window-read-coding", goal: "Update and verify exported count", completionPolicy: { requiresChangedFile: true, requiresVerification: true },
+        verification: [{ kind: "artifact", path: "values.cjs", mustChange: true }, { kind: "command", command: process.execPath, args: ["check.cjs"] }] },
     });
     const session = await harness.runtime.createSession({ agent: harness.agents[0]!, cwd });
     const turn = await harness.runtime.startTurn(session.id, "Find the current count, update it to 42, and run the project check.");
