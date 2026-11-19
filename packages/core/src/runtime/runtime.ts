@@ -1145,7 +1145,9 @@ export class AgentRuntime {
       const stored = await this.store.getTurn(turnId);
       if (stored?.sessionId !== sessionId) throw new AgentError(errorInfo("INTERNAL_ERROR", `turn ${turnId} does not belong to session ${sessionId}`));
       await this.reconcileTerminalTurns(sessionId);
-      if (stored.terminalOutcome !== undefined || stored.status === "completed" || stored.status === "cancelled") throw new AgentError(errorInfo("INTERNAL_ERROR", `turn ${turnId} is terminal (${stored.status}); create a new turn instead of replaying it`));
+      if (stored.terminalOutcome !== undefined || RecoveryController.isTerminal(stored.status)) {
+        throw new AgentError(errorInfo("INTERNAL_ERROR", `turn ${turnId} is terminal (${stored.status}); create a new turn instead of replaying it`));
+      }
       const continuing = stored.status === "waiting_for_user";
       const restoration = continuing ? { options: await this.restoreQuestionPause(sessionId, turnId, signal), continuing: true }
         : await this.restoreInterruptedTurn(sessionId, turnId, opts);

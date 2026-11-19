@@ -90,6 +90,17 @@ describe("durable terminal outcome", () => {
     expect(await h.store.listTurns(h.session.id)).toHaveLength(1);
   });
 
+  it.each(["completed", "failed", "cancelled"] as const)("rejects replay of a legacy %s turn before executing work", async status => {
+    const h = await setup();
+    const legacy = { ...h.turn, status, completedAt: h.turn.startedAt + 1 };
+    await h.store.updateTurn(legacy);
+    await expect(h.h.engine.runTurn(h.session.id, h.turn.id, new AbortController().signal)).rejects.toThrow(/is terminal/);
+    expect(h.h.calls.model).toBe(0);
+    expect(h.h.orchestrator.calls).toHaveLength(0);
+    expect(await h.store.getTurn(h.turn.id)).toEqual(legacy);
+    expect((await h.events.list(h.session.id)).filter(terminal)).toHaveLength(0);
+  });
+
   it("legacy terminal rows retain their no-evidence compatibility and pauses remain nonterminal", async () => {
     const h = await setup();
     await h.store.updateTurn({ ...h.turn, status: "completed", completedAt: 100 });

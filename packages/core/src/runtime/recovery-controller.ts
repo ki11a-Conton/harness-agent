@@ -117,7 +117,7 @@ export class RecoveryController {
    * need publication after a crash; repeated finishTurn calls reconcile that
    * identity and never replace it with a later result or a second event.
    */
-  private static isTerminal(status: TurnStatus): boolean {
+  static isTerminal(status: TurnStatus): boolean {
     return status === "completed" || status === "failed" || status === "cancelled";
   }
 
