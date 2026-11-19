@@ -58,6 +58,7 @@ export function composeVerification(
                 ...(event.passed !== undefined ? { passed: event.passed } : {}),
                 ...(event.detail !== undefined ? { detail: event.detail } : {}),
               },
+              { turnId: event.turnId },
             ).catch((err) =>
               process.stderr.write(`[degraded] verification-steps.append: ${err instanceof Error ? err.message : String(err)}\n`),
             );

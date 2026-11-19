@@ -820,56 +820,56 @@ export class AgentRuntime {
     });
     // Q-1: verification gate delegated to the extracted controller.
     this.verificationController = new VerificationController({
-      executeCommand: async (ctx, spec) => {
+      executeCommands: async (ctx, specs) => {
         if (!isToolAllowedByPolicy(ctx.agent.tools, "exec")) {
-          return { status: "denied", error: errorInfo("PERMISSION_DENIED", "verification exec is excluded by the session tool policy") };
+          return specs.map(() => ({ status: "denied", error: errorInfo("PERMISSION_DENIED", "verification exec is excluded by the session tool policy") }));
         }
         const definition = this.toolRegistry?.get("exec");
         if (definition === undefined) {
-          return { status: "denied", error: errorInfo("TOOL_SCHEMA_ERROR", "verification requires a registered exec tool") };
+          return specs.map(() => ({ status: "denied", error: errorInfo("TOOL_SCHEMA_ERROR", "verification requires a registered exec tool") }));
         }
-        const id = newToolCallId();
-        const args = { command: spec.command, ...(spec.args !== undefined ? { args: [...spec.args] } : {}), timeoutMs: 120_000 };
-        const call: ToolCall = { id, name: "exec", args };
-        // Thinking APIs require a reasoning field on every assistant tool-call
-        // record in a thinking conversation. A host command has no generated
-        // chain: send an empty field only after this provider actually emitted
-        // reasoning, preserving the plain OpenAI wire shape otherwise.
+        const calls: ToolCall[] = specs.map(spec => ({
+          id: newToolCallId(),
+          name: "exec",
+          args: { command: spec.command, ...(spec.args !== undefined ? { args: [...spec.args] } : {}), timeoutMs: 120_000 },
+        }));
         const thinkingConversation = (await this.store.listMessages(ctx.sessionId))
           .some(message => message.role === "assistant" && message.reasoningContent !== undefined);
-        // A host verification command is a real tool execution. Preserve its
-        // request/result pair so the next model call can diagnose a failure;
-        // never promote captured stdout/stderr into a system instruction.
+        // Persist the entire request before dispatch. All results belong to this
+        // single assistant message, even if the processes finish out of order.
         await this.store.appendMessage({ id: newMessageId(), sessionId: ctx.sessionId, turnId: ctx.turnId,
-          role: "assistant", content: "", toolCalls: [call], ...(thinkingConversation ? { reasoningContent: "" } : {}), createdAt: this.now() });
-        let result: ToolResult;
-        try { result = await this.orchestrator.executeBound({
-          id, sessionId: ctx.sessionId, turnId: ctx.turnId, agentId: ctx.agent.id,
-          call: { id, name: "exec", args },
-          binding: {
-            name: "exec", spec: { name: "exec", description: definition.description, inputSchema: { type: "object" } },
-            definition: { ...definition, execute: (input, context) => context.sandboxPolicy.filesystem.mode === "read-only"
-              ? Promise.resolve({ status: "denied", error: errorInfo("SANDBOX_DENIED", "verification process cannot run in a read-only workspace") })
-              : definition.execute(input, context) },
-            semantics: this.semanticsOf("exec"), provenance: { kind: "builtin" },
-          },
-        }, {
-          sessionId: ctx.sessionId, turnId: ctx.turnId, agentId: ctx.agent.id,
-          cwd: ctx.session.cwd, signal: ctx.signal,
-          permissions: ctx.agent.permissions, sandboxPolicy: this.sandboxPolicy ?? defaultSandboxPolicy(),
-        }); } catch (error) {
-          rethrowIfKill(error);
-          result = { status: "failed", error: errorInfo("INTERNAL_ERROR", error instanceof Error ? error.message : String(error)) };
+          role: "assistant", content: "", toolCalls: calls, ...(thinkingConversation ? { reasoningContent: "" } : {}), createdAt: this.now() });
+        const results = await Promise.all(calls.map(async (call): Promise<ToolResult> => {
+          try {
+            return await this.orchestrator.executeBound({
+              id: call.id, sessionId: ctx.sessionId, turnId: ctx.turnId, agentId: ctx.agent.id, call,
+              binding: {
+                name: "exec", spec: { name: "exec", description: definition.description, inputSchema: { type: "object" } },
+                definition: { ...definition, execute: (input, context) => context.sandboxPolicy.filesystem.mode === "read-only"
+                  ? Promise.resolve({ status: "denied", error: errorInfo("SANDBOX_DENIED", "verification process cannot run in a read-only workspace") })
+                  : definition.execute(input, context) },
+                semantics: this.semanticsOf("exec"), provenance: { kind: "builtin" },
+              },
+            }, {
+              sessionId: ctx.sessionId, turnId: ctx.turnId, agentId: ctx.agent.id,
+              cwd: ctx.session.cwd, signal: ctx.signal,
+              permissions: ctx.agent.permissions, sandboxPolicy: this.sandboxPolicy ?? defaultSandboxPolicy(),
+            });
+          } catch (error) {
+            rethrowIfKill(error);
+            return { status: "failed", error: errorInfo("INTERNAL_ERROR", error instanceof Error ? error.message : String(error)) };
+          }
+        }));
+        for (const [index, call] of calls.entries()) {
+          const content = await this.contextController.renderToolResultForContext(ctx, call, results[index]!);
+          await this.store.appendMessage({ id: newMessageId(), sessionId: ctx.sessionId, turnId: ctx.turnId,
+            role: "tool", content, toolCallId: call.id, createdAt: this.now() });
         }
-        const content = await this.contextController.renderToolResultForContext(ctx, call, result);
-        await this.store.appendMessage({ id: newMessageId(), sessionId: ctx.sessionId, turnId: ctx.turnId,
-          role: "tool", content, toolCallId: id, createdAt: this.now() });
-        return result as ToolResult<{ exitCode: number | null; durationMs: number }>;
+        return results as ToolResult<{ exitCode: number | null; durationMs: number }>[];
       },
       task: this.task,
       verifier: this.verifier,
       store: this.store,
-      now: () => this.now(),
       changedPathsProvider: this.changedPathsProvider,
       baselineFilesProvider: this.baselineFilesProvider,
       ...(this.verificationPlanner !== undefined
@@ -1076,7 +1076,7 @@ export class AgentRuntime {
       }
       const agent = await this.resolveAgent(session);
       const state = new AgentState(sessionId, agent.id, this.now); state.beginTurn(turnId);
-      const outcome = await this.recoveryController.finishTurn({ sessionId, turnId, session, agent, signal: new AbortController().signal },
+      const outcome = await this.recoveryController.finishTurn({ sessionId, turnId, turnStartedAt: turn.startedAt, session, agent, signal: new AbortController().signal },
         "cancelled", state, newWorkingState(turn.input.text), undefined, "cancelled", []);
       await this.flushDurability(sessionId);
       return outcome;
@@ -1690,7 +1690,7 @@ export class AgentRuntime {
 
   /**
    * Q-1: turn initialization extracted from runTurn — resolves the session,
-   * agent and turn (throwing AgentError on unknown ids), bundles the five
+   * agent and turn (throwing AgentError on unknown ids), bundles the
    * read-only values into the TurnContext, and creates the per-turn mutable
    * accumulators: AgentState (with beginTurn applied), the working state
    * (seeded from the restored checkpoint on resume, else the turn input),
@@ -1706,9 +1706,6 @@ export class AgentRuntime {
     if (!session) throw new AgentError(errorInfo("INTERNAL_ERROR", `unknown session ${sessionId}`));
     const agent = await this.resolveAgent(session);
 
-    // Q-1: bundle the five read-only turn values into a single context object.
-    const ctx: TurnContext = { sessionId, turnId, signal, session, agent };
-
     const state = new AgentState(sessionId, session.agentId, this.now);
     state.beginTurn(turnId);
     state.seedProgress(opts.iterationSeed ?? 0, opts.toolCallsExecutedSeed ?? 0);
@@ -1718,6 +1715,7 @@ export class AgentRuntime {
     }
     const turn = await this.store.getTurn(turnId);
     if (!turn) throw new AgentError(errorInfo("INTERNAL_ERROR", `unknown turn ${turnId}`));
+    const ctx: TurnContext = { sessionId, turnId, turnStartedAt: turn.startedAt, signal, session, agent };
     // P1-4: a resuming turn seeds its working state from the restored
     // checkpoint instead of the (resume) input text; otherwise a fresh
     // per-turn working state is the single run-state structure — the
@@ -2203,7 +2201,7 @@ export class AgentRuntime {
       // preserving its failed record while continuing in a fresh turn.
       const state = new AgentState(sessionId, agent.id, this.now); state.beginTurn(original.id);
       state.seedProgress(checkpoint.iteration, (checkpoint.toolCallsExecuted ?? checkpoint.toolLedger.length) + replayedToolLedger.length);
-      const outcome = await this.recoveryController.finishTurn({ sessionId, turnId: original.id, session, agent, signal },
+      const outcome = await this.recoveryController.finishTurn({ sessionId, turnId: original.id, turnStartedAt: original.startedAt, session, agent, signal },
         original.terminalOutcome.status, state, working);
       return { sessionId, checkpointId: checkpoint.checkpointId, turnId: original.id, state: working,
         committedSideEffects, unresolvedTools, replayedEventCount, outcome };

@@ -62,6 +62,7 @@ function ctx(sessionId: SessionId, turnId: TurnId): TurnContext {
   return {
     sessionId,
     turnId,
+    turnStartedAt: 1,
     signal: new AbortController().signal,
     session: {
       id: sessionId,

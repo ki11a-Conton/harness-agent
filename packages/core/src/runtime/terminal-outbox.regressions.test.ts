@@ -38,7 +38,7 @@ async function setup(events = new MemoryEventStore()) {
   const session = await h.engine.createSession({ agent: AGENT, cwd: "/terminal-outbox" });
   const turn = await h.engine.startTurn(session.id, "finish");
   const state = new AgentState(session.id, AGENT.id, () => 1); state.beginTurn(turn.id);
-  const ctx = { sessionId: session.id, turnId: turn.id, session, agent: AGENT, signal: new AbortController().signal };
+  const ctx = { sessionId: session.id, turnId: turn.id, turnStartedAt: turn.startedAt, session, agent: AGENT, signal: new AbortController().signal };
   const controller = (journal: EventStore = events) => new RecoveryController({ store, events: journal,
     emit: (sessionId, type, payload, turnId) => journal.appendNew({ id: `legacy-${type}` as never, sessionId, type, payload, turnId, timestamp: 1000 }),
     now: () => 1000, semanticsOf: () => DEFAULT_TOOL_SEMANTICS });

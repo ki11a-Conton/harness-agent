@@ -50,6 +50,7 @@ import { classifyCommand } from "./command-classification.js";
 export interface TurnContext {
   readonly sessionId: SessionId;
   readonly turnId: TurnId;
+  readonly turnStartedAt: number;
   readonly signal: AbortSignal;
   readonly session: Session;
   readonly agent: AgentDefinition;

@@ -80,3 +80,77 @@ it("C04: changing the project test recipe invalidates the previous passing verif
     expect((await run()).terminationReason).toBe("verification_failed");
   } finally { await h.close(); }
 });
+
+it("keeps both parallel verification results in the session and the repair request", async () => {
+  const cwd = await fixture();
+  // Each command needs its peer to start. A sequential dispatcher would time out.
+  await writeFile(join(cwd, "check.cjs"), `
+    const fs = require("node:fs");
+    const [name, peer] = process.argv.slice(2);
+    fs.writeFileSync(name, "");
+    const deadline = setTimeout(() => process.exit(9), 5000);
+    const poll = setInterval(() => {
+      if (!fs.existsSync(peer)) return;
+      clearTimeout(deadline);
+      clearInterval(poll);
+      console.log("diagnostic-" + name);
+      process.exitCode = name === "first" ? 1 : 0;
+    }, 10);
+  `);
+  const provider = new ScriptedModelProvider(Array.from({ length: 8 }, () => ScriptedModelProvider.text("done")));
+  const seen: ModelRequest[] = [];
+  const original = provider.createClient.bind(provider);
+  provider.createClient = (model, config) => {
+    const client = original(model, config);
+    return { async *generate(request, signal) { seen.push(request as ModelRequest); yield* client.generate(request, signal); } };
+  };
+  const h = await createHarness({ cwd, profile: "test", modelProvider: provider,
+    model: { providerId: provider.id, modelId: "scripted-model" },
+    task: { id: "parallel-checks", goal: "verify both checks", verification: [
+      { kind: "command", command: process.execPath, args: ["check.cjs", "first", "second"] },
+      { kind: "command", command: process.execPath, args: ["check.cjs", "second", "first"] },
+    ] },
+  });
+  try {
+    const session = await h.runtime.createSession({ agent: h.agents[0]!, cwd });
+    const turn = await h.runtime.startTurn(session.id, "verify");
+    const outcome = await h.runtime.runTurn(session.id, turn.id, new AbortController().signal);
+    expect(outcome.terminationReason).toBe("verification_failed");
+    assertToolProtocol(await h.store.listMessages(session.id));
+    const retry = seen[1]!;
+    assertToolProtocol(retry.messages);
+    const diagnostics = retry.messages.filter(m => m.role === "tool").map(m => m.content);
+    expect(diagnostics).toEqual(expect.arrayContaining([
+      expect.stringContaining("diagnostic-first"), expect.stringContaining("diagnostic-second"),
+    ]));
+    const steps = (await h.events.list(session.id)).filter(e => e.type === "verification.step_completed");
+    expect(steps.length).toBeGreaterThanOrEqual(2);
+    expect(steps.every(e => e.turnId === turn.id)).toBe(true);
+  } finally { await h.close(); }
+});
+
+it("reports the stored turn start time on every verification attempt", async () => {
+  const cwd = await fixture();
+  const times: number[] = [];
+  let clock = Date.now();
+  const provider = new ScriptedModelProvider(Array.from({ length: 3 }, () => ScriptedModelProvider.text("done")));
+  const h = await createHarness({ cwd, profile: "test", modelProvider: provider,
+    model: { providerId: provider.id, modelId: "scripted-model" }, now: () => clock,
+    task: { id: "timed-check", goal: "verify the current run" },
+    verification: { verifier: { async verify(_task, context) {
+      times.push(context.runStartedAt);
+      const passed = times.length === 2;
+      return { level: passed ? 3 : 1, passed,
+        checks: [{ id: "time", kind: "review", description: "verify the run", passed }],
+        evidence: [], startedAt: clock, completedAt: clock };
+    } } },
+  });
+  try {
+    const session = await h.runtime.createSession({ agent: h.agents[0]!, cwd });
+    const turn = await h.runtime.startTurn(session.id, "verify");
+    clock += 100;
+    const outcome = await h.runtime.runTurn(session.id, turn.id, new AbortController().signal);
+    expect(outcome.terminationReason).toBe("verified_complete");
+    expect(times).toEqual([turn.startedAt, turn.startedAt]);
+  } finally { await h.close(); }
+});

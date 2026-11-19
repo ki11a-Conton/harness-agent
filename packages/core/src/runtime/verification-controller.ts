@@ -20,12 +20,34 @@ export interface VerificationGateResult {
   evidence?: CompletionEvidence;
 }
 
+type Command = Extract<VerificationSpec, { kind: "command" }>;
+type CommandResult = Awaited<ReturnType<NonNullable<VerificationContext["executeCommand"]>>>;
+
+// A verifier may request several commands together or choose its next command
+// after seeing a result. Each group owns one complete assistant/tool block.
+// Keep this queue local to this invocation so sessions never share a transcript.
+function groupCommands(run: (commands: readonly Command[]) => Promise<CommandResult[]>): NonNullable<VerificationContext["executeCommand"]> {
+  let pending: Command[] | undefined;
+  let results: Promise<CommandResult[]> = Promise.resolve([]);
+  return command => {
+    if (pending === undefined) {
+      const batch: Command[] = [];
+      pending = batch;
+      results = results.then(() => {
+        pending = undefined;
+        return run(batch);
+      });
+    }
+    const index = pending.push(command) - 1;
+    return results.then(batch => batch[index]!);
+  };
+}
+
 export interface VerificationControllerDeps {
-  executeCommand?: (ctx: TurnContext, spec: Extract<VerificationSpec, { kind: "command" }>) => ReturnType<NonNullable<VerificationContext["executeCommand"]>>;
+  executeCommands?: (ctx: TurnContext, commands: readonly Command[]) => Promise<CommandResult[]>;
   task?: TaskSpec;
   verifier?: Verifier;
   store: SessionStore;
-  now: () => number;
   changedPathsProvider?: () => readonly string[];
   baselineFilesProvider?: () => readonly string[];
   /**
@@ -88,6 +110,7 @@ export class VerificationController {
         cwd: session.cwd,
       });
     }
+    const executeCommands = this.deps.executeCommands;
     const gate = await new RuntimeVerifier(this.deps.verifier).verifyTurn(
       verification === undefined ? task : { ...task, verification },
       session.id,
@@ -95,9 +118,9 @@ export class VerificationController {
       this.deps.store,
       {
         signal: ctx.signal,
-        ...(this.deps.executeCommand !== undefined ? { executeCommand: (spec: Extract<VerificationSpec, { kind: "command" }>) => this.deps.executeCommand!(ctx, spec) } : {}),
+        ...(executeCommands && { executeCommand: groupCommands(commands => executeCommands(ctx, commands)) }),
         cwd: session.cwd,
-        runStartedAt: this.deps.now(),
+        runStartedAt: ctx.turnStartedAt,
         changedPaths: changed,
         ...(this.deps.baselineFilesProvider !== undefined
           ? { baselineFiles: [...this.deps.baselineFilesProvider()] }

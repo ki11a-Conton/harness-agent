@@ -4,6 +4,7 @@ import type {
   AgentErrorInfo,
   SessionId,
   TaskSpec,
+  TurnId,
   VerificationContext,
   VerificationResult,
   VerificationSpec,
@@ -27,6 +28,7 @@ export interface TaskVerifierDeps {
     passed?: boolean;
     detail?: string;
     sessionId?: SessionId;
+    turnId?: TurnId;
   }) => void;
 }
 
@@ -85,6 +87,7 @@ export class TaskVerifier implements Verifier {
       kind: spec.kind,
       description: spec.description ?? spec.kind,
       sessionId: context.sessionId,
+      turnId: context.turnId,
     });
     context.signal?.throwIfAborted();
     const check = await (() => {
@@ -107,6 +110,7 @@ export class TaskVerifier implements Verifier {
       passed: check.passed,
       detail: check.evidence?.description,
       sessionId: context.sessionId,
+      turnId: context.turnId,
     });
     return check;
   }
