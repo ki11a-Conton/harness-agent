@@ -109,6 +109,7 @@ function makeLoop(
     maxToolCalls?: number;
     maxIterationsPerTurn?: number;
     maxVerificationFailures?: number;
+    now?: () => number;
     toolSemanticsOf?: (name: string) => ToolSemantics;
     orchResult?: { status: "success" | "failed"; output?: string; error?: ReturnType<typeof errorInfo> };
     changedPaths?: () => readonly string[];
@@ -132,6 +133,7 @@ function makeLoop(
     ],
     maxIterationsPerTurn: overrides.maxIterationsPerTurn,
     maxVerificationFailures: overrides.maxVerificationFailures,
+    now: overrides.now,
     recovery: overrides.recovery,
     task: overrides.task,
     verifier: overrides.verifier,
@@ -144,8 +146,8 @@ function makeLoop(
   return { store, events, orch, runtime };
 }
 
-async function runLoop(runtime: AgentRuntime, store: MemorySessionStore, text = "please do the task") {
-  const session = await runtime.createSession({ agent: AGENT, cwd: "C:\\work" });
+async function runLoop(runtime: AgentRuntime, store: MemorySessionStore, text = "please do the task", agent = AGENT) {
+  const session = await runtime.createSession({ agent, cwd: "C:\\work" });
   const turn = await runtime.startTurn(session.id, text);
   const outcome = await runtime.runTurn(session.id, turn.id, new AbortController().signal);
   return { session, turn, outcome };
@@ -219,6 +221,46 @@ describe("LOOP-001 full agent loop (integration)", () => {
     expect(stored.map((e) => e.type)).toContain("verification.failed");
     const limit = stored.find((e) => e.type === "run.limit_reached");
     expect(limit?.payload.limit).toBe("maxVerificationFailures");
+  });
+
+  it.each(["passed", "failed"] as const)("checks verification once with zero retries, including a %s check", async verdict => {
+    const h = makeLoop([ScriptedModelProvider.text("ready for verification")], {
+      task: FAKE_TASK, verifier: listVerifier(verdict), maxVerificationFailures: 0,
+    });
+    const { session, outcome } = await runLoop(h.runtime, h.store);
+    expect(outcome.terminationReason).toBe(verdict === "passed" ? "verified_complete" : "verification_failed");
+    const events = await h.events.list(session.id);
+    expect(events.filter(event => event.type === "model.completed")).toHaveLength(1);
+    expect(events.filter(event => event.type === "verification.failed")).toHaveLength(verdict === "failed" ? 1 : 0);
+  });
+
+  it("allows a turn without a verifier with zero verification retries", async () => {
+    const h = makeLoop([ScriptedModelProvider.text("ready")], { maxVerificationFailures: 0 });
+    const { outcome } = await runLoop(h.runtime, h.store);
+    expect(outcome.terminationReason).toBe("model_stopped");
+  });
+
+  it.each([500, 501])("enforces a 500ms turn limit after verification takes %sms", async duration => {
+    let now = 1000;
+    const passingVerifier = listVerifier("passed");
+    const h = makeLoop([ScriptedModelProvider.text("ready for verification")], {
+      task: FAKE_TASK, now: () => now,
+      verifier: { async verify(task, context) {
+        now += duration;
+        return passingVerifier.verify(task, context);
+      } },
+    });
+    const agent = { ...AGENT, limits: { maxDurationMs: 500 } };
+    const { session, outcome } = await runLoop(h.runtime, h.store, undefined, agent);
+    const events = await h.events.list(session.id);
+    if (duration > 500) {
+      expect(outcome).toMatchObject({ status: "failed", terminationReason: "time_limit", error: { code: "RESOURCE_LIMIT" } });
+      expect(events.some(event => event.type === "verification.completed")).toBe(false);
+      expect(events.find(event => event.type === "run.limit_reached")?.payload)
+        .toMatchObject({ limit: "maxDurationMs", allowed: 500, used: duration });
+    } else {
+      expect(outcome).toMatchObject({ status: "completed", terminationReason: "verified_complete" });
+    }
   });
 
   it("VERIFY-001 (plan.md Phase 4): a failed gate injects an observation and the loop continues; a later pass completes", async () => {

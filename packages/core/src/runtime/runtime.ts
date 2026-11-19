@@ -705,7 +705,8 @@ export class AgentRuntime {
       deps.enabledStallPatterns ?? DEFAULT_ENABLED_STALL_PATTERNS,
     );
     this.maxPatternStallRecoveries = deps.maxPatternStallRecoveries ?? 1;
-    this.maxVerificationFailures = deps.maxVerificationFailures ?? 3;
+    // Zero retries still allows the initial check.
+    this.maxVerificationFailures = Math.max(1, deps.maxVerificationFailures ?? 3);
     this.maxParallelToolCalls = deps.maxParallelToolCalls ?? 4;
     this.toolSemanticsOf = deps.toolSemanticsOf;
     this.resourceConflictOf = deps.resourceConflictOf;
@@ -1229,13 +1230,12 @@ export class AgentRuntime {
       event.type === "model.completed" && event.payload.purpose !== "compaction").length;
     const modelCompletions = replay.filter(event => event.type === "model.completed" && event.payload.purpose !== "compaction");
     const budgetSeed = replayCheckpointBudget(checkpoint, usage.run, turnEvents);
-    const failedVerifications = replay.filter(event => event.type === "verification.failed");
     return { continuing: true, options: { ...opts, initialState: recovered.working,
       toolLedgerSeed: [...checkpoint.toolLedger, ...recovered.replayedToolLedger],
       iterationSeed: Math.max(checkpoint.iteration, completedThroughCheckpoint) + modelCompletions.length,
       toolCallsExecutedSeed: (checkpoint.toolCallsExecuted ?? checkpoint.toolLedger.length) + recovered.replayedToolLedger.length,
       budgetSeed, recoveryUsageSeed: usage.recoveryUsage,
-      verificationRetriesSeed: (usage.verificationRetries ?? 0) + failedVerifications.length,
+      verificationRetriesSeed: (usage.verificationRetries ?? 0) + recovered.replayedVerificationFailures,
       stallRecoverySeed: usage.stallRecoveryCount } };
   }
 
@@ -2193,7 +2193,7 @@ export class AgentRuntime {
     }
 
     const turnId = checkpoint.turnId;
-    const { working, committedSideEffects, replayedToolLedger, unresolvedTools, replayedEventCount } =
+    const { working, committedSideEffects, replayedToolLedger, unresolvedTools, replayedEventCount, replayedVerificationFailures } =
       await this.recoveryController.reconstructResumeState(sessionId, turnId, checkpoint);
     const original = turnId === undefined ? undefined : await this.store.getTurn(turnId);
     if (original?.terminalOutcome !== undefined && (original.status === "completed" || original.status === "cancelled")) {
@@ -2254,6 +2254,7 @@ export class AgentRuntime {
     }
     const resumePrompt = buildResumePrompt(working, committedSideEffects, unresolvedTools, verdicts, interruptedUsers);
     const bu = checkpoint.budgetUsage;
+    const verificationRetriesSeed = (bu?.verificationRetries ?? 0) + replayedVerificationFailures;
     const budgetSeed = bu?.run === undefined ? undefined : replayCheckpointBudget(checkpoint, bu.run,
       await this.events.list(sessionId, { afterSequence: checkpoint.lastEventSequence }));
     const turn = await this.startTurn(sessionId, resumePrompt);
@@ -2261,7 +2262,7 @@ export class AgentRuntime {
       initialState: working,
       ...(budgetSeed !== undefined ? { budgetSeed } : {}),
       ...(bu?.recoveryUsage !== undefined ? { recoveryUsageSeed: bu.recoveryUsage } : {}),
-      ...(bu?.verificationRetries !== undefined ? { verificationRetriesSeed: bu.verificationRetries } : {}),
+      verificationRetriesSeed,
       ...(bu?.stallRecoveryCount !== undefined ? { stallRecoverySeed: bu.stallRecoveryCount } : {}),
     });
     await this.emit(sessionId, "session.resumed", {

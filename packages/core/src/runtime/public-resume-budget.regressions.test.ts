@@ -27,11 +27,11 @@ async function setup(limits: RunLimits = {}, scripts = [ScriptedModelProvider.te
   const session = await runtime.createSession({ agent, cwd: "/work" });
   const turn = await runtime.startTurn(session.id, "finish the change");
   const budget = new RunBudgetTracker(limits, () => 0); budget.onTurnStart();
-  async function checkpoint(run: RunBudget = budget.snapshot()) {
+  async function checkpoint(run: RunBudget = budget.snapshot(), verificationRetries?: number) {
     const checkpoint = buildCheckpoint({ checkpointId: newCheckpointId(), schemaVersion: 1, sessionId: session.id, turnId: turn.id,
       agentId: agent.id, createdAt: 0, reason: "iteration", phase: "thinking", iteration: 1, toolCallsExecuted: 0,
       state: newWorkingState(turn.input.text), toolLedger: [], childSessions: [], lastEventSequence: (await events.nextSequence(session.id)) - 1,
-      effectiveAgentConfigRef: "effectiveAgent", contextRefs: [], budgetUsage: { maxTokens: 0, run } });
+      effectiveAgentConfigRef: "effectiveAgent", contextRefs: [], budgetUsage: { maxTokens: 0, run, ...(verificationRetries !== undefined ? { verificationRetries } : {}) } });
     await checkpointStore.save(checkpoint);
     return checkpoint;
   }
@@ -91,6 +91,27 @@ describe("public recovery preserves durable task consumption across its fresh tu
     expect((await h.resume()).outcome.status).toBe("completed");
     expect(h.provider.calls).toHaveLength(1);
     expect(h.checkpointStore.saved[0]).toEqual(original);
+  });
+
+  it.each([1, 2])("counts only post-checkpoint verification failures from the source turn with %s already spent", async spent => {
+    const h = await setup();
+    await h.event("verification.failed", { error: "before checkpoint" });
+    await h.checkpoint(undefined, spent);
+    await h.event("verification.failed", { error: "another turn" }, newTurnId());
+    await h.event("verification.failed", { error: "source turn after checkpoint" });
+    const result = await h.resume();
+    expect(result.outcome.turn.id).not.toBe(h.turn.id);
+    if (spent === 2) {
+      expect(result.outcome.terminationReason).toBe("verification_failed");
+      expect(result.outcome.error?.message).toBe("verification: source turn after checkpoint");
+      expect(h.provider.calls).toHaveLength(0);
+      expect(h.prefetches()).toBe(0);
+      expect(h.events.events.find(event => event.type === "run.limit_reached")?.payload)
+        .toMatchObject({ limit: "maxVerificationFailures", used: 3, allowed: 3 });
+    } else {
+      expect(result.outcome.terminationReason).toBe("model_stopped");
+      expect(h.provider.calls).toHaveLength(1);
+    }
   });
 
   it("charges compaction cost before resuming but does not count its summary as answer output", async () => {

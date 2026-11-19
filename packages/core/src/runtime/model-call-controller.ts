@@ -336,6 +336,15 @@ export class ModelCallController {
       }
     };
 
+    const finishAtDurationLimit = async (elapsed: number): Promise<CompletionResult> => {
+      await this.deps.emit(sessionId, "run.limit_reached", { limit: "maxDurationMs", used: elapsed, allowed: agent.limits.maxDurationMs }, turnId);
+      return { action: "finish", outcome: await this.deps.finishTurn(
+        ctx, "failed", state, working,
+        errorInfo("RESOURCE_LIMIT", `maxDurationMs (${agent.limits.maxDurationMs}ms) exceeded after ${elapsed}ms`),
+        "time_limit", toolLedger,
+      ) };
+    };
+
     const completionBreach = await accountCompletion?.();
     // Even a response that cannot proceed has completed and consumed usage.
     // Preserve the original terminal reason only after the durable call and
@@ -346,12 +355,7 @@ export class ModelCallController {
     }
     if (wallElapsedAfterModel !== undefined) {
       await settleUnexecutedToolCalls(call => `[not executed] the completed model call exceeded the turn duration; "${call.name}" did not run.`);
-      await this.deps.emit(sessionId, "run.limit_reached", { limit: "maxDurationMs", used: wallElapsedAfterModel, allowed: agent.limits.maxDurationMs }, turnId);
-      return { action: "finish", outcome: await this.deps.finishTurn(
-        ctx, "failed", state, working,
-        errorInfo("RESOURCE_LIMIT", `maxDurationMs (${agent.limits.maxDurationMs}ms) exceeded after ${wallElapsedAfterModel}ms`),
-        "time_limit", toolLedger,
-      ) };
+      return finishAtDurationLimit(wallElapsedAfterModel);
     }
     if (malformedFailure !== undefined) {
       await this.deps.emit(sessionId, "model.failed", { error: malformedFailure }, turnId);
@@ -387,6 +391,8 @@ export class ModelCallController {
       if (signal.aborted) {
         return { action: "finish", outcome: await this.deps.finishTurn(ctx, "cancelled", state, working, undefined, "cancelled", toolLedger) };
       }
+      const wallElapsedAfterVerification = this.deps.wallClockExceeded(agent, turn);
+      if (wallElapsedAfterVerification !== undefined) return finishAtDurationLimit(wallElapsedAfterVerification);
       if (gate !== undefined) {
         if (gate.status !== "passed") {
           verificationFailures += 1;

@@ -508,6 +508,7 @@ export class RecoveryController {
     replayedToolLedger: ToolExecutionRecord[];
     unresolvedTools: UnresolvedToolExecution[];
     replayedEventCount: number;
+    replayedVerificationFailures: number;
   }> {
     const working: WorkingState = structuredClone(checkpoint.state) as WorkingState;
     const events = (await this.deps.events.list(sessionId, { afterSequence: checkpoint.lastEventSequence }))
@@ -622,12 +623,16 @@ export class RecoveryController {
       replayedToolLedger.push(record);
       if (sideEffect && status === "success") committedSideEffects.push(record);
     }
+    let replayedVerificationFailures = 0;
     for (const event of events) {
-      if (event.type === "verification.failed" && typeof event.payload.error === "string") {
+      if (event.type !== "verification.failed") continue;
+      // Old checkpoints without a turn ID cannot attribute the failure count.
+      if (turnId !== undefined) replayedVerificationFailures += 1;
+      if (typeof event.payload.error === "string") {
         working.failures.push(`verification: ${event.payload.error}`);
       }
     }
 
-    return { working, committedSideEffects, replayedToolLedger, unresolvedTools, replayedEventCount };
+    return { working, committedSideEffects, replayedToolLedger, unresolvedTools, replayedEventCount, replayedVerificationFailures };
   }
 }
