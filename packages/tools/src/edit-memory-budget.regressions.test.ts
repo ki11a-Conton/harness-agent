@@ -47,3 +47,52 @@ it("edits eight million short lines and returns a bounded receipt inside a 64MiB
     expect(child.stderr).toBe(""); expect(await fs.readFile(target, "utf8")).toBe(original.replace("MARKER=1", "MARKER=2"));
   } finally { await fs.rm(root, { recursive: true, force: true, maxRetries: process.platform === "win32" ? 8 : 0, retryDelay: 50 }); }
 });
+
+it.each(["line range", "last occurrence"] as const)("edits a dense generated file by %s inside a 64 MiB Node heap", async mode => {
+  const root = await fs.realpath(await fs.mkdtemp(join(tmpdir(), "ar-edit-offsets-")));
+  const target = join(root, "generated.txt");
+  const count = 8_000_000;
+  const range = mode === "line range";
+  const body = range ? "MARKER=1;\n" + "\n".repeat(12_000_000) : "a".repeat(count);
+  const expected = range ? body.replace("MARKER=1;", "MARKER=2;") : "a".repeat(count - 1) + "b";
+  const edit = range
+    ? { lineStart: 1, lineEnd: 1, replacement: "MARKER=2;" }
+    : { oldText: "a", newText: "b", occurrence: count };
+  try {
+    await fs.writeFile(target, body);
+    const program = `
+      import assert from "node:assert/strict";
+      import { createHash } from "node:crypto";
+      import { readFile } from "node:fs/promises";
+      import { ToolOrchestrator } from ${JSON.stringify(new URL("../dist/orchestrator.js", import.meta.url).href)};
+      import { ToolRegistry } from ${JSON.stringify(new URL("../dist/registry.js", import.meta.url).href)};
+      import { editFileTool } from ${JSON.stringify(new URL("../dist/tools/edit-file.js", import.meta.url).href)};
+      const [target, cwd, serializedEdit] = process.argv.slice(1);
+      const sha256 = async () => createHash("sha256").update(await readFile(target)).digest("hex");
+      const expectedSha256 = await sha256();
+      const registry = new ToolRegistry();
+      registry.register(editFileTool);
+      const orchestrator = new ToolOrchestrator({ registry, workspaceRoot: cwd });
+      const context = { cwd, sessionId: "session_fixture", turnId: "turn_fixture", agentId: "agent_fixture",
+        signal: new AbortController().signal,
+        permissions: { rules: [{ action: "*", resource: "*", effect: "allow" }] },
+        sandboxPolicy: { filesystem: { mode: "workspace-write", allowedPaths: [cwd] }, network: { mode: "deny" }, process: {} } };
+      const id = "toolcall_fixture";
+      const { sessionId, turnId, agentId } = context;
+      const result = await orchestrator.execute({ id, sessionId, turnId, agentId,
+        call: { id, name: "edit_file", args: { path: target, expectedSha256, profile: "strict", ...JSON.parse(serializedEdit) } } },
+        context);
+      assert.equal(result.status, "success", JSON.stringify(result.error));
+      assert.equal(result.output.sha256, await sha256());
+      console.log(JSON.stringify(result.output));
+    `;
+    const child = await execute(process.execPath,
+      ["--max-old-space-size=64", "--input-type=module", "-e", program, target, root, JSON.stringify(edit)],
+      { timeout: 20000, maxBuffer: 64 * 1024 });
+    expect(JSON.parse(child.stdout)).toMatchObject(range ? { replacedLines: 1 } : { replacements: 1 });
+    expect(child.stderr).toBe("");
+    expect(Buffer.compare(await fs.readFile(target), Buffer.from(expected))).toBe(0);
+  } finally {
+    await fs.rm(root, { recursive: true, force: true, maxRetries: 8, retryDelay: 50 });
+  }
+});

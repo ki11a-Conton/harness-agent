@@ -36,20 +36,6 @@ export interface ApplyResult {
   error?: string;
 }
 
-/** Locate every start index of `old` in `content` (non-overlapping). */
-function allMatchesIndexes(content: string, old: string): number[] {
-  const res: number[] = [];
-  if (old.length === 0) return res;
-  let i = 0;
-  for (;;) {
-    const k = content.indexOf(old, i);
-    if (k < 0) break;
-    res.push(k);
-    i = k + old.length;
-  }
-  return res;
-}
-
 /** Match CRLF and LF in one view while retaining original offsets.
  * No other Unicode or punctuation normalization is performed. */
 function lfView(content: string): { text: string; originalOffset: (index: number) => number } {
@@ -108,37 +94,35 @@ export function applyReplace(
   const view = lfView(body);
   const includesBom = bom.length > 0 && oldText.startsWith(bom);
   const anchor = oldText.slice(includesBom ? bom.length : 0).replace(/\r\n/g, "\n");
-  const matches = allMatchesIndexes(view.text, anchor).filter((index) => !includesBom || index === 0);
-  if (matches.length === 0) {
-    return { ok: false, content, count: 0, matched: 0, error: "anchor not found" };
-  }
-
-  const occurrence = options.occurrence;
-  if (!options.replaceAll && occurrence !== undefined) {
-    if (occurrence < 1 || occurrence > matches.length) {
-      return {
-        ok: false,
-        content,
-        count: 0,
-        matched: matches.length,
-        error: `occurrence ${occurrence} out of range (file has ${matches.length})`,
-      };
-    }
-  }
   // Splice original blocks; each occurrence gets its own local EOL, so
   // replaceAll does not homogenize an existing mixed-EOL file.
-  const selected = options.replaceAll ? matches : [matches[(occurrence ?? 1) - 1]!];
+  const occurrence = options.occurrence ?? 1;
+  const replacement = includesBom && newText.startsWith(bom) ? newText.slice(bom.length) : newText;
+  const hasLineBreak = replacement.includes("\n");
+  let matched = 0;
+  let count = 0;
   let cursor = 0;
   const parts = [bom];
-  for (const index of selected) {
+  for (let index = anchor.length > 0 ? view.text.indexOf(anchor) : -1;
+    index >= 0 && (!includesBom || index === 0);
+    index = view.text.indexOf(anchor, index + anchor.length)) {
+    matched++;
+    if (!options.replaceAll && matched !== occurrence) continue;
     const start = view.originalOffset(index);
     const end = view.originalOffset(index + anchor.length);
-    const replacement = includesBom && newText.startsWith(bom) ? newText.slice(bom.length) : newText;
-    parts.push(body.slice(cursor, start), replacementEol(replacement, localEol(body, start)));
+    const inserted = hasLineBreak ? replacementEol(replacement, localEol(body, start)) : replacement;
+    parts.push(body.slice(cursor, start), inserted);
     cursor = end;
+    count++;
+  }
+  if (matched === 0) {
+    return { ok: false, content, count: 0, matched, error: "anchor not found" };
+  }
+  if (count === 0) {
+    return { ok: false, content, count, matched, error: `occurrence ${occurrence} out of range (file has ${matched})` };
   }
   parts.push(body.slice(cursor));
-  return { ok: true, content: parts.join(""), count: selected.length, matched: matches.length };
+  return { ok: true, content: parts.join(""), count, matched };
 }
 
 /** A group of unique, disjoint anchors in ONE original file snapshot. */
@@ -210,22 +194,29 @@ export function applyLineRange(
   }
   const bom = content.startsWith("\ufeff") ? "\ufeff" : "";
   const body = content.slice(bom.length);
-  // Include the trailing empty logical line for the existing count/clamp API.
-  const starts = [0];
-  for (let i = 0; i < body.length; i++) if (body[i] === "\n") starts.push(i + 1);
-  const startIndex = Math.min(lineStart - 1, starts.length);
-  const endIndex = Math.min(lineEnd, starts.length);
-  const start = starts[startIndex] ?? body.length;
-  const end = starts[endIndex] ?? body.length;
-  const removedCount = Math.max(0, endIndex - (lineStart - 1));
+  // Keep the trailing empty logical line. Stop once the next line's
+  // offset is known, or use EOF when the requested end must be clamped.
+  let line = 1;
+  let offset = 0;
+  let startOffset: number | undefined;
+  for (; line <= lineEnd; line++) {
+    if (line === lineStart) startOffset = offset;
+    const newline = body.indexOf("\n", offset);
+    if (newline < 0) break;
+    offset = newline + 1;
+  }
+  const hasFollowingLine = line > lineEnd;
+  const start = startOffset ?? body.length;
+  const end = hasFollowingLine ? offset : body.length;
+  const removedCount = Math.max(0, Math.min(lineEnd, line) - lineStart + 1);
   const eol = localEol(body, start);
   let inserted = replacementEol(bom && start === 0 && replacement.startsWith(bom) ? replacement.slice(bom.length) : replacement, eol);
   let head = body.slice(0, start);
   if (inserted.length > 0) {
-    if (startIndex === starts.length) {
+    if (startOffset === undefined) {
       // Preserve the legacy out-of-bounds start behavior: append a new line.
       inserted = eol + inserted;
-    } else if (endIndex < starts.length) {
+    } else if (hasFollowingLine) {
       // The final touched line separates replacement from the untouched tail.
       const boundary = body[end - 2] === "\r" ? "\r\n" : "\n";
       inserted += boundary;
@@ -233,7 +224,7 @@ export function applyLineRange(
       // Replacing through EOF retains the original terminal newline.
       inserted += body.endsWith("\r\n") ? "\r\n" : "\n";
     }
-  } else if (endIndex === starts.length && !body.endsWith("\n") && head.endsWith("\n")) {
+  } else if (!hasFollowingLine && !body.endsWith("\n") && head.endsWith("\n")) {
     // Removing the final unterminated line keeps the preceding line
     // unterminated, as in the existing LF range API.
     head = head.slice(0, head.endsWith("\r\n") ? -2 : -1);
