@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { newAgentId, newToolCallId, type AgentDefinition, type AgentEvent, type Message, type ModelEvent, type RunLimits, type UsageSnapshot } from "@ar/contracts";
+import { assertToolProtocol, newAgentId, newToolCallId, type AgentDefinition, type AgentEvent, type Message, type ModelEvent, type RunLimits, type UsageSnapshot } from "@ar/contracts";
 import { ScriptedModelProvider } from "@ar/model";
 import { AgentRuntime } from "./runtime.js";
 import { MemoryEventStore, MemorySessionStore, defaultTestToolCatalog } from "../test/fakes.js";
@@ -129,4 +129,21 @@ describe("completed model calls remain accounted on early terminal boundaries", 
       expect(h.events.events.some(event => event.type === "tool.requested")).toBe(false);
     }
   });
+});
+
+it("settles every call in a batch rejected by the subagent limit before making any effect", async () => {
+  const calls = [
+    { id: newToolCallId(), name: "write_file", args: { path: "must-not-exist.txt", content: "data" } },
+    { id: newToolCallId(), name: "delegate_agent", args: { goal: "check fixture" } },
+  ];
+  const h = setup([{ type: "completed", timestamp: 0,
+    result: { finishReason: "tool_calls", toolCalls: calls, usage: measured } }], { maxSubagents: 0 });
+  const { session, outcome } = await run(h);
+  const transcript = await h.store.listMessages(session.id);
+  assertToolProtocol(transcript);
+  expect(outcome).toMatchObject({ status: "failed", statusDetail: "failed_no_effect", terminationReason: "agent_limit", toolCalls: 0 });
+  expect(h.orchestrator.calls).toHaveLength(0);
+  const results = transcript.filter(message => message.role === "tool");
+  expect(results.map(message => message.toolCallId)).toEqual(calls.map(call => call.id));
+  expect(results.every(message => message.content.includes("maxSubagents"))).toBe(true);
 });

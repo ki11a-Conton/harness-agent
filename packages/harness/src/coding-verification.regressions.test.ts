@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { afterEach, expect, it } from "vitest";
 import { ScriptedModelProvider } from "@ar/model";
-import { assertToolProtocol, type ModelRequest } from "@ar/contracts";
+import { assertToolProtocol, newToolCallId, type ModelRequest } from "@ar/contracts";
 import { createHarness } from "./create-harness.js";
 
 const roots: string[] = [];
@@ -232,5 +232,43 @@ it.each([
     expect(failures).toHaveLength(fits ? 1 : 3);
     expect(outcome.terminationReason).toBe(fits ? "verified_complete" : "verification_failed");
     expect(await readFile(join(cwd, "value.txt"), "utf8")).toBe(fits ? "42\n" : "41\n");
+  } finally { await h.close(); }
+});
+
+it("keeps a completed write and settles the rest of a serial batch when the turn expires", async () => {
+  const cwd = await fixture();
+  let clock = 1000;
+  const calls = ["first.txt", "second.txt"].map(path => ({
+    id: newToolCallId(), name: "write_file", args: { path, content: "committed\n" },
+  }));
+  const provider = new ScriptedModelProvider([[{ type: "completed", timestamp: clock,
+    result: { finishReason: "tool_calls", toolCalls: calls } }]]);
+  const h = await createHarness({ cwd, profile: "test", modelProvider: provider,
+    model: { providerId: provider.id, modelId: "scripted-model" }, now: () => clock,
+    maxIterationsPerTurn: 1, limits: { maxDurationMs: 500 },
+  });
+  try {
+    const execute = h.orchestrator.executeBound.bind(h.orchestrator);
+    h.orchestrator.executeBound = async (request, context) => {
+      const result = await execute(request, context);
+      if (request.call.id === calls[0]!.id && result.status === "success") clock += 501;
+      return result;
+    };
+    const session = await h.runtime.createSession({ agent: h.agents[0]!, cwd });
+    const turn = await h.runtime.startTurn(session.id, "Write the two fixtures in order.");
+    const outcome = await h.runtime.runTurn(session.id, turn.id, new AbortController().signal);
+    const messages = await h.store.listMessages(session.id);
+    assertToolProtocol(messages);
+    expect(await readFile(join(cwd, "first.txt"), "utf8")).toBe("committed\n");
+    await expect(readFile(join(cwd, "second.txt"), "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+    expect(outcome).toMatchObject({ status: "failed", statusDetail: "failed_with_effects", terminationReason: "time_limit" });
+    const events = await h.events.list(session.id);
+    expect(events.filter(event => event.type === "tool.requested").map(event => event.payload.toolCallId))
+      .toEqual([calls[0]!.id]);
+    expect(events.filter(event => event.type === "run.limit_reached").map(event => event.payload.limit))
+      .toEqual(["maxDurationMs"]);
+    expect(messages.filter(message => message.role === "tool").map(message => message.toolCallId))
+      .toEqual(calls.map(call => call.id));
+    expect(messages.find(message => message.toolCallId === calls[1]!.id)?.content).toContain("did not run");
   } finally { await h.close(); }
 });

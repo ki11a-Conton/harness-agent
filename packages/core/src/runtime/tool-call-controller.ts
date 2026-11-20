@@ -271,6 +271,7 @@ export class ToolCallController {
      *  used for every tool call of this model response — a mid-batch config/
      *  policy change cannot affect the already-started batch. */
     step: StepExecutionSnapshot,
+    timeLimitExceeded: () => boolean,
     /** P9-1: the model call that requested these tool calls (parent span). */
     parentCallId?: string,
   ): Promise<ExecutedToolCall[]> {
@@ -278,23 +279,15 @@ export class ToolCallController {
     const executed: ExecutedToolCall[] = [];
     let i = 0;
     while (i < calls.length) {
-      if (signal.aborted) {
-        // P15-6: cancellation settlement — every not-yet-started call in this
-        // model batch still gets a synthetic cancelled settlement; a tool call
-        // must never vanish from the transcript (abort mid-batch).
+      if (signal.aborted || timeLimitExceeded()) {
+        // Calls already settled retain their real result. Every pending
+        // call still needs a protocol result even though it never starts.
+        const result: ToolResult = signal.aborted
+          ? { status: "cancelled", error: errorInfo("USER_CANCELLED", "turn aborted before this tool call started") }
+          : { status: "failed", error: errorInfo("RESOURCE_LIMIT", "maxDurationMs exceeded before dispatch; the tool did not run") };
         for (; i < calls.length; i++) {
           const pending = calls[i]!;
-          executed.push({
-            call: pending,
-            result: {
-              status: "cancelled",
-              error: errorInfo("USER_CANCELLED", "turn aborted before this tool call started"),
-            },
-            ...this.noteExecutedCall(state, pending, {
-              status: "cancelled",
-              error: errorInfo("USER_CANCELLED", "turn aborted before this tool call started"),
-            }),
-          });
+          executed.push({ call: pending, result, ...this.noteExecutedCall(state, pending, result) });
         }
         break;
       }
@@ -347,36 +340,6 @@ export class ToolCallController {
         const result = await this.executeToolCall(ctx, call, turnState, step, parentCallId, observations);
         state.transition("observing");
         state.transition("thinking");
-        if (signal.aborted) {
-          // P2-37: serial (write) chain — the interrupt took effect during this
-          // call. It returned a CANCELLED outcome (or the call already committed
-          // and returned success). Stop the remaining calls: do not keep firing
-          // later writes into an aborted turn, and never pretend the committed
-          // ones rolled back. P15-6: every not-yet-started call still gets a
-          // synthetic cancelled settlement (no tool call disappears).
-          executed.push({
-            call,
-            result,
-            ...this.noteExecutedCall(state, call, result),
-            ...(observations.length > 0 ? { deferredObservations: observations } : {}),
-          });
-          this.recordStallTrace(state, call, result);
-          for (let k = i + 1; k < calls.length; k++) {
-            const pending = calls[k]!;
-            executed.push({
-              call: pending,
-              result: {
-                status: "cancelled",
-                error: errorInfo("USER_CANCELLED", "turn aborted before this tool call started"),
-              },
-              ...this.noteExecutedCall(state, pending, {
-                status: "cancelled",
-                error: errorInfo("USER_CANCELLED", "turn aborted before this tool call started"),
-              }),
-            });
-          }
-          break;
-        }
         executed.push({
           call,
           result,

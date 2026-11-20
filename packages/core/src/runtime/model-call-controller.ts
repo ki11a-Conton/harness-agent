@@ -42,6 +42,7 @@ import { AgentState } from "../state/agent-state.js";
 import { RecoveryPolicy } from "../recovery/recovery.js";
 import {
   ASK_GATE_TOOL,
+  appendUnexecutedToolResults,
   buildStateDigest,
   decideModelRetry,
   rethrowIfKill,
@@ -320,21 +321,8 @@ export class ModelCallController {
     // 'tool_call_id'"). Previously the error/cancelled and parked-ask paths left
     // the calls dangling, and the `stop` path could append a verification
     // observation straight after them.
-    const settleUnexecutedToolCalls = async (
-      reason: (call: ToolCall) => string,
-    ): Promise<void> => {
-      for (const call of toolCalls) {
-        await this.deps.store.appendMessage({
-          id: newMessageId(),
-          sessionId,
-          turnId,
-          role: "tool",
-          content: reason(call),
-          toolCallId: call.id,
-          createdAt: this.deps.now(),
-        });
-      }
-    };
+    const settleUnexecutedToolCalls = (reason: (call: ToolCall) => string) =>
+      appendUnexecutedToolResults(this.deps.store, ctx, toolCalls, reason, this.deps.now);
 
     const finishAtDurationLimit = async (elapsed: number): Promise<CompletionResult> => {
       await this.deps.emit(sessionId, "run.limit_reached", { limit: "maxDurationMs", used: elapsed, allowed: agent.limits.maxDurationMs }, turnId);

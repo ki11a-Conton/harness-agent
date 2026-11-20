@@ -98,6 +98,7 @@ import { HookRegistry } from "../lifecycle/hooks.js";
 import { RecoveryPolicy, type FailureKind } from "../recovery/recovery.js";
 import {
   activeUserMessages,
+  appendUnexecutedToolResults,
   buildResumePrompt,
   classifyUnknownOutcome,
   DEFAULT_RUNTIME_TOOL_SEMANTICS,
@@ -1645,6 +1646,8 @@ export class AgentRuntime {
           if (call.name.startsWith("delegate")) {
             const spawnBreach = budget.onSubagentSpawn();
             if (spawnBreach !== undefined) {
+              await appendUnexecutedToolResults(this.store, ctx, toolCalls,
+                () => `[not executed] maxSubagents (${spawnBreach.allowed}) reached; the tool batch did not run.`, this.now);
               await this.emit(sessionId, "run.limit_reached", { ...spawnBreach }, turnId);
               return await this.recoveryController.finishTurn(
                 ctx, "failed", state, working,
@@ -1667,17 +1670,21 @@ export class AgentRuntime {
           else blocked.push({ call, streak: 0, result: { status: "failed", error: errorInfo("RESOURCE_LIMIT", "tool call not dispatched: maxToolCalls reached") } });
         }
         if (toolBreach !== undefined) await this.emit(sessionId, "run.limit_reached", { ...toolBreach }, turnId);
-        const executed = [...await this.toolCallController.executeToolCalls(ctx, state, admitted, turnState, step, modelResult.callId), ...blocked];
-        const toolAction = await this.handleToolResults(
-          ctx, executed, working, state, toolLedger, priorBlocks, lastReportTokens, budget,
+        const executed = await this.toolCallController.executeToolCalls(
+          ctx, state, admitted, turnState, step,
+          () => this.wallClockExceeded(ctx.agent, turn) !== undefined,
+          modelResult.callId,
         );
+        const toolAction = await this.handleToolResults(
+          ctx, [...executed, ...blocked], working, state, toolLedger, priorBlocks, lastReportTokens, turn,
+        );
+        if (toolAction.action === "finish") return toolAction.outcome;
         if (toolBreach !== undefined) return await this.recoveryController.finishTurn(
           ctx, signal.aborted ? "cancelled" : "failed", state, working,
           signal.aborted ? undefined : errorInfo("RESOURCE_LIMIT", `maxToolCalls (${toolBreach.allowed}) reached`),
           signal.aborted ? "cancelled" : "tool_limit", toolLedger,
         );
         if (toolAction.action === "continue_loop") continue;
-        if (toolAction.action === "finish") return toolAction.outcome;
         // done: fall through to next iteration
       }
 
@@ -1840,7 +1847,7 @@ export class AgentRuntime {
     toolLedger: ToolExecutionRecord[],
     priorBlocks: ContextBlock[],
     lastReportTokens: number | undefined,
-    budget: RunBudgetTracker,
+    turn: Turn,
   ): Promise<ToolResultsAction> {
     const { sessionId, turnId, signal, agent } = ctx;
     // P2-41/PROTOCOL: the wire protocol requires an assistant message carrying
@@ -1952,6 +1959,13 @@ export class AgentRuntime {
 
     // ── Phase 2: gates. The tool block above is fully durable, so every
     // observation appended from here on lands AFTER it (protocol-safe).
+    const elapsed = signal.aborted ? undefined : this.wallClockExceeded(agent, turn);
+    if (elapsed !== undefined) {
+      await this.emit(sessionId, "run.limit_reached", { limit: "maxDurationMs", used: elapsed, allowed: agent.limits.maxDurationMs }, turnId);
+      return { action: "finish", outcome: await this.recoveryController.finishTurn(ctx, "failed", state, working,
+        errorInfo("RESOURCE_LIMIT", `maxDurationMs (${agent.limits.maxDurationMs}ms) exceeded after ${elapsed}ms`),
+        "time_limit", toolLedger) };
+    }
     let deferredStallObservation: string | null = null;
     let terminal: { error: ReturnType<typeof errorInfo>; reason: TerminationReason } | null = null;
     for (const { call, result, streak, progressCancelled, wouldBeStreak } of executed) {

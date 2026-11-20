@@ -7,7 +7,7 @@
  * functions in runtime.ts.
  */
 
-import { errorInfo, DEFAULT_TOOL_SEMANTICS, dropOrphanToolResults } from "@ar/contracts";
+import { errorInfo, DEFAULT_TOOL_SEMANTICS, dropOrphanToolResults, newMessageId } from "@ar/contracts";
 import type {
   AgentDefinition,
   AskUserRequest,
@@ -21,6 +21,7 @@ import type {
   SandboxPolicy,
   Session,
   SessionId,
+  SessionStore,
   Skill,
   FalseCompleteGrade,
   TerminationReason,
@@ -54,6 +55,21 @@ export interface TurnContext {
   readonly signal: AbortSignal;
   readonly session: Session;
   readonly agent: AgentDefinition;
+}
+
+/** Settle calls rejected before dispatch so the persisted assistant block
+ * remains valid on subsequent turns and after reopening the session. */
+export async function appendUnexecutedToolResults(
+  store: SessionStore,
+  { sessionId, turnId }: Pick<TurnContext, "sessionId" | "turnId">,
+  calls: readonly ToolCall[],
+  reason: (call: ToolCall) => string,
+  now: () => number,
+): Promise<void> {
+  for (const call of calls) {
+    await store.appendMessage({ id: newMessageId(), sessionId, turnId, role: "tool",
+      content: reason(call), toolCallId: call.id, createdAt: now() });
+  }
 }
 
 /** Tool output rendered as a string the model can read. Non-success results
