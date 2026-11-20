@@ -75,7 +75,7 @@ export function createRepoMapTool(
   return {
     name: "repo_map",
     description:
-      "Return the cached repository overview. query additionally produces a task-related Tree-sitter symbol/reference graph for TS/JS, Python, Rust and Go; maxCodeTokens bounds that additional section (default 1600). queryPath restricts ONLY this extra code map to a known workspace file/subdirectory, useful when a broad scan exhausts its file budget; the repository overview remains global, bounded separately by maxFiles. Use queryPath together with query. References are candidates, not semantic resolution. refresh:true rebuilds the overview.",
+      "Return the cached repository overview. query additionally produces a task-related Tree-sitter symbol/reference graph for TS/JS, Python, Rust and Go; maxCodeTokens bounds that additional section (default 1600). Put exact symbol names in backticks to prioritize their declarations and references. queryPath restricts ONLY this extra code map to a known workspace file/subdirectory, useful when a broad scan exhausts its file budget; the repository overview remains global, bounded separately by maxFiles. Use queryPath together with query. References are candidates, not semantic resolution. refresh:true rebuilds the overview.",
     inputSchema: repoMapSchema,
     risk: "readonly",
     metadata: {

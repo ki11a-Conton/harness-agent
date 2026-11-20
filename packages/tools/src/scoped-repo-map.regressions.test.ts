@@ -2,7 +2,9 @@ import { mkdtemp, mkdir, realpath, rm, stat, symlink, utimes, writeFile } from "
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, expect, it } from "vitest";
-import { newAgentId, newSessionId, type ToolExecutionContext } from "@ar/contracts";
+import { newAgentId, newSessionId, newToolCallId, type ToolExecutionContext } from "@ar/contracts";
+import { ToolOrchestrator } from "./orchestrator.js";
+import { ToolRegistry } from "./registry.js";
 import { buildRelevantCodeMap } from "./relevant-code-map.js";
 import { createRepoMapTool, makeRepoMapResolver } from "./tools/repo-map-tool.js";
 const roots: string[] = [];
@@ -101,4 +103,51 @@ it("omitting queryPath preserves the existing broad-map result shape", async () 
   const root = await fixture({ "src/a.ts": "export function target() {}\n" });
   const map = (await createRepoMapTool().execute({ query: "target" }, context(root))).output!.relevantCode!;
   expect(map).not.toHaveProperty("scope"); expect(map.filesIndexed).toBe(1); expect(map.files[0]?.path).toBe("src/a.ts");
+});
+
+it.each([
+  { symbol: "renderInvoice", term: "renderInvoice" },
+  { symbol: "render_invoice", term: "render_invoice" },
+  { symbol: "dispatch", term: "`dispatch`" },
+])("prioritizes the exact $symbol declaration ahead of repeated partial matches", async ({ symbol, term }) => {
+  const definitions = (count: number) => Array.from({ length: count }, (_, n) =>
+    `export function ${symbol}_old${n}() { return 0; }\n`).join("");
+  const root = await fixture({
+    "src/target.ts": definitions(9) + `export function ${symbol}() { return 42; }\n`,
+    "src/caller.ts": `import { ${symbol} } from "./target.js";\nexport const value = ${symbol}();\n`,
+    "outside/other.ts": `export function ${symbol}() { return -1; }\n`,
+    ...Object.fromEntries(Array.from({ length: 6 }, (_, n) => [`src/archive-${n}.ts`, definitions(15)])),
+  });
+  const registry = new ToolRegistry();
+  registry.register(createRepoMapTool());
+  const orchestrator = new ToolOrchestrator({ registry, workspaceRoot: root });
+  const ctx = context(root);
+  ctx.permissions = { rules: [{ action: "read", resource: "file", effect: "allow" }] };
+  const { sessionId, agentId } = ctx;
+  const id = newToolCallId();
+  const args = { query: `Find ${term} callers and definition`, queryPath: "src", maxCodeTokens: 1600 };
+  const result = await orchestrator.execute({ id, sessionId, agentId,
+    call: { id, name: "repo_map", args } }, ctx);
+  expect(result.status).toBe("success");
+  const map = (result.output as { relevantCode: Awaited<ReturnType<typeof buildRelevantCodeMap>> }).relevantCode;
+  expect(map.files[0]?.path).toBe("src/target.ts");
+  expect(map.files[0]?.symbols[0]).toMatchObject({ name: symbol, line: 10 });
+  expect(map.files[1]?.path).toBe("src/caller.ts");
+  expect(map.files.every(file => file.path.startsWith("src/"))).toBe(true);
+  expect(Buffer.byteLength(JSON.stringify(map))).toBeLessThanOrEqual(6400);
+});
+
+it("prices truncation metadata before admitting the last symbol at a byte boundary", async () => {
+  const root = await fixture({ "src/target.ts": "export function firstTarget() { return 1; }\nexport function secondTarget() { return 2; }\n" });
+  const query = "target" + " ".repeat(300);
+  const full = await buildRelevantCodeMap({ root, query });
+  const file = full.files[0]!;
+  expect(file.symbols).toHaveLength(2);
+  const optimistic = { ...full, truncated: true, files: [{ ...file, symbols: file.symbols.slice(0, 1) }] };
+  const optimisticBytes = Buffer.byteLength(JSON.stringify(optimistic));
+  const maxTokens = Math.ceil(optimisticBytes / 4);
+  const alignedQuery = query + " ".repeat(maxTokens * 4 - optimisticBytes);
+  const limited = await buildRelevantCodeMap({ root, query: alignedQuery, maxTokens });
+  expect(limited).toMatchObject({ truncated: true, complete: false });
+  expect(Buffer.byteLength(JSON.stringify(limited))).toBeLessThanOrEqual(maxTokens * 4);
 });

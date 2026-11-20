@@ -43,9 +43,22 @@ export async function buildRelevantCodeMap(input: { root: string; query: string;
   if (!Number.isSafeInteger(maxTokens) || maxTokens < 128 || maxTokens > 4000) throw new TypeError("invalid relevant code token budget");
   const index = await buildSyntaxIndex(input.root, input.path ?? ".", input.signal);
   const tokens = [...new Set((input.query.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase().match(/[\p{L}\p{N}_$]+/gu) ?? []).filter(word => word.length >= 3))].slice(0, 40);
+  // Keep the original spelling of identifiers the user explicitly names.
+  // Bare prose remains on the existing graph ranking.
+  const exactSymbols = new Set<string>();
+  for (const [word, quoted] of input.query.matchAll(/`([\p{L}_$][\p{L}\p{N}_$]*)`|[\p{L}\p{N}_$]+/gu)) {
+    if (quoted !== undefined) exactSymbols.add(quoted);
+    else if (/\p{Ll}\p{Lu}|\p{Lu}{2}\p{Ll}|[_$]/u.test(word)) exactSymbols.add(word);
+  }
   const definitions = new Map<string, Set<number>>();
-  for (const [i, file] of index.files.entries()) for (const tag of file.tags) if (tag.role === "definition") {
-    const key = tag.name.toLowerCase(); const targets = definitions.get(key) ?? new Set<number>(); targets.add(i); definitions.set(key, targets);
+  const exactTiers = index.files.map(() => 0);
+  for (const [i, file] of index.files.entries()) for (const tag of file.tags) {
+    if (exactSymbols.has(tag.name)) {
+      exactTiers[i] = Math.max(exactTiers[i]!, tag.role === "definition" ? 2 : 1);
+    }
+    if (tag.role === "definition") {
+      const key = tag.name.toLowerCase(); const targets = definitions.get(key) ?? new Set<number>(); targets.add(i); definitions.set(key, targets);
+    }
   }
   const links = index.files.map(() => new Map<number, number>());
   const seed = index.files.map(file => 1 + tokens.reduce((score, token) => score
@@ -64,13 +77,22 @@ export async function buildRelevantCodeMap(input: { root: string; query: string;
     }
   }
   const scores = rankRelevantFiles(seed, links);
-  const ordered = index.files.map((file, i) => ({ file, score: scores[i]! }))
+  // The graph score sums two unit-mass distributions. A fixed bonus per
+  // tier puts exact declarations ahead of exact usages, then partial names.
+  // Graph scores and path tie-breaking still determine order within a tier.
+  const ordered = index.files.map((file, i) => ({ file, score: scores[i]! + 2 * exactTiers[i]! }))
     .sort((a, b) => b.score - a.score || a.file.file.localeCompare(b.file.file, "en"));
+  const truncated = ordered.length > 12;
   const output: RelevantCodeMap = { query: input.query, ...(input.path === undefined ? {} : { scope: input.path }), indexer: index.indexer, semantic: false, fingerprint: index.fingerprint,
-    filesIndexed: index.files.length, complete: index.complete && edgeCount < 20000, truncated: ordered.length > 12, files: [], edges: [] };
+    filesIndexed: index.files.length, complete: index.complete && edgeCount < 20000 && !truncated, truncated, files: [], edges: [] };
+  const tagPriority = (name: string) => {
+    if (exactSymbols.has(name)) return 2;
+    const normalized = name.toLowerCase();
+    return tokens.some(token => normalized.includes(token)) ? 1 : 0;
+  };
   for (const { file, score } of ordered.slice(0, 12)) {
     const tags = file.tags.filter(tag => tag.role === "definition").sort((a, b) =>
-      Number(tokens.some(token => b.name.toLowerCase().includes(token))) - Number(tokens.some(token => a.name.toLowerCase().includes(token))) || a.line - b.line).slice(0, 8);
+      tagPriority(b.name) - tagPriority(a.name) || a.line - b.line).slice(0, 8);
     output.files.push({ path: file.file, sha256: file.sha256, score, symbols: tags.map(({ name, line, endLine, text }) => ({ name, line, endLine, text })) });
   }
   const selected = new Set(output.files.map(file => file.path));
@@ -79,6 +101,7 @@ export async function buildRelevantCodeMap(input: { root: string; query: string;
   }
   while (Buffer.byteLength(JSON.stringify(output)) > maxTokens * 4) {
     output.truncated = true;
+    output.complete = false;
     if (output.edges.length) { output.edges.pop(); continue; }
     const last = output.files.at(-1);
     if (!last) {
@@ -87,6 +110,5 @@ export async function buildRelevantCodeMap(input: { root: string; query: string;
     }
     if (last.symbols.length) last.symbols.pop(); else output.files.pop();
   }
-  output.complete &&= !output.truncated;
   return output;
 }
