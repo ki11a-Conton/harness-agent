@@ -508,7 +508,25 @@ export class ContextController {
                 if (rawTokens + cost > rawBudget) break;
                 rawTokens += cost; tailStart--;
               }
-              const recentIds = new Set(retainMessageHistoryTail(history, tailStart, activeUsers)
+              let retainedTail = retainMessageHistoryTail(history, tailStart, activeUsers);
+              const failedCheckIndex = history.findLastIndex(message => message.role === "tool"
+                && message.turnId === turnId && message.verificationFailure === true);
+              const failedCheck = history[failedCheckIndex];
+              if (failedCheck !== undefined && !retainedTail.some(message => message.id === failedCheck.id)) {
+                // A handoff can omit the precise failure. Retain its original
+                // batch and the following messages when they fit with the handoff.
+                let batchStart = failedCheckIndex - 1;
+                while (batchStart >= 0 && history[batchStart]?.role === "tool") batchStart--;
+                const batchRequest = history[batchStart];
+                if (batchRequest?.role === "assistant" && batchRequest.turnId === turnId
+                  && batchRequest.toolCalls?.some(call => call.id === failedCheck.toolCallId)) {
+                  const withDiagnostic = retainMessageHistoryTail(history, batchStart, activeUsers)
+                    .filter(message => message.contextCheckpoint === undefined);
+                  const total = pipeline.estimateMessageTokens([{ role: "assistant", content: checkpointContent }, ...withDiagnostic]);
+                  if (total <= targetHeadroom && total < beforeTokens) retainedTail = withDiagnostic;
+                }
+              }
+              const recentIds = new Set(retainedTail
                 .filter(message => !activeIds.has(message.id) && message.contextCheckpoint === undefined).map(message => message.id));
               const firstRecent = durable.findIndex(message => recentIds.has(message.id));
               // A view can end in an old protected user anchor after a newer

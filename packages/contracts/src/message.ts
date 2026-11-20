@@ -16,6 +16,8 @@ export interface Message {
   incomplete?: { reason: "model_error"; callId: ModelCallId };
   /** Set when role === "tool": the tool call this message answers. */
   toolCallId?: ToolCallId;
+  /** Runtime-owned marker for a failed verification command result. */
+  verificationFailure?: true;
   /** Set when role === "assistant": tool calls requested by the model. */
   toolCalls?: ToolCall[];
   /** Set when role === "assistant": the exact model reference that produced this

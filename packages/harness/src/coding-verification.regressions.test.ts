@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { afterEach, expect, it } from "vitest";
@@ -152,5 +152,85 @@ it("reports the stored turn start time on every verification attempt", async () 
     const outcome = await h.runtime.runTurn(session.id, turn.id, new AbortController().signal);
     expect(outcome.terminationReason).toBe("verified_complete");
     expect(times).toEqual([turn.startedAt, turn.startedAt]);
+  } finally { await h.close(); }
+});
+
+it.each([
+  { dataStore: "jsonl", lines: 560, fits: true },
+  { dataStore: "sqlite", lines: 560, fits: true },
+  { dataStore: "jsonl", lines: 1450, fits: false },
+] as const)("retains the original check batch only if it fits after compaction ($dataStore, $lines lines)", async ({ dataStore, lines, fits }) => {
+  const cwd = await fixture();
+  const diagnostic = "CHECKSUM_TARGET_EXPECTED_42";
+  await writeFile(join(cwd, "value.txt"), "41\n");
+  await writeFile(join(cwd, "check.cjs"), `
+    const value = require("node:fs").readFileSync("value.txt", "utf8").trim();
+    if (value !== "42") {
+      process.stderr.write("compile unit complete\\n".repeat(${lines}));
+      console.error("${diagnostic}");
+      process.exitCode = 8;
+    }
+  `);
+
+  const requests: ModelRequest[] = [];
+  const summaries: ModelRequest[] = [];
+  const provider = new ScriptedModelProvider([]);
+  provider.createClient = () => ({ async *generate(rawRequest) {
+    const request = rawRequest as ModelRequest;
+    if (request.system?.includes("CONTEXT CHECKPOINT COMPACTION")) {
+      summaries.push(request);
+      // A valid handoff can omit a concrete diagnostic. Recovery must use
+      // observed tool evidence, even when the summary names only the failure.
+      yield* ScriptedModelProvider.text("A project check failed. Continue the current repair.");
+      return;
+    }
+    requests.push(request);
+    if (requests.length === 1) {
+      yield* ScriptedModelProvider.text("Initial investigation and working notes. ".repeat(270));
+      return;
+    }
+    if (requests.length === 2 && request.messages.some(message =>
+      message.role === "tool" && message.content.includes(diagnostic))) {
+      yield* ScriptedModelProvider.toolCall("edit_file", { path: "value.txt", oldText: "41", newText: "42" });
+      return;
+    }
+    yield* ScriptedModelProvider.text("Ready for the project check.");
+  } });
+
+  const h = await createHarness({ cwd, dataDir: join(cwd, "state"), dataStore, profile: "test", modelProvider: provider,
+    model: { providerId: provider.id, modelId: "scripted-model" },
+    contextBudget: { maxTokens: 6200, reserved: { system: 0, task: 0, output: 500 }, dynamic: 0 },
+    task: { id: "compacted-check", goal: "Repair the project check",
+      verification: [
+        { kind: "command", command: process.execPath, args: ["check.cjs"] },
+        { kind: "command", command: process.execPath, args: ["-e", 'console.log("CHECK_COMPANION")'] },
+      ] },
+  });
+  try {
+    const session = await h.runtime.createSession({ agent: h.agents[0]!, cwd });
+    const turn = await h.runtime.startTurn(session.id, "Inspect the project check result, repair value.txt and validate.");
+    const outcome = await h.runtime.runTurn(session.id, turn.id, new AbortController().signal);
+    const stored = await h.store.listMessages(session.id);
+    const failed = stored.find(message => message.role === "tool" && message.content.includes(diagnostic));
+    expect(failed?.content).toContain("[failed]");
+    expect(summaries.length).toBeGreaterThan(0);
+    const repair = requests[1]!;
+    expect(repair.messages.some(message => message.contextCheckpoint?.source === "model")).toBe(true);
+    const retained = repair.messages.find(message => message.id === failed!.id);
+    expect(retained?.content === failed!.content).toBe(fits);
+    expect(h.context.pipeline.estimateTextTokens(repair.system ?? "") + h.context.pipeline.estimateMessageTokens(repair.messages))
+      .toBeLessThanOrEqual(5700);
+    if (fits) {
+      expect(retained).toEqual(failed);
+      expect(retained?.verificationFailure).toBe(true);
+      const request = repair.messages.find(message => message.toolCalls?.some(call => call.id === failed!.toolCallId));
+      expect(request?.toolCalls).toHaveLength(2);
+      expect(repair.messages.some(message => message.role === "tool" && message.content.includes("CHECK_COMPANION"))).toBe(true);
+    }
+    for (const request of requests) assertToolProtocol(request.messages);
+    const failures = (await h.events.list(session.id)).filter(event => event.type === "verification.failed");
+    expect(failures).toHaveLength(fits ? 1 : 3);
+    expect(outcome.terminationReason).toBe(fits ? "verified_complete" : "verification_failed");
+    expect(await readFile(join(cwd, "value.txt"), "utf8")).toBe(fits ? "42\n" : "41\n");
   } finally { await h.close(); }
 });

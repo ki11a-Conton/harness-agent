@@ -862,9 +862,11 @@ export class AgentRuntime {
           }
         }));
         for (const [index, call] of calls.entries()) {
-          const content = await this.contextController.renderToolResultForContext(ctx, call, results[index]!);
+          const result = results[index]!;
+          const content = await this.contextController.renderToolResultForContext(ctx, call, result);
           await this.store.appendMessage({ id: newMessageId(), sessionId: ctx.sessionId, turnId: ctx.turnId,
-            role: "tool", content, toolCallId: call.id, createdAt: this.now() });
+            role: "tool", content, toolCallId: call.id, createdAt: this.now(),
+            ...(result.status !== "success" ? { verificationFailure: true } : {}) });
         }
         return results as ToolResult<{ exitCode: number | null; durationMs: number }>[];
       },
