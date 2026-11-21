@@ -308,15 +308,17 @@ export class SqliteRuntimeStore
   }
 
   async listMessages(sessionId: SessionId): Promise<Message[]> {
+    // Match JSONL append order. Wall-clock timestamps can move backwards
+    // between an assistant tool call and its result.
     const rows = this.db
-      .prepare("SELECT doc FROM messages WHERE session_id = ? ORDER BY created_at")
+      .prepare("SELECT doc FROM messages WHERE session_id = ? ORDER BY rowid")
       .all(sessionId);
     return rows.map((row) => parseDoc<Message>(row.doc, "message"));
   }
 
   async listMessagesByTurn(sessionId: SessionId, turnId: TurnId): Promise<Message[]> {
     const rows = this.db
-      .prepare("SELECT doc FROM messages WHERE session_id = ? AND turn_id = ? ORDER BY created_at")
+      .prepare("SELECT doc FROM messages WHERE session_id = ? AND turn_id = ? ORDER BY rowid")
       .all(sessionId, turnId);
     return rows.map((row) => parseDoc<Message>(row.doc, "message"));
   }

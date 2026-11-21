@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  assertToolProtocol,
   newAgentId,
   newAskId,
   newCheckpointId,
@@ -13,6 +14,7 @@ import {
   newPromptId,
   newRunId,
   newSessionId,
+  newToolCallId,
   newTurnId,
   newWorkingState,
   type AdmittedPrompt,
@@ -113,6 +115,31 @@ describe("SqliteRuntimeStore (P5-3)", () => {
     expect(await reopened.listSessions()).toHaveLength(1);
     expect(await reopened.listTurns(s.id)).toHaveLength(1);
     reopened.close();
+  });
+
+  it("preserves the durable message sequence after the wall clock moves backwards", async () => {
+    const dir = await freshDir();
+    const store = trackStore(new SqliteRuntimeStore({ dataDir: dir }));
+    const s = session();
+    const t = turn(s.id);
+    const call = { id: newToolCallId(), name: "read_file", args: { path: "fixture.txt" } };
+    const before = { ...message(s.id, t.id, "Read the fixture"), role: "user" as const, createdAt: 1000 };
+    const requested = { ...message(s.id, t.id, ""), toolCalls: [call], createdAt: 1000 };
+    const result = { ...message(s.id, t.id, "fixture content"), role: "tool" as const, toolCallId: call.id, createdAt: 900 };
+    const following = { ...message(s.id, t.id, "Finished reading."), createdAt: 900 };
+    const messages = [before, requested, result, following];
+    await store.createSession(s);
+    await store.createTurn(t);
+    for (const entry of messages) await store.appendMessage(entry);
+    store.close();
+
+    const reopened = trackStore(new SqliteRuntimeStore({ dataDir: dir }));
+    const all = await reopened.listMessages(s.id);
+    const byTurn = await reopened.listMessagesByTurn(s.id, t.id);
+    assertToolProtocol(all);
+    assertToolProtocol(byTurn);
+    expect(all).toEqual(messages);
+    expect(byTurn).toEqual(messages);
   });
 
   it("updates sessions/turns and filters listSessions by parent/status", async () => {
