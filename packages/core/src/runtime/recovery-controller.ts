@@ -531,16 +531,16 @@ export class RecoveryController {
       }
     }
     // Reconstruct requested calls from the post-checkpoint event log.
-    type Requested = { id: string; name: string; args: Record<string, unknown>; started: number;
-      outcome?: { status: ToolExecutionRecord["status"]; completed: number } };
+    type Requested = { id: string; name: string; args: Record<string, unknown>; started: number; restartedAfterRefusal?: true;
+      outcome?: { status: ToolExecutionRecord["status"]; completed: number; preDispatch?: true } };
     const requested: Requested[] = [];
     const active = new Map<string, Requested>();
     const occurrences = new Map<string, number>();
     const admitted = new Set(replayedToolRequests(events));
     for (const event of events) {
+      const id = typeof event.payload.toolCallId === "string" ? event.payload.toolCallId : event.id;
       if (event.type === "tool.requested") {
         if (!admitted.has(event)) continue;
-        const id = typeof event.payload.toolCallId === "string" ? event.payload.toolCallId : event.id;
         const occurrence: Requested = {
           id,
           name: typeof event.payload.name === "string" ? event.payload.name : "unknown",
@@ -549,16 +549,31 @@ export class RecoveryController {
         };
         requested.push(occurrence); active.set(id, occurrence);
         occurrences.set(id, (occurrences.get(id) ?? 0) + 1);
+      } else if (event.type === "tool.started") {
+        const occurrence = active.get(id);
+        // A new attempt can have an unknown outcome even if the preceding
+        // attempt never reached the executor.
+        if (occurrence?.outcome?.preDispatch === true) {
+          delete occurrence.outcome;
+          occurrence.restartedAfterRefusal = true;
+        }
       } else if (event.type === "tool.completed" || event.type === "tool.failed") {
-        const key = typeof event.payload.toolCallId === "string" ? event.payload.toolCallId : event.id;
+        const occurrence = active.get(id);
+        if (occurrence === undefined) continue;
         // The orchestrator may persist a returned denied/failed/cancelled
         // result before Core emits its terminal event or stores a message.
         // Fold in sequence order: a successful safe retry must supersede an
         // earlier failure of the same call. Never infer status from output.
         let status: ToolExecutionRecord["status"];
+        let preDispatch = false;
         if (event.type === "tool.failed") {
           const error = event.payload.error as { code?: unknown } | undefined;
           status = error?.code === "PROCESS_TIMEOUT" || error?.code === "TOOL_TIMEOUT" ? "timeout" : "failed";
+          const previous = occurrence.outcome;
+          // Core can repeat the orchestrator's terminal event. Keep the
+          // refusal evidence, but never use it to erase an earlier outcome.
+          preDispatch = error?.code === "RESOURCE_LIMIT" &&
+            (previous?.preDispatch === true || (previous === undefined && event.payload.preDispatch === true));
         } else if (event.payload.status === undefined) {
           status = "success"; // legacy Core success events omit status
         } else {
@@ -569,8 +584,7 @@ export class RecoveryController {
         // A model may reuse its call id in another protocol-valid iteration.
         // Retries before the next request update this occurrence only; a new
         // request must never inherit or overwrite a previous execution.
-        const occurrence = active.get(key);
-        if (occurrence) occurrence.outcome = { status, completed: event.timestamp };
+        occurrence.outcome = { status, completed: event.timestamp, ...(preDispatch ? { preDispatch: true } : {}) };
       }
     }
 
@@ -585,10 +599,10 @@ export class RecoveryController {
       // Message-only legacy evidence has no execution/step identity. Accept
       // the unambiguous single-call case, otherwise preserve reconciliation
       // rather than using an earlier result to certify a new side effect.
-      const legacyCompleted = occurrences.get(info.id) === 1 && legacy?.count === 1
+      const legacyCompleted = !info.restartedAfterRefusal && occurrences.get(info.id) === 1 && legacy?.count === 1
         && legacy.createdAt >= info.started && !checkpoint.toolLedger.some(row => row.toolCallId === info.id);
       const status = outcome?.status ?? (legacyCompleted ? "success" : undefined);
-      if (status === undefined || status === "interrupted" || (sideEffect && status !== "success" && status !== "denied")) {
+      if (status === undefined || status === "interrupted" || (sideEffect && status !== "success" && status !== "denied" && outcome?.preDispatch !== true)) {
         // A failed/cancelled write or process can have partial effects. Keep
         // the existing reconciliation barrier without claiming completion.
         unresolvedTools.push({

@@ -56,6 +56,36 @@ describe("crash replay preserves authoritative tool outcomes", () => {
     expect((await f.replay()).replayedToolLedger[0]!.status).toBe("denied");
   });
 
+  it("resolves a durable pre-dispatch refusal before the tool result message exists", async () => {
+    const f = await fixture();
+    await f.append("tool.started", {});
+    await f.append("tool.failed", { error: { code: "RESOURCE_LIMIT" }, preDispatch: true });
+    await f.append("tool.failed", { error: { code: "RESOURCE_LIMIT" } }); // Core repeats the same result.
+    const result = await f.replay();
+    expect(result.replayedToolLedger[0]?.status).toBe("failed");
+    expect(result.committedSideEffects).toEqual([]);
+    expect(result.working.filesChanged).toEqual([]);
+    expect(result.unresolvedTools).toEqual([]);
+  });
+
+  it("keeps a prior ambiguous effect unresolved when a later retry is refused", async () => {
+    const f = await fixture();
+    await f.append("tool.started", {});
+    await f.append("tool.failed", { error: { code: "PROCESS_TIMEOUT" } });
+    await f.append("tool.failed", { error: { code: "RESOURCE_LIMIT" }, preDispatch: true });
+    expect((await f.replay()).unresolvedTools).toHaveLength(1);
+  });
+
+  it("keeps a later dispatch unresolved even if an earlier attempt was refused", async () => {
+    const f = await fixture();
+    await f.append("tool.failed", { error: { code: "RESOURCE_LIMIT" }, preDispatch: true });
+    await f.message("[failed] the tool did not run");
+    await f.append("tool.started", {});
+    const result = await f.replay();
+    expect(result.unresolvedTools).toHaveLength(1);
+    expect(result.committedSideEffects).toEqual([]);
+  });
+
   it("a later successful retry wins over an earlier failure of the same call", async () => {
     const f = await fixture();
     await f.append("tool.failed", { error: { code: "TOOL_EXECUTION_FAILED" } });

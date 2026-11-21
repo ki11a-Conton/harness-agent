@@ -428,6 +428,7 @@ export class ToolOrchestrator {
       tool: request.call.name,
       error: result.error,
       durationMs: this.now() - started,
+      preDispatch: true,
     }).catch((err) => this.nonFatal?.report("orchestrator.emit:tool.failed", err));
     return result;
   }

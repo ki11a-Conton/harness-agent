@@ -996,7 +996,10 @@ export class ToolCallController {
       // P2-37: a CANCELLED tool outcome (user interrupt during execution) is not
       // a tool failure — do not mislabel it as one. The turn's cancellation is
       // emitted separately by finishTurn.
-      await this.deps.emit(session.id, "tool.failed", { toolCallId: call.id, tool: call.name, error: result.error, durationMs }, turnId);
+      await this.deps.emit(session.id, "tool.failed", {
+        toolCallId: call.id, tool: call.name, error: result.error, durationMs,
+        ...(deadlineRefused ? { preDispatch: true } : {}),
+      }, turnId);
     }
     return result;
   }

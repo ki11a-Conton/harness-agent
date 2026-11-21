@@ -113,6 +113,8 @@ export interface ToolFailedPayload {
   name?: string;
   error?: unknown;
   durationMs?: number;
+  /** A trusted dispatch gate established that this attempt never entered the tool body. */
+  preDispatch?: true;
 }
 
 /** tool.permission_requested — an approval request was created. */

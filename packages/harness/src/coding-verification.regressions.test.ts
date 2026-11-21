@@ -365,6 +365,7 @@ it.each(["model", "verification"] as const)("refuses %s tool effects when publis
     expect(messages.find(message => message.role === "tool")?.content).toContain("did not run");
     const events = await h.events.list(session.id);
     expect(events.filter(event => event.type === "tool.started")).toHaveLength(1);
+    expect(events.some(event => event.type === "tool.failed" && event.payload.preDispatch === true)).toBe(true);
     expect(events.some(event => event.type === "tool.completed")).toBe(false);
   } finally { await h.close(); }
 });
