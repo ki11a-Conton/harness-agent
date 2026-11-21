@@ -329,3 +329,42 @@ it("settles verification calls without running a command after planning exhausts
     expect(messages.find(message => message.role === "tool")?.content).toContain("did not run");
   } finally { await h.close(); }
 });
+
+it.each(["model", "verification"] as const)("refuses %s tool effects when publishing tool.started exhausts the turn time", async source => {
+  const cwd = await fixture();
+  let clock = 1000;
+  const path = "deadline-effect.txt";
+  const call = { id: newToolCallId(), name: "write_file", args: { path, content: "started" } };
+  const provider = new ScriptedModelProvider(source === "model"
+    ? [[{ type: "completed", timestamp: clock, result: { finishReason: "tool_calls", toolCalls: [call] } }]]
+    : [ScriptedModelProvider.text("Ready to verify.")]);
+  const h = await createHarness({ cwd, profile: "test", modelProvider: provider,
+    model: { providerId: provider.id, modelId: "scripted-model" },
+    now: () => clock, limits: { maxDurationMs: 500 }, maxIterationsPerTurn: 1,
+    ...(source === "verification" ? {
+      task: { id: "late-dispatch", goal: "Run a local check." },
+      verification: { planner: async () => [{ kind: "command" as const, command: process.execPath,
+        args: ["-e", `require('node:fs').writeFileSync(${JSON.stringify(path)}, 'started')`] }] },
+    } : {}),
+  });
+  try {
+    const append = h.events.append.bind(h.events);
+    h.events.append = async event => {
+      const saved = await append(event);
+      if (event.type === "tool.started") clock += 501;
+      return saved;
+    };
+    const session = await h.runtime.createSession({ agent: h.agents[0]!, cwd });
+    const turn = await h.runtime.startTurn(session.id, "Dispatch a tool within the time limit.");
+    const outcome = await h.runtime.runTurn(session.id, turn.id, new AbortController().signal);
+    expect(clock).toBe(1501);
+    await expect(readFile(join(cwd, path), "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+    expect(outcome.terminationReason).toBe("time_limit");
+    const messages = await h.store.listMessages(session.id);
+    assertToolProtocol(messages);
+    expect(messages.find(message => message.role === "tool")?.content).toContain("did not run");
+    const events = await h.events.list(session.id);
+    expect(events.filter(event => event.type === "tool.started")).toHaveLength(1);
+    expect(events.some(event => event.type === "tool.completed")).toBe(false);
+  } finally { await h.close(); }
+});

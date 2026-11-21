@@ -16,7 +16,7 @@ import type {
   ToolResult,
   ToolRisk,
 } from "@ar/contracts";
-import { computeArgsHash, errorInfo, isPermissionOrSandboxDenied, isTimeoutErrorCode, mayHaveSideEffect, newApprovalId, toToolSemantics } from "@ar/contracts";
+import { computeArgsHash, errorInfo, isPermissionOrSandboxDenied, isTimeoutErrorCode, mayHaveSideEffect, newApprovalId, toToolSemantics, turnTimeLimitRefusal } from "@ar/contracts";
 import {
   classifySupplyChain,
   DeterministicPermissionEngine,
@@ -194,6 +194,8 @@ export class ToolOrchestrator {
   ): Promise<ToolResult> {
     try {
       if (context.signal.aborted) return this.cancelledBeforeDispatch();
+      const refuseTurnTimeLimit = () => this.reportDispatchRefusal(request, context, started, turnTimeLimitRefusal());
+      if (context.turnTimeLimitExceeded?.()) return await refuseTurnTimeLimit();
 
       // 2+3. validate & normalize arguments
       const parsed = tool.inputSchema.safeParse(request.call.args);
@@ -235,6 +237,7 @@ export class ToolOrchestrator {
       }
 
       if (context.signal.aborted) return this.cancelledBeforeDispatch();
+      if (context.turnTimeLimitExceeded?.()) return await refuseTurnTimeLimit();
 
       // 7. resolve sandbox
       const sandboxDecision = this.evaluateSandbox(context, surface);
@@ -304,9 +307,18 @@ export class ToolOrchestrator {
       // cap and its single wall-clock deadline constrain execution BEFORE the side
       // effect instead of tallying it afterwards.
       const deadlineAtMs = this.dispatchDeadlineAtMs?.() ?? null;
-      if (deadlineAtMs !== null && this.now() >= deadlineAtMs) {
-        return await this.failCampaignDeadline(request, context, started, deadlineAtMs);
-      }
+      const refuseExpiredDispatch = () => {
+        if (deadlineAtMs !== null && this.now() >= deadlineAtMs) {
+          return this.reportDispatchRefusal(request, context, started, {
+            status: "failed",
+            error: errorInfo("RESOURCE_LIMIT", `${CAMPAIGN_DEADLINE_EXCEEDED}: the campaign deadline (${new Date(deadlineAtMs).toISOString()}) passed before this tool started; refusing to start it`),
+            metadata: { reasonCode: CAMPAIGN_DEADLINE_EXCEEDED, preDispatch: true },
+          });
+        }
+        return context.turnTimeLimitExceeded?.() ? refuseTurnTimeLimit() : undefined;
+      };
+      let refusal = refuseExpiredDispatch();
+      if (refusal !== undefined) return await refusal;
 
       let dispatchReservation: ToolDispatchReservation | undefined;
       if (this.toolBudget !== undefined) {
@@ -337,16 +349,14 @@ export class ToolOrchestrator {
         if (context.signal.aborted) return this.cancelledBeforeDispatch();
         // Reserving the budget can wait on durable storage. An admission
         // before the deadline cannot authorize execution after that wait.
-        if (deadlineAtMs !== null && this.now() >= deadlineAtMs) {
-          return await this.failCampaignDeadline(request, context, started, deadlineAtMs);
-        }
+        refusal = refuseExpiredDispatch();
+        if (refusal !== undefined) return await refusal;
         await this.emit("tool.started", request, context, {});
         if (context.signal.aborted) return this.cancelledBeforeDispatch();
         // Event publication is asynchronous too. Keep the final check next
         // to the real body, with no await between an admitted check and it.
-        if (deadlineAtMs !== null && this.now() >= deadlineAtMs) {
-          return await this.failCampaignDeadline(request, context, started, deadlineAtMs);
-        }
+        refusal = refuseExpiredDispatch();
+        if (refusal !== undefined) return await refusal;
         bodyStarted = true;
         let result: ToolResult;
         try {
@@ -407,17 +417,12 @@ export class ToolOrchestrator {
     };
   }
 
-  private async failCampaignDeadline(
+  private async reportDispatchRefusal(
     request: ToolCallRequest,
     context: ToolExecutionContext,
     started: number,
-    deadlineAtMs: number,
+    result: ToolResult,
   ): Promise<ToolResult> {
-    const result: ToolResult = {
-      status: "failed",
-      error: errorInfo("RESOURCE_LIMIT", `${CAMPAIGN_DEADLINE_EXCEEDED}: the campaign deadline (${new Date(deadlineAtMs).toISOString()}) passed before this tool started; refusing to start it`),
-      metadata: { reasonCode: CAMPAIGN_DEADLINE_EXCEEDED, preDispatch: true },
-    };
     await this.emit("tool.failed", request, context, {
       toolCallId: request.call.id,
       tool: request.call.name,

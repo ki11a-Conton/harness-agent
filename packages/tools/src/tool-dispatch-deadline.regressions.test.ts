@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { EventSink, ToolExecutionContext } from "@ar/contracts";
-import { newAgentId, newSessionId, newToolCallId, newTurnId } from "@ar/contracts";
+import { newAgentId, newSessionId, newToolCallId, newTurnId, TURN_TIME_LIMIT_EXCEEDED } from "@ar/contracts";
 import { ToolRegistry } from "./registry.js";
 import { CAMPAIGN_DEADLINE_EXCEEDED, ToolOrchestrator, type ToolDispatchBudget } from "./orchestrator.js";
 import { writeFileTool } from "./tools/write-file.js";
@@ -11,8 +11,9 @@ import { writeFileTool } from "./tools/write-file.js";
 const roots: string[] = [];
 afterEach(() => { for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true }); });
 
-function fixture(options: { crossAt?: "reservation" | "started"; withBudget?: boolean; cancelAt?: "reservation" | "started"; expiredInitially?: boolean } = {}) {
+function fixture(options: { crossAt?: "reservation" | "started"; withBudget?: boolean; cancelAt?: "reservation" | "started"; expiredInitially?: boolean; turnLimit?: number } = {}) {
   const cwd = mkdtempSync(join(tmpdir(), "dispatch-deadline-")); roots.push(cwd);
+  const { turnLimit } = options;
   let now = options.expiredInitially ? 1_000 : 900;
   const ac = new AbortController();
   const settle = vi.fn(async (_outcome: string) => {});
@@ -34,11 +35,12 @@ function fixture(options: { crossAt?: "reservation" | "started"; withBudget?: bo
   const registry = new ToolRegistry(); registry.register(writeFileTool);
   const orchestrator = new ToolOrchestrator({
     registry, workspaceRoot: cwd, events: sink, now: () => now,
-    dispatchDeadlineAtMs: () => 1_000,
+    ...(turnLimit === undefined ? { dispatchDeadlineAtMs: () => 1_000 } : {}),
     ...(options.withBudget === false ? {} : { toolBudget: { reserve } satisfies ToolDispatchBudget }),
   });
   const context: ToolExecutionContext = {
     cwd, sessionId: newSessionId(), agentId: newAgentId(), turnId: newTurnId(), signal: ac.signal,
+    ...(turnLimit !== undefined && { turnTimeLimitExceeded: () => now > turnLimit }),
     permissions: { rules: [{ action: "edit", resource: "file", pattern: "**/*", effect: "allow" }] },
     sandboxPolicy: { filesystem: { mode: "workspace-write" }, network: { mode: "deny" }, process: { timeoutMs: 500 } },
   };
@@ -101,5 +103,24 @@ describe("campaign deadline at the actual tool body boundary", () => {
     expect(result.status).toBe("cancelled");
     expect(existsSync(f.path)).toBe(false);
     expect(f.settle).toHaveBeenCalledExactlyOnceWith("not_executed");
+  });
+});
+
+describe("turn time limit at the actual tool body boundary", () => {
+  it("releases the dispatch reservation if it consumes the remaining turn time", async () => {
+    const f = fixture({ crossAt: "reservation", turnLimit: 999 });
+    const result = await f.execute();
+    expect(result).toMatchObject({ status: "failed", error: { code: "RESOURCE_LIMIT" },
+      metadata: { reasonCode: TURN_TIME_LIMIT_EXCEEDED, preDispatch: true } });
+    expect(existsSync(f.path)).toBe(false);
+    expect(f.settle).toHaveBeenCalledExactlyOnceWith("not_executed");
+    expect(f.events).not.toContain("tool.started");
+  });
+
+  it("preserves the runtime's inclusive turn time limit", async () => {
+    const f = fixture({ crossAt: "started", turnLimit: 1001 });
+    expect((await f.execute()).status).toBe("success");
+    expect(readFileSync(f.path, "utf8")).toBe("actual side effect");
+    expect(f.settle).toHaveBeenCalledExactlyOnceWith("dispatched");
   });
 });

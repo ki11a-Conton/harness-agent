@@ -56,6 +56,7 @@ import {
   defaultAskUserLifecycle,
   isAskReason,
   RealTimer,
+  turnTimeLimitRefusal,
 } from "@ar/contracts";
 import type {
   CheckpointBudgetUsage,
@@ -850,8 +851,7 @@ export class AgentRuntime {
           // Planning and persisting the tool request can consume the remaining
           // turn time. Settle the recorded call even when dispatch is refused.
           if (ctx.signal.aborted) return { status: "cancelled" };
-          if (timeLimitExceeded()) return { status: "failed",
-            error: errorInfo("RESOURCE_LIMIT", "maxDurationMs exceeded before dispatch; the verification command did not run") };
+          if (timeLimitExceeded()) return turnTimeLimitRefusal();
           try {
             return await this.orchestrator.executeBound({
               id: call.id, sessionId: ctx.sessionId, turnId: ctx.turnId, agentId: ctx.agent.id, call,
@@ -864,7 +864,7 @@ export class AgentRuntime {
               },
             }, {
               sessionId: ctx.sessionId, turnId: ctx.turnId, agentId: ctx.agent.id,
-              cwd: ctx.session.cwd, signal: ctx.signal,
+              cwd: ctx.session.cwd, signal: ctx.signal, turnTimeLimitExceeded: timeLimitExceeded,
               permissions: ctx.agent.permissions, sandboxPolicy: this.sandboxPolicy ?? defaultSandboxPolicy(),
             });
           } catch (error) {

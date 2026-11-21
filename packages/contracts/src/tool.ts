@@ -1,4 +1,5 @@
 import type { ZodType } from "zod";
+import { errorInfo } from "./errors.js";
 import type { AgentErrorInfo, ErrorCode } from "./errors.js";
 import type { AgentId, SessionId, ToolCallId, TurnId } from "./ids.js";
 import type { PermissionPolicy } from "./permission.js";
@@ -268,6 +269,16 @@ export interface ToolResult<T = unknown> {
   metadata?: Record<string, unknown>;
 }
 
+export const TURN_TIME_LIMIT_EXCEEDED = "TURN_TIME_LIMIT_EXCEEDED";
+
+export function turnTimeLimitRefusal(): ToolResult {
+  return {
+    status: "failed",
+    error: errorInfo("RESOURCE_LIMIT", "maxDurationMs exceeded before dispatch; the tool did not run"),
+    metadata: { reasonCode: TURN_TIME_LIMIT_EXCEEDED, preDispatch: true },
+  };
+}
+
 /**
  * Streaming chunk emitted by tools as they run. P18-5: stdout/stderr chunks
  * become `tool.output` events and a `progress` chunk becomes a separate
@@ -286,6 +297,8 @@ export interface ToolExecutionContext {
   agentId: AgentId;
   cwd: string;
   signal: AbortSignal;
+  /** The runtime's elapsed-turn limit, checked again immediately before dispatch. */
+  turnTimeLimitExceeded?: () => boolean;
   /** Agent permission policy the orchestrator must evaluate against. */
   permissions: PermissionPolicy;
   /** Sandbox policy the orchestrator must enforce. */

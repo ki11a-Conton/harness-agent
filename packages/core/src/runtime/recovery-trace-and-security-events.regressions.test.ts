@@ -14,7 +14,7 @@
 //   POLICY_DENIED from exactly those events. Fixed by classifying the denial
 //   code onto a security event, with a fail-closed fallback.
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type {
   AgentDefinition,
   AgentEvent,
@@ -24,7 +24,7 @@ import type {
   ToolResult,
   ToolSemantics,
 } from "@ar/contracts";
-import { DEFAULT_TOOL_SEMANTICS, errorInfo, newAgentId } from "@ar/contracts";
+import { DEFAULT_TOOL_SEMANTICS, errorInfo, ManualTimer, newAgentId } from "@ar/contracts";
 import { ScriptedModelProvider } from "@ar/model";
 import { AgentRuntime } from "./runtime.js";
 import { RecoveryPolicy } from "../recovery/recovery.js";
@@ -76,9 +76,12 @@ async function makeHarness(opts: {
   orch: CountingOrchestrator;
   recovery?: RecoveryPolicy;
   toolSemantics?: (name: string) => ToolSemantics;
+  agent?: AgentDefinition;
+  timer?: ManualTimer;
 }): Promise<Harness> {
   const store = new MemorySessionStore();
   const events = new MemoryEventStore();
+  const { timer } = opts;
   const runtime = new AgentRuntime({
     toolRegistry: defaultTestToolCatalog(),
     permissiveToolResolution: true,
@@ -86,8 +89,9 @@ async function makeHarness(opts: {
     events,
     modelProvider: new ScriptedModelProvider(opts.scripts),
     orchestrator: opts.orch,
-    agents: [{ ...AGENT, limits: {} }],
+    agents: [opts.agent ?? AGENT],
     recovery: opts.recovery ?? new RecoveryPolicy({ maxAttempts: 3, retryDelayMs: 0 }),
+    ...(timer !== undefined ? { timer, now: () => timer.now() } : {}),
     ...(opts.toolSemantics !== undefined ? { toolSemanticsOf: opts.toolSemantics } : {}),
   });
   return { runtime, store, events, orch: opts.orch };
@@ -159,6 +163,30 @@ describe("task-12 / DEFECT-1: recovery.decided must not claim a retry that never
     expect(decisions(all).some((d) => d.action === "fail_safe")).toBe(true);
     // No refusal is recorded when the gate actually allows the retry.
     expect(decisions(all).filter((d) => d.action === "retry_refused")).toHaveLength(0);
+  });
+
+  it.each(["time_limit", "cancelled"] as const)("refuses a safe tool retry during backoff on %s", async reason => {
+    const timer = new ManualTimer();
+    const agent = { ...AGENT, limits: { maxDurationMs: 500 } };
+    const orch = new CountingOrchestrator({ status: "failed", error: errorInfo("INTERNAL_ERROR", "initial read failure") });
+    const h = await makeHarness({ agent, timer, orch,
+      scripts: [ScriptedModelProvider.toolCall("read_file", { path: "a.txt" })],
+      recovery: new RecoveryPolicy({ maxAttempts: 2, retryDelayMs: 501 }), toolSemantics: () => READ_ONLY_SAFE,
+    });
+    const session = await h.runtime.createSession({ agent, cwd: process.cwd() });
+    const turn = await h.runtime.startTurn(session.id, "Read once within the budget.");
+    const controller = new AbortController();
+    const unfinished = h.runtime.runTurn(session.id, turn.id, controller.signal);
+    await vi.waitFor(() => expect(timer.pendingCount()).toBe(1));
+    if (reason === "cancelled") {
+      controller.abort();
+      expect(timer.pendingCount()).toBe(0);
+    } else {
+      timer.advance(501);
+    }
+    expect((await unfinished).terminationReason).toBe(reason);
+    expect(orch.dispatched).toBe(1);
+    expect(decisions(await h.events.list(session.id)).map(d => d.action)).toEqual(["retry_refused"]);
   });
 });
 

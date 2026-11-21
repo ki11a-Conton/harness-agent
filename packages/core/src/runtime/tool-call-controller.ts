@@ -21,6 +21,8 @@ import {
   resourceConflicts,
   sleep as timerSleep,
   stableFingerprint,
+  TURN_TIME_LIMIT_EXCEEDED,
+  turnTimeLimitRefusal,
 } from "@ar/contracts";
 import type {
   AgentEvent,
@@ -284,7 +286,7 @@ export class ToolCallController {
         // call still needs a protocol result even though it never starts.
         const result: ToolResult = signal.aborted
           ? { status: "cancelled", error: errorInfo("USER_CANCELLED", "turn aborted before this tool call started") }
-          : { status: "failed", error: errorInfo("RESOURCE_LIMIT", "maxDurationMs exceeded before dispatch; the tool did not run") };
+          : turnTimeLimitRefusal();
         for (; i < calls.length; i++) {
           const pending = calls[i]!;
           executed.push({ call: pending, result, ...this.noteExecutedCall(state, pending, result) });
@@ -317,7 +319,7 @@ export class ToolCallController {
         // so a read that has not settled at abort time is simply dropped (its
         // result is not recorded); the reads themselves observe the aborted
         // signal and terminate promptly.
-        const settled = await this.runReadBatch(ctx, batch, turnState, step, parentCallId);
+        const settled = await this.runReadBatch(ctx, batch, turnState, step, timeLimitExceeded, parentCallId);
         state.transition("observing");
         state.transition("thinking");
         for (const { call: c, result, deferredObservations } of settled) {
@@ -337,7 +339,7 @@ export class ToolCallController {
         // P2-41/PROTOCOL: observations produced during execution are collected
         // here and persisted by the caller AFTER this batch's tool results.
         const observations: string[] = [];
-        const result = await this.executeToolCall(ctx, call, turnState, step, parentCallId, observations);
+        const result = await this.executeToolCall(ctx, call, turnState, step, timeLimitExceeded, parentCallId, observations);
         state.transition("observing");
         state.transition("thinking");
         executed.push({
@@ -367,6 +369,7 @@ export class ToolCallController {
     turnState: TurnExecutionState,
     /** P15-2: the immutable step shared by every call in this batch. */
     step: StepExecutionSnapshot,
+    timeLimitExceeded: () => boolean,
     parentCallId?: string,
   ): Promise<SettledToolCall[]> {
     const { signal } = ctx;
@@ -438,7 +441,7 @@ export class ToolCallController {
       };
       signal.addEventListener("abort", onAbort, { once: true });
       batch.forEach((c, idx) => {
-        const promise = this.executeToolCall(ctx, c, turnState, step, parentCallId, observationsByIdx[idx]!);
+        const promise = this.executeToolCall(ctx, c, turnState, step, timeLimitExceeded, parentCallId, observationsByIdx[idx]!);
         // P18-5: the settle signal ALWAYS resolves (the rejection is already
         // recorded into results by the catch below — the abort wait path only
         // needs to know WHEN settlement happened, never to see the error).
@@ -564,6 +567,7 @@ export class ToolCallController {
     turnState: TurnExecutionState,
     /** P15-2: the immutable step this tool call belongs to. */
     step: StepExecutionSnapshot,
+    timeLimitExceeded: () => boolean,
     parentCallId?: string,
     /** P2-41/PROTOCOL: per-call collector for adaptive-recovery observations.
      *  REQUIRED so an observation can never be persisted inside the tool block
@@ -675,6 +679,7 @@ export class ToolCallController {
       // sandbox and environment from the frozen snapshot, not live state.
       cwd: step.environment.cwd,
       signal,
+      turnTimeLimitExceeded: timeLimitExceeded,
       permissions: step.permissions.permissions,
       sandboxPolicy: step.permissions.sandboxPolicy,
     };
@@ -709,6 +714,9 @@ export class ToolCallController {
       if (campaignDeadlineExpired()) {
         deadlineRefused = true;
         result = deadlineRefusal();
+      } else if (timeLimitExceeded()) {
+        deadlineRefused = true;
+        result = turnTimeLimitRefusal();
       } else {
         result = await this.deps.orchestrator.executeBound(
           {
@@ -771,7 +779,7 @@ export class ToolCallController {
     if (result.status === "denied") {
       await this.emitOrchestratorDenial(session.id, turnId, call, result);
     }
-    if (!deadlineRefused && (result.status === "failed" || result.status === "timeout") && this.deps.recovery !== undefined) {
+    if (!deadlineRefused && !timeLimitExceeded() && (result.status === "failed" || result.status === "timeout") && this.deps.recovery !== undefined) {
       // plan.md Phase 3.6: auto-retry ONLY idempotent read-only tools
       // (retry: "safe"). Tools with unknown or non-idempotent effects are
       // never blindly re-executed — the failed result flows to the model,
@@ -822,9 +830,13 @@ export class ToolCallController {
         if (decision.action === "retry") {
           if (retryPolicy !== "safe") { await this.deps.emit(session.id, "recovery.decided", reported, turnId); break; }
           if ((decision.retryDelayMs ?? 0) > 0) {
-            await timerSleep(this.deps.timer, decision.retryDelayMs ?? 0);
+            await timerSleep(this.deps.timer, decision.retryDelayMs ?? 0, signal);
           }
           // R3/F4 — a retry is a NEW dispatch: it must not start after the deadline.
+          if (timeLimitExceeded()) {
+            await this.deps.emit(session.id, "recovery.decided", { ...reported, action: "retry_refused", reason: "maxDurationMs exceeded before retry" }, turnId);
+            break;
+          }
           if (campaignDeadlineExpired() || signal.aborted) {
             result = campaignDeadlineExpired() ? deadlineRefusal() : { status: "cancelled", error: errorInfo("USER_CANCELLED", "retry cancelled before dispatch") };
             await this.deps.emit(session.id, "recovery.decided", { ...reported, action: "retry_refused", reason: result.error?.message }, turnId);
@@ -841,8 +853,12 @@ export class ToolCallController {
             };
           }
           await this.deps.hooks.afterTool(hookCtx, call, result);
-          await this.deps.emit(session.id, "recovery.decided", reported, turnId);
+          const refusedByTurnLimit = result.metadata?.preDispatch === true && result.metadata.reasonCode === TURN_TIME_LIMIT_EXCEEDED;
+          await this.deps.emit(session.id, "recovery.decided", refusedByTurnLimit
+            ? { ...reported, action: "retry_refused", reason: result.error?.message }
+            : reported, turnId);
           if (result.status === "denied") await this.emitOrchestratorDenial(session.id, turnId, call, result);
+          if (refusedByTurnLimit || timeLimitExceeded()) break;
           continue;
         }
         await this.deps.emit(session.id, "recovery.decided", reported, turnId);
@@ -855,6 +871,7 @@ export class ToolCallController {
       }
     } else if (
       !deadlineRefused &&
+      !timeLimitExceeded() &&
       (result.status === "failed" || result.status === "timeout") &&
       this.deps.adaptiveRecovery !== undefined
     ) {
@@ -888,6 +905,7 @@ export class ToolCallController {
           remaining: decision.remaining,
           reason: decision.reason,
         }, turnId);
+        if (timeLimitExceeded()) break;
         if (decision.action === "retry_safe") {
           if (retryPolicy !== "safe") break;
           // R3/F4 — a retry is a NEW dispatch: it must not start after the deadline.
@@ -905,6 +923,7 @@ export class ToolCallController {
             };
           }
           await this.deps.hooks.afterTool(hookCtx, call, result);
+          if (timeLimitExceeded()) break;
           continue;
         }
         // Self-heal actions: inject a bounded observation so the model changes
@@ -921,6 +940,7 @@ export class ToolCallController {
             } catch {
               turn = undefined;
             }
+            if (timeLimitExceeded()) break;
             try {
               const outcome = await this.deps.delegateSpecialist({
                 sessionId: session.id,
