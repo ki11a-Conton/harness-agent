@@ -673,10 +673,10 @@ export class SqliteRuntimeStore
   }
 
   private async checkpointLoadLatest(sessionId: SessionId): Promise<CheckpointData | undefined> {
-    // Multiple safe boundaries may share a millisecond; the later saved row
-    // must retain the newer state and consumed budget when timestamps tie.
+    // The later saved row carries the newer state and consumed budget even
+    // when the wall clock moves backwards between safe boundaries.
     const row = this.db
-      .prepare("SELECT doc FROM checkpoints WHERE session_id = ? ORDER BY created_at DESC, rowid DESC LIMIT 1")
+      .prepare("SELECT doc FROM checkpoints WHERE session_id = ? ORDER BY rowid DESC LIMIT 1")
       .get(sessionId);
     if (row === undefined) return undefined;
     const checkpoint = parseDoc<CheckpointData>(row.doc, "checkpoint");
@@ -686,7 +686,7 @@ export class SqliteRuntimeStore
 
   private async checkpointList(sessionId: SessionId): Promise<CheckpointData[]> {
     const rows = this.db
-      .prepare("SELECT doc FROM checkpoints WHERE session_id = ? ORDER BY created_at DESC, rowid DESC")
+      .prepare("SELECT doc FROM checkpoints WHERE session_id = ? ORDER BY rowid DESC")
       .all(sessionId);
     return rows
       .map((row) => parseDoc<CheckpointData>(row.doc, "checkpoint"))

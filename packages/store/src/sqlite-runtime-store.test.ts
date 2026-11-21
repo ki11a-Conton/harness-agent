@@ -280,21 +280,21 @@ describe("SqliteRuntimeStore (P5-3)", () => {
     expect(await store.checkpoints.list(sid)).toHaveLength(2);
   });
 
-  it("checkpoints: equal timestamps retain the last saved state and budget after reopen", async () => {
+  it.each([1000, 900])("checkpoints: retain the last saved state and budget after reopen (last timestamp %s)", async (lastTimestamp) => {
     const dir = await freshDir();
     const store = trackStore(new SqliteRuntimeStore({ dataDir: dir }));
     const sid = newSessionId(), tid = newTurnId(), aid = newAgentId(), runId = newRunId();
-    const checkpoint = (used: number, sessionId = sid): CheckpointData => buildCheckpoint({
+    const checkpoint = (used: number, createdAt: number, sessionId = sid): CheckpointData => buildCheckpoint({
       checkpointId: newCheckpointId(), schemaVersion: 1, sessionId, turnId: tid, agentId: aid,
-      createdAt: 1000, reason: "verification:failed", phase: "thinking", iteration: used, toolCallsExecuted: used,
+      createdAt, reason: "verification:failed", phase: "thinking", iteration: used, toolCallsExecuted: used,
       state: newWorkingState(`consumed ${used}`), toolLedger: [], childSessions: [], lastEventSequence: used,
       effectiveAgentConfigRef: "cfg", contextRefs: [], budgetUsage: { maxTokens: 0, verificationRetries: used,
         run: { runId, limits: { maxToolCalls: 2 }, usedTurns: 1, usedToolCalls: used, startedAt: 0,
           durationMs: 100, outputChars: used, retries: 0, subagentsSpawned: 0, estimatedCostUsd: used / 10 } },
     });
-    const first = checkpoint(1), latest = checkpoint(2);
+    const first = checkpoint(1, 1000), latest = checkpoint(2, lastTimestamp);
     await store.checkpoints.save(first);
-    await store.checkpoints.save(checkpoint(3, newSessionId()));
+    await store.checkpoints.save(checkpoint(3, 1100, newSessionId()));
     await store.checkpoints.save(latest);
     expect(await store.checkpoints.loadLatest(sid)).toEqual(latest);
     expect(await store.checkpoints.list(sid)).toEqual([latest, first]);
