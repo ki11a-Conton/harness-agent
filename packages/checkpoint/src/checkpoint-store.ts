@@ -167,25 +167,7 @@ export class DurableCheckpointStore implements CheckpointStore {
     const latest = await this.readValidated(this.latestFile(sessionId));
     if (latest !== undefined) return latest;
 
-    // latest.json missing/corrupt: fall back to the newest valid checkpoint
-    // in the session directory.
-    const dir = this.sessionDir(sessionId);
-    let entries: string[];
-    try {
-      entries = await readdir(dir);
-    } catch (err) {
-      if (isNodeError(err, "ENOENT")) return undefined;
-      throw new CheckpointStoreError("IO_ERROR", `list failed for ${dir}: ${String(err)}`);
-    }
-    const candidates: { checkpoint: CheckpointData; file: string }[] = [];
-    for (const entry of entries) {
-      if (entry === LATEST_FILE || !entry.endsWith(".json")) continue;
-      const checkpoint = await this.readValidated(join(dir, entry));
-      if (checkpoint !== undefined) candidates.push({ checkpoint, file: entry });
-    }
-    if (candidates.length === 0) return undefined;
-    candidates.sort((a, b) => b.checkpoint.createdAt - a.checkpoint.createdAt);
-    return candidates[0]!.checkpoint;
+    return (await this.list(sessionId))[0];
   }
 
   async list(sessionId: SessionId): Promise<CheckpointData[]> {
@@ -204,7 +186,9 @@ export class DurableCheckpointStore implements CheckpointStore {
       const checkpoint = await this.readValidated(join(dir, entry));
       if (checkpoint !== undefined) checkpoints.push(checkpoint);
     }
-    checkpoints.sort((a, b) => b.createdAt - a.createdAt);
+    // Journal progress survives wall-clock rollback. The timestamp breaks
+    // ties for checkpoints taken at the same position in the journal.
+    checkpoints.sort((a, b) => b.lastEventSequence - a.lastEventSequence || b.createdAt - a.createdAt);
     return checkpoints;
   }
 }

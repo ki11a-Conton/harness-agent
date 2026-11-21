@@ -138,6 +138,23 @@ describe("DurableCheckpointStore (P1-3)", () => {
     expect(loaded!.iteration).toBe(good.iteration);
   });
 
+  it("recovers the furthest journal position if the clock went backwards and the latest pointer is corrupt", async () => {
+    const root = await freshRoot();
+    const store = new DurableCheckpointStore({ dataDir: root });
+    const sessionId = newSessionId();
+    const earlier = checkpoint({ sessionId, createdAt: 500, lastEventSequence: 42,
+      budgetUsage: { maxTokens: 0, verificationRetries: 1 } });
+    const later = checkpoint({ sessionId, createdAt: 400, lastEventSequence: 45,
+      budgetUsage: { maxTokens: 0, verificationRetries: 2 } });
+    await store.save(earlier);
+    await store.save(later);
+    await writeFile(join(root, "checkpoints", sessionId, "latest.json"), "{ broken pointer");
+
+    const reopened = new DurableCheckpointStore({ dataDir: root });
+    expect(await reopened.loadLatest(sessionId)).toEqual(later);
+    expect(await reopened.list(sessionId)).toEqual([later, earlier]);
+  });
+
   it("bad checkpoints are skipped by list while good ones survive", async () => {
     const root = await freshRoot();
     const store = new DurableCheckpointStore({ dataDir: root });
