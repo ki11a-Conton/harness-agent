@@ -133,6 +133,10 @@ function stableHashOf(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex").slice(0, 16);
 }
 
+function isDelegationTool(name: unknown): boolean {
+  return typeof name === "string" && name.startsWith("delegate");
+}
+
 /** Carry durable consumption past the snapshot into either recovery path. */
 function replayCheckpointBudget(checkpoint: CheckpointData, budget: RunBudget, events: readonly AgentEvent[]): RunBudget {
   // Legacy snapshots cannot identify an interrupted turn. Preserve their
@@ -146,6 +150,7 @@ function replayCheckpointBudget(checkpoint: CheckpointData, budget: RunBudget, e
     .filter(event => typeof event.payload.toolCallId === "string");
   const restored = structuredClone(budget);
   restored.usedToolCalls += requested.filter(event => event.payload.name !== "update_plan").length;
+  restored.subagentsSpawned += requested.filter(event => isDelegationTool(event.payload.name)).length;
   for (const event of replay.filter(event => event.type === "model.completed")) {
     const usage = event.payload.usage as import("@ar/contracts").UsageSnapshot | undefined;
     restored.estimatedCostUsd += usage?.estimatedCostUsd ?? 0;
@@ -822,7 +827,7 @@ export class AgentRuntime {
     });
     // Q-1: verification gate delegated to the extracted controller.
     this.verificationController = new VerificationController({
-      executeCommands: async (ctx, specs) => {
+      executeCommands: async (ctx, specs, timeLimitExceeded) => {
         if (!isToolAllowedByPolicy(ctx.agent.tools, "exec")) {
           return specs.map(() => ({ status: "denied", error: errorInfo("PERMISSION_DENIED", "verification exec is excluded by the session tool policy") }));
         }
@@ -842,6 +847,11 @@ export class AgentRuntime {
         await this.store.appendMessage({ id: newMessageId(), sessionId: ctx.sessionId, turnId: ctx.turnId,
           role: "assistant", content: "", toolCalls: calls, ...(thinkingConversation ? { reasoningContent: "" } : {}), createdAt: this.now() });
         const results = await Promise.all(calls.map(async (call): Promise<ToolResult> => {
+          // Planning and persisting the tool request can consume the remaining
+          // turn time. Settle the recorded call even when dispatch is refused.
+          if (ctx.signal.aborted) return { status: "cancelled" };
+          if (timeLimitExceeded()) return { status: "failed",
+            error: errorInfo("RESOURCE_LIMIT", "maxDurationMs exceeded before dispatch; the verification command did not run") };
           try {
             return await this.orchestrator.executeBound({
               id: call.id, sessionId: ctx.sessionId, turnId: ctx.turnId, agentId: ctx.agent.id, call,
@@ -924,7 +934,8 @@ export class AgentRuntime {
         }
         return outcome;
       },
-      runVerificationGate: (ctx, filesChanged) => this.verificationController.runVerificationGate(ctx, filesChanged),
+      runVerificationGate: (ctx, filesChanged, timeLimitExceeded) =>
+        this.verificationController.runVerificationGate(ctx, filesChanged, timeLimitExceeded),
       hasPendingSteering: (ctx) => this.hasPendingSteering(ctx),
       closeSteeringForCompletion: async (ctx) => {
         // Close synchronously, before durable reads can yield to an admission.
@@ -1643,7 +1654,7 @@ export class AgentRuntime {
         // P0-10: maxSubagents — consumed before any delegate tool actually
         // spawns a child (never after the fact).
         for (const call of toolCalls) {
-          if (call.name.startsWith("delegate")) {
+          if (isDelegationTool(call.name)) {
             const spawnBreach = budget.onSubagentSpawn();
             if (spawnBreach !== undefined) {
               await appendUnexecutedToolResults(this.store, ctx, toolCalls,

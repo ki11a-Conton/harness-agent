@@ -852,8 +852,11 @@ export class ContextController {
       const hash = createHash("sha256").update(out).digest("hex");
       let ref = "(no artifact dir configured — inline truncated)";
       if (budget.artifactDir !== undefined) {
-        // Provider correlation ids are untrusted values, never path parts.
-        const identity = createHash("sha256").update(JSON.stringify([sessionId, turnId, call.id])).digest("hex");
+        // Provider correlation IDs may be reused in later steps. Each
+        // artifact gets a new identity, and correlation IDs never become
+        // filesystem path components.
+        const artifactId = newArtifactId();
+        const identity = createHash("sha256").update(JSON.stringify([sessionId, turnId, call.id, artifactId])).digest("hex");
         const path = join(budget.artifactDir, `tool-output-${identity}.txt`);
         try {
           await mkdir(dirname(path), { recursive: true });
@@ -864,7 +867,7 @@ export class ContextController {
           // ref, never the identity. Sensitivity follows the tool semantics.
           if (this.deps.artifactStore !== undefined) {
             const artifact: Artifact = {
-              id: newArtifactId(),
+              id: artifactId,
               sessionId,
               turnId,
               toolCallId: call.id,

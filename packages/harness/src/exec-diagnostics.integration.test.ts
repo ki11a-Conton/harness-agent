@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { createRequire } from 'node:module';
 import { expect, it } from 'vitest';
-import type { ModelProvider, ModelRequest } from '@ar/contracts';
+import { assertToolProtocol, newToolCallId, type ModelEvent, type ModelProvider, type ModelRequest } from '@ar/contracts';
 import { ScriptedModelProvider } from '@ar/model';
 import { createHarness } from './create-harness.js';
 
@@ -63,4 +63,37 @@ process.stdout.write(result.stdout??'');process.stderr.write(result.stderr??'');
     expect(toolMessage).toContain('[failed]');
     expect(visible, 'The real process error was discarded before the provider could inspect it').toBe(true);
   } finally { await h.close(); await rm(cwd, { recursive: true, force: true }); }
+}, 30000);
+
+it('retains two full output artifacts when the provider reuses a tool ID across steps', async () => {
+  const cwd = await realpath(await mkdtemp(join(tmpdir(), 'exec-reused-artifact-')));
+  const id = newToolCallId();
+  const script = (marker: string): ModelEvent[] => [{
+    type: 'completed', timestamp: 0,
+    result: { finishReason: 'tool_calls', toolCalls: [{ id, name: 'exec', args: {
+      command: process.execPath,
+      args: ['-e', `process.stdout.write(${JSON.stringify(marker)} + 'x'.repeat(75000));`],
+    } }] },
+  }];
+  const provider = new ScriptedModelProvider([script('FIRST_RECEIPT'), script('SECOND_RECEIPT'), ScriptedModelProvider.text('Both invocations ran.')]);
+  const h = await createHarness({ cwd, dataDir: join(cwd, 'state'), profile: 'test', modelProvider: provider,
+    model: { providerId: provider.id, modelId: 'scripted-model' },
+    sandboxPolicy: { filesystem: { mode: 'workspace-write', allowedPaths: [cwd] }, network: { mode: 'deny' },
+      process: { timeoutMs: 10000, maxOutputBytes: 128 * 1024 } },
+  });
+  try {
+    const session = await h.runtime.createSession({ cwd, agent: h.agents[0]! });
+    const turn = await h.runtime.startTurn(session.id, 'Run both local diagnostic commands.');
+    const outcome = await h.runtime.runTurn(session.id, turn.id, new AbortController().signal);
+    expect(outcome.status).toBe('completed');
+    const artifacts = await h.artifactStore!.byToolCallId(session.id, turn.id, id);
+    expect(artifacts).toHaveLength(2);
+    expect(new Set(artifacts.map(item => item.ref)).size).toBe(2);
+    const outputs = await Promise.all(artifacts.map(async item => JSON.parse(await readFile(item.ref, 'utf8')).stdout));
+    expect(outputs).toEqual(expect.arrayContaining(['FIRST_RECEIPT' + 'x'.repeat(75000), 'SECOND_RECEIPT' + 'x'.repeat(75000)]));
+    const messages = await h.store.listMessages(session.id);
+    assertToolProtocol(messages);
+    for (const artifact of artifacts) expect(messages.filter(message => message.role === 'tool'
+      && message.content.includes(`#artifact:${artifact.id}`))).toHaveLength(1);
+  } finally { await h.close(); await rm(cwd, { recursive: true, force: true, maxRetries: 8, retryDelay: 50 }); }
 }, 30000);

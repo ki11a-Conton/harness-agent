@@ -8,7 +8,7 @@
 
 import type { CompletionEvidence, SessionStore, TaskSpec, VerificationSpec, Verifier, VerificationContext } from "@ar/contracts";
 import { RuntimeVerifier } from "../verification/runtime-verifier.js";
-import type { TurnContext } from "./turn-helpers.js";
+import { rethrowIfKill, type TurnContext } from "./turn-helpers.js";
 
 export interface VerificationGateResult {
   status: "passed" | "failed" | "blocked";
@@ -44,7 +44,7 @@ function groupCommands(run: (commands: readonly Command[]) => Promise<CommandRes
 }
 
 export interface VerificationControllerDeps {
-  executeCommands?: (ctx: TurnContext, commands: readonly Command[]) => Promise<CommandResult[]>;
+  executeCommands?: (ctx: TurnContext, commands: readonly Command[], timeLimitExceeded: () => boolean) => Promise<CommandResult[]>;
   task?: TaskSpec;
   verifier?: Verifier;
   store: SessionStore;
@@ -69,6 +69,7 @@ export class VerificationController {
   async runVerificationGate(
     ctx: TurnContext,
     filesChanged: readonly string[],
+    timeLimitExceeded: () => boolean,
   ): Promise<VerificationGateResult | undefined> {
     const { session, turnId } = ctx;
     // P1-15: completion policy runs before the verifier — objective task
@@ -104,11 +105,13 @@ export class VerificationController {
     const task = this.deps.task;
     let verification = task.verification;
     if ((verification === undefined || verification.length === 0) && this.deps.planVerification !== undefined) {
-      verification = await this.deps.planVerification({
-        task,
-        changedPaths: changed,
-        cwd: session.cwd,
-      });
+      try {
+        verification = await this.deps.planVerification({ task, changedPaths: changed, cwd: session.cwd });
+      } catch (error) {
+        rethrowIfKill(error);
+        const detail = error instanceof Error ? error.message : String(error);
+        return { status: "blocked", reason: `verification planner failed: ${detail}` };
+      }
     }
     const executeCommands = this.deps.executeCommands;
     const gate = await new RuntimeVerifier(this.deps.verifier).verifyTurn(
@@ -118,7 +121,7 @@ export class VerificationController {
       this.deps.store,
       {
         signal: ctx.signal,
-        ...(executeCommands && { executeCommand: groupCommands(commands => executeCommands(ctx, commands)) }),
+        ...(executeCommands && { executeCommand: groupCommands(commands => executeCommands(ctx, commands, timeLimitExceeded)) }),
         cwd: session.cwd,
         runStartedAt: ctx.turnStartedAt,
         changedPaths: changed,

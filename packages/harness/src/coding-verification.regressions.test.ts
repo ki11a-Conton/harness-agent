@@ -272,3 +272,60 @@ it("keeps a completed write and settles the rest of a serial batch when the turn
     expect(messages.find(message => message.toolCallId === calls[1]!.id)?.content).toContain("did not run");
   } finally { await h.close(); }
 });
+
+it.each([false, true])("handles a failing verification planner within the existing retry bound (recovers=%s)", async recovers => {
+  const cwd = await fixture();
+  const provider = new ScriptedModelProvider(Array.from({ length: 3 }, () => ScriptedModelProvider.text("Ready to verify.")));
+  let plans = 0;
+  const h = await createHarness({ cwd, profile: "test", modelProvider: provider,
+    model: { providerId: provider.id, modelId: "scripted-model" },
+    task: { id: "planner-failure", goal: "Verify a local check." },
+    verification: { async planner() {
+      if (++plans === 1 || !recovers) throw new Error("fixture discovery unavailable");
+      return [{ kind: "command", command: process.execPath, args: ["-e", "console.log('CHECK_RAN')"] }];
+    } },
+  });
+  try {
+    const session = await h.runtime.createSession({ agent: h.agents[0]!, cwd });
+    const turn = await h.runtime.startTurn(session.id, "Run the verification check.");
+    const outcome = await h.runtime.runTurn(session.id, turn.id, new AbortController().signal);
+    const events = await h.events.list(session.id);
+    const failures = events.filter(event => event.type === "verification.failed");
+    expect(failures).toHaveLength(recovers ? 1 : 3);
+    expect(failures[0]?.payload.error).toContain("fixture discovery unavailable");
+    expect(plans).toBe(recovers ? 2 : 3);
+    expect(outcome.terminationReason).toBe(recovers ? "verified_complete" : "verification_failed");
+    const messages = await h.store.listMessages(session.id);
+    assertToolProtocol(messages);
+    expect(messages.some(message => message.role === "tool" && message.content.includes("CHECK_RAN"))).toBe(recovers);
+    expect((await h.store.getTurn(turn.id))?.status).toBe(recovers ? "completed" : "failed");
+  } finally { await h.close(); }
+});
+
+it("settles verification calls without running a command after planning exhausts the turn time", async () => {
+  const cwd = await fixture();
+  let clock = 1000;
+  const provider = new ScriptedModelProvider([ScriptedModelProvider.text("Ready to verify.")]);
+  const h = await createHarness({ cwd, profile: "test", modelProvider: provider,
+    model: { providerId: provider.id, modelId: "scripted-model" },
+    now: () => clock, limits: { maxDurationMs: 500 },
+    task: { id: "verification-deadline", goal: "Run the local check before the deadline." },
+    verification: { async planner() {
+      clock += 501;
+      return [{ kind: "command", command: process.execPath,
+        args: ["-e", "require('node:fs').writeFileSync('check-ran.txt', 'started')"] }];
+    } },
+  });
+  try {
+    const session = await h.runtime.createSession({ agent: h.agents[0]!, cwd });
+    const turn = await h.runtime.startTurn(session.id, "Run the verification check.");
+    const outcome = await h.runtime.runTurn(session.id, turn.id, new AbortController().signal);
+    expect(outcome.terminationReason).toBe("time_limit");
+    await expect(readFile(join(cwd, "check-ran.txt"), "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+    const events = await h.events.list(session.id);
+    expect(events.some(event => event.type === "tool.started")).toBe(false);
+    const messages = await h.store.listMessages(session.id);
+    assertToolProtocol(messages);
+    expect(messages.find(message => message.role === "tool")?.content).toContain("did not run");
+  } finally { await h.close(); }
+});

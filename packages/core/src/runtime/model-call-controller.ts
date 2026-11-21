@@ -185,7 +185,7 @@ export interface ModelCallControllerDeps {
     call: ToolCall,
     ledger: ToolExecutionRecord[],
   ) => Promise<TurnOutcome>;
-  runVerificationGate: (ctx: TurnContext, filesChanged: readonly string[]) => Promise<VerificationGateResult | undefined>;
+  runVerificationGate: (ctx: TurnContext, filesChanged: readonly string[], timeLimitExceeded: () => boolean) => Promise<VerificationGateResult | undefined>;
   /** Accepted input for this turn must be sampled before a successful stop. */
   hasPendingSteering?: (ctx: TurnContext) => Promise<boolean>;
   /** Close actor admission before awaited successful completion commits.
@@ -375,7 +375,8 @@ export class ModelCallController {
       if (correction !== undefined) return correction;
       await this.deps.failAt("verification.started", { sessionId, turnId });
       const verificationStartedAt = this.deps.now();
-      const gate = await this.deps.runVerificationGate(ctx, working.filesChanged);
+      const gate = await this.deps.runVerificationGate(ctx, working.filesChanged,
+        () => this.deps.wallClockExceeded(agent, turn) !== undefined);
       if (signal.aborted) {
         return { action: "finish", outcome: await this.deps.finishTurn(ctx, "cancelled", state, working, undefined, "cancelled", toolLedger) };
       }

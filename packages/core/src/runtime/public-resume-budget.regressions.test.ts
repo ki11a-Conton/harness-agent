@@ -179,3 +179,19 @@ describe("public recovery preserves durable task consumption across its fresh tu
     expect(h.events.events.find(event => event.type === "run.limit_reached")?.payload).toMatchObject({ limit: "maxTurns", used: 2, allowed: 1 });
   });
 });
+
+it.each(["same turn", "explicit resume"] as const)("retains a post-checkpoint delegation charge on %s", async mode => {
+  const h = await setup({ maxSubagents: 1 }, [
+    ScriptedModelProvider.toolCall("delegate_worker", { goal: "another lookup" }),
+    ScriptedModelProvider.text("Done."),
+  ]);
+  await h.checkpoint();
+  await h.settledTool("spent-delegation", "delegate_worker", true);
+  await h.settledTool("unrelated-delegation", "delegate_worker", false, newTurnId());
+  const outcome = mode === "explicit resume" ? (await h.resume()).outcome
+    : await h.runtime.runTurn(h.session.id, h.turn.id, new AbortController().signal);
+  expect(outcome.terminationReason).toBe("agent_limit");
+  expect(h.orchestrator.calls).toHaveLength(0);
+  const limits = h.events.events.filter(event => event.type === "run.limit_reached");
+  expect(limits.map(event => event.payload)).toEqual([{ limit: "maxSubagents", used: 2, allowed: 1 }]);
+});
