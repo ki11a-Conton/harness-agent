@@ -6,14 +6,17 @@ import { newMessageId, newTurnId, type InstructionDiscovery, type ModelEvent, ty
 import { createHarness } from "@ar/harness";
 import { createDeepseekComposition } from "./composition.js";
 import { sessionMetadataTool } from "./session.js";
+import { allocateAvailableLeaseFixture } from "./test-support/lease-fixture.js";
 
-const cleanup: Array<() => Promise<unknown>> = [];
+const cleanup: Array<() => Promise<void>> = [];
 afterEach(async () => {
   vi.restoreAllMocks();
   for (const close of cleanup.splice(0).reverse()) await close();
 });
 const signal = () => new AbortController().signal;
-async function setup() {
+const setup = () => allocateAvailableLeaseFixture(prepare, cleanup);
+
+async function prepare() {
   const root = await mkdtemp(join(tmpdir(), "compaction-request-identity-"));
   cleanup.push(() => rm(root, { recursive: true, force: true, maxRetries: 8 }));
   const cwd = join(root, "work"); await mkdir(cwd);
@@ -35,9 +38,24 @@ async function setup() {
     model: { providerId: provider.id, modelId: "test" },
     contextBudget: { maxTokens: 20000, reserved: { system: 1500, task: 2000, output: 2000 }, dynamic: 0 } };
   let current: { base: Awaited<ReturnType<typeof createHarness>>; composition: Awaited<ReturnType<typeof createDeepseekComposition>> } | undefined;
-  const close = async () => { const old = current; current = undefined; if (old) { await old.composition.close(); await old.base.close(); } };
+  const close = async () => {
+    const old = current;
+    current = undefined;
+    if (!old) return;
+    try { await old.composition.close(); } finally { await old.base.close(); }
+  };
   cleanup.push(close); cleanup.push(async () => { release(); });
-  const open = async () => { const base = await createHarness(config); const composition = await createDeepseekComposition(base, config.dataDir); current = { base, composition }; return current; };
+  const open = async () => {
+    const base = await createHarness(config);
+    try {
+      const composition = await createDeepseekComposition(base, config.dataDir);
+      current = { base, composition };
+      return current;
+    } catch (error) {
+      await base.close();
+      throw error;
+    }
+  };
   const first = await open();
   const { sessionId } = await first.composition.sessions.call("session/create", { request: {} }, signal()) as { sessionId: string };
   const owner = await first.composition.owners.ownerOf(sessionId), nativeId = first.composition.owners.nativeSessionId(sessionId);
