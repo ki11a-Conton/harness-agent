@@ -490,6 +490,7 @@ describe.each([
   it.each(["delete before open", "save before open", "replace after open"])("honors an external %s at write admission", async change => {
     const target = join(ws, "guarded.txt");
     const incoming = join(ws, "incoming.txt");
+    const displaced = join(ws, "displaced.txt");
     await fs.writeFile(target, "old");
     await fs.writeFile(incoming, "new"); // same byte length
     const tool = harness();
@@ -503,8 +504,16 @@ describe.each([
       injected = true;
       if (change === "replace after open") {
         const handle = await open(...options);
-        await fs.rename(incoming, target);
-        return handle;
+        try {
+          // Windows permits moving the shared-open source to a free name,
+          // but can refuse a rename over an existing open destination.
+          await fs.rename(target, displaced);
+          await fs.rename(incoming, target);
+          return handle;
+        } catch (error) {
+          await handle.close();
+          throw error;
+        }
       }
       if (change === "delete before open") await fs.unlink(target);
       else await fs.rename(incoming, target);
@@ -518,6 +527,7 @@ describe.each([
     expect(result.evidence).toBeUndefined();
     if (change === "delete before open") await expect(fs.stat(target)).rejects.toMatchObject({ code: "ENOENT" });
     else expect(await fs.readFile(target, "utf8")).toBe("new");
+    if (change === "replace after open") expect(await fs.readFile(displaced, "utf8")).toBe("old");
     expect(fileLockEntryCount()).toBe(0);
   });
 });

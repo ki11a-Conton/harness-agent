@@ -6,6 +6,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { allocateHostStartupFixture, allocateWebStartupFixture, HostStartupExit, WebStartupExit } from '../coding-audit-20261007/web-startup-fixture.mjs';
 
 // Engineering A/B: one input-dependent local HTTP provider, real entrypoints,
 // separate project/state copies, identical permission and verification policy.
@@ -81,17 +82,26 @@ async function command(file, args, cwd, input = '') {
 }
 async function webTurn(entry, project, data, run) {
   let child, exit, reader; const frames = [];
-  try {
-    child = spawn(process.execPath, [entry], { cwd: project, env: { ...env, HARNESS_WEB_PORT: '0', HARNESS_DATA_DIR: data,
+  let logs = '';
+  function launch(dataDir) {
+    child = spawn(process.execPath, [entry], { cwd: project, env: { ...env, HARNESS_WEB_PORT: '0', HARNESS_DATA_DIR: dataDir,
       HARNESS_VERIFY_COMMAND: 'node --test check.test.cjs' }, stdio: ['ignore', 'pipe', 'pipe'] });
-    exit = new Promise(r => child.once('close', (code, signal) => r({ code, signal }))); let logs = '';
-    const address = await new Promise((r, reject) => {
+    exit = new Promise(r => child.once('close', (code, signal) => r({ code, signal })));
+    let stdout = '', stderr = '';
+    return new Promise((r, reject) => {
       const timer = setTimeout(() => reject(new Error('Web startup timed out')), 30000);
       child.once('error', e => { clearTimeout(timer); reject(e); });
-      child.stdout.on('data', d => { logs += d; const match = /listening on (http:\/\/127\.0\.0\.1:\d+)/.exec(logs); if (match) { clearTimeout(timer); r(match[1]); } });
-      child.stderr.on('data', d => { logs += d; });
-      child.once('close', () => { clearTimeout(timer); reject(new Error(`Web exited: ${logs}`)); });
+      child.stdout.on('data', d => {
+        logs += d; stdout += d;
+        const match = /listening on (http:\/\/127\.0\.0\.1:\d+)/.exec(stdout);
+        if (match) { clearTimeout(timer); r(match[1]); }
+      });
+      child.stderr.on('data', d => { logs += d; stderr += d; });
+      child.once('close', (code, signal) => { clearTimeout(timer); reject(new WebStartupExit({ code, signal, stdout, stderr })); });
     });
+  }
+  try {
+    const { address } = await allocateWebStartupFixture(launch, data, attempt => `${data}-${attempt}`, true);
     const stream = await fetch(`${address}/api/events?from=coding-tools`); assert.equal(stream.status, 200); reader = stream.body.getReader();
     const sent = await fetch(`${address}/api/messages`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ from: 'coding-tools', text: 'Inspect the invoice code under zzz-target, then fix all three values and verify.' }) }); assert.equal(sent.status, 200);
@@ -137,8 +147,11 @@ try {
       const run = active = { arm, surface, sourceSha: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: source, encoding: 'utf8' }).trim(),
         sourceTreeClean: execFileSync('git', ['status', '--porcelain'], { cwd: source, encoding: 'utf8' }).trim() === '', requests: 0, edited: 0, toolCalls: [] }; runs.push(run);
       if (surface === 'cli') {
-        run.process = await command(process.execPath, [join(source, 'apps/cli/dist/main.js'), '--data-dir', data, 'run', project,
-          'Inspect the invoice code under zzz-target, then fix all three values and verify.', '--verify', 'node --test check.test.cjs'], root, 'allow\n'.repeat(20));
+        await allocateHostStartupFixture(async dataDir => {
+          run.process = await command(process.execPath, [join(source, 'apps/cli/dist/main.js'), '--data-dir', dataDir, 'run', project,
+            'Inspect the invoice code under zzz-target, then fix all three values and verify.', '--verify', 'node --test check.test.cjs'], root, 'allow\n'.repeat(20));
+          if (run.process.code !== 0 && !run.process.stdout && run.requests === 0) throw new HostStartupExit('CLI', run.process);
+        }, data, attempt => `${data}-${attempt}`, true);
         assert.equal(run.process.code, 0, run.providerError ?? run.process.stderr); assert.ok(run.process.stdout.includes('grade: verified_complete'));
         run.approvals = (run.process.stderr.match(/allowed for this call/g) ?? []).length;
       } else await webTurn(join(source, 'apps/web/dist/main.js'), project, data, run);
