@@ -1,40 +1,54 @@
-name: original Windows failure forensics
-
-on:
-  workflow_dispatch:
-  push:
-    paths:
-      - '.github/workflows/current-windows-forensics.yml'
-      - 'scripts/ci/current-windows-forensics.mjs'
-
+name: Inspect original coding acceptance failure
+on: workflow_dispatch
 permissions:
   contents: read
   actions: read
-
 jobs:
-  recover:
+  inspect:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - job: '122338942877'
-            run: '40546654496'
-          - job: '122338942703'
-            run: '40546654424'
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-      - name: Read the original failed job without rerunning its commands
+      - name: Read original Linux job and project only diagnostic fields
         env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: node scripts/ci/current-windows-forensics.mjs '${{ matrix.job }}' '${{ matrix.run }}' dd13f39fa812c0c00daf8b33f7aa6c15f271a364
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: original-windows-job-${{ matrix.job }}-${{ github.sha }}
-          path: .ci/original-windows/
-          if-no-files-found: error
+          GH_TOKEN: ${{ github.token }}
+        shell: python
+        run: |
+          import hashlib, json, os, re, urllib.parse, urllib.request
+          repo = "ki11a-Conton/harness-agent"
+          assert os.environ["GITHUB_REPOSITORY"] == repo
+          job = "137531532021"
+          api = f"https://api.github.com/repos/{repo}/actions/jobs/{job}"
+          headers = {"Authorization": "Bearer " + os.environ["GH_TOKEN"]}
+          class Redirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, req, *args):
+                  redirect = super().redirect_request(req, *args)
+                  if redirect:
+                      host = urllib.parse.urlsplit(redirect.full_url)
+                      assert host.scheme == "https" and host.hostname.endswith(".blob.core.windows.net")
+                      redirect.remove_header("Authorization")
+                  return redirect
+          opener = urllib.request.build_opener(Redirect())
+          def read(url, cap):
+              with opener.open(urllib.request.Request(url, headers=headers), timeout=30) as response:
+                  data = response.read(cap + 1)
+                  assert len(data) <= cap
+                  return data
+          meta = json.loads(read(api, 2**20))
+          assert meta["run_id"] == 45126377675 and meta["head_sha"] == "0c52cd9f4a74645f63d5e484a09d6a0097e9be6a"
+          assert meta["conclusion"] == "failure"
+          raw = read(api + "/logs", 32 * 2**20)
+          log = re.sub(r"\x1b\[[0-9;]*m", "", raw.decode("utf-8", "replace"))
+          start = log.index("node scripts/research/coding-tools-20261019/acceptance.mjs")
+          section = log[start:].split("##[error]Process completed with exit code", 1)[0]
+          refs = re.findall(r"(?:[\w.-]+/)*[\w.-]+\.(?:mjs|[cm]?js|ts):\d+(?::\d+)?", section)
+          codes = re.findall(r"\b(?:HARNESS_[A-Z_]+|E[A-Z_]{3,}|[A-Z_]+_(?:ERROR|FAILED|CONFLICT|DENIED)|AssertionError)\b", section)
+          messages = []
+          for line in section.splitlines():
+              line = re.sub(r"^\d{4}-\S+\s+", "", line)
+              if re.search(r"(AssertionError|Error:|failed|already in use|code:|actual:|expected:|listen |address already|port |ownership)", line, re.I):
+                  if re.search(r"(token|api.?key|authorization|secret|credentials?)", line, re.I): continue
+                  messages.append(line[:280])
+          print("::notice title=Original coding acceptance diagnosis::" + json.dumps({
+              "sha256":hashlib.sha256(raw).hexdigest(), "bytes":len(raw), "job":job,
+              "codes":sorted(set(codes))[:20], "frames":refs[-12:], "messages":messages[-14:]
+          }, ensure_ascii=True).replace("%", "%25")[:6000])
