@@ -24,12 +24,10 @@ export class GrepContext {
   collect(file: string, source: readonly string[], matches: readonly { line: number }[]): void {
     if (this.exhausted || matches.length === 0) return;
     const hitLines = new Set(matches.map(match => match.line));
-    // Splitting text ending in a newline produces one extra empty element.
-    const lastLine = source.at(-1) === "" ? source.length - 1 : source.length;
     let visitedThrough = 0;
     for (const { line } of matches) {
       const start = Math.max(1, line - this.radius, visitedThrough + 1);
-      const end = Math.min(lastLine, line + this.radius);
+      const end = Math.min(source.length, line + this.radius);
       for (let neighbor = start; neighbor <= end; neighbor++) {
         if (hitLines.has(neighbor)) continue;
         const raw = source[neighbor - 1]!;

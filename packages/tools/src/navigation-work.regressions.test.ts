@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ToolExecutionContext } from "@ar/contracts";
 import { newAgentId, newSessionId, newToolCallId, newTurnId } from "@ar/contracts";
 import { grepFiles, repoTree, symbolSearch, walkFiles } from "./navigate.js";
+import { readFileTool } from "./tools/read-file.js";
 import { grepSearchTool, repoTreeTool } from "./tools/navigation-tools.js";
 import { ToolRegistry } from "./registry.js";
 import { ToolOrchestrator } from "./orchestrator.js";
@@ -43,8 +44,8 @@ function context(): ToolExecutionContext {
     },
   };
 }
-async function run(name: "grep_search" | "repo_tree", args: Record<string, unknown>, ctx = context()) {
-  const registry = new ToolRegistry(); registry.register(grepSearchTool); registry.register(repoTreeTool);
+async function run(name: "grep_search" | "repo_tree" | "read_file", args: Record<string, unknown>, ctx = context()) {
+  const registry = new ToolRegistry(); registry.register(grepSearchTool); registry.register(repoTreeTool); registry.register(readFileTool);
   const orch = new ToolOrchestrator({ registry, workspaceRoot: root });
   return orch.execute({
     id: newToolCallId(), sessionId: ctx.sessionId, turnId: ctx.turnId, agentId: ctx.agentId,
@@ -318,5 +319,36 @@ describe("R3 navigation: production security controls", () => {
     const result = await run("repo_tree", { path: outside });
     expect(result.status).toBe("denied");
     expect(reads).not.toHaveBeenCalled();
+  });
+});
+
+describe("grep source line boundaries", () => {
+  it.each([
+    { text: "", blankLines: [] },
+    { text: "value\n", blankLines: [] },
+    { text: "value", blankLines: [] },
+    { text: "\n", blankLines: [1] },
+    { text: "value\n\n", blankLines: [2] },
+    { text: "\r\n\r\nend", blankLines: [1, 2] },
+    { text: "value\r\n\r\n", blankLines: [2] },
+  ])("returns only blank lines that read_file can address in $text", async ({ text, blankLines }) => {
+    const path = "sample.txt";
+    await write(path, text);
+    const result = await run("grep_search", { path, pattern: "^\\r?$", maxResults: blankLines.length + 1, includeSummary: true });
+    expect(result.status).toBe("success");
+    const output = result.output as { hits: { line: number; text: string }[]; summary: { complete: boolean; limitReached: boolean } };
+    expect(output.hits.map(hit => hit.line)).toEqual(blankLines);
+    expect(output.summary).toMatchObject({ complete: true, limitReached: false });
+    for (const hit of output.hits) {
+      const page = await run("read_file", { path, offset: hit.line, limit: 1 });
+      expect(page.output).toMatchObject({ startLine: hit.line, endLine: hit.line, content: hit.text });
+    }
+  });
+
+  it.each([false, true])("keeps a final real blank line as match context, literal=%s", async literal => {
+    const path = "context.txt";
+    await write(path, "needle\n\n");
+    const result = await run("grep_search", { path, pattern: "needle", literal, contextLines: 2 });
+    expect(result.output).toMatchObject({ hits: [{ line: 1 }], context: [{ line: 2, text: "" }] });
   });
 });
