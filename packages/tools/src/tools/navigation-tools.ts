@@ -4,6 +4,7 @@ import { errorInfo } from "@ar/contracts";
 import { createGrepScanSummary, createRepoTreeSummary, grepFiles, repoTree, symbolSearch, type GrepScanSummary, type GrepHit, type SymbolHit, type RepoTreeEntry, type RepoTreeSummary } from "../navigate.js";
 import { indexedSymbolSearch, isIndexedSourceFile, SYMBOL_INDEX_SKIP_DIRS, type LexicalScanSummary } from "../symbol-index.js";
 import { syntaxSymbolSearch } from "../syntax-index.js";
+import { GrepContext, type GrepContextLine } from "../grep-context.js";
 
 /**
  * P2-29 navigation tools. Read-only; policy (permission + sandbox path scoping)
@@ -21,12 +22,15 @@ export interface GrepFilesToolInput {
   maxResults?: number;
   /** Include scan completeness in the model-visible output rather than only metadata. */
   includeSummary?: boolean;
+  contextLines?: number;
 }
 
-export const grepSearchTool: ToolDefinition<GrepFilesToolInput, GrepHit[] | { summary: GrepScanSummary; hits: GrepHit[] }> = {
+type GrepSearchOutput = GrepHit[] | { summary: GrepScanSummary; hits: GrepHit[]; context?: GrepContextLine[] };
+
+export const grepSearchTool: ToolDefinition<GrepFilesToolInput, GrepSearchOutput> = {
   name: "grep_search",
   description:
-    "Regex text search in a selected workspace file or directory (skips .git/node_modules/dist/build); literal=true searches source text as a fixed string. Returns {file,line,column,text} hits; long matching lines are rendered around their match with truncated=true. Use includeSummary=true when verifying absence or scan completeness: {summary,hits} exposes capped/oversized/unreadable scans. Legacy arrays are positive evidence only; omitted files report SCAN_INCOMPLETE. Files above 512KiB require a targeted read or approved exec search.",
+    "Regex text search in a selected workspace file or directory (skips .git/node_modules/dist/build); literal=true searches source text as a fixed string. Returns {file,line,column,text} hits; long matching lines are rendered around their match with truncated=true. Set contextLines (1–10) to include deduplicated neighboring source lines in {summary,hits,context}, bounded to 32 KiB. Use includeSummary=true for scan completeness without neighboring lines. Legacy arrays are positive evidence only; omitted files report SCAN_INCOMPLETE. Files above 512KiB require a targeted read or approved exec search.",
   inputSchema: z.object({
     pattern: z.string().min(1).max(8192),
     path: z.string().optional(),
@@ -35,6 +39,7 @@ export const grepSearchTool: ToolDefinition<GrepFilesToolInput, GrepHit[] | { su
     literal: z.boolean().optional().describe("Search the exact fixed string rather than regex; use for source text containing regex metacharacters."),
     maxResults: z.number().int().positive().max(5000).optional(),
     includeSummary: z.boolean().optional().describe("Set true before claiming no matches: exposes incomplete scans and omitted files in the model-visible {summary,hits}."),
+    contextLines: z.number().int().min(1).max(10).optional().describe("Include this many lines on each side of a hit. Returns structured output. summary.contextTruncated signals clipped or omitted neighboring lines."),
   }),
   risk: "readonly",
   metadata: {
@@ -48,9 +53,11 @@ export const grepSearchTool: ToolDefinition<GrepFilesToolInput, GrepHit[] | { su
     retry: "safe",
     concurrencySafe: true,
   },
-  async execute(input: GrepFilesToolInput, context: ToolExecutionContext): Promise<ToolResult<GrepHit[] | { summary: GrepScanSummary; hits: GrepHit[] }>> {
+  async execute(input: GrepFilesToolInput, context: ToolExecutionContext): Promise<ToolResult<GrepSearchOutput>> {
     try {
       const summary = createGrepScanSummary();
+      const window = input.contextLines === undefined ? undefined : new GrepContext(input.contextLines);
+      const detailed = input.includeSummary || window !== undefined;
       const hits = await grepFiles({
         pattern: input.pattern,
         root: context.cwd,
@@ -61,17 +68,18 @@ export const grepSearchTool: ToolDefinition<GrepFilesToolInput, GrepHit[] | { su
         maxHits: input.maxResults ?? 200,
         signal: context.signal,
         summary,
+        ...(window !== undefined ? { context: window } : {}),
       });
       // The legacy array cannot carry model-visible completeness diagnostics.
       // Do not let omitted files turn into a false negative assertion.
-      if (!input.includeSummary && (summary.skippedOversizedFiles > 0 || summary.unreadableFiles > 0 || summary.unreadableDirectories > 0 || summary.unavailableScope)) {
+      if (!detailed && (summary.skippedOversizedFiles > 0 || summary.unreadableFiles > 0 || summary.unreadableDirectories > 0 || summary.unavailableScope)) {
         return { status: "failed", output: hits, metadata: { ...summary }, error: errorInfo("PROCESS_ERROR",
           `SCAN_INCOMPLETE: search skipped ${summary.skippedOversizedFiles} oversized file(s), ${summary.unreadableFiles} unreadable file(s), ${summary.unreadableDirectories} unreadable directory(s)${summary.unavailableScope ? "; selected scope is unavailable" : ""}. Returned hits are positive evidence only; use includeSummary=true, a targeted paged read_file, or an approved exec before claiming absence.`,
           { retryable: false, safeToRetry: false }) };
       }
       return {
         status: "success",
-        output: input.includeSummary ? { summary, hits } : hits,
+        output: detailed ? { summary, hits, ...(window !== undefined ? { context: window.lines } : {}) } : hits,
         metadata: { ...summary },
         evidence: [{ type: "file", description: `grep_search: ${hits.length} hit(s) for ${input.pattern}`, source: input.pattern, timestamp: Date.now() }],
       };

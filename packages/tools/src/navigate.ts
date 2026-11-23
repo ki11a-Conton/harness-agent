@@ -22,6 +22,7 @@ import { promises as fs, type Dirent } from "node:fs";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { matchGlob } from "@ar/security";
 import { RegexScanner, SymbolRegexScanner } from "./regex-scanner.js";
+import { GREP_CONTEXT_HIT_BYTES, type GrepContext } from "./grep-context.js";
 
 const SKIP_DIRS = new Set([".git", "node_modules", ".DS_Store", "dist", "build", "coverage"]);
 const MAX_READ_BYTES = 512 * 1024; // skip files larger than this for text search
@@ -77,6 +78,8 @@ export interface GrepScanSummary {
   limitReached: boolean;
   maxFileBytes: number;
   unavailableScope?: boolean;
+  outputLimitReached?: true;
+  contextTruncated?: true;
 }
 
 export function createGrepScanSummary(): GrepScanSummary {
@@ -96,6 +99,7 @@ export interface GrepFilesInput {
   signal?: AbortSignal;
   /** Caller-owned diagnostics; hits remain a plain JSON-serializable array. */
   summary?: GrepScanSummary;
+  context?: GrepContext;
 }
 
 /** Recursive walk yielding files (with rel path), skipping VCS/dep dirs. */
@@ -139,7 +143,7 @@ export async function walkFiles(
 
 export function grepFiles(input: GrepFilesInput): Promise<GrepHit[]> {
   return (async () => {
-    const { root, relPath, signal } = input;
+    const { root, relPath, signal, context } = input;
     signal?.throwIfAborted();
     let re: RegExp;
     try {
@@ -148,6 +152,7 @@ export function grepFiles(input: GrepFilesInput): Promise<GrepHit[]> {
       throw err; // exposed by caller as a schema/argument error
     }
     const hits: GrepHit[] = [];
+    let hitBytes = 0;
     const summary = input.summary ?? createGrepScanSummary();
     const scope = await resolveSearchScope(root, relPath ?? ".");
     signal?.throwIfAborted();
@@ -198,20 +203,38 @@ export function grepFiles(input: GrepFilesInput): Promise<GrepHit[]> {
         positions = await scanner.scan(text, remaining);
         signal?.throwIfAborted();
       }
+      const earlierHits = hits.length;
       for (const position of positions) {
         const line = lines[position.line - 1]!;
         const m = position.column - 1;
         const truncated = line.length > MAX_LINE;
-        if (truncated) summary.truncatedLines++;
         // Keep the actual match visible even when it occurs near a long line's tail.
         let begin = truncated ? Math.max(0, m - Math.floor(MAX_LINE / 2)) : 0;
         if (begin > 0 && /[\uDC00-\uDFFF]/u.test(line[begin]!)) begin--;
         let end = Math.min(line.length, begin + MAX_LINE);
         if (end < line.length && /[\uD800-\uDBFF]/u.test(line[end - 1]!)) end--;
-        hits.push({ file: relFile, line: position.line, column: position.column, text: line.slice(begin, end), ...(truncated ? { truncated: true } : {}) });
+        const hit: GrepHit = { file: relFile, line: position.line, column: position.column,
+          text: line.slice(begin, end), ...(truncated ? { truncated: true } : {}) };
+        if (context !== undefined) {
+          hitBytes += Buffer.byteLength(JSON.stringify(hit), "utf8") + 1;
+          if (hitBytes > GREP_CONTEXT_HIT_BYTES) {
+            summary.outputLimitReached = true;
+            break;
+          }
+        }
+        if (truncated) summary.truncatedLines++;
+        hits.push(hit);
+      }
+      if (context !== undefined) {
+        context.collect(relFile, lines, positions.slice(0, hits.length - earlierHits));
+        if (context.truncated) summary.contextTruncated = true;
       }
       // Stop at the matching file itself, before reading another directory.
-      if (hits.length >= (input.maxHits ?? 200)) { summary.complete = false; summary.limitReached = true; return false; }
+      if (summary.outputLimitReached || hits.length >= (input.maxHits ?? 200)) {
+        summary.complete = false;
+        summary.limitReached = true;
+        return false;
+      }
       return true;
     };
     try {
@@ -251,7 +274,7 @@ export interface SymbolHit {
   truncated?: boolean;
 }
 
-export interface SymbolSearchInput extends Omit<GrepFilesInput, "pattern" | "maxHits"> {
+export interface SymbolSearchInput extends Omit<GrepFilesInput, "pattern" | "maxHits" | "context"> {
   symbol: string;
   maxHits?: number;
   /** Internal filters for supplementing an already indexed file set. */

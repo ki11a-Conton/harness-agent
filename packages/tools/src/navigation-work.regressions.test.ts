@@ -106,6 +106,70 @@ describe("R3 navigation: global traversal stop", () => {
   });
 });
 
+describe("grep_search with neighboring source lines", () => {
+  it.each([true, false])("merges overlapping windows from one file read, literal=%s", async literal => {
+    await write("src/settings.txt", "first\nneedle one\nshared\nneedle two\nlast\n");
+    await write("elsewhere.txt", "needle outside the scope\n");
+    const files = vi.spyOn(fs, "readFile");
+    const result = await run("grep_search", { pattern: "needle", path: "src/settings.txt", contextLines: 1, literal });
+    expect(result.status).toBe("success");
+    expect(result.output).toMatchObject({
+      summary: { complete: true },
+      hits: [{ file: "src/settings.txt", line: 2, column: 1 }, { file: "src/settings.txt", line: 4, column: 1 }],
+      context: [
+        { file: "src/settings.txt", line: 1, text: "first" },
+        { file: "src/settings.txt", line: 3, text: "shared" },
+        { file: "src/settings.txt", line: 5, text: "last" },
+      ],
+    });
+    expect(files).toHaveBeenCalledTimes(1);
+  });
+
+  it("retains the legacy array and summary shapes when the option is absent", async () => {
+    await write("settings.txt", "start\nneedle\nend\n");
+    const args = { pattern: "needle", literal: true, path: "settings.txt" };
+    const hit = { file: "settings.txt", line: 2, column: 1, text: "needle" };
+    expect((await run("grep_search", args)).output).toEqual([hit]);
+    const detailed = await run("grep_search", { ...args, includeSummary: true });
+    expect(detailed.output).toMatchObject({ summary: { complete: true }, hits: [hit] });
+    expect(detailed.output).not.toHaveProperty("context");
+  });
+
+  it("reports output limits and keeps complete JSON rows for large windows", async () => {
+    await write("many.txt", `needle ${"\t".repeat(1700)}\n${"\t".repeat(900)}\n`.repeat(100));
+    const result = await run("grep_search", { pattern: "needle", literal: true, path: "many.txt", maxResults: 1000, contextLines: 2 });
+    expect(result.status).toBe("success");
+    expect(result.metadata).toMatchObject({ complete: false, limitReached: true, outputLimitReached: true, contextTruncated: true });
+    const output = result.output as { context: { truncated?: true }[] };
+    expect(output.context.some(row => row.truncated)).toBe(true);
+    expect(Buffer.byteLength(JSON.stringify(result.output), "utf8")).toBeLessThanOrEqual(32 * 1024);
+  });
+
+  it("marks a clipped UTF-8 context line without turning it into a missing search result", async () => {
+    await write("settings.txt", `needle\n${"😃".repeat(500)}\n`);
+    const result = await run("grep_search", { pattern: "needle", literal: true, path: "settings.txt", contextLines: 2 });
+    const output = result.output as { summary: Record<string, unknown>; context: { line: number; text: string; truncated?: true }[] };
+    expect(output.summary).toMatchObject({ complete: true, contextTruncated: true });
+    expect(output.context).toHaveLength(1);
+    expect(output.context[0]).toMatchObject({ line: 2, truncated: true });
+    expect(output.context[0]!.text).toMatch(/^😃+$/u);
+    expect(output.context[0]!.text.length).toBeLessThan(1000);
+  });
+
+  it("does not open a file when permission, sandbox, or cancellation prevents context search", async () => {
+    await write("settings.txt");
+    await fs.writeFile(join(outside, "settings.txt"), "needle outside workspace");
+    const args = { pattern: "needle", contextLines: 2, path: "settings.txt" };
+    const files = vi.spyOn(fs, "readFile");
+    const denied = await run("grep_search", args, { ...context(), permissions: { rules: [], defaultEffect: "deny" } });
+    const blocked = await run("grep_search", { ...args, path: join(outside, "settings.txt") });
+    const control = new AbortController(); control.abort();
+    const cancelled = await run("grep_search", args, { ...context(), signal: control.signal });
+    expect([denied.status, blocked.status, cancelled.status]).toEqual(["denied", "denied", "cancelled"]);
+    expect(files).not.toHaveBeenCalled();
+  });
+});
+
 describe("R3 navigation: real directory entries and work bounds", () => {
   it("returns all 66 immediate directories including empty ones with one read", async () => {
     await fs.mkdir(join(root, "a-hit"));
