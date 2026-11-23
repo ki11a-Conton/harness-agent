@@ -49,12 +49,12 @@ it("uses and closes owned regular descriptors for both the snapshot and pre-writ
   const target = join(root, "source.ts"); await fs.writeFile(target, "old"); const opened = observe();
   const result = await setup().invoke();
   expect(result.status).toBe("success"); expect(await fs.readFile(target, "utf8")).toBe("new");
-  expect(opened).toHaveBeenCalledTimes(3);
-  for (const call of opened.mock.calls.slice(0, 2)) expect(call[1]).toBe(constants.O_RDONLY | (process.platform === "win32" ? 0 : constants.O_NONBLOCK));
-  // An existing-file writer must not create a replacement implicitly; new
-  // files use a separate exclusive creation/admission path.
-  expect(opened.mock.calls[2]![1]).toBe(constants.O_WRONLY | (process.platform === "win32" ? 0 : constants.O_NONBLOCK));
-  for (const handle of handles) { expect(handle.close).toHaveBeenCalledTimes(1); expect(handle.fd).toBe(-1); }
+  expect(opened).toHaveBeenCalledTimes(2);
+  const nonblock = process.platform === "win32" ? 0 : constants.O_NONBLOCK;
+  expect(opened.mock.calls[0]![1]).toBe(constants.O_RDONLY | nonblock);
+  expect(opened.mock.calls[1]![1]).toBe(constants.O_RDWR | nonblock);
+  // Node may call the idempotent FileHandle.close again while the read stream detaches.
+  for (const handle of handles) { expect(handle.close).toHaveBeenCalled(); expect(handle.fd).toBe(-1); }
   expect(fileLockEntryCount()).toBe(0);
 });
 
@@ -65,14 +65,23 @@ it.each(["open", "stat", "read", "version-read"])("cancels at the %s boundary wi
     if (boundary === "stat" && index === 0) {
       const stat = handle.stat.bind(handle); vi.spyOn(handle, "stat").mockImplementation(async () => { const value = await stat(); controller.abort(); return value; });
     }
-    if ((boundary === "read" && index === 0) || (boundary === "version-read" && index === 1)) {
+    if (boundary === "read" && index === 0) {
       const read = handle.readFile.bind(handle); vi.spyOn(handle, "readFile").mockImplementation(async options => { const bytes = await read(options); controller.abort(); return bytes; });
+    }
+    if (boundary === "version-read" && index === 1) {
+      const create = handle.createReadStream.bind(handle);
+      vi.spyOn(handle, "createReadStream").mockImplementation(options => {
+        const stream = create(options);
+        stream.once("end", () => controller.abort());
+        return stream;
+      });
     }
   });
   const result = await setup(controller.signal).invoke();
   expect(result.status).toBe("cancelled"); expect(result.output).toBeUndefined(); expect(result.evidence).toBeUndefined();
   expect(await fs.readFile(target, "utf8")).toBe("old"); expect(handles.length).toBeGreaterThan(0);
-  for (const handle of handles) { expect(handle.close).toHaveBeenCalledTimes(1); expect(handle.fd).toBe(-1); }
+  // Node may call the idempotent FileHandle.close again while the read stream detaches.
+  for (const handle of handles) { expect(handle.close).toHaveBeenCalled(); expect(handle.fd).toBe(-1); }
   expect(fileLockEntryCount()).toBe(0);
 });
 
@@ -94,6 +103,17 @@ it.each([
   let nativeSignal: AbortSignal | undefined;
   observe((handle, current) => {
     if (current !== index) return;
+    if (name === "write_file" || index === 1) {
+      const create = handle.createReadStream.bind(handle);
+      vi.spyOn(handle, "createReadStream").mockImplementation(options => {
+        const stream = create(options);
+        nativeSignal = options?.signal;
+        // Hold the real stream pending until its native AbortSignal fires.
+        vi.spyOn(stream, "_read").mockImplementation(() => { entered(); });
+        return stream;
+      });
+      return;
+    }
     const read = handle.readFile.bind(handle);
     vi.spyOn(handle, "readFile").mockImplementation(async options => {
       await read(options);

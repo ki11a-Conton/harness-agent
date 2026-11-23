@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { promises as fs } from "node:fs";
+import { constants, promises as fs, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -479,4 +479,95 @@ describe("R4 cancellation, version and policy boundaries", () => {
       expect(fileLockEntryCount()).toBe(0);
     } finally { await fs.rm(outside, { recursive: true, force: true }); }
   });
+});
+
+describe.each([
+  { label: "edit", name: "edit_file", args: { oldText: "old", newText: "agent" }, explicit: true },
+  { label: "edit snapshot", name: "edit_file", args: { oldText: "old", newText: "agent" }, explicit: false },
+  { label: "overwrite", name: "write_file", args: { content: "agent" }, explicit: true },
+  { label: "append", name: "write_file", args: { content: "+agent", append: true }, explicit: true },
+])("guarded $label", ({ name, args, explicit }) => {
+  it.each(["delete before open", "save before open", "replace after open"])("honors an external %s at write admission", async change => {
+    const target = join(ws, "guarded.txt");
+    const incoming = join(ws, "incoming.txt");
+    await fs.writeFile(target, "old");
+    await fs.writeFile(incoming, "new"); // same byte length
+    const tool = harness();
+    const read = await tool.invoke("read_file", { path: "guarded.txt", versioned: true });
+    const expectedSha256 = (read.output as { sha256: string }).sha256;
+    const open = fs.open.bind(fs);
+    let injected = false;
+    vi.spyOn(fs, "open").mockImplementation(async (...options) => {
+      const [path, flags] = options;
+      if (injected || String(path) !== target || typeof flags !== "number" || !(flags & (constants.O_WRONLY | constants.O_RDWR))) return open(...options);
+      injected = true;
+      if (change === "replace after open") {
+        const handle = await open(...options);
+        await fs.rename(incoming, target);
+        return handle;
+      }
+      if (change === "delete before open") await fs.unlink(target);
+      else await fs.rename(incoming, target);
+      return open(...options);
+    });
+    const result = await tool.invoke(name, { path: "guarded.txt", ...args, ...(explicit ? { expectedSha256 } : {}) });
+    expect(injected).toBe(true);
+    expect(result.status).toBe("failed");
+    expect(result.error?.message).toMatch(/version/);
+    expect(result.error?.safeToRetry).toBe(false);
+    expect(result.evidence).toBeUndefined();
+    if (change === "delete before open") await expect(fs.stat(target)).rejects.toMatchObject({ code: "ENOENT" });
+    else expect(await fs.readFile(target, "utf8")).toBe("new");
+    expect(fileLockEntryCount()).toBe(0);
+  });
+});
+
+it("preserves a same-size in-place save made at the end of the descriptor version read", async () => {
+  const target = join(ws, "same-inode.txt");
+  await fs.writeFile(target, "old");
+  await fs.utimes(target, 1000, 1000);
+  const open = fs.open.bind(fs);
+  let saved = false;
+  vi.spyOn(fs, "open").mockImplementation(async (...options) => {
+    const handle = await open(...options);
+    if (String(options[0]) === target && (Number(options[1]) & constants.O_RDWR)) {
+      const create = handle.createReadStream.bind(handle);
+      vi.spyOn(handle, "createReadStream").mockImplementation(options => {
+        const stream = create(options);
+        stream.once("end", () => {
+          writeFileSync(target, "new");
+          utimesSync(target, 2000, 2000);
+          saved = true;
+        });
+        return stream;
+      });
+    }
+    return handle;
+  });
+  const result = await harness().invoke("write_file", { path: target, content: "agent", expectedSha256: digest("old") });
+  expect(saved).toBe(true);
+  expect(result.status).toBe("failed");
+  expect(result.error?.message).toMatch(/version/);
+  expect(await fs.readFile(target, "utf8")).toBe("new");
+});
+
+it.each([false, true])("checks raw bytes on the writer and preserves overwrite/append offsets, append=%s", async append => {
+  const target = join(ws, "raw.dat");
+  const original = Buffer.alloc(180_001, 255);
+  await fs.writeFile(target, original);
+  const alias = join(ws, "raw-alias.dat");
+  await fs.link(target, alias);
+  const content = append ? "🙂" : "A".repeat(100_000);
+  const result = await harness().invoke("write_file", { path: alias, content, append, expectedSha256: digest(original).toUpperCase() });
+  expect(result.status).toBe("success");
+  const expected = append ? Buffer.concat([original, Buffer.from(content)]) : Buffer.from(content);
+  expect((await fs.readFile(target)).equals(expected)).toBe(true);
+});
+
+it("a missing guarded path cannot create parent directories", async () => {
+  const path = join(ws, "missing", "source.ts");
+  const result = await harness().invoke("write_file", { path, content: "agent", expectedSha256: digest("") });
+  expect(result.status).toBe("failed");
+  expect(result.error?.message).toMatch(/version/);
+  await expect(fs.stat(join(ws, "missing"))).rejects.toMatchObject({ code: "ENOENT" });
 });

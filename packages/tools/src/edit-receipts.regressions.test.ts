@@ -1,4 +1,4 @@
-import { constants, promises as fs } from "node:fs";
+import { promises as fs } from "node:fs";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -37,8 +37,12 @@ async function fixture(body: string) {
   let writes = 0;
   const open = fs.open.bind(fs);
   vi.spyOn(fs, "open").mockImplementation(async (...args) => {
-    if (String(args[0]) === path && typeof args[1] === "number" && (args[1] & constants.O_WRONLY)) writes++;
-    return open(...args);
+    const handle = await open(...args);
+    if (String(args[0]) === path) {
+      const write = handle.writeFile.bind(handle);
+      vi.spyOn(handle, "writeFile").mockImplementation((...options) => { writes++; return write(...options); });
+    }
+    return handle;
   });
   return { root, path, context, writes: () => writes,
     edit: (input: Omit<EditFileInput, "path">) => editFileTool.execute({ path: "source.txt", expectedSha256: digest(body), ...input }, context) };

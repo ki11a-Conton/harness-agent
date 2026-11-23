@@ -4,7 +4,7 @@ import type { ToolDefinition, ToolExecutionContext, ToolResult } from "@ar/contr
 import { errorInfo } from "@ar/contracts";
 import { applyBatchReplace, applyLineRange, applyReplace, lineDiff, MAX_BATCH_EDITS, type TextEdit } from "../edit.js";
 import {
-  assertFileVersion, checkFileVersion, decodeEditableUtf8, fileSha256, readRegularFileBytes, writeRegularFileUtf8,
+  assertFileVersion, decodeEditableUtf8, fileSha256, readRegularFileBytes, writeRegularFileUtf8,
   FileOperationCancelled, FileVersionConflict, throwIfFileCancelled, withFileLock,
 } from "../file-coordination.js";
 
@@ -188,11 +188,9 @@ export const editFileTool: ToolDefinition<EditFileInput, EditFileOutput> = {
           ...(isRange ? { replacedLines: res.count } : { replacements: res.count }),
         };
 
-        // Best-effort pre-write check catches external changes observed here;
-        // this is not an atomic CAS against arbitrary external writers.
-        await checkFileVersion(target, input.expectedSha256 ?? fileSha256(bytes), context.signal);
-        throwIfFileCancelled(context.signal);
-        await writeRegularFileUtf8(target, res.content, { signal: context.signal });
+        await writeRegularFileUtf8(target, res.content, {
+          signal: context.signal, expectedSha256: input.expectedSha256 ?? fileSha256(bytes),
+        });
         return {
           status: "success",
           output,

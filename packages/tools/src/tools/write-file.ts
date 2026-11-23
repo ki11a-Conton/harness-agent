@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { ToolDefinition, ToolExecutionContext, ToolResult } from "@ar/contracts";
 import { errorInfo } from "@ar/contracts";
 import { assessWriteSafety } from "../write-safety.js";
-import { assertWritableUtf8, InvalidUtf8Content, checkFileVersion, FileOperationCancelled, FileVersionConflict, throwIfFileCancelled, withFileLock, writeRegularFileUtf8 } from "../file-coordination.js";
+import { assertWritableUtf8, InvalidUtf8Content, FileOperationCancelled, FileVersionConflict, throwIfFileCancelled, withFileLock, writeRegularFileUtf8 } from "../file-coordination.js";
 
 class UnsafeWrite extends Error {}
 
@@ -59,7 +59,6 @@ export const writeFileTool: ToolDefinition<WriteFileInput, WriteFileOutput> = {
       const target = resolve(context.cwd, input.path);
       const bytes = Buffer.byteLength(input.content, "utf8");
       return await withFileLock(target, context.signal, async (): Promise<ToolResult<WriteFileOutput>> => {
-        if (input.expectedSha256 !== undefined) await checkFileVersion(target, input.expectedSha256, context.signal);
         throwIfFileCancelled(context.signal);
 
         // A missing file is safe to create; existing-file facts must come
@@ -67,11 +66,9 @@ export const writeFileTool: ToolDefinition<WriteFileInput, WriteFileOutput> = {
         let safety = assessWriteSafety({ exists: false, originalBytes: 0, newBytes: bytes,
           append: input.append ?? false, untracked: false, hasCheckpoint: false });
 
+        if (input.expectedSha256 === undefined) await mkdir(dirname(target), { recursive: true });
         throwIfFileCancelled(context.signal);
-        await mkdir(dirname(target), { recursive: true });
-        if (input.expectedSha256 !== undefined) await checkFileVersion(target, input.expectedSha256, context.signal);
-        throwIfFileCancelled(context.signal);
-        await writeRegularFileUtf8(target, input.content, { append: input.append, signal: context.signal,
+        await writeRegularFileUtf8(target, input.content, { append: input.append, signal: context.signal, expectedSha256: input.expectedSha256,
           checkExisting: stat => {
             safety = assessWriteSafety({ exists: true, originalBytes: stat.size, newBytes: bytes,
               append: input.append ?? false, untracked: false, hasCheckpoint: false });

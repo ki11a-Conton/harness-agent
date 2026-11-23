@@ -53,19 +53,19 @@ it.skipIf(process.platform === "win32").each([false, true])("rejects an unversio
   expect(result.status).toBe("failed"); expect(result.error?.message).toMatch(/regular file|ENXIO/);
   expect(live).toBe(0); expect(bytesWrittenAfterTimeout).toBe(0); expect(fileLockEntryCount()).toBe(0);
 });
-it.skipIf(process.platform === "win32")("rejects an edit target replaced by a FIFO after its version read closes", async () => {
+it.skipIf(process.platform === "win32")("rejects an edit target replaced by a FIFO after its snapshot read closes", async () => {
   const target = join(root, "source.ts"), pipe = join(root, "pipe"); await fs.writeFile(target, "old"); execFileSync("mkfifo", [pipe]);
   const open = fs.open.bind(fs); let reads = 0;
   vi.spyOn(fs, "open").mockImplementation(async (...args) => {
     const file = await open(...args);
-    if (String(args[0]) === target && args[1] === (constants.O_RDONLY | constants.O_NONBLOCK) && ++reads === 2) {
+    if (String(args[0]) === target && args[1] === (constants.O_RDONLY | constants.O_NONBLOCK) && ++reads === 1) {
       const close = file.close.bind(file);
       vi.spyOn(file, "close").mockImplementation(async () => { await close(); await fs.unlink(target); await fs.rename(pipe, target); });
     }
     return file;
   });
   const { result, live, bytesWrittenAfterTimeout } = await withFifoRescue(target, () => invoke("edit_file", target));
-  expect(reads).toBe(2); expect(result.status).toBe("failed"); expect(result.error?.message).toMatch(/regular file|ENXIO/);
+  expect(reads).toBe(1); expect(result.status).toBe("failed"); expect(result.error?.message).toMatch(/regular file|ENXIO/);
   expect(live).toBe(0); expect(bytesWrittenAfterTimeout).toBe(0); expect(fileLockEntryCount()).toBe(0);
 });
 

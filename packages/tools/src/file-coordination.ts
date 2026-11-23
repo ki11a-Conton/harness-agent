@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
-import { constants, promises as fs, statSync } from "node:fs";
+import { constants, promises as fs, statSync, type BigIntStats } from "node:fs";
+import type { FileHandle } from "node:fs/promises";
 import { canonicalizePath } from "@ar/security";
 
 /** Cooperation between file tools and transactions in this process only.
@@ -153,19 +154,48 @@ export function assertWritableUtf8(content: string): void {
   if (/[\uD800-\uDFFF]/u.test(content)) throw new InvalidUtf8Content();
 }
 
+/** Hash the bytes on the writable descriptor without moving its write offset.
+ * Verify the pathname still identifies this snapshot after the cancellable
+ * read. This is a pre-write observation, not an OS-level compare-and-swap. */
+async function verifyOpenVersion(
+  file: FileHandle, path: string, expected: string, before: BigIntStats, signal?: AbortSignal,
+): Promise<void> {
+  const hash = createHash("sha256");
+  const stream = file.createReadStream({ start: 0, autoClose: false, signal });
+  let bytesRead = 0n;
+  for await (const chunk of stream) {
+    bytesRead += BigInt(chunk.length);
+    if (bytesRead > before.size) throw new FileVersionConflict(path);
+    hash.update(chunk);
+  }
+  throwIfFileCancelled(signal);
+  if (bytesRead !== before.size || hash.digest("hex") !== expected.toLowerCase()) throw new FileVersionConflict(path);
+  const current = await fs.stat(path, { bigint: true });
+  if (current.dev !== before.dev || current.ino !== before.ino || current.size !== before.size
+    || current.mtimeNs !== before.mtimeNs || current.ctimeNs !== before.ctimeNs) throw new FileVersionConflict(path);
+}
+
+function missingVersionTarget(error: unknown): boolean {
+  return ["ENOENT", "ENOTDIR", "EISDIR"].includes((error as NodeJS.ErrnoException).code ?? "");
+}
+
 /** Preserve in-place/hard-link and authorized symlink semantics, but inspect
  * the actual writable object before truncating or writing. In particular,
  * O_TRUNC must not run as part of opening an unchecked path. */
-export async function writeRegularFileUtf8(path: string, content: string, options: { append?: boolean; signal?: AbortSignal; checkExisting?: (stat: { size: number }) => void } = {}): Promise<void> {
-  const { signal, append } = options;
+export async function writeRegularFileUtf8(path: string, content: string, options: { append?: boolean; signal?: AbortSignal; expectedSha256?: string; checkExisting?: (stat: { size: number }) => void } = {}): Promise<void> {
+  const { signal, append, expectedSha256 } = options;
   throwIfFileCancelled(signal);
   assertWritableUtf8(content);
-  const flags = constants.O_WRONLY | (append ? constants.O_APPEND : 0)
+  const flags = (expectedSha256 === undefined ? constants.O_WRONLY : constants.O_RDWR) | (append ? constants.O_APPEND : 0)
     | (process.platform === "win32" ? 0 : constants.O_NONBLOCK);
-  let file: Awaited<ReturnType<typeof fs.open>>;
+  let file: FileHandle;
   let admitted = false;
   try { file = await fs.open(path, flags); }
   catch (error) {
+    if (expectedSha256 !== undefined) {
+      if (missingVersionTarget(error)) throw new FileVersionConflict(path);
+      throw error;
+    }
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     throwIfFileCancelled(signal);
     // Exclusive creation identifies the irreversible mutation. In contrast,
@@ -185,11 +215,15 @@ export async function writeRegularFileUtf8(path: string, content: string, option
   }
   try {
     if (!admitted) throwIfFileCancelled(signal);
-    const stat = await file.stat();
+    const stat = await file.stat({ bigint: true });
     if (!admitted) throwIfFileCancelled(signal);
     if (!stat.isFile()) throw new Error("file operation requires a regular file");
     // Inspect safety on the actual owned object, before irreversible truncation.
-    if (!admitted) options.checkExisting?.(stat);
+    if (expectedSha256 !== undefined) {
+      await verifyOpenVersion(file, path, expectedSha256, stat, signal);
+      throwIfFileCancelled(signal);
+    }
+    if (!admitted) options.checkExisting?.({ size: Number(stat.size) });
     // Preserve the original write tool's irreversible phase: cancellation
     // before admission prevents mutation. Once create/truncate is admitted,
     // finish the complete write instead of leaving an empty/partial file at
@@ -199,19 +233,9 @@ export async function writeRegularFileUtf8(path: string, content: string, option
     await file.writeFile(content, "utf8");
   } catch (error) {
     if (!admitted && signal?.aborted) throw new FileOperationCancelled();
+    if (!admitted && expectedSha256 !== undefined && missingVersionTarget(error)) throw new FileVersionConflict(path);
     throw error;
   } finally { await file.close(); }
-}
-
-export async function checkFileVersion(path: string, expectedSha256: string, signal?: AbortSignal): Promise<void> {
-  let bytes: Buffer;
-  try { bytes = await readRegularFileBytes(path, signal); }
-  catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
-    if (code === "ENOENT" || code === "ENOTDIR" || code === "EISDIR") throw new FileVersionConflict(path);
-    throw err;
-  }
-  assertFileVersion(bytes, expectedSha256, path);
 }
 
 /** Buffer's permissive decoder would replace invalid bytes during a small edit. */
