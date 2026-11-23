@@ -24,6 +24,8 @@ export interface ApplyReplaceOptions {
   replaceAll?: boolean;
   /** Replace exactly the Nth (1-based) occurrence. */
   occurrence?: number;
+  /** Refuse a second possible start, including an overlapping one, before rendering changes. */
+  requireUnique?: boolean;
 }
 
 export interface ApplyResult {
@@ -31,8 +33,9 @@ export interface ApplyResult {
   content: string;
   /** Number of replacements actually made. */
   count: number;
-  /** Total occurrences of the anchor found in the original content. */
+  /** Non-overlapping matches for ordinary replacements. A uniqueness failure stops at the second candidate. */
   matched: number;
+  ambiguous?: true;
   error?: string;
 }
 
@@ -64,9 +67,28 @@ function lfView(content: string): { text: string; originalOffset: (index: number
   };
 }
 
+/** Locate the first two candidate starts for an actionable error. Offsets are
+ * in the LF view without the BOM. Columns use 1-based UTF-16 code units, as
+ * grep_search does. Only scan line boundaries when reporting a conflict. */
+function duplicateAnchor(text: string, anchor: string, first: number, bomLength: number): string | undefined {
+  const second = text.indexOf(anchor, first + 1);
+  if (second < 0) return;
+  let line = 1, lineStart = 0;
+  let newline = text.indexOf("\n");
+  function location(offset: number): string {
+    while (newline >= 0 && newline < offset) {
+      line++;
+      lineStart = newline + 1;
+      newline = text.indexOf("\n", lineStart);
+    }
+    const column = offset - lineStart + 1 + (line === 1 ? bomLength : 0);
+    return `line ${line}, column ${column}`;
+  }
+  return `anchor is ambiguous at ${location(first)} and ${location(second)}; read the target lines and use a unique anchor`;
+}
+
 /** Prefer the touched line's terminator, then the preceding line, then LF. */
-function localEol(content: string, offset: number): string {
-  let newline = content.indexOf("\n", offset);
+function localEol(content: string, offset: number, newline = content.indexOf("\n", offset)): string {
   if (newline < 0) newline = content.lastIndexOf("\n", offset - 1);
   return newline > 0 && content[newline - 1] === "\r" ? "\r\n" : "\n";
 }
@@ -86,6 +108,9 @@ export function applyReplace(
   newText: string,
   options: ApplyReplaceOptions = {},
 ): ApplyResult {
+  if (options.replaceAll && options.occurrence !== undefined) {
+    return { ok: false, content, count: 0, matched: 0, error: "occurrence and replaceAll=true are mutually exclusive" };
+  }
   if (oldText.length === 0) {
     return { ok: false, content, count: 0, matched: 0, error: "oldText must not be empty" };
   }
@@ -94,24 +119,44 @@ export function applyReplace(
   const view = lfView(body);
   const includesBom = bom.length > 0 && oldText.startsWith(bom);
   const anchor = oldText.slice(includesBom ? bom.length : 0).replace(/\r\n/g, "\n");
+  const first = anchor.length ? view.text.indexOf(anchor) : -1;
+  if (options.requireUnique && !includesBom && first >= 0) {
+    const error = duplicateAnchor(view.text, anchor, first, bom.length);
+    if (error) return { ok: false, content, count: 0, matched: 2, ambiguous: true, error };
+  }
   // Splice original blocks; each occurrence gets its own local EOL, so
   // replaceAll does not homogenize an existing mixed-EOL file.
   const occurrence = options.occurrence ?? 1;
   const replacement = includesBom && newText.startsWith(bom) ? newText.slice(bom.length) : newText;
   const hasLineBreak = replacement.includes("\n");
+  let lineEnd = -1;
+  let inserted = replacement;
   let matched = 0;
   let count = 0;
   let cursor = 0;
   const parts = [bom];
-  for (let index = anchor.length > 0 ? view.text.indexOf(anchor) : -1;
+  const chunks: string[] = [];
+  for (let index = first;
     index >= 0 && (!includesBom || index === 0);
-    index = view.text.indexOf(anchor, index + anchor.length)) {
+    index = options.requireUnique || includesBom ? -1 : view.text.indexOf(anchor, index + anchor.length)) {
     matched++;
     if (!options.replaceAll && matched !== occurrence) continue;
     const start = view.originalOffset(index);
     const end = view.originalOffset(index + anchor.length);
-    const inserted = hasLineBreak ? replacementEol(replacement, localEol(body, start)) : replacement;
+    // Match starts advance monotonically. Reuse the rendered replacement
+    // until the original line changes, even for many matches on a single line.
+    if (hasLineBreak && start > lineEnd) {
+      const newline = body.indexOf("\n", start);
+      lineEnd = newline < 0 ? body.length : newline;
+      inserted = replacementEol(replacement, localEol(body, start, newline));
+    }
     parts.push(body.slice(cursor, start), inserted);
+    // Dense replaceAll can produce millions of tiny slices. Join batches so
+    // temporary array slots stay bounded independently of the match count.
+    if (parts.length >= 4096) {
+      chunks.push(parts.join(""));
+      parts.length = 0;
+    }
     cursor = end;
     count++;
   }
@@ -122,7 +167,8 @@ export function applyReplace(
     return { ok: false, content, count, matched, error: `occurrence ${occurrence} out of range (file has ${matched})` };
   }
   parts.push(body.slice(cursor));
-  return { ok: true, content: parts.join(""), count, matched };
+  chunks.push(parts.join(""));
+  return { ok: true, content: chunks.join(""), count, matched };
 }
 
 /** A group of unique, disjoint anchors in ONE original file snapshot. */
@@ -152,8 +198,10 @@ export function applyBatchReplace(content: string, edits: readonly TextEdit[]): 
     if (!anchor) return fail(`edits[${editIndex}] has an empty anchor after BOM removal`);
     const first = view.text.indexOf(anchor);
     if (first < 0 || (includesBom && first !== 0)) return fail(`edits[${editIndex}] anchor not found in the original snapshot`);
-    // Count overlapping candidates too: "aa" in "aaa" is ambiguous.
-    if (!includesBom && view.text.indexOf(anchor, first + 1) >= 0) return fail(`edits[${editIndex}] anchor is ambiguous; use a unique anchor`);
+    if (!includesBom) {
+      const error = duplicateAnchor(view.text, anchor, first, bom.length);
+      if (error) return fail(`edits[${editIndex}] ${error}`);
+    }
     const start = view.originalOffset(first), end = view.originalOffset(first + anchor.length);
     const text = includesBom && edit.newText.startsWith(bom) ? edit.newText.slice(bom.length) : edit.newText;
     planned.push({ start, end, text: replacementEol(text, localEol(body, start)), editIndex });

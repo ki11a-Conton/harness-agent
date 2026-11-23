@@ -52,3 +52,61 @@ it("a coding turn recovers from no-op feedback and chains actual edit versions w
     expect(events.some(e => e.type === "verification.completed")).toBe(true);
   } finally { await h.close(); await rm(cwd, { recursive: true, force: true, maxRetries: process.platform === "win32" ? 8 : 0, retryDelay: 50 }); }
 }, 30000);
+
+it("repairs an ambiguous strict edit using the model-visible source positions and real verification", async () => {
+  const cwd = await realpath(await mkdtemp(join(tmpdir(), "edit-disambiguation-")));
+  const path = join(cwd, "defaults.cjs");
+  const before = "exports.primary = 1;\r\nexports.secondary = 1;\n";
+  const after = before.replace("secondary = 1", "secondary = 2");
+  await writeFile(path, before);
+  await writeFile(join(cwd, "check.cjs"), "require('node:assert/strict').deepEqual(require('./defaults.cjs'), {primary: 1, secondary: 2});\n");
+  let step = 0;
+  const provider: ModelProvider = {
+    id: "strict-edit-replay", listModels: async () => [{ id: "offline", capabilities: { contextWindowTokens: 128000 } }],
+    createClient: () => ({ async *generate(request) {
+      const last = request.messages.filter(message => message.role === "tool").at(-1)?.content ?? "";
+      switch (++step) {
+        case 1:
+          yield* ScriptedModelProvider.toolCall("edit_file", { path: "defaults.cjs", oldText: " = 1;", newText: " = 2;", profile: "strict" });
+          break;
+        case 2: {
+          expect(last).toContain("[failed]");
+          expect(await readFile(path, "utf8")).toBe(before);
+          const positions = Array.from(last.matchAll(/line (\d+), column (\d+)/g));
+          expect(positions.map(match => match[1])).toEqual(["1", "2"]);
+          yield* ScriptedModelProvider.toolCall("read_file", { path: "defaults.cjs", offset: Number(positions[1]![1]), limit: 1, versioned: true });
+          break;
+        }
+        case 3: {
+          const oldText = /"content":"([^"]+)"/.exec(last)?.[1];
+          const expectedSha256 = /"sha256":"([a-f0-9]{64})"/.exec(last)?.[1];
+          expect(oldText).toBe("exports.secondary = 1;");
+          expect(expectedSha256).toBe(createHash("sha256").update(before).digest("hex"));
+          yield* ScriptedModelProvider.toolCall("edit_file", { path: "defaults.cjs", oldText, newText: "exports.secondary = 2;", profile: "strict", expectedSha256 });
+          break;
+        }
+        case 4:
+          expect(last).toContain(createHash("sha256").update(after).digest("hex"));
+          yield* ScriptedModelProvider.text("Updated the secondary default.");
+          break;
+        default: throw new Error("unexpected model request");
+      }
+    } }),
+  };
+  const h = await createHarness({
+    cwd, dataDir: join(cwd, "state"), profile: "test", modelProvider: provider, model: { providerId: provider.id, modelId: "offline" },
+    featureFlags: { skills: false, mcp: false, memory: false, delegation: false, learning: false },
+    sandboxPolicy: { filesystem: { mode: "workspace-write", allowedPaths: [cwd] }, network: { mode: "deny" }, process: { timeoutMs: 10000 } },
+    task: { id: "strict-edit", goal: "Change only the secondary default", completionPolicy: { requiresVerification: true },
+      verification: [{ kind: "command", command: process.execPath, args: ["check.cjs"] }] },
+  });
+  try {
+    const session = await h.runtime.createSession({ agent: h.agents[0]!, cwd });
+    const turn = await h.runtime.startTurn(session.id, "Change the secondary default to 2 and verify.");
+    const result = await h.runtime.runTurn(session.id, turn.id, new AbortController().signal);
+    expect(result.grade).toBe("verified_complete");
+    expect(step).toBe(4);
+    expect(await readFile(path, "utf8")).toBe(after);
+    expect((await h.events.list(session.id)).some(event => event.type === "verification.completed")).toBe(true);
+  } finally { await h.close(); await rm(cwd, { recursive: true, force: true, maxRetries: 8, retryDelay: 50 }); }
+}, 30000);

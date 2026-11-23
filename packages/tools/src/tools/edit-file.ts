@@ -51,12 +51,12 @@ const fileSchema = z.object({
   oldText: z.string().optional(),
   newText: z.string().optional(),
   replaceAll: z.boolean().optional(),
-  occurrence: z.number().int().min(1).optional(),
+  occurrence: z.number().int().min(1).optional().describe("Select one non-overlapping match by its 1-based ordinal. Use only in text mode and omit replaceAll=true."),
   lineStart: z.number().int().min(1).optional(),
   lineEnd: z.number().int().min(1).optional(),
   replacement: z.string().optional(),
   expectedSha256: z.string().regex(/^[a-fA-F0-9]{64}$/).optional(),
-  profile: z.enum(["compatibility", "strict"]).optional(),
+  profile: z.enum(["compatibility", "strict"]).optional().describe("Strict range edits require expectedSha256. Without a version, a strict text anchor must have one possible start. Ambiguity errors identify the first two positions."),
 });
 
 /**
@@ -94,7 +94,7 @@ export const editFileTool: ToolDefinition<EditFileInput, EditFileOutput> = {
       const target = resolve(context.cwd, input.path);
 
       const isBatch = input.edits !== undefined;
-      const isRange = !isBatch && input.lineStart !== undefined;
+      const isRange = input.lineStart !== undefined || input.lineEnd !== undefined || input.replacement !== undefined;
       if (isBatch) {
         if (!Array.isArray(input.edits) || !input.edits.length || input.edits.length > MAX_BATCH_EDITS
           || input.edits.some(edit => !edit || typeof edit.oldText !== "string" || !edit.oldText.length || typeof edit.newText !== "string")) {
@@ -106,25 +106,21 @@ export const editFileTool: ToolDefinition<EditFileInput, EditFileOutput> = {
         if ([input.oldText, input.newText, input.replaceAll, input.occurrence, input.lineStart, input.lineEnd, input.replacement].some(value => value !== undefined)) {
           return { status: "failed", error: errorInfo("TOOL_SCHEMA_ERROR", "batch edits cannot be combined with text/occurrence/range parameters; no writes made") };
         }
-      }
-      if (input.profile === "strict" && isRange && input.expectedSha256 === undefined) {
-        return { status: "failed", error: errorInfo("TOOL_SCHEMA_ERROR", "strict range edits require expectedSha256; no writes made, read_file with versioned=true and recalculate") };
-      }
-      if (isBatch) {
-        // All batch shape/version checks above happen before any file read.
       } else if (isRange) {
-        if (input.lineEnd === undefined || input.replacement === undefined) {
+        if (input.oldText !== undefined || input.newText !== undefined || input.occurrence !== undefined || input.replaceAll) {
+          return { status: "failed", error: errorInfo("TOOL_SCHEMA_ERROR", "Choose one edit mode. A line range cannot be combined with oldText/newText, occurrence, or replaceAll=true.") };
+        }
+        if (input.lineStart === undefined || input.lineEnd === undefined || input.replacement === undefined) {
           return {
             status: "failed",
-            error: errorInfo("TOOL_SCHEMA_ERROR", "edit_file range mode requires lineEnd and replacement"),
+            error: errorInfo("TOOL_SCHEMA_ERROR", "edit_file range mode requires lineStart, lineEnd and replacement"),
           };
         }
-        if (input.oldText !== undefined || input.newText !== undefined) {
-          return {
-            status: "failed",
-            error: errorInfo("TOOL_SCHEMA_ERROR", "edit_file range mode cannot be combined with oldText/newText"),
-          };
+        if (input.profile === "strict" && input.expectedSha256 === undefined) {
+          return { status: "failed", error: errorInfo("TOOL_SCHEMA_ERROR", "strict range edits require expectedSha256; no writes made, read_file with versioned=true and recalculate") };
         }
+      } else if (input.replaceAll && input.occurrence !== undefined) {
+        return { status: "failed", error: errorInfo("TOOL_SCHEMA_ERROR", "Choose occurrence for one match or replaceAll=true for every match.") };
       } else if (input.oldText === undefined || input.newText === undefined) {
         return {
           status: "failed",
@@ -149,12 +145,13 @@ export const editFileTool: ToolDefinition<EditFileInput, EditFileOutput> = {
           : applyReplace(before, input.oldText!, input.newText!, {
               replaceAll: input.replaceAll,
               occurrence: input.occurrence,
+              requireUnique: input.profile === "strict" && input.expectedSha256 === undefined,
             });
 
-        if (input.profile === "strict" && res.matched > 1 && input.expectedSha256 === undefined) {
-          return { status: "failed", error: errorInfo("TOOL_SCHEMA_ERROR", "strict edits of repeated anchors require expectedSha256; no writes made, read_file with versioned=true and recalculate") };
+        if (res.ambiguous) {
+          return { status: "failed", error: errorInfo("TOOL_SCHEMA_ERROR",
+            `strict edits of repeated anchors require expectedSha256; ${res.error}. Use read_file with versioned=true before retrying.`) };
         }
-
         if (!res.ok) {
           return {
             status: "failed",

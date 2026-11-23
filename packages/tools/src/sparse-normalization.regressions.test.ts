@@ -23,3 +23,13 @@ it("preserves a literal lone CR and does not perform additional Unicode normaliz
   expect(applyReplace("head\rword\r\ntail", "word\n", "new\n").content).toBe("head\rnew\r\ntail");
   expect(applyReplace("🙂\r\nＡ\nA\r\ntail", "Ａ\nA", "B").content).toBe("🙂\r\nB\r\ntail");
 });
+
+it("retains local terminators across dense replacements, batch boundaries and an unterminated tail", () => {
+  const n = 5000;
+  const row = "a".repeat(n);
+  const input = "\ufeff" + row + "\r\n" + row + "\n" + row;
+  const result = applyReplace(input, "a", "$&\r\nx", { replaceAll: true });
+  const lf = "$&\nx".repeat(n);
+  expect(result).toMatchObject({ ok: true, count: 3 * n, matched: 3 * n,
+    content: "\ufeff" + "$&\r\nx".repeat(n) + "\r\n" + lf + "\n" + lf });
+});

@@ -142,3 +142,54 @@ it("a no-op batch never writes", async () => {
   const f = await fixture("retained"); const r = await editFileTool.execute({ path: f.path, expectedSha256: f.expectedSha256, edits: [{ oldText: "retained", newText: "retained" }] }, f.context);
   expect(r.status).toBe("failed"); expect(writes.count).toBe(0); expect(await readFile(f.path, "utf8")).toBe("retained");
 });
+
+const selectedText = { oldText: "tag", newText: "changed" };
+const selectedRange = { lineStart: 1, lineEnd: 1, replacement: "changed" };
+
+it.each([
+  { ...selectedText, occurrence: 2, replaceAll: true },
+  { ...selectedText, lineEnd: 2 },
+  { ...selectedText, replacement: "ignored" },
+  { ...selectedRange, occurrence: 2 },
+  { ...selectedRange, replaceAll: true },
+])("rejects conflicting edit selectors before opening the source: %j", async selectors => {
+  const body = "tag tag tag\nsecond\n";
+  const f = await fixture(body);
+  const opens = vi.mocked(nativeFs.open);
+  const result = await editFileTool.execute({ path: f.path, expectedSha256: f.expectedSha256, ...selectors }, f.context);
+  expect(result.status).toBe("failed");
+  expect(result.error?.code).toBe("TOOL_SCHEMA_ERROR");
+  expect(opens.mock.calls.some(([path]) => path === f.path)).toBe(false);
+  expect(await readFile(f.path, "utf8")).toBe(body);
+});
+
+it.each([
+  { body: "\ufeff🙂aaa\r\n", anchor: "aa", first: "line 1, column 4", second: "line 1, column 5" },
+  { body: "head\r\nA\r\nA\nA\nend", anchor: "A\nA", first: "line 2, column 1", second: "line 3, column 1" },
+])("reports both overlapping source positions before strict or batch edits for $anchor", async ({ body, anchor, first, second }) => {
+  const f = await fixture(body);
+  const pair = { oldText: anchor, newText: "replacement" };
+  for (const input of [{ ...pair, profile: "strict" as const }, { edits: [pair], expectedSha256: f.expectedSha256 }]) {
+    const result = await editFileTool.execute({ path: f.path, ...input }, f.context);
+    expect(result.status).toBe("failed");
+    expect(result.error?.message).toContain(first);
+    expect(result.error?.message).toContain(second);
+    expect(result.evidence).toBeUndefined();
+  }
+  expect(writes.count).toBe(0);
+  expect(await readFile(f.path, "utf8")).toBe(body);
+});
+
+it.each([
+  { body: "aaa", input: { oldText: "aa", newText: "X" }, versioned: false, expected: "Xa" },
+  { body: "aaa", input: { oldText: "aa", newText: "X", profile: "strict" as const }, versioned: true, expected: "Xa" },
+  { body: "tag tag", input: { ...selectedText, occurrence: 2, replaceAll: false }, versioned: true, expected: "tag changed" },
+  { body: "\ufeffaa aa", input: { oldText: "\ufeffaa", newText: "X", profile: "strict" as const }, versioned: false, expected: "\ufeffX aa" },
+])("keeps valid selection semantics for $input on $body", async ({ body, input, versioned, expected }) => {
+  const f = await fixture(body);
+  const result = await editFileTool.execute({ path: f.path, ...(versioned ? { expectedSha256: f.expectedSha256 } : {}), ...input }, f.context);
+  expect(result.status).toBe("success");
+  expect(result.output?.sha256).toBe(hash(expected));
+  expect(writes.count).toBe(1);
+  expect(await readFile(f.path, "utf8")).toBe(expected);
+});

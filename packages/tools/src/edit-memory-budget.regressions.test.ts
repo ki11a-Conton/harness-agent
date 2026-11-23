@@ -48,16 +48,16 @@ it("edits eight million short lines and returns a bounded receipt inside a 64MiB
   } finally { await fs.rm(root, { recursive: true, force: true, maxRetries: process.platform === "win32" ? 8 : 0, retryDelay: 50 }); }
 });
 
-it.each(["line range", "last occurrence"] as const)("edits a dense generated file by %s inside a 64 MiB Node heap", async mode => {
+it.each(["line range", "last occurrence", "replace all"] as const)("edits a dense generated file by %s inside a 64 MiB Node heap", async mode => {
   const root = await fs.realpath(await fs.mkdtemp(join(tmpdir(), "ar-edit-offsets-")));
   const target = join(root, "generated.txt");
   const count = 8_000_000;
   const range = mode === "line range";
   const body = range ? "MARKER=1;\n" + "\n".repeat(12_000_000) : "a".repeat(count);
-  const expected = range ? body.replace("MARKER=1;", "MARKER=2;") : "a".repeat(count - 1) + "b";
+  const expected = range ? body.replace("MARKER=1;", "MARKER=2;") : mode === "replace all" ? "b".repeat(count) : "a".repeat(count - 1) + "b";
   const edit = range
     ? { lineStart: 1, lineEnd: 1, replacement: "MARKER=2;" }
-    : { oldText: "a", newText: "b", occurrence: count };
+    : { oldText: "a", newText: "b", ...(mode === "replace all" ? { replaceAll: true } : { occurrence: count }) };
   try {
     await fs.writeFile(target, body);
     const program = `
@@ -89,10 +89,30 @@ it.each(["line range", "last occurrence"] as const)("edits a dense generated fil
     const child = await execute(process.execPath,
       ["--max-old-space-size=64", "--input-type=module", "-e", program, target, root, JSON.stringify(edit)],
       { timeout: 20000, maxBuffer: 64 * 1024 });
-    expect(JSON.parse(child.stdout)).toMatchObject(range ? { replacedLines: 1 } : { replacements: 1 });
+    expect(JSON.parse(child.stdout)).toMatchObject(range ? { replacedLines: 1 } : { replacements: mode === "replace all" ? count : 1 });
     expect(child.stderr).toBe("");
     expect(Buffer.compare(await fs.readFile(target), Buffer.from(expected))).toBe(0);
   } finally {
     await fs.rm(root, { recursive: true, force: true, maxRetries: 8, retryDelay: 50 });
   }
+});
+
+it("refuses a repeated unversioned strict replaceAll before expanding the replacement", async () => {
+  const root = await fs.mkdtemp(join(tmpdir(), "ar-edit-ambiguity-"));
+  const target = join(root, "source.txt");
+  const body = "a".repeat(8_000_000);
+  try {
+    await fs.writeFile(target, body);
+    const program = `
+      import assert from "node:assert/strict";
+      import { editFileTool } from ${JSON.stringify(new URL("../dist/tools/edit-file.js", import.meta.url).href)};
+      const [path, cwd] = process.argv.slice(1);
+      const result = await editFileTool.execute({ path, profile: "strict", oldText: "a", newText: "bb", replaceAll: true },
+        { cwd, signal: new AbortController().signal });
+      assert.equal(result.status, "failed");
+      assert.match(result.error.message, /line 1, column 1 and line 1, column 2/);
+    `;
+    await execute(process.execPath, ["--max-old-space-size=64", "--input-type=module", "-e", program, target, root], { timeout: 20000 });
+    expect(await fs.readFile(target, "utf8")).toBe(body);
+  } finally { await fs.rm(root, { recursive: true, force: true, maxRetries: 8, retryDelay: 50 }); }
 });

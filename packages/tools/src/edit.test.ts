@@ -12,6 +12,11 @@ describe("P2-28 applyReplace", () => {
     expect(r.matched).toBe(3);
   });
 
+  it("refuses a conflicting ordinal and all-matches selection", () => {
+    const result = applyReplace(content, "a", "X", { occurrence: 2, replaceAll: true });
+    expect(result).toMatchObject({ ok: false, content, count: 0 });
+  });
+
   it("replaceAll replaces every occurrence", () => {
     const r = applyReplace(content, "a", "X", { replaceAll: true });
     expect(r.content).toBe("X b X c X");
