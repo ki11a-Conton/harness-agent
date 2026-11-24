@@ -2,11 +2,15 @@ import { mkdtemp, mkdir, readFile, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runInNewContext } from "node:vm";
-import { expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { createHarness } from "@ar/harness";
 import { ScriptedModelProvider } from "@ar/model";
 import type { ModelEvent, SessionId } from "@ar/contracts";
 import { createDeepseekComposition } from "./composition.js";
+import { allocateAvailableLeaseFixture } from "./test-support/lease-fixture.js";
+
+const cleanup: Array<() => Promise<void>> = [];
+afterEach(async () => { for (const close of cleanup.splice(0).reverse()) await close(); });
 
 type Client = {
   refreshList(): Promise<void>;
@@ -40,8 +44,6 @@ async function clientManager(list: () => Promise<unknown>): Promise<Client> {
 }
 
 it("production event notifications settle a resident client loaded while the model is running", async () => {
-  const root = await realpath(await mkdtemp(join(tmpdir(), "web-running-status-")));
-  const cwd = join(root, "project"), dataDir = join(root, "data"); await mkdir(cwd);
   let release!: () => void;
   const gate = new Promise<void>(done => { release = done; });
   let entered!: () => void;
@@ -51,15 +53,23 @@ it("production event notifications settle a resident client loaded while the mod
     entered(); await gate;
     yield { type: "completed", result: { text: "Actual answer", finishReason: "stop" }, timestamp: 0 };
   })()]);
-  const base = await createHarness({ cwd, dataDir, profile: "interactive", modelProvider: provider,
-    model: { providerId: provider.id, modelId: "scripted-model" } });
-  let composition: Awaited<ReturnType<typeof createDeepseekComposition>> | undefined;
   let client: Client | undefined, pump: Promise<void> | undefined;
   const controller = new AbortController(), frames: Notice[] = [];
+  const signal = controller.signal;
+  const { composition, sessionId } = await allocateAvailableLeaseFixture(async () => {
+    const root = await realpath(await mkdtemp(join(tmpdir(), "web-running-status-")));
+    cleanup.push(() => rm(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 20 }));
+    const cwd = join(root, "project"), dataDir = join(root, "data"); await mkdir(cwd);
+    const base = await createHarness({ cwd, dataDir, profile: "interactive", modelProvider: provider,
+      model: { providerId: provider.id, modelId: "scripted-model" } });
+    cleanup.push(() => base.close());
+    const composition = await createDeepseekComposition(base, dataDir);
+    cleanup.push(() => composition.close());
+    const { sessionId } = await composition.sessions.call("session/create", { request: {} }, signal) as { sessionId: SessionId };
+    return { composition, sessionId };
+  }, cleanup);
   try {
-    composition = await createDeepseekComposition(base, dataDir);
-    const service = composition.sessions, signal = controller.signal;
-    const { sessionId } = await service.call("session/create", { request: {} }, signal) as { sessionId: SessionId };
+    const service = composition.sessions;
     await service.call("session/prompt", { request: { sessionId, requestId: "load-during-generation", mode: "queue",
       content: [{ type: "text", text: "Answer while a client is opening" }] } }, signal);
     await generating;
@@ -91,7 +101,6 @@ it("production event notifications settle a resident client loaded while the mod
     expect((await composition.harness.store.listTurns(sessionId))[0]?.status).toBe("completed");
   } finally {
     release(); controller.abort(); await pump;
-    await client?.dispose(); await composition?.close(); await base.close();
-    await rm(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 20 });
+    await client?.dispose();
   }
 }, 25_000);

@@ -68,8 +68,11 @@ async function escapeOverlay() {
 }
 async function modelMenu(query) {
   await button(/^(Select model|选择模型)/).click();
-  const branch = page.getByRole('menuitem', { name: /^(Model|模型)/ }).filter({ visible: true }); if (await branch.count()) await branch.first().click();
-  const input = page.getByRole('searchbox', { name: /Search models|搜索模型/ }); await input.fill(query); return input;
+  const branch = page.getByRole('menuitem', { name: /^(Model|模型)/ }).filter({ visible: true }).first();
+  const input = page.getByRole('searchbox', { name: /Search models|搜索模型/ });
+  await input.or(branch).first().waitFor({ state: 'visible' });
+  if (!await input.isVisible()) await branch.click();
+  await input.fill(query); return input;
 }
 async function fresh() { await sidebar(); return createReadyWorkspaceSession(page, rpc); }
 async function send(ready, marker, model) {
