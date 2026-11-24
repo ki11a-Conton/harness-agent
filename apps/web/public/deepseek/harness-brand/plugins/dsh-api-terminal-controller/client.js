@@ -298,15 +298,20 @@ window.__ModuleLoader__.load({
 				const state = this.state.getSnapshot();
 				const attachmentId = this.attachmentId;
 				if (!state.writable || state.info === void 0 || attachmentId === void 0) return;
-				if (state.info.cols === cols && state.info.rows === rows) return;
 				const id = state.info.id;
 				cols = Math.min(cols, state.environment?.maxCols ?? cols);
 				rows = Math.min(rows, state.environment?.maxRows ?? rows);
+				const previous = this.pendingResize?.attachmentId === attachmentId ? this.pendingResize : state.info;
+				if (previous.cols === cols && previous.rows === rows) return;
+				const pending = { attachmentId, cols, rows };
+				this.pendingResize = pending;
 				this.writes = this.writes.then(async () => {
 					if (this.attachmentId !== attachmentId || !this.state.getSnapshot().writable) return;
 					valueOf(await this.remote.resize(this.sessionId, id, attachmentId, cols, rows));
 				}).catch((error) => {
 					if (this.attachmentId === attachmentId) this.fail(error);
+				}).finally(() => {
+					if (this.pendingResize === pending) this.pendingResize = void 0;
 				});
 			}
 			/**

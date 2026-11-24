@@ -182,23 +182,99 @@ const cases = {
   },
   "terminal": async (page, checks) => {
     await clickVisible(page, "Open right sidebar");
-    const outcome = rpcByPage.get(page).waitForResult("terminal/create", 12000);
-    let settled; outcome.then(value => { settled = value; });
-    await clickVisible(page, "New terminal Run commands in the Session workspace");
-    const deadline = Date.now() + 12000;
-    while (!settled && Date.now() < deadline) {
-      const allow = page.getByRole("button", { name: "Allow once", exact: true });
-      if (await allow.isVisible()) { await allow.click(); checks.push({ label: "real terminal process step received human approval", status: "PASS" }); }
-      await page.waitForTimeout(200);
+    const rpc = rpcByPage.get(page);
+    async function awaitApprovalResult(outcome) {
+      let settled = false;
+      const checked = outcome.then(value => ({ value }), error => ({ error })).finally(() => { settled = true; });
+      while (!settled) {
+        const allow = page.getByRole("button", { name: "Allow once", exact: true });
+        if (await allow.isVisible()) await allow.click();
+        await page.waitForTimeout(100);
+      }
+      const result = await checked;
+      if (result.error) throw result.error;
+      return result.value;
     }
-    const created = settled ?? await outcome; if (created.error) throw created.error;
+    const outcome = rpc.waitForResult("terminal/create", 15000);
+    await clickVisible(page, "New terminal Run commands in the Session workspace");
+    const created = await awaitApprovalResult(outcome); if (created.error) throw created.error;
     if (!created.result.ok && created.result.error?.code === "terminal/unavailable") {
       created.result.expected = true;
       throw new Blocked("Actual terminal owner refused PTY execution: " + created.result.error.message);
     }
     assert.equal(created.result.ok, true, JSON.stringify(created.result.error));
     checks.push({ label: "actual confined PTY owner created a terminal", status: "PASS" });
-    throw new Blocked("PTY created; input/resize/exit still need an independently bounded continuation scenario.");
+    const screen = page.locator(".xterm-screen").last();
+    await awaitApprovalResult(screen.waitFor({ timeout: 15000 }));
+    const viewport = page.viewportSize();
+    const resize = rpc.waitForResult("terminal/resize", 15000);
+    await page.setViewportSize({ width: viewport.width, height: viewport.height - 120 });
+    const resized = await awaitApprovalResult(resize); if (resized.error) throw resized.error;
+    assert.equal(resized.result.ok, true, JSON.stringify(resized.result.error));
+    checks.push({ label: "terminal resize acknowledged by the running owner", status: "PASS" });
+    async function typeAndApprove(action) {
+      // A fit can open a permission dialog after the terminal becomes visible.
+      // Finish that interaction before giving keyboard focus back to xterm.
+      const allow = page.getByRole("button", { name: "Allow once", exact: true });
+      const deadline = Date.now() + 15000;
+      let focused = false;
+      while (!focused && Date.now() < deadline) {
+        if (await allow.isVisible()) {
+          await allow.click();
+        } else if (!rpc.calls.some(call => call.endpoint === "terminal/resize" && call.state === "sent")) {
+          try {
+            await screen.click({ timeout: 500 });
+            focused = await page.evaluate(async () => {
+              await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+              return document.activeElement?.matches("textarea.xterm-helper-textarea:not([readonly])") === true;
+            });
+          } catch (error) { if (error.name !== "TimeoutError") throw error; }
+        }
+        if (!focused) await page.waitForTimeout(50);
+      }
+      assert(focused, "xterm must have keyboard focus after terminal permissions settle");
+      const written = rpc.waitForResult("terminal/write", 15000);
+      await action();
+      const ack = await awaitApprovalResult(written); if (ack.error) throw ack.error;
+      assert.equal(ack.result.ok, true, JSON.stringify(ack.result.error));
+    }
+    await typeAndApprove(() => page.keyboard.insertText("printf 'UI_%s\\n' READY && exit 7"));
+    await typeAndApprove(() => page.keyboard.press("Enter"));
+    await awaitApprovalResult(page.waitForFunction(() => document.body.innerText.includes("Process exited (7)"), undefined, { timeout: 15000 }));
+    assert((await page.locator(".xterm-rows").last().textContent()).includes("UI_READY"), "shell output must reach xterm");
+    checks.push({ label: "shell input produced the marker and the UI reported exit code 7", status: "PASS" });
+    const close = page.getByRole("tab", { selected: true }).getByRole("button", { name: "Close", exact: true });
+    await awaitApprovalResult(close.click({ timeout: 15000 }));
+    await awaitApprovalResult(screen.waitFor({ state: "detached", timeout: 15000 }));
+    checks.push({ label: "closing the terminal tab removed its screen", status: "PASS" });
+  },
+  "composer-model-cancel": async (page, checks) => {
+    const editor = page.locator('[data-composer-input=true][contenteditable=true]').filter({ visible: true });
+    const model = page.getByRole("button", { name: /^Select model/ }).last();
+    const initialModel = await model.getAttribute("aria-label");
+    const draft = "Check composer draft " + Date.now();
+    await editor.fill(draft);
+    const touch = await page.evaluate(() => navigator.maxTouchPoints > 0);
+    const activate = control => touch ? control.tap() : control.click();
+    await activate(model);
+    await page.waitForFunction(() => document.querySelector('button[aria-label^="Select model"][aria-expanded="true"]'));
+    await page.keyboard.press("Escape");
+    if (await model.getAttribute("aria-expanded") === "true") await page.keyboard.press("Escape");
+    assert.equal(await model.getAttribute("aria-expanded"), "false");
+    assert.equal(await model.getAttribute("aria-label"), initialModel);
+    assert.equal(await editor.innerText(), draft);
+    checks.push({ label: "cancelling model selection kept the selected model and the unsent draft", status: "PASS" });
+    const before = (await modelRequests()).length;
+    const accepted = rpcByPage.get(page).waitForResult("session/prompt");
+    await activate(page.getByRole("button", { name: "Send message", exact: true }));
+    const result = await accepted;
+    if (result.error) throw result.error;
+    assert.equal(result.result.ok, true);
+    await answerFinished(page);
+    const matches = (await modelRequests()).slice(before).filter(request => request.purpose === "coding"
+      && request.messages.some(message => message.role === "user" && JSON.stringify(message.content).includes(draft)));
+    assert.equal(matches.length, 1);
+    checks.push({ label: (touch ? "touch" : "mouse") + " submit reached the loopback model exactly once and rendered the answer", status: "PASS" });
   },
   "session-lifecycle": async (page, checks) => {
     await prompt(page, "Render the fixture before testing actual session lifecycle.", checks); await answerFinished(page);
@@ -374,10 +450,11 @@ try {
   for (const viewportName of viewportNames) {
     for (const [name, operation] of Object.entries(cases)) {
       if (chosen && !chosen.has(name)) continue;
-      if (["session-lifecycle", "markdown-stream-reload", "read-tool", "write-approval", "write-rejection", "ask-reload-answer"].includes(name) && !values.models) {
+      if (["composer-model-cancel", "session-lifecycle", "markdown-stream-reload", "read-tool", "write-approval", "write-rejection", "ask-reload-answer"].includes(name) && !values.models) {
         results.push({ name, viewport: viewportName, status: "SKIPPED", reason: "Model scenarios require explicit loopback fixture evidence." }); continue;
       }
-      const context = await browser.newContext({ viewport: viewportCatalog[viewportName] });
+      const context = await browser.newContext({ viewport: viewportCatalog[viewportName],
+        ...(name === "composer-model-cancel" && viewportName !== "desktop" ? { hasTouch: true, isMobile: true } : {}) });
       const page = await context.newPage(); page.setDefaultTimeout(4000);
       const rpc = observeProductionRpc(page, origin); rpcByPage.set(page, rpc);
       const calls = rpc.results, errors = [], externalRequests = rpc.externalRequests, checks = [], assets = [], failedHttp = [];

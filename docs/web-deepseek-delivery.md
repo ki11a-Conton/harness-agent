@@ -70,7 +70,7 @@
 5. 泛用图片/二进制模型输入；目前受限 UTF-8 文本上传，不能把上传成功当多模态理解。
 6. native OS open-in-app；headless 应用目录为空且 ability=false，网页文件 preview 可用。
 7. Windows lease 仅保证同机/同 network namespace 的单写者；固定端口占用或不可绑定时拒绝。旧高端口 guard 不可持有时，不保证跨旧/新版的滚动混跑；不支持多机 NFS 共享 dataDir。旧 Session 未保存 cosmetic metadata 时仍可能显示 durable ID，不伪造无法证明的原角色。
-8. 本 managed Linux 不支持强 PTY confinement，实际 owner 返回 `SANDBOX_BACKEND_DENIED`；native addon 可加载不证明产品交互终端通过。手机右栏打开时 approval 需收起右栏查看，尚待统一交互验收。
+8. Linux 交互终端使用 Bubblewrap 和 `/usr/bin/prlimit`。当前 Linux 环境通过了 8 项隔离自检。浏览器在 320、390 和 1440 像素宽度下均验证了审批、创建终端、调整尺寸、命令输出、退出码和关闭标签页。保留 `--new-session` 时，当前 Bash 报告作业控制不可用。
 9. 矩阵中尚未实际操作的默认细项，如高级 preview/复杂 Markdown、快捷键所有分支、完整 trajectory/artifact/skill 交互，还不能从组件装配或后端 unit PASS 推广为逐控件通过。
 
 因此本次作为有明确能力边界的代码候选提交，不声明 140 个默认细项全部完成，不发布“全功能生产级” release。W3–W6 整域仍部分完成。真实付费模型 coding 质量为 NOT_PROVEN；用户线下实验与这次工程接线证据分别记录。v1.9/c5 发布与 N7 结论不改写。

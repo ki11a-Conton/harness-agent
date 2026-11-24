@@ -37,3 +37,21 @@ it("a missing shell keeps its actual failure and a terminal limit keeps its scop
   view.fail(new api.RemoteError("terminal/limit-reached", "Session terminal limit reached", {}));
   expect(view.state.getSnapshot().issue).toBe("terminalLimit");
 });
+
+it("coalesces repeated fits while authorization is pending and preserves a resize back to the original dimensions", async () => {
+  const api = await controller();
+  const sizes: number[][] = [];
+  const remote = { resize: async (_session: string, _id: string, _attachment: string, cols: number, rows: number) => {
+    sizes.push([cols, rows]);
+    return { ok: true };
+  } };
+  const view = new api.TerminalView("session-a", remote, {}, "terminal");
+  view.attachmentId = "attachment";
+  view.patch({ writable: true, info: { id: "terminal", cols: 80, rows: 24 }, environment: { maxCols: 100, maxRows: 50 } });
+  view.resize(120, 60);
+  view.resize(100, 50);
+  view.resize(80, 24);
+  view.resize(80, 24);
+  await view.writes;
+  expect(sizes).toEqual([[100, 50], [80, 24]]);
+});

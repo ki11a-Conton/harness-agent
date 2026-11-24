@@ -74,6 +74,28 @@ export function deriveBrandModule(stem, original) {
     // Native view/list recovery already emits the explicit missingTerminal
     // issue. Confinement, shell and allocation failures need their real reason.
     source = source.replace(marker, ' : void 0;');
+    const resizeStart = source.indexOf('resize(cols, rows) {');
+    const resizeEnd = source.indexOf('\n\t\t\t}', resizeStart);
+    const resize = source.slice(resizeStart, resizeEnd);
+    const sizeCheck = 'if (state.info.cols === cols && state.info.rows === rows) return;';
+    const queue = 'this.writes = this.writes.then';
+    if (resizeStart < 0 || !resize.includes(sizeCheck) || !resize.includes(queue) || !resize.endsWith('});')) {
+      throw new Error('Expected terminal resize queue before applying duplicate fit suppression');
+    }
+    // Repeated fits while permission is pending target one PTY size. Preserve
+    // distinct changes, including returning to the original size before an ACK.
+    const updated = resize.replace(sizeCheck + '\n\t\t\t\t', '').replace(queue, [
+      'const previous = this.pendingResize?.attachmentId === attachmentId ? this.pendingResize : state.info;',
+      'if (previous.cols === cols && previous.rows === rows) return;',
+      'const pending = { attachmentId, cols, rows };',
+      'this.pendingResize = pending;',
+      queue,
+    ].join('\n\t\t\t\t')).replace(/\}\);$/, [
+      '}).finally(() => {',
+      '\tif (this.pendingResize === pending) this.pendingResize = void 0;',
+      '});',
+    ].join('\n\t\t\t\t'));
+    source = source.slice(0, resizeStart) + updated + source.slice(resizeEnd);
   }
   if (stem === 'dsh-client-ui-sidebar-right') {
     const marker = 'console.error("Sidebar Session opening failed:", error);';
