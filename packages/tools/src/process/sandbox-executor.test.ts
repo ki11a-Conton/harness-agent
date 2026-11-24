@@ -109,6 +109,7 @@ describe("E3-09 bwrap argv construction", () => {
     const wsIdx = argv.indexOf("/work/case-1");
     expect(wsIdx).toBeGreaterThan(0);
     expect(argv[wsIdx + 1]).toBe("/work/case-1");
+    expect(wsIdx).toBeGreaterThan(argv.indexOf("--tmpfs") + 1);
     // The rw bind comes AFTER the ro root bind.
     expect(wsIdx).toBeGreaterThan(argv.indexOf("/") + 1);
   });
@@ -131,25 +132,14 @@ describe("E3-09 bwrap argv construction", () => {
     const argv = buildBwrapArgv(basePolicy());
     expect(argv).toContain("--clearenv");
     expect(argv).toContain("--setenv");
-    // PATH must be allowlisted (required to run tools inside the sandbox).
-    const setenvPath = argv[argv.indexOf("--setenv") + 1];
-    expect(setenvPath?.startsWith("PATH=")).toBe(true);
-    // HOME/LANG/TZ are allowlisted (predictable runtime).
-    // HOME/LANG/TZ are allowlisted (predictable runtime). Only assert
-    // env vars that are actually set in the host environment (buildBwrapArgv
-    // only emits --setenv for defined vars).
-    const setEnvKeys = ["HOME", "LANG", "TZ"].filter((k) => process.env[k] !== undefined);
-    for (const key of setEnvKeys) {
-      const found = argv.some((_, i) => argv[i] === "--setenv" && i + 1 < argv.length && (argv[i + 1] ?? "").startsWith(`${key}=`));
-      expect(found).toBe(true);
+    for (const key of ["PATH", "HOME", "LANG", "TZ"].filter(k => process.env[k] !== undefined)) {
+      expect(argv.some((arg, i) => arg === "--setenv" && argv[i + 1] === key && argv[i + 2] === process.env[key])).toBe(true);
     }
   });
 
   it("resource limits (fd, cpu, memory) are encoded", () => {
     const argv = buildBwrapArgv(basePolicy({ maxMemoryMb: 512, cpuShare: 256, timeoutMs: 6000 }));
-    expect(argv).toContain("--rlimit-nofile");
-    expect(argv).toContain("--rlimit-cpu");
-    expect(argv).toContain("--rlimit-as");
+    expect(argv.slice(argv.indexOf("--"))).toEqual(["--", "/usr/bin/prlimit", "--nofile=1024", "--cpu=11", "--as=536870912"]);
   });
 
   it("read-only runtime dirs are bound read-only", () => {
@@ -296,8 +286,10 @@ describe("E4-00: capability self-test leaves no residue in the repo working tree
       strongIsolation: true,
       schemaVersion: "1.0.0",
       wrapperArgv: () => [],
-      async selfTest(paths) {
+      async selfTest(paths, policy) {
         capturedBase = paths.outsideDir;
+        expect(policy.writableDirs).toEqual([paths.workspace]);
+        expect(paths.workspace).not.toBe(paths.outsideDir);
         // Simulate the historical pollution: a real backend writes fixtures/leaks
         // under the probe base (bwrap does mkdirSync + writeFileSync here).
         writeFileSync(join(capturedBase, "e3-09-leaked.txt"), "pwned");

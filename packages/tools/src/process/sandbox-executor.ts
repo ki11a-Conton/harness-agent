@@ -171,14 +171,14 @@ export function buildSandboxPolicySpec(input: {
 // ---------------------------------------------------------------------------
 // Pure: bwrap argv construction
 // ---------------------------------------------------------------------------
-// Order matters: ro-bind / first, then rw bind, then tmpfs/dev/proc, then
-// unshare, then clearenv+setenv, then rlimit, then die-with-parent/new-session.
+// Mount a private /tmp before binding workspace paths that may live under it.
 
 export function buildBwrapArgv(policy: SandboxPolicySpec): string[] {
   const argv: string[] = [];
 
   // 1. Host root read-only (allows runtime tools to work; nothing writable).
   argv.push("--ro-bind", "/", "/");
+  argv.push("--tmpfs", "/tmp");
 
   // 2. Writable workspace dirs (shadow the ro root).
   for (const dir of policy.writableDirs) {
@@ -193,7 +193,6 @@ export function buildBwrapArgv(policy: SandboxPolicySpec): string[] {
   // 4. Virtual filesystems.
   argv.push("--dev", "/dev");
   argv.push("--proc", "/proc");
-  argv.push("--tmpfs", "/tmp");
 
   // 5. Network namespace disabled.
   argv.push("--unshare-net");
@@ -206,24 +205,17 @@ export function buildBwrapArgv(policy: SandboxPolicySpec): string[] {
   for (const key of policy.envAllowlist) {
     const val = process.env[key];
     if (val !== undefined) {
-      argv.push("--setenv", `${key}=${val}`);
+      argv.push("--setenv", key, val);
     }
   }
 
-  // 8. Resource limits.
-  argv.push("--rlimit-nofile", "1024");
-  if (policy.maxMemoryMb !== undefined) {
-    // bwrap --rlimit-as expects bytes; 512 MB default.
-    argv.push("--rlimit-as", String(policy.maxMemoryMb * 1024 * 1024));
-  }
-  // CPU timeout: convert ms to seconds (ceil).
-  const cpuSecs = Math.ceil(policy.timeoutMs / 1000) + 5; // 5s grace
-  argv.push("--rlimit-cpu", String(cpuSecs));
-
-  // 9. PID isolation: die with parent + new session.
   argv.push("--die-with-parent");
   argv.push("--new-session");
 
+  // Bubblewrap runs prlimit inside the namespace. prlimit applies the hard
+  // and soft limits before execing the caller's "--", executable and args.
+  argv.push("--", "/usr/bin/prlimit", "--nofile=1024", `--cpu=${Math.ceil(policy.timeoutMs / 1000) + 5}`);
+  if (policy.maxMemoryMb !== undefined) argv.push(`--as=${policy.maxMemoryMb * 1024 * 1024}`);
   return argv;
 }
 
@@ -505,9 +497,8 @@ export async function bwrapBackend(): Promise<SandboxExecutionBackend | undefine
             timeout: opts.timeoutMs,
             windowsHide: true,
           }, (err, stdout, stderr) => {
-            const raw = err?.code != null ? Number(err.code) : null;
             resolve({
-              exitCode: Number.isFinite(raw) ? raw : null,
+              exitCode: err === null ? 0 : typeof err.code === "number" ? err.code : null,
               stdout: stdout ?? "",
               stderr: stderr ?? "",
               durationMs: Date.now() - started,
@@ -603,29 +594,20 @@ const selfTestCache = new Map<string, CapabilitySelfTestResult>();
  * E4-00 — run a backend's capability self-test inside a unique OS temp dir so
  * probe fixtures and any leaked writes NEVER touch the repository working tree.
  *
- * The self-test's effect paths are built under the probe base, and the probe
- * policy makes that base writable (mirroring the historical
- * `writableDirs: [process.cwd()]` with the base under cwd). Relocating BOTH the
- * base and the writable dir to the same temp path preserves the exact probe
- * semantics (effect paths sit under the writable base) while keeping the run
- * side-effect-free and reproducible — a hard requirement of the E4 offline
- * gates (every task must end with `git status --short` empty). Cleaned up in a
- * finally so a throwing self-test still leaves no residue.
+ * Only the fixture workspace represents an authorized writable directory.
+ * Its sibling files represent the host outside the workspace.
  */
 async function selfTestInTempDir(
   backend: SandboxExecutionBackend,
   policy: SandboxPolicySpec,
 ): Promise<CapabilitySelfTestResult> {
-  const base = await mkdtemp(join(tmpdir(), "e3-09-selftest-"));
+  // The real Linux wrapper mounts private writable scratch at /tmp. Host-side
+  // read-only checks must see their actual files through its read-only root.
+  const probeParent = backend.id === "linux-bwrap" && process.platform === "linux" ? "/var/tmp" : tmpdir();
+  const base = await mkdtemp(join(probeParent, "e3-09-selftest-"));
   try {
-    const relocated: SandboxPolicySpec = {
-      ...policy,
-      writableDirs: policy.writableDirs.map((d) => (d === process.cwd() ? base : d)),
-    };
-    if (!relocated.writableDirs.includes(base)) {
-      relocated.writableDirs = [base, ...relocated.writableDirs];
-    }
-    return await backend.selfTest(buildProbePaths(base), relocated);
+    const paths = buildProbePaths(base);
+    return await backend.selfTest(paths, { ...policy, writableDirs: [paths.workspace] });
   } finally {
     // Best-effort cleanup must be OBSERVABLE (P14-6): a leftover temp dir is
     // reported on the degraded channel, never silently swallowed.
