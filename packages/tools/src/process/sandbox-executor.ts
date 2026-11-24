@@ -597,7 +597,7 @@ export function unavailableBackend(platform: NodeJS.Platform): SandboxExecutionB
 // Self-test memoization
 // ---------------------------------------------------------------------------
 
-const selfTestCache = new Map<string, { digest: string; ok: boolean }>();
+const selfTestCache = new Map<string, CapabilitySelfTestResult>();
 
 /**
  * E4-00 — run a backend's capability self-test inside a unique OS temp dir so
@@ -640,21 +640,11 @@ async function selfTestInTempDir(
 export async function selfTestForBackend(backend: SandboxExecutionBackend, policy: SandboxPolicySpec, paths?: ProbePaths): Promise<CapabilitySelfTestResult> {
   const key = `${backend.id}@${SANDBOX_EXECUTOR_SCHEMA_VERSION}`;
   const cached = selfTestCache.get(key);
-  if (cached !== undefined) {
-    return {
-      ok: cached.ok,
-      backendId: backend.id,
-      schemaVersion: SANDBOX_EXECUTOR_SCHEMA_VERSION,
-      digest: cached.digest,
-      attempted: [],
-      failures: cached.ok ? [] : [],
-      probes: [],
-    };
-  }
+  if (cached !== undefined) return structuredClone(cached);
   const result = paths !== undefined
     ? await backend.selfTest(paths, policy)
     : await selfTestInTempDir(backend, policy);
-  selfTestCache.set(key, { digest: result.digest, ok: result.ok });
+  selfTestCache.set(key, structuredClone(result));
   return result;
 }
 

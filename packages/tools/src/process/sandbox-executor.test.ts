@@ -6,7 +6,7 @@
  * runners — no real bwrap is required (this machine is Windows; the Linux
  * backend code is exercised by CI). Every test is offline and deterministic.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -235,9 +235,9 @@ function fakeStrongBackend(): SandboxExecutionBackend {
 }
 
 /** A fake backend whose selfTest reports one failure (leak). */
-function leakingBackend(): SandboxExecutionBackend {
+function leakingBackend(id = "fake-leaking"): SandboxExecutionBackend {
   return {
-    id: "fake-leaking",
+    id,
     platform: "linux",
     strongIsolation: true,
     schemaVersion: "1.0.0",
@@ -245,7 +245,7 @@ function leakingBackend(): SandboxExecutionBackend {
     async selfTest() {
       return {
         ok: false,
-        backendId: "fake-leaking",
+        backendId: id,
         schemaVersion: "1.0.0",
         digest: "d-leak",
         attempted: ["external-absolute-write", "secret-env-exposure"],
@@ -258,6 +258,21 @@ function leakingBackend(): SandboxExecutionBackend {
     },
   };
 }
+
+it("preserves the original sandbox refusal details across terminal retries", async () => {
+  const backend = leakingBackend("terminal-retry-diagnostics");
+  const run = vi.spyOn(backend, "selfTest");
+  const first = await selfTestForBackend(backend, basePolicy());
+  const expected = structuredClone(first);
+  expect(expected.ok).toBe(false);
+  expect(expected.failures.length).toBeGreaterThan(0);
+  first.failures.length = 0;
+  const retry = await selfTestForBackend(backend, basePolicy());
+  expect(retry).toEqual(expected);
+  retry.probes[0]!.detail = "modified by caller";
+  expect(await selfTestForBackend(backend, basePolicy())).toEqual(expected);
+  expect(run).toHaveBeenCalledTimes(1);
+});
 
 describe("E4-00: capability self-test leaves no residue in the repo working tree", () => {
   const probePolicy = (): SandboxPolicySpec =>
