@@ -649,10 +649,28 @@ async function cancel() {
   }
 }
 function setSidebar(collapsed, persist = false) {
+  const sidebar = $("sidebar");
+  const toggle = $("sidebar-toggle");
+  const main = $("main");
+  const mobile = matchMedia("(max-width: 760px)").matches;
+  const modal = mobile && !collapsed;
+  const wasModal = main.inert;
+  const returnFocus = collapsed && (wasModal || sidebar.contains(document.activeElement));
   $("app").classList.toggle("sidebar-collapsed", collapsed);
-  $("sidebar-toggle").setAttribute("aria-expanded", String(!collapsed));
-  $("sidebar-toggle").setAttribute("aria-label", collapsed ? "展开会话侧栏" : "收起会话侧栏");
-  if (persist && !matchMedia("(max-width: 760px)").matches) storageSet(LS_SIDEBAR, String(collapsed));
+  toggle.setAttribute("aria-expanded", String(!collapsed));
+  toggle.title = collapsed ? "展开会话侧栏" : "收起会话侧栏";
+  toggle.setAttribute("aria-label", toggle.title);
+  main.inert = modal;
+  if (modal) {
+    sidebar.setAttribute("role", "dialog");
+    sidebar.setAttribute("aria-modal", "true");
+    if (!wasModal) $("sidebar-close").focus();
+  } else {
+    sidebar.removeAttribute("role");
+    sidebar.removeAttribute("aria-modal");
+    if (returnFocus) toggle.focus();
+  }
+  if (persist && !mobile) storageSet(LS_SIDEBAR, String(collapsed));
 }
 function setTheme(theme) {
   const dark = theme === "dark";
@@ -670,6 +688,16 @@ async function init() {
   $("sidebar-toggle").addEventListener("click", () => setSidebar(!$("app").classList.contains("sidebar-collapsed"), true));
   $("sidebar-close").addEventListener("click", () => setSidebar(true, true));
   $("sidebar-backdrop").addEventListener("click", () => setSidebar(true));
+  $("sidebar").addEventListener("keydown", (event) => {
+    if (event.key !== "Tab" || !$("main").inert) return;
+    const buttons = $("sidebar").querySelectorAll("button:not(:disabled)");
+    const first = buttons[0], last = buttons[buttons.length - 1];
+    const from = event.shiftKey ? first : last;
+    if (event.target === from) {
+      event.preventDefault();
+      (event.shiftKey ? last : first).focus();
+    }
+  });
   matchMedia("(max-width: 760px)").addEventListener("change", (event) => setSidebar(event.matches || storageGet(LS_SIDEBAR) === "true"));
   document.addEventListener("keydown", (event) => { if (event.key === "Escape" && matchMedia("(max-width: 760px)").matches) setSidebar(true); });
   $("new-session-btn").addEventListener("click", () => void newSession());

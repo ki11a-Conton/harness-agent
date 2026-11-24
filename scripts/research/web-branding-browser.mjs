@@ -135,6 +135,23 @@ try {
       await scan('reload', true);
       await page.goto(origin + '/legacy/index.html', { waitUntil: 'domcontentloaded' });
       await scan('legacy');
+      await page.locator('#messages[aria-busy="false"]').waitFor();
+      const sidebarToggle = page.locator('#sidebar-toggle');
+      const sidebarClose = page.locator('#sidebar-close');
+      if (viewport !== 'desktop') {
+        await sidebarToggle.click();
+        assert(await sidebarClose.evaluate(element => element === document.activeElement));
+        await page.keyboard.press('Shift+Tab');
+        assert(await page.locator('#session-list button').last().evaluate(element => element === document.activeElement));
+        await page.keyboard.press('Tab');
+        assert(await sidebarClose.evaluate(element => element === document.activeElement));
+        await page.keyboard.press('Escape');
+        assert(await sidebarToggle.evaluate(element => element === document.activeElement));
+        await sidebarToggle.click();
+      }
+      await sidebarClose.click();
+      assert(await sidebarToggle.evaluate(element => element === document.activeElement));
+      checks.push('legacy-sidebar-keyboard-and-dismissal');
       assert.deepEqual(errors, [], 'Browser boot errors'); assert.deepEqual(externalRequests, [], 'No external branding requests');
       checks.push('no-browser-errors-or-external-assets');
       const launch = JSON.parse(await readFile(path.join(directory, 'fixture/evidence/launch.json'), 'utf8'));
