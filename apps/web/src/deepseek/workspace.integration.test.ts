@@ -274,10 +274,14 @@ it("the real PTY provider either proves confined input/resize/process cleanup or
   expect(created).toMatchObject({ id: "actual-pty", state: "running" });
   const controller = new AbortController(), attachmentId = "verified-controller";
   const feed = s.terminal.stream("terminal/follow", { agentId: s.session.id, id: "actual-pty", attachmentId }, controller.signal)[Symbol.asyncIterator]();
-  expect((await feed.next()).value).toMatchObject({ type: "snapshot", sequence: 0, info: { controllerId: attachmentId } });
+  // A real shell can print its prompt before the follower attaches.
+  const snapshot = (await feed.next()).value as { sequence: number };
+  expect(snapshot).toMatchObject({ type: "snapshot", screen: expect.any(String), info: { controllerId: attachmentId } });
+  expect(Number.isSafeInteger(snapshot.sequence)).toBe(true);
+  expect(snapshot.sequence).toBeGreaterThanOrEqual(0);
   await s.terminal.call("terminal/resize", { agentId: s.session.id, id: "actual-pty", attachmentId, cols: 100, rows: 30 }, s.signal);
   await expect(s.terminal.call("terminal/write", { agentId: s.session.id, id: "actual-pty", attachmentId: "foreign", data: "unexpected\n" }, s.signal)).rejects.toMatchObject({ code: "terminal/control-unavailable" });
-  const data = process.platform === "win32" ? "Set-Content -LiteralPath terminal-proof.txt -Value 'ACTUAL_PTY_FILE';\r\n" : "printf 'ACTUAL_PTY_FILE\\n' > terminal-proof.txt\n";
+  const data = process.platform === "win32" ? "Write-Output 'PTY_READY'; Set-Content -LiteralPath terminal-proof.txt -Value 'ACTUAL_PTY_FILE';\r\n" : "echo PTY_READY && printf 'ACTUAL_PTY_FILE\\n' > terminal-proof.txt\n";
   await s.terminal.call("terminal/write", { agentId: s.session.id, id: "actual-pty", attachmentId, data }, s.signal);
   let actual: unknown;
   for (let i = 0; i < 200; i++) {
@@ -286,6 +290,12 @@ it("the real PTY provider either proves confined input/resize/process cleanup or
   expect(actual).toMatchObject({ text: expect.stringContaining("ACTUAL_PTY_FILE") });
   await s.terminal.closeSession(s.session.id, s.signal);
   expect(await s.terminal.call("terminal/list", { sessionId: s.session.id }, s.signal)).toEqual([]); expect(s.terminal.active(s.session.id)).toEqual([]);
+  let sequence = snapshot.sequence;
+  for (let next = await feed.next(); !next.done; next = await feed.next()) {
+    const frame = next.value as { type: string; sequence: number };
+    if (frame.type === "output") expect(frame.sequence).toBe(++sequence);
+  }
+  expect(sequence).toBeGreaterThan(snapshot.sequence);
   controller.abort(); await feed.return?.();
   await expect(s.terminal.call("terminal/create", { agentId: s.session.id, request: { id: "actual-pty", cols: 80, rows: 24 } }, s.signal)).rejects.toMatchObject({ code: "terminal/unavailable" });
 });

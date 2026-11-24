@@ -12,7 +12,11 @@ import { createHarness } from "./create-harness.js";
 import { defaultSandboxPolicy } from "@ar/core";
 
 const directories: string[] = [];
-async function scratch() { const dir = await mkdtemp(join(tmpdir(), "audit-boundary-")); directories.push(dir); return dir; }
+async function scratch(parent = tmpdir()) {
+  const dir = await mkdtemp(join(parent, "audit-boundary-"));
+  directories.push(dir);
+  return dir;
+}
 afterEach(async () => { await Promise.all(directories.splice(0).map((dir) => rm(dir, { recursive: true, force: true }))); });
 
 it("B01/B02: protected constraints fail explicitly instead of being omitted or cut", () => {
@@ -98,7 +102,10 @@ it("B19: an already aborted primitive never spawns an argv child", async () => {
 });
 
 it.each(["read-only", "strong", "budget", "deadline"] as const)("B16: verification independently honors the %s execution boundary", async (boundary) => {
-  const root = await scratch(); const workspace = join(root, "workspace"); await mkdir(workspace);
+  // The Linux wrapper mounts a private writable /tmp. Place the strong-case
+  // marker on the real host filesystem so this checks its read-only boundary.
+  const root = await scratch(boundary === "strong" && process.platform === "linux" ? "/var/tmp" : tmpdir());
+  const workspace = join(root, "workspace"); await mkdir(workspace);
   const marker = join(root, "outside-workspace"); const sandbox = defaultSandboxPolicy();
   if (boundary === "read-only") sandbox.filesystem.mode = "read-only";
   if (boundary === "strong") sandbox.process.confinement = "strong";
