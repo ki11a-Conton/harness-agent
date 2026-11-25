@@ -152,6 +152,21 @@ try {
       await sidebarClose.click();
       assert(await sidebarToggle.evaluate(element => element === document.activeElement));
       checks.push('legacy-sidebar-keyboard-and-dismissal');
+      await sidebarToggle.click();
+      const activeRow = page.locator('#session-list li:has(button[aria-current="true"])');
+      const previousSession = await activeRow.getAttribute('data-from');
+      await page.locator('#new-session-btn').click();
+      await page.waitForFunction(previous => {
+        const selected = document.querySelector('#session-list button[aria-current="true"]')?.parentElement?.dataset.from;
+        return selected && selected !== previous;
+      }, previousSession);
+      if (viewport !== 'desktop') await sidebarToggle.click();
+      const chosen = page.locator(`#session-list li[data-from="${previousSession}"] button`);
+      await chosen.press('Enter');
+      await page.waitForFunction(previous => document.querySelector('#session-list button[aria-current="true"]')?.parentElement?.dataset.from === previous, previousSession);
+      const focusTarget = viewport === 'desktop' ? chosen : sidebarToggle;
+      assert(await focusTarget.evaluate(element => element === document.activeElement), 'Keyboard session selection must keep focus on the row or return it to the opening button');
+      checks.push('legacy-session-switch-focus');
       assert.deepEqual(errors, [], 'Browser boot errors'); assert.deepEqual(externalRequests, [], 'No external branding requests');
       checks.push('no-browser-errors-or-external-assets');
       const launch = JSON.parse(await readFile(path.join(directory, 'fixture/evidence/launch.json'), 'utf8'));

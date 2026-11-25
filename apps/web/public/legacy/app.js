@@ -537,6 +537,9 @@ function sessionIcon() {
 }
 function renderSidebar() {
   const list = $("session-list");
+  const focusedSession = list.contains(document.activeElement)
+    ? document.activeElement.closest("[data-from]")?.dataset.from : undefined;
+  let replacementFocus;
   list.replaceChildren();
   $("session-count").textContent = state.froms.length;
   for (const from of [...state.froms].reverse()) {
@@ -550,6 +553,10 @@ function renderSidebar() {
     button.addEventListener("click", () => void switchSession(from));
     item.appendChild(button);
     list.appendChild(item);
+    if (from === focusedSession) replacementFocus = button;
+  }
+  if (focusedSession !== undefined) {
+    (replacementFocus ?? list.querySelector('[aria-current="true"]') ?? $("sidebar-close")).focus({ preventScroll: true });
   }
   void enrichSidebar(++state.sidebarGeneration);
 }
