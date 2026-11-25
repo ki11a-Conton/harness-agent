@@ -44,11 +44,12 @@ try {
       host = { child, exit, log: () => ({ stdout, stderr }) };
       await timeout(ready, 60_000, 'Production host readiness timeout');
     }
-    async function stop() {
+    async function stop(useSignal = false) {
       if (!host) return;
       const current = host;
       try {
-        if (current.child.connected) current.child.send({ type: 'fixture-stop' });
+        if (useSignal) current.child.kill('SIGTERM');
+        else if (current.child.connected) current.child.send({ type: 'fixture-stop' });
         const result = await timeout(current.exit, 15_000, 'Production host shutdown timeout');
         assert.equal(result.code, 0, 'Actual production shutdown must finish');
       } finally {
@@ -72,7 +73,7 @@ try {
       await page.locator('[data-composer-input=true][contenteditable=true]').waitFor({ state: 'visible', timeout: 10_000 });
       await reconnecting.waitFor({ state: 'hidden', timeout: 5000 }); checks.push('real loopback generation ready while navigator.onLine=false');
       await page.screenshot({ path: path.join(directory, 'healthy.png') });
-      await stop();
+      await stop(process.platform !== 'win32');
       await reconnecting.waitFor({ state: 'visible', timeout: 10_000 }); checks.push('actual backend loss remains visible rather than forced connected');
       await page.screenshot({ path: path.join(directory, 'disconnected.png') });
       await page.evaluate(() => { const now = Date.now.bind(Date); globalThis.__testRestoreWallClock = () => { Date.now = now; }; Date.now = () => now() - 60_000; });
@@ -102,7 +103,7 @@ try {
   }
 } finally { await browser.close(); }
 const receipt = { status: results.length === 2 && results.every(result => result.status === 'PASS') ? 'PASS' : 'FAIL', scenarios: results.length, assertions: results.reduce((sum, result) => sum + result.checks.length, 0), paidModelCalls: 0, results,
-  shutdownControl: 'Test-only IPC invokes the actual production SIGTERM handler; not native OS signal delivery.',
+  shutdownControl: process.platform === 'win32' ? 'Test-only IPC invokes the production SIGTERM handler.' : 'A native SIGTERM stops the first host. IPC stops the restarted host.',
   scope: 'Actual loopback HTTP/WebSocket and coding after host loss/restart. Browser network hint and wall clock are controlled; backend responses are not mocked.' };
 await writeFile(path.join(output, 'result.json'), JSON.stringify(receipt, null, 2) + '\n');
 if (receipt.status !== 'PASS') process.exitCode = 1;

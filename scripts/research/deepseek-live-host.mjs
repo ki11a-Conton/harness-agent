@@ -155,8 +155,10 @@ const entry = resolve(web, "dist/main.js");
 // registered handler. Test-only IPC invokes the actual handler and disconnects
 // its channel; it does not assert native operating-system signal delivery.
 const controlled = values["ipc-control"] || values["preflight-owner"];
+// The web server owns the child's lifetime. An unused control channel must not
+// keep it alive after the production handler drains an OS signal.
 const childArgs = controlled ? ["--input-type=module", "--eval",
-  `import { main } from ${JSON.stringify(pathToFileURL(entry).href)}; process.once("message", message => { if (message?.type === "fixture-stop") { process.disconnect(); process.emit("SIGTERM"); } }); process.exitCode = await main();`] : [entry];
+  `import { main } from ${JSON.stringify(pathToFileURL(entry).href)}; process.once("message", message => { if (message?.type === "fixture-stop") { process.disconnect(); process.emit("SIGTERM"); } }); process.channel.unref(); process.exitCode = await main();`] : [entry];
 const deadline = (promise, ms, label) => new Promise((done, reject) => {
   const timer = setTimeout(() => reject(new Error(label)), ms);
   promise.then(value => { clearTimeout(timer); done(value); }, error => { clearTimeout(timer); reject(error); });
