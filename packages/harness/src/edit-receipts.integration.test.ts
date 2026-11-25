@@ -53,7 +53,10 @@ it("a coding turn recovers from no-op feedback and chains actual edit versions w
   } finally { await h.close(); await rm(cwd, { recursive: true, force: true, maxRetries: process.platform === "win32" ? 8 : 0, retryDelay: 50 }); }
 }, 30000);
 
-it("repairs an ambiguous strict edit using the model-visible source positions and real verification", async () => {
+it.each([
+  { reason: "ambiguous anchor", anchor: " = 1;" },
+  { reason: "indentation mismatch", anchor: "    exports.secondary = 1;" },
+])("recovers from a strict edit's $reason using the model-visible location and real verification", async ({ reason, anchor }) => {
   const cwd = await realpath(await mkdtemp(join(tmpdir(), "edit-disambiguation-")));
   const path = join(cwd, "defaults.cjs");
   const before = "exports.primary = 1;\r\nexports.secondary = 1;\n";
@@ -67,14 +70,22 @@ it("repairs an ambiguous strict edit using the model-visible source positions an
       const last = request.messages.filter(message => message.role === "tool").at(-1)?.content ?? "";
       switch (++step) {
         case 1:
-          yield* ScriptedModelProvider.toolCall("edit_file", { path: "defaults.cjs", oldText: " = 1;", newText: " = 2;", profile: "strict" });
+          yield* ScriptedModelProvider.toolCall("edit_file", { path: "defaults.cjs", oldText: anchor, newText: " = 2;", profile: "strict" });
           break;
         case 2: {
           expect(last).toContain("[failed]");
           expect(await readFile(path, "utf8")).toBe(before);
-          const positions = Array.from(last.matchAll(/line (\d+), column (\d+)/g));
-          expect(positions.map(match => match[1])).toEqual(["1", "2"]);
-          yield* ScriptedModelProvider.toolCall("read_file", { path: "defaults.cjs", offset: Number(positions[1]![1]), limit: 1, versioned: true });
+          let offset: number, limit: number;
+          if (reason === "ambiguous anchor") {
+            const positions = Array.from(last.matchAll(/line (\d+), column (\d+)/g));
+            expect(positions.map(match => match[1])).toEqual(["1", "2"]);
+            offset = Number(positions[1]![1]); limit = 1;
+          } else {
+            const hint = /read_file with offset=(\d+), limit=(\d+), versioned=true/.exec(last);
+            expect(hint?.slice(1)).toEqual(["2", "1"]);
+            offset = Number(hint![1]); limit = Number(hint![2]);
+          }
+          yield* ScriptedModelProvider.toolCall("read_file", { path: "defaults.cjs", offset, limit, versioned: true });
           break;
         }
         case 3: {

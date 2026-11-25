@@ -1,3 +1,5 @@
+import { DEFAULT_READ_BYTES } from "./read-window.js";
+
 /**
  * P2-28 File Edit Primitive Improvements.
  *
@@ -36,6 +38,8 @@ export interface ApplyResult {
   /** Non-overlapping matches for ordinary replacements. A uniqueness failure stops at the second candidate. */
   matched: number;
   ambiguous?: true;
+  /** Diagnostic read window only; it never authorizes a replacement. */
+  reread?: { offset: number; limit: number };
   error?: string;
 }
 
@@ -85,6 +89,38 @@ function duplicateAnchor(text: string, anchor: string, first: number, bomLength:
     return `line ${line}, column ${column}`;
   }
   return `anchor is ambiguous at ${location(first)} and ${location(second)}; read the target lines and use a unique anchor`;
+}
+
+/** An exact miss may still identify a useful read window. Compare whole
+ * lines, ignoring only leading ASCII spaces and tabs. A partial scan cannot
+ * establish uniqueness, so over-budget inputs get the ordinary miss. */
+function indentationReadWindow(text: string, anchor: string, anchoredAtStart: boolean): ApplyResult["reread"] {
+  if (!anchor || anchor.length > 4096 || text.length > 256 * 1024) return;
+  const requiresNewline = anchor.endsWith("\n");
+  const withoutIndent = (line: string) => line.replace(/^[ \t]+/, "");
+  const wanted = (requiresNewline ? anchor.slice(0, -1) : anchor).split("\n").map(withoutIndent);
+  if (wanted.length > 32 || !wanted.some(line => line.length > 0)) return;
+
+  const lines = text.split("\n", 8193);
+  if (lines.length > 8192) return;
+  const endsWithNewline = text.endsWith("\n");
+  if (endsWithNewline) lines.pop();
+  const normalized = lines.map(withoutIndent);
+  const eligibleLines = lines.length - (requiresNewline && !endsWithNewline ? 1 : 0);
+  const lastStart = eligibleLines - wanted.length;
+  let start: number | undefined;
+  for (let i = 0; i <= lastStart; i++) {
+    if (anchoredAtStart && i > 0) break;
+    if (!wanted.every((line, j) => normalized[i + j] === line)) continue;
+    if (start !== undefined) return;
+    start = i;
+  }
+  if (start === undefined) return;
+  // The suggested page must fit the default reader, including a possible
+  // BOM and a CR at each original line ending removed by lfView.
+  const block = lines.slice(start, start + wanted.length).join("\n");
+  if (Buffer.byteLength(block) + 3 + wanted.length > DEFAULT_READ_BYTES) return;
+  return { offset: start + 1, limit: wanted.length };
 }
 
 /** Prefer the touched line's terminator, then the preceding line, then LF. */
@@ -161,7 +197,10 @@ export function applyReplace(
     count++;
   }
   if (matched === 0) {
-    return { ok: false, content, count: 0, matched, error: "anchor not found" };
+    return {
+      ok: false, content, count: 0, matched, error: "anchor not found",
+      reread: indentationReadWindow(view.text, anchor, includesBom),
+    };
   }
   if (count === 0) {
     return { ok: false, content, count, matched, error: `occurrence ${occurrence} out of range (file has ${matched})` };
@@ -197,7 +236,10 @@ export function applyBatchReplace(content: string, edits: readonly TextEdit[]): 
     const anchor = edit.oldText.slice(includesBom ? bom.length : 0).replace(/\r\n/g, "\n");
     if (!anchor) return fail(`edits[${editIndex}] has an empty anchor after BOM removal`);
     const first = view.text.indexOf(anchor);
-    if (first < 0 || (includesBom && first !== 0)) return fail(`edits[${editIndex}] anchor not found in the original snapshot`);
+    if (first < 0 || (includesBom && first !== 0)) {
+      return { ...fail(`edits[${editIndex}] anchor not found in the original snapshot`),
+        reread: indentationReadWindow(view.text, anchor, includesBom) };
+    }
     if (!includesBom) {
       const error = duplicateAnchor(view.text, anchor, first, bom.length);
       if (error) return fail(`edits[${editIndex}] ${error}`);

@@ -153,13 +153,16 @@ export const editFileTool: ToolDefinition<EditFileInput, EditFileOutput> = {
             `strict edits of repeated anchors require expectedSha256; ${res.error}. Use read_file with versioned=true before retrying.`) };
         }
         if (!res.ok) {
+          const hint = res.reread
+            ? `. One block matches after ignoring indentation. Inspect this path using read_file with offset=${res.reread.offset}, limit=${res.reread.limit}, versioned=true before retrying.`
+            : "";
           return {
             status: "failed",
             error: errorInfo(
               "PROCESS_ERROR",
               `edit_file: ${res.error} in ${target}${
                 res.matched > 0 && input.occurrence !== undefined ? `; file has ${res.matched} occurrence(s)` : ""
-              }`,
+              }${hint}`,
             ),
           };
         }
