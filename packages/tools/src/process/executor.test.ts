@@ -1,5 +1,6 @@
 import { execSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -11,7 +12,8 @@ beforeAll(() => {
   ws = mkdtempSync(join(tmpdir(), "ar-exec-"));
 });
 
-afterAll(() => rmSync(ws, { recursive: true, force: true }));
+// Windows can briefly retain a command's working directory after the child exits.
+afterAll(() => rm(ws, { recursive: true, force: true, maxRetries: 8, retryDelay: 50 }));
 
 const NODE = process.execPath;
 

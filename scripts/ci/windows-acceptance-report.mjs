@@ -9,6 +9,8 @@ import { gzipSync } from 'node:zlib';
 export function receiptFromReport(report, host, requiredNames) {
   const files = (report.testResults ?? []).map(file => ({
     file: file.name.replace(/\\/g, '/').slice(file.name.replace(/\\/g, '/').lastIndexOf('/harness-agent/') + '/harness-agent/'.length),
+    ...(file.status === 'failed' && (file.message || !file.assertionResults?.some(test => test.status === 'failed'))
+      ? { suiteFailure: file.message || 'Vitest reported a failed suite without an error message' } : {}),
     assertions: (file.assertionResults ?? []).map(test => ({ name: test.fullName, status: test.status, durationMs: test.duration ?? null,
       ...(test.status === 'failed' ? { failureMessages: test.failureMessages ?? [] } : {}) })),
   }));
@@ -18,7 +20,7 @@ export function receiptFromReport(report, host, requiredNames) {
   if (host.platform !== 'win32' || host.osType !== 'Windows_NT') issues.push('GENUINE_WINDOWS_REQUIRED');
   if (!/^[a-f0-9]{40}$/.test(host.sourceSha) || host.sourceSha !== host.workflowSha) issues.push('SOURCE_SHA_MISMATCH');
   if (!host.treeClean) issues.push('CLEAN_TREE_REQUIRED');
-  if (!files.length || !assertions.length || !report.success || report.numFailedTests !== 0 || report.numFailedTestSuites !== 0 || assertions.some(test => test.status === 'failed')) issues.push('TEST_SUITE_NOT_PASSED');
+  if (!files.length || !assertions.length || !report.success || report.numFailedTests !== 0 || report.numFailedTestSuites !== 0 || files.some(file => file.suiteFailure) || assertions.some(test => test.status === 'failed')) issues.push('TEST_SUITE_NOT_PASSED');
   for (const test of required) if (test.observed.length !== 1 || test.observed[0] !== 'passed') issues.push('REQUIRED_TEST_NOT_EXECUTED: ' + test.name);
   const passed = assertions.filter(test => test.status === 'passed').length;
   const failed = assertions.filter(test => test.status === 'failed').length;
@@ -93,12 +95,17 @@ export function caseRecordPublication(files, maxPackets = 9) {
 /** Keep the actionable failure visible even when complete records need an
  * artifact, and bound each message below GitHub's 4 KiB truncation limit. */
 export function failureAnnotations(files) {
-  const failed = files.flatMap(file => file.assertions.filter(test => test.status === 'failed').map(test => ({ file: file.file, test })));
-  return failed.slice(0, 8).map(({ file, test }) => {
-    const detail = { file, name: test.name, failure: (test.failureMessages ?? []).join('\n'),
-      omittedFailures: Math.max(0, failed.length - 8) };
+  const failed = files.flatMap(file => {
+    const entries = file.assertions.filter(test => test.status === 'failed').map(test => ({
+      file: file.file, name: test.name, failure: (test.failureMessages ?? []).join('\n'),
+    }));
+    if (file.suiteFailure) entries.unshift({ file: file.file, name: 'Vitest suite', failure: file.suiteFailure });
+    return entries;
+  });
+  return failed.slice(0, 8).map(entry => {
+    const detail = { ...entry, omittedFailures: Math.max(0, failed.length - 8) };
     const fields = ['failure', 'name', 'file'];
-    while (Buffer.byteLength(JSON.stringify(detail), 'utf8') > 3500) {
+    while (!fitsReceiptNotice(detail)) {
       const key = fields.reduce((a, b) => detail[a].length >= detail[b].length ? a : b);
       detail[key] = detail[key].slice(0, Math.floor(detail[key].length * 0.75));
       detail.truncated = true;

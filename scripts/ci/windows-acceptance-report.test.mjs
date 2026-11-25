@@ -84,6 +84,39 @@ test('failed assertions remain visible when complete records exceed the annotati
   assert.equal(JSON.stringify(files), original);
 });
 
+test('a failed teardown stays visible even when every individual assertion passed', () => {
+  const source = structuredClone(report);
+  source.success = false;
+  source.numFailedTestSuites = 1;
+  const message = "EBUSY: resource busy or locked, rmdir 'workspace'\n" + '%'.repeat(4000);
+  Object.assign(source.testResults[0], { status: 'failed', message });
+  const { files, receipt } = receiptFromReport(source, host, ['required native case']);
+  assert.equal(receipt.outcome, 'FAIL');
+  assert.equal(receipt.failed, 0);
+  assert.deepEqual(receipt.required[0].observed, ['passed']);
+  assert.equal(files[0].suiteFailure, message);
+  const [annotation] = failureAnnotations(files);
+  assert.equal(annotation.file, 'test.ts');
+  assert.equal(annotation.name, 'Vitest suite');
+  assert.match(annotation.failure, /^EBUSY/);
+  assert(noticeBytes(annotation) < 3500);
+  assert.equal(annotation.truncated, true);
+});
+
+test('preserves failed suites without a message and avoids duplicating assertion-only failures', () => {
+  const source = structuredClone(report);
+  const file = source.testResults[0];
+  Object.assign(file, { status: 'failed', message: '' });
+  const result = receiptFromReport(source, host, []);
+  assert.equal(result.receipt.outcome, 'FAIL');
+  assert.deepEqual(failureAnnotations(result.files).map(entry => entry.file), ['test.ts']);
+  Object.assign(file.assertionResults[0], { status: 'failed', failureMessages: ['failed assertion'] });
+  assert.deepEqual(failureAnnotations(receiptFromReport(source, host, []).files).map(entry => entry.failure), ['failed assertion']);
+  file.message = 'teardown failed too';
+  assert.deepEqual(failureAnnotations(receiptFromReport(source, host, []).files).map(entry => entry.failure),
+    ['teardown failed too', 'failed assertion']);
+});
+
 test('Unicode failure summaries fit message and step budgets while raw failures stay intact', () => {
   const files = [{ file: '中文路径'.repeat(2000), assertions: Array.from({ length: 11 }, (_, index) => ({
     name: `${index}: 中文用例`.repeat(2000), status: 'failed', failureMessages: ['中文错误\n%0A::error::'.repeat(2000)],
