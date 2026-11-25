@@ -273,12 +273,17 @@ it("the real PTY provider either proves confined input/resize/process cleanup or
   }
   expect(created).toMatchObject({ id: "actual-pty", state: "running" });
   const controller = new AbortController(), attachmentId = "verified-controller";
-  const feed = s.terminal.stream("terminal/follow", { agentId: s.session.id, id: "actual-pty", attachmentId }, controller.signal)[Symbol.asyncIterator]();
+  const follow = () => s.terminal.stream("terminal/follow", { agentId: s.session.id, id: "actual-pty", attachmentId }, controller.signal)[Symbol.asyncIterator]();
+  const oldFeed = follow();
+  expect((await oldFeed.next()).value).toMatchObject({ type: "snapshot", info: { controllerId: attachmentId } });
+  const feed = follow();
   // A real shell can print its prompt before the follower attaches.
   const snapshot = (await feed.next()).value as { sequence: number };
   expect(snapshot).toMatchObject({ type: "snapshot", screen: expect.any(String), info: { controllerId: attachmentId } });
   expect(Number.isSafeInteger(snapshot.sequence)).toBe(true);
   expect(snapshot.sequence).toBeGreaterThanOrEqual(0);
+  // A reconnect may resume the same logical attachment before its old stream unwinds.
+  await oldFeed.return?.();
   await s.terminal.call("terminal/resize", { agentId: s.session.id, id: "actual-pty", attachmentId, cols: 100, rows: 30 }, s.signal);
   await expect(s.terminal.call("terminal/write", { agentId: s.session.id, id: "actual-pty", attachmentId: "foreign", data: "unexpected\n" }, s.signal)).rejects.toMatchObject({ code: "terminal/control-unavailable" });
   const data = process.platform === "win32" ? "Write-Output 'PTY_READY'; Set-Content -LiteralPath terminal-proof.txt -Value 'ACTUAL_PTY_FILE';\r\n" : "echo PTY_READY && printf 'ACTUAL_PTY_FILE\\n' > terminal-proof.txt\n";
@@ -300,6 +305,23 @@ it("the real PTY provider either proves confined input/resize/process cleanup or
   await expect(s.terminal.call("terminal/create", { agentId: s.session.id, request: { id: "actual-pty", cols: 80, rows: 24 } }, s.signal)).rejects.toMatchObject({ code: "terminal/unavailable" });
 });
 
+
+it("releases a timed-out terminal's slot and refuses late requests for its retired ID", async () => {
+  const s = await setup({ sandbox: { filesystem: { mode: "workspace-write" }, network: { mode: "deny" },
+    process: { maxProcesses: 1, timeoutMs: 1200 } } });
+  const create = (id: string) => s.terminal.call("terminal/create", { agentId: s.session.id, request: { id, cols: 80, rows: 24 } }, s.signal);
+  try { await create("expires"); }
+  catch (error) {
+    expect(error).toMatchObject({ code: "terminal/unavailable", details: { code: "SANDBOX_BACKEND_DENIED" } });
+    expect(s.terminal.active(s.session.id)).toEqual([]);
+    return;
+  }
+  await expect(create("while-running")).rejects.toMatchObject({ code: "terminal/limit-reached" });
+  await expect.poll(() => s.terminal.active(s.session.id), { timeout: 8000 }).toEqual([]);
+  expect(await s.terminal.call("terminal/list", { sessionId: s.session.id }, s.signal)).toEqual([]);
+  await expect(create("next-terminal")).resolves.toMatchObject({ id: "next-terminal", state: "running" });
+  await expect(create("expires")).rejects.toMatchObject({ code: "terminal/unavailable" });
+});
 
 it("the real Web file service routes bounded pages through the orchestrator and preserves credential denial", async () => {
   const s = await setup();

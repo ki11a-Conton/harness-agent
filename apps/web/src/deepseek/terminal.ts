@@ -23,7 +23,7 @@ class Follower {
   close(error?:Error){this.ended=true;this.error=error;this.wake?.();}
   async *read(signal:AbortSignal):AsyncIterable<Frame>{const abort=()=>this.close();signal.addEventListener("abort",abort,{once:true});try{while(!signal.aborted){const next=this.queue.shift();if(next){this.bytes-=Buffer.byteLength(JSON.stringify(next));yield next;continue;}if(this.ended){if(this.error)throw this.error;return;}await new Promise<void>(done=>{this.wake=done;});this.wake=undefined;}}finally{signal.removeEventListener("abort",abort);this.close();}}
 }
-interface OwnedTerminal {info:WebTerminalInfo;pty:IPty;screen:HeadlessTerminal;serializer:Serializer;sequence:number;followers:Set<Follower>;tail:Promise<void>;exited:Promise<void>;resolveExit:()=>void;timer?:ReturnType<typeof setTimeout>;closed:boolean;processExited:boolean;bufferedBytes:number;closing?:Promise<void>}
+interface OwnedTerminal {info:WebTerminalInfo;pty:IPty;screen:HeadlessTerminal;serializer:Serializer;sequence:number;followers:Set<Follower>;controller?:Follower;tail:Promise<void>;exited:Promise<void>;resolveExit:()=>void;timer?:ReturnType<typeof setTimeout>;closed:boolean;processExited:boolean;bufferedBytes:number;closing?:Promise<void>}
 /** Browser PTYs are private host tools; no ordinary chat process is exposed here. */
 export interface TerminalHost extends WorkspaceHost {
   externalSessionId?(nativeId:string):string;
@@ -58,15 +58,24 @@ export function createTerminalService(host:TerminalHost) {
     })();terminal.closing=cleanup;
     try{await cleanup;}catch(error){terminal.closing=undefined;terminal.info={...terminal.info,state:"failed",error:error instanceof Error?error.message:String(error)};broadcast(terminal,{type:"state",info:terminal.info});throw error;}
   }
+  async function retireTerminal(sessionId:string,terminal:OwnedTerminal):Promise<void> {
+    const id=terminal.info.id;
+    tombstones(sessionId).add(id);
+    await closeProcess(terminal);
+    const owner=terminals.get(sessionId);
+    if(owner?.get(id)===terminal)owner.delete(id);
+  }
   function toolFailure(error:unknown,signal:AbortSignal):ToolResult {return{status:signal.aborted?"cancelled":"failed",error:{code:"PROCESS_ERROR",message:error instanceof Error?error.message:String(error),retryable:false,safeToRetry:false},metadata:{remoteCode:error instanceof WorkspaceRemoteError?error.code:"terminal/unavailable",details:error instanceof WorkspaceRemoteError?error.details:{}}};}
   const createSchema=z.object({command:z.string().min(1),id:z.string(),cols:z.number().int(),rows:z.number().int(),shellPath:z.string().optional()}).strict();
   const createTool:ToolDefinition={name:"web_terminal_create",description:"Start an interactive shell confined to this session workspace with network disabled. Input can run commands within that confined process namespace.",inputSchema:createSchema,risk:"elevated",metadata:{name:"web_terminal_create",version:"1.0.0",sideEffect:true,filesystem:false,network:false,process:true,interactive:true,retry:"unknown"},async execute(raw,context){
-    const input=createSchema.parse(raw);let terminal:OwnedTerminal|undefined;
+    const input=createSchema.parse(raw);
+    const sessionId=logicalId(context.sessionId);
+    let terminal:OwnedTerminal|undefined;
     try {
-      const id=identity(input.id,"terminal id");const size=dimensions(input.cols,input.rows);const owner=collection(logicalId(context.sessionId));
-      if(tombstones(logicalId(context.sessionId)).has(id))throw new WorkspaceRemoteError("terminal/unavailable","Closed terminal identities cannot be recreated");
+      const id=identity(input.id,"terminal id");const size=dimensions(input.cols,input.rows);const owner=collection(sessionId);
+      if(tombstones(sessionId).has(id))throw new WorkspaceRemoteError("terminal/unavailable","Closed terminal identities cannot be recreated");
       const existing=owner.get(id);if(existing)return{status:"success",output:existing.info};
-      const limit=Math.min(8,context.sandboxPolicy.process.maxProcesses??8);if(new Set([...owner.keys(),...Array.from(pending.keys()).filter(key=>key.startsWith(`${logicalId(context.sessionId)}/`)).map(key=>key.slice(logicalId(context.sessionId).length+1))]).size>limit || owner.size>=limit)throw new WorkspaceRemoteError("terminal/limit-reached","Session terminal limit reached",{limit});
+      const limit=Math.min(8,context.sandboxPolicy.process.maxProcesses??8);if(new Set([...owner.keys(),...Array.from(pending.keys()).filter(key=>key.startsWith(`${sessionId}/`)).map(key=>key.slice(sessionId.length+1))]).size>limit || owner.size>=limit)throw new WorkspaceRemoteError("terminal/limit-reached","Session terminal limit reached",{limit});
       const policy=context.sandboxPolicy;
       if(policy.filesystem.mode==="read-only"||policy.process.allowedCommands?.length||policy.process.deniedSurfaces?.length)throw new WorkspaceRemoteError("terminal/unavailable","The session process policy cannot safely serve arbitrary PTY input");
       const cwd=await resolveExecCwd(undefined,context.cwd);
@@ -90,9 +99,15 @@ export function createTerminalService(host:TerminalHost) {
       let resolveExit!:()=>void;const exited=new Promise<void>(done=>{resolveExit=done;});
       terminal={info:{id,title:shell.name,shell,cwd,...size,state:"running",exitCode:null},pty,screen,serializer,sequence:0,followers:new Set(),tail:Promise.resolve(),exited,resolveExit,closed:false,processExited:false,bufferedBytes:0};
       const owned=terminal;
+      const closeAutomatically=()=>{
+        void retireTerminal(sessionId,owned).catch(error=>{
+          // closeProcess keeps the failed owner available for explicit cleanup.
+          console.error("Automatic terminal cleanup failed",error instanceof Error?error.message:String(error));
+        });
+      };
       const failOutput=(error:unknown)=>{
         owned.info={...owned.info,state:"failed",error:error instanceof Error?error.message:String(error)};broadcast(owned,{type:"state",info:owned.info});
-        void closeProcess(owned).catch(cleanupError=>{owned.info={...owned.info,state:"failed",error:cleanupError instanceof Error?cleanupError.message:String(cleanupError)};broadcast(owned,{type:"state",info:owned.info});});
+        closeAutomatically();
       };
       pty.onData(data=>{
         if(owned.closed)return;
@@ -106,15 +121,15 @@ export function createTerminalService(host:TerminalHost) {
         owned.processExited=true;owned.resolveExit();
         void enqueue(owned,()=>{if(owned.timer)clearTimeout(owned.timer);owned.info={...owned.info,state:owned.info.state==="failed"?"failed":"exited",exitCode};broadcast(owned,{type:"state",info:owned.info});});
       });
-      owned.timer=setTimeout(()=>{void closeProcess(owned).catch(error=>{owned.info={...owned.info,state:"failed",error:error instanceof Error?error.message:String(error)};broadcast(owned,{type:"state",info:owned.info});});},timeoutMs);owned.timer.unref();
-      context.signal.throwIfAborted();if(tombstones(logicalId(context.sessionId)).has(id))throw new WorkspaceRemoteError("terminal/unavailable","Terminal was closed during allocation");owner.set(id,owned);
+      owned.timer=setTimeout(closeAutomatically,timeoutMs);owned.timer.unref();
+      context.signal.throwIfAborted();if(tombstones(sessionId).has(id))throw new WorkspaceRemoteError("terminal/unavailable","Terminal was closed during allocation");owner.set(id,owned);
       return{status:"success",output:owned.info,metadata:{provenance:prepared.provenance,pid:pty.pid}};
-    }catch(error){if(terminal){tombstones(logicalId(context.sessionId)).add(terminal.info.id);try{await closeProcess(terminal);}catch(cleanupError){collection(logicalId(context.sessionId)).set(terminal.info.id,terminal);return toolFailure(cleanupError,context.signal);}}return toolFailure(error,context.signal);}
+    }catch(error){if(terminal){tombstones(sessionId).add(terminal.info.id);try{await closeProcess(terminal);}catch(cleanupError){collection(sessionId).set(terminal.info.id,terminal);return toolFailure(cleanupError,context.signal);}}return toolFailure(error,context.signal);}
   }};
   const controlsSchema=z.object({command:z.string(),operation:z.enum(["write","resize","rename","close"]),id:z.string(),attachmentId:z.string().optional(),data:z.string().optional(),cols:z.number().int().optional(),rows:z.number().int().optional(),title:z.string().optional()}).strict();
   const controlsTool:ToolDefinition={name:"web_terminal_control",description:"Control this session's existing confined terminal; close waits for actual process cleanup.",inputSchema:controlsSchema,risk:"elevated",metadata:{name:"web_terminal_control",version:"1.0.0",sideEffect:true,filesystem:false,network:false,process:true,interactive:true,retry:"unknown"},async execute(raw,context){try{
     const input=controlsSchema.parse(raw);const id=identity(input.id,"terminal id");
-    if(input.operation==="close") {tombstones(logicalId(context.sessionId)).add(id);await pending.get(`${logicalId(context.sessionId)}/${id}`)?.catch(error=>{console.error("Terminal allocation failed during close",error instanceof Error?error.message:String(error));});const terminal=collection(logicalId(context.sessionId)).get(id);if(terminal){await closeProcess(terminal);collection(logicalId(context.sessionId)).delete(id);}return{status:"success"};}
+    if(input.operation==="close") {tombstones(logicalId(context.sessionId)).add(id);await pending.get(`${logicalId(context.sessionId)}/${id}`)?.catch(error=>{console.error("Terminal allocation failed during close",error instanceof Error?error.message:String(error));});const terminal=collection(logicalId(context.sessionId)).get(id);if(terminal)await retireTerminal(logicalId(context.sessionId),terminal);return{status:"success"};}
     const terminal=lookup(logicalId(context.sessionId),id);
     await enqueue(terminal,()=>{context.signal.throwIfAborted();if(input.operation==="rename"){const title=text(input.title,"title").trim();if(title.length>120)throw new WorkspaceRemoteError("gateway/bad-request","Title exceeds 120 characters");terminal.info={...terminal.info,title};broadcast(terminal,{type:"state",info:terminal.info});return;}
       if(terminal.info.state!=="running")throw new WorkspaceRemoteError("terminal/control-unavailable","Terminal is not running",{reason:"not-running"});
@@ -158,8 +173,28 @@ export function createTerminalService(host:TerminalHost) {
     signal.throwIfAborted();
     if(endpoint==="terminal/retain"){const a=exact(args,["sessionId","id"]);const session=await requireFileSession(host,a.sessionId);lookup(session.id,identity(a.id,"terminal id"));yield{type:"retained"};await new Promise<void>(done=>{if(signal.aborted)done();else signal.addEventListener("abort",()=>done(),{once:true});});return;}
     if(endpoint!=="terminal/follow")throw new WorkspaceRemoteError("gateway/not-found","Unknown terminal stream");const a=exact(args,["agentId","id","attachmentId"]);const session=await requireFileSession(host,a.agentId);const id=identity(a.id,"terminal id"),attachmentId=identity(a.attachmentId,"attachment id");const terminal=lookup(session.id,id);const follower=new Follower();
-    const baseline=await enqueue(terminal,()=>{signal.throwIfAborted();if(terminal.closed)throw new WorkspaceRemoteError("terminal/unavailable","Terminal closed during attachment");terminal.info={...terminal.info,controllerId:attachmentId};broadcast(terminal,{type:"state",info:terminal.info});terminal.followers.add(follower);return{type:"snapshot",sequence:terminal.sequence,screen:terminal.serializer.serialize(),info:terminal.info};});
-    try{yield baseline;yield* follower.read(signal);}finally{terminal.followers.delete(follower);follower.close();await enqueue(terminal,()=>{if(terminal.info.controllerId===attachmentId){const {controllerId:_controller,...info}=terminal.info;terminal.info=info;broadcast(terminal,{type:"state",info});}});}
+    const baseline=await enqueue(terminal,()=>{
+      signal.throwIfAborted();
+      if(terminal.closed)throw new WorkspaceRemoteError("terminal/unavailable","Terminal closed during attachment");
+      terminal.controller=follower;
+      terminal.info={...terminal.info,controllerId:attachmentId};
+      broadcast(terminal,{type:"state",info:terminal.info});
+      terminal.followers.add(follower);
+      return{type:"snapshot",sequence:terminal.sequence,screen:terminal.serializer.serialize(),info:terminal.info};
+    });
+    try{yield baseline;yield* follower.read(signal);}
+    finally{
+      terminal.followers.delete(follower);
+      follower.close();
+      await enqueue(terminal,()=>{
+        // A replacement stream may already be using the same attachment ID.
+        if(terminal.controller!==follower)return;
+        delete terminal.controller;
+        const {controllerId:_controller,...info}=terminal.info;
+        terminal.info=info;
+        broadcast(terminal,{type:"state",info});
+      });
+    }
   }
   return{endpoints,call,stream,tools:[createTool,controlsTool,discoverTool],
     async closeSession(sessionId:string,signal:AbortSignal):Promise<void>{
