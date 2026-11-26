@@ -23,3 +23,5 @@ Aider 在 SEARCH 块失配后用相似行提示下一步。Gemini CLI 的编辑�
 OpenCode 在展示行文本时处理行尾回车，Pi 将匹配位置映射回原文件以保留未编辑的字节。Harness 现在只在下一行也能放进分页时才返回两行之间的分隔符。这样，页内混合换行按原样返回，文件末尾独立的 `\r` 仍然属于正文，版本哈希仍取自完整原始文件。[OpenCode 读取实现](https://github.com/anomalyco/opencode/blob/f3b5e9fa0ae7fac2c5516ccb3481ecc3b3d15831/packages/core/src/tool/read-filesystem.ts#L244) · [Pi 编辑实现](https://github.com/earendil-works/pi/blob/47a73ff97d9c35c4a3268c4545755ae16bee3bd8/packages/coding-agent/src/core/tools/edit-diff.ts#L21)
 
 移除脚本中的手工处理后，相同的六次重试全部成功，单行、多行和批量编辑的落盘字节与预期一致，写入回执的 SHA-256 也与落盘文件一致。[复测脚本](../../scripts/research/edit-anchor-recovery.mjs) · [跨读取块与字节上限回归](../../packages/tools/src/read-window-early-stop.test.ts)
+
+`grep_search` 的固定文本和正则搜索也按相同的行边界返回匹配和上下文。正则 `^$` 可以找到 CRLF 空行，搜索回车字符则会命中正文中的独立回车。原来依靠匹配 CRLF 中的回车寻找行尾的正则，应使用行尾锚点 `$`。[搜索与重读一致性回归](../../packages/tools/src/navigation-work.regressions.test.ts)

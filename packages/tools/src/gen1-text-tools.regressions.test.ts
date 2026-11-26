@@ -37,7 +37,7 @@ describe("Gen1 text tools correctness", () => {
     await fs.writeFile(join(root, "代码.ts"), "needle\r\nother\r\n");
     const r = await invoke("grep_search", { path: "代码.ts", pattern: "needle" });
     expect(r.status).toBe("success");
-    expect(r.output).toEqual([{ file: "代码.ts", line: 1, column: 1, text: "needle\r" }]);
+    expect(r.output).toEqual([{ file: "代码.ts", line: 1, column: 1, text: "needle" }]);
   });
   it("finds a real match beyond the previous 2000 character line boundary", async () => {
     await fs.writeFile(join(root, "wide.txt"), "x".repeat(2100) + "needle\n");

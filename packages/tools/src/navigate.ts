@@ -187,7 +187,7 @@ export function grepFiles(input: GrepFilesInput): Promise<GrepHit[]> {
       summary.scannedFiles++;
       // Refuse obvious binary content.
       if (text.includes("\u0000")) { summary.skippedBinaryFiles++; return; }
-      const lines = text.split("\n");
+      const lines = text.split(/\r?\n/);
       // Keep the same physical source lines as the regex worker and read_file.
       if (lines.at(-1) === "") lines.pop();
       const remaining = (input.maxHits ?? 200) - hits.length;

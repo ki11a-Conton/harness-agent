@@ -334,7 +334,7 @@ describe("grep source line boundaries", () => {
   ])("returns only blank lines that read_file can address in $text", async ({ text, blankLines }) => {
     const path = "sample.txt";
     await write(path, text);
-    const result = await run("grep_search", { path, pattern: "^\\r?$", maxResults: blankLines.length + 1, includeSummary: true });
+    const result = await run("grep_search", { path, pattern: "^$", maxResults: blankLines.length + 1, includeSummary: true });
     expect(result.status).toBe("success");
     const output = result.output as { hits: { line: number; text: string }[]; summary: { complete: boolean; limitReached: boolean } };
     expect(output.hits.map(hit => hit.line)).toEqual(blankLines);
@@ -343,6 +343,17 @@ describe("grep source line boundaries", () => {
       const page = await run("read_file", { path, offset: hit.line, limit: 1 });
       expect(page.output).toMatchObject({ startLine: hit.line, endLine: hit.line, content: hit.text });
     }
+  });
+
+  it.each([false, true])("matches literal CR inside lines and returns readable context, literal=%s", async literal => {
+    const path = "mixed.txt";
+    await write(path, "first\r\nkeep\r\r\nlast\nend\r");
+    const result = await run("grep_search", { path, pattern: "\r", literal, contextLines: 1 });
+    expect(result.status).toBe("success");
+    expect(result.output).toMatchObject({
+      hits: [{ line: 2, column: 5, text: "keep\r" }, { line: 4, column: 4, text: "end\r" }],
+      context: [{ line: 1, text: "first" }, { line: 3, text: "last" }],
+    });
   });
 
   it.each([false, true])("keeps a final real blank line as match context, literal=%s", async literal => {

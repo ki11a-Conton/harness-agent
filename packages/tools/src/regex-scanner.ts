@@ -45,7 +45,7 @@ parentPort.on("message", ({ text, maxHits }) => {
     parentPort.postMessage(matches);
     return;
   }
-  const lines = text.split("\n");
+  const lines = text.split(/\r?\n/);
   // EOF is a boundary, including in an empty file. Only search physical lines.
   if (lines.at(-1) === "") lines.pop();
   const matches = [];
