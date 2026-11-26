@@ -57,7 +57,7 @@ describe("Gen1 text tools correctness", () => {
     await fs.writeFile(join(root, "page.txt"), bytes);
     const r = await invoke("read_file", { path: "page.txt", offset: 2, limit: 1, versioned: true });
     expect(r.status).toBe("success");
-    expect(r.output).toMatchObject({ content: "second\r", startLine: 2, endLine: 2, totalLines: 3, nextOffset: 3, truncated: true, bytes: bytes.length,
+    expect(r.output).toMatchObject({ content: "second", startLine: 2, endLine: 2, totalLines: 3, nextOffset: 3, truncated: true, bytes: bytes.length,
       sha256: createHash("sha256").update(bytes).digest("hex") });
   });
   it("rejects invalid pagination rather than silently ignoring unknown arguments", async () => {

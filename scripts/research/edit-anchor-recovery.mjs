@@ -54,8 +54,7 @@ try {
       const page = await call('read_file', { ...window, versioned: true });
       assert.equal(page.status, 'success');
       assert.equal(page.output.sha256, digest(before));
-      // A CRLF page omits the final LF. Use the original whole-line text as the anchor.
-      const copied = page.output.content.replace(/\r$/, '');
+      const copied = page.output.content;
       assert.equal(copied, block.join(eol));
       const exact = { oldText: copied, newText: copied.replace('= 1;', '= 2;') };
       const repaired = await call('edit_file', { ...(batch ? { edits: [exact] } : exact), profile: 'strict', expectedSha256: page.output.sha256 });

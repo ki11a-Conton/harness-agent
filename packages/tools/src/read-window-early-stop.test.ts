@@ -8,6 +8,7 @@ import { newAgentId, newSessionId, newToolCallId, newTurnId, type ToolExecutionC
 import { ToolRegistry } from "./registry.js";
 import { ToolOrchestrator } from "./orchestrator.js";
 import { readFileTool } from "./tools/read-file.js";
+import { readWindow } from "./read-window.js";
 
 let cwd: string;
 let orchestrator: ToolOrchestrator;
@@ -64,14 +65,14 @@ it("reads one native block for a four-line window and preserves full-file reads 
   const meter = measureReads();
   const range = { offset: 2, limit: 4 };
   const baseline = await invoke(range);
-  expect(baseline.output).toMatchObject({ content: "source😀\r\n\r\nthird\r\nfourth\r", startLine: 2,
+  expect(baseline.output).toMatchObject({ content: "source😀\r\n\r\nthird\r\nfourth", startLine: 2,
     endLine: 5, nextOffset: 6, totalLines: 500005, truncated: true, bytes });
   const baselineBytes = meter.bytes();
   expect(baselineBytes).toBe(bytes);
   const window = await invoke({ ...range, scan: "window" });
   const windowBytes = meter.bytes() - baselineBytes;
   expect(windowBytes).toBeLessThanOrEqual(65536);
-  expect(window.output).toMatchObject({ content: "source😀\r\n\r\nthird\r\nfourth\r", startLine: 2,
+  expect(window.output).toMatchObject({ content: "source😀\r\n\r\nthird\r\nfourth", startLine: 2,
     endLine: 5, nextOffset: 6, scanComplete: false, scannedBytes: windowBytes, truncatedBy: "lines" });
   expect(window.output).not.toHaveProperty("totalLines");
   expect(window.output).not.toHaveProperty("sha256");
@@ -107,6 +108,24 @@ it("proves continuation at a chunk boundary without returning a partial line", a
   expect(next.output).toMatchObject({ content: "\nend", totalLines: 3, scanComplete: true, truncated: false });
 });
 
+const splitLine = "a".repeat(65535);
+it.each([
+  { name: "CR and LF in separate reads at the byte cap", file: splitLine + "\r\nlater", limit: 1, maxBytes: 65535, content: splitLine, lines: 1 },
+  { name: "CR at EOF is content", file: "x\r", limit: 1, maxBytes: 2, content: "x\r", lines: 1 },
+  { name: "CR at EOF exceeds the byte cap", file: "x\r", limit: 1, maxBytes: 1, content: "", lines: 0 },
+  { name: "literal CR immediately before CRLF", file: "x\r\r\n", limit: 1, maxBytes: 2, content: "x\r", lines: 1 },
+  { name: "mixed separators and a blank CRLF line", file: "x\r\ny\n\r\nz", limit: 3, maxBytes: 5, content: "x\r\ny\n", lines: 3 },
+  { name: "separator does not fit before a blank line", file: "x\r\n\r\n", limit: 2, maxBytes: 2, content: "x", lines: 1 },
+  { name: "Unicode at the byte cap", file: "中🙂\r\n", limit: 1, maxBytes: 7, content: "中🙂", lines: 1 },
+])("preserves the page boundary for $name", async ({ file, limit, maxBytes, content, lines }) => {
+  await fs.writeFile(join(cwd, "target.txt"), file);
+  const expected = { content, startLine: 1, endLine: lines };
+  expect(readWindow(file, 1, limit, maxBytes)).toMatchObject(expected);
+  const versioned = await invoke({ versioned: true, limit, maxBytes });
+  expect(versioned.output).toMatchObject({ ...expected, sha256: createHash("sha256").update(file).digest("hex") });
+  expect((await invoke({ scan: "window", limit, maxBytes })).output).toMatchObject(expected);
+});
+
 it("stops after proving first-line overflow without walking a giant line", async () => {
   await fs.writeFile(join(cwd, "target.txt"), "a".repeat(2 * 1024 * 1024));
   const meter = measureReads();
@@ -120,7 +139,7 @@ it("stops after proving first-line overflow without walking a giant line", async
 it("returns a continuation when only a subsequent selected line exceeds the byte budget", async () => {
   await fs.writeFile(join(cwd, "target.txt"), "ok\r\n" + "中".repeat(30000));
   const result = await invoke({ scan: "window", limit: 2, maxBytes: 12 });
-  expect(result.output).toMatchObject({ content: "ok\r", endLine: 1, nextOffset: 2, scanComplete: false,
+  expect(result.output).toMatchObject({ content: "ok", endLine: 1, nextOffset: 2, scanComplete: false,
     truncated: true, truncatedBy: "bytes" });
   expect(result.output).not.toHaveProperty("firstLineExceedsLimit");
 });

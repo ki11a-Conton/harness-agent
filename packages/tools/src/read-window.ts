@@ -3,7 +3,7 @@
  * packages/coding-agent/src/core/tools/truncate.ts (truncateHead), and its
  * read.ts pagination. Copyright (c) 2025 Mario Zechner, MIT.
  * The full notice is retained in third_party/coding-prompts/pi-MIT.txt.
- * Unlike the upstream normalised view, this helper preserves CRLF bytes.
+ * Pages preserve the original separators between selected lines.
  * Bounded chunk scanning also follows DeepSeek harness's MIT
  * packages/fs/tool-fs/src/read-render.ts (buildWindow); no provider or sandbox
  * implementation is copied. See licenses/deepseek-harness-MIT.txt.
@@ -33,7 +33,32 @@ export type ScannedReadWindow =
   | (ReadWindow & { bytes: number; scanComplete: true; scannedBytes: number })
   | (ReadPage & { scanComplete: false; scannedBytes: number });
 
-function windowResult(selected: string[], offset: number, totalLines: number | undefined, exceeded: boolean, maxBytes: number): ReadPage {
+/** A line's separator only enters the page if the following line fits. */
+class PageLines {
+  readonly chunks: string[] = [];
+  private bytes = 0;
+  private separator = "";
+
+  constructor(readonly maxBytes: number) {}
+
+  get remainingLineBytes(): number {
+    return this.maxBytes - this.bytes - this.separator.length;
+  }
+
+  append(raw: string, followedByLf: boolean): boolean {
+    const crlf = followedByLf && raw.endsWith("\r");
+    const line = crlf ? raw.slice(0, -1) : raw;
+    const bytes = Buffer.byteLength(line);
+    if (bytes > this.remainingLineBytes) return false;
+    this.chunks.push(this.separator + line);
+    this.bytes += this.separator.length + bytes;
+    this.separator = crlf ? "\r\n" : "\n";
+    return true;
+  }
+}
+
+function windowResult(page: PageLines, offset: number, totalLines: number | undefined, exceeded: boolean): ReadPage {
+  const { chunks: selected, maxBytes } = page;
   const next = offset + selected.length;
   const truncated = totalLines === undefined || next <= totalLines;
   const firstLineExceedsLimit = exceeded && selected.length === 0;
@@ -45,25 +70,22 @@ function windowResult(selected: string[], offset: number, totalLines: number | u
     ...(truncated && !firstLineExceedsLimit ? { nextOffset: next } : {}),
     ...(firstLineExceedsLimit ? { firstLineExceedsLimit: true,
       hint: `Line ${offset} exceeds maxBytes=${maxBytes}; increase maxBytes (up to 1048576), or inspect it with an approved exec. No partial line was returned.` } : {}),
-    content: selected.join("\n"),
+    content: selected.join(""),
   };
 }
 
 /** Window a text snapshot by 1-based lines without returning partial UTF-8. */
 export function readWindow(content: string, offset = 1, limit = DEFAULT_READ_LINES, maxBytes = DEFAULT_READ_BYTES): ReadWindow {
   const lines = content === "" ? [] : content.split("\n");
-  if (content.endsWith("\n")) lines.pop();
+  const endsWithLf = content.endsWith("\n");
+  if (endsWithLf) lines.pop();
   if (offset > Math.max(1, lines.length)) throw new Error(`offset ${offset} is beyond end of file (${lines.length} lines)`);
-  const selected: string[] = [];
-  let bytes = 0;
+  const page = new PageLines(maxBytes);
   let exceeded = false;
-  for (let i = offset - 1; i < lines.length && selected.length < limit; i++) {
-    const line = lines[i]!;
-    const cost = Buffer.byteLength(line, "utf8") + (selected.length > 0 ? 1 : 0);
-    if (bytes + cost > maxBytes) { exceeded = true; break; }
-    selected.push(line); bytes += cost;
+  for (let i = offset - 1; i < lines.length && page.chunks.length < limit; i++) {
+    if (!page.append(lines[i]!, i + 1 < lines.length || endsWithLf)) { exceeded = true; break; }
   }
-  return { ...windowResult(selected, offset, lines.length, exceeded, maxBytes), totalLines: lines.length };
+  return { ...windowResult(page, offset, lines.length, exceeded), totalLines: lines.length };
 }
 
 /** Scan an owned descriptor with bounded memory. By default count all lines
@@ -78,30 +100,27 @@ export async function readWindowFromHandle(handle: FileHandle, options: {
   const earlyStop = options.scan === "window";
   const digest = options.versioned ? createHash("sha256") : undefined;
   const buffer = Buffer.allocUnsafe(64 * 1024);
-  const selected: string[] = [];
-  let currentLine = 1, totalBytes = 0, outputBytes = 0, lineBytes = 0;
+  const selected = new PageLines(maxBytes);
+  let currentLine = 1, totalBytes = 0, lineBytes = 0;
   let parts: Buffer[] = [];
   let exceeded = false, endedWithNewline = false;
   const unfinishedPage = (): ScannedReadWindow => ({
     scanComplete: false, scannedBytes: totalBytes,
-    ...windowResult(selected, offset, undefined, exceeded, maxBytes),
+    ...windowResult(selected, offset, undefined, exceeded),
   });
 
   const capture = (part: Buffer): void => {
+    if (!part.length || currentLine < offset || selected.chunks.length >= limit || exceeded) return;
     lineBytes += part.length;
-    if (currentLine < offset || selected.length >= limit || exceeded) return;
-    const separator = selected.length > 0 ? 1 : 0;
-    if (outputBytes + separator + lineBytes > maxBytes) { exceeded = true; parts = []; return; }
-    if (part.length) parts.push(Buffer.from(part));
+    // At the cap, a final CR can still be the first byte of a CRLF split across reads.
+    const possibleCr = part[part.length - 1] === 13 ? 1 : 0;
+    if (lineBytes - possibleCr > selected.remainingLineBytes) { exceeded = true; parts = []; return; }
+    parts.push(Buffer.from(part));
   };
-  const completeLine = (): void => {
-    if (currentLine >= offset && selected.length < limit && !exceeded) {
-      const text = Buffer.concat(parts).toString("utf8");
-      const bytes = Buffer.byteLength(text, "utf8");
-      // Invalid input may expand to replacement characters during decoding;
-      // apply the output-byte budget to rendered text as well as raw bytes.
-      if (outputBytes + (selected.length ? 1 : 0) + bytes > maxBytes) exceeded = true;
-      else { outputBytes += (selected.length ? 1 : 0) + bytes; selected.push(text); }
+  const completeLine = (followedByLf: boolean): void => {
+    if (currentLine >= offset && selected.chunks.length < limit && !exceeded) {
+      // Decoding invalid UTF-8 may expand its byte count. Check the rendered line too.
+      exceeded = !selected.append(Buffer.concat(parts).toString("utf8"), followedByLf);
     }
     parts = []; lineBytes = 0; currentLine++;
   };
@@ -116,21 +135,21 @@ export async function readWindowFromHandle(handle: FileHandle, options: {
     while (position < chunk.length) {
       // Any byte after a completed page proves another line exists, even
       // when it is blank or the page ended exactly at a native read boundary.
-      if (earlyStop && selected.length === limit) return unfinishedPage();
+      if (earlyStop && selected.chunks.length === limit) return unfinishedPage();
       const newline = chunk.indexOf(10, position);
       const end = newline < 0 ? chunk.length : newline;
       capture(chunk.subarray(position, end));
       if (earlyStop && exceeded) return unfinishedPage();
       if (newline < 0) { endedWithNewline = false; break; }
-      completeLine();
+      completeLine(true);
       if (earlyStop && exceeded) return unfinishedPage();
       endedWithNewline = true; position = newline + 1;
     }
   }
   const totalLines = totalBytes === 0 ? 0 : currentLine - (endedWithNewline ? 1 : 0);
-  if (totalBytes > 0 && !endedWithNewline) completeLine();
+  if (totalBytes > 0 && !endedWithNewline) completeLine(false);
   if (offset > Math.max(1, totalLines)) throw new Error(`offset ${offset} is beyond end of file (${totalLines} lines)`);
-  const page = windowResult(selected, offset, totalLines, exceeded, maxBytes);
+  const page = windowResult(selected, offset, totalLines, exceeded);
   if (earlyStop) return { scanComplete: true, scannedBytes: totalBytes, bytes: totalBytes, ...page, totalLines };
   return { bytes: totalBytes, ...(digest ? { sha256: digest.digest("hex") } : {}), ...page, totalLines };
 }

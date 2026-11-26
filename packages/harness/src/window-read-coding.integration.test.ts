@@ -40,7 +40,7 @@ it.each(["default", "window"] as const)("real HTTP coding turn uses %s orientati
         }
         case 2: {
           const page = JSON.parse(last!);
-          expect(page).toMatchObject({ content: "exports.count = 1; // 数量😀\r", nextOffset: 2, truncated: true });
+          expect(page).toMatchObject({ content: "exports.count = 1; // 数量😀", nextOffset: 2, truncated: true });
           expect(page).not.toHaveProperty("sha256");
           if (mode === "window") {
             expect(page).toMatchObject({ scanComplete: false, scannedBytes: 65536 });
@@ -52,7 +52,8 @@ it.each(["default", "window"] as const)("real HTTP coding turn uses %s orientati
         case 3: {
           const page = JSON.parse(last!);
           expect(page).toMatchObject({ totalLines: 10001, sha256: version });
-          call = { name: "edit_file", args: { path: "values.cjs", expectedSha256: page.sha256, oldText: "count = 1", newText: "count = 42" } };
+          call = { name: "edit_file", args: { path: "values.cjs", expectedSha256: page.sha256,
+            oldText: page.content, newText: page.content.replace("count = 1", "count = 42") } };
           break;
         }
         case 4:
