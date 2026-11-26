@@ -249,7 +249,7 @@ export async function buildPortable({ repo, out, version, sourceSha, offline = f
       external.set(name, { version: metadata.version, license: metadata.license ?? 'UNKNOWN' });
       await copyFiles(resolved, join(payload, 'node_modules', ...name.split('/')), path => !path.startsWith('node_modules/'));
       for (const dependency of Object.keys(metadata.dependencies ?? {})) await copyExternal(dependency, resolved);
-      // zod-to-json-schema's required peer must resolve from the same layout.
+      // Required peers must resolve from the installed portable layout.
       for (const [dependency, range] of Object.entries(metadata.peerDependencies ?? {})) {
         if (metadata.peerDependenciesMeta?.[dependency]?.optional) continue;
         void range; await copyExternal(dependency, resolved);

@@ -7,7 +7,7 @@ import { verifyArchive } from './portable.mjs';
 import { MANAGED_BROWSER_CHECKS } from './managed-checks.mjs';
 
 const repository = 'ki11a-Conton/harness-agent';
-const version = '1.13.0';
+const version = '1.14.0';
 const sha = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
 const sourceTree = execFileSync('git', ['rev-parse', 'HEAD^{tree}'], { encoding: 'utf8' }).trim();
 const runId = process.env.CANDIDATE_ACCEPTANCE_RUN_ID;
@@ -68,7 +68,7 @@ for (const [name, platform, kind] of [
     // The POSIX SIGINT case contributes one assertion and one request on Linux.
     // Native Windows cancellation is covered by the separate publication gate.
     const minimum = platform === 'win32' ? { assertions: 49, requests: 18 } : { assertions: 50, requests: 19 };
-    if (receipt.doctorErrors !== 0 || receipt.tamperRejected !== true || receipt.tamperedStartupRejected !== true
+    if (receipt.editReceiptScenarios !== 4 || receipt.doctorErrors !== 0 || receipt.tamperRejected !== true || receipt.tamperedStartupRejected !== true
       || !countAtLeast(receipt.codingAssertions, minimum.assertions) || !countAtLeast(receipt.requests, minimum.requests)
       || receipt.cleanroomOutsideRepository !== true) throw new Error('CANDIDATE_CLI_CONTROLS_REJECTED');
   }
@@ -77,6 +77,7 @@ for (const [name, platform, kind] of [
     || !countAtLeast(receipt.dailyAssertions, 120) || receipt.connectionScenarios !== 2
     || !countAtLeast(receipt.connectionAssertions, 10) || receipt.workspaceKeyboardScenarios !== 3
     || !countAtLeast(receipt.workspaceKeyboardAssertions, 45) || !countAtLeast(receipt.modelReasoningChecks, 22)
+    || !countAtLeast(receipt.multilingualSearchChecks, 12)
     || !countAtLeast(receipt.composerModeChecks, 24) || !countAtLeast(receipt.managedCommandChecks, MANAGED_BROWSER_CHECKS.length))) throw new Error('CANDIDATE_WEB_CONTROLS_REJECTED');
   installed[name] = receipt;
 }

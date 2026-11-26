@@ -9,7 +9,7 @@ import { digest, makeArchive } from './portable-lib.mjs';
 
 const script = fileURLToPath(new URL('./candidate-export.mjs', import.meta.url));
 const repository = 'ki11a-Conton/harness-agent';
-const version = '1.13.0';
+const version = '1.14.0';
 const actualCli = Object.fromEntries(await Promise.all(['linux', 'win32'].map(async platform => [platform,
   JSON.parse(await readFile(new URL(`../../docs/evidence/release-v112-platform-20261023/actual-${platform}.json`, import.meta.url), 'utf8')),
 ])));
@@ -41,9 +41,9 @@ async function scenario(change, expected, expectedUploads = expected ? 0 : 4) {
         ...name.startsWith('web') ? { installedApplication: true, cases: 30, assertions: 75,
           pr15Controls: 10, dailyScenarios: 42, dailyAssertions: 120, connectionScenarios: 2, connectionAssertions: 10,
           workspaceKeyboardScenarios: 3, workspaceKeyboardAssertions: 45, modelReasoningChecks: 22,
-          composerModeChecks: 24, managedCommandChecks: 10 }
+          composerModeChecks: 24, managedCommandChecks: 10, multilingualSearchChecks: 12 }
           : { doctorErrors: 0, tamperRejected: true, tamperedStartupRejected: true,
-            codingAssertions: actualCli[platform].assertions.length, requests: actualCli[platform].requests,
+            editReceiptScenarios: 4, codingAssertions: actualCli[platform].assertions.length, requests: actualCli[platform].requests,
             cleanroomOutsideRepository: true } }));
     }
     const fixture = { run: { head_sha: sha, head_branch: 'main', status: 'completed', conclusion: 'success', path: '.github/workflows/deepseek-ui-installed.yml' },
@@ -123,6 +123,7 @@ test('rejects Windows receipts from different archive bytes', () => scenario(asy
 for (const [field, value] of [['assertions', 74], ['pr15Controls', 9], ['dailyScenarios', 41],
   ['dailyAssertions', 119], ['connectionScenarios', 1], ['connectionAssertions', 9], ['assertions', '75'], ['workspaceKeyboardScenarios', 2],
   ['workspaceKeyboardAssertions', 44], ['modelReasoningChecks', 21], ['composerModeChecks', 23],
+  ['multilingualSearchChecks', 11], ['multilingualSearchChecks', undefined], ['multilingualSearchChecks', '12'],
   ['managedCommandChecks', 8], ['managedCommandChecks', 9], ['managedCommandChecks', '10']]) {
   test(`rejects incomplete or nonnumeric Web evidence: ${field}=${JSON.stringify(value)}`, () => scenario(async ({ base }) => {
     const path = join(base, 'web-windows/result.json');
@@ -131,7 +132,8 @@ for (const [field, value] of [['assertions', 74], ['pr15Controls', 9], ['dailySc
   }, /WEB_CONTROLS_REJECTED/));
 }
 for (const [name, field, value] of [
-  ['cli-linux', 'codingAssertions', 49], ['cli-linux', 'requests', 18],
+  ['cli-linux', 'editReceiptScenarios', undefined], ['cli-windows', 'editReceiptScenarios', 3],
+  ['cli-windows', 'editReceiptScenarios', '4'], ['cli-linux', 'codingAssertions', 49], ['cli-linux', 'requests', 18],
   ['cli-windows', 'codingAssertions', 48], ['cli-windows', 'requests', 17],
   ['cli-windows', 'cleanroomOutsideRepository', false], ['cli-windows', 'requests', '18'],
   ['cli-windows', 'codingAssertions', 49.5], ['cli-windows', 'requests', true],
@@ -147,9 +149,9 @@ test('rejects tampered archive bytes before any upload', () => scenario(async ({
   await writeFile(join(base, `assets/harness-agent-${version}-portable.tar.gz`), 'altered');
 }, /ARCHIVE_CHECKSUM_REJECTED/));
 
-// v1.12 artifacts and the previous runner label cannot qualify this release.
-test('rejects the previous v1.12.0 release before any upload', () => scenario(({ fixture }) => {
-  fixture.release.tag_name = 'v1.12.0';
+// v1.13 artifacts and the previous runner label cannot qualify this release.
+test('rejects the previous v1.13.0 release before any upload', () => scenario(({ fixture }) => {
+  fixture.release.tag_name = 'v1.13.0';
 }, /EXISTING_DRAFT_SOURCE_REQUIRED/));
 test('rejects stale Ubuntu job naming instead of exporting unrelated receipts', () => scenario(({ fixture }) => {
   fixture.jobs.jobs[1].name = 'installed (ubuntu-latest)';

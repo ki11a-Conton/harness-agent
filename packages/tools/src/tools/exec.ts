@@ -126,7 +126,7 @@ export const execTool: ToolDefinition<ExecInput, ExecOutput> = {
     command: z.string().min(1),
     args: z.array(z.string()).optional(),
     cwd: z.string().optional(),
-    env: z.record(z.string()).optional(),
+    env: z.record(z.string(), z.string()).optional(),
     timeoutMs: z.number().int().positive().max(10 * 60 * 1000).optional(),
   }),
   risk: "elevated",

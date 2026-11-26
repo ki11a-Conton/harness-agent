@@ -1,6 +1,6 @@
 # Harness Agent（智能体运行时）
 
-第一代个人 coding agent 已发布 [v1.10.0](https://github.com/ki11a-Conton/harness-agent/releases/tag/v1.10.0)。独立 CLI/Web 安装与最终验收见 [发布说明](docs/release-v1.10.0.md)，开源来源及能力边界见 [第一代交付说明](docs/first-generation.md)。模型质量仍单独报告。
+从 [GitHub 最新正式版](https://github.com/ki11a-Conton/harness-agent/releases/latest) 下载 CLI 和 Web 共用的便携包。发布页提供启动命令、SHA-256 校验值，以及该归档在 Ubuntu 和 Windows 上的验收记录。开源参考和能力范围见[第一代交付说明](docs/first-generation.md)。
 
 Web 在 `/` 使用 Harness Agent 品牌界面并接入真实 Harness，Preview Notice 和首页 Preview 标记已移除；旧 UI 保留在 `/legacy/index.html`。普通编码流程已通过相同独立包在 Ubuntu/Windows 的实际浏览器验收，详见[当前交付与缺口](docs/web-deepseek-delivery.md)和[执行计划](plan.md)。完整默认 UI parity 与付费模型质量仍未证明。
 

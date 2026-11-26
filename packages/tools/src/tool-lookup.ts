@@ -1,7 +1,6 @@
 import { z } from "zod";
-import { zodToJsonSchema } from "zod-to-json-schema";
 import type { ToolDefinition, ToolResult } from "@ar/contracts";
-import { ToolRegistry } from "./registry.js";
+import { ToolRegistry, toolInputJsonSchema } from "./registry.js";
 
 /**
  * P18-2: on-demand full-schema lookup. In deferred-advertisement mode the
@@ -39,7 +38,7 @@ export function createToolLookupTool(registry: ToolRegistry): ToolDefinition<{ n
             : {
                 name: tool.name,
                 description: tool.description,
-                inputSchema: zodToJsonSchema(tool.inputSchema) as Record<string, unknown>,
+                inputSchema: toolInputJsonSchema(tool.inputSchema),
               };
       }
       return { status: "success", output: out };

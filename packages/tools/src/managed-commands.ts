@@ -135,7 +135,7 @@ const input = z
     command: z.string().min(1),
     args: z.array(z.string()).optional(),
     cwd: z.string().optional(),
-    env: z.record(z.string()).optional(),
+    env: z.record(z.string(), z.string()).optional(),
     timeoutMs: z.number().int().positive().max(600000).optional(),
     yieldMs: z.number().int().min(0).max(1000).default(50),
     supersedes: z.string().optional(),

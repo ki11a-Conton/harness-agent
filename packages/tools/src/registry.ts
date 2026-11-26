@@ -1,6 +1,31 @@
 import type { ToolCapability, ToolDefinition, ToolSemantics, ToolSpec } from "@ar/contracts";
 import { DEFAULT_TOOL_SEMANTICS, AgentError, errorInfo, toToolCapability, toToolSemantics, toolNameViolation } from "@ar/contracts";
-import { zodToJsonSchema } from "zod-to-json-schema";
+import { z } from "zod";
+
+/** Provider and deferred lookup must advertise the same input contract. */
+export function toolInputJsonSchema(schema: ToolDefinition["inputSchema"]): Record<string, unknown> {
+  return z.toJSONSchema(schema, {
+    target: "draft-7",
+    io: "input",
+    unrepresentable: "any",
+    override({ zodSchema, jsonSchema }) {
+      // Stripping object schemas accept extra keys but never pass them to tools.
+      if (zodSchema instanceof z.ZodObject && zodSchema.def.catchall === undefined) {
+        jsonSchema.additionalProperties = false;
+      }
+      // JSON keys are already strings. Keep constrained record keys intact.
+      const keys = jsonSchema.propertyNames;
+      if (keys && typeof keys === "object" && keys.type === "string" && Object.keys(keys).length === 1) {
+        delete jsonSchema.propertyNames;
+      }
+      // Discriminated branches are disjoint, so the existing provider anyOf is exact.
+      if (zodSchema instanceof z.ZodDiscriminatedUnion && jsonSchema.oneOf) {
+        jsonSchema.anyOf = jsonSchema.oneOf;
+        delete jsonSchema.oneOf;
+      }
+    },
+  });
+}
 
 /** Capability projection of a tool for LEGACY retry/concurrency callers.
  *  P18-1: derived through the single semantics chain (metadata → semantics →
@@ -81,7 +106,7 @@ export class ToolRegistry {
     return this.list().map((t) => ({
       name: t.name,
       description: t.description,
-      inputSchema: zodToJsonSchema(t.inputSchema) as Record<string, unknown>,
+      inputSchema: toolInputJsonSchema(t.inputSchema),
     }));
   }
 }

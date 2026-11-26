@@ -132,7 +132,7 @@ const profileValidation = z.object({
   defaultContextWindow: z.number().int().positive().safe().optional(), defaultMaxTokens: z.number().int().positive().safe().optional(),
 }).strict();
 const validation = {
-  "llm-pi-ai": z.object({ providers: z.record(profileValidation).optional() }).strict(),
+  "llm-pi-ai": z.object({ providers: z.record(z.string(), profileValidation).optional() }).strict(),
   locale: z.object({ preference: z.string().regex(/^[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*$/u).optional() }).strict(),
   "ui-theme": z.object({ preference: z.enum(["light", "dark", "system"]).optional(), fontSize: z.number().int().min(10).max(22).optional() }).strict(),
   "ui-conversation": z.object({ busyEnter: z.enum(["queue", "steer"]).optional() }).strict(),
