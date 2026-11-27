@@ -20,6 +20,7 @@ export interface GrepFilesToolInput {
   /** Fixed-string search, useful for source text containing regex syntax. */
   literal?: boolean;
   maxResults?: number;
+  maxResultsPerFile?: number;
   /** Include scan completeness in the model-visible output rather than only metadata. */
   includeSummary?: boolean;
   contextLines?: number;
@@ -30,7 +31,7 @@ type GrepSearchOutput = GrepHit[] | { summary: GrepScanSummary; hits: GrepHit[];
 export const grepSearchTool: ToolDefinition<GrepFilesToolInput, GrepSearchOutput> = {
   name: "grep_search",
   description:
-    "Regex text search in a selected workspace file or directory (skips .git/node_modules/dist/build); literal=true searches source text as a fixed string. Returns {file,line,column,text} hits; long matching lines are rendered around their match with truncated=true. Set contextLines (1–10) to include deduplicated neighboring source lines in {summary,hits,context}, bounded to 32 KiB. Use includeSummary=true for scan completeness without neighboring lines. Legacy arrays are positive evidence only; omitted files report SCAN_INCOMPLETE. Files above 512KiB require a targeted read or approved exec search.",
+    "Regex text search in a selected workspace file or directory (skips .git/node_modules/dist/build); literal=true searches source text as a fixed string. Returns {file,line,column,text} hits; long matching lines are rendered around their match with truncated=true. Set contextLines (1–10) to include deduplicated neighboring source lines in {summary,hits,context}, bounded to 32 KiB. Set maxResultsPerFile to sample across files within the overall maxResults budget. It returns {summary,hits} and reports files with proven omissions in summary.filesLimitedByPerFileCap. Use includeSummary=true for scan completeness without neighboring lines. Legacy arrays are positive evidence only; omitted files report SCAN_INCOMPLETE. Files above 512KiB require a targeted read or approved exec search.",
   inputSchema: z.object({
     pattern: z.string().min(1).max(8192),
     path: z.string().optional(),
@@ -38,6 +39,7 @@ export const grepSearchTool: ToolDefinition<GrepFilesToolInput, GrepSearchOutput
     caseSensitive: z.boolean().optional(),
     literal: z.boolean().optional().describe("Search the exact fixed string rather than regex; use for source text containing regex metacharacters."),
     maxResults: z.number().int().positive().max(5000).optional(),
+    maxResultsPerFile: z.number().int().positive().max(5000).optional().describe("Maximum matching lines per file. Use 1 to find distinct files. Always returns a summary with the hits."),
     includeSummary: z.boolean().optional().describe("Set true before claiming no matches: exposes incomplete scans and omitted files in the model-visible {summary,hits}."),
     contextLines: z.number().int().min(1).max(10).optional().describe("Include this many lines on each side of a hit. Returns structured output. summary.contextTruncated signals clipped or omitted neighboring lines."),
   }),
@@ -57,7 +59,7 @@ export const grepSearchTool: ToolDefinition<GrepFilesToolInput, GrepSearchOutput
     try {
       const summary = createGrepScanSummary();
       const window = input.contextLines === undefined ? undefined : new GrepContext(input.contextLines);
-      const detailed = input.includeSummary || window !== undefined;
+      const detailed = input.includeSummary || window !== undefined || input.maxResultsPerFile !== undefined;
       const hits = await grepFiles({
         pattern: input.pattern,
         root: context.cwd,
@@ -66,6 +68,7 @@ export const grepSearchTool: ToolDefinition<GrepFilesToolInput, GrepSearchOutput
         literal: input.literal ?? false,
         fileGlob: input.fileGlob ?? null,
         maxHits: input.maxResults ?? 200,
+        ...(input.maxResultsPerFile !== undefined ? { maxHitsPerFile: input.maxResultsPerFile } : {}),
         signal: context.signal,
         summary,
         ...(window !== undefined ? { context: window } : {}),

@@ -107,6 +107,54 @@ describe("R3 navigation: global traversal stop", () => {
   });
 });
 
+describe("grep_search per-file match budgets", () => {
+  it.each([true, false])("samples distinct files and reports only proven omissions, literal=%s", async literal => {
+    await write("src/dense.ts", "target a\r\ncontext a\r\ntarget b\r\ncontext b\r\ntarget c\r\n");
+    await write("src/exact.ts", "target x\r\ncontext x\r\ntarget y\r\n");
+    await write("src/skip.md", "target ignored\n");
+    await write("outside.ts", "target outside selection\n");
+    const args = { pattern: "target", path: "src", fileGlob: "*.ts", literal, maxResults: 8, maxResultsPerFile: 2 };
+    const hitLines = [
+      { file: "src/dense.ts", line: 1 }, { file: "src/dense.ts", line: 3 },
+      { file: "src/exact.ts", line: 1 }, { file: "src/exact.ts", line: 3 },
+    ];
+    const files = vi.spyOn(fs, "readFile");
+    const result = await run("grep_search", { ...args, contextLines: 1 });
+    expect(result.status).toBe("success");
+    expect(files).toHaveBeenCalledTimes(2);
+    expect(result.output).toMatchObject({
+      summary: { complete: false, limitReached: false, filesLimitedByPerFileCap: 1, scannedFiles: 2 },
+      hits: expect.arrayContaining(hitLines.map(hit => expect.objectContaining(hit))),
+    });
+    const output = result.output as { hits: unknown[]; context: { file: string; line: number }[] };
+    expect(output.hits).toHaveLength(4);
+    expect(output.context.map(row => row.line).sort()).toEqual([2, 2, 4]);
+    const exact = await run("grep_search", { ...args, path: "src/exact.ts" });
+    expect(exact.output).toMatchObject({ summary: { complete: true, limitReached: false } });
+    expect(exact.output).not.toHaveProperty("summary.filesLimitedByPerFileCap");
+  });
+
+  it("keeps the global early stop and the legacy array contract", async () => {
+    for (const file of ["a", "b", "c", "d"]) await write(file + ".ts", "needle\n".repeat(6));
+    const args = { pattern: "needle", literal: true, maxResults: 3 };
+    const files = vi.spyOn(fs, "readFile");
+    const legacy = await run("grep_search", args);
+    expect(files).toHaveBeenCalledTimes(1);
+    expect(Array.isArray(legacy.output)).toBe(true);
+    files.mockClear();
+    const spread = await run("grep_search", { ...args, maxResultsPerFile: 1 });
+    expect(files).toHaveBeenCalledTimes(3);
+    expect(spread.output).toMatchObject({ summary: { complete: false, limitReached: true, scannedFiles: 3 } });
+    const { hits } = spread.output as { hits: { file: string }[] };
+    expect(new Set(hits.map(row => row.file)).size).toBe(3);
+    expect(hits).toHaveLength(3);
+  });
+
+  it.each([0, -1, 1.5, 5001])("rejects invalid per-file budget %s", maxResultsPerFile => {
+    expect(grepSearchTool.inputSchema.safeParse({ pattern: "a", maxResultsPerFile }).success).toBe(false);
+  });
+});
+
 describe("grep_search with neighboring source lines", () => {
   it.each([true, false])("merges overlapping windows from one file read, literal=%s", async literal => {
     await write("src/settings.txt", "first\nneedle one\nshared\nneedle two\nlast\n");

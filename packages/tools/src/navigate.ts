@@ -75,6 +75,8 @@ export interface GrepScanSummary {
   unreadableFiles: number;
   unreadableDirectories: number;
   truncatedLines: number;
+  /** Files with a proven extra matching line beyond their individual budget. */
+  filesLimitedByPerFileCap?: number;
   limitReached: boolean;
   maxFileBytes: number;
   unavailableScope?: boolean;
@@ -96,6 +98,7 @@ export interface GrepFilesInput {
   /** Restrict to file basenames matching this glob (e.g. "*.ts"). */
   fileGlob?: string | null;
   maxHits?: number;
+  maxHitsPerFile?: number;
   signal?: AbortSignal;
   /** Caller-owned diagnostics; hits remain a plain JSON-serializable array. */
   summary?: GrepScanSummary;
@@ -191,19 +194,27 @@ export function grepFiles(input: GrepFilesInput): Promise<GrepHit[]> {
       // Keep the same physical source lines as the regex worker and read_file.
       if (lines.at(-1) === "") lines.pop();
       const remaining = (input.maxHits ?? 200) - hits.length;
+      const fileLimit = Math.min(remaining, input.maxHitsPerFile ?? remaining);
+      // One extra match proves this file was clipped. Never scan past the global stop.
+      const scanLimit = Math.min(remaining, fileLimit + 1);
       let positions: Array<{ line: number; column: number }>;
       if (input.literal) {
         // Escaped fixed strings cannot introduce regex backtracking. Keep the
         // existing JS case-insensitive matching semantics without a worker.
         positions = [];
-        for (let i = 0; i < lines.length && positions.length < remaining; i++) {
+        for (let i = 0; i < lines.length && positions.length < scanLimit; i++) {
           signal?.throwIfAborted(); const column = lines[i]!.search(re);
           if (column >= 0) positions.push({ line: i + 1, column: column + 1 });
         }
       } else {
         scanner ??= new RegexScanner(input.pattern, input.caseSensitive ?? false, signal);
-        positions = await scanner.scan(text, remaining);
+        positions = await scanner.scan(text, scanLimit);
         signal?.throwIfAborted();
+      }
+      if (positions.length > fileLimit) {
+        positions.pop();
+        summary.complete = false;
+        summary.filesLimitedByPerFileCap = (summary.filesLimitedByPerFileCap ?? 0) + 1;
       }
       const earlierHits = hits.length;
       for (const position of positions) {
@@ -276,7 +287,7 @@ export interface SymbolHit {
   truncated?: boolean;
 }
 
-export interface SymbolSearchInput extends Omit<GrepFilesInput, "pattern" | "maxHits" | "context"> {
+export interface SymbolSearchInput extends Omit<GrepFilesInput, "pattern" | "maxHits" | "maxHitsPerFile" | "context"> {
   symbol: string;
   maxHits?: number;
   /** Internal filters for supplementing an already indexed file set. */

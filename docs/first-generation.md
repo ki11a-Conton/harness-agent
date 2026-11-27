@@ -61,6 +61,10 @@ CLI/Web 产品入口会在加载存储前取得数据目录所有权。同一台
 
 大型文件使用 `read_file` 的 1-based `offset` / `limit` / `maxBytes`；分页返回的 SHA256 仍覆盖整个原文件。grep 要用 `includeSummary=true` 检查 `complete` 后才把“没找到”当负证据；字面搜索优先 `literal=true`。正则计算超时/取消明确失败，不伪装成空结果。
 
+要找某段代码分布在哪些文件，可以调用 `grep_search`，例如 `{"pattern":"createSession","literal":true,"maxResults":6,"maxResultsPerFile":1}`。这会返回最多 6 个文件的首个匹配行，同时给出 `summary`。随后把 `path` 缩到目标文件并去掉单文件上限，即可查看那里的其他匹配。每文件取样可能需要读取更多文件。
+
+只有实际看到额外匹配时，工具才将该文件计入 `summary.filesLimitedByPerFileCap` 并将 `complete` 置为 `false`。刚好达到单文件上限且扫描完毕时，结果仍可完整。达到全局上限会立即停止，沿用原有的 `limitReached` 语义。每文件上限参考 Gemini CLI，截断判定参考 Pi。[Gemini CLI](https://github.com/google-gemini/gemini-cli/blob/2fd679bbfb4d2005031d9bef810afa6c1740bef6/packages/core/src/tools/grep.ts#L452) · [Pi](https://github.com/earendil-works/pi/blob/47a73ff97d9c35c4a3268c4545755ae16bee3bd8/packages/coding-agent/src/core/tools/grep.ts#L212)
+
 ## 验收与发布
 
 执行合同：[GEN1-20261008](../tasks/GEN1-20261008.md)。计划：[第一代实施规格](../plan(20261008-024527).md)。第一代必须通过固定源码全量、安全、协议、原生 Windows、CLI/Web 编码闭环和独立产物安装验收；未满足时不宣称 release 可用。
