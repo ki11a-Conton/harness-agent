@@ -1,3 +1,4 @@
+import * as sourceReader from "./indexed-source-reader.js";
 import fs from "node:fs/promises";
 import { syncBuiltinESMExports } from "node:module";
 import { tmpdir } from "node:os";
@@ -70,10 +71,10 @@ describe("Gen1 text tools correctness", () => {
     await fs.mkdir(join(root, "a")); await fs.mkdir(join(root, "b"));
     await fs.writeFile(join(root, "a", "one.txt"), "needle");
     await fs.writeFile(join(root, "b", "two.txt"), "needle");
-    const ac = new AbortController(); const actual = fs.readFile.bind(fs);
-    const reads = vi.spyOn(fs, "readFile").mockImplementation((async (...args: Parameters<typeof fs.readFile>) => {
+    const ac = new AbortController(); const actual = sourceReader.readIndexedSource;
+    const reads = vi.spyOn(sourceReader, "readIndexedSource").mockImplementation(async (...args) => {
       const out = await actual(...args); ac.abort(); return out;
-    }) as typeof fs.readFile);
+    });
     const r = await invoke("grep_search", { pattern: "needle" }, ac.signal);
     expect(r.status).toBe("cancelled"); expect(r.evidence).toBeUndefined();
     expect(reads).toHaveBeenCalledTimes(1);
@@ -154,12 +155,12 @@ describe("Gen1 text tools correctness", () => {
   it("propagates cancellation during the supplementary scan after an indexed hit", async () => {
     await fs.writeFile(join(root, "frontend.ts"), "export const SharedSymbol = 1;\n");
     await fs.writeFile(join(root, "worker.py"), "def SharedSymbol():\n    return 2\n");
-    const ac = new AbortController(); const actual = fs.readFile.bind(fs);
-    const reads = vi.spyOn(fs, "readFile").mockImplementation((async (...args: Parameters<typeof fs.readFile>) => {
+    const ac = new AbortController(); const actual = sourceReader.readIndexedSource;
+    const reads = vi.spyOn(sourceReader, "readIndexedSource").mockImplementation(async (...args) => {
       const result = await actual(...args);
       if (String(args[0]) === join(root, "worker.py")) ac.abort();
       return result;
-    }) as typeof fs.readFile);
+    });
     const result = await invoke("symbol_search", { symbol: "SharedSymbol" }, ac.signal);
     expect(reads.mock.calls.some(([path]) => String(path) === join(root, "worker.py"))).toBe(true);
     expect(result.status).toBe("cancelled"); expect(result.output).toBeUndefined();

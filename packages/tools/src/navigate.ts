@@ -21,6 +21,7 @@
 import { promises as fs, type Dirent } from "node:fs";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { matchGlob } from "@ar/security";
+import { IndexedSourceError, readIndexedSource } from "./indexed-source-reader.js";
 import { RegexScanner, SymbolRegexScanner } from "./regex-scanner.js";
 import { GREP_CONTEXT_HIT_BYTES, type GrepContext } from "./grep-context.js";
 
@@ -73,6 +74,7 @@ export interface GrepScanSummary {
   skippedOversizedFiles: number;
   skippedBinaryFiles: number;
   unreadableFiles: number;
+  changedFiles?: number;
   unreadableDirectories: number;
   truncatedLines: number;
   /** Files with a proven extra matching line beyond their individual budget. */
@@ -87,6 +89,33 @@ export interface GrepScanSummary {
 export function createGrepScanSummary(): GrepScanSummary {
   return { complete: true, scannedFiles: 0, skippedOversizedFiles: 0, skippedBinaryFiles: 0,
     unreadableFiles: 0, unreadableDirectories: 0, truncatedLines: 0, limitReached: false, maxFileBytes: MAX_READ_BYTES };
+}
+
+/** Grep and lexical fallback use the same byte limit and stable file snapshot. */
+function createSearchReader(root: string, signal: AbortSignal, summary: GrepScanSummary) {
+  let realRoot: string | undefined;
+  return async (path: string): Promise<string | undefined> => {
+    signal.throwIfAborted();
+    let text: string;
+    try {
+      realRoot ??= await fs.realpath(root);
+      text = await readIndexedSource(path, { root, realRoot, maxBytes: MAX_READ_BYTES, signal, encoding: "utf8" });
+    } catch (err) {
+      signal.throwIfAborted();
+      summary.complete = false;
+      if (err instanceof IndexedSourceError) {
+        if (err.code === "SOURCE_TOO_LARGE") summary.skippedOversizedFiles++;
+        else summary.changedFiles = (summary.changedFiles ?? 0) + 1;
+      } else {
+        summary.unreadableFiles++;
+      }
+      return;
+    }
+    signal.throwIfAborted();
+    summary.scannedFiles++;
+    if (text.includes("\u0000")) { summary.skippedBinaryFiles++; return; }
+    return text;
+  };
 }
 
 export interface GrepFilesInput {
@@ -146,7 +175,7 @@ export async function walkFiles(
 
 export function grepFiles(input: GrepFilesInput): Promise<GrepHit[]> {
   return (async () => {
-    const { root, relPath, signal, context } = input;
+    const { root, relPath, signal = new AbortController().signal, context } = input;
     signal?.throwIfAborted();
     let re: RegExp;
     try {
@@ -160,6 +189,7 @@ export function grepFiles(input: GrepFilesInput): Promise<GrepHit[]> {
     const scope = await resolveSearchScope(root, relPath ?? ".");
     signal?.throwIfAborted();
     if (!scope) { summary.complete = false; summary.unavailableScope = true; return hits; }
+    const read = createSearchReader(scope.root, signal, summary);
     let scanner: RegexScanner | undefined;
     const searchFile = async (abs: string, relFile: string): Promise<boolean | void> => {
       signal?.throwIfAborted();
@@ -168,28 +198,8 @@ export function grepFiles(input: GrepFilesInput): Promise<GrepHit[]> {
         const candidate = relFile.split("/").pop()!;
         if (!matchGlob(input.fileGlob!, candidate)) return;
       }
-      let stat;
-      try {
-        stat = await fs.stat(abs);
-      } catch {
-        signal?.throwIfAborted();
-        summary.unreadableFiles++; summary.complete = false;
-        return;
-      }
-      signal?.throwIfAborted();
-      if (stat.size > MAX_READ_BYTES) { summary.skippedOversizedFiles++; summary.complete = false; return; }
-      let text: string;
-      try {
-        text = await fs.readFile(abs, { encoding: "utf8", signal });
-      } catch {
-        signal?.throwIfAborted();
-        summary.unreadableFiles++; summary.complete = false;
-        return; // binary or unreadable → skip
-      }
-      signal?.throwIfAborted();
-      summary.scannedFiles++;
-      // Refuse obvious binary content.
-      if (text.includes("\u0000")) { summary.skippedBinaryFiles++; return; }
+      const text = await read(abs);
+      if (text === undefined) return;
       const lines = text.split(/\r?\n/);
       // Keep the same physical source lines as the regex worker and read_file.
       if (lines.at(-1) === "") lines.pop();
@@ -265,13 +275,13 @@ export function grepFiles(input: GrepFilesInput): Promise<GrepHit[]> {
 
 /** Language-agnostic symbol patterns (fallback when no symbol index exists). */
 const SYMBOL_PATTERNS: Array<{ label: string; re: RegExp }> = [
-  { label: "function", re: /\bfunction\s+([A-Za-z_$][\w$]*)\b/g },
-  { label: "class", re: /\bclass\s+([A-Za-z_$][\w$]*)\b/g },
-  { label: "type", re: /\b(?:type|interface)\s+([A-Za-z_$][\w$]*)\b/g },
+  { label: "function", re: /\bfunction\s+([A-Za-z_$][\w$]*)/g },
+  { label: "class", re: /\bclass\s+([A-Za-z_$][\w$]*)/g },
+  { label: "type", re: /\b(?:type|interface)\s+([A-Za-z_$][\w$]*)/g },
   { label: "const", re: /\bconst\s+([A-Za-z_$][\w$]*)\s*=/g },
   { label: "function", re: /\bfn\s+([A-Za-z_$][\w$]*)\s*\(/g }, // Rust
   { label: "function", re: /\bfunc\s+(?:\([^)]*\)\s*)?([A-Za-z_$][\w$]*)\s*\(/g }, // Go, including methods
-  { label: "method", re: /\b([A-Za-z_$][\w$]*)\s*\([^)]*\)\s*\{/g },
+  { label: "method", re: /(?<![\w$])([A-Za-z_$][\w$]*)\s*\([^)]*\)\s*\{/g },
   { label: "export", re: /\bexport\s+(?:default\s+)?(?:function|class|const|type|interface)\s+([A-Za-z_$][\w$]*)/g },
   { label: "def", re: /\bdef\s+([A-Za-z_$][\w$]*)\s*\(/g }, // python
   { label: "import", re: /\b(?:import|require)\s*\(?['"]([^'"]+)['"]\)?/g },
@@ -301,56 +311,41 @@ export async function symbolSearch(input: SymbolSearchInput): Promise<{
   indexer: string;
   hits: SymbolHit[];
 }> {
-  input.signal?.throwIfAborted();
-  const { root, relPath, symbol } = input;
-  // Build a per-marker regex. `//g` not needed; we test the whole matched text.
-  const want =
-    symbol === "" ? null : `\\b${escapeRegExp(symbol)}\\b`;
+  const { root, relPath, symbol, signal = new AbortController().signal, summary = createGrepScanSummary() } = input;
+  signal.throwIfAborted();
+  // Match identifiers in the captured name or a component of a module specifier.
+  const want = symbol === "" ? null : `(?<![\\w$])${escapeRegExp(symbol)}(?![\\w$])`;
   // This escaped literal is a necessary (not sufficient) condition for a
   // fallback match. Avoid starting a worker for files that cannot contain one.
   const candidate = symbol === "" ? null : new RegExp(escapeRegExp(symbol), "i");
   const hits: SymbolHit[] = [];
   const cap = input.maxHits ?? 200;
   const scope = await resolveSearchScope(root, relPath ?? ".", input.ignoredDirectories);
-  input.signal?.throwIfAborted();
-  if (!scope && input.summary) { input.summary.complete = false; input.summary.unavailableScope = true; }
+  signal.throwIfAborted();
+  if (!scope) { summary.complete = false; summary.unavailableScope = true; }
+  const read = createSearchReader(root, signal, summary);
   let scanner: SymbolRegexScanner | undefined;
 
   const searchFile = async (abs: string, relFile: string): Promise<boolean | void> => {
-    input.signal?.throwIfAborted();
+    signal.throwIfAborted();
     if (hits.length >= cap) return false;
     if (input.excludeFile?.(relFile)) return;
-    let text: string;
-    try {
-      const stat = await fs.stat(abs);
-      input.signal?.throwIfAborted();
-      if (stat.size > MAX_READ_BYTES) {
-        if (input.summary) { input.summary.skippedOversizedFiles++; input.summary.complete = false; }
-        return;
-      }
-      text = await fs.readFile(abs, { encoding: "utf8", signal: input.signal });
-    } catch {
-      input.signal?.throwIfAborted();
-      if (input.summary) { input.summary.unreadableFiles++; input.summary.complete = false; }
-      return;
-    }
-    input.signal?.throwIfAborted();
-    if (input.summary) input.summary.scannedFiles++;
-    if (text.includes("\u0000")) { if (input.summary) input.summary.skippedBinaryFiles++; return; }
+    const text = await read(abs);
+    if (text === undefined) return;
     if (candidate && !candidate.test(text)) return;
-    scanner ??= new SymbolRegexScanner(SYMBOL_PATTERNS, want, input.signal);
+    scanner ??= new SymbolRegexScanner(SYMBOL_PATTERNS, want, signal);
     const matched = await scanner.scan(text, cap - hits.length);
-    input.signal?.throwIfAborted();
+    signal.throwIfAborted();
     hits.push(...matched.map(hit => ({ file: relFile, ...hit })));
-    if (hits.length >= cap && input.summary) { input.summary.limitReached = true; input.summary.complete = false; }
+    if (hits.length >= cap) { summary.limitReached = true; summary.complete = false; }
     return hits.length < cap;
   };
   try {
     if (scope?.type === "file") {
       await searchFile(scope.path, scope.relPath);
     } else if (scope) {
-      await walkFiles(scope.root, scope.relPath, searchFile, undefined, input.signal, () => {
-        if (input.summary) { input.summary.unreadableDirectories++; input.summary.complete = false; }
+      await walkFiles(scope.root, scope.relPath, searchFile, undefined, signal, () => {
+        summary.unreadableDirectories++; summary.complete = false;
       }, input.ignoredDirectories);
     }
   } finally {

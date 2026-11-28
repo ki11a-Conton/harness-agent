@@ -4,6 +4,7 @@ import { dirname, join, relative } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ToolExecutionContext } from "@ar/contracts";
 import { newAgentId, newSessionId, newToolCallId, newTurnId } from "@ar/contracts";
+import * as sourceReader from "./indexed-source-reader.js";
 import { grepFiles, repoTree, symbolSearch, walkFiles } from "./navigate.js";
 import { readFileTool } from "./tools/read-file.js";
 import { grepSearchTool, repoTreeTool } from "./tools/navigation-tools.js";
@@ -77,7 +78,7 @@ describe("R3 navigation: global traversal stop", () => {
   it("stops grep immediately when the first file fills the hit cap", async () => {
     await siblings();
     const reads = vi.spyOn(fs, "readdir");
-    const files = vi.spyOn(fs, "readFile");
+    const files = vi.spyOn(sourceReader, "readIndexedSource");
     const hits = await grepFiles({ root, pattern: "needle", maxHits: 1 });
     expect(hits).toHaveLength(1);
     expect(hits[0]).toMatchObject({ line: 1, column: 1, text: "needle" });
@@ -88,7 +89,7 @@ describe("R3 navigation: global traversal stop", () => {
   it("stops at a cap inside a multi-line file without entering later siblings", async () => {
     for (let i = 0; i < 8; i += 1) await write(`group-${i}/one.txt`, "needle\nneedle\nneedle\n");
     const reads = vi.spyOn(fs, "readdir");
-    const files = vi.spyOn(fs, "readFile");
+    const files = vi.spyOn(sourceReader, "readIndexedSource");
     const result = await run("grep_search", { pattern: "needle", maxResults: 2 });
     expect(result.status).toBe("success");
     expect(result.output).toMatchObject([{ line: 1 }, { line: 2 }]);
@@ -99,7 +100,7 @@ describe("R3 navigation: global traversal stop", () => {
   it("also stops the unchanged regex symbol fallback globally", async () => {
     for (let i = 0; i < 10; i += 1) await write(`group-${i}/source.txt`, "export function KnownSymbol() {}\n");
     const reads = vi.spyOn(fs, "readdir");
-    const files = vi.spyOn(fs, "readFile");
+    const files = vi.spyOn(sourceReader, "readIndexedSource");
     const result = await symbolSearch({ root, symbol: "KnownSymbol", maxHits: 1 });
     expect(result).toMatchObject({ fallback: true, hits: [{ name: "KnownSymbol", kind: "function" }] });
     expect(reads).toHaveBeenCalledTimes(2);
@@ -118,7 +119,7 @@ describe("grep_search per-file match budgets", () => {
       { file: "src/dense.ts", line: 1 }, { file: "src/dense.ts", line: 3 },
       { file: "src/exact.ts", line: 1 }, { file: "src/exact.ts", line: 3 },
     ];
-    const files = vi.spyOn(fs, "readFile");
+    const files = vi.spyOn(sourceReader, "readIndexedSource");
     const result = await run("grep_search", { ...args, contextLines: 1 });
     expect(result.status).toBe("success");
     expect(files).toHaveBeenCalledTimes(2);
@@ -137,7 +138,7 @@ describe("grep_search per-file match budgets", () => {
   it("keeps the global early stop and the legacy array contract", async () => {
     for (const file of ["a", "b", "c", "d"]) await write(file + ".ts", "needle\n".repeat(6));
     const args = { pattern: "needle", literal: true, maxResults: 3 };
-    const files = vi.spyOn(fs, "readFile");
+    const files = vi.spyOn(sourceReader, "readIndexedSource");
     const legacy = await run("grep_search", args);
     expect(files).toHaveBeenCalledTimes(1);
     expect(Array.isArray(legacy.output)).toBe(true);
@@ -156,10 +157,31 @@ describe("grep_search per-file match budgets", () => {
 });
 
 describe("grep_search with neighboring source lines", () => {
+  it("keeps sibling hits and reports a changed source in both output formats", async () => {
+    await write("changing.txt");
+    await write("stable.txt");
+    const read = sourceReader.readIndexedSource;
+    vi.spyOn(sourceReader, "readIndexedSource").mockImplementation((path, options) => {
+      if (path === join(root, "changing.txt")) throw new sourceReader.IndexedSourceError("SOURCE_CHANGED", "source changed during read");
+      return read(path, options);
+    });
+    const args = { pattern: "needle", literal: true };
+    const detailed = await run("grep_search", { ...args, maxResultsPerFile: 1, contextLines: 1 });
+    expect(detailed.status).toBe("success");
+    expect(detailed.output).toMatchObject({
+      hits: [{ file: "stable.txt" }], context: [],
+      summary: { complete: false, changedFiles: 1, scannedFiles: 1, unreadableFiles: 0, limitReached: false },
+    });
+    const legacy = await run("grep_search", args);
+    expect(legacy.status).toBe("failed");
+    expect(legacy.error?.message).toContain("1 file(s) changed during the scan");
+    expect(legacy.output).toMatchObject([{ file: "stable.txt" }]);
+  });
+
   it.each([true, false])("merges overlapping windows from one file read, literal=%s", async literal => {
     await write("src/settings.txt", "first\nneedle one\nshared\nneedle two\nlast\n");
     await write("elsewhere.txt", "needle outside the scope\n");
-    const files = vi.spyOn(fs, "readFile");
+    const files = vi.spyOn(sourceReader, "readIndexedSource");
     const result = await run("grep_search", { pattern: "needle", path: "src/settings.txt", contextLines: 1, literal });
     expect(result.status).toBe("success");
     expect(result.output).toMatchObject({
@@ -209,7 +231,7 @@ describe("grep_search with neighboring source lines", () => {
     await write("settings.txt");
     await fs.writeFile(join(outside, "settings.txt"), "needle outside workspace");
     const args = { pattern: "needle", contextLines: 2, path: "settings.txt" };
-    const files = vi.spyOn(fs, "readFile");
+    const files = vi.spyOn(sourceReader, "readIndexedSource");
     const denied = await run("grep_search", args, { ...context(), permissions: { rules: [], defaultEffect: "deny" } });
     const blocked = await run("grep_search", { ...args, path: join(outside, "settings.txt") });
     const control = new AbortController(); control.abort();

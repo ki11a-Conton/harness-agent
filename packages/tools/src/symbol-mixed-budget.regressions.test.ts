@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { newAgentId, newSessionId, newToolCallId, newTurnId, type ToolExecutionContext } from "@ar/contracts";
 import { ToolOrchestrator } from "./orchestrator.js";
 import { ToolRegistry } from "./registry.js";
+import * as sourceReader from "./indexed-source-reader.js";
 import { symbolSearchTool } from "./tools/navigation-tools.js";
 
 let root: string;
@@ -28,6 +29,21 @@ async function run(args: Record<string, unknown>) {
 }
 
 describe("symbol_search across languages and context budgets", () => {
+  it("matches fallback names including dollar signs and keeps import path component searches", async () => {
+    await fs.writeFile(join(root, "component.vue"), [
+      "function $store() {}", "function Cash$() {}", "function other() {}",
+      "import './widgets/toggle';",
+    ].join("\n"));
+    const names = async (symbol: string) => (await run({ symbol, path: "component.vue" })).hits.map(hit => hit.name);
+    expect(await names("$STORE")).toEqual(["$store"]);
+    expect(await names("Cash$")).toEqual(["Cash$"]);
+    expect(await names("store")).toEqual([]);
+    expect(await names("Cash")).toEqual([]);
+    expect(await names("function")).toEqual([]);
+    expect(await names("toggle")).toEqual(["./widgets/toggle"]);
+    expect(await names("import")).toEqual([]);
+  });
+
   it("returns the Python definition as well as a same-name TypeScript hit", async () => {
     await fs.writeFile(join(root, "frontend.ts"), "export const SharedSymbol = 1;\n");
     await fs.writeFile(join(root, "worker.py"), "def SharedSymbol():\n    return 2\n");
@@ -53,11 +69,10 @@ describe("symbol_search across languages and context budgets", () => {
   it("does not reread indexed files when searching the supplementary languages", async () => {
     await fs.writeFile(join(root, "frontend.ts"), "export const SharedSymbol = 1;\n");
     await fs.writeFile(join(root, "worker.py"), "def SharedSymbol():\n    return 2\n");
-    const reads = vi.spyOn(fs, "readFile");
+    const reads = vi.spyOn(sourceReader, "readIndexedSource");
     const result = await run({ symbol: "SharedSymbol" });
     expect(result.supplementalSearch).toBe("regex-symbol-fallback");
-    expect(reads.mock.calls.some(([path]) => String(path) === join(root, "worker.py"))).toBe(true);
-    expect(reads.mock.calls.some(([path]) => String(path) === join(root, "frontend.ts"))).toBe(false);
+    expect(reads.mock.calls.map(([path]) => path).sort()).toEqual([join(root, "frontend.ts"), join(root, "worker.py")]);
   });
 
   it("preserves the selected file boundary and does not read its sibling", async () => {

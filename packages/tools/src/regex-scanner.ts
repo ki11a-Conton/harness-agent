@@ -30,7 +30,7 @@ parentPort.on("message", ({ text, maxHits }) => {
       scanner.lastIndex = 0;
       let found;
       while (matches.length < maxHits && (found = scanner.exec(text)) !== null) {
-        if (!want || want.test(found[0])) {
+        if (!want || want.test(found[1])) {
           const line = lineAt(found.index);
           const key = JSON.stringify([line, found[1]]);
           if (!seen.has(key)) {
